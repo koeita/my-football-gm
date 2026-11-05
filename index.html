@@ -177,29 +177,96 @@
 
     <!-- タブ2：所属選手（スタメン・ベンチ・戦術・契約延長・放出）画面 -->
     <main id="view-roster" class="tab-view hidden">
-      <!-- チーム戦術方針パネル -->
-      <div class="panel tactics-panel-card">
+      <!-- 作戦ボード（ピッチUI）＆フォーメーション・戦術設定パネル -->
+      <div class="panel tactical-board-panel" id="tactical-board-panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">クラブ戦術方針設定</h2>
-            <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：中盤（DM/CM/SM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
+            <h2 class="panel-title">作戦ボード（フォーメーション＆ピッチ編成）</h2>
+            <p class="panel-note">
+              ピッチ上の選手スロットをクリックすると、右側の控え（ベンチ）リストからワンクリックで選手交代・コンバート配置が可能です（適性外配置は実効総合力 -20%）。
+            </p>
           </div>
-          <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
+          <div class="formation-selector-wrap">
+            <span class="formation-selector-label mono">FORMATION:</span>
+            <div class="formation-btn-group" id="formation-btn-group" role="group" aria-label="フォーメーション選択">
+              <button type="button" class="btn btn-formation active mono" data-formation="4-3-3">4-3-3</button>
+              <button type="button" class="btn btn-formation mono" data-formation="4-2-3-1">4-2-3-1</button>
+              <button type="button" class="btn btn-formation mono" data-formation="4-4-2">4-4-2</button>
+              <button type="button" class="btn btn-formation mono" data-formation="3-5-2">3-5-2</button>
+            </div>
+          </div>
         </div>
-        <div class="panel-body">
-          <div class="tactics-btn-group" id="tactics-btn-group">
-            <button type="button" class="btn btn-tactic active" data-tactic="possession">
-              <span class="tactic-name">ポゼッション（支配）</span>
-              <span class="tactic-desc">中盤(DM/CM/SM/AM)重視 / ロースコア傾向</span>
-            </button>
-            <button type="button" class="btn btn-tactic" data-tactic="counter">
-              <span class="tactic-name">カウンター（速攻）</span>
-              <span class="tactic-desc">前線(WG/CF)・守備(CB/SB)重視 / 波乱多</span>
-            </button>
-            <button type="button" class="btn btn-tactic" data-tactic="highpress">
-              <span class="tactic-name">ハイプレス（前線守備）</span>
-              <span class="tactic-desc">全能力+8% / スタミナ消耗大</span>
-            </button>
+
+        <div class="panel-body tactical-board-body">
+          <div class="tactical-board-grid">
+            <!-- 左：サッカーグラウンド（ピッチ）描画エリア -->
+            <div class="pitch-container" id="pitch-container">
+              <!-- 白線（ペナルティエリア・センターサークル・ハーフウェイライン）SVG -->
+              <svg class="pitch-lines-svg" viewBox="0 0 600 420" preserveAspectRatio="none" aria-hidden="true">
+                <!-- 外枠タッチライン・ゴールライン -->
+                <rect x="16" y="14" width="568" height="392" fill="none" stroke="rgba(240, 242, 245, 0.28)" stroke-width="2" />
+                <!-- ハーフウェイライン（横向きピッチまたは縦向きピッチ：上＝相手ゴール、下＝自陣GK） -->
+                <line x1="16" y1="210" x2="584" y2="210" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.8" />
+                <!-- センターサークル -->
+                <circle cx="300" cy="210" r="48" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.8" />
+                <circle cx="300" cy="210" r="3" fill="rgba(240, 242, 245, 0.35)" />
+                <!-- 上側（敵陣側）ペナルティエリア＆ゴールエリア -->
+                <rect x="165" y="14" width="270" height="72" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.8" />
+                <rect x="230" y="14" width="140" height="28" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.6" />
+                <path d="M 250 86 A 42 42 0 0 0 350 86" fill="none" stroke="rgba(240, 242, 245, 0.22)" stroke-width="1.6" />
+                <!-- 下側（自陣GK側）ペナルティエリア＆ゴールエリア -->
+                <rect x="165" y="334" width="270" height="72" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.8" />
+                <rect x="230" y="378" width="140" height="28" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.6" />
+                <path d="M 250 334 A 42 42 0 0 1 350 334" fill="none" stroke="rgba(240, 242, 245, 0.22)" stroke-width="1.6" />
+              </svg>
+
+              <div class="pitch-direction-label mono">ATTACK DIRECTION ▲</div>
+
+              <!-- スタメン11名のノード配置レイヤー -->
+              <div class="pitch-nodes-layer" id="pitch-nodes-layer">
+                <!-- JSで11スロットを絶対配置（%指定）描画 -->
+              </div>
+            </div>
+
+            <!-- 右：直感的な選手交代（ベンチ控えリスト＆戦術方針切替）パネル -->
+            <div class="tactical-side-column">
+              <!-- スロット選択時の控え・交代パネル -->
+              <div class="pitch-sub-box" id="pitch-sub-box">
+                <div class="pitch-sub-header">
+                  <span class="pitch-sub-title" id="pitch-sub-title">ベンチ（控え選手）一覧 — 交代待機</span>
+                  <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-clear-slot-select">選択解除</button>
+                </div>
+                <p class="pitch-sub-guide" id="pitch-sub-guide">
+                  ピッチ上のスロットをクリックして選択すると、控え選手または他スロット選手とワンクリックで入れ替えできます。
+                </p>
+                <div class="pitch-bench-list" id="pitch-bench-list">
+                  <!-- JSで控え選手または入替候補を描画 -->
+                </div>
+              </div>
+
+              <!-- クラブ戦術方針設定（コンパクト統合） -->
+              <div class="pitch-tactics-box">
+                <div class="pitch-sub-header">
+                  <span class="pitch-sub-title">クラブ戦術方針</span>
+                  <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
+                </div>
+                <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：中盤（DM/CM/SM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
+                <div class="tactics-btn-group compact-tactics-group" id="tactics-btn-group">
+                  <button type="button" class="btn btn-tactic active" data-tactic="possession">
+                    <span class="tactic-name">ポゼッション（支配）</span>
+                    <span class="tactic-desc">中盤(DM/CM/SM/AM)重視 / ロースコア傾向</span>
+                  </button>
+                  <button type="button" class="btn btn-tactic" data-tactic="counter">
+                    <span class="tactic-name">カウンター（速攻）</span>
+                    <span class="tactic-desc">前線(WG/CF)・守備(CB/SB)重視 / 波乱多</span>
+                  </button>
+                  <button type="button" class="btn btn-tactic" data-tactic="highpress">
+                    <span class="tactic-name">ハイプレス（前線守備）</span>
+                    <span class="tactic-desc">全能力+8% / スタミナ消耗大</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -208,12 +275,13 @@
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">自チーム登録選手一覧（9ポジション編成・契約年数管理）</h2>
+            <h2 class="panel-title">自チーム登録選手一覧（詳細ポジション適性・契約年数管理）</h2>
             <p class="panel-note">
-              スタメン枠：GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1（計11名）。適性外配置時は実効総合力が20%低下します。任意の2行クリックで異ポジション間でも入替可能です。
+              詳細9ポジション（GK, CB, SB, DM, CM, SM, AM, WG, CF）。配置枠と適性（preferredPosition）が異なる場合は実効総合力が20%低下します。
             </p>
           </div>
           <div class="team-power-badges">
+            <span class="power-badge">フォーメーション <strong class="mono" id="roster-formation-label">4-3-3</strong></span>
             <span class="power-badge">実効攻撃 <strong class="mono" id="team-total-atk">0</strong></span>
             <span class="power-badge">実効守備 <strong class="mono" id="team-total-def">0</strong></span>
             <span class="power-badge">平均スタミナ <strong class="mono" id="team-avg-sta">0</strong></span>

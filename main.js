@@ -288,29 +288,97 @@ const POS_ROLE_GROUP = {
   CF: 'FW'
 };
 
-// スタメン11枠の標準フォーメーション構成（計11名：GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1）
+// 4種類のフォーメーション定義（ピッチ座標 x: 0〜100%, y: 0〜100% ※上が相手ゴール方向）
+const FORMATIONS = {
+  '4-3-3': {
+    name: '4-3-3',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
+      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 70 },
+      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
+      { slotIndex: 8, pos: 'WG', label: 'LWG', x: 20, y: 22 },
+      { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
+      { slotIndex: 10, pos: 'WG', label: 'RWG', x: 80, y: 22 }
+    ]
+  },
+  '4-2-3-1': {
+    name: '4-2-3-1',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 72 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 74 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 74 },
+      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 72 },
+      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
+      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
+      { slotIndex: 7, pos: 'SM', label: 'LSM', x: 18, y: 36 },
+      { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 35 },
+      { slotIndex: 9, pos: 'SM', label: 'RSM', x: 82, y: 36 },
+      { slotIndex: 10, pos: 'CF', label: 'CF', x: 50, y: 15 }
+    ]
+  },
+  '4-4-2': {
+    name: '4-4-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 71 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
+      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 71 },
+      { slotIndex: 5, pos: 'SM', label: 'LSM', x: 15, y: 46 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
+      { slotIndex: 8, pos: 'SM', label: 'RSM', x: 85, y: 46 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+    ]
+  },
+  '3-5-2': {
+    name: '3-5-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 24, y: 72 },
+      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 74 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 76, y: 72 },
+      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 56 },
+      { slotIndex: 5, pos: 'SM', label: 'LSM', x: 14, y: 43 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 35, y: 42 },
+      { slotIndex: 7, pos: 'AM', label: 'AM', x: 65, y: 42 },
+      { slotIndex: 8, pos: 'SM', label: 'RSM', x: 86, y: 43 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+    ]
+  }
+};
+
+// スタメン11枠の基準ポジション数（4-3-3ベース）
 const REQUIRED_STARTERS = {
   GK: 1,
   CB: 2,
   SB: 2,
   DM: 1,
-  CM: 1,
-  SM: 1,
-  AM: 1,
-  WG: 1,
+  CM: 2,
+  SM: 0,
+  AM: 0,
+  WG: 2,
   CF: 1
 };
 
-// 1チームの初期16名構成（スタメン11名＋ベンチ5名）
+// 1チームの初期16名構成（4-3-3のスタメン11名＋各フォーメーション対応ベンチ5名）
 const SQUAD_COMPOSITION = [
   { pos: 'GK', total: 2, starters: 1 },
   { pos: 'CB', total: 3, starters: 2 },
   { pos: 'SB', total: 2, starters: 2 },
-  { pos: 'DM', total: 2, starters: 1 },
-  { pos: 'CM', total: 2, starters: 1 },
-  { pos: 'SM', total: 1, starters: 1 },
-  { pos: 'AM', total: 1, starters: 1 },
-  { pos: 'WG', total: 1, starters: 1 },
+  { pos: 'DM', total: 1, starters: 1 },
+  { pos: 'CM', total: 2, starters: 2 },
+  { pos: 'SM', total: 1, starters: 0 },
+  { pos: 'AM', total: 1, starters: 0 },
+  { pos: 'WG', total: 2, starters: 2 },
   { pos: 'CF', total: 2, starters: 1 }
 ];
 
@@ -390,7 +458,8 @@ const gameState = {
   lastMatchTicker: null,
   transferMarket: [],
   lastSettlement: null,
-  selectedPlayerId: null
+  selectedPlayerId: null,
+  selectedSlotIndex: null
 };
 
 let playerIdCounter = 1;
@@ -460,8 +529,9 @@ function getGrowthCurveLabel(curve) {
  * 選手の本来の能力に基づく総合評価値（1〜99スケール）を算出
  */
 function getPlayerOverallRating(p) {
+  const prefPos = p.preferredPosition || p.position || p.pos;
   let raw;
-  switch (p.pos) {
+  switch (prefPos) {
     case 'GK':
       raw = p.def * 0.78 + p.sta * 0.17 + p.atk * 0.05;
       break;
@@ -499,14 +569,33 @@ function getPlayerOverallRating(p) {
  */
 function getEffectivePlayerRating(p) {
   const baseOvr = getPlayerOverallRating(p);
+  const prefPos = p.preferredPosition || p.position || p.pos;
   let factor = 1.0;
 
   // スタメン時、適性ポジションと配置枠が異なる場合は総合値20%低下
-  if (p.isStarter && p.assignedPos && p.assignedPos !== p.pos) {
+  if (p.isStarter && p.assignedPos && p.assignedPos !== prefPos) {
     factor *= 0.80;
   }
 
   // 負傷中にもかかわらず強行出場している場合はさらに低下
+  if (p.injuryWeeks && p.injuryWeeks > 0) {
+    factor *= 0.75;
+  }
+
+  return clamp(Math.round(baseOvr * factor), 1, 99);
+}
+
+/**
+ * 指定されたポジション枠（slotPos）に配置した場合の実効総合力をシミュレーション算出
+ */
+function getEffectivePlayerRatingForSlot(p, slotPos) {
+  const baseOvr = getPlayerOverallRating(p);
+  const prefPos = p.preferredPosition || p.position || p.pos;
+  let factor = 1.0;
+
+  if (slotPos && slotPos !== prefPos) {
+    factor *= 0.80;
+  }
   if (p.injuryWeeks && p.injuryWeeks > 0) {
     factor *= 0.75;
   }
@@ -649,7 +738,10 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     name: fullName,
     age,
     pos,
+    position: pos,
+    preferredPosition: pos,
     assignedPos: isStarter ? pos : null,
+    slotIndex: null,
     atk,
     def,
     sta,
@@ -713,9 +805,97 @@ function generateTransferMarket() {
 }
 
 /**
- * クラブの総人数（最低11名）とスタメン11枠（REQUIRED_STARTERS）を検証・補完する
+ * クラブの現在選択されているフォーメーション定義を取得
+ */
+function getClubFormationDef(club) {
+  const fKey = (club && club.formation && FORMATIONS[club.formation]) ? club.formation : '4-3-3';
+  return FORMATIONS[fKey];
+}
+
+/**
+ * スタメン11名をクラブの現在フォーメーションの11スロット（0〜10）に割り当てる
+ * forceReassign = true の場合（フォーメーション変更時など）、現在のスタメン11名を新フォーメーションの各枠へ適性優先で再配置する
+ */
+function assignStartersToFormationSlots(club, forceReassign = false) {
+  const formationDef = getClubFormationDef(club);
+  const slots = formationDef.slots;
+  const starters = club.players.filter(p => p.isStarter && !p.isRetired);
+
+  club.players.forEach(p => {
+    if (!p.isStarter) {
+      p.slotIndex = null;
+      p.assignedPos = null;
+    }
+  });
+
+  const claimedSlotIndices = new Set();
+  const remainingStarters = [];
+
+  if (!forceReassign) {
+    for (const s of starters) {
+      if (
+        Number.isInteger(s.slotIndex) &&
+        s.slotIndex >= 0 &&
+        s.slotIndex < slots.length &&
+        !claimedSlotIndices.has(s.slotIndex)
+      ) {
+        claimedSlotIndices.add(s.slotIndex);
+        s.assignedPos = slots[s.slotIndex].pos;
+      } else {
+        remainingStarters.push(s);
+      }
+    }
+  } else {
+    remainingStarters.push(...starters);
+  }
+
+  if (remainingStarters.length === 0) return;
+
+  const openSlots = slots.filter(sl => !claimedSlotIndices.has(sl.slotIndex));
+  const unassignedPlayers = [...remainingStarters];
+
+  // 第1パス：適性ポジション（preferredPosition）と完全一致するスロットへ優先配置
+  for (const sl of [...openSlots]) {
+    const matchIdx = unassignedPlayers.findIndex(p => (p.preferredPosition || p.pos) === sl.pos);
+    if (matchIdx !== -1) {
+      const p = unassignedPlayers.splice(matchIdx, 1)[0];
+      p.slotIndex = sl.slotIndex;
+      p.assignedPos = sl.pos;
+      claimedSlotIndices.add(sl.slotIndex);
+    }
+  }
+
+  // 第2パス：同系統ロール（GK/DF/MF/FW）が一致するスロットへ配置
+  const stillOpenSlots = slots.filter(sl => !claimedSlotIndices.has(sl.slotIndex));
+  for (const sl of [...stillOpenSlots]) {
+    const targetGroup = POS_ROLE_GROUP[sl.pos];
+    const groupIdx = unassignedPlayers.findIndex(p => POS_ROLE_GROUP[p.preferredPosition || p.pos] === targetGroup);
+    if (groupIdx !== -1) {
+      const p = unassignedPlayers.splice(groupIdx, 1)[0];
+      p.slotIndex = sl.slotIndex;
+      p.assignedPos = sl.pos;
+      claimedSlotIndices.add(sl.slotIndex);
+    }
+  }
+
+  // 第3パス：残りの選手を空いているスロットへ順に配置
+  const finalOpenSlots = slots.filter(sl => !claimedSlotIndices.has(sl.slotIndex));
+  for (let i = 0; i < unassignedPlayers.length; i++) {
+    const p = unassignedPlayers[i];
+    const sl = finalOpenSlots[i] || slots[0];
+    p.slotIndex = sl.slotIndex;
+    p.assignedPos = sl.pos;
+  }
+}
+
+/**
+ * クラブの総人数（最低11名）とスタメン11枠（フォーメーション11スロット）を検証・補完する
  */
 function ensureValidSquadAndStarters(club, noticeLogs = null) {
+  if (!club.formation || !FORMATIONS[club.formation]) {
+    club.formation = '4-3-3';
+  }
+  const formationDef = getClubFormationDef(club);
   const usedNames = new Set(club.players.map(p => p.name));
 
   // GKが最低1名いることを保証
@@ -745,14 +925,6 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     }
   }
 
-  // スタメン11枠の割り当て整理
-  const requiredSlots = [];
-  for (const [pos, count] of Object.entries(REQUIRED_STARTERS)) {
-    for (let i = 0; i < count; i++) {
-      requiredSlots.push(pos);
-    }
-  }
-
   let starters = club.players.filter(p => p.isStarter);
   let bench = club.players.filter(p => !p.isStarter);
 
@@ -763,11 +935,16 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
       const slot = s.assignedPos || s.pos;
       filledCounts[slot] = (filledCounts[slot] || 0) + 1;
     });
-    const neededPos = ALL_POSITIONS.find(pos => (filledCounts[pos] || 0) < REQUIRED_STARTERS[pos]) || 'CM';
+
+    const neededSlot = formationDef.slots.find(sl => {
+      const reqCount = formationDef.slots.filter(x => x.pos === sl.pos).length;
+      return (filledCounts[sl.pos] || 0) < reqCount;
+    });
+    const neededPos = neededSlot ? neededSlot.pos : 'CM';
 
     bench.sort((a, b) => {
-      const aMatch = a.pos === neededPos ? 1 : 0;
-      const bMatch = b.pos === neededPos ? 1 : 0;
+      const aMatch = (a.preferredPosition || a.pos) === neededPos ? 1 : 0;
+      const bMatch = (b.preferredPosition || b.pos) === neededPos ? 1 : 0;
       if (aMatch !== bMatch) return bMatch - aMatch;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
@@ -783,72 +960,51 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     starters.slice(11).forEach(p => {
       p.isStarter = false;
       p.assignedPos = null;
+      p.slotIndex = null;
     });
     starters = starters.slice(0, 11);
   }
 
-  // スタメン全員に必ず11スロット（GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1）が重複・漏れなく割り当てられるよう整える
-  const slotPool = [...requiredSlots];
-  const unassignedStarters = [];
-
-  for (const s of starters) {
-    const desired = s.assignedPos || s.pos;
-    const idx = slotPool.indexOf(desired);
-    if (idx !== -1) {
-      s.assignedPos = desired;
-      slotPool.splice(idx, 1);
-    } else {
-      unassignedStarters.push(s);
-    }
-  }
-
-  for (const s of unassignedStarters) {
-    const naturalIdx = slotPool.indexOf(s.pos);
-    if (naturalIdx !== -1) {
-      s.assignedPos = s.pos;
-      slotPool.splice(naturalIdx, 1);
-    } else {
-      s.assignedPos = slotPool.shift() || s.pos;
-    }
-  }
-
-  club.players.forEach(p => {
-    if (!p.isStarter) p.assignedPos = null;
-  });
+  assignStartersToFormationSlots(club, false);
 }
 
 /**
  * CPUクラブのスタメン11名を最適配置で自動編成
  */
 function autoSelectStarters(club) {
+  if (!club.formation || !FORMATIONS[club.formation]) {
+    club.formation = '4-3-3';
+  }
+  const formationDef = getClubFormationDef(club);
+
   club.players.forEach(p => {
     p.isStarter = false;
     p.assignedPos = null;
+    p.slotIndex = null;
   });
 
   const available = [...club.players].filter(p => !p.isRetired);
 
-  for (const [pos, reqCount] of Object.entries(REQUIRED_STARTERS)) {
-    for (let i = 0; i < reqCount; i++) {
-      const candidates = available.filter(p => !p.isStarter);
-      if (candidates.length === 0) break;
+  for (const sl of formationDef.slots) {
+    const candidates = available.filter(p => !p.isStarter);
+    if (candidates.length === 0) break;
 
-      candidates.sort((a, b) => {
-        const aHealthy = (a.injuryWeeks || 0) === 0 ? 1 : 0;
-        const bHealthy = (b.injuryWeeks || 0) === 0 ? 1 : 0;
-        if (aHealthy !== bHealthy) return bHealthy - aHealthy;
+    candidates.sort((a, b) => {
+      const aHealthy = (a.injuryWeeks || 0) === 0 ? 1 : 0;
+      const bHealthy = (b.injuryWeeks || 0) === 0 ? 1 : 0;
+      if (aHealthy !== bHealthy) return bHealthy - aHealthy;
 
-        const aMatch = a.pos === pos ? 1 : 0;
-        const bMatch = b.pos === pos ? 1 : 0;
-        if (aMatch !== bMatch) return bMatch - aMatch;
+      const aMatch = (a.preferredPosition || a.pos) === sl.pos ? 1 : 0;
+      const bMatch = (b.preferredPosition || b.pos) === sl.pos ? 1 : 0;
+      if (aMatch !== bMatch) return bMatch - aMatch;
 
-        return getPlayerOverallRating(b) - getPlayerOverallRating(a);
-      });
+      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+    });
 
-      const chosen = candidates[0];
-      chosen.isStarter = true;
-      chosen.assignedPos = pos;
-    }
+    const chosen = candidates[0];
+    chosen.isStarter = true;
+    chosen.slotIndex = sl.slotIndex;
+    chosen.assignedPos = sl.pos;
   }
 
   ensureValidSquadAndStarters(club);
@@ -1890,6 +2046,106 @@ function setTeamTactic(tacticKey) {
 }
 
 /**
+ * クラブのフォーメーション（4-3-3 / 4-2-3-1 / 4-4-2 / 3-5-2）を切り替える
+ */
+function setClubFormation(formationKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || !FORMATIONS[formationKey]) return;
+
+  playerClub.formation = formationKey;
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+
+  // 現在のスタメン11名を新しいフォーメーションの11スロットに適性優先で再配置
+  assignStartersToFormationSlots(playerClub, true);
+  renderRoster();
+}
+
+/**
+ * 作戦ボード（ピッチ）上のスロットノードをクリックした際の処理
+ */
+function handlePitchNodeClick(slotIndex) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  const formationDef = getClubFormationDef(playerClub);
+  const slotDef = formationDef.slots[slotIndex];
+  if (!slotDef) return;
+
+  const clickedStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
+
+  if (gameState.selectedSlotIndex === null) {
+    gameState.selectedSlotIndex = slotIndex;
+    gameState.selectedPlayerId = clickedStarter ? clickedStarter.id : null;
+    renderRoster();
+    return;
+  }
+
+  if (gameState.selectedSlotIndex === slotIndex) {
+    gameState.selectedSlotIndex = null;
+    gameState.selectedPlayerId = null;
+    renderRoster();
+    return;
+  }
+
+  // 既に別のピッチ枠が選択されていた場合、2つのスタメン枠の選手同士をスワップ
+  const prevSlotIndex = gameState.selectedSlotIndex;
+  const prevSlotDef = formationDef.slots[prevSlotIndex];
+  const prevStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === prevSlotIndex);
+
+  if (prevStarter && clickedStarter && prevSlotDef) {
+    prevStarter.slotIndex = slotIndex;
+    prevStarter.assignedPos = slotDef.pos;
+    clickedStarter.slotIndex = prevSlotIndex;
+    clickedStarter.assignedPos = prevSlotDef.pos;
+  }
+
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+  renderRoster();
+}
+
+/**
+ * ベンチ選手を指定スロット（または最適枠）のスタメンとワンクリックで交代する
+ */
+function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  const benchPlayer = playerClub.players.find(p => p.id === benchPlayerId && !p.isStarter);
+  if (!benchPlayer) return;
+
+  const formationDef = getClubFormationDef(playerClub);
+  const resolvedSlotIdx = targetSlotIndex !== null ? targetSlotIndex : gameState.selectedSlotIndex;
+
+  if (resolvedSlotIdx !== null && formationDef.slots[resolvedSlotIdx]) {
+    const slotDef = formationDef.slots[resolvedSlotIdx];
+    const currentStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === resolvedSlotIdx);
+
+    if (currentStarter) {
+      currentStarter.isStarter = false;
+      currentStarter.slotIndex = null;
+      currentStarter.assignedPos = null;
+    }
+
+    benchPlayer.isStarter = true;
+    benchPlayer.slotIndex = resolvedSlotIdx;
+    benchPlayer.assignedPos = slotDef.pos;
+
+    gameState.selectedSlotIndex = null;
+    gameState.selectedPlayerId = null;
+    ensureValidSquadAndStarters(playerClub);
+    renderRoster();
+    return;
+  }
+
+  // スロット未選択時は適性枠または実効OVRが最も低いフィールド枠と交代
+  togglePlayerStarter(benchPlayerId);
+}
+
+/**
  * スタメン選手の配置枠（assignedPos）をプルダウンで変更した際、該当枠のスタメンと入れ替える
  */
 function changeStarterAssignedPos(playerId, newSlotPos) {
@@ -1907,6 +2163,9 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
   );
 
   if (swapPartner) {
+    const tempSlotIndex = target.slotIndex;
+    target.slotIndex = swapPartner.slotIndex;
+    swapPartner.slotIndex = tempSlotIndex;
     swapPartner.assignedPos = oldSlot;
   }
   target.assignedPos = newSlotPos;
@@ -1930,19 +2189,23 @@ function togglePlayerStarter(playerId) {
   if (target.isStarter) {
     if (bench.length === 0) return;
     const slotToFill = target.assignedPos || target.pos;
+    const slotIdxToFill = target.slotIndex;
     bench.sort((a, b) => {
-      const aMatch = a.pos === slotToFill ? 1 : 0;
-      const bMatch = b.pos === slotToFill ? 1 : 0;
+      const aMatch = (a.preferredPosition || a.pos) === slotToFill ? 1 : 0;
+      const bMatch = (b.preferredPosition || b.pos) === slotToFill ? 1 : 0;
       if (aMatch !== bMatch) return bMatch - aMatch;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
     const promoted = bench[0];
     promoted.isStarter = true;
+    promoted.slotIndex = slotIdxToFill;
     promoted.assignedPos = slotToFill;
     target.isStarter = false;
+    target.slotIndex = null;
     target.assignedPos = null;
   } else {
-    let sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) === target.pos);
+    const prefPos = target.preferredPosition || target.pos;
+    let sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) === prefPos);
     if (sameSlotStarters.length === 0) {
       sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) !== 'GK');
     }
@@ -1950,14 +2213,19 @@ function togglePlayerStarter(playerId) {
       sameSlotStarters.sort((a, b) => getEffectivePlayerRating(a) - getEffectivePlayerRating(b));
       const demoted = sameSlotStarters[0];
       const inheritedSlot = demoted.assignedPos || demoted.pos;
+      const inheritedSlotIdx = demoted.slotIndex;
       demoted.isStarter = false;
+      demoted.slotIndex = null;
       demoted.assignedPos = null;
       target.isStarter = true;
+      target.slotIndex = inheritedSlotIdx;
       target.assignedPos = inheritedSlot;
     }
   }
 
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
+  ensureValidSquadAndStarters(playerClub);
   renderRoster();
 }
 
@@ -1999,6 +2267,7 @@ function startNextSeason() {
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
 
   for (const club of gameState.clubs) {
     club.played = 0;
@@ -2077,12 +2346,14 @@ function handleRosterClick(playerId) {
 
   if (!gameState.selectedPlayerId) {
     gameState.selectedPlayerId = playerId;
+    gameState.selectedSlotIndex = clickedPlayer.isStarter ? clickedPlayer.slotIndex : null;
     renderRoster();
     return;
   }
 
   if (gameState.selectedPlayerId === playerId) {
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
     renderRoster();
     return;
   }
@@ -2090,29 +2361,40 @@ function handleRosterClick(playerId) {
   const prevPlayer = playerClub.players.find(p => p.id === gameState.selectedPlayerId);
   if (!prevPlayer) {
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
     renderRoster();
     return;
   }
 
   if (prevPlayer.isStarter && clickedPlayer.isStarter) {
     const tempSlot = prevPlayer.assignedPos || prevPlayer.pos;
+    const tempSlotIdx = prevPlayer.slotIndex;
     prevPlayer.assignedPos = clickedPlayer.assignedPos || clickedPlayer.pos;
+    prevPlayer.slotIndex = clickedPlayer.slotIndex;
     clickedPlayer.assignedPos = tempSlot;
+    clickedPlayer.slotIndex = tempSlotIdx;
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
   } else if (prevPlayer.isStarter !== clickedPlayer.isStarter) {
     const starter = prevPlayer.isStarter ? prevPlayer : clickedPlayer;
     const benchPlayer = prevPlayer.isStarter ? clickedPlayer : prevPlayer;
     const slot = starter.assignedPos || starter.pos;
+    const slotIdx = starter.slotIndex;
 
     starter.isStarter = false;
     starter.assignedPos = null;
+    starter.slotIndex = null;
     benchPlayer.isStarter = true;
     benchPlayer.assignedPos = slot;
+    benchPlayer.slotIndex = slotIdx;
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
   } else {
     gameState.selectedPlayerId = playerId;
+    gameState.selectedSlotIndex = null;
   }
 
+  ensureValidSquadAndStarters(playerClub);
   renderRoster();
 }
 
@@ -2471,10 +2753,172 @@ function formatDiffHtml(val) {
 }
 
 /**
+ * 作戦ボード（ピッチUI・フォーメーション選択・控えワンクリック入替リスト）の描画
+ */
+function renderTacticalBoard() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  ensureValidSquadAndStarters(playerClub);
+
+  const formationKey = playerClub.formation || '4-3-3';
+  const formationDef = getClubFormationDef(playerClub);
+
+  document.querySelectorAll('#formation-btn-group .btn-formation').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.formation === formationKey);
+  });
+
+  const formationLabelEl = document.getElementById('roster-formation-label');
+  if (formationLabelEl) {
+    formationLabelEl.textContent = formationDef.name;
+  }
+
+  const pitchLayer = document.getElementById('pitch-nodes-layer');
+  if (pitchLayer) {
+    pitchLayer.innerHTML = formationDef.slots.map(sl => {
+      const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === sl.slotIndex);
+      if (!starter) return '';
+
+      const prefPos = starter.preferredPosition || starter.pos;
+      const isOutOfPos = prefPos !== sl.pos;
+      const isSelected = gameState.selectedSlotIndex === sl.slotIndex;
+      const effOvr = getEffectivePlayerRating(starter);
+      const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
+
+      const nodeClasses = [
+        'pitch-node',
+        `pos-group-${roleGroup}`,
+        isOutOfPos ? 'out-of-pos' : '',
+        isSelected ? 'selected' : ''
+      ].filter(Boolean).join(' ');
+
+      const warnBadgeHtml = isOutOfPos
+        ? `<span class="pitch-node-warn" title="適性(${prefPos})と配置枠(${sl.pos})が異なるため実効能力-20%">-20%</span>`
+        : '';
+
+      const injuryBadgeHtml = starter.injuryWeeks > 0
+        ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+        : '';
+
+      return `
+        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" style="left: ${sl.x}%; top: ${sl.y}%;" title="クリックで選択 / 他の枠または控え選手と交代">
+          <div class="pitch-node-top">
+            <span class="pitch-node-pos">${sl.pos}</span>
+            <span class="pitch-node-ovr">OVR ${effOvr}</span>
+          </div>
+          <div class="pitch-node-name">${starter.name}</div>
+          <div class="pitch-node-meta">
+            <span class="pitch-node-pref">適性:${prefPos}</span>
+            ${warnBadgeHtml}
+            ${injuryBadgeHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 右側：控え（ベンチ）選手ワンクリック交代リスト描画
+  const subTitleEl = document.getElementById('pitch-sub-title');
+  const clearBtnEl = document.getElementById('btn-clear-slot-select');
+  const subGuideEl = document.getElementById('pitch-sub-guide');
+  const benchListEl = document.getElementById('pitch-bench-list');
+
+  if (!benchListEl) return;
+
+  const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+  const selectedSlot = gameState.selectedSlotIndex !== null ? formationDef.slots[gameState.selectedSlotIndex] : null;
+  const selectedStarter = selectedSlot
+    ? playerClub.players.find(p => p.isStarter && p.slotIndex === selectedSlot.slotIndex)
+    : null;
+
+  if (selectedSlot && selectedStarter) {
+    const starterPref = selectedStarter.preferredPosition || selectedStarter.pos;
+    const starterEff = getEffectivePlayerRating(selectedStarter);
+    subTitleEl.textContent = `交代対象：[${selectedSlot.pos}] ${selectedStarter.name} (実効OVR ${starterEff})`;
+    clearBtnEl.classList.remove('hidden');
+    subGuideEl.textContent = `下の控え選手の「交代投入」を押すと [${selectedSlot.pos}] 枠へ即座に投入します（ピッチ上の別枠をクリックするとスタメン同士で位置を入れ替えます）。`;
+
+    const sortedBench = [...benchPlayers].sort((a, b) => {
+      const aMatch = (a.preferredPosition || a.pos) === selectedSlot.pos ? 1 : 0;
+      const bMatch = (b.preferredPosition || b.pos) === selectedSlot.pos ? 1 : 0;
+      if (aMatch !== bMatch) return bMatch - aMatch;
+      return getEffectivePlayerRatingForSlot(b, selectedSlot.pos) - getEffectivePlayerRatingForSlot(a, selectedSlot.pos);
+    });
+
+    if (sortedBench.length === 0) {
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+    } else {
+      benchListEl.innerHTML = sortedBench.map(bp => {
+        const prefPos = bp.preferredPosition || bp.pos;
+        const isMatch = prefPos === selectedSlot.pos;
+        const simOvr = getEffectivePlayerRatingForSlot(bp, selectedSlot.pos);
+        const baseOvr = getPlayerOverallRating(bp);
+
+        const fitTag = isMatch
+          ? `<span class="bench-fit-tag fit-ok">適性一致 OVR ${simOvr}</span>`
+          : `<span class="bench-fit-tag fit-warn">適性外-20% OVR ${simOvr} (${baseOvr})</span>`;
+
+        return `
+          <div class="bench-sub-item ${isMatch ? 'fit-match' : 'fit-mismatch'}">
+            <div class="bench-sub-info">
+              <span class="pos-tag pos-${prefPos}">${prefPos}</span>
+              <span class="bench-sub-name">${bp.name}</span>
+            </div>
+            <div class="bench-sub-stats">
+              ${fitTag}
+              <button type="button" class="btn btn-primary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">交代投入</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } else {
+    subTitleEl.textContent = `控え（ベンチ）選手一覧（${benchPlayers.length}名）`;
+    clearBtnEl.classList.add('hidden');
+    subGuideEl.textContent = `ピッチ上のポジション枠をクリックすると、その枠への適性と実効OVRを比較してワンクリックで選手交代できます。`;
+
+    const sortedBench = [...benchPlayers].sort((a, b) => {
+      const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
+      const orderB = POS_DISPLAY_ORDER[b.pos] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+    });
+
+    if (sortedBench.length === 0) {
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+    } else {
+      benchListEl.innerHTML = sortedBench.map(bp => {
+        const prefPos = bp.preferredPosition || bp.pos;
+        const baseOvr = getPlayerOverallRating(bp);
+        const hasSlotInFormation = formationDef.slots.some(sl => sl.pos === prefPos);
+        const fitTag = hasSlotInFormation
+          ? `<span class="bench-fit-tag fit-ok">本来のOVR ${baseOvr}</span>`
+          : `<span class="bench-fit-tag fit-warn">${formationDef.name}枠外 (OVR ${baseOvr})</span>`;
+
+        return `
+          <div class="bench-sub-item">
+            <div class="bench-sub-info">
+              <span class="pos-tag pos-${prefPos}">${prefPos}</span>
+              <span class="bench-sub-name">${bp.name}</span>
+            </div>
+            <div class="bench-sub-stats">
+              ${fitTag}
+              <button type="button" class="btn btn-secondary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">最適枠へ投入</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+/**
  * 自チーム登録選手一覧の描画（9ポジション順ソート、適性外20%低下、契約延長ボタン含む）
  */
 function renderRoster() {
   const playerClub = getPlayerClub();
+  renderTacticalBoard();
+
   const stats = getTeamStarterStats(playerClub);
   const payroll = getClubTotalPayroll(playerClub);
 
@@ -2829,6 +3273,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
 
   gameState.clubs = CLUB_DEFINITIONS.map(def => {
     const isPlayer = def.id === gameState.selectedClubId;
@@ -2841,6 +3286,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
       targetRank: def.targetRank,
       targetLabel: def.targetLabel,
       tactic: def.defaultTactic,
+      formation: '4-3-3',
       played: 0,
       won: 0,
       drawn: 0,
@@ -2904,6 +3350,49 @@ function initGame() {
       switchTab(btn.dataset.tab);
     });
   });
+
+  // フォーメーション選択ボタン（4-3-3 / 4-2-3-1 / 4-4-2 / 3-5-2）
+  const formationBtnGroup = document.getElementById('formation-btn-group');
+  if (formationBtnGroup) {
+    formationBtnGroup.addEventListener('click', (e) => {
+      const fBtn = e.target.closest('.btn-formation');
+      if (fBtn && fBtn.dataset.formation) {
+        setClubFormation(fBtn.dataset.formation);
+      }
+    });
+  }
+
+  // 作戦ボード（ピッチ）上のスタメン枠ノードクリック
+  const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
+  if (pitchNodesLayer) {
+    pitchNodesLayer.addEventListener('click', (e) => {
+      const nodeEl = e.target.closest('.pitch-node');
+      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
+        handlePitchNodeClick(parseInt(nodeEl.dataset.slotIndex, 10));
+      }
+    });
+  }
+
+  // 作戦ボード選択解除ボタン
+  const clearSlotBtn = document.getElementById('btn-clear-slot-select');
+  if (clearSlotBtn) {
+    clearSlotBtn.addEventListener('click', () => {
+      gameState.selectedSlotIndex = null;
+      gameState.selectedPlayerId = null;
+      renderRoster();
+    });
+  }
+
+  // 作戦ボード横の控え選手ワンクリック交代ボタン
+  const pitchBenchList = document.getElementById('pitch-bench-list');
+  if (pitchBenchList) {
+    pitchBenchList.addEventListener('click', (e) => {
+      const subBtn = e.target.closest('.btn-sub-bench');
+      if (subBtn && subBtn.dataset.subBenchId) {
+        substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
+      }
+    });
+  }
 
   document.getElementById('tactics-btn-group').addEventListener('click', (e) => {
     const tacticBtn = e.target.closest('.btn-tactic');
