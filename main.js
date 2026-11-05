@@ -704,7 +704,7 @@ function playNextMatchweek(skipAnimation = false) {
 
     // ステップ2：財務バランスの適正化
     // ホーム開催時：約2,500万〜4,500万円のチケット・グッズ売上
-    const matchIncome = Math.round((homeClub.supporters * 2.1 + randInt(-80, 80)) / 10) * 10;
+    const matchIncome = Math.round((homeClub.supporters * 0.21 + randInt(-80, 80)) / 10) * 10;
     homeClub.funds += matchIncome;
     match.homeRevenue = matchIncome;
 
