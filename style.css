@@ -85,19 +85,27 @@ body {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 2px;
-  background-color: rgba(46, 204, 113, 0.16);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-main);
+  color: var(--text-muted);
 }
 
+.finance-status-badge.status-healthy {
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.finance-status-badge.status-warning,
 .finance-status-badge.status-deficit {
   background-color: rgba(243, 156, 18, 0.18);
   color: var(--accent-gold);
   border-color: var(--accent-gold);
 }
 
+.finance-status-badge.status-danger,
 .finance-status-badge.status-gameover {
   background-color: rgba(231, 76, 60, 0.2);
   color: var(--danger-red);
@@ -247,7 +255,7 @@ body {
 
 .btn-sm {
   font-size: 11px;
-  padding: 4px 10px;
+  padding: 4px 9px;
 }
 
 .btn:disabled {
@@ -292,6 +300,42 @@ body {
 
 .btn-danger:hover:not(:disabled) {
   background-color: rgba(231, 76, 60, 0.15);
+}
+
+/* スタメン / ベンチ切り替えボタン */
+.btn-starter-toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 2px;
+  min-width: 68px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-starter-active {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.btn-starter-active:hover {
+  background-color: rgba(231, 76, 60, 0.18);
+  color: var(--danger-red);
+  border-color: var(--danger-red);
+}
+
+.btn-bench-active {
+  background-color: var(--bg-main);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.btn-bench-active:hover {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
 }
 
 /* ダッシュボード2カラムレイアウト */
@@ -419,13 +463,18 @@ body {
   text-align: center;
 }
 
+.col-status {
+  width: 82px;
+  text-align: center;
+}
+
 .col-growth {
   width: 72px;
   text-align: center;
 }
 
 .col-action {
-  width: 110px;
+  width: 96px;
   text-align: center;
 }
 
@@ -488,29 +537,6 @@ body {
   background-color: rgba(243, 156, 18, 0.14);
 }
 
-.status-pill {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 2px;
-  text-align: center;
-  min-width: 54px;
-}
-
-.status-starter {
-  background-color: rgba(46, 204, 113, 0.18);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
-}
-
-.status-bench {
-  background-color: var(--bg-main);
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
-}
-
 .growth-pill {
   display: inline-block;
   font-size: 11px;
@@ -564,11 +590,106 @@ body {
   color: var(--danger-red);
 }
 
-/* 試合結果・ログ表示 */
+/* 試合結果・速報ログ演出 */
 .match-results-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* テキスト速報ログボックス */
+.match-ticker-box {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 3px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.ticker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+}
+
+.ticker-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.ticker-live-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.ticker-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.ticker-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  animation: tickerFadeIn 0.22s ease-out forwards;
+}
+
+@keyframes tickerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ticker-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 28px;
+}
+
+.ticker-text {
+  color: var(--text-main);
+}
+
+.ticker-line.ticker-goal .ticker-text {
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.ticker-line.ticker-goal .ticker-time {
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.ticker-line.ticker-final .ticker-text {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.ticker-line.ticker-revenue .ticker-text {
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .match-card {
