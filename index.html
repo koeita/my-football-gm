@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>僕のサッカークラブ（仮） - GM Simulation Prototype</title>
+  <title>僕のサッカークラブ（仮） - European Football GM Simulation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -15,10 +15,10 @@
     <header class="status-header">
       <div class="brand-area">
         <div class="brand-top-row">
-          <span class="game-label">FOOTBALL GM SIMULATOR</span>
+          <span class="game-label">EUROPEAN FOOTBALL GM</span>
           <span class="finance-status-badge status-healthy" id="header-finance-badge">健全</span>
         </div>
-        <h1 class="club-title" id="header-club-name">FCトウキョウ</h1>
+        <h1 class="club-title" id="header-club-name">ロンドン・ユナイテッド</h1>
       </div>
 
       <div class="status-metrics">
@@ -65,7 +65,7 @@
         順位表 / 日程
       </button>
       <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster">
-        所属選手・戦術
+        所属選手・戦術・契約
         <span class="tab-badge mono" id="tab-badge-roster">16/20</span>
       </button>
       <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market">
@@ -81,14 +81,15 @@
           <h3 id="summary-headline">シーズン終了・決算報告</h3>
           <p id="summary-reward-text" class="mono"></p>
           <p id="summary-payroll-projection" class="mono"></p>
+          <p id="summary-contract-warning" class="mono text-danger"></p>
         </div>
         <div class="summary-logs-wrapper">
           <div class="summary-log-block">
-            <h4 class="summary-subhead">現役引退・離脱通知</h4>
+            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
             <div id="summary-retirement-log" class="summary-retirement-list"></div>
           </div>
           <div class="summary-log-block">
-            <h4 class="summary-subhead">選手加齢・能力変動ログ</h4>
+            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
             <div id="summary-aging-log" class="summary-details"></div>
           </div>
         </div>
@@ -101,7 +102,7 @@
         <!-- リーグ順位表パネル -->
         <div class="panel">
           <div class="panel-header">
-            <h2 class="panel-title">リーグ順位表</h2>
+            <h2 class="panel-title">欧州リーグ順位表</h2>
             <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 14</span>
           </div>
           <div class="table-wrapper">
@@ -169,14 +170,14 @@
       </section>
     </main>
 
-    <!-- タブ2：所属選手（スタメン・ベンチ・戦術・放出）画面 -->
+    <!-- タブ2：所属選手（スタメン・ベンチ・戦術・契約延長・放出）画面 -->
     <main id="view-roster" class="tab-view hidden">
       <!-- チーム戦術方針パネル -->
       <div class="panel tactics-panel-card">
         <div class="panel-header">
           <div>
             <h2 class="panel-title">クラブ戦術方針設定</h2>
-            <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：MFの能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
+            <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：中盤（DM/CM/SM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
           </div>
           <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
         </div>
@@ -184,15 +185,15 @@
           <div class="tactics-btn-group" id="tactics-btn-group">
             <button type="button" class="btn btn-tactic active" data-tactic="possession">
               <span class="tactic-name">ポゼッション（支配）</span>
-              <span class="tactic-desc">MF重視 / ロースコア傾向</span>
+              <span class="tactic-desc">中盤(DM/CM/SM/AM)重視 / ロースコア傾向</span>
             </button>
             <button type="button" class="btn btn-tactic" data-tactic="counter">
               <span class="tactic-name">カウンター（速攻）</span>
-              <span class="tactic-desc">FW・DF重視 / 勝敗波乱多</span>
+              <span class="tactic-desc">前線(WG/CF)・守備(CB/SB)重視 / 波乱多</span>
             </button>
             <button type="button" class="btn btn-tactic" data-tactic="highpress">
               <span class="tactic-name">ハイプレス（前線守備）</span>
-              <span class="tactic-desc">全能力+8% / 疲労大</span>
+              <span class="tactic-desc">全能力+8% / スタミナ消耗大</span>
             </button>
           </div>
         </div>
@@ -202,13 +203,15 @@
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">自チーム登録選手一覧（編成・契約管理）</h2>
-            <p class="panel-note">「スタメン / ベンチ」ボタンで入替可能（GK1, DF4, MF4, FW2の計11名固定） / 「自由契約（解雇）」でチームから放出し翌年以降の年俸負担を削減</p>
+            <h2 class="panel-title">自チーム登録選手一覧（9ポジション編成・契約年数管理）</h2>
+            <p class="panel-note">
+              スタメン枠：GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1（計11名）。適性外配置時は実効総合力が20%低下します。任意の2行クリックで異ポジション間でも入替可能です。
+            </p>
           </div>
           <div class="team-power-badges">
-            <span class="power-badge">攻撃合計 <strong class="mono" id="team-total-atk">0</strong></span>
-            <span class="power-badge">守備合計 <strong class="mono" id="team-total-def">0</strong></span>
-            <span class="power-badge">スタミナ平均 <strong class="mono" id="team-avg-sta">0</strong></span>
+            <span class="power-badge">実効攻撃 <strong class="mono" id="team-total-atk">0</strong></span>
+            <span class="power-badge">実効守備 <strong class="mono" id="team-total-def">0</strong></span>
+            <span class="power-badge">平均スタミナ <strong class="mono" id="team-avg-sta">0</strong></span>
             <span class="power-badge">年間総年俸 <strong class="mono accent-gold" id="roster-total-payroll">0万円</strong></span>
           </div>
         </div>
@@ -216,20 +219,22 @@
           <table class="data-table roster-table">
             <thead>
               <tr>
-                <th class="col-status">編成</th>
-                <th class="col-pos">POS</th>
+                <th class="col-status">起用</th>
+                <th class="col-pos">配置枠</th>
+                <th class="col-pos">適性</th>
                 <th class="col-name">選手名</th>
                 <th class="col-num">年齢</th>
-                <th class="col-num">総合力</th>
-                <th class="col-growth">成長型</th>
+                <th class="col-num">実効総合</th>
+                <th class="col-growth">成長曲線</th>
                 <th class="col-num">出場</th>
                 <th class="col-num">得点</th>
                 <th class="col-num">評価</th>
                 <th class="col-num">攻撃</th>
                 <th class="col-num">守備</th>
                 <th class="col-num">スタミナ</th>
+                <th class="col-num">契約残</th>
                 <th class="col-num">年俸</th>
-                <th class="col-action">契約管理</th>
+                <th class="col-action">契約・放出</th>
               </tr>
             </thead>
             <tbody id="roster-tbody">
@@ -245,8 +250,8 @@
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">移籍市場（FA・移籍候補リスト）</h2>
-            <p class="panel-note" id="market-status-note">オフシーズン中に所持金の範囲内で選手を獲得できます（所属上限：最大20名）</p>
+            <h2 class="panel-title">欧州移籍市場（獲得可能選手リスト）</h2>
+            <p class="panel-note" id="market-status-note">契約残り1年の選手は移籍金が格安（約50%OFF）で獲得可能です（所属上限：最大20名）</p>
           </div>
           <div class="team-power-badges" id="market-pos-summary">
             <!-- ポジション別所属人数サマリー -->
@@ -256,15 +261,16 @@
           <table class="data-table market-table">
             <thead>
               <tr>
-                <th class="col-pos">POS</th>
+                <th class="col-pos">適性POS</th>
                 <th class="col-name">選手名</th>
                 <th class="col-num">年齢</th>
-                <th class="col-growth">成長型</th>
+                <th class="col-growth">成長曲線</th>
                 <th class="col-num">攻撃</th>
                 <th class="col-num">守備</th>
                 <th class="col-num">スタミナ</th>
                 <th class="col-num">総合力</th>
-                <th class="col-num">獲得金（移籍金）</th>
+                <th class="col-num">契約残</th>
+                <th class="col-num">移籍金</th>
                 <th class="col-num">要求年俸</th>
                 <th class="col-action">補強操作</th>
               </tr>
@@ -276,6 +282,23 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- GMイベント / メガオファー モーダルダイアログ -->
+  <div id="gm-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-category mono" id="modal-category">GM EVENT</span>
+        <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description" id="modal-description"></p>
+        <div class="modal-detail-box mono" id="modal-detail-box"></div>
+      </div>
+      <div class="modal-actions" id="modal-actions">
+        <!-- JSで選択肢ボタンを生成 -->
+      </div>
+    </div>
   </div>
 
   <script src="main.js"></script>

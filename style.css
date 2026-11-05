@@ -41,7 +41,7 @@ body {
 }
 
 .app-container {
-  max-width: 1380px;
+  max-width: 1420px;
   margin: 0 auto;
   padding: 16px 20px 36px;
 }
@@ -157,6 +157,10 @@ body {
   color: var(--danger-red);
 }
 
+.text-muted {
+  color: var(--text-muted);
+}
+
 /* 赤字経営・ゲームオーバー警告バー */
 .financial-alert-banner {
   background-color: var(--bg-panel);
@@ -255,7 +259,7 @@ body {
 
 .btn-sm {
   font-size: 11px;
-  padding: 4px 9px;
+  padding: 4px 8px;
 }
 
 .btn:disabled {
@@ -309,7 +313,7 @@ body {
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 2px;
-  min-width: 68px;
+  min-width: 66px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -509,7 +513,7 @@ body {
 
 .data-table th,
 .data-table td {
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -530,13 +534,17 @@ body {
 }
 
 .col-rank {
-  width: 48px;
+  width: 46px;
   text-align: center;
 }
 
 .col-status {
-  width: 82px;
+  width: 76px;
   text-align: center;
+}
+
+.col-pos {
+  white-space: nowrap;
 }
 
 .col-growth {
@@ -545,8 +553,9 @@ body {
 }
 
 .col-action {
-  width: 108px;
-  text-align: center;
+  width: 150px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .col-num,
@@ -608,6 +617,7 @@ body {
   background-color: rgba(243, 156, 18, 0.14);
 }
 
+/* 成長曲線ピル */
 .growth-pill {
   display: inline-block;
   font-size: 11px;
@@ -624,6 +634,7 @@ body {
   color: var(--accent-gold);
 }
 
+.growth-standard,
 .growth-normal {
   border-color: var(--border-color);
   color: var(--text-main);
@@ -634,18 +645,89 @@ body {
   color: var(--accent-green);
 }
 
+.growth-fragile {
+  border-color: var(--danger-red);
+  color: var(--danger-red);
+}
+
+/* 9ポジションタグ */
 .pos-tag {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   display: inline-block;
-  width: 28px;
+  min-width: 28px;
 }
 
 .pos-GK { color: var(--accent-gold); }
-.pos-DF { color: var(--text-main); }
-.pos-MF { color: var(--accent-green); }
-.pos-FW { color: var(--accent-gold); }
+.pos-CB, .pos-SB { color: var(--text-main); }
+.pos-DM, .pos-CM, .pos-SM, .pos-AM { color: var(--accent-green); }
+.pos-WG, .pos-CF { color: var(--accent-gold); }
+
+/* 配置枠セレクトボックス */
+.slot-select {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.slot-select.slot-mismatch {
+  border-color: var(--danger-red);
+  color: var(--danger-red);
+}
+
+/* 適性外・負傷・格安バッジ */
+.sub-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.badge-penalty {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--danger-red);
+  border: 1px solid var(--danger-red);
+}
+
+.badge-injury {
+  background-color: rgba(231, 76, 60, 0.25);
+  color: var(--danger-red);
+  border: 1px solid var(--danger-red);
+}
+
+.badge-bargain {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.contract-expiring {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.contract-expired {
+  color: var(--danger-red);
+  font-weight: 700;
+}
+
+.action-btn-group {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+}
 
 .stat-diff {
   font-family: var(--font-mono);
@@ -891,4 +973,76 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 4px 12px;
+}
+
+/* モーダルダイアログ（メガオファー・GMイベント） */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 17, 19, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-gold);
+  border-radius: 4px;
+  width: 100%;
+  max-width: 540px;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-category {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.modal-body {
+  padding: 16px 18px;
+}
+
+.modal-description {
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.modal-detail-box {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--accent-green);
+  line-height: 1.6;
+}
+
+.modal-actions {
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
