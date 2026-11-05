@@ -1,0 +1,491 @@
+:root {
+  --bg-main: #1a1d20;
+  --bg-panel: #24282c;
+  --bg-row-hover: #2d3238;
+  --bg-row-player: rgba(46, 204, 113, 0.12);
+  --border-color: #3a3f45;
+  --text-main: #f0f2f5;
+  --text-muted: #9aa2ac;
+  --accent-green: #2ecc71;
+  --accent-green-dark: #25a25a;
+  --accent-gold: #f39c12;
+  --accent-gold-dark: #d68910;
+  --danger-red: #e74c3c;
+  --font-sans: 'M PLUS Rounded 1c', sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 16px 20px 32px;
+}
+
+/* 上部ステータスヘッダー */
+.status-header {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-green);
+  border-radius: 4px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.club-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.status-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+}
+
+.metric-box {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--border-color);
+  padding-left: 12px;
+}
+
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.accent-gold {
+  color: var(--accent-gold);
+}
+
+.accent-green {
+  color: var(--accent-green);
+}
+
+/* アクションボタン */
+.action-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--accent-green);
+  color: #111417;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--accent-green-dark);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--bg-row-hover);
+  border-color: var(--text-muted);
+}
+
+.btn-accent {
+  background-color: var(--accent-gold);
+  color: #111417;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background-color: var(--accent-gold-dark);
+}
+
+/* ダッシュボード2カラムレイアウト */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column-main,
+.column-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* パネル共通 */
+.panel {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.panel-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.panel-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.panel-body {
+  padding: 14px 16px;
+}
+
+/* チーム総合力バッジ */
+.team-power-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.power-badge {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.power-badge strong {
+  color: var(--accent-green);
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+/* データテーブル */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table thead th {
+  background-color: #1e2226;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--bg-row-hover);
+}
+
+.col-rank {
+  width: 48px;
+  text-align: center;
+}
+
+.col-num,
+.col-pts {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.col-pts {
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+/* 自チーム行の強調 */
+.row-player-club {
+  background-color: var(--bg-row-player);
+}
+
+.row-player-club td.col-team {
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.rank-badge {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+}
+
+.rank-1 {
+  background-color: var(--accent-gold);
+  color: #111417;
+  border-color: var(--accent-gold);
+}
+
+/* 選手一覧テーブル固有 */
+.roster-table tbody tr {
+  cursor: pointer;
+}
+
+.roster-table tbody tr.row-bench {
+  color: var(--text-muted);
+  background-color: #1f2327;
+}
+
+.roster-table tbody tr.row-selected {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: -2px;
+  background-color: rgba(243, 156, 18, 0.14);
+}
+
+.status-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-align: center;
+  min-width: 54px;
+}
+
+.status-starter {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.status-bench {
+  background-color: var(--bg-main);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.pos-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+  width: 28px;
+}
+
+.pos-GK { color: var(--accent-gold); }
+.pos-DF { color: var(--text-main); }
+.pos-MF { color: var(--accent-green); }
+.pos-FW { color: var(--accent-gold); }
+
+.stat-diff {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-left: 3px;
+}
+
+.diff-up {
+  color: var(--accent-green);
+}
+
+.diff-down {
+  color: var(--danger-red);
+}
+
+/* 試合結果・ログ表示 */
+.match-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-card {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 3px;
+}
+
+.match-card.player-match {
+  border-left: 3px solid var(--accent-green);
+}
+
+.match-team {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.match-team.home {
+  text-align: right;
+  padding-right: 12px;
+}
+
+.match-team.away {
+  text-align: left;
+  padding-left: 12px;
+}
+
+.match-team.is-player {
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.match-score-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  padding: 3px 12px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  min-width: 76px;
+  text-align: center;
+}
+
+.empty-log-message {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* シーズン終了サマリー */
+.season-summary {
+  background-color: var(--bg-main);
+  border: 1px solid var(--accent-gold);
+  border-radius: 3px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.summary-banner h3 {
+  font-size: 14px;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+}
+
+.summary-banner p {
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.summary-details {
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 4px 12px;
+}

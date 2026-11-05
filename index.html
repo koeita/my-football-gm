@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>僕のサッカークラブ（仮） - GM Simulation Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 上部ステータスバー -->
+    <header class="status-header">
+      <div class="brand-area">
+        <span class="game-label">FOOTBALL GM SIMULATOR</span>
+        <h1 class="club-title" id="header-club-name">FCトウキョウ</h1>
+      </div>
+
+      <div class="status-metrics">
+        <div class="metric-box">
+          <span class="metric-label">SEASON</span>
+          <span class="metric-value mono" id="header-season">1年目</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">MATCHWEEK</span>
+          <span class="metric-value mono" id="header-matchweek">第1節 / 全14節</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">CLUB FUNDS</span>
+          <span class="metric-value mono accent-gold" id="header-funds">5,000万円</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">SUPPORTERS</span>
+          <span class="metric-value mono" id="header-supporters">12,000人</span>
+        </div>
+      </div>
+
+      <div class="action-controls">
+        <button type="button" class="btn btn-primary" id="btn-play-next">次節をプレイ</button>
+        <button type="button" class="btn btn-secondary" id="btn-skip-season">シーズン終了までスキップ</button>
+        <button type="button" class="btn btn-accent hidden" id="btn-next-season">次のシーズンへ</button>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ（2カラムダッシュボード） -->
+    <main class="dashboard-grid">
+      <!-- 左カラム：順位表・試合結果・シーズン決算 -->
+      <section class="column-main">
+        <!-- リーグ順位表パネル -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">リーグ順位表</h2>
+            <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 14</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table standings-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">順位</th>
+                  <th class="col-team">クラブ名</th>
+                  <th class="col-num">試合</th>
+                  <th class="col-num">勝</th>
+                  <th class="col-num">分</th>
+                  <th class="col-num">敗</th>
+                  <th class="col-num">得点</th>
+                  <th class="col-num">失点</th>
+                  <th class="col-num">得失点</th>
+                  <th class="col-pts">勝点</th>
+                </tr>
+              </thead>
+              <tbody id="standings-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 試合結果ログ / シーズン決算パネル -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title" id="log-panel-title">試合結果・進行ログ</h2>
+            <span class="panel-subtitle mono" id="log-panel-subtitle">MATCH LOG</span>
+          </div>
+          <div class="panel-body">
+            <!-- シーズン終了時の決算サマリー（通常時は非表示） -->
+            <div id="season-summary-box" class="season-summary hidden">
+              <div class="summary-banner">
+                <h3 id="summary-headline">シーズン終了・決算報告</h3>
+                <p id="summary-reward-text" class="mono"></p>
+              </div>
+              <div class="summary-details" id="summary-aging-log"></div>
+            </div>
+
+            <!-- 節ごとの試合結果リスト -->
+            <div id="match-results-container" class="match-results-container">
+              <!-- JSで描画 -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右カラム：自チーム登録選手一覧 -->
+      <section class="column-side">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">自チーム登録選手一覧</h2>
+              <p class="panel-note">同ポジションのスタメンとベンチをクリックして入れ替え可能</p>
+            </div>
+            <div class="team-power-badges">
+              <span class="power-badge">攻撃合計 <strong class="mono" id="team-total-atk">0</strong></span>
+              <span class="power-badge">守備合計 <strong class="mono" id="team-total-def">0</strong></span>
+              <span class="power-badge">スタミナ平均 <strong class="mono" id="team-avg-sta">0</strong></span>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table roster-table">
+              <thead>
+                <tr>
+                  <th class="col-status">区分</th>
+                  <th class="col-pos">POS</th>
+                  <th class="col-name">選手名</th>
+                  <th class="col-num">年齢</th>
+                  <th class="col-num">攻撃</th>
+                  <th class="col-num">守備</th>
+                  <th class="col-num">スタミナ</th>
+                </tr>
+              </thead>
+              <tbody id="roster-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
