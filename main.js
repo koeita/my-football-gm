@@ -6,8 +6,8 @@
  * 内部通貨単位：1 = £1K（1,000ポンド）。例：45000 = £45.0M、500 = £500K
  */
 
-// イングランドリーグ（プレミア相当）8クラブ定義（全クラブ選択可能）
-// 初期資金：£20.0M〜£80.0M（20000〜80000 £K）、サポーター規模、目標順位に差を設定
+// イングランドリーグ（プレミア相当）全20クラブ定義（全クラブ選択可能・全38節2回戦総当たり）
+// 初期資金：£16.0M〜£80.0M（16000〜80000 £K）、サポーター規模、目標順位に差を設定
 const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
@@ -29,8 +29,8 @@ const CLUB_DEFINITIONS = [
     basePower: 70,
     initialFunds: 72000, // £72.0M
     supporters: 22000,
-    targetRank: 2,
-    targetLabel: '2位以内',
+    targetRank: 3,
+    targetLabel: '3位以内',
     defaultTactic: 'counter'
   },
   {
@@ -39,8 +39,8 @@ const CLUB_DEFINITIONS = [
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいハイプレスを武器とする強豪',
     basePower: 71,
-    initialFunds: 64000, // £64.0M
-    supporters: 20500,
+    initialFunds: 66000, // £66.0M
+    supporters: 21000,
     targetRank: 2,
     targetLabel: '2位以内',
     defaultTactic: 'highpress'
@@ -50,9 +50,9 @@ const CLUB_DEFINITIONS = [
     name: 'ノースロンドン・A',
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
-    basePower: 69,
-    initialFunds: 56000, // £56.0M
-    supporters: 19500,
+    basePower: 70,
+    initialFunds: 60000, // £60.0M
+    supporters: 20000,
     targetRank: 3,
     targetLabel: '3位以内',
     defaultTactic: 'possession'
@@ -62,35 +62,47 @@ const CLUB_DEFINITIONS = [
     name: 'ロンドン・FC',
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
-    basePower: 67,
-    initialFunds: 48000, // £48.0M
-    supporters: 18000,
+    basePower: 68,
+    initialFunds: 55000, // £55.0M
+    supporters: 19000,
     targetRank: 4,
     targetLabel: '4位以内',
     defaultTactic: 'possession'
+  },
+  {
+    id: 'northlondon_w',
+    name: 'ノースロンドン・W',
+    tier: 'BIG CLUB',
+    desc: '最新鋭スタジアムと鋭い速攻を備える北ロンドンの白百合',
+    basePower: 68,
+    initialFunds: 50000, // £50.0M
+    supporters: 18500,
+    targetRank: 5,
+    targetLabel: '5位以内',
+    defaultTactic: 'highpress'
   },
   {
     id: 'newcastle_u',
     name: 'ニューカッスル・U',
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
-    basePower: 66,
-    initialFunds: 42000, // £42.0M
-    supporters: 17000,
-    targetRank: 4,
-    targetLabel: '4位以内',
+    basePower: 67,
+    initialFunds: 48000, // £48.0M
+    supporters: 18000,
+    targetRank: 6,
+    targetLabel: '6位以内',
     defaultTactic: 'highpress'
   },
   {
     id: 'aston_v',
     name: 'アストン・V',
     tier: 'CHALLENGER',
-    desc: '智将のもとで上位進出を狙うバーミンガムの古豪クラブ',
-    basePower: 64,
-    initialFunds: 30000, // £30.0M
-    supporters: 15000,
-    targetRank: 5,
-    targetLabel: '5位以内',
+    desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
+    basePower: 66,
+    initialFunds: 40000, // £40.0M
+    supporters: 16800,
+    targetRank: 6,
+    targetLabel: '6位以内',
     defaultTactic: 'counter'
   },
   {
@@ -98,12 +110,144 @@ const CLUB_DEFINITIONS = [
     name: 'ブライトン・G',
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
-    basePower: 62,
-    initialFunds: 20000, // £20.0M
-    supporters: 12500,
-    targetRank: 6,
-    targetLabel: '6位以内',
+    basePower: 65,
+    initialFunds: 34000, // £34.0M
+    supporters: 15000,
+    targetRank: 8,
+    targetLabel: '8位以内',
     defaultTactic: 'possession'
+  },
+  {
+    id: 'eastlondon_h',
+    name: 'イーストロンドン・H',
+    tier: 'MID TABLE',
+    desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
+    basePower: 64,
+    initialFunds: 35000, // £35.0M
+    supporters: 16500,
+    targetRank: 9,
+    targetLabel: '9位以内',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'southlondon_p',
+    name: 'サウスロンドン・P',
+    tier: 'MID TABLE',
+    desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
+    basePower: 63,
+    initialFunds: 30000, // £30.0M
+    supporters: 14500,
+    targetRank: 10,
+    targetLabel: '10位以内',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'westlondon_c',
+    name: 'ウェストロンドン・C',
+    tier: 'MID TABLE',
+    desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
+    basePower: 63,
+    initialFunds: 28000, // £28.0M
+    supporters: 14000,
+    targetRank: 12,
+    targetLabel: '12位以内',
+    defaultTactic: 'possession'
+  },
+  {
+    id: 'westlondon_b',
+    name: 'ウェストロンドン・B',
+    tier: 'MONEYBALL',
+    desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
+    basePower: 62,
+    initialFunds: 25000, // £25.0M
+    supporters: 13200,
+    targetRank: 13,
+    targetLabel: '13位以内',
+    defaultTactic: 'highpress'
+  },
+  {
+    id: 'midlands_w',
+    name: 'ミッドランズ・W',
+    tier: 'MID TABLE',
+    desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
+    basePower: 62,
+    initialFunds: 26000, // £26.0M
+    supporters: 13800,
+    targetRank: 13,
+    targetLabel: '13位以内',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'merseyside_b',
+    name: 'マージーサイド・B',
+    tier: 'TRADITIONAL',
+    desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
+    basePower: 62,
+    initialFunds: 24000, // £24.0M
+    supporters: 15200,
+    targetRank: 14,
+    targetLabel: '14位以内',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'southcoast_c',
+    name: 'サウスコースト・C',
+    tier: 'CHALLENGER',
+    desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
+    basePower: 61,
+    initialFunds: 23000, // £23.0M
+    supporters: 12500,
+    targetRank: 15,
+    targetLabel: '15位以内',
+    defaultTactic: 'highpress'
+  },
+  {
+    id: 'nottingham_r',
+    name: 'ノッティンガム・R',
+    tier: 'HISTORIC',
+    desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
+    basePower: 61,
+    initialFunds: 22000, // £22.0M
+    supporters: 13500,
+    targetRank: 16,
+    targetLabel: '16位以内',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'leicester_f',
+    name: 'レスター・F',
+    tier: 'MIRACLE',
+    desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
+    basePower: 60,
+    initialFunds: 20000, // £20.0M
+    supporters: 13200,
+    targetRank: 17,
+    targetLabel: '17位以内（残留）',
+    defaultTactic: 'counter'
+  },
+  {
+    id: 'southampton_s',
+    name: 'サウサンプトン・S',
+    tier: 'ACADEMY',
+    desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
+    basePower: 59,
+    initialFunds: 18000, // £18.0M
+    supporters: 12200,
+    targetRank: 17,
+    targetLabel: '17位以内（残留）',
+    defaultTactic: 'possession'
+  },
+  {
+    id: 'ipswich_t',
+    name: 'イプスウィッチ・T',
+    tier: 'PROMOTED',
+    desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
+    basePower: 58,
+    initialFunds: 16000, // £16.0M
+    supporters: 11500,
+    targetRank: 17,
+    targetLabel: '17位以内（残留）',
+    defaultTactic: 'highpress'
   }
 ];
 
@@ -173,8 +317,13 @@ const SQUAD_COMPOSITION = [
 // 所属選手の上限枠
 const MAX_SQUAD_SIZE = 20;
 
-// プレミア順位賞金テーブル（単位：£1K -> 1位 £18.0M 〜 8位 £4.0M）
-const PRIZE_MONEY_TABLE = [18000, 14000, 11000, 9000, 7500, 6000, 5000, 4000];
+// プレミア順位賞金テーブル（全20位、単位：£1K -> 1位 £25.0M 〜 20位 £2.0M）
+const PRIZE_MONEY_TABLE = [
+  25000, 21000, 18000, 16000, 14000,
+  12500, 11000, 10000, 9000, 8200,
+  7500, 6800, 6200, 5600, 5000,
+  4500, 4000, 3200, 2600, 2000
+];
 
 // 4つの成長曲線（growthCurve）定義
 const GROWTH_CURVES = [
@@ -228,7 +377,7 @@ const gameState = {
   hasStartedOnce: false,
   season: 1,
   currentWeek: 0,
-  totalWeeks: 14,
+  totalWeeks: 38,
   isSeasonOver: false,
   isGameOver: false,
   isSimulating: false,
@@ -415,16 +564,18 @@ function calculateTransferFee(player) {
  */
 function generateUniqueName(usedNames) {
   let fullName = '';
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 120; i++) {
     const init = FIRST_INITIALS[randInt(0, FIRST_INITIALS.length - 1)];
     const surname = EUROPEAN_SURNAMES[randInt(0, EUROPEAN_SURNAMES.length - 1)];
     fullName = `${init} ${surname}`;
     if (!usedNames || !usedNames.has(fullName)) {
       if (usedNames) usedNames.add(fullName);
-      break;
+      return fullName;
     }
   }
-  return fullName;
+  const fallback = `${fullName} ${randInt(2, 99)}`;
+  if (usedNames) usedNames.add(fallback);
+  return fallback;
 }
 
 /**
@@ -919,11 +1070,11 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   assignRatings(homeStarters, homeScore, awayScore, isHomeWin, isDraw);
   assignRatings(awayStarters, awayScore, homeScore, isAwayWin, isDraw);
 
-  // ハイプレス選択時はスタメンのスタミナが1ずつ微減（疲労蓄積）
-  if (homeClub.tactic === 'highpress' && Math.random() < 0.45) {
+  // ハイプレス選択時はスタメンのスタミナが微減（全38節に合わせ20%確率）
+  if (homeClub.tactic === 'highpress' && Math.random() < 0.20) {
     homeStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
   }
-  if (awayClub.tactic === 'highpress' && Math.random() < 0.45) {
+  if (awayClub.tactic === 'highpress' && Math.random() < 0.20) {
     awayStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
   }
 
@@ -1034,13 +1185,13 @@ function playNextMatchweek(skipAnimation = false) {
     match.awayScore = awayScore;
     match.played = true;
 
-    // ホーム開催時：サポーター規模に応じ1試合 £2.5M〜£4.7M（2500〜4700 £K）のマッチデイ収入
-    const matchIncome = Math.round((homeClub.supporters * 0.21 + randInt(-80, 80)) / 10) * 10;
+    // ホーム開催時（全19試合）：サポーター規模に応じ1試合 £900K〜£2.2M（900〜2200 £K）のマッチデイ収入
+    const matchIncome = Math.round((homeClub.supporters * 0.092 + randInt(-40, 40)) / 10) * 10;
     homeClub.funds += matchIncome;
     match.homeRevenue = matchIncome;
 
-    // アウェイ戦：プレミア放映権料分配金 £500K（500 £K）
-    const awayBroadcastingFee = 500;
+    // アウェイ戦（全19試合）：プレミア放映権料分配金 £250K（250 £K）
+    const awayBroadcastingFee = 250;
     awayClub.funds += awayBroadcastingFee;
     match.awayRevenue = awayBroadcastingFee;
 
@@ -1188,16 +1339,16 @@ function skipToSeasonEnd() {
  * 試合後のランダムGMイベントおよび欧州メガクラブ強奪オファー判定
  */
 function checkPostMatchEvents() {
-  // 第7節（冬の移籍ウインドウ）は高確率で欧州メガクラブからの強奪オファーが発生
-  if (gameState.currentWeek === 7) {
+  // 第19節（前半戦終了・冬の移籍ウインドウ）は高確率で欧州メガクラブからの強奪オファーが発生
+  if (gameState.currentWeek === Math.floor(gameState.totalWeeks / 2)) {
     if (Math.random() < 0.75) {
       triggerMegaOfferEvent();
       return;
     }
   }
 
-  // 通常節は38%の確率でランダムGMイベントが発生
-  if (Math.random() < 0.38) {
+  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生
+  if (Math.random() < 0.18) {
     const roll = Math.random();
     if (roll < 0.36) {
       triggerInjuryEvent();
@@ -1376,7 +1527,7 @@ function triggerSupporterPetitionEvent() {
     category: 'SUPPORTERS UNION PETITION',
     title: 'サポーター連合によるスタジアム設備拡張嘆願',
     description: `熱狂的なサポーター連合から、ホームスタジアムの観客席改修およびホスピタリティ拡充を求める要望書が提出されました。投資を行えばサポーター数が大幅に増加し、今後のホーム戦チケット収入が向上します。`,
-    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +1,300人増加（ホーム開催時のマッチデイ収入が毎試合約 +£270K 増加）`,
+    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +1,300人増加（ホーム19試合のマッチデイ収入が毎試合約 +£120K 増加）`,
     actions: [
       {
         label: `設備投資を実施する（-${formatMoney(investCost)} / サポーター +1,300人）`,

@@ -1031,7 +1031,7 @@ body {
 }
 
 .intro-modal-card {
-  max-width: 880px;
+  max-width: 1080px;
   border-top-color: var(--accent-green);
 }
 
@@ -1158,6 +1158,9 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 @media (max-width: 840px) {
