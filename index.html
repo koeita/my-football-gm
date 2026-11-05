@@ -65,7 +65,7 @@
         順位表 / 日程
       </button>
       <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster">
-        所属選手（スタメン・ベンチ・放出）
+        所属選手・戦術
         <span class="tab-badge mono" id="tab-badge-roster">16/20</span>
       </button>
       <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market">
@@ -98,6 +98,7 @@
     <!-- タブ1：順位表 / 日程画面 -->
     <main id="view-standings" class="tab-view dashboard-grid">
       <section class="column-main">
+        <!-- リーグ順位表パネル -->
         <div class="panel">
           <div class="panel-header">
             <h2 class="panel-title">リーグ順位表</h2>
@@ -125,6 +126,32 @@
             </table>
           </div>
         </div>
+
+        <!-- リーグ得点ランキング（TOP 5） -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">リーグ得点ランキング</h2>
+            <span class="panel-subtitle mono">TOP 5 SCORERS</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table top-scorers-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">順位</th>
+                  <th class="col-pos">POS</th>
+                  <th class="col-name">選手名</th>
+                  <th class="col-team">所属クラブ</th>
+                  <th class="col-num">出場</th>
+                  <th class="col-num">ゴール</th>
+                  <th class="col-num">平均評価</th>
+                </tr>
+              </thead>
+              <tbody id="top-scorers-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <section class="column-side">
@@ -142,13 +169,41 @@
       </section>
     </main>
 
-    <!-- タブ2：所属選手（スタメン・ベンチ・放出）画面 -->
+    <!-- タブ2：所属選手（スタメン・ベンチ・戦術・放出）画面 -->
     <main id="view-roster" class="tab-view hidden">
+      <!-- チーム戦術方針パネル -->
+      <div class="panel tactics-panel-card">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">クラブ戦術方針設定</h2>
+            <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：MFの能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
+          </div>
+          <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
+        </div>
+        <div class="panel-body">
+          <div class="tactics-btn-group" id="tactics-btn-group">
+            <button type="button" class="btn btn-tactic active" data-tactic="possession">
+              <span class="tactic-name">ポゼッション（支配）</span>
+              <span class="tactic-desc">MF重視 / ロースコア傾向</span>
+            </button>
+            <button type="button" class="btn btn-tactic" data-tactic="counter">
+              <span class="tactic-name">カウンター（速攻）</span>
+              <span class="tactic-desc">FW・DF重視 / 勝敗波乱多</span>
+            </button>
+            <button type="button" class="btn btn-tactic" data-tactic="highpress">
+              <span class="tactic-name">ハイプレス（前線守備）</span>
+              <span class="tactic-desc">全能力+8% / 疲労大</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 選手一覧パネル -->
       <div class="panel">
         <div class="panel-header">
           <div>
             <h2 class="panel-title">自チーム登録選手一覧（編成・契約管理）</h2>
-            <p class="panel-note">「スタメン / ベンチ」ボタンで入替可能（GK1, DF4, MF4, FW2の計11名固定） / 「契約解除」でチームから放出し翌年以降の年俸負担を削減</p>
+            <p class="panel-note">「スタメン / ベンチ」ボタンで入替可能（GK1, DF4, MF4, FW2の計11名固定） / 「自由契約（解雇）」でチームから放出し翌年以降の年俸負担を削減</p>
           </div>
           <div class="team-power-badges">
             <span class="power-badge">攻撃合計 <strong class="mono" id="team-total-atk">0</strong></span>
@@ -167,11 +222,14 @@
                 <th class="col-num">年齢</th>
                 <th class="col-num">総合力</th>
                 <th class="col-growth">成長型</th>
+                <th class="col-num">出場</th>
+                <th class="col-num">得点</th>
+                <th class="col-num">評価</th>
                 <th class="col-num">攻撃</th>
                 <th class="col-num">守備</th>
                 <th class="col-num">スタミナ</th>
                 <th class="col-num">年俸</th>
-                <th class="col-action">契約解除</th>
+                <th class="col-action">契約管理</th>
               </tr>
             </thead>
             <tbody id="roster-tbody">
