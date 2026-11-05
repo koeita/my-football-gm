@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>僕のサッカークラブ（仮） - European Football GM Simulation</title>
+  <title>僕のサッカークラブ（仮） - English Premier GM Simulation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -15,10 +15,14 @@
     <header class="status-header">
       <div class="brand-area">
         <div class="brand-top-row">
-          <span class="game-label">EUROPEAN FOOTBALL GM</span>
+          <span class="game-label">ENGLAND PREMIER DIVISION</span>
           <span class="finance-status-badge status-healthy" id="header-finance-badge">健全</span>
+          <span class="target-rank-badge mono" id="header-target-rank">目標：4位以内</span>
         </div>
-        <h1 class="club-title" id="header-club-name">ロンドン・ユナイテッド</h1>
+        <div class="club-title-row">
+          <h1 class="club-title" id="header-club-name">ロンドン・FC</h1>
+          <span class="gm-badge">GM: <strong id="header-gm-name">A. ファーガソン</strong></span>
+        </div>
       </div>
 
       <div class="status-metrics">
@@ -32,11 +36,11 @@
         </div>
         <div class="metric-box">
           <span class="metric-label">CLUB FUNDS</span>
-          <span class="metric-value mono accent-gold" id="header-funds">3億5,000万円</span>
+          <span class="metric-value mono accent-gold" id="header-funds">£45.0M</span>
         </div>
         <div class="metric-box">
           <span class="metric-label">ANNUAL PAYROLL</span>
-          <span class="metric-value mono" id="header-payroll">0万円</span>
+          <span class="metric-value mono" id="header-payroll">£0</span>
         </div>
         <div class="metric-box">
           <span class="metric-label">SQUAD SIZE</span>
@@ -44,7 +48,7 @@
         </div>
         <div class="metric-box">
           <span class="metric-label">SUPPORTERS</span>
-          <span class="metric-value mono" id="header-supporters">15,000人</span>
+          <span class="metric-value mono" id="header-supporters">18,000人</span>
         </div>
       </div>
 
@@ -53,6 +57,7 @@
         <button type="button" class="btn btn-secondary" id="btn-skip-season">シーズン終了までスキップ</button>
         <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
         <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-open-intro" title="GM名・担当クラブを選び直して新規ゲームを開始">はじめから</button>
       </div>
     </header>
 
@@ -102,7 +107,7 @@
         <!-- リーグ順位表パネル -->
         <div class="panel">
           <div class="panel-header">
-            <h2 class="panel-title">欧州リーグ順位表</h2>
+            <h2 class="panel-title">イングランド・プレミアディビジョン順位表</h2>
             <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 14</span>
           </div>
           <div class="table-wrapper">
@@ -212,7 +217,7 @@
             <span class="power-badge">実効攻撃 <strong class="mono" id="team-total-atk">0</strong></span>
             <span class="power-badge">実効守備 <strong class="mono" id="team-total-def">0</strong></span>
             <span class="power-badge">平均スタミナ <strong class="mono" id="team-avg-sta">0</strong></span>
-            <span class="power-badge">年間総年俸 <strong class="mono accent-gold" id="roster-total-payroll">0万円</strong></span>
+            <span class="power-badge">年間総年俸 <strong class="mono accent-gold" id="roster-total-payroll">£0</strong></span>
           </div>
         </div>
         <div class="table-wrapper">
@@ -282,6 +287,40 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- ゲーム開始時：GM就任・クラブ選択モーダル -->
+  <div id="intro-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
+    <div class="modal-card intro-modal-card">
+      <div class="modal-header">
+        <span class="modal-category mono">INAUGURATION / PREMIER DIVISION GM APPOINTMENT</span>
+        <h2 class="modal-title" id="intro-modal-title">ゼネラルマネージャー（GM）就任契約</h2>
+      </div>
+      <div class="modal-body">
+        <p class="intro-story-text">
+          欧州サッカー界へようこそ。あなたは新任ゼネラルマネージャー（GM）として、名門または新興クラブの全権を託されました。戦術方針、9ポジション編成、複数年契約交渉、そしてポンド（£）経済が動く移籍市場を制し、クラブを栄光へ導いてください。
+        </p>
+
+        <div class="intro-form-section">
+          <label for="input-gm-name" class="intro-form-label">GM名（プレイヤー名）を入力</label>
+          <input type="text" id="input-gm-name" class="intro-text-input" value="A. ファーガソン" maxlength="24" placeholder="例：A. ファーガソン / K. プレイヤー">
+        </div>
+
+        <div class="intro-form-section">
+          <div class="intro-section-header">
+            <span class="intro-form-label">指揮を執るイングランド1部クラブを選択（全8クラブ）</span>
+            <span class="intro-mega-note mono">※西・独・伊・仏の欧州メガクラブは大陸強豪データとして内部収録</span>
+          </div>
+          <div id="intro-club-grid" class="club-select-grid">
+            <!-- JSで8クラブカードを描画 -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions intro-modal-actions">
+        <button type="button" class="btn btn-secondary hidden" id="btn-cancel-intro">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-intro">GMに就任してシーズンを開幕する</button>
+      </div>
+    </div>
   </div>
 
   <!-- GMイベント / メガオファー モーダルダイアログ -->

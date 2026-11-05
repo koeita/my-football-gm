@@ -64,13 +64,14 @@ body {
 .brand-area {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .brand-top-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .game-label {
@@ -112,10 +113,41 @@ body {
   border-color: var(--danger-red);
 }
 
+.target-rank-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--accent-gold);
+  background-color: rgba(243, 156, 18, 0.14);
+  color: var(--accent-gold);
+}
+
+.club-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .club-title {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-main);
+}
+
+.gm-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  padding: 1px 8px;
+  border-radius: 2px;
+}
+
+.gm-badge strong {
+  color: var(--text-main);
+  font-weight: 700;
 }
 
 .status-metrics {
@@ -975,16 +1007,17 @@ body {
   gap: 4px 12px;
 }
 
-/* モーダルダイアログ（メガオファー・GMイベント） */
+/* モーダルダイアログ（GM就任・メガオファー・GMイベント） */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 17, 19, 0.82);
+  background-color: rgba(15, 17, 19, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-card {
@@ -995,6 +1028,11 @@ body {
   width: 100%;
   max-width: 540px;
   overflow: hidden;
+}
+
+.intro-modal-card {
+  max-width: 880px;
+  border-top-color: var(--accent-green);
 }
 
 .modal-header {
@@ -1009,6 +1047,10 @@ body {
   letter-spacing: 0.06em;
   display: block;
   margin-bottom: 2px;
+}
+
+.intro-modal-card .modal-category {
+  color: var(--accent-green);
 }
 
 .modal-title {
@@ -1045,4 +1087,162 @@ body {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* GM就任・クラブ選択モーダル専用スタイル */
+.intro-story-text {
+  font-size: 13px;
+  color: var(--text-main);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 3px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.intro-form-section {
+  margin-bottom: 14px;
+}
+
+.intro-form-section:last-child {
+  margin-bottom: 0;
+}
+
+.intro-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.intro-form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.intro-section-header .intro-form-label {
+  margin-bottom: 0;
+}
+
+.intro-mega-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.intro-text-input {
+  width: 100%;
+  max-width: 340px;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.intro-text-input:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.club-select-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 840px) {
+  .club-select-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .club-select-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.club-select-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  text-align: left;
+}
+
+.club-select-card:hover {
+  background-color: var(--bg-row-hover);
+  border-color: var(--text-muted);
+}
+
+.club-select-card.selected {
+  background-color: rgba(46, 204, 113, 0.12);
+  border-color: var(--accent-green);
+  outline: 1px solid var(--accent-green);
+}
+
+.club-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.club-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.club-select-card.selected .club-card-name {
+  color: var(--accent-green);
+}
+
+.club-card-tier {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.club-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.club-card-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 6px;
+  font-size: 11px;
+}
+
+.club-card-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.club-card-metric-label {
+  color: var(--text-muted);
 }
