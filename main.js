@@ -17,7 +17,7 @@ const CLUB_DEFINITIONS = [
   { id: 'hiroshima', name: 'ヒロシマ・アローズ', isPlayer: false, basePower: 66, supporters: 14900 }
 ];
 
-// 1チームのポジション構成（計16名：スタメン11名＋ベンチ5名）
+// 1チームの初期ポジション構成（計16名：スタメン11名＋ベンチ5名）
 const SQUAD_COMPOSITION = [
   { pos: 'GK', total: 2, starters: 1 },
   { pos: 'DF', total: 5, starters: 4 },
@@ -25,8 +25,26 @@ const SQUAD_COMPOSITION = [
   { pos: 'FW', total: 3, starters: 2 }
 ];
 
+// ポジションごとの必須スタメン人数
+const REQUIRED_STARTERS = {
+  GK: 1,
+  DF: 4,
+  MF: 4,
+  FW: 2
+};
+
+// 所属選手の上限枠
+const MAX_SQUAD_SIZE = 20;
+
 // 順位賞金テーブル（単位：万円）
 const PRIZE_MONEY_TABLE = [3000, 2000, 1500, 1200, 1000, 800, 600, 500];
+
+// 成長タイプ定義
+const GROWTH_TYPES = [
+  { id: 'early', label: '早熟' },
+  { id: 'normal', label: '普通' },
+  { id: 'late', label: '晩成' }
+];
 
 // 架空選手名生成用リスト
 const LAST_NAMES = [
@@ -47,7 +65,7 @@ const FIRST_NAMES = [
   '直樹', '和也', '達也', '裕太', '亮', '誠', '剛', '翼', '駿', '颯太',
   '海斗', '陸', '優斗', '健司', '智也', '浩二', '哲也', '龍之介', '慎吾', '康平',
   '将太', '隆', '涼太', '大樹', '洸平', '一樹', '慶太', '颯', '航平', '昂平',
-  '圭介', '真司', '篤人', '長友', '本田', '香川', '遠藤', '岡崎', '川島', '吉田'
+  '圭介', '真司', '篤人', '佑都', '憲剛', '俊輔', '保仁', '慎三', '栄嗣', '麻也'
 ];
 
 // ゲーム全体の状態管理
@@ -56,9 +74,14 @@ const gameState = {
   currentWeek: 0, // 0 = 開幕前、1〜14 = 各節終了時点
   totalWeeks: 14,
   isSeasonOver: false,
+  isGameOver: false,
+  consecutiveDeficitSeasons: 0,
+  activeTab: 'standings', // 'standings' | 'roster' | 'market'
   clubs: [],
-  schedule: [], // 長さ14の配列、各要素は4試合のペア [{homeId, awayId, homeScore, awayScore, played}]
+  schedule: [],
   lastWeekResults: [],
+  transferMarket: [], // 移籍市場候補リスト
+  lastSettlement: null, // 直近の決算情報
   selectedPlayerId: null
 };
 
@@ -79,7 +102,24 @@ function clamp(val, min, max) {
 }
 
 /**
- * ポアソン分布に従う乱数を生成（Knuthのアルゴリズム）
+ * 金額フォーマット（単位：万円 -> 「1億2,000万円」「1,500万円」「-450万円」等）
+ */
+function formatMoney(manYen) {
+  const sign = manYen < 0 ? '-' : '';
+  const absVal = Math.abs(Math.round(manYen));
+  if (absVal >= 10000) {
+    const oku = Math.floor(absVal / 10000);
+    const man = absVal % 10000;
+    if (man === 0) {
+      return `${sign}${oku}億円`;
+    }
+    return `${sign}${oku}億${man.toLocaleString()}万円`;
+  }
+  return `${sign}${absVal.toLocaleString()}万円`;
+}
+
+/**
+ * ポアソン分布に従う乱数を生成
  */
 function samplePoisson(lambda) {
   const L = Math.exp(-lambda);
@@ -93,22 +133,103 @@ function samplePoisson(lambda) {
 }
 
 /**
- * ランダムな選手1名を生成
+ * 成長タイプをランダムに決定
  */
-function createPlayer(pos, basePower, isStarter, usedNames) {
+function pickRandomGrowthType() {
+  const r = Math.random();
+  if (r < 0.28) return 'early';
+  if (r < 0.72) return 'normal';
+  return 'late';
+}
+
+function getGrowthTypeLabel(growthType) {
+  const found = GROWTH_TYPES.find(g => g.id === growthType);
+  return found ? found.label : '普通';
+}
+
+/**
+ * ポジション適性に応じた選手の総合評価値（1〜99スケール）を算出
+ */
+function getPlayerOverallRating(p) {
+  let raw;
+  if (p.pos === 'GK') {
+    raw = p.def * 0.78 + p.sta * 0.17 + p.atk * 0.05;
+  } else if (p.pos === 'DF') {
+    raw = p.def * 0.65 + p.sta * 0.23 + p.atk * 0.12;
+  } else if (p.pos === 'MF') {
+    raw = p.atk * 0.40 + p.def * 0.35 + p.sta * 0.25;
+  } else {
+    raw = p.atk * 0.68 + p.sta * 0.22 + p.def * 0.10;
+  }
+  return clamp(Math.round(raw), 1, 99);
+}
+
+/**
+ * 選手の能力値と年齢に応じた年俸（単位：万円、800万〜12,000万円）を算出
+ */
+function calculatePlayerSalary(pos, atk, def, sta, age) {
+  const ovr = getPlayerOverallRating({ pos, atk, def, sta });
+  let baseSalary;
+  if (ovr <= 58) {
+    // 58以下：800万〜1,000万円
+    baseSalary = 800 + Math.max(0, ovr - 50) * 25;
+  } else if (ovr <= 68) {
+    // 59〜68（標準主力）：1,050万〜2,000万円
+    baseSalary = 1000 + Math.pow(ovr - 58, 1.3) * 50;
+  } else if (ovr <= 80) {
+    // 69〜80（リーグ屈指の主力）：2,100万〜5,500万円
+    baseSalary = 2000 + Math.pow(ovr - 68, 1.45) * 95;
+  } else {
+    // 81〜99（スーパースター）：5,600万〜12,000万円（1億2,000万円）
+    baseSalary = 5500 + Math.pow(ovr - 80, 1.35) * 185;
+  }
+
+  // 年齢補正（全盛期26〜30歳はやや高め、20歳以下は若手契約）
+  let ageFactor = 1.0;
+  if (age <= 20) ageFactor = 0.88;
+  else if (age >= 26 && age <= 30) ageFactor = 1.05;
+  else if (age >= 33) ageFactor = 0.90;
+
+  const rounded = Math.round((baseSalary * ageFactor) / 50) * 50;
+  return clamp(rounded, 800, 12000);
+}
+
+/**
+ * 移籍市場での獲得金（移籍金：単位 万円）を算出
+ */
+function calculateTransferFee(player) {
+  const ovr = getPlayerOverallRating(player);
+  const ageBonus = player.age <= 23 ? 1.2 : (player.age >= 30 ? 0.65 : 1.0);
+  const rawFee = player.salary * 0.75 * ageBonus + Math.max(0, ovr - 60) * 35;
+  const rounded = Math.round(rawFee / 50) * 50;
+  return clamp(rounded, 400, 12000);
+}
+
+/**
+ * 重複しない選手名を生成
+ */
+function generateUniqueName(usedNames) {
   let fullName = '';
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 40; i++) {
     const ln = LAST_NAMES[randInt(0, LAST_NAMES.length - 1)];
     const fn = FIRST_NAMES[randInt(0, FIRST_NAMES.length - 1)];
     fullName = `${ln} ${fn}`;
-    if (!usedNames.has(fullName)) {
-      usedNames.add(fullName);
+    if (!usedNames || !usedNames.has(fullName)) {
+      if (usedNames) usedNames.add(fullName);
       break;
     }
   }
+  return fullName;
+}
 
-  const age = randInt(18, 35);
-  // スタメンはベンチより少し能力が高めになりやすい補正
+/**
+ * ランダムな選手1名を生成
+ */
+function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null) {
+  const fullName = generateUniqueName(usedNames);
+  const age = customAgeRange ? randInt(customAgeRange[0], customAgeRange[1]) : randInt(18, 34);
+  const growthType = pickRandomGrowthType();
+
   const starterBonus = isStarter ? randInt(1, 5) : randInt(-4, 1);
   const center = basePower + starterBonus;
 
@@ -126,11 +247,12 @@ function createPlayer(pos, basePower, isStarter, usedNames) {
     def = clamp(center + randInt(-6, 8), 1, 99);
     sta = clamp(center + 3 + randInt(-6, 8), 1, 99);
   } else {
-    // FW
     atk = clamp(center + 6 + randInt(-6, 10), 1, 99);
     def = clamp(center - 18 + randInt(-8, 8), 1, 99);
     sta = clamp(center + randInt(-8, 6), 1, 99);
   }
+
+  const salary = calculatePlayerSalary(pos, atk, def, sta, age);
 
   return {
     id: `p_${playerIdCounter++}`,
@@ -140,13 +262,16 @@ function createPlayer(pos, basePower, isStarter, usedNames) {
     atk,
     def,
     sta,
+    salary,
+    growthType,
+    isRetired: false,
     isStarter,
-    lastDiff: null // シーズン終了時の能力変動記録 { atk: 0, def: 0, sta: 0 }
+    lastDiff: null
   };
 }
 
 /**
- * 1クラブ分の選手16名を生成
+ * 1クラブ分の初期選手16名を生成
  */
 function createSquad(basePower, usedNames) {
   const players = [];
@@ -160,40 +285,104 @@ function createSquad(basePower, usedNames) {
 }
 
 /**
+ * 移籍市場候補選手（5〜8名）を生成
+ */
+function generateTransferMarket() {
+  const count = randInt(5, 8);
+  const positions = ['GK', 'DF', 'DF', 'MF', 'MF', 'FW', 'FW'];
+  const usedNames = new Set();
+  for (const club of gameState.clubs) {
+    for (const p of club.players) {
+      usedNames.add(p.name);
+    }
+  }
+
+  const candidates = [];
+  for (let i = 0; i < count; i++) {
+    const pos = i < 4 ? ['GK', 'DF', 'MF', 'FW'][i] : positions[randInt(0, positions.length - 1)];
+    // 有望な若手から即戦力スターまで幅広く登場
+    const basePower = randInt(58, 78);
+    const player = createPlayer(pos, basePower, false, usedNames, [18, 31]);
+    player.transferFee = calculateTransferFee(player);
+    candidates.push(player);
+  }
+
+  // 総合評価の高い順に並べる
+  candidates.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+  gameState.transferMarket = candidates;
+}
+
+/**
+ * クラブのスタメン枠（GK1, DF4, MF4, FW2）に欠員がないか検証・自動補完し、
+ * 万一特定ポジションの総人数が必須枠未満になった場合はユース昇格で補填する
+ */
+function ensureValidSquadAndStarters(club, promotionLogs = null) {
+  const usedNames = new Set(club.players.map(p => p.name));
+
+  for (const [pos, reqCount] of Object.entries(REQUIRED_STARTERS)) {
+    let posPlayers = club.players.filter(p => p.pos === pos && !p.isRetired);
+
+    // 必須人数に足りない場合は18歳ユース選手を緊急昇格
+    while (posPlayers.length < reqCount) {
+      const youth = createPlayer(pos, 52, true, usedNames, [18, 18]);
+      youth.salary = 800;
+      club.players.push(youth);
+      posPlayers.push(youth);
+      if (promotionLogs && club.isPlayer) {
+        promotionLogs.push(`[ユース昇格] ${pos} ${youth.name} (18歳 / 年俸800万円) がトップチームに昇格しました`);
+      }
+    }
+
+    // スタメン人数が必須数と一致するように調整
+    const currentStarters = posPlayers.filter(p => p.isStarter);
+    if (currentStarters.length < reqCount) {
+      const bench = posPlayers
+        .filter(p => !p.isStarter)
+        .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+      const needed = reqCount - currentStarters.length;
+      for (let i = 0; i < needed && i < bench.length; i++) {
+        bench[i].isStarter = true;
+      }
+    } else if (currentStarters.length > reqCount) {
+      currentStarters.forEach((p, idx) => {
+        p.isStarter = idx < reqCount;
+      });
+    }
+  }
+}
+
+/**
  * CPUクラブのスタメン11名を総合力順に自動編成
  */
 function autoSelectStarters(club) {
-  for (const group of SQUAD_COMPOSITION) {
-    const posPlayers = club.players.filter(p => p.pos === group.pos);
-    // ポジション適性に応じた評価値でソート
-    posPlayers.sort((a, b) => {
-      const scoreA = evaluatePlayerForPos(a);
-      const scoreB = evaluatePlayerForPos(b);
-      return scoreB - scoreA;
-    });
+  ensureValidSquadAndStarters(club);
+  for (const [pos, reqCount] of Object.entries(REQUIRED_STARTERS)) {
+    const posPlayers = club.players.filter(p => p.pos === pos && !p.isRetired);
+    posPlayers.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
     posPlayers.forEach((p, idx) => {
-      p.isStarter = idx < group.starters;
+      p.isStarter = idx < reqCount;
     });
   }
 }
 
-function evaluatePlayerForPos(p) {
-  if (p.pos === 'GK') return p.def * 1.8 + p.sta * 0.4;
-  if (p.pos === 'DF') return p.def * 1.5 + p.sta * 0.5 + p.atk * 0.3;
-  if (p.pos === 'MF') return p.atk * 1.0 + p.def * 1.0 + p.sta * 0.6;
-  return p.atk * 1.6 + p.sta * 0.5 + p.def * 0.2;
+/**
+ * クラブの年間総年俸（単位：万円）を計算
+ */
+function getClubTotalPayroll(club) {
+  return club.players
+    .filter(p => !p.isRetired)
+    .reduce((sum, p) => sum + p.salary, 0);
 }
 
 /**
- * 8チームの2回戦総当たり（全14節・各節4試合）のスケジュールを生成（サークル法）
+ * 8チームの2回戦総当たり（全14節・各節4試合）のスケジュールを生成
  */
 function generateSeasonSchedule(clubs) {
   const ids = clubs.map(c => c.id);
-  const n = ids.length; // 8
-  const half = n / 2;   // 4
+  const n = ids.length;
+  const half = n / 2;
   const firstHalfWeeks = [];
-
-  const rotating = ids.slice(1); // 7チーム回転、ids[0]固定
+  const rotating = ids.slice(1);
 
   for (let round = 0; round < n - 1; round++) {
     const currentList = [ids[0], ...rotating];
@@ -201,7 +390,6 @@ function generateSeasonSchedule(clubs) {
     for (let i = 0; i < half; i++) {
       const teamA = currentList[i];
       const teamB = currentList[n - 1 - i];
-      // 節ごとにホーム＆アウェイを交互に割り振る
       if ((round + i) % 2 === 0) {
         matches.push({ homeId: teamA, awayId: teamB, homeScore: null, awayScore: null, played: false });
       } else {
@@ -209,12 +397,9 @@ function generateSeasonSchedule(clubs) {
       }
     }
     firstHalfWeeks.push(matches);
-
-    // 末尾を先頭へローテーション
     rotating.unshift(rotating.pop());
   }
 
-  // 後半7節は前半7節のホーム＆アウェイを反転
   const secondHalfWeeks = firstHalfWeeks.map(weekMatches =>
     weekMatches.map(m => ({
       homeId: m.awayId,
@@ -232,7 +417,7 @@ function generateSeasonSchedule(clubs) {
  * チームのスタメン11名の合計攻撃力・合計守備力・平均スタミナを計算
  */
 function getTeamStarterStats(club) {
-  const starters = club.players.filter(p => p.isStarter);
+  const starters = club.players.filter(p => p.isStarter && !p.isRetired);
   let totalAtk = 0;
   let totalDef = 0;
   let totalSta = 0;
@@ -256,17 +441,14 @@ function simulateMatch(homeClub, awayClub) {
   const homeStats = getTeamStarterStats(homeClub);
   const awayStats = getTeamStarterStats(awayClub);
 
-  // スタミナ補正係数 (0.85 〜 1.15程度)
   const homeStaFactor = 0.85 + (homeStats.avgSta / 100) * 0.3;
   const awayStaFactor = 0.85 + (awayStats.avgSta / 100) * 0.3;
 
-  // 実効攻撃力・実効守備力（ホームアドバンテージ +4%）
   const homeEffAtk = homeStats.totalAtk * homeStaFactor * 1.04;
   const homeEffDef = homeStats.totalDef * homeStaFactor * 1.04;
   const awayEffAtk = awayStats.totalAtk * awayStaFactor;
   const awayEffDef = awayStats.totalDef * awayStaFactor;
 
-  // 期待得点（lambda）の算出：基準1.35点 × (攻撃力 / 相手守備力)
   const rawHomeLambda = 1.38 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
   const rawAwayLambda = 1.22 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
 
@@ -283,7 +465,7 @@ function simulateMatch(homeClub, awayClub) {
  * 1節分（4試合）を進行する
  */
 function playNextMatchweek() {
-  if (gameState.isSeasonOver || gameState.currentWeek >= gameState.totalWeeks) {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.currentWeek >= gameState.totalWeeks) {
     return;
   }
 
@@ -300,7 +482,6 @@ function playNextMatchweek() {
     match.awayScore = awayScore;
     match.played = true;
 
-    // 成績反映
     homeClub.played += 1;
     awayClub.played += 1;
     homeClub.gf += homeScore;
@@ -315,21 +496,21 @@ function playNextMatchweek() {
       homeClub.won += 1;
       homeClub.pts += 3;
       awayClub.lost += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(80, 220));
-      awayClub.supporters = Math.max(5000, awayClub.supporters - randInt(20, 90));
+      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(90, 240));
+      awayClub.supporters = Math.max(5000, awayClub.supporters - randInt(20, 80));
     } else if (homeScore < awayScore) {
       awayClub.won += 1;
       awayClub.pts += 3;
       homeClub.lost += 1;
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(80, 220));
-      homeClub.supporters = Math.max(5000, homeClub.supporters - randInt(20, 90));
+      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(90, 240));
+      homeClub.supporters = Math.max(5000, homeClub.supporters - randInt(20, 80));
     } else {
       homeClub.drawn += 1;
       awayClub.drawn += 1;
       homeClub.pts += 1;
       awayClub.pts += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(-20, 60));
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-20, 60));
+      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(-10, 60));
+      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-10, 60));
     }
 
     results.push({
@@ -344,7 +525,7 @@ function playNextMatchweek() {
   gameState.currentWeek += 1;
   gameState.lastWeekResults = results;
 
-  // 最終節（第14節）終了時は自動的にシーズン終了・決算処理を実行
+  // 全14節終了時はオフシーズン（決算・成長・引退・移籍市場）へ遷移
   if (gameState.currentWeek === gameState.totalWeeks) {
     processSeasonEnd();
   }
@@ -356,60 +537,146 @@ function playNextMatchweek() {
  * シーズン終了まで残り全節を一気にスキップ
  */
 function skipToSeasonEnd() {
+  if (gameState.isGameOver || gameState.isSeasonOver) return;
   while (!gameState.isSeasonOver && gameState.currentWeek < gameState.totalWeeks) {
     playNextMatchweek();
   }
 }
 
 /**
- * シーズン終了と決算処理（賞金支給、加齢、能力成長・衰退）
+ * 年齢と成長タイプに応じた能力変動値を算出
+ * - 若手（〜23歳）：能力が大幅にアップしやすい
+ * - 中堅（24〜29歳）：微増または維持
+ * - ベテラン（30歳〜）：スタミナやフィジカルを中心に能力が低下
+ */
+function computeStatGrowth(player) {
+  const age = player.age;
+  const gt = player.growthType; // 'early' | 'normal' | 'late'
+
+  let atkRange, defRange, staRange;
+
+  if (age <= 23) {
+    // 若手（〜23歳）
+    if (gt === 'early') {
+      atkRange = [1, 5];
+      defRange = [1, 5];
+      staRange = [1, 5];
+    } else if (gt === 'normal') {
+      atkRange = [0, 4];
+      defRange = [0, 4];
+      staRange = [0, 4];
+    } else {
+      // late
+      atkRange = [0, 3];
+      defRange = [0, 3];
+      staRange = [0, 3];
+    }
+  } else if (age <= 29) {
+    // 中堅（24〜29歳）
+    if (gt === 'early') {
+      atkRange = age >= 27 ? [-2, 1] : [-1, 2];
+      defRange = age >= 27 ? [-2, 1] : [-1, 2];
+      staRange = age >= 27 ? [-3, 0] : [-1, 1];
+    } else if (gt === 'normal') {
+      atkRange = [-1, 2];
+      defRange = [-1, 2];
+      staRange = [-1, 2];
+    } else {
+      // late（晩成は中堅期に大きく伸びる）
+      atkRange = [1, 4];
+      defRange = [1, 4];
+      staRange = [0, 3];
+    }
+  } else {
+    // ベテラン（30歳〜）：スタミナやフィジカルを中心に低下
+    if (gt === 'late') {
+      atkRange = [-2, 1];
+      defRange = [-2, 1];
+      staRange = [-3, 0];
+    } else if (gt === 'normal') {
+      atkRange = [-3, 0];
+      defRange = [-3, 0];
+      staRange = [-5, -1];
+    } else {
+      // early
+      atkRange = [-4, -1];
+      defRange = [-4, -1];
+      staRange = [-6, -2];
+    }
+  }
+
+  return {
+    dAtk: randInt(atkRange[0], atkRange[1]),
+    dDef: randInt(defRange[0], defRange[1]),
+    dSta: randInt(staRange[0], staRange[1])
+  };
+}
+
+/**
+ * 33歳以上の選手の現役引退判定
+ */
+function shouldPlayerRetire(player) {
+  if (player.age < 33) return false;
+  let baseProb = 0.25;
+  if (player.age === 34) baseProb = 0.40;
+  else if (player.age === 35) baseProb = 0.60;
+  else if (player.age >= 36) baseProb = 0.82;
+
+  if (player.growthType === 'late') baseProb -= 0.12;
+  if (player.growthType === 'early') baseProb += 0.10;
+
+  return Math.random() < baseProb;
+}
+
+/**
+ * シーズン終了時の処理（収入加算・加齢・成長・引退・移籍市場オープン）
  */
 function processSeasonEnd() {
   gameState.isSeasonOver = true;
+  gameState.selectedPlayerId = null;
 
   const sortedClubs = getSortedStandings();
   const playerRankIndex = sortedClubs.findIndex(c => c.isPlayer);
   const playerRank = playerRankIndex + 1;
   const playerClub = sortedClubs[playerRankIndex];
 
-  // 全クラブに順位に応じた賞金を支給
+  // 1. 全クラブに順位賞金 ＋ サポーター規模に応じた年間入場料/スポンサー料を加算
+  let playerPrize = 0;
+  let playerSponsorIncome = 0;
+
   sortedClubs.forEach((club, idx) => {
     const prize = PRIZE_MONEY_TABLE[idx] || 500;
-    club.funds += prize;
+    // サポーター規模に応じた年間入場料・スポンサー放映権料（例: 15,000人で約2億250万円）
+    const sponsorIncome = Math.round((club.supporters * 1.35) / 50) * 50;
+    club.funds += prize + sponsorIncome;
+
+    if (club.isPlayer) {
+      playerPrize = prize;
+      playerSponsorIncome = sponsorIncome;
+    }
   });
 
-  const playerPrize = PRIZE_MONEY_TABLE[playerRankIndex] || 500;
-
-  // 全クラブの全選手の年齢+1 ＆ 年齢帯に応じた能力変動
+  // 2. 全選手の年齢+1、成長・衰退、および33歳以上の引退判定
   const playerAgingLogs = [];
+  const playerRetirementLogs = [];
 
   for (const club of gameState.clubs) {
     for (const p of club.players) {
       p.age += 1;
 
-      let minDelta, maxDelta;
-      if (p.age <= 23) {
-        // 若手：大きく成長
-        minDelta = 0;
-        maxDelta = 4;
-      } else if (p.age <= 27) {
-        // 中堅：緩やかに成長・維持
-        minDelta = -1;
-        maxDelta = 2;
-      } else if (p.age <= 30) {
-        // ベテラン入り口：維持〜微減
-        minDelta = -2;
-        maxDelta = 1;
-      } else {
-        // ベテラン：衰退
-        minDelta = -4;
-        maxDelta = 0;
+      // 33歳以上の引退判定
+      if (shouldPlayerRetire(p)) {
+        p.isRetired = true;
+        p.isStarter = false;
+        if (club.isPlayer) {
+          playerRetirementLogs.push(
+            `[現役引退] ${p.pos} ${p.name} (${p.age}歳 / ${getGrowthTypeLabel(p.growthType)}) が今シーズン限りで現役を引退しました`
+          );
+        }
+        continue;
       }
 
-      const dAtk = randInt(minDelta, maxDelta);
-      const dDef = randInt(minDelta, maxDelta);
-      const dSta = randInt(minDelta, maxDelta);
-
+      const { dAtk, dDef, dSta } = computeStatGrowth(p);
       const oldAtk = p.atk;
       const oldDef = p.def;
       const oldSta = p.sta;
@@ -424,6 +691,9 @@ function processSeasonEnd() {
         sta: p.sta - oldSta
       };
 
+      // 能力変化に応じて更改年俸も微調整
+      p.salary = calculatePlayerSalary(p.pos, p.atk, p.def, p.sta, p.age);
+
       if (club.isPlayer) {
         const totalDiff = p.lastDiff.atk + p.lastDiff.def + p.lastDiff.sta;
         const sign = totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`;
@@ -431,48 +701,132 @@ function processSeasonEnd() {
           name: p.name,
           pos: p.pos,
           age: p.age,
+          growthLabel: getGrowthTypeLabel(p.growthType),
           totalDiff,
           sign
         });
       }
     }
 
-    // CPUクラブは新能力に合わせてスタメンを再編成
+    // 引退した選手をロスターから除外し、必須スタメン枠を補完
+    club.players = club.players.filter(p => !p.isRetired);
+    ensureValidSquadAndStarters(club, playerRetirementLogs);
+
     if (!club.isPlayer) {
       autoSelectStarters(club);
     }
   }
 
-  // 決算サマリー表示を更新
-  const summaryBox = document.getElementById('season-summary-box');
-  const headlineEl = document.getElementById('summary-headline');
-  const rewardEl = document.getElementById('summary-reward-text');
-  const agingLogEl = document.getElementById('summary-aging-log');
+  // 3. オフシーズンの移籍市場リスト（5〜8名）を更新
+  generateTransferMarket();
 
-  headlineEl.textContent = `${gameState.season}年目シーズン終了 — 最終順位：第${playerRank}位`;
-  rewardEl.textContent = `順位賞金 +${playerPrize.toLocaleString()}万円 を獲得しました（現在の所持資金：${playerClub.funds.toLocaleString()}万円）`;
+  // 4. 決算データを保存して表示更新
+  gameState.lastSettlement = {
+    season: gameState.season,
+    rank: playerRank,
+    prize: playerPrize,
+    sponsorIncome: playerSponsorIncome,
+    totalIncome: playerPrize + playerSponsorIncome,
+    retirementLogs: playerRetirementLogs,
+    agingLogs: playerAgingLogs
+  };
 
-  agingLogEl.innerHTML = playerAgingLogs.map(item => {
-    const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-    return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
-  }).join('');
-
-  summaryBox.classList.remove('hidden');
+  // オフシーズン突入時は移籍市場タブへ自動遷移
+  switchTab('market');
 }
 
 /**
- * 次のシーズンへ移行する
+ * 移籍市場から選手を獲得する
+ */
+function signMarketPlayer(candidateId) {
+  if (gameState.isGameOver) return;
+
+  const playerClub = getPlayerClub();
+  if (playerClub.players.length >= MAX_SQUAD_SIZE) {
+    return;
+  }
+
+  const idx = gameState.transferMarket.findIndex(c => c.id === candidateId);
+  if (idx === -1) return;
+
+  const candidate = gameState.transferMarket[idx];
+  if (playerClub.funds < candidate.transferFee) {
+    return;
+  }
+
+  // 獲得金（移籍金）を支払い、チームに加入させる
+  playerClub.funds -= candidate.transferFee;
+  candidate.isStarter = false;
+  playerClub.players.push(candidate);
+
+  // 移籍市場リストから削除
+  gameState.transferMarket.splice(idx, 1);
+
+  renderAll();
+}
+
+/**
+ * 自チームの選手を契約満了（放出）する
+ */
+function releaseRosterPlayer(playerId) {
+  if (gameState.isGameOver) return;
+
+  const playerClub = getPlayerClub();
+  const target = playerClub.players.find(p => p.id === playerId);
+  if (!target) return;
+
+  // 同ポジションの残り人数が必須スタメン数を下回る場合は放出不可
+  const samePosCount = playerClub.players.filter(p => p.pos === target.pos).length;
+  const minRequired = REQUIRED_STARTERS[target.pos] || 1;
+  if (samePosCount <= minRequired) {
+    return;
+  }
+
+  playerClub.players = playerClub.players.filter(p => p.id !== playerId);
+  if (gameState.selectedPlayerId === playerId) {
+    gameState.selectedPlayerId = null;
+  }
+
+  // スタメンだった選手を放出した場合、同ポジションのベンチ選手を自動昇格
+  ensureValidSquadAndStarters(playerClub);
+
+  renderAll();
+}
+
+/**
+ * 年俸を支払い、新シーズンを開幕する
  */
 function startNextSeason() {
-  if (!gameState.isSeasonOver) return;
+  if (!gameState.isSeasonOver || gameState.isGameOver) return;
 
+  // 全クラブの翌シーズン年俸合計をチーム資金から差し引く
+  for (const club of gameState.clubs) {
+    const payroll = getClubTotalPayroll(club);
+    club.funds -= payroll;
+  }
+
+  const playerClub = getPlayerClub();
+
+  // 赤字経営チェック
+  if (playerClub.funds < 0) {
+    gameState.consecutiveDeficitSeasons += 1;
+    if (gameState.consecutiveDeficitSeasons >= 2) {
+      gameState.isGameOver = true;
+      renderAll();
+      return;
+    }
+  } else {
+    gameState.consecutiveDeficitSeasons = 0;
+  }
+
+  // 新シーズン開幕処理
   gameState.season += 1;
   gameState.currentWeek = 0;
   gameState.isSeasonOver = false;
   gameState.lastWeekResults = [];
+  gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
 
-  // 各クラブのリーグ成績をリセットし、選手の差分表示をクリア
   for (const club of gameState.clubs) {
     club.played = 0;
     club.won = 0;
@@ -487,10 +841,30 @@ function startNextSeason() {
     }
   }
 
-  // 新シーズンの日程を再生成
   gameState.schedule = generateSeasonSchedule(gameState.clubs);
+  switchTab('standings');
+  renderAll();
+}
 
-  document.getElementById('season-summary-box').classList.add('hidden');
+/**
+ * タブ切り替え
+ */
+function switchTab(tabName) {
+  gameState.activeTab = tabName;
+
+  const tabs = ['standings', 'roster', 'market'];
+  for (const t of tabs) {
+    const btn = document.getElementById(`tab-btn-${t}`);
+    const view = document.getElementById(`view-${t}`);
+    if (t === tabName) {
+      btn.classList.add('active');
+      view.classList.remove('hidden');
+    } else {
+      btn.classList.remove('active');
+      view.classList.add('hidden');
+    }
+  }
+
   renderAll();
 }
 
@@ -518,6 +892,8 @@ function getPlayerClub() {
  * 自チームの選手行クリックによるスタメン・ベンチ入れ替え処理
  */
 function handleRosterClick(playerId) {
+  if (gameState.isGameOver) return;
+
   const playerClub = getPlayerClub();
   const clickedPlayer = playerClub.players.find(p => p.id === playerId);
   if (!clickedPlayer) return;
@@ -541,14 +917,12 @@ function handleRosterClick(playerId) {
     return;
   }
 
-  // 同じポジションかつスタメン/ベンチが異なる場合は入れ替え
   if (prevPlayer.pos === clickedPlayer.pos && prevPlayer.isStarter !== clickedPlayer.isStarter) {
     const temp = prevPlayer.isStarter;
     prevPlayer.isStarter = clickedPlayer.isStarter;
     clickedPlayer.isStarter = temp;
     gameState.selectedPlayerId = null;
   } else {
-    // それ以外は選択対象を切り替え
     gameState.selectedPlayerId = playerId;
   }
 
@@ -560,9 +934,12 @@ function handleRosterClick(playerId) {
  */
 function renderAll() {
   renderHeader();
+  renderFinancialAlert();
+  renderSeasonSettlement();
   renderStandings();
   renderMatchLog();
   renderRoster();
+  renderMarket();
 }
 
 /**
@@ -570,32 +947,148 @@ function renderAll() {
  */
 function renderHeader() {
   const playerClub = getPlayerClub();
+  const payroll = getClubTotalPayroll(playerClub);
+  const squadCount = playerClub.players.length;
+
   document.getElementById('header-club-name').textContent = playerClub.name;
   document.getElementById('header-season').textContent = `${gameState.season}年目`;
 
-  if (gameState.isSeasonOver) {
-    document.getElementById('header-matchweek').textContent = `全${gameState.totalWeeks}節終了`;
+  if (gameState.isGameOver) {
+    document.getElementById('header-matchweek').textContent = 'GM解任（GAME OVER）';
+  } else if (gameState.isSeasonOver) {
+    document.getElementById('header-matchweek').textContent = 'オフシーズン（移籍・契約）';
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
     document.getElementById('header-matchweek').textContent = `第${nextWeek}節 / 全${gameState.totalWeeks}節`;
   }
 
-  document.getElementById('header-funds').textContent = `${playerClub.funds.toLocaleString()}万円`;
+  const fundsEl = document.getElementById('header-funds');
+  fundsEl.textContent = formatMoney(playerClub.funds);
+  if (playerClub.funds < 0) {
+    fundsEl.classList.remove('accent-gold');
+    fundsEl.classList.add('text-danger');
+  } else {
+    fundsEl.classList.remove('text-danger');
+    fundsEl.classList.add('accent-gold');
+  }
+
+  document.getElementById('header-payroll').textContent = formatMoney(payroll);
+  document.getElementById('header-squad-size').textContent = `${squadCount} / ${MAX_SQUAD_SIZE}名`;
   document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
 
+  // タブバッジ更新
+  document.getElementById('tab-badge-roster').textContent = `${squadCount}/${MAX_SQUAD_SIZE}`;
+  const marketBadge = document.getElementById('tab-badge-market');
+  marketBadge.textContent = `${gameState.transferMarket.length}名`;
+  if (gameState.isSeasonOver) {
+    marketBadge.classList.add('badge-highlight');
+  } else {
+    marketBadge.classList.remove('badge-highlight');
+  }
+
+  // 経営状態バッジ
+  const financeBadge = document.getElementById('header-finance-badge');
+  financeBadge.className = 'finance-status-badge';
+  if (gameState.isGameOver) {
+    financeBadge.textContent = '経営破綻・解任';
+    financeBadge.classList.add('status-gameover');
+  } else if (playerClub.funds < 0) {
+    financeBadge.textContent = '警告：赤字経営';
+    financeBadge.classList.add('status-deficit');
+  } else {
+    financeBadge.textContent = '健全経営';
+  }
+
+  // アクションボタン切り替え
   const btnPlayNext = document.getElementById('btn-play-next');
   const btnSkipSeason = document.getElementById('btn-skip-season');
   const btnNextSeason = document.getElementById('btn-next-season');
+  const btnRestart = document.getElementById('btn-restart-game');
 
-  if (gameState.isSeasonOver) {
+  if (gameState.isGameOver) {
+    btnPlayNext.classList.add('hidden');
+    btnSkipSeason.classList.add('hidden');
+    btnNextSeason.classList.add('hidden');
+    btnRestart.classList.remove('hidden');
+  } else if (gameState.isSeasonOver) {
     btnPlayNext.classList.add('hidden');
     btnSkipSeason.classList.add('hidden');
     btnNextSeason.classList.remove('hidden');
+    btnRestart.classList.add('hidden');
   } else {
     btnPlayNext.classList.remove('hidden');
     btnSkipSeason.classList.remove('hidden');
     btnNextSeason.classList.add('hidden');
+    btnRestart.classList.add('hidden');
   }
+}
+
+/**
+ * 赤字経営・ゲームオーバー警告バナーの描画
+ */
+function renderFinancialAlert() {
+  const banner = document.getElementById('financial-alert-banner');
+  const playerClub = getPlayerClub();
+
+  if (gameState.isGameOver) {
+    banner.className = 'financial-alert-banner alert-gameover';
+    banner.textContent = `【ゲームオーバー】2シーズン連続の赤字経営（現在資金：${formatMoney(playerClub.funds)}）により、クラブ理事会からGM解任が通告されました。「最初からやり直す」で新規クラブ運営を開始できます。`;
+    banner.classList.remove('hidden');
+    return;
+  }
+
+  if (playerClub.funds < 0) {
+    banner.className = 'financial-alert-banner';
+    banner.textContent = `【警告：赤字経営】現在クラブ資金がマイナス（${formatMoney(playerClub.funds)}）です。高年俸選手の契約満了（放出）や上位入賞で収支を改善してください。次シーズン開幕時も赤字が続くとGM解任（ゲームオーバー）となります。`;
+    banner.classList.remove('hidden');
+    return;
+  }
+
+  banner.classList.add('hidden');
+}
+
+/**
+ * オフシーズン決算・世代交代サマリーの描画
+ */
+function renderSeasonSettlement() {
+  const summaryBox = document.getElementById('season-summary-box');
+  if (!gameState.isSeasonOver || !gameState.lastSettlement) {
+    summaryBox.classList.add('hidden');
+    return;
+  }
+
+  summaryBox.classList.remove('hidden');
+  const s = gameState.lastSettlement;
+  const playerClub = getPlayerClub();
+  const currentPayroll = getClubTotalPayroll(playerClub);
+  const projectedBalance = playerClub.funds - currentPayroll;
+
+  document.getElementById('summary-headline').textContent =
+    `${s.season}年目シーズン終了・決算報告（最終順位：第${s.rank}位） — オフシーズン編成フェーズ`;
+
+  document.getElementById('summary-reward-text').textContent =
+    `収入加算：順位賞金 +${formatMoney(s.prize)} ／ 年間入場料・スポンサー料 +${formatMoney(s.sponsorIncome)}（計 +${formatMoney(s.totalIncome)}）`;
+
+  const projEl = document.getElementById('summary-payroll-projection');
+  const deficitWarning = projectedBalance < 0 ? ' 【警告：このまま開幕すると赤字経営になります。不要な選手を放出して年俸を削減してください】' : '';
+  projEl.textContent =
+    `現在資金：${formatMoney(playerClub.funds)} ／ 翌シーズン年俸合計（開幕時支払）：-${formatMoney(currentPayroll)} ➜ 開幕時予想残高：${formatMoney(projectedBalance)}${deficitWarning}`;
+  projEl.className = projectedBalance < 0 ? 'mono text-danger' : 'mono accent-green';
+
+  // 引退ログ
+  const retireEl = document.getElementById('summary-retirement-log');
+  if (s.retirementLogs.length === 0) {
+    retireEl.innerHTML = '<div class="text-muted">今シーズンの現役引退選手はいません。</div>';
+  } else {
+    retireEl.innerHTML = s.retirementLogs.map(line => `<div>${line}</div>`).join('');
+  }
+
+  // 成長・衰退ログ
+  const agingEl = document.getElementById('summary-aging-log');
+  agingEl.innerHTML = s.agingLogs.map(item => {
+    const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
+    return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳/${item.growthLabel}</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+  }).join('');
 }
 
 /**
@@ -638,7 +1131,6 @@ function renderMatchLog() {
 
   if (gameState.lastWeekResults.length === 0) {
     subtitle.textContent = 'READY FOR KICKOFF';
-    // 次節の対戦カードプレビューを表示
     const nextMatches = gameState.schedule[0] || [];
     container.innerHTML = `
       <div class="empty-log-message">シーズン開幕前です。「次節をプレイ」で第1節を開始してください。</div>
@@ -688,16 +1180,24 @@ function formatDiffHtml(val) {
 function renderRoster() {
   const playerClub = getPlayerClub();
   const stats = getTeamStarterStats(playerClub);
+  const payroll = getClubTotalPayroll(playerClub);
 
   document.getElementById('team-total-atk').textContent = stats.totalAtk;
   document.getElementById('team-total-def').textContent = stats.totalDef;
   document.getElementById('team-avg-sta').textContent = stats.avgSta;
+  document.getElementById('roster-total-payroll').textContent = formatMoney(payroll);
+
+  // ポジションごとの現在の人数を集計（必須スタメン数を下回る放出を防止するため）
+  const posCounts = { GK: 0, DF: 0, MF: 0, FW: 0 };
+  for (const p of playerClub.players) {
+    posCounts[p.pos] = (posCounts[p.pos] || 0) + 1;
+  }
 
   const posOrder = { GK: 1, DF: 2, MF: 3, FW: 4 };
   const sortedPlayers = [...playerClub.players].sort((a, b) => {
     if (a.isStarter !== b.isStarter) return a.isStarter ? -1 : 1;
     if (posOrder[a.pos] !== posOrder[b.pos]) return posOrder[a.pos] - posOrder[b.pos];
-    return b.atk + b.def - (a.atk + a.def);
+    return getPlayerOverallRating(b) - getPlayerOverallRating(a);
   });
 
   const tbody = document.getElementById('roster-tbody');
@@ -710,9 +1210,15 @@ function renderRoster() {
       ? '<span class="status-pill status-starter">STARTER</span>'
       : '<span class="status-pill status-bench">BENCH</span>';
 
+    const growthLabel = getGrowthTypeLabel(p.growthType);
+    const growthBadge = `<span class="growth-pill growth-${p.growthType}">${growthLabel}</span>`;
+
     const atkDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.atk) : '';
     const defDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.def) : '';
     const staDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.sta) : '';
+
+    const canRelease = posCounts[p.pos] > REQUIRED_STARTERS[p.pos] && !gameState.isGameOver;
+    const releaseBtnLabel = canRelease ? '契約満了（放出）' : '必須枠';
 
     return `
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
@@ -720,19 +1226,109 @@ function renderRoster() {
         <td class="col-pos"><span class="pos-tag pos-${p.pos}">${p.pos}</span></td>
         <td class="col-name">${p.name}</td>
         <td class="col-num">${p.age}</td>
+        <td class="col-growth">${growthBadge}</td>
         <td class="col-num">${p.atk}${atkDiff}</td>
         <td class="col-num">${p.def}${defDiff}</td>
         <td class="col-num">${p.sta}${staDiff}</td>
+        <td class="col-num">${formatMoney(p.salary)}</td>
+        <td class="col-action">
+          <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
+            ${releaseBtnLabel}
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
 }
 
 /**
- * ゲーム初期化処理
+ * 移籍市場の描画
  */
-function initGame() {
+function renderMarket() {
+  const playerClub = getPlayerClub();
+  const squadCount = playerClub.players.length;
+  const isFull = squadCount >= MAX_SQUAD_SIZE;
+
+  const posCounts = { GK: 0, DF: 0, MF: 0, FW: 0 };
+  for (const p of playerClub.players) {
+    posCounts[p.pos] = (posCounts[p.pos] || 0) + 1;
+  }
+
+  document.getElementById('market-pos-summary').innerHTML = `
+    <span class="power-badge">GK <strong class="mono">${posCounts.GK}</strong></span>
+    <span class="power-badge">DF <strong class="mono">${posCounts.DF}</strong></span>
+    <span class="power-badge">MF <strong class="mono">${posCounts.MF}</strong></span>
+    <span class="power-badge">FW <strong class="mono">${posCounts.FW}</strong></span>
+    <span class="power-badge">所属枠 <strong class="mono">${squadCount} / ${MAX_SQUAD_SIZE}名</strong></span>
+    <span class="power-badge">獲得予算（所持資金） <strong class="mono accent-gold">${formatMoney(playerClub.funds)}</strong></span>
+  `;
+
+  const noteEl = document.getElementById('market-status-note');
+  if (gameState.isSeasonOver) {
+    noteEl.textContent = '【オフシーズン補強期間】獲得金を支払って即戦力や若手を補強できます。新シーズン開幕時に所属全選手の年俸合計が差し引かれます。';
+  } else {
+    noteEl.textContent = 'シーズン中もFA・移籍候補リストの閲覧および緊急補強が可能です（所属上限：最大20名）。シーズン終了後に候補リストが更新されます。';
+  }
+
+  const tbody = document.getElementById('market-tbody');
+  if (gameState.transferMarket.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" class="empty-log-message">現在リストアップされている移籍候補選手はすべて獲得済みです。次シーズン終了時に新たな候補が登場します。</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = gameState.transferMarket.map(c => {
+    const ovr = getPlayerOverallRating(c);
+    const growthLabel = getGrowthTypeLabel(c.growthType);
+    const growthBadge = `<span class="growth-pill growth-${c.growthType}">${growthLabel}</span>`;
+    const canAfford = playerClub.funds >= c.transferFee;
+    const canSign = !isFull && canAfford && !gameState.isGameOver;
+
+    let btnText = '獲得する';
+    if (isFull) btnText = '枠上限(20名)';
+    else if (!canAfford) btnText = '資金不足';
+
+    return `
+      <tr>
+        <td class="col-pos"><span class="pos-tag pos-${c.pos}">${c.pos}</span></td>
+        <td class="col-name">${c.name}</td>
+        <td class="col-num">${c.age}</td>
+        <td class="col-growth">${growthBadge}</td>
+        <td class="col-num">${c.atk}</td>
+        <td class="col-num">${c.def}</td>
+        <td class="col-num">${c.sta}</td>
+        <td class="col-num accent-green">${ovr}</td>
+        <td class="col-num accent-gold">${formatMoney(c.transferFee)}</td>
+        <td class="col-num">${formatMoney(c.salary)}</td>
+        <td class="col-action">
+          <button type="button" class="btn btn-primary btn-sm btn-sign-player" data-sign-id="${c.id}" ${canSign ? '' : 'disabled'}>
+            ${btnText}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * 新規ゲームのセットアップ（初回およびゲームオーバー時のリセット共通）
+ */
+function setupNewGame() {
   const usedNames = new Set();
+  playerIdCounter = 1;
+
+  gameState.season = 1;
+  gameState.currentWeek = 0;
+  gameState.isSeasonOver = false;
+  gameState.isGameOver = false;
+  gameState.consecutiveDeficitSeasons = 0;
+  gameState.activeTab = 'standings';
+  gameState.lastWeekResults = [];
+  gameState.lastSettlement = null;
+  gameState.selectedPlayerId = null;
 
   gameState.clubs = CLUB_DEFINITIONS.map(def => {
     const club = {
@@ -758,20 +1354,50 @@ function initGame() {
   });
 
   gameState.schedule = generateSeasonSchedule(gameState.clubs);
+  generateTransferMarket();
+  switchTab('standings');
+}
 
-  // イベントリスナー登録
+/**
+ * ゲーム初期化処理（イベントリスナー登録）
+ */
+function initGame() {
   document.getElementById('btn-play-next').addEventListener('click', playNextMatchweek);
   document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
   document.getElementById('btn-next-season').addEventListener('click', startNextSeason);
+  document.getElementById('btn-restart-game').addEventListener('click', setupNewGame);
 
+  // タブ切り替えイベント
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTab(btn.dataset.tab);
+    });
+  });
+
+  // 所属選手一覧のクリック（放出ボタン or 行クリックでスタメン入れ替え）
   document.getElementById('roster-tbody').addEventListener('click', (e) => {
+    const releaseBtn = e.target.closest('.btn-release-player');
+    if (releaseBtn) {
+      e.stopPropagation();
+      releaseRosterPlayer(releaseBtn.dataset.releaseId);
+      return;
+    }
+
     const tr = e.target.closest('tr[data-player-id]');
     if (tr) {
       handleRosterClick(tr.dataset.playerId);
     }
   });
 
-  renderAll();
+  // 移籍市場の獲得ボタンクリック
+  document.getElementById('market-tbody').addEventListener('click', (e) => {
+    const signBtn = e.target.closest('.btn-sign-player');
+    if (signBtn) {
+      signMarketPlayer(signBtn.dataset.signId);
+    }
+  });
+
+  setupNewGame();
 }
 
 document.addEventListener('DOMContentLoaded', initGame);

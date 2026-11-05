@@ -11,6 +11,7 @@
   --accent-gold: #f39c12;
   --accent-gold-dark: #d68910;
   --danger-red: #e74c3c;
+  --danger-red-dark: #c0392b;
   --font-sans: 'M PLUS Rounded 1c', sans-serif;
   --font-mono: 'Roboto Mono', monospace;
 }
@@ -40,9 +41,9 @@ body {
 }
 
 .app-container {
-  max-width: 1360px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 16px 20px 32px;
+  padding: 16px 20px 36px;
 }
 
 /* 上部ステータスヘッダー */
@@ -52,7 +53,7 @@ body {
   border-top: 3px solid var(--accent-green);
   border-radius: 4px;
   padding: 14px 20px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -63,6 +64,13 @@ body {
 .brand-area {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+
+.brand-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .game-label {
@@ -71,6 +79,29 @@ body {
   letter-spacing: 0.08em;
   color: var(--accent-green);
   font-weight: 700;
+}
+
+.finance-status-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.finance-status-badge.status-deficit {
+  background-color: rgba(243, 156, 18, 0.18);
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.finance-status-badge.status-gameover {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--danger-red);
+  border-color: var(--danger-red);
 }
 
 .club-title {
@@ -82,7 +113,7 @@ body {
 .status-metrics {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 18px;
   align-items: center;
 }
 
@@ -90,18 +121,18 @@ body {
   display: flex;
   flex-direction: column;
   border-left: 2px solid var(--border-color);
-  padding-left: 12px;
+  padding-left: 10px;
 }
 
 .metric-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
 
 .metric-value {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -114,26 +145,113 @@ body {
   color: var(--accent-green);
 }
 
+.text-danger {
+  color: var(--danger-red);
+}
+
+/* 赤字経営・ゲームオーバー警告バー */
+.financial-alert-banner {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--accent-gold);
+  border-left: 4px solid var(--accent-gold);
+  color: var(--accent-gold);
+  padding: 10px 16px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.financial-alert-banner.alert-gameover {
+  border-color: var(--danger-red);
+  border-left-color: var(--danger-red);
+  color: var(--danger-red);
+}
+
+/* ナビゲーションタブ */
+.tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background-color: var(--bg-panel);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab-btn:hover {
+  background-color: var(--bg-row-hover);
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  background-color: var(--bg-main);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.tab-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.tab-btn.active .tab-badge {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.tab-badge.badge-highlight {
+  background-color: rgba(243, 156, 18, 0.18);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
 /* アクションボタン */
 .action-controls {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .btn {
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
-  padding: 9px 16px;
+  padding: 8px 14px;
   border-radius: 3px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  font-size: 11px;
+  padding: 4px 10px;
 }
 
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -166,10 +284,20 @@ body {
   background-color: var(--accent-gold-dark);
 }
 
+.btn-danger {
+  background-color: transparent;
+  color: var(--danger-red);
+  border-color: var(--danger-red);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: rgba(231, 76, 60, 0.15);
+}
+
 /* ダッシュボード2カラムレイアウト */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   gap: 16px;
   align-items: start;
 }
@@ -248,6 +376,10 @@ body {
   margin-left: 4px;
 }
 
+.power-badge strong.accent-gold {
+  color: var(--accent-gold);
+}
+
 /* データテーブル */
 .table-wrapper {
   width: 100%;
@@ -284,6 +416,16 @@ body {
 
 .col-rank {
   width: 48px;
+  text-align: center;
+}
+
+.col-growth {
+  width: 72px;
+  text-align: center;
+}
+
+.col-action {
+  width: 110px;
   text-align: center;
 }
 
@@ -367,6 +509,32 @@ body {
   background-color: var(--bg-main);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
+}
+
+.growth-pill {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-main);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.growth-early {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.growth-normal {
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+.growth-late {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
 }
 
 .pos-tag {
@@ -457,17 +625,24 @@ body {
   text-align: center;
 }
 
-/* シーズン終了サマリー */
+/* シーズン終了・決算サマリー */
 .season-summary {
-  background-color: var(--bg-main);
+  background-color: var(--bg-panel);
   border: 1px solid var(--accent-gold);
-  border-radius: 3px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  border-left: 4px solid var(--accent-gold);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .summary-banner h3 {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--accent-gold);
   margin-bottom: 4px;
 }
@@ -475,15 +650,51 @@ body {
 .summary-banner p {
   font-size: 13px;
   color: var(--text-main);
-  margin-bottom: 8px;
+  margin-bottom: 3px;
+}
+
+.summary-logs-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 14px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .summary-logs-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summary-subhead {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.summary-retirement-list {
+  font-size: 12px;
+  color: var(--text-main);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 8px 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .summary-details {
   font-size: 12px;
   color: var(--text-muted);
-  border-top: 1px solid var(--border-color);
-  padding-top: 8px;
-  max-height: 150px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 8px 10px;
+  max-height: 120px;
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
