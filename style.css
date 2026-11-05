@@ -64,13 +64,14 @@ body {
 .brand-area {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .brand-top-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .game-label {
@@ -112,10 +113,41 @@ body {
   border-color: var(--danger-red);
 }
 
+.target-rank-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--accent-gold);
+  background-color: rgba(243, 156, 18, 0.14);
+  color: var(--accent-gold);
+}
+
+.club-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .club-title {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-main);
+}
+
+.gm-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  padding: 1px 8px;
+  border-radius: 2px;
+}
+
+.gm-badge strong {
+  color: var(--text-main);
+  font-weight: 700;
 }
 
 .status-metrics {
@@ -975,16 +1007,17 @@ body {
   gap: 4px 12px;
 }
 
-/* モーダルダイアログ（メガオファー・GMイベント） */
+/* モーダルダイアログ（GM就任・メガオファー・GMイベント） */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 17, 19, 0.82);
+  background-color: rgba(15, 17, 19, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-card {
@@ -997,9 +1030,36 @@ body {
   overflow: hidden;
 }
 
+.intro-modal-card {
+  max-width: 1040px;
+  width: 95vw;
+  height: 90vh;
+  max-height: 700px;
+  border-top-color: var(--accent-green);
+  display: flex;
+  flex-direction: column;
+}
+
 .modal-header {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.intro-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.intro-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
 }
 
 .modal-category {
@@ -1011,6 +1071,10 @@ body {
   margin-bottom: 2px;
 }
 
+.intro-modal-card .modal-category {
+  color: var(--accent-green);
+}
+
 .modal-title {
   font-size: 16px;
   font-weight: 700;
@@ -1019,6 +1083,16 @@ body {
 
 .modal-body {
   padding: 16px 18px;
+}
+
+.intro-modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 18px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .modal-description {
@@ -1045,4 +1119,350 @@ body {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* GM就任・クラブ選択モーダル専用スタイル（2ペインUI） */
+.intro-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 3px;
+  padding: 8px 14px;
+  flex-shrink: 0;
+}
+
+.intro-story-compact {
+  font-size: 12px;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.intro-gm-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.intro-inline-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.intro-gm-input-wrap .intro-text-input {
+  max-width: 190px;
+  padding: 5px 10px;
+  font-size: 13px;
+  background-color: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.intro-gm-input-wrap .intro-text-input:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+/* 2ペインレイアウト */
+.intro-main-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 800px) {
+  .intro-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 左ペイン：20クラブ選択リスト */
+.intro-club-list-pane {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.intro-filter-bar {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: #1f2327;
+  flex-shrink: 0;
+}
+
+.intro-pane-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.club-filter-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-filter-tag {
+  background-color: var(--bg-main);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-filter-tag:hover {
+  background-color: var(--bg-row-hover);
+  color: var(--text-main);
+}
+
+.btn-filter-tag.active {
+  background-color: rgba(46, 204, 113, 0.16);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.intro-club-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.intro-club-item {
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.intro-club-item:hover {
+  background-color: var(--bg-row-hover);
+  border-color: var(--border-color);
+}
+
+.intro-club-item.selected {
+  background-color: rgba(46, 204, 113, 0.14);
+  border-color: var(--accent-green);
+}
+
+.club-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.club-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.intro-club-item.selected .club-item-name {
+  color: var(--accent-green);
+}
+
+.club-item-tier {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.club-item-metrics {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.club-item-funds {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.club-item-power {
+  color: var(--text-muted);
+}
+
+/* 右ペイン：選択中クラブの詳細プレビュー */
+.intro-club-detail-pane {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.detail-header-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.detail-club-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.detail-tier-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background-color: rgba(243, 156, 18, 0.16);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+}
+
+.detail-club-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.detail-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.detail-metric-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-metric-card.highlight {
+  border-left: 3px solid var(--accent-green);
+}
+
+.detail-metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.detail-metric-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.detail-mission-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 3px;
+  padding: 10px 14px;
+}
+
+.detail-mission-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.detail-mission-text {
+  font-size: 12px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* モーダルフッター（常に下部固定） */
+.intro-modal-actions {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.intro-selected-summary {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.intro-selected-summary strong {
+  color: var(--accent-green);
+}
+
+.intro-selected-summary .summary-target {
+  color: var(--accent-gold);
+  margin-left: 8px;
+}
+
+.btn-lg {
+  padding: 9px 18px;
+  font-size: 13px;
 }
