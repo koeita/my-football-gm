@@ -1031,13 +1031,35 @@ body {
 }
 
 .intro-modal-card {
-  max-width: 1080px;
+  max-width: 1040px;
+  width: 95vw;
+  height: 90vh;
+  max-height: 700px;
   border-top-color: var(--accent-green);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.intro-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.intro-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
 }
 
 .modal-category {
@@ -1061,6 +1083,16 @@ body {
 
 .modal-body {
   padding: 16px 18px;
+}
+
+.intro-modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 18px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .modal-description {
@@ -1089,163 +1121,348 @@ body {
   flex-wrap: wrap;
 }
 
-/* GM就任・クラブ選択モーダル専用スタイル */
-.intro-story-text {
-  font-size: 13px;
-  color: var(--text-main);
+/* GM就任・クラブ選択モーダル専用スタイル（2ペインUI） */
+.intro-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   background-color: var(--bg-main);
   border: 1px solid var(--border-color);
   border-left: 3px solid var(--accent-green);
   border-radius: 3px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  line-height: 1.6;
+  padding: 8px 14px;
+  flex-shrink: 0;
 }
 
-.intro-form-section {
-  margin-bottom: 14px;
+.intro-story-compact {
+  font-size: 12px;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.4;
+  flex: 1;
 }
 
-.intro-form-section:last-child {
-  margin-bottom: 0;
-}
-
-.intro-section-header {
+.intro-gm-input-wrap {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
-.intro-form-label {
-  display: block;
+.intro-inline-label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 6px;
-}
-
-.intro-section-header .intro-form-label {
-  margin-bottom: 0;
-}
-
-.intro-mega-note {
-  font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.intro-text-input {
-  width: 100%;
-  max-width: 340px;
-  background-color: var(--bg-main);
+.intro-gm-input-wrap .intro-text-input {
+  max-width: 190px;
+  padding: 5px 10px;
+  font-size: 13px;
+  background-color: var(--bg-panel);
   color: var(--text-main);
   border: 1px solid var(--border-color);
   border-radius: 3px;
-  padding: 8px 12px;
-  font-family: var(--font-sans);
-  font-size: 14px;
   font-weight: 700;
 }
 
-.intro-text-input:focus {
+.intro-gm-input-wrap .intro-text-input:focus {
   outline: none;
   border-color: var(--accent-green);
 }
 
-.club-select-grid {
+/* 2ペインレイアウト */
+.intro-main-layout {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  max-height: 440px;
-  overflow-y: auto;
-  padding-right: 4px;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
 }
 
-@media (max-width: 840px) {
-  .club-select-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 520px) {
-  .club-select-grid {
+@media (max-width: 800px) {
+  .intro-main-layout {
     grid-template-columns: 1fr;
   }
 }
 
-.club-select-card {
+/* 左ペイン：20クラブ選択リスト */
+.intro-club-list-pane {
   background-color: var(--bg-main);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  padding: 10px 12px;
-  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.intro-filter-bar {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-  text-align: left;
+  background-color: #1f2327;
+  flex-shrink: 0;
 }
 
-.club-select-card:hover {
-  background-color: var(--bg-row-hover);
-  border-color: var(--text-muted);
+.intro-pane-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
-.club-select-card.selected {
-  background-color: rgba(46, 204, 113, 0.12);
-  border-color: var(--accent-green);
-  outline: 1px solid var(--accent-green);
-}
-
-.club-card-header {
+.club-filter-tags {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
-.club-card-name {
+.btn-filter-tag {
+  background-color: var(--bg-main);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-filter-tag:hover {
+  background-color: var(--bg-row-hover);
+  color: var(--text-main);
+}
+
+.btn-filter-tag.active {
+  background-color: rgba(46, 204, 113, 0.16);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.intro-club-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.intro-club-item {
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.intro-club-item:hover {
+  background-color: var(--bg-row-hover);
+  border-color: var(--border-color);
+}
+
+.intro-club-item.selected {
+  background-color: rgba(46, 204, 113, 0.14);
+  border-color: var(--accent-green);
+}
+
+.club-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.club-item-name {
   font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.intro-club-item.selected .club-item-name {
+  color: var(--accent-green);
+}
+
+.club-item-tier {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.club-item-metrics {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.club-item-funds {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.club-item-power {
+  color: var(--text-muted);
+}
+
+/* 右ペイン：選択中クラブの詳細プレビュー */
+.intro-club-detail-pane {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.detail-header-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.detail-club-name {
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-main);
 }
 
-.club-select-card.selected .club-card-name {
-  color: var(--accent-green);
-}
-
-.club-card-tier {
+.detail-tier-badge {
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 2px;
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-}
-
-.club-card-desc {
   font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.4;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background-color: rgba(243, 156, 18, 0.16);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
 }
 
-.club-card-metrics {
+.detail-club-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.detail-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.detail-metric-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 6px;
-  font-size: 11px;
+  gap: 2px;
 }
 
-.club-card-metric-row {
+.detail-metric-card.highlight {
+  border-left: 3px solid var(--accent-green);
+}
+
+.detail-metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.detail-metric-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.detail-mission-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 3px;
+  padding: 10px 14px;
+}
+
+.detail-mission-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.detail-mission-text {
+  font-size: 12px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* モーダルフッター（常に下部固定） */
+.intro-modal-actions {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
-.club-card-metric-label {
+.intro-selected-summary {
+  font-size: 13px;
   color: var(--text-muted);
+}
+
+.intro-selected-summary strong {
+  color: var(--accent-green);
+}
+
+.intro-selected-summary .summary-target {
+  color: var(--accent-gold);
+  margin-left: 8px;
+}
+
+.btn-lg {
+  padding: 9px 18px;
+  font-size: 13px;
 }

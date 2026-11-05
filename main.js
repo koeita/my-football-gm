@@ -2669,43 +2669,101 @@ function renderMarket() {
   }).join('');
 }
 
-/**
- * GM就任・クラブ選択モーダル内の8クラブカード一覧を描画
- */
-function renderIntroClubGrid() {
-  const grid = document.getElementById('intro-club-grid');
-  if (!grid) return;
+let introClubFilter = 'all';
 
-  grid.innerHTML = CLUB_DEFINITIONS.map(def => {
+/**
+ * クラブをフィルターカテゴリに分類
+ */
+function matchesClubFilter(clubDef, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'big') {
+    return clubDef.basePower >= 67 || ['MEGA RICH', 'TRADITIONAL', 'CONTENDER', 'BIG CLUB', 'AMBITIOUS'].includes(clubDef.tier);
+  }
+  if (filter === 'mid') {
+    return (clubDef.basePower >= 62 && clubDef.basePower <= 66) || ['RISING FORCE', 'CHALLENGER', 'SMART SCOUT', 'MID TABLE', 'MONEYBALL'].includes(clubDef.tier);
+  }
+  if (filter === 'challenger') {
+    return clubDef.basePower <= 61 || ['HISTORIC', 'MIRACLE', 'ACADEMY', 'PROMOTED'].includes(clubDef.tier);
+  }
+  return true;
+}
+
+/**
+ * GM就任モーダル：左ペインの20クラブ選択リストを描画
+ */
+function renderIntroClubList() {
+  const listEl = document.getElementById('intro-club-list');
+  if (!listEl) return;
+
+  const filteredClubs = CLUB_DEFINITIONS.filter(c => matchesClubFilter(c, introClubFilter));
+
+  listEl.innerHTML = filteredClubs.map(def => {
     const isSelected = def.id === gameState.selectedClubId;
     return `
-      <button type="button" class="club-select-card ${isSelected ? 'selected' : ''}" data-club-id="${def.id}">
-        <div class="club-card-header">
-          <span class="club-card-name">${def.name}</span>
-          <span class="club-card-tier">${def.tier}</span>
+      <button type="button" class="intro-club-item ${isSelected ? 'selected' : ''}" data-club-id="${def.id}">
+        <div class="club-item-main">
+          <span class="club-item-name">${def.name}</span>
+          <span class="club-item-tier">${def.tier}</span>
         </div>
-        <p class="club-card-desc">${def.desc}</p>
-        <div class="club-card-metrics">
-          <div class="club-card-metric-row">
-            <span class="club-card-metric-label">初期資金</span>
-            <strong class="mono accent-gold">${formatMoney(def.initialFunds)}</strong>
-          </div>
-          <div class="club-card-metric-row">
-            <span class="club-card-metric-label">サポーター</span>
-            <span class="mono">${def.supporters.toLocaleString()}人</span>
-          </div>
-          <div class="club-card-metric-row">
-            <span class="club-card-metric-label">戦力基準値</span>
-            <span class="mono accent-green">OVR ${def.basePower}</span>
-          </div>
-          <div class="club-card-metric-row">
-            <span class="club-card-metric-label">理事会目標</span>
-            <strong class="mono">${def.targetLabel}</strong>
-          </div>
+        <div class="club-item-metrics mono">
+          <span class="club-item-funds">${formatMoney(def.initialFunds)}</span>
+          <span class="club-item-power">OVR ${def.basePower}</span>
         </div>
       </button>
     `;
   }).join('');
+}
+
+/**
+ * GM就任モーダル：右ペインの選択中クラブ詳細プレビューを描画
+ */
+function renderIntroClubDetail() {
+  const detailEl = document.getElementById('intro-club-detail-pane');
+  const summaryEl = document.getElementById('intro-selected-summary');
+  if (!detailEl) return;
+
+  const club = CLUB_DEFINITIONS.find(c => c.id === gameState.selectedClubId) || CLUB_DEFINITIONS[0];
+  const tacticDef = TACTICS_DEFINITIONS[club.defaultTactic] || TACTICS_DEFINITIONS.possession;
+
+  detailEl.innerHTML = `
+    <div class="detail-header-card">
+      <div class="detail-title-row">
+        <h3 class="detail-club-name">${club.name}</h3>
+        <span class="detail-tier-badge">${club.tier}</span>
+      </div>
+      <p class="detail-club-desc">${club.desc}</p>
+    </div>
+
+    <div class="detail-metrics-grid">
+      <div class="detail-metric-card highlight">
+        <span class="detail-metric-label">CLUB FUNDS（初期資金）</span>
+        <span class="detail-metric-val mono accent-gold">${formatMoney(club.initialFunds)}</span>
+      </div>
+      <div class="detail-metric-card">
+        <span class="detail-metric-label">BOARD TARGET（理事会目標）</span>
+        <span class="detail-metric-val mono">${club.targetLabel}</span>
+      </div>
+      <div class="detail-metric-card">
+        <span class="detail-metric-label">SQUAD POWER（戦力値）</span>
+        <span class="detail-metric-val mono accent-green">OVR ${club.basePower}</span>
+      </div>
+      <div class="detail-metric-card">
+        <span class="detail-metric-label">SUPPORTERS（ファン数）</span>
+        <span class="detail-metric-val mono">${club.supporters.toLocaleString()}人</span>
+      </div>
+    </div>
+
+    <div class="detail-mission-box">
+      <div class="detail-mission-title mono">BOARD MISSION / EXPECTATION</div>
+      <p class="detail-mission-text">
+        今季の理事会要求は「<strong>${club.targetLabel}</strong>」です。初期戦術方針は「${tacticDef.name}」が設定されています。目標を達成してシーズンを終えると、理事会から <strong>+£3.0M</strong> の特別ボーナスが支給されます。
+      </p>
+    </div>
+  `;
+
+  if (summaryEl) {
+    summaryEl.innerHTML = `選択中：<strong>${club.name}</strong> <span class="summary-target mono">（目標：${club.targetLabel} / 予算 ${formatMoney(club.initialFunds)}）</span>`;
+  }
 }
 
 /**
@@ -2725,7 +2783,13 @@ function openIntroModal(allowCancel = false) {
     cancelBtn.classList.toggle('hidden', !allowCancel);
   }
 
-  renderIntroClubGrid();
+  introClubFilter = 'all';
+  document.querySelectorAll('#club-filter-tags .btn-filter-tag').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+
+  renderIntroClubList();
+  renderIntroClubDetail();
   overlay.classList.remove('hidden');
 }
 
@@ -2809,12 +2873,24 @@ function initGame() {
   document.getElementById('btn-restart-game').addEventListener('click', () => openIntroModal(false));
   document.getElementById('btn-open-intro').addEventListener('click', () => openIntroModal(true));
 
-  // GM就任モーダル内のイベント
-  document.getElementById('intro-club-grid').addEventListener('click', (e) => {
-    const card = e.target.closest('.club-select-card');
-    if (card && card.dataset.clubId) {
-      gameState.selectedClubId = card.dataset.clubId;
-      renderIntroClubGrid();
+  // GM就任モーダル内のイベント（フィルタータグ・クラブ選択・詳細同期）
+  document.getElementById('club-filter-tags').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-filter-tag');
+    if (btn && btn.dataset.filter) {
+      introClubFilter = btn.dataset.filter;
+      document.querySelectorAll('#club-filter-tags .btn-filter-tag').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+      renderIntroClubList();
+    }
+  });
+
+  document.getElementById('intro-club-list').addEventListener('click', (e) => {
+    const item = e.target.closest('.intro-club-item');
+    if (item && item.dataset.clubId) {
+      gameState.selectedClubId = item.dataset.clubId;
+      renderIntroClubList();
+      renderIntroClubDetail();
     }
   });
 

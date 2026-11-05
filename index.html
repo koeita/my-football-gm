@@ -293,32 +293,58 @@
   <div id="intro-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
     <div class="modal-card intro-modal-card">
       <div class="modal-header">
-        <span class="modal-category mono">INAUGURATION / PREMIER DIVISION GM APPOINTMENT</span>
-        <h2 class="modal-title" id="intro-modal-title">ゼネラルマネージャー（GM）就任契約</h2>
+        <div class="intro-header-row">
+          <div>
+            <span class="modal-category mono">INAUGURATION / PREMIER DIVISION GM APPOINTMENT</span>
+            <h2 class="modal-title" id="intro-modal-title">ゼネラルマネージャー（GM）就任契約</h2>
+          </div>
+          <span class="intro-badge mono">ENGLAND 20 CLUBS</span>
+        </div>
       </div>
-      <div class="modal-body">
-        <p class="intro-story-text">
-          欧州サッカー界へようこそ。あなたは新任ゼネラルマネージャー（GM）として、名門または新興クラブの全権を託されました。現実と同じ全20クラブ・全38節の過酷なイングランド1部リーグで、戦術方針・9ポジション編成・ポンド（£）経済の移籍市場を制し、クラブを栄光へ導いてください。
-        </p>
-
-        <div class="intro-form-section">
-          <label for="input-gm-name" class="intro-form-label">GM名（プレイヤー名）を入力</label>
-          <input type="text" id="input-gm-name" class="intro-text-input" value="A. ファーガソン" maxlength="24" placeholder="例：A. ファーガソン / K. プレイヤー">
+      <div class="modal-body intro-modal-body">
+        <!-- 上部：ストーリーとGM名入力バー -->
+        <div class="intro-top-bar">
+          <p class="intro-story-compact">
+            欧州サッカー界へようこそ。新任GMとして名門または新興クラブの全権を託されました。全20クラブ・全38節の過酷なリーグを制覇してください。
+          </p>
+          <div class="intro-gm-input-wrap">
+            <label for="input-gm-name" class="intro-inline-label">GM氏名:</label>
+            <input type="text" id="input-gm-name" class="intro-text-input" value="A. ファーガソン" maxlength="20" placeholder="GM氏名を入力">
+          </div>
         </div>
 
-        <div class="intro-form-section">
-          <div class="intro-section-header">
-            <span class="intro-form-label">指揮を執るイングランド1部クラブを選択（全20クラブ）</span>
-            <span class="intro-mega-note mono">※西・独・伊・仏の欧州メガクラブは大陸強豪データとして内部収録</span>
+        <!-- メイン：左リスト × 右詳細プレビューの2ペイン構造 -->
+        <div class="intro-main-layout">
+          <!-- 左ペイン：20クラブ選択リスト -->
+          <div class="intro-club-list-pane">
+            <div class="intro-filter-bar">
+              <span class="intro-pane-title">クラブ選択（20）</span>
+              <div class="club-filter-tags" id="club-filter-tags">
+                <button type="button" class="btn-filter-tag active" data-filter="all">すべて</button>
+                <button type="button" class="btn-filter-tag" data-filter="big">強豪</button>
+                <button type="button" class="btn-filter-tag" data-filter="mid">中堅</button>
+                <button type="button" class="btn-filter-tag" data-filter="challenger">古豪・昇格</button>
+              </div>
+            </div>
+            <div id="intro-club-list" class="intro-club-list">
+              <!-- JSで20クラブの行を描画 -->
+            </div>
           </div>
-          <div id="intro-club-grid" class="club-select-grid">
-            <!-- JSで20クラブカードを描画 -->
+
+          <!-- 右ペイン：選択中クラブの詳細プレビュー -->
+          <div class="intro-club-detail-pane" id="intro-club-detail-pane">
+            <!-- JSで選択クラブの詳細を描画 -->
           </div>
         </div>
       </div>
       <div class="modal-actions intro-modal-actions">
-        <button type="button" class="btn btn-secondary hidden" id="btn-cancel-intro">キャンセル</button>
-        <button type="button" class="btn btn-primary" id="btn-confirm-intro">GMに就任してシーズンを開幕する</button>
+        <div class="intro-selected-summary" id="intro-selected-summary">
+          <!-- JSで選択中クラブのサマリーを描画 -->
+        </div>
+        <div class="action-btn-group">
+          <button type="button" class="btn btn-secondary hidden" id="btn-cancel-intro">キャンセル</button>
+          <button type="button" class="btn btn-primary btn-lg" id="btn-confirm-intro">GMに就任してシーズンを開幕する</button>
+        </div>
       </div>
     </div>
   </div>
