@@ -5801,9 +5801,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     left: 64px !important;
     z-index: 10 !important;
     background: #161a1f !important;
-    min-width: 110px !important;
-    max-width: 110px !important;
-    width: 110px !important;
+    min-width: 132px !important;
+    max-width: 132px !important;
+    width: 132px !important;
     box-sizing: border-box !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -6218,5 +6218,142 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 100% !important;
     height: 30px !important;
     font-size: 11px !important;
+  }
+}
+
+/* ==========================================================================
+   選手ドット絵アバター（Pixel Avatar）
+   ========================================================================== */
+.player-avatar {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: #1a1d20;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  vertical-align: middle;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.player-avatar.avatar-xs { width: 16px; height: 16px; }
+.player-avatar.avatar-sm { width: 20px; height: 20px; }
+.player-avatar.avatar-md { width: 32px; height: 32px; }
+
+.player-avatar.table-avatar {
+  margin-right: 5px;
+  position: relative;
+  top: -1px;
+}
+
+/* ピッチ上ノード：名前の左にアバター */
+.pitch-node-name-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.pitch-node-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 控え選手カード：名前の左にアバター */
+.bench-sub-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bench-sub-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* スカウティングレポート：大型アバター＋背番号 */
+.profile-avatar-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-canvas {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #15181b;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 1.5px solid rgba(46, 204, 113, 0.55);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.08), inset 0 0 10px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  /* ピッチノード：狭幅のため、アバターはノード上辺中央に丸バッジとして載せる（ポジション・OVR表示を隠さない） */
+  .pitch-node {
+    overflow: visible !important;
+  }
+
+  .pitch-node-name-btn {
+    display: block !important;
+  }
+
+  .pitch-node-name-text {
+    display: block;
+  }
+
+  .player-avatar.pitch-node-avatar {
+    position: absolute;
+    left: 50%;
+    top: -17px;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 18px;
+    z-index: 2;
+    box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.6), 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .bench-sub-name {
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+  }
+
+  .player-avatar.bench-sub-avatar {
+    width: 16px;
+    height: 16px;
+  }
+
+  .player-avatar.table-avatar {
+    width: 18px;
+    height: 18px;
+    margin-right: 3px;
+  }
+
+  .profile-avatar-col {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .profile-avatar-canvas {
+    width: 52px;
+    height: 52px;
+  }
+
+  .profile-avatar-col .profile-squad-num {
+    width: 52px !important;
+    height: 24px !important;
+    font-size: 14px !important;
   }
 }

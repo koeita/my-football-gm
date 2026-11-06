@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261107_0245">
+  <link rel="stylesheet" href="style.css?v=20261107_0300">
 </head>
 <body data-active-tab="office">
   <div class="app-container">
@@ -755,7 +755,10 @@
     <div class="modal-card profile-modal-card" id="player-profile-modal-card">
       <div class="profile-modal-header">
         <div class="profile-header-left">
-          <div class="profile-squad-num mono" id="profile-squad-num">#10</div>
+          <div class="profile-avatar-col">
+            <canvas class="profile-avatar-canvas" id="profile-avatar-canvas" width="64" height="64" aria-label="選手ドット絵アバター"></canvas>
+            <div class="profile-squad-num mono" id="profile-squad-num">#10</div>
+          </div>
           <div class="profile-identity">
             <div class="profile-top-tags">
               <span class="modal-category mono" id="profile-club-label">SCOUTING REPORT</span>
@@ -843,6 +846,7 @@
     </div>
   </div>
 
-  <script src="main.js?v=20261107_0158"></script>
+  <script src="avatar.js?v=20261107_0300"></script>
+  <script src="main.js?v=20261107_0300"></script>
 </body>
 </html>

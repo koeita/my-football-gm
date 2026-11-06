@@ -9,13 +9,32 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
 
     def setUp(self):
         self.main_js_path = os.path.join(ROOT_DIR, 'main.js')
+        self.avatar_js_path = os.path.join(ROOT_DIR, 'avatar.js')
         self.style_css_path = os.path.join(ROOT_DIR, 'style.css')
         self.index_html_path = os.path.join(ROOT_DIR, 'index.html')
 
     def test_files_exist(self):
         self.assertTrue(os.path.exists(self.main_js_path), "main.js exists")
+        self.assertTrue(os.path.exists(self.avatar_js_path), "avatar.js exists")
         self.assertTrue(os.path.exists(self.style_css_path), "style.css exists")
         self.assertTrue(os.path.exists(self.index_html_path), "index.html exists")
+
+    def test_pixel_avatar_generator_structure(self):
+        """ドット絵顔ジェネレーターの仕様（遺伝子要素・描画関数・プロフィールCanvas）が満たされていること"""
+        with open(self.avatar_js_path, 'r', encoding='utf-8') as f:
+            avatar_js = f.read()
+        with open(self.index_html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+
+        self.assertIn('function generateAvatarData', avatar_js)
+        self.assertIn('function generatePlayerAvatar', avatar_js)
+        self.assertIn('skinColor', avatar_js)
+        self.assertIn('hairStyle', avatar_js)
+        self.assertIn('hairColor', avatar_js)
+        self.assertIn('facialHair', avatar_js)
+        self.assertIn('accessories', avatar_js)
+        self.assertIn('jerseyColor', avatar_js)
+        self.assertIn('id="profile-avatar-canvas"', html)
 
     def test_no_forbidden_draggable_attribute(self):
         """モバイルスクロールを破壊する draggable='true' が作戦ボード関連要素に含まれていないこと"""
