@@ -3414,3 +3414,202 @@ body {
   gap: 6px;
 }
 
+/* ==========================================
+   グローバル移籍市場フィルター＆UI
+   ========================================== */
+.market-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.market-select {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 5px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.market-select:focus {
+  border-color: var(--accent-green);
+}
+
+.filter-search-wrap {
+  flex: 1;
+  min-width: 160px;
+}
+
+.market-search-input {
+  width: 100%;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  outline: none;
+}
+
+.market-search-input:focus {
+  border-color: var(--accent-green);
+}
+
+/* 常設ユースチーム */
+.badge-potential-s {
+  background-color: rgba(241, 196, 15, 0.22);
+  color: #f1c40f;
+  border: 1px solid #f1c40f;
+  font-weight: 700;
+}
+.badge-potential-a {
+  background-color: rgba(46, 204, 113, 0.22);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+  font-weight: 700;
+}
+.badge-potential-b {
+  background-color: rgba(52, 152, 219, 0.22);
+  color: #3498db;
+  border: 1px solid #3498db;
+  font-weight: 700;
+}
+.badge-potential-c {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.btn-demote-youth {
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-demote-youth:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* 買取オファーモーダル */
+.incoming-offer-card {
+  max-width: 580px;
+  border-color: var(--accent-gold);
+}
+
+.incoming-offer-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.incoming-offer-hero {
+  background-color: rgba(243, 156, 18, 0.08);
+  border: 1px solid rgba(243, 156, 18, 0.3);
+  border-radius: 4px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.incoming-offer-sum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.incoming-offer-amt {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--accent-gold);
+}
+
+.incoming-offer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* GM通知トーストコンテナ */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast-item {
+  min-width: 280px;
+  max-width: 420px;
+  background: #24282c;
+  color: #ecf0f1;
+  border-left: 4px solid var(--accent-green);
+  border-top: 1px solid #3a3f45;
+  border-right: 1px solid #3a3f45;
+  border-bottom: 1px solid #3a3f45;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-item.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-item.toast-success {
+  border-left-color: var(--accent-green);
+}
+
+.toast-item.toast-warning {
+  border-left-color: #f1c40f;
+}
+
+.toast-item.toast-danger,
+.toast-item.toast-error {
+  border-left-color: #e74c3c;
+}
+
+.toast-item.toast-info {
+  border-left-color: #3498db;
+}
+
+
