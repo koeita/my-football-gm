@@ -7098,22 +7098,29 @@ function initTacticalDragAndDrop() {
   let startX = 0;
   let startY = 0;
   let isDragging = false;
+  let isTouchReady = false;
+  let longPressTimer = null;
   let ghostEl = null;
   let lastHoverDropTarget = null;
 
   function cleanupDrag() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
     if (ghostEl && ghostEl.parentNode) {
       ghostEl.parentNode.removeChild(ghostEl);
     }
     ghostEl = null;
-    document.querySelectorAll('.pitch-node.dragging, .bench-sub-item.dragging').forEach(el => {
-      el.classList.remove('dragging');
+    document.querySelectorAll('.pitch-node.dragging, .bench-sub-item.dragging, .touch-drag-ready').forEach(el => {
+      el.classList.remove('dragging', 'touch-drag-ready');
     });
     document.querySelectorAll('.drag-drop-target-active').forEach(el => {
       el.classList.remove('drag-drop-target-active');
     });
     dragSource = null;
     isDragging = false;
+    isTouchReady = false;
   }
 
   // ネイティブ DnD ゴーストの干渉を抑止
@@ -7138,9 +7145,15 @@ function initTacticalDragAndDrop() {
     const playerClub = getPlayerClub();
     if (!playerClub) return;
 
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
     startX = e.clientX;
     startY = e.clientY;
     isDragging = false;
+    isTouchReady = false;
     lastHoverDropTarget = null;
 
     if (pitchNode && pitchNode.dataset.slotIndex !== undefined) {
@@ -7174,7 +7187,28 @@ function initTacticalDragAndDrop() {
       }
     }
 
-    // タッチ時のポインタキャプチャ設定はドラッグ確定時(isDragging=true)に行う
+    if (!dragSource) return;
+
+    // タッチ端末での誤取得防止：
+    // スワイプ時に誤ってカードを掴んでしまうのを完全に防ぐため、
+    // タッチ操作時は約200msのホールド（長押し）で「持ち上げ準備完了」にする。
+    const isTouch = e.pointerType === 'touch';
+    if (isTouch) {
+      const targetEl = dragSource.element;
+      longPressTimer = setTimeout(() => {
+        if (!dragSource) return;
+        isTouchReady = true;
+        if (targetEl) {
+          targetEl.classList.add('touch-drag-ready');
+          if (navigator.vibrate) {
+            try { navigator.vibrate(25); } catch(err) {}
+          }
+        }
+      }, 200);
+    } else {
+      // PCマウス操作は即座にドラッグ可能
+      isTouchReady = true;
+    }
   });
 
   // Pointer Move
@@ -7186,17 +7220,32 @@ function initTacticalDragAndDrop() {
     const dist = Math.hypot(deltaX, deltaY);
 
     if (!isDragging) {
-      // 控え選手カードの場合：指が上(ピッチ方向)へ動いていない(deltaY >= -8)かつ水平移動がある場合はカルーセル横スクロールに委ねる
-      if (dragSource.type === 'bench') {
-        if (deltaY >= -8 && Math.abs(deltaX) > 8) {
+      const isTouch = e.pointerType === 'touch';
+
+      // タッチ操作時：長押し完了前（まだ掴んでいない状態）に指が動いた場合
+      // これはユーザーが「画面の縦スクロール」または「控えカルーセルの横スクロール」を行っている最中！
+      // 選手カードを一切拾わずにドラッグ処理を即座に破棄し、ブラウザのスクロールに100%委ねる！
+      if (isTouch && !isTouchReady) {
+        if (dist > 8) {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
           dragSource = null;
           return;
         }
+        return;
       }
 
-      if (dist > 7) {
+      // 長押し完了済み、またはPCマウス操作の場合：動かしたらドラッグ開始！
+      if (dist > 6) {
         isDragging = true;
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
         if (dragSource.element) {
+          dragSource.element.classList.remove('touch-drag-ready');
           dragSource.element.classList.add('dragging');
         }
 
@@ -7256,6 +7305,11 @@ function initTacticalDragAndDrop() {
 
   // Pointer Up
   document.addEventListener('pointerup', (e) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
     if (!dragSource) return;
 
     const source = dragSource;
@@ -7266,7 +7320,8 @@ function initTacticalDragAndDrop() {
     }
 
     if (!isDragging) {
-      // 単なるタップ/クリック: 詳細スカウティングレポートを開く！
+      // 単なるタップ/クリック、または長押ししただけで動かさずに離した場合:
+      // 詳細スカウティングレポートを開く！
       cleanupDrag();
       lastHoverDropTarget = null;
       if (source.playerId) {
@@ -7332,6 +7387,10 @@ function initTacticalDragAndDrop() {
 
   // Pointer Cancel
   document.addEventListener('pointercancel', (e) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
     if (e.target.releasePointerCapture) {
       try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
     }

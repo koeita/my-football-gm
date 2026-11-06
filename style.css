@@ -5411,20 +5411,31 @@ body.modal-open {
 .bench-sub-item {
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none !important;
+  touch-action: pan-y;
 }
 
 .pitch-node {
   cursor: grab;
+  touch-action: pan-y;
 }
 
 .bench-sub-item {
   cursor: grab;
+  touch-action: pan-x pan-y;
 }
 
 .pitch-node:active,
 .bench-sub-item:active {
   cursor: grabbing;
+}
+
+.pitch-node.touch-drag-ready,
+.bench-sub-item.touch-drag-ready {
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
+  border-color: #2ecc71 !important;
+  z-index: 100 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
 }
 
 .pitch-node.dragging,
@@ -5572,7 +5583,7 @@ body.modal-open {
     padding: 2px 2px !important;
     gap: 1px !important;
     border-radius: 4px !important;
-    touch-action: none !important;
+    touch-action: pan-y !important;
   }
 
   .pitch-node-top {
@@ -5690,7 +5701,7 @@ body.modal-open {
     align-items: stretch !important;
     box-sizing: border-box !important;
     border-radius: 4px !important;
-    touch-action: pan-x !important;
+    touch-action: pan-x pan-y !important;
     cursor: grab !important;
     background-color: #12181f !important;
     border: 1px solid var(--border-color, #30363d) !important;
