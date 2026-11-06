@@ -2713,6 +2713,235 @@ body {
   font-weight: 700;
 }
 
+
+/* ==========================================================================
+   5分割タブ ＆ 本部（GMオフィス）スタイル
+   ========================================================================== */
+
+/* 本部タブの中央アイコン（PC時はインライン） */
+.tab-office-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-btn-office {
+  font-weight: 700;
+}
+
+.tab-btn-office.active {
+  background: linear-gradient(180deg, rgba(46, 204, 113, 0.16) 0%, rgba(46, 204, 113, 0.03) 100%);
+  color: var(--accent-green);
+  border-bottom: 3px solid var(--accent-green);
+}
+
+.header-utility-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* 本部タブ（GM執務室）ダッシュボードレイアウト */
+.office-hub-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.office-hub-hero {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.office-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.office-club-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.office-club-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 3px 10px rgba(46, 204, 113, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.office-club-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.office-club-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.office-gm-name {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.office-gm-name strong {
+  color: var(--text-main);
+}
+
+.office-rank-target-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.office-rank-pill {
+  background: rgba(46, 204, 113, 0.14);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.office-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.office-stat-card {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.office-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.office-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.office-action-section {
+  width: 100%;
+}
+
+.office-action-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.btn-advance-large {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%) !important;
+  color: #fff !important;
+  padding: 10px 22px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  min-width: 175px !important;
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: transform 0.1s ease, box-shadow 0.15s ease !important;
+}
+
+.btn-advance-large:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.45) !important;
+}
+
+.btn-advance-large:active {
+  transform: scale(0.98);
+}
+
+.btn-large-sub {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  opacity: 0.88;
+}
+
+.btn-large-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.btn-advance-sub {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 8px 16px !important;
+}
+
+.btn-sub-text {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.office-match-section {
+  width: 100%;
+}
+
+.view-team-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.view-team-layout .column-main {
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .gm-task-card {
     flex-direction: column;
@@ -4318,6 +4547,95 @@ body {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+
+  /* 5分割ボトムナビゲーションバー & 中央本部タブ */
+  .tab-btn-office {
+    overflow: visible !important;
+  }
+
+  .tab-office-circle {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50% !important;
+    background: #252a2f !important;
+    border: 3px solid #1a1d20 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: -16px !important;
+    margin-bottom: 2px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6) !important;
+    transition: all 0.15s ease !important;
+  }
+
+  .tab-btn-office.active .tab-office-circle {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%) !important;
+    border-color: #1a1d20 !important;
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.6), 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .tab-btn-office.active .tab-office-circle svg {
+    stroke: #ffffff !important;
+  }
+
+  .tab-btn-office:not(.active) .tab-office-circle svg {
+    stroke: #94a3b8 !important;
+  }
+
+  .tab-btn-office .tab-label-mob {
+    font-size: 10px !important;
+  }
+
+  /* 本部タブ（GM執務室）モバイルレイアウト */
+  .office-hub-hero {
+    padding: 12px !important;
+  }
+
+  .office-hero-top {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .office-club-name {
+    font-size: 17px !important;
+  }
+
+  .office-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .office-action-controls {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  .btn-advance-large {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 48px !important;
+  }
+
+  .btn-advance-sub {
+    width: 100% !important;
+    min-height: 42px !important;
+  }
+
+  #btn-skip-season {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  #btn-restart-game,
+  #btn-next-season {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
 }
 
 
