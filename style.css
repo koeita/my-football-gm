@@ -4194,32 +4194,39 @@ body.modal-open {
    ========================================================================== */
 @media (max-width: 768px) {
   /* スマホ表示時：本部（office）タブ以外では、上部の巨大なステータスヘッダーカードを非表示にして全画面を活用 */
-  body:not([data-active-tab="office"]) .status-header,
-  .status-header.mobile-hidden-header {
-    display: none !important;
-  }
+
 
   /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保） */
   .app-container {
-    padding: 6px 8px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: calc(62px + env(safe-area-inset-top, 0px)) 8px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* 1. ヘッダー＆ステータスバーのコンパクト化 */
-  /* 1. 『ぼくのプロ野球』風 2行ミニステータスヘッダー（高さ約52px・全タブ常設） */
+  /* 1. 『ぼくのプロ野球』風 2行ミニステータスヘッダー（スクロール時上部完全固定・全タブ常設） */
   .status-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 900 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 3px !important;
-    padding: 5px 10px 5px !important;
-    margin: 0 0 6px 0 !important;
-    border-radius: 6px !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-top: 2px solid var(--accent-green) !important;
-    background: linear-gradient(180deg, #1a1f26 0%, #121519 100%) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+    padding: max(env(safe-area-inset-top, 0px), 5px) 12px 5px !important;
+    margin: 0 !important;
+    border-radius: 0 0 8px 8px !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(18, 22, 28, 0.96) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+    height: 52px !important;
+    max-height: 52px !important;
+    box-sizing: border-box !important;
   }
 
   /* 上段：クラブ名 ＆ 右側ステータスバッジ（健全度・目標） */
