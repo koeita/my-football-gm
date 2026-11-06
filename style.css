@@ -4353,9 +4353,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保・全タブ完全統一） */
   .app-container {
-    padding: calc(54px + env(safe-area-inset-top, 0px)) 6px calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: calc(54px + env(safe-area-inset-top, 0px)) 6px calc(88px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: 100%;
     overflow-x: clip;
+    box-sizing: border-box !important;
   }
 
   /* 1. ヘッダー＆ステータスバーのコンパクト化 */
@@ -4376,12 +4377,26 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     border: none !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     background: #121417 !important;
+    background-color: #121417 !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
     height: 52px !important;
     max-height: 52px !important;
     box-sizing: border-box !important;
+  }
+
+  /* 上部オーバースクロール時の背面透過遮断カバー */
+  .status-header::before {
+    content: "";
+    position: absolute;
+    top: -120px;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: #121417 !important;
+    pointer-events: none;
+    z-index: -1;
   }
 
   /* 上段：クラブ名 ＆ 右側ステータスバッジ（健全度・目標） */
@@ -4571,7 +4586,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     padding: 4px 6px !important;
   }
 
-  /* 3. 画面最下部固定ボトムナビゲーションバー（ネイティブアプリ風・セーフエリア対応） */
+  /* 3. 画面最下部固定ボトムナビゲーションバー（ネイティブアプリ風・セーフエリア対応・完全不透明保証） */
   .tab-nav {
     position: fixed !important;
     bottom: 0 !important;
@@ -4594,6 +4609,19 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
+  }
+
+  /* 下部オーバースクロール＆セーフエリア隙間からの背面透過完全遮断カバー */
+  .tab-nav::after {
+    content: "";
+    position: absolute;
+    bottom: -120px;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: #121417 !important;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .tab-btn {
@@ -4696,48 +4724,69 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
   }
 
-  .standings-table {
+  .standings-table,
+  .roster-table,
+  .market-table {
     min-width: 580px !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
   }
 
-  .roster-table,
-  .market-table {
-    min-width: 540px !important;
-  }
-
-  /* 順位列・クラブ名列のsticky固定 */
+  /* 順位表テーブル：順位列・クラブ名列の完全sticky固定 & 完全不透明化（WebKitブレ＆透過ゼロ保証） */
   .standings-table th.col-rank,
   .standings-table td.col-rank {
     position: sticky !important;
     left: 0 !important;
-    background-color: var(--bg-panel) !important;
-    z-index: 2 !important;
-    width: 38px !important;
-    min-width: 38px !important;
+    z-index: 10 !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    box-sizing: border-box !important;
     text-align: center !important;
+    padding: 6px 2px !important;
+    background-color: #161a1f !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+    background-clip: padding-box !important;
   }
 
   .standings-table thead th.col-rank {
-    background-color: #16191d !important;
-    z-index: 4 !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background-color: #22272e !important;
   }
 
   .standings-table th.col-team,
   .standings-table td.col-team {
     position: sticky !important;
-    left: 38px !important;
-    background-color: var(--bg-panel) !important;
-    z-index: 2 !important;
+    left: 42px !important;
+    z-index: 10 !important;
+    width: 130px !important;
     min-width: 130px !important;
+    max-width: 130px !important;
+    box-sizing: border-box !important;
     white-space: nowrap !important;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 6px 8px !important;
+    background-color: #161a1f !important;
+    border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4) !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+    background-clip: padding-box !important;
   }
 
   .standings-table thead th.col-team {
-    background-color: #16191d !important;
-    z-index: 4 !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background-color: #22272e !important;
+  }
+
+  /* 自チーム行（ロンドン・FC）の固定列の背景色完全不透明追従 */
+  .standings-table tr.row-player-club td.col-rank,
+  .standings-table tr.row-player-club td.col-team {
+    background-color: #1a2e22 !important;
   }
 
   /* 6. 作戦ボード（ピッチ）の縮小適応 */
@@ -5689,7 +5738,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     margin: 0 !important;
     gap: 4px !important;
     background: #121417 !important;
+    background-color: #121417 !important;
     border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.09)) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 
   /* 編成タブ（サブタブバーの高さ38px分のパディング確保） */
@@ -5705,39 +5757,68 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
     overflow: hidden !important;
   }
+  /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化 */
   .roster-table th.col-pos,
   .roster-table td.col-pos {
     position: sticky !important;
     left: 0 !important;
-    z-index: 8 !important;
+    z-index: 10 !important;
     background: #161a1f !important;
-    min-width: 56px !important;
-    max-width: 56px !important;
-    width: 56px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    width: 64px !important;
     box-sizing: border-box !important;
+    text-align: center !important;
+    padding: 5px 2px !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+    background-clip: padding-box !important;
   }
 
   .roster-table thead th.col-pos {
-    z-index: 12 !important;
+    top: 0 !important;
+    z-index: 20 !important;
     background: #22272e !important;
+  }
+
+  /* 適性列内のサブ適性テキストを縦2段に整然と配置して 64px 内に美しく収める */
+  .roster-table td.col-pos .pos-sub-text {
+    display: block !important;
+    font-size: 8.5px !important;
+    line-height: 1.1 !important;
+    margin-top: 2px !important;
+    margin-left: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 60px !important;
+    color: #8c9ba5 !important;
   }
 
   .roster-table th.col-name,
   .roster-table td.col-name {
     position: sticky !important;
-    left: 56px !important;
-    z-index: 8 !important;
+    left: 64px !important;
+    z-index: 10 !important;
     background: #161a1f !important;
     min-width: 110px !important;
     max-width: 110px !important;
     width: 110px !important;
     box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 6px 8px !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.45) !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+    background-clip: padding-box !important;
   }
 
   .roster-table thead th.col-name {
-    z-index: 12 !important;
+    top: 0 !important;
+    z-index: 20 !important;
     background: #22272e !important;
   }
 
