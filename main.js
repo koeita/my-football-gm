@@ -6939,11 +6939,8 @@ function renderIntroClubDetail() {
     </div>
 
     <div class="detail-tactic-box">
-      <div class="detail-tactic-head">
-        <span class="detail-tactic-label">初期戦術方針:</span>
-        <strong class="detail-tactic-name mono">${tacticDef.name}</strong>
-      </div>
-      <p class="detail-tactic-desc">${tacticDef.desc}</p>
+      <span class="detail-tactic-label">初期戦術方針:</span>
+      <strong class="detail-tactic-name mono">${tacticDef.name}</strong>
     </div>
   `;
 

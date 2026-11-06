@@ -4623,7 +4623,7 @@ body.modal-open {
   .intro-modal-card {
     width: 95vw !important;
     max-width: 95vw !important;
-    height: 575px !important;
+    height: 555px !important;
     max-height: 94vh !important;
     border-radius: 8px !important;
     overflow: hidden !important;
@@ -4890,37 +4890,35 @@ body.modal-open {
 
   /* 初期戦術方針ボックス：常に48pxを完全確保してガタつきゼロ */
   .detail-tactic-box {
-    padding: 4px 6px !important;
+    padding: 5px 10px !important;
     margin: 0 !important;
-    gap: 2px !important;
-    height: 46px !important;
-    max-height: 46px !important;
+    height: 28px !important;
+    max-height: 28px !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
     display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 6px !important;
     flex-shrink: 0 !important;
   }
 
   .detail-tactic-label {
-    font-size: 9px !important;
+    font-size: 10px !important;
+    color: var(--text-muted, #8b949e) !important;
   }
 
   .detail-tactic-name {
-    font-size: 10px !important;
+    font-size: 11px !important;
+    color: var(--accent-green, #2ecc71) !important;
+    font-weight: 700 !important;
   }
 
   .detail-tactic-desc {
-    font-size: 9px !important;
-    line-height: 1.25 !important;
-    height: 23px !important;
-    max-height: 23px !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    margin: 0 !important;
+    display: none !important;
   }
 
   /* 下部アクションバー：高さ完全固定 */
