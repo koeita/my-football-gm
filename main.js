@@ -4648,15 +4648,13 @@ function handleGmDutyAction(actionKey) {
 
   if (actionKey === 'goto-pitch') {
     switchTab('roster');
-    const board = document.getElementById('tactical-board-container');
-    if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    switchRosterSubtab('board');
     return;
   }
 
   if (actionKey === 'goto-roster-table') {
     switchTab('roster');
-    const table = document.getElementById('roster-tbody');
-    if (table) table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    switchRosterSubtab('players');
     return;
   }
 
@@ -5038,6 +5036,11 @@ function switchTab(tabName) {
     }
   }
 
+  // 編成タブに切り替えた場合はサブタブの属性と表示状態を適用
+  if (tabName === 'roster') {
+    switchRosterSubtab(gameState.rosterSubtab || 'board');
+  }
+
   renderAll();
 
   // 2. 切り替え先タブの前回スクロール位置を復元（未スクロール時は 0: 最上部）
@@ -5056,6 +5059,50 @@ function switchTab(tabName) {
       behavior: 'instant'
     });
   });
+}
+
+/**
+ * 編成画面内のサブタブ切り替え（作戦ボード / 選手一覧 / 戦術）
+ */
+function switchRosterSubtab(subtabKey) {
+  if (!subtabKey) subtabKey = 'board';
+  gameState.rosterSubtab = subtabKey;
+
+  // DOM 属性をセット（CSSでモバイル作戦ボードのスクロール禁止等を連動）
+  document.body.setAttribute('data-roster-subtab', subtabKey);
+  const rosterView = document.getElementById('view-roster');
+  if (rosterView) {
+    rosterView.setAttribute('data-roster-subtab', subtabKey);
+  }
+
+  const subtabs = ['board', 'players', 'tactics'];
+  subtabs.forEach(key => {
+    const btn = document.getElementById(`subtab-btn-${key}`);
+    const subview = document.getElementById(`roster-subview-${key}`);
+    const isActive = (key === subtabKey);
+
+    if (btn) {
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
+    if (subview) {
+      if (isActive) {
+        subview.classList.remove('hidden');
+      } else {
+        subview.classList.add('hidden');
+      }
+    }
+  });
+
+  // 作戦ボードタブの場合はスクロールを最上部に固定（スクロールなし完全フィット）
+  if (subtabKey === 'board') {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    renderTacticalPitchBoard();
+  } else if (subtabKey === 'players') {
+    renderRoster();
+  } else if (subtabKey === 'tactics') {
+    renderTacticsOverview();
+  }
 }
 
 /**
@@ -5783,11 +5830,31 @@ function renderTacticalBoard() {
 }
 
 /**
+ * クラブ戦術方針の描画
+ */
+function renderTacticsOverview() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+  const currentTactic = playerClub.tactic || 'possession';
+  document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tactic === currentTactic);
+  });
+  const tacticDef = TACTICS_DEFINITIONS[currentTactic];
+  if (tacticDef) {
+    const badge = document.getElementById('current-tactic-badge');
+    if (badge) badge.textContent = tacticDef.badge;
+    const desc = document.getElementById('current-tactic-desc');
+    if (desc) desc.textContent = tacticDef.desc;
+  }
+}
+
+/**
  * 自チーム登録選手一覧の描画（9ポジション順ソート、メイン100%/サブ92%/適性外80%、契約延長ボタン含む）
  */
 function renderRoster() {
   const playerClub = getPlayerClub();
   renderTacticalBoard();
+  renderTacticsOverview();
 
   const stats = getTeamStarterStats(playerClub);
   const payroll = getClubTotalPayroll(playerClub);
@@ -7189,9 +7256,9 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
-    // タッチ端末での誤取得防止：
-    // スワイプ時に誤ってカードを掴んでしまうのを完全に防ぐため、
-    // タッチ操作時は約200msのホールド（長押し）で「持ち上げ準備完了」にする。
+    // タッチ端末での誤取得防止と快適な操作性の両立：
+    // 作戦ボードタブは画面全体のスクロールがないため、長押しタイマーは短縮(60ms)し、
+    // 指を置いて軽く動かすだけですぐにドラッグ開始できるようにする。
     const isTouch = e.pointerType === 'touch';
     if (isTouch) {
       const targetEl = dragSource.element;
@@ -7201,10 +7268,10 @@ function initTacticalDragAndDrop() {
         if (targetEl) {
           targetEl.classList.add('touch-drag-ready');
           if (navigator.vibrate) {
-            try { navigator.vibrate(25); } catch(err) {}
+            try { navigator.vibrate(15); } catch(err) {}
           }
         }
-      }, 200);
+      }, 60);
     } else {
       // PCマウス操作は即座にドラッグ可能
       isTouchReady = true;
@@ -7222,23 +7289,20 @@ function initTacticalDragAndDrop() {
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
 
-      // タッチ操作時：長押し完了前（まだ掴んでいない状態）に指が動いた場合
-      // スクロール操作であるため、カードを拾わずにドラッグ処理を即座に破棄
-      if (isTouch && !isTouchReady) {
-        if (dist > 7) {
-          cleanupDrag();
-          return;
-        }
+      // 控え選手カードの場合：水平方向へのスワイプ（カルーセル横スクロール）ならドラッグ処理を即座に破棄
+      if (dragSource.type === 'bench' && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
+        cleanupDrag();
         return;
       }
 
-      // 長押し完了済み、またはPCマウス操作の場合：
       // 指が動いたらドラッグ開始！
-      if (dist > 6) {
-        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -10)へ向かっていることを確認
-        // もし指が水平または下向き(deltaY >= -10)なら、カルーセルの横スクロールなのでドラッグを開始しない！
-        if (dragSource.type === 'bench' && deltaY >= -10) {
-          cleanupDrag();
+      if (dist > 5) {
+        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -4)へ動いた時にドラッグ開始
+        if (dragSource.type === 'bench' && deltaY >= -4) {
+          if (dist > 12) {
+            cleanupDrag();
+            return;
+          }
           return;
         }
 
@@ -7958,6 +8022,19 @@ function initGame() {
       }
     }
   });
+
+  // 編成サブタブ（作戦ボード / 選手一覧 / 戦術）の切り替え
+  const rosterSubnav = document.getElementById('roster-subnav-bar');
+  if (rosterSubnav) {
+    rosterSubnav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.roster-subtab-btn');
+      if (!btn) return;
+      const subtabKey = btn.dataset.subtab;
+      if (subtabKey) {
+        switchRosterSubtab(subtabKey);
+      }
+    });
+  }
 
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
   initReloadPrevention();

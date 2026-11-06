@@ -1,4 +1,99 @@
 /* ==========================================
+   編成サブタブナビゲーション（作戦ボード / 選手一覧 / 戦術）
+   ========================================== */
+.roster-subnav-bar {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-surface, #22272e);
+  padding: 4px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.09));
+}
+
+.roster-subtab-btn {
+  flex: 1;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.roster-subtab-btn:hover {
+  color: var(--text-main, #f0f3f6);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.roster-subtab-btn.active {
+  background: var(--accent-green, #2ecc71);
+  color: #0c140e !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.32);
+}
+
+.roster-subview {
+  width: 100%;
+}
+
+.roster-subview.hidden {
+  display: none !important;
+}
+
+/* 戦術タブの解説カード */
+.tactics-overview-card {
+  background: var(--bg-surface, #22272e);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.09));
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.tactics-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.tactics-guide-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.09));
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.tactics-guide-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.tactics-guide-item p {
+  font-size: 12.5px;
+  color: var(--text-muted, #8b949e);
+  line-height: 1.5;
+}
+
+.tactical-header-titles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tactical-header-tip {
+  font-size: 11.5px;
+  color: var(--text-muted, #8b949e);
+}
+
+/* ==========================================
    PC向け：上部ステータスバー＆タブナビゲーションの常時固定（Sticky Header）
    ========================================== */
 @media (min-width: 769px) {
@@ -5520,6 +5615,126 @@ body.modal-open {
    モバイル専用 作戦ボード & 控え選手カード 最適化レイアウト
    ========================================================================== */
 @media (max-width: 768px) {
+  /* ==========================================================================
+     モバイル：作戦ボードタブ表示時の「スクロール完全禁止（No Scroll）」レイアウト
+     ピッチと控えカルーセルが1画面に100%収まり、ドラッグ＆ドロップ時に画面が一切動かない
+     ========================================================================== */
+  body[data-active-tab="roster"][data-roster-subtab="board"] {
+    overflow: hidden !important;
+    height: 100dvh !important;
+    position: fixed !important;
+    width: 100% !important;
+    touch-action: none !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .app-container {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding: 4px 6px 58px 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .header-nav-sticky-wrapper,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .status-header {
+    flex-shrink: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin-bottom: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border-color, #30363d) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
+    flex: 1 !important;
+    min-height: 0 !important;
+    padding: 3px 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    overflow: hidden !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column {
+    flex-shrink: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {
+    margin: 0 !important;
+    padding: 3px 4px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 5px !important;
+    padding: 2px 2px 4px 2px !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* サブタブボタン：モバイルでコンパクト */
+  .roster-subnav-bar {
+    flex-shrink: 0 !important;
+    padding: 3px !important;
+    margin-bottom: 6px !important;
+    gap: 4px !important;
+  }
+
+  .roster-subtab-btn {
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
   /* 作戦ボードパネル：余白最小化 */
   .tactical-board-panel {
     margin-bottom: 8px !important;

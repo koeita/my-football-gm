@@ -55,7 +55,8 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
             'view-team', 'view-roster', 'view-office', 'view-facilities', 'view-market',
             'pitch-container', 'pitch-bench-list', 'pitch-sub-box',
             'formation-btn-group', 'tactics-btn-group',
-            'player-profile-modal', 'intro-modal-overlay'
+            'player-profile-modal', 'intro-modal-overlay',
+            'roster-subnav-bar', 'roster-subview-board', 'roster-subview-players', 'roster-subview-tactics'
         ]
         for dom_id in required_ids:
             self.assertIn(f'id="{dom_id}"', html, f"DOM ID #{dom_id} must exist in index.html")
