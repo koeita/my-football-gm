@@ -33,16 +33,6 @@ const CLUB_SHORT_CODES = {
   ipswich_t: 'IPS'
 };
 
-function setBodyModalLock(locked) {
-  if (locked) {
-    document.documentElement.classList.add('modal-open');
-    document.body.classList.add('modal-open');
-  } else {
-    document.documentElement.classList.remove('modal-open');
-    document.body.classList.remove('modal-open');
-  }
-}
-
 function getClubShortCode(clubOrId) {
   const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
   if (id && CLUB_SHORT_CODES[id]) return CLUB_SHORT_CODES[id];

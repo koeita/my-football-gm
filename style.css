@@ -3251,7 +3251,7 @@ body {
 }
 
 
-/* モーダル表示中の背景スクロール完全抑止 */
+/* モーダル表示中の背景スクロール完全抑止 ＆ 下部ナビゲーションバーの完全隠蔽 */
 html.modal-open,
 body.modal-open {
   overflow: hidden !important;
@@ -3260,15 +3260,22 @@ body.modal-open {
   -webkit-overflow-scrolling: auto !important;
 }
 
+body.modal-open .tab-nav,
+body.modal-open .header-nav-sticky-wrapper,
+body.modal-open .status-header,
+body:has(.modal-overlay:not(.hidden)) .tab-nav {
+  display: none !important;
+}
+
 .modal-overlay {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  z-index: 2000 !important;
-  background-color: rgba(0, 0, 0, 0.78) !important;
-  backdrop-filter: blur(4px) !important;
+  z-index: 30000 !important;
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(6px) !important;
   overscroll-behavior: contain !important;
   touch-action: none !important;
 }
@@ -5637,14 +5644,14 @@ body.modal-open {
     box-sizing: border-box !important;
   }
 
-  /* 下部ナビゲーションバー（最前面タップ保証） */
+  /* 下部ナビゲーションバー（通常プレイ時の最前面タップ保証・モーダル時は非表示） */
   .tab-nav {
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     pointer-events: auto !important;
-    z-index: 10000 !important;
+    z-index: 1000 !important;
   }
 
   .tab-btn {
