@@ -5963,7 +5963,6 @@ function renderRoster() {
         </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
-        <td class="col-growth">${growthBadge}</td>
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
         <td class="col-num accent-green">${avgRating}</td>

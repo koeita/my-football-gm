@@ -102,8 +102,13 @@
   }
 
   .roster-subnav-bar {
+    position: static !important;
     max-width: 480px;
     margin: 0 auto 12px auto;
+  }
+
+  #view-roster {
+    padding-top: 0 !important;
   }
 
   .header-nav-sticky-wrapper {
@@ -4346,9 +4351,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   /* スマホ表示時：本部（office）タブ以外では、上部の巨大なステータスヘッダーカードを非表示にして全画面を活用 */
 
 
-  /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保） */
+  /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保・全タブ完全統一） */
   .app-container {
-    padding: calc(62px + env(safe-area-inset-top, 0px)) 8px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: calc(54px + env(safe-area-inset-top, 0px)) 6px calc(76px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: 100%;
     overflow-x: clip;
   }
@@ -4370,10 +4375,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     border-radius: 0 0 8px 8px !important;
     border: none !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    background: rgba(18, 22, 28, 0.96) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+    background: #121417 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
     height: 52px !important;
     max-height: 52px !important;
     box-sizing: border-box !important;
@@ -4573,10 +4578,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     left: 0 !important;
     right: 0 !important;
     z-index: 1000 !important;
-    background-color: #1a1d20 !important;
-    border-top: 1px solid #3a3f45 !important;
+    background: #121417 !important;
+    background-color: #121417 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-top: 1px solid var(--border-color, #30363d) !important;
     border-bottom: none !important;
-    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.55) !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8) !important;
     display: flex !important;
     flex-direction: row !important;
     justify-content: space-around !important;
@@ -5640,16 +5648,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     height: 100dvh !important;
     max-height: 100dvh !important;
     overflow: hidden !important;
-    padding-top: calc(56px + env(safe-area-inset-top, 0px)) !important; /* 上部ミニステータスヘッダー(52px)の重なりを完全解消しサブタブを露出 */
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important; /* 下部ナビ(56px)の余白を確保しタップ領域を完全分離 */
+    padding-top: calc(54px + env(safe-area-inset-top, 0px)) !important; /* 上部ミニステータスヘッダー(52px)のパディング完全統一 */
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; /* 下部ナビ(56px)のパディング完全統一 */
     padding-left: 6px !important;
     padding-right: 6px !important;
-    display: flex !important;
-    flex-direction: column !important;
     box-sizing: border-box !important;
   }
 
-  /* 下部ナビゲーションバー（通常プレイ時の最前面タップ保証・モーダル時は非表示） */
+  /* 下部ナビゲーションバー（通常プレイ時の最前面タップ保証・完全不透明・モーダル時は非表示） */
   .tab-nav {
     position: fixed !important;
     bottom: 0 !important;
@@ -5657,6 +5663,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     right: 0 !important;
     pointer-events: auto !important;
     z-index: 1000 !important;
+    background: #121417 !important;
+    background-color: #121417 !important;
   }
 
   .tab-btn {
@@ -5665,39 +5673,91 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     -webkit-tap-highlight-color: rgba(46, 204, 113, 0.2) !important;
   }
 
-  /* 編成サブタブバー（固定ヘッダー直下に露出・最前面タップ保証） */
+  /* 編成サブタブバー（固定ヘッダー直下にFixed完全固定・高さミリ単位統一・完全不透明・最前面タップ保証） */
   .roster-subnav-bar {
-    position: relative !important;
-    z-index: 950 !important;
+    position: fixed !important;
+    top: calc(52px + env(safe-area-inset-top, 0px)) !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 38px !important;
+    box-sizing: border-box !important;
+    z-index: 850 !important;
     pointer-events: auto !important;
-    flex-shrink: 0 !important;
-    padding: 3px !important;
-    margin-bottom: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 3px 6px !important;
+    margin: 0 !important;
     gap: 4px !important;
-    background: var(--bg-surface, #22272e) !important;
+    background: #121417 !important;
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.09)) !important;
   }
 
-  .roster-subtab-btn {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    padding: 5px 8px !important;
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    -webkit-tap-highlight-color: rgba(46, 204, 113, 0.2) !important;
-  }
-
-  body[data-active-tab="roster"][data-roster-subtab="board"] .header-nav-sticky-wrapper,
-  body[data-active-tab="roster"][data-roster-subtab="board"] .status-header {
-    flex-shrink: 0 !important;
+  /* 編成タブ（サブタブバーの高さ38px分のパディング確保） */
+  #view-roster {
+    padding-top: 42px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: 100% !important;
+    height: calc(100dvh - 54px - 76px) !important;
+    max-height: calc(100dvh - 54px - 76px) !important;
     display: flex !important;
     flex-direction: column !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
+  }
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 8 !important;
+    background: #161a1f !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    width: 56px !important;
+    box-sizing: border-box !important;
+  }
+
+  .roster-table thead th.col-pos {
+    z-index: 12 !important;
+    background: #22272e !important;
+  }
+
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    position: sticky !important;
+    left: 56px !important;
+    z-index: 8 !important;
+    background: #161a1f !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    width: 110px !important;
+    box-sizing: border-box !important;
+    border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .roster-table thead th.col-name {
+    z-index: 12 !important;
+    background: #22272e !important;
+  }
+
+  /* 行状態に応じた固定列の背景色追従（透け防止） */
+  .roster-table tr.row-bench td.col-pos,
+  .roster-table tr.row-bench td.col-name {
+    background: #13161a !important;
+  }
+
+  .roster-table tr.row-selected td.col-pos,
+  .roster-table tr.row-selected td.col-name {
+    background: #1a2720 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
+    height: calc(100dvh - 54px - 76px) !important;
+    max-height: calc(100dvh - 54px - 76px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board {
