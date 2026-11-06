@@ -515,32 +515,38 @@ const FACILITY_DEFINITIONS = {
   stadium: {
     id: 'stadium',
     code: 'STADIUM EXPANSION',
+    iconLabel: 'STADIUM',
     name: 'スタジアム拡張',
     maxLevel: 5,
     // Lv.1->2: £10M, Lv.2->3: £15M, Lv.3->4: £22M, Lv.4->5: £30M
     costs: [0, 10000, 15000, 22000, 30000],
     desc: '観客席の増設とホスピタリティエリアの拡充を行い、ホーム開催時の入場料・グッズ売上を1レベルごとに+15%永続向上させます。',
-    getEffectText: (lv) => `ホーム戦収入 +${(lv - 1) * 15}%（基準比 ${100 + (lv - 1) * 15}%）`
+    getEffectText: (lv) => `ホーム戦収入 +${(lv - 1) * 15}%（基準比 ${100 + (lv - 1) * 15}%）`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `ホーム戦収入 +${lv * 15}% / サポーター +1,200人`
   },
   training: {
     id: 'training',
     code: 'TRAINING & MEDICAL',
+    iconLabel: 'TRAINING',
     name: 'トレーニング＆メディカル施設',
     maxLevel: 5,
     // Lv.1->2: £8M, Lv.2->3: £13M, Lv.3->4: £19M, Lv.4->5: £25M
     costs: [0, 8000, 13000, 19000, 25000],
     desc: '最新鋭のフィジカル機器とスポーツ医療設備を導入し、シーズン終了時の若手成長率UPおよび試合時のスタミナ消耗・負傷発生率を軽減します。',
-    getEffectText: (lv) => `若手成長率 +${(lv - 1) * 20}% / 疲労・負傷率 -${(lv - 1) * 18}%`
+    getEffectText: (lv) => `若手成長率 +${(lv - 1) * 20}% / 疲労・負傷率 -${(lv - 1) * 18}%`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `若手成長率 +${lv * 20}% / 疲労・負傷率 -${lv * 18}%`
   },
   scouting: {
     id: 'scouting',
     code: 'GLOBAL SCOUTING NET',
+    iconLabel: 'SCOUTING',
     name: 'グローバルスカウト網',
     maxLevel: 5,
     // Lv.1->2: £5M, Lv.2->3: £10M, Lv.3->4: £15M, Lv.4->5: £20M
     costs: [0, 5000, 10000, 15000, 20000],
     desc: '欧州全土・南米・アジアに専属スカウトを派遣し、移籍市場に登場する有望選手の人数と能力上限（OVR）、ユース発掘精度を引き上げます。',
-    getEffectText: (lv) => `移籍市場リスト +${(lv - 1) * 2}名 / 候補能力上限 +${(lv - 1) * 2} OVR`
+    getEffectText: (lv) => `移籍市場リスト +${(lv - 1) * 2}名 / 候補能力上限 +${(lv - 1) * 2} OVR`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `移籍市場候補 +${lv * 2}名 / 候補能力上限 +${lv * 2} OVR`
   }
 };
 
@@ -4107,7 +4113,7 @@ function renderFacilitiesAndYouth() {
         <div class="facility-card">
           <div class="facility-card-header">
             <div>
-              <span class="facility-code">${def.iconLabel}</span>
+              <span class="facility-code">${def.iconLabel || def.code || 'FACILITY'}</span>
               <h3 class="facility-name">${def.name}</h3>
             </div>
             <span class="facility-level-badge">Lv.${lv} / ${def.maxLevel}</span>
@@ -4122,11 +4128,11 @@ function renderFacilitiesAndYouth() {
           <div class="facility-effect-box">
             <div class="facility-effect-row">
               <span class="text-muted">現在の稼働効果</span>
-              <span class="facility-effect-current">${def.getEffectText(lv)}</span>
+              <span class="facility-effect-current">${typeof def.getEffectText === 'function' ? def.getEffectText(lv) : ''}</span>
             </div>
             <div class="facility-effect-row">
               <span class="text-muted">次段階の強化効果</span>
-              <span class="facility-effect-next">${def.getNextEffectText(lv)}</span>
+              <span class="facility-effect-next">${typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大拡張レベル達成済' : '効果増大')}</span>
             </div>
           </div>
 
