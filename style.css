@@ -1882,7 +1882,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  max-height: 235px;
+  max-height: 250px;
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -1894,8 +1894,9 @@ body {
   gap: 8px;
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
-  border-radius: 3px;
+  border-radius: 4px;
   padding: 6px 10px;
+  cursor: grab;
   transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
@@ -1907,16 +1908,19 @@ body {
   border-left: 3px solid var(--accent-green);
 }
 
+.bench-sub-item.fit-sub {
+  border-left: 3px solid #38bdf8;
+}
+
 .bench-sub-item.fit-mismatch {
   border-left: 3px solid var(--accent-gold);
 }
 
-.bench-sub-info {
+.bench-sub-top-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .bench-sub-name {
@@ -1926,14 +1930,23 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  margin-left: 4px;
 }
 
-.bench-sub-stats {
+.bench-sub-ovr {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.bench-sub-bottom-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-  font-size: 11px;
 }
 
 .bench-fit-tag {
@@ -4568,8 +4581,7 @@ body.modal-open {
   }
 
   .roster-table,
-  .market-table,
-  .youth-squad-table {
+  .market-table {
     min-width: 540px !important;
   }
 
@@ -5263,6 +5275,513 @@ body.modal-open {
     width: 100% !important;
   }
 
+  /* モバイル表示時：ユースチームテーブル（攻撃・守備・週給も網羅し、スクロールなしで1画面収容） */
+  .youth-squad-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .youth-squad-table th {
+    font-size: 9.5px !important;
+    padding: 5px 1px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  .youth-squad-table td {
+    padding: 4px 1px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+  }
+
+  /* ポテンシャル・成長曲線は完全に非表示（分からない状態を維持） */
+  .youth-squad-table .col-growth {
+    display: none !important;
+  }
+
+  .youth-squad-table .col-pos {
+    width: 30px !important;
+    text-align: center !important;
+    padding: 4px 1px !important;
+  }
+
+  .youth-squad-table .col-pos .pos-tag {
+    font-size: 8.5px !important;
+    padding: 1px 2px !important;
+    min-width: 22px !important;
+  }
+
+  .youth-squad-table .col-name {
+    width: auto !important;
+    text-align: left !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    padding-left: 2px !important;
+  }
+
+  .youth-squad-table .col-name .player-name-link {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+  }
+
+  .youth-squad-table .col-youth-age {
+    width: 26px !important;
+    text-align: center !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+
+  .youth-squad-table .col-youth-ovr {
+    width: 26px !important;
+    text-align: center !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 攻撃・守備・週給もモバイルで美しく表示 */
+  .youth-squad-table .col-youth-atk {
+    display: table-cell !important;
+    width: 24px !important;
+    text-align: center !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+    color: var(--text-muted, #8b949e) !important;
+  }
+
+  .youth-squad-table .col-youth-def {
+    display: table-cell !important;
+    width: 24px !important;
+    text-align: center !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+    color: var(--text-muted, #8b949e) !important;
+  }
+
+  .youth-squad-table .col-youth-wage {
+    display: table-cell !important;
+    width: 36px !important;
+    text-align: center !important;
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    color: var(--accent-gold, #f1c40f) !important;
+  }
+
+  .youth-squad-table .col-action {
+    width: 48px !important;
+    text-align: center !important;
+    padding: 2px 2px !important;
+  }
+
+  .youth-squad-table .col-action .btn {
+    min-height: 22px !important;
+    height: 22px !important;
+    padding: 0 4px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    width: 100% !important;
+    line-height: 22px !important;
+  }
+
+  /* 親スクロールコンテナの横スクロールバーを抑止 */
+  .table-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-scroll-container:has(.youth-squad-table) {
+    overflow-x: hidden !important;
+  }
 }
 
 
+
+
+/* ==========================================================================
+   作戦ボード・控え選手ドラッグ＆ドロップ & カードタップUI
+   ========================================================================== */
+.pitch-node,
+.bench-sub-item {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+.pitch-node {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.bench-sub-item {
+  cursor: grab;
+  touch-action: pan-x pan-y;
+}
+
+.pitch-node:active,
+.bench-sub-item:active {
+  cursor: grabbing;
+}
+
+.pitch-node.touch-drag-ready,
+.bench-sub-item.touch-drag-ready {
+  transform: scale(1.08) !important;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
+  border-color: #2ecc71 !important;
+  z-index: 100 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.pitch-node.dragging,
+.bench-sub-item.dragging {
+  opacity: 0.45;
+  filter: grayscale(30%);
+}
+
+/* ドロップターゲットのハイライト発光 */
+.pitch-node.drag-drop-target-active {
+  border-color: #2ecc71 !important;
+  box-shadow: 0 0 16px rgba(46, 204, 113, 0.9), inset 0 0 8px rgba(46, 204, 113, 0.3) !important;
+  transform: translate(-50%, -50%) scale(1.1) !important;
+  z-index: 20 !important;
+  background-color: #1a2e22 !important;
+}
+
+.bench-sub-item.drag-drop-target-active {
+  border-color: #2ecc71 !important;
+  background-color: rgba(46, 204, 113, 0.2) !important;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.6) !important;
+}
+
+#pitch-bench-list.drag-drop-target-active {
+  outline: 2px dashed #2ecc71 !important;
+  outline-offset: 2px;
+  background-color: rgba(46, 204, 113, 0.08) !important;
+  border-radius: 4px;
+}
+
+/* ドラッグ中に追従するフローティングゴースト */
+.tactical-drag-ghost {
+  position: fixed;
+  z-index: 999999;
+  pointer-events: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  background: rgba(18, 22, 26, 0.96);
+  border: 2px solid #2ecc71;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75), 0 0 12px rgba(46, 204, 113, 0.5);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.tactical-drag-ghost .ghost-pos {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #14171a;
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.tactical-drag-ghost .ghost-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f2f6;
+}
+
+.tactical-drag-ghost .ghost-ovr {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-gold, #f39c12);
+}
+
+
+/* ==========================================================================
+   モバイル専用 作戦ボード & 控え選手カード 最適化レイアウト
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 作戦ボードパネル：余白最小化 */
+  .tactical-board-panel {
+    margin-bottom: 8px !important;
+  }
+
+  .tactical-board-panel .panel-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+
+  .tactical-board-panel .panel-title {
+    font-size: 13px !important;
+    margin: 0 !important;
+  }
+
+  .tactical-board-panel .panel-note {
+    display: none !important;
+  }
+
+  .formation-selector-wrap {
+    width: auto !important;
+    gap: 4px !important;
+  }
+
+  .formation-selector-label {
+    display: none !important;
+  }
+
+  .formation-btn-group {
+    display: flex !important;
+    gap: 3px !important;
+  }
+
+  .btn-formation {
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 2px 6px !important;
+    font-size: 11px !important;
+    line-height: 20px !important;
+  }
+
+  .tactical-board-body {
+    padding: 4px 6px !important;
+  }
+
+  .tactical-board-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  /* ピッチコンテナ：高さ295pxでGKからFWまで1画面上部に完全収容 */
+  .pitch-container {
+    width: 100% !important;
+    min-height: 295px !important;
+    height: 295px !important;
+    max-height: 295px !important;
+    margin: 0 !important;
+  }
+
+  /* ピッチ上の選手カード：4バック・中盤が重ならないコンパクトサイズ */
+  .pitch-node {
+    min-width: 48px !important;
+    max-width: 58px !important;
+    padding: 2px 2px !important;
+    gap: 1px !important;
+    border-radius: 4px !important;
+    touch-action: pan-y !important;
+  }
+
+  .pitch-node-top {
+    gap: 1px !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .pitch-node-pos {
+    font-size: 7.5px !important;
+    padding: 0 2px !important;
+    line-height: 1.15 !important;
+    border-radius: 2px !important;
+  }
+
+  .pitch-node-ovr {
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+  }
+
+  .pitch-node-name,
+  .pitch-node-name-btn {
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+    max-width: 52px !important;
+    letter-spacing: -0.03em !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    padding: 0 !important;
+    text-align: center !important;
+  }
+
+  .pitch-node-meta {
+    gap: 1px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .pitch-node-pref {
+    font-size: 7px !important;
+    line-height: 1.1 !important;
+  }
+
+  .pitch-node-warn,
+  .pitch-node-subpos,
+  .pitch-node-injury {
+    font-size: 6.5px !important;
+    padding: 0 1px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* 控え選手パネル：ピッチ直下にドック形式で常駐 */
+  .tactical-side-column {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .pitch-sub-box {
+    padding: 4px 6px !important;
+    margin: 0 !important;
+    gap: 3px !important;
+    border-radius: 4px !important;
+    background: var(--bg-panel, #161b22) !important;
+  }
+
+  .pitch-sub-header {
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .pitch-sub-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    color: var(--accent-green, #2ecc71) !important;
+  }
+
+  .pitch-sub-guide {
+    display: none !important;
+  }
+
+  /* 案1：控え選手を横スクロールカルーセル（横並びドック）化 */
+  .pitch-bench-list {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 6px !important;
+    padding: 2px 2px 6px 2px !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    touch-action: pan-x !important;
+  }
+
+  /* 控え選手カード：横並び用の均一幅・高さコンパクトカード */
+  .bench-sub-item {
+    flex-shrink: 0 !important;
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+    padding: 4px 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: stretch !important;
+    box-sizing: border-box !important;
+    border-radius: 4px !important;
+    touch-action: pan-x !important;
+    cursor: grab !important;
+    background-color: #12181f !important;
+    border: 1px solid var(--border-color, #30363d) !important;
+  }
+
+  .bench-sub-item * {
+    touch-action: pan-x !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  .bench-sub-top-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 4px !important;
+  }
+
+  .bench-sub-name {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--text-main, #f1f2f6) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+  }
+
+  .bench-sub-ovr {
+    font-family: var(--font-mono, monospace) !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: var(--accent-gold, #f39c12) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .bench-sub-bottom-row {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+
+  .bench-fit-tag {
+    font-size: 8.5px !important;
+    padding: 1px 4px !important;
+    border-radius: 2px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+
+  /* タップ交代なし：交代ボタンは不要・非表示 */
+  .btn-sub-bench {
+    display: none !important;
+  }
+
+  .pitch-tactics-box {
+    margin-top: 4px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* チーム総合指標バッジ：4枚が均等に収まり左が見切れないレイアウト */
+  .tactical-board-summary,
+  .roster-summary-metrics,
+  .power-badges-wrap {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  .power-badge {
+    font-size: 9.5px !important;
+    padding: 3px 2px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+  }
+}

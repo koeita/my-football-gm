@@ -355,31 +355,31 @@ const FORMATIONS = {
     name: '4-3-3',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 70 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 70 },
-      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
-      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
-      { slotIndex: 8, pos: 'LW', label: 'LW', x: 20, y: 22 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 69 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 75 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 75 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 69 },
+      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 57 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 26, y: 42 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 74, y: 42 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 18, y: 22 },
       { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
-      { slotIndex: 10, pos: 'RW', label: 'RW', x: 80, y: 22 }
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 82, y: 22 }
     ]
   },
   '4-2-3-1': {
     name: '4-2-3-1',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 72 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 74 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 74 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 72 },
-      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
-      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
-      { slotIndex: 7, pos: 'LM', label: 'LM', x: 18, y: 36 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
+      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 33, y: 56 },
+      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 67, y: 56 },
+      { slotIndex: 7, pos: 'LM', label: 'LM', x: 16, y: 36 },
       { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 35 },
-      { slotIndex: 9, pos: 'RM', label: 'RM', x: 82, y: 36 },
+      { slotIndex: 9, pos: 'RM', label: 'RM', x: 84, y: 36 },
       { slotIndex: 10, pos: 'CF', label: 'CF', x: 50, y: 15 }
     ]
   },
@@ -387,32 +387,32 @@ const FORMATIONS = {
     name: '4-4-2',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 71 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 71 },
-      { slotIndex: 5, pos: 'LM', label: 'LM', x: 15, y: 46 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
-      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
-      { slotIndex: 8, pos: 'RM', label: 'RM', x: 85, y: 46 },
-      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
-      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 69 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 75 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 75 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 69 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 46 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 37, y: 49 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 63, y: 49 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 46 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
     ]
   },
   '3-5-2': {
     name: '3-5-2',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 24, y: 72 },
-      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 74 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 76, y: 72 },
-      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 56 },
-      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 43 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 35, y: 42 },
-      { slotIndex: 7, pos: 'AM', label: 'AM', x: 65, y: 42 },
-      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 43 },
-      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
-      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 22, y: 73 },
+      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 78, y: 73 },
+      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 57 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 13, y: 43 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 34, y: 41 },
+      { slotIndex: 7, pos: 'AM', label: 'AM', x: 66, y: 41 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 87, y: 43 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
     ]
   }
 };
@@ -4723,6 +4723,33 @@ function setClubFormation(formationKey) {
 /**
  * 作戦ボード（ピッチ）上のスロットノードをクリックした際の処理
  */
+/**
+ * 2つのスタメン枠の選手同士をスワップする
+ */
+function swapStarterSlots(slotIndexA, slotIndexB) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const formationDef = getClubFormationDef(playerClub);
+  const slotDefA = formationDef.slots[slotIndexA];
+  const slotDefB = formationDef.slots[slotIndexB];
+  if (!slotDefA || !slotDefB) return;
+
+  const starterA = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndexA);
+  const starterB = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndexB);
+
+  if (starterA && starterB) {
+    starterA.slotIndex = slotIndexB;
+    starterA.assignedPos = slotDefB.pos;
+    starterB.slotIndex = slotIndexA;
+    starterB.assignedPos = slotDefA.pos;
+  }
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+  renderRoster();
+}
+
 function handlePitchNodeClick(slotIndex) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
@@ -5056,63 +5083,11 @@ function getPlayerClub() {
  */
 function handleRosterClick(playerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
-
-  const playerClub = getPlayerClub();
-  const clickedPlayer = playerClub.players.find(p => p.id === playerId);
-  if (!clickedPlayer) return;
-
-  if (!gameState.selectedPlayerId) {
-    gameState.selectedPlayerId = playerId;
-    gameState.selectedSlotIndex = clickedPlayer.isStarter ? clickedPlayer.slotIndex : null;
-    renderRoster();
-    return;
+  // 下部選手一覧からの交代操作は廃止（作戦ボード・控え選手エリアのドラッグ＆ドロップに一本化）
+  // 行クリック時は詳細プロフィールを表示
+  if (playerId) {
+    openPlayerProfileModal(playerId);
   }
-
-  if (gameState.selectedPlayerId === playerId) {
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-    renderRoster();
-    return;
-  }
-
-  const prevPlayer = playerClub.players.find(p => p.id === gameState.selectedPlayerId);
-  if (!prevPlayer) {
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-    renderRoster();
-    return;
-  }
-
-  if (prevPlayer.isStarter && clickedPlayer.isStarter) {
-    const tempSlot = prevPlayer.assignedPos || prevPlayer.pos;
-    const tempSlotIdx = prevPlayer.slotIndex;
-    prevPlayer.assignedPos = clickedPlayer.assignedPos || clickedPlayer.pos;
-    prevPlayer.slotIndex = clickedPlayer.slotIndex;
-    clickedPlayer.assignedPos = tempSlot;
-    clickedPlayer.slotIndex = tempSlotIdx;
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-  } else if (prevPlayer.isStarter !== clickedPlayer.isStarter) {
-    const starter = prevPlayer.isStarter ? prevPlayer : clickedPlayer;
-    const benchPlayer = prevPlayer.isStarter ? clickedPlayer : prevPlayer;
-    const slot = starter.assignedPos || starter.pos;
-    const slotIdx = starter.slotIndex;
-
-    starter.isStarter = false;
-    starter.assignedPos = null;
-    starter.slotIndex = null;
-    benchPlayer.isStarter = true;
-    benchPlayer.assignedPos = slot;
-    benchPlayer.slotIndex = slotIdx;
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-  } else {
-    gameState.selectedPlayerId = playerId;
-    gameState.selectedSlotIndex = null;
-  }
-
-  ensureValidSquadAndStarters(playerClub);
-  renderRoster();
 }
 
 /**
@@ -5680,14 +5655,14 @@ function renderTacticalBoard() {
         : '';
 
       return `
-        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" style="left: ${sl.x}%; top: ${sl.y}%;" title="枠クリックで交代対象選択 / 選手名クリックでプロフィール表示">
+        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
           <div class="pitch-node-top">
             <span class="pitch-node-pos">${sl.pos}</span>
             <span class="pitch-node-ovr">OVR ${effOvr}</span>
           </div>
-          <button type="button" class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="クリックで選手詳細プロフィールを表示">
+          <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
             #${starter.squadNumber || '-'} ${starter.name}
-          </button>
+          </div>
           <div class="pitch-node-meta">
             <span class="pitch-node-pref">${posDisplay}</span>
             ${fitBadgeHtml}
@@ -5716,7 +5691,7 @@ function renderTacticalBoard() {
     const starterEff = getEffectivePlayerRating(selectedStarter);
     subTitleEl.textContent = `交代対象：[${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name} (実効OVR ${starterEff})`;
     clearBtnEl.classList.remove('hidden');
-    subGuideEl.textContent = `下の控え選手の「交代投入」を押すと [${selectedSlot.pos}] 枠へ即座に投入します（サブ適性は水色 SUB-POS 92% として計算されます）。`;
+    subGuideEl.textContent = `控え選手をピッチの [${selectedSlot.pos}] 枠へドラッグ＆ドロップして交代します（タップで詳細表示）。`;
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
@@ -5734,35 +5709,35 @@ function renderTacticalBoard() {
         const baseOvr = getPlayerOverallRating(bp);
 
         let itemClass = 'fit-mismatch';
-        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80% OVR ${simOvr} (${baseOvr})</span>`;
+        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80%</span>`;
         if (fitInfo.type === 'main') {
           itemClass = 'fit-match';
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100% OVR ${simOvr}</span>`;
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100%</span>`;
         } else if (fitInfo.type === 'sub') {
           itemClass = 'fit-sub';
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS 92% OVR ${simOvr} (${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB 92%</span>`;
         }
 
         return `
-          <div class="bench-sub-item ${itemClass}">
-            <div class="bench-sub-info">
+          <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
+            <div class="bench-sub-top-row">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
-                #${bp.squadNumber || '-'} ${bp.name}
-              </button>
+              <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
             </div>
-            <div class="bench-sub-stats">
+            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+              #${bp.squadNumber || '-'} ${bp.name}
+            </div>
+            <div class="bench-sub-bottom-row">
               ${fitTag}
-              <button type="button" class="btn btn-primary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">交代投入</button>
             </div>
           </div>
         `;
       }).join('');
     }
   } else {
-    subTitleEl.textContent = `控え（ベンチ）選手一覧（${benchPlayers.length}名）`;
+    subTitleEl.textContent = `控え（ベンチ）選手（${benchPlayers.length}名） — 上のピッチへドラッグで交代`;
     clearBtnEl.classList.add('hidden');
-    subGuideEl.textContent = `ピッチ上の枠をクリックすると適性比較・交代ができます。選手名をクリックするとスカウティングシート（詳細プロフィール）が開きます。`;
+    subGuideEl.textContent = `控え選手をピッチ上のスロットへドラッグ＆ドロップして交代できます。タップすると詳細プロフィールが表示されます。`;
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
@@ -5781,24 +5756,24 @@ function renderTacticalBoard() {
         const hasMainSlot = formationDef.slots.some(sl => sl.pos === prefPos);
         const hasSubSlot = formationDef.slots.some(sl => subs.includes(sl.pos));
 
-        let fitTag = `<span class="bench-fit-tag fit-warn">${formationDef.name}枠外 (OVR ${baseOvr})</span>`;
+        let fitTag = `<span class="bench-fit-tag fit-warn">枠外</span>`;
         if (hasMainSlot) {
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性あり (OVR ${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性</span>`;
         } else if (hasSubSlot) {
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS対応 (OVR ${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB適性</span>`;
         }
 
         return `
-          <div class="bench-sub-item">
-            <div class="bench-sub-info">
+          <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
+            <div class="bench-sub-top-row">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
-                #${bp.squadNumber || '-'} ${bp.name}
-              </button>
+              <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
             </div>
-            <div class="bench-sub-stats">
+            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+              #${bp.squadNumber || '-'} ${bp.name}
+            </div>
+            <div class="bench-sub-bottom-row">
               ${fitTag}
-              <button type="button" class="btn btn-secondary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">最適枠へ投入</button>
             </div>
           </div>
         `;
@@ -5853,8 +5828,11 @@ function renderRoster() {
     const assignedSlot = p.isStarter ? (p.assignedPos || p.pos) : null;
     const fitInfo = p.isStarter ? getPositionFitInfo(p, assignedSlot) : { type: 'main', factor: 1.0 };
 
-    const growthLabel = getGrowthCurveLabel(p.growthCurve);
-    const growthBadge = `<span class="growth-pill growth-${p.growthCurve}">${growthLabel}</span>`;
+    const playerClub = getPlayerClub();
+  const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
+  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
+    const growthBadge = `<span class="growth-pill ${growthClass}">${growthLabel}</span>`;
 
     const atkDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.atk) : '';
     const defDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.def) : '';
@@ -5880,23 +5858,7 @@ function renderRoster() {
       demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
     }
 
-    const starterToggleBtn = p.isStarter
-      ? `<button type="button" class="btn btn-starter-toggle btn-starter-active" data-starter-id="${p.id}" title="クリックでベンチと入替">スタメン</button>`
-      : `<button type="button" class="btn btn-starter-toggle btn-bench-active" data-starter-id="${p.id}" title="クリックでスタメンへ昇格">ベンチ</button>`;
 
-    let assignedPosHtml = '<span class="mono text-muted">-</span>';
-    if (p.isStarter) {
-      const selectFitClass = fitInfo.type === 'sub' ? 'slot-sub' : (fitInfo.type === 'out' ? 'slot-mismatch' : '');
-      const optionsHtml = ALL_POSITIONS.map(posOpt => {
-        const selected = posOpt === assignedSlot ? 'selected' : '';
-        return `<option value="${posOpt}" ${selected}>${posOpt}</option>`;
-      }).join('');
-      assignedPosHtml = `
-        <select class="slot-select ${selectFitClass}" data-slot-player-id="${p.id}" title="配置ポジション枠を変更（サブ適性92% / 適性外80%）">
-          ${optionsHtml}
-        </select>
-      `;
-    }
 
     let fitBadge = '';
     if (p.isStarter && fitInfo.type === 'sub') {
@@ -5935,8 +5897,6 @@ function renderRoster() {
 
     return `
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
-        <td class="col-status">${starterToggleBtn}</td>
-        <td class="col-pos">${assignedPosHtml}</td>
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
@@ -6044,19 +6004,28 @@ function renderMarket() {
     const feeA = calculateTransferFee(pA);
     const feeB = calculateTransferFee(pB);
 
-    switch (mf.sortKey) {
+    const sortKey = mf.sortKey || mf.sort || 'ovr-desc';
+    switch (sortKey) {
       case 'ovr-desc':
         return ovrB - ovrA;
+      case 'ovr-asc':
+        return ovrA - ovrB;
       case 'fee-desc':
         return feeB - feeA;
       case 'fee-asc':
         return feeA - feeB;
       case 'wage-desc':
         return (pB.wage || 0) - (pA.wage || 0);
+      case 'wage-asc':
+        return (pA.wage || 0) - (pB.wage || 0);
       case 'age-asc':
         return pA.age - pB.age;
+      case 'age-desc':
+        return pB.age - pA.age;
       case 'contract-asc':
         return pA.contractYears - pB.contractYears || feeA - feeB;
+      case 'contract-desc':
+        return pB.contractYears - pA.contractYears || feeB - feeA;
       default:
         return ovrB - ovrA;
     }
@@ -6163,8 +6132,8 @@ function renderYouthSquad() {
   if (youthList.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-log-message" style="text-align: center; padding: 20px;">
-          現在ユースチーム所属選手はいません。シーズン終了時に新星アカデミー生が加入します。
+        <td colspan="8" class="empty-log-message" style="text-align: center; padding: 20px;">
+          現在ユースチーム選手はいません。シーズン終了時に新アカデミー生が入団します。
         </td>
       </tr>
     `;
@@ -6173,9 +6142,11 @@ function renderYouthSquad() {
 
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
-    const potClass = `badge-potential-${(y.potential || 'B').toLowerCase()}`;
-    const potLabel = `★ ${y.potential || 'B'} ランク`;
-    const growthLabel = getGrowthCurveLabel(y.growthCurve);
+    const canPromoteBtn = canPromote ? `
+      <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
+        昇格
+      </button>
+    ` : `<button type="button" class="btn btn-secondary btn-sm" disabled>枠上限</button>`;
 
     return `
       <tr>
@@ -6185,23 +6156,18 @@ function renderYouthSquad() {
             ${y.name}
           </button>
         </td>
-        <td class="col-num">${y.age}歳</td>
-        <td class="col-num accent-green"><strong>${ovr}</strong></td>
-        <td class="col-growth"><span class="sub-badge ${potClass}">${potLabel}</span></td>
-        <td class="col-growth"><span class="growth-pill growth-${y.growthCurve}">${growthLabel}</span></td>
-        <td class="col-num">${y.atk}</td>
-        <td class="col-num">${y.def}</td>
-        <td class="col-num mono">${formatWage(y.wage || 2)}</td>
+        <td class="col-num col-youth-age">${y.age}歳</td>
+        <td class="col-num col-youth-ovr accent-green"><strong>${ovr}</strong></td>
+        <td class="col-num col-youth-atk">${y.atk}</td>
+        <td class="col-num col-youth-def">${y.def}</td>
+        <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
-          <button type="button" class="btn btn-primary btn-sm btn-promote-youth-direct" data-youth-promote-id="${y.id}" ${canPromote ? '' : 'disabled'}>
-            ${topCount >= MAX_SQUAD_SIZE ? 'トップ枠上限' : 'トップ昇格（プロ契約）'}
-          </button>
+          ${canPromoteBtn}
         </td>
       </tr>
     `;
   }).join('');
 }
-
 /**
  * GM業務タスク一覧（必須 CRITICAL / 推奨 RECOMMENDED / 任意 OPTIONAL）を描画する
  */
@@ -6665,7 +6631,10 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
-  const growthLabel = getGrowthCurveLabel(p.growthCurve);
+  const playerClub = getPlayerClub();
+  const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
+  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
 
   const footLabelMap = {
@@ -6778,7 +6747,7 @@ function openPlayerProfileModal(playerId) {
 
           <div class="profile-box-header" style="margin-top: 6px;">
             <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
-            <span class="growth-pill growth-${p.growthCurve}">成長：${growthLabel}</span>
+            <span class="growth-pill ${growthClass}">成長：${growthLabel}</span>
           </div>
           <div class="profile-traits-wrap">
             ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
@@ -7120,7 +7089,321 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
 /**
  * ゲーム初期化処理（イベントリスナー登録）
  */
+
+/**
+ * 作戦ボードおよび控え選手カードのドラッグ＆ドロップ（DnD）とタップ詳細表示の初期化
+ */
+function initTacticalDragAndDrop() {
+  let dragSource = null;
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+  let isTouchReady = false;
+  let longPressTimer = null;
+  let ghostEl = null;
+  let lastHoverDropTarget = null;
+
+  function cleanupDrag() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    if (ghostEl && ghostEl.parentNode) {
+      ghostEl.parentNode.removeChild(ghostEl);
+    }
+    ghostEl = null;
+    document.querySelectorAll('.pitch-node.dragging, .bench-sub-item.dragging, .touch-drag-ready').forEach(el => {
+      el.classList.remove('dragging', 'touch-drag-ready');
+    });
+    document.querySelectorAll('.drag-drop-target-active').forEach(el => {
+      el.classList.remove('drag-drop-target-active');
+    });
+    dragSource = null;
+    isDragging = false;
+    isTouchReady = false;
+  }
+
+  // ネイティブ DnD ゴーストの干渉を抑止
+  document.addEventListener('dragstart', (e) => {
+    if (e.target.closest('.pitch-node, .bench-sub-item')) {
+      e.preventDefault();
+    }
+  });
+
+  // Pointer Down
+  document.addEventListener('pointerdown', (e) => {
+    const rosterView = document.getElementById('view-roster');
+    if (!rosterView || rosterView.classList.contains('hidden')) return;
+
+    // ボタンや入力要素は通常のクリック操作を優先
+    if (e.target.closest('button, select, input, a')) return;
+
+    const pitchNode = e.target.closest('.pitch-node');
+    const benchItem = e.target.closest('.bench-sub-item');
+    if (!pitchNode && !benchItem) return;
+
+    const playerClub = getPlayerClub();
+    if (!playerClub) return;
+
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+    isTouchReady = false;
+    lastHoverDropTarget = null;
+
+    if (pitchNode && pitchNode.dataset.slotIndex !== undefined) {
+      const slotIndex = parseInt(pitchNode.dataset.slotIndex, 10);
+      const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
+      if (starter) {
+        dragSource = {
+          type: 'starter',
+          playerId: starter.id,
+          slotIndex: slotIndex,
+          squadNumber: starter.squadNumber || '-',
+          name: starter.name,
+          pos: starter.assignedPos || starter.pos,
+          ovr: getEffectivePlayerRating(starter),
+          element: pitchNode
+        };
+      }
+    } else if (benchItem && benchItem.dataset.playerId) {
+      const benchPlayer = playerClub.players.find(p => p.id === benchItem.dataset.playerId && !p.isStarter);
+      if (benchPlayer) {
+        dragSource = {
+          type: 'bench',
+          playerId: benchPlayer.id,
+          slotIndex: null,
+          squadNumber: benchPlayer.squadNumber || '-',
+          name: benchPlayer.name,
+          pos: benchPlayer.primaryPosition || benchPlayer.pos,
+          ovr: getPlayerOverallRating(benchPlayer),
+          element: benchItem
+        };
+      }
+    }
+
+    if (!dragSource) return;
+
+    // タッチ端末での誤取得防止：
+    // スワイプ時に誤ってカードを掴んでしまうのを完全に防ぐため、
+    // タッチ操作時は約200msのホールド（長押し）で「持ち上げ準備完了」にする。
+    const isTouch = e.pointerType === 'touch';
+    if (isTouch) {
+      const targetEl = dragSource.element;
+      longPressTimer = setTimeout(() => {
+        if (!dragSource) return;
+        isTouchReady = true;
+        if (targetEl) {
+          targetEl.classList.add('touch-drag-ready');
+          if (navigator.vibrate) {
+            try { navigator.vibrate(25); } catch(err) {}
+          }
+        }
+      }, 200);
+    } else {
+      // PCマウス操作は即座にドラッグ可能
+      isTouchReady = true;
+    }
+  });
+
+  // Pointer Move
+  document.addEventListener('pointermove', (e) => {
+    if (!dragSource) return;
+
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    const dist = Math.hypot(deltaX, deltaY);
+
+    if (!isDragging) {
+      const isTouch = e.pointerType === 'touch';
+
+      // タッチ操作時：長押し完了前（まだ掴んでいない状態）に指が動いた場合
+      // スクロール操作であるため、カードを拾わずにドラッグ処理を即座に破棄
+      if (isTouch && !isTouchReady) {
+        if (dist > 7) {
+          cleanupDrag();
+          return;
+        }
+        return;
+      }
+
+      // 長押し完了済み、またはPCマウス操作の場合：
+      // 指が動いたらドラッグ開始！
+      if (dist > 6) {
+        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -10)へ向かっていることを確認
+        // もし指が水平または下向き(deltaY >= -10)なら、カルーセルの横スクロールなのでドラッグを開始しない！
+        if (dragSource.type === 'bench' && deltaY >= -10) {
+          cleanupDrag();
+          return;
+        }
+
+        isDragging = true;
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        if (dragSource.element) {
+          dragSource.element.classList.remove('touch-drag-ready');
+          dragSource.element.classList.add('dragging');
+        }
+
+        // ドラッグ確定時にポインタキャプチャ
+        if (e.target && e.target.setPointerCapture) {
+          try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+        }
+
+        ghostEl = document.createElement('div');
+        ghostEl.className = 'tactical-drag-ghost';
+        ghostEl.innerHTML = `
+          <span class="ghost-pos">${dragSource.pos}</span>
+          <span class="ghost-name">#${dragSource.squadNumber} ${dragSource.name}</span>
+          <span class="ghost-ovr">OVR ${dragSource.ovr}</span>
+        `;
+        document.body.appendChild(ghostEl);
+      }
+    }
+
+    if (isDragging && ghostEl) {
+      if (e.cancelable) e.preventDefault();
+
+      // モバイルで指の真下ではなく指の少し上(45px上)にオフセット表示して指で隠れないようにする！
+      const isTouch = e.pointerType === 'touch';
+      const offsetY = isTouch ? -45 : 0;
+
+      ghostEl.style.left = `${e.clientX}px`;
+      ghostEl.style.top = `${e.clientY + offsetY}px`;
+
+      // 判定座標（タッチ時は指の上端付近もカバー）
+      const checkX = e.clientX;
+      const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+
+      const targetUnderPointer = document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY);
+      document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
+
+      if (targetUnderPointer) {
+        const hoverPitchNode = targetUnderPointer.closest('.pitch-node');
+        const hoverBenchItem = targetUnderPointer.closest('.bench-sub-item');
+        const hoverBenchList = targetUnderPointer.closest('#pitch-bench-list');
+
+        if (hoverPitchNode && hoverPitchNode !== dragSource.element) {
+          hoverPitchNode.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverPitchNode;
+        } else if (hoverBenchItem && hoverBenchItem !== dragSource.element) {
+          hoverBenchItem.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverBenchItem;
+        } else if (hoverBenchList && dragSource.type === 'starter') {
+          hoverBenchList.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverBenchList;
+        } else {
+          lastHoverDropTarget = null;
+        }
+      }
+    }
+  }, { passive: false });
+
+  // Pointer Up
+  document.addEventListener('pointerup', (e) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
+    if (!dragSource) return;
+
+    const source = dragSource;
+
+    // キャプチャ解除
+    if (e.target.releasePointerCapture) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+
+    if (!isDragging) {
+      // 単なるタップ/クリック、または長押ししただけで動かさずに離した場合:
+      // 詳細スカウティングレポートを開く！
+      cleanupDrag();
+      lastHoverDropTarget = null;
+      if (source.playerId) {
+        openPlayerProfileModal(source.playerId);
+      }
+      return;
+    }
+
+    // ドラッグ完了フラグ
+    if (window.__setJustFinishedDragging) {
+      window.__setJustFinishedDragging(true);
+      setTimeout(() => window.__setJustFinishedDragging(false), 200);
+    }
+
+    // ゴースト要素を消去
+    cleanupDrag();
+
+    const isTouch = e.pointerType === 'touch';
+    const offsetY = isTouch ? -45 : 0;
+    const checkX = e.clientX;
+    const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+
+    const targetUnderPointer = (checkX !== undefined && checkY !== undefined)
+      ? (document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY))
+      : null;
+
+    const resolvedTarget = targetUnderPointer || lastHoverDropTarget;
+    const dropPitchNode = resolvedTarget ? resolvedTarget.closest('.pitch-node') : null;
+    const dropBenchItem = resolvedTarget ? resolvedTarget.closest('.bench-sub-item') : null;
+    const dropBenchList = resolvedTarget ? resolvedTarget.closest('#pitch-bench-list') : null;
+    lastHoverDropTarget = null;
+
+    if (dropPitchNode && dropPitchNode.dataset.slotIndex !== undefined) {
+      const targetSlotIndex = parseInt(dropPitchNode.dataset.slotIndex, 10);
+      if (source.type === 'starter') {
+        if (source.slotIndex !== targetSlotIndex) {
+          swapStarterSlots(source.slotIndex, targetSlotIndex);
+        }
+      } else if (source.type === 'bench') {
+        substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
+      }
+    } else if (dropBenchItem && dropBenchItem.dataset.playerId) {
+      const benchPlayerId = dropBenchItem.dataset.playerId;
+      if (source.type === 'starter') {
+        substituteBenchPlayerToSlot(benchPlayerId, source.slotIndex);
+      }
+    } else if (dropBenchList && source.type === 'starter') {
+      const playerClub = getPlayerClub();
+      const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+      if (benchPlayers.length > 0) {
+        const formationDef = getClubFormationDef(playerClub);
+        const slotDef = formationDef.slots[source.slotIndex];
+        const sorted = [...benchPlayers].sort((a, b) => {
+          const aFit = getPositionFitInfo(a, slotDef.pos).factor;
+          const bFit = getPositionFitInfo(b, slotDef.pos).factor;
+          if (aFit !== bFit) return bFit - aFit;
+          return getEffectivePlayerRatingForSlot(b, slotDef.pos) - getEffectivePlayerRatingForSlot(a, slotDef.pos);
+        });
+        substituteBenchPlayerToSlot(sorted[0].id, source.slotIndex);
+      }
+    }
+  });
+
+  // Pointer Cancel
+  document.addEventListener('pointercancel', (e) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    if (e.target.releasePointerCapture) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+    cleanupDrag();
+    lastHoverDropTarget = null;
+  });
+}
+
 function initGame() {
+  initTacticalDragAndDrop();
   const btnAdvanceDay = document.getElementById('btn-advance-day');
   if (btnAdvanceDay) {
     btnAdvanceDay.addEventListener('click', () => advanceCalendarDay(false));
@@ -7241,19 +7524,22 @@ function initGame() {
     });
   }
 
-  // 作戦ボード（ピッチ）上のスタメン枠ノードクリック（選手名クリック時はプロフィール表示）
+  // 作戦ボード（ピッチ）および控え選手のカード全体タップで詳細プロフィール表示
+  let justFinishedDragging = false;
+  window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
+  window.__getJustFinishedDragging = function() { return justFinishedDragging; };
+
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
+      if (justFinishedDragging) {
         e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
-        handlePitchNodeClick(parseInt(nodeEl.dataset.slotIndex, 10));
+      if (nodeEl && nodeEl.dataset.playerId) {
+        e.stopPropagation();
+        openPlayerProfileModal(nodeEl.dataset.playerId);
       }
     });
   }
@@ -7268,19 +7554,24 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手ワンクリック交代ボタン＆選手名クリック
+  // 作戦ボード横の控え選手リスト：交代投入ボタン＆カード全体タップでプロフィール表示
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
+      if (justFinishedDragging) {
         e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
       const subBtn = e.target.closest('.btn-sub-bench');
       if (subBtn && subBtn.dataset.subBenchId) {
+        e.stopPropagation();
         substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
+        return;
+      }
+      const itemEl = e.target.closest('.bench-sub-item');
+      if (itemEl && itemEl.dataset.playerId) {
+        e.stopPropagation();
+        openPlayerProfileModal(itemEl.dataset.playerId);
       }
     });
   }
@@ -7366,20 +7657,49 @@ function initGame() {
     }
   });
 
-  // 常設ユースチーム（U-21 SQUAD）テーブルのイベント
+  // 常設ユースチーム（U-21 SQUAD）テーブルのイベント（昇格＆詳細プロフィール）
   const youthSquadTbody = document.getElementById('youth-squad-tbody');
   if (youthSquadTbody) {
     youthSquadTbody.addEventListener('click', (e) => {
+      const promoteBtn = e.target.closest('.btn-promote-youth, .btn-promote-youth-direct');
+      if (promoteBtn) {
+        const youthId = promoteBtn.dataset.promoteId || promoteBtn.dataset.promoteDirectId;
+        if (youthId) {
+          e.stopPropagation();
+          promoteYouthPlayer(youthId);
+          return;
+        }
+      }
       const profileBtn = e.target.closest('[data-profile-id]');
       if (profileBtn) {
         e.stopPropagation();
         openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
-      const promoteBtn = e.target.closest('.btn-promote-youth-direct');
-      if (promoteBtn && promoteBtn.dataset.promoteDirectId) {
+    });
+  }
+
+  // アカデミー施設・ユース候補リストのイベント（トップ昇格・見送り・詳細表示）
+  const youthListEl = document.getElementById('youth-list');
+  if (youthListEl) {
+    youthListEl.addEventListener('click', (e) => {
+      const promoteBtn = e.target.closest('[data-promote-youth]');
+      if (promoteBtn && promoteBtn.dataset.promoteYouth) {
         e.stopPropagation();
-        promoteYouthPlayer(promoteBtn.dataset.promoteDirectId);
+        promoteYouthCandidate(promoteBtn.dataset.promoteYouth);
+        return;
+      }
+      const dismissBtn = e.target.closest('[data-dismiss-youth]');
+      if (dismissBtn && dismissBtn.dataset.dismissYouth) {
+        e.stopPropagation();
+        dismissYouthCandidate(dismissBtn.dataset.dismissYouth);
+        return;
+      }
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
       }
     });
   }
@@ -7392,26 +7712,59 @@ function initGame() {
 
   if (marketFilterClub) {
     marketFilterClub.addEventListener('change', (e) => {
+      gameState.marketFilter.clubId = e.target.value;
       gameState.marketFilter.club = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterPos) {
     marketFilterPos.addEventListener('change', (e) => {
+      gameState.marketFilter.position = e.target.value;
       gameState.marketFilter.pos = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterSort) {
     marketFilterSort.addEventListener('change', (e) => {
+      gameState.marketFilter.sortKey = e.target.value;
       gameState.marketFilter.sort = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterSearch) {
     marketFilterSearch.addEventListener('input', (e) => {
+      gameState.marketFilter.searchQuery = e.target.value.trim().toLowerCase();
       gameState.marketFilter.search = e.target.value.trim().toLowerCase();
       renderMarket();
+    });
+  }
+
+  // 移籍市場テーブルのヘッダークリックによる直感的ソート対応
+  const marketTableHead = document.querySelector('.market-table thead');
+  if (marketTableHead) {
+    marketTableHead.style.cursor = 'pointer';
+    marketTableHead.addEventListener('click', (e) => {
+      const th = e.target.closest('th');
+      if (!th) return;
+      const txt = th.textContent.trim();
+      let nextSort = null;
+      if (txt.includes('OVR')) {
+        nextSort = gameState.marketFilter.sortKey === 'ovr-desc' ? 'ovr-asc' : 'ovr-desc';
+      } else if (txt.includes('移籍金')) {
+        nextSort = gameState.marketFilter.sortKey === 'fee-desc' ? 'fee-asc' : 'fee-desc';
+      } else if (txt.includes('週給')) {
+        nextSort = gameState.marketFilter.sortKey === 'wage-desc' ? 'wage-asc' : 'wage-desc';
+      } else if (txt.includes('年齢')) {
+        nextSort = gameState.marketFilter.sortKey === 'age-asc' ? 'age-desc' : 'age-asc';
+      } else if (txt.includes('契約残')) {
+        nextSort = gameState.marketFilter.sortKey === 'contract-asc' ? 'contract-desc' : 'contract-asc';
+      }
+      if (nextSort) {
+        gameState.marketFilter.sortKey = nextSort;
+        gameState.marketFilter.sort = nextSort;
+        if (marketFilterSort) marketFilterSort.value = nextSort;
+        renderMarket();
+      }
     });
   }
 
