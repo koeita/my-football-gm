@@ -4723,6 +4723,33 @@ function setClubFormation(formationKey) {
 /**
  * 作戦ボード（ピッチ）上のスロットノードをクリックした際の処理
  */
+/**
+ * 2つのスタメン枠の選手同士をスワップする
+ */
+function swapStarterSlots(slotIndexA, slotIndexB) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const formationDef = getClubFormationDef(playerClub);
+  const slotDefA = formationDef.slots[slotIndexA];
+  const slotDefB = formationDef.slots[slotIndexB];
+  if (!slotDefA || !slotDefB) return;
+
+  const starterA = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndexA);
+  const starterB = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndexB);
+
+  if (starterA && starterB) {
+    starterA.slotIndex = slotIndexB;
+    starterA.assignedPos = slotDefB.pos;
+    starterB.slotIndex = slotIndexA;
+    starterB.assignedPos = slotDefA.pos;
+  }
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+  renderRoster();
+}
+
 function handlePitchNodeClick(slotIndex) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
@@ -5056,63 +5083,11 @@ function getPlayerClub() {
  */
 function handleRosterClick(playerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
-
-  const playerClub = getPlayerClub();
-  const clickedPlayer = playerClub.players.find(p => p.id === playerId);
-  if (!clickedPlayer) return;
-
-  if (!gameState.selectedPlayerId) {
-    gameState.selectedPlayerId = playerId;
-    gameState.selectedSlotIndex = clickedPlayer.isStarter ? clickedPlayer.slotIndex : null;
-    renderRoster();
-    return;
+  // 下部選手一覧からの交代操作は廃止（作戦ボード・控え選手エリアのドラッグ＆ドロップに一本化）
+  // 行クリック時は詳細プロフィールを表示
+  if (playerId) {
+    openPlayerProfileModal(playerId);
   }
-
-  if (gameState.selectedPlayerId === playerId) {
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-    renderRoster();
-    return;
-  }
-
-  const prevPlayer = playerClub.players.find(p => p.id === gameState.selectedPlayerId);
-  if (!prevPlayer) {
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-    renderRoster();
-    return;
-  }
-
-  if (prevPlayer.isStarter && clickedPlayer.isStarter) {
-    const tempSlot = prevPlayer.assignedPos || prevPlayer.pos;
-    const tempSlotIdx = prevPlayer.slotIndex;
-    prevPlayer.assignedPos = clickedPlayer.assignedPos || clickedPlayer.pos;
-    prevPlayer.slotIndex = clickedPlayer.slotIndex;
-    clickedPlayer.assignedPos = tempSlot;
-    clickedPlayer.slotIndex = tempSlotIdx;
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-  } else if (prevPlayer.isStarter !== clickedPlayer.isStarter) {
-    const starter = prevPlayer.isStarter ? prevPlayer : clickedPlayer;
-    const benchPlayer = prevPlayer.isStarter ? clickedPlayer : prevPlayer;
-    const slot = starter.assignedPos || starter.pos;
-    const slotIdx = starter.slotIndex;
-
-    starter.isStarter = false;
-    starter.assignedPos = null;
-    starter.slotIndex = null;
-    benchPlayer.isStarter = true;
-    benchPlayer.assignedPos = slot;
-    benchPlayer.slotIndex = slotIdx;
-    gameState.selectedPlayerId = null;
-    gameState.selectedSlotIndex = null;
-  } else {
-    gameState.selectedPlayerId = playerId;
-    gameState.selectedSlotIndex = null;
-  }
-
-  ensureValidSquadAndStarters(playerClub);
-  renderRoster();
 }
 
 /**
@@ -5680,14 +5655,14 @@ function renderTacticalBoard() {
         : '';
 
       return `
-        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" style="left: ${sl.x}%; top: ${sl.y}%;" title="枠クリックで交代対象選択 / 選手名クリックでプロフィール表示">
+        <div class="${nodeClasses}" draggable="true" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
           <div class="pitch-node-top">
             <span class="pitch-node-pos">${sl.pos}</span>
             <span class="pitch-node-ovr">OVR ${effOvr}</span>
           </div>
-          <button type="button" class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="クリックで選手詳細プロフィールを表示">
+          <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
             #${starter.squadNumber || '-'} ${starter.name}
-          </button>
+          </div>
           <div class="pitch-node-meta">
             <span class="pitch-node-pref">${posDisplay}</span>
             ${fitBadgeHtml}
@@ -5744,12 +5719,12 @@ function renderTacticalBoard() {
         }
 
         return `
-          <div class="bench-sub-item ${itemClass}">
+          <div class="bench-sub-item ${itemClass}" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-info">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+              <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
                 #${bp.squadNumber || '-'} ${bp.name}
-              </button>
+              </span>
             </div>
             <div class="bench-sub-stats">
               ${fitTag}
@@ -5762,7 +5737,7 @@ function renderTacticalBoard() {
   } else {
     subTitleEl.textContent = `控え（ベンチ）選手一覧（${benchPlayers.length}名）`;
     clearBtnEl.classList.add('hidden');
-    subGuideEl.textContent = `ピッチ上の枠をクリックすると適性比較・交代ができます。選手名をクリックするとスカウティングシート（詳細プロフィール）が開きます。`;
+    subGuideEl.textContent = `ピッチ上の選手や控え選手をドラッグ＆ドロップして交代できます。カードをタップするとスカウティング詳細（プロフィール）が開きます。`;
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
@@ -5789,12 +5764,12 @@ function renderTacticalBoard() {
         }
 
         return `
-          <div class="bench-sub-item">
+          <div class="bench-sub-item" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-info">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+              <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
                 #${bp.squadNumber || '-'} ${bp.name}
-              </button>
+              </span>
             </div>
             <div class="bench-sub-stats">
               ${fitTag}
@@ -5938,7 +5913,6 @@ function renderRoster() {
 
     return `
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
-        <td class="col-status">${starterToggleBtn}</td>
         <td class="col-pos">${assignedPosHtml}</td>
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
@@ -7123,7 +7097,220 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
 /**
  * ゲーム初期化処理（イベントリスナー登録）
  */
+
+/**
+ * 作戦ボードおよび控え選手カードのドラッグ＆ドロップ（DnD）とタップ詳細表示の初期化
+ */
+function initTacticalDragAndDrop() {
+  let dragSource = null;
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+  let ghostEl = null;
+  let lastHoverDropTarget = null;
+
+  function cleanupDrag() {
+    if (ghostEl && ghostEl.parentNode) {
+      ghostEl.parentNode.removeChild(ghostEl);
+    }
+    ghostEl = null;
+    document.querySelectorAll('.pitch-node.dragging, .bench-sub-item.dragging').forEach(el => {
+      el.classList.remove('dragging');
+    });
+    document.querySelectorAll('.drag-drop-target-active').forEach(el => {
+      el.classList.remove('drag-drop-target-active');
+    });
+    dragSource = null;
+    isDragging = false;
+  }
+
+  // ネイティブ DnD ゴーストの干渉を抑止
+  document.addEventListener('dragstart', (e) => {
+    if (e.target.closest('.pitch-node, .bench-sub-item')) {
+      e.preventDefault();
+    }
+  });
+
+  // Pointer Down
+  document.addEventListener('pointerdown', (e) => {
+    const rosterView = document.getElementById('view-roster');
+    if (!rosterView || rosterView.classList.contains('hidden')) {
+      return;
+    }
+
+    // ボタンやセレクトボックス、リンクの場合は通常クリックを優先
+    if (e.target.closest('button, select, input, a')) return;
+
+    const pitchNode = e.target.closest('.pitch-node');
+    const benchItem = e.target.closest('.bench-sub-item');
+    if (!pitchNode && !benchItem) return;
+
+    const playerClub = getPlayerClub();
+    if (!playerClub) return;
+
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+    lastHoverDropTarget = null;
+
+    if (pitchNode && pitchNode.dataset.slotIndex !== undefined) {
+      const slotIndex = parseInt(pitchNode.dataset.slotIndex, 10);
+      const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
+      if (starter) {
+        dragSource = {
+          type: 'starter',
+          playerId: starter.id,
+          slotIndex: slotIndex,
+          squadNumber: starter.squadNumber || '-',
+          name: starter.name,
+          pos: starter.assignedPos || starter.pos,
+          ovr: getEffectivePlayerRating(starter),
+          element: pitchNode
+        };
+      }
+    } else if (benchItem && benchItem.dataset.playerId) {
+      const benchPlayer = playerClub.players.find(p => p.id === benchItem.dataset.playerId && !p.isStarter);
+      if (benchPlayer) {
+        dragSource = {
+          type: 'bench',
+          playerId: benchPlayer.id,
+          slotIndex: null,
+          squadNumber: benchPlayer.squadNumber || '-',
+          name: benchPlayer.name,
+          pos: benchPlayer.primaryPosition || benchPlayer.pos,
+          ovr: getPlayerOverallRating(benchPlayer),
+          element: benchItem
+        };
+      }
+    }
+  });
+
+  // Pointer Move
+  document.addEventListener('pointermove', (e) => {
+    if (!dragSource) return;
+
+    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+    if (!isDragging && dist > 6) {
+      isDragging = true;
+      if (dragSource.element) {
+        dragSource.element.classList.add('dragging');
+      }
+
+      ghostEl = document.createElement('div');
+      ghostEl.className = 'tactical-drag-ghost';
+      ghostEl.innerHTML = `
+        <span class="ghost-pos">${dragSource.pos}</span>
+        <span class="ghost-name">#${dragSource.squadNumber} ${dragSource.name}</span>
+        <span class="ghost-ovr">OVR ${dragSource.ovr}</span>
+      `;
+      document.body.appendChild(ghostEl);
+    }
+
+    if (isDragging && ghostEl) {
+      if (e.cancelable) e.preventDefault();
+
+      ghostEl.style.left = `${e.clientX}px`;
+      ghostEl.style.top = `${e.clientY}px`;
+
+      const targetUnderPointer = document.elementFromPoint(e.clientX, e.clientY);
+      document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
+
+      if (targetUnderPointer) {
+        const hoverPitchNode = targetUnderPointer.closest('.pitch-node');
+        const hoverBenchItem = targetUnderPointer.closest('.bench-sub-item');
+        const hoverBenchList = targetUnderPointer.closest('#pitch-bench-list');
+
+        if (hoverPitchNode && hoverPitchNode !== dragSource.element) {
+          hoverPitchNode.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverPitchNode;
+        } else if (hoverBenchItem && hoverBenchItem !== dragSource.element) {
+          hoverBenchItem.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverBenchItem;
+        } else if (hoverBenchList && dragSource.type === 'starter') {
+          hoverBenchList.classList.add('drag-drop-target-active');
+          lastHoverDropTarget = hoverBenchList;
+        } else {
+          lastHoverDropTarget = null;
+        }
+      }
+    }
+  }, { passive: false });
+
+  // Pointer Up
+  document.addEventListener('pointerup', (e) => {
+    if (!dragSource) return;
+
+    const source = dragSource;
+
+    if (!isDragging) {
+      // タップ（クリック）動作：選手詳細スカウティングレポートを表示！
+      cleanupDrag();
+      lastHoverDropTarget = null;
+      if (source.playerId) {
+        openPlayerProfileModal(source.playerId);
+      }
+      return;
+    }
+
+    // ドラッグ完了フラグ
+    if (window.__setJustFinishedDragging) {
+      window.__setJustFinishedDragging(true);
+      setTimeout(() => window.__setJustFinishedDragging(false), 200);
+    }
+
+    // ゴースト要素を先に完全消去し、真下の要素を確実に検出可能にする
+    cleanupDrag();
+
+    const targetUnderPointer = (e.clientX !== undefined && e.clientY !== undefined)
+      ? document.elementFromPoint(e.clientX, e.clientY)
+      : null;
+
+    const resolvedTarget = targetUnderPointer || lastHoverDropTarget;
+    const dropPitchNode = resolvedTarget ? resolvedTarget.closest('.pitch-node') : null;
+    const dropBenchItem = resolvedTarget ? resolvedTarget.closest('.bench-sub-item') : null;
+    const dropBenchList = resolvedTarget ? resolvedTarget.closest('#pitch-bench-list') : null;
+    lastHoverDropTarget = null;
+
+    if (dropPitchNode && dropPitchNode.dataset.slotIndex !== undefined) {
+      const targetSlotIndex = parseInt(dropPitchNode.dataset.slotIndex, 10);
+      if (source.type === 'starter') {
+        if (source.slotIndex !== targetSlotIndex) {
+          swapStarterSlots(source.slotIndex, targetSlotIndex);
+        }
+      } else if (source.type === 'bench') {
+        substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
+      }
+    } else if (dropBenchItem && dropBenchItem.dataset.playerId) {
+      const benchPlayerId = dropBenchItem.dataset.playerId;
+      if (source.type === 'starter') {
+        substituteBenchPlayerToSlot(benchPlayerId, source.slotIndex);
+      }
+    } else if (dropBenchList && source.type === 'starter') {
+      const playerClub = getPlayerClub();
+      const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+      if (benchPlayers.length > 0) {
+        const formationDef = getClubFormationDef(playerClub);
+        const slotDef = formationDef.slots[source.slotIndex];
+        const sorted = [...benchPlayers].sort((a, b) => {
+          const aFit = getPositionFitInfo(a, slotDef.pos).factor;
+          const bFit = getPositionFitInfo(b, slotDef.pos).factor;
+          if (aFit !== bFit) return bFit - aFit;
+          return getEffectivePlayerRatingForSlot(b, slotDef.pos) - getEffectivePlayerRatingForSlot(a, slotDef.pos);
+        });
+        substituteBenchPlayerToSlot(sorted[0].id, source.slotIndex);
+      }
+    }
+  });
+
+  // Pointer Cancel
+  document.addEventListener('pointercancel', () => {
+    cleanupDrag();
+    lastHoverDropTarget = null;
+  });
+}
+
 function initGame() {
+  initTacticalDragAndDrop();
   const btnAdvanceDay = document.getElementById('btn-advance-day');
   if (btnAdvanceDay) {
     btnAdvanceDay.addEventListener('click', () => advanceCalendarDay(false));
@@ -7244,19 +7431,22 @@ function initGame() {
     });
   }
 
-  // 作戦ボード（ピッチ）上のスタメン枠ノードクリック（選手名クリック時はプロフィール表示）
+  // 作戦ボード（ピッチ）および控え選手のカード全体タップで詳細プロフィール表示
+  let justFinishedDragging = false;
+  window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
+  window.__getJustFinishedDragging = function() { return justFinishedDragging; };
+
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
+      if (justFinishedDragging) {
         e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
-        handlePitchNodeClick(parseInt(nodeEl.dataset.slotIndex, 10));
+      if (nodeEl && nodeEl.dataset.playerId) {
+        e.stopPropagation();
+        openPlayerProfileModal(nodeEl.dataset.playerId);
       }
     });
   }
@@ -7271,19 +7461,24 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手ワンクリック交代ボタン＆選手名クリック
+  // 作戦ボード横の控え選手リスト：交代投入ボタン＆カード全体タップでプロフィール表示
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
+      if (justFinishedDragging) {
         e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
       const subBtn = e.target.closest('.btn-sub-bench');
       if (subBtn && subBtn.dataset.subBenchId) {
+        e.stopPropagation();
         substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
+        return;
+      }
+      const itemEl = e.target.closest('.bench-sub-item');
+      if (itemEl && itemEl.dataset.playerId) {
+        e.stopPropagation();
+        openPlayerProfileModal(itemEl.dataset.playerId);
       }
     });
   }
