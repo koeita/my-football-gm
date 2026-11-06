@@ -705,7 +705,7 @@ const gameState = {
   isGameOver: false,
   isSimulating: false,
   consecutiveDeficitSeasons: 0,
-  activeTab: 'standings',
+  activeTab: 'office',
   clubs: [],
   europeanMegaClubs: [...EUROPEAN_MEGA_CLUBS],
   schedule: [],
@@ -4577,7 +4577,7 @@ function handleGmDutyAction(actionKey) {
   }
 
   if (actionKey === 'play-match') {
-    switchTab('standings');
+    switchTab('office');
     if (isTodayMatchDayPending()) {
       playCurrentMatchday(false);
     } else {
@@ -4620,7 +4620,7 @@ function handleGmDutyAction(actionKey) {
   }
 
   if (actionKey === 'goto-youth') {
-    switchTab('roster');
+    switchTab('facilities');
     const panel = document.getElementById('youth-squad-panel') || document.getElementById('youth-squad-tbody');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -4898,7 +4898,7 @@ function startNextSeason() {
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: `Season ${gameState.season} が開幕しました！目標順位達成に向けてチームを指揮しましょう。` }
   ];
-  switchTab('standings');
+  switchTab('office');
   renderAll();
 }
 
@@ -4906,9 +4906,10 @@ function startNextSeason() {
  * タブ切り替え
  */
 function switchTab(tabName) {
+  if (tabName === 'standings') tabName = 'team';
   gameState.activeTab = tabName;
 
-  const tabs = ['standings', 'roster', 'market', 'facilities'];
+  const tabs = ['team', 'roster', 'office', 'facilities', 'market'];
   for (const t of tabs) {
     const btn = document.getElementById(`tab-btn-${t}`);
     const view = document.getElementById(`view-${t}`);
@@ -5164,7 +5165,7 @@ function renderHeader() {
       if (btnPlayMatch) {
         btnPlayMatch.classList.remove('hidden');
         const matchWeekNum = currentDay ? currentDay.matchWeek : gameState.currentWeek + 1;
-        btnPlayMatch.textContent = `キックオフ（第${matchWeekNum}節）`;
+        btnPlayMatch.innerHTML = `<span class="btn-large-sub mono">MATCHDAY READY</span><span class="btn-large-title">キックオフ（第${matchWeekNum}節）</span>`;
       }
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
@@ -6913,7 +6914,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.isGameOver = false;
   gameState.isSimulating = false;
   gameState.consecutiveDeficitSeasons = 0;
-  gameState.activeTab = 'standings';
+  gameState.activeTab = 'office';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
@@ -6963,7 +6964,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   ];
   generateTransferMarket();
   generateYouthAcademyCandidates();
-  switchTab('standings');
+  switchTab('office');
 }
 
 /**

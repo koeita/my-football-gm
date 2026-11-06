@@ -62,20 +62,166 @@
         </div>
       </div>
 
-      <div class="action-controls">
-        <button type="button" class="btn btn-secondary" id="btn-advance-day" title="日付を1日進める">日程を進める（翌日へ）</button>
-        <button type="button" class="btn btn-primary" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">次の試合まで進める</button>
-        <button type="button" class="btn btn-primary btn-kickoff-pulse hidden" id="btn-play-match" title="本日の試合を開始">キックオフ（試合開始）</button>
-        <button type="button" class="btn btn-warning hidden" id="btn-pause-advance" title="日程の自動進行を一時停止">一時停止</button>
-        <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
-        <button type="button" class="btn btn-secondary" id="btn-skip-season">シーズン終了までスキップ</button>
-        <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
-        <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
+            <div class="header-utility-actions">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-open-intro" title="GM名・担当クラブを選び直して新規ゲームを開始">はじめから</button>
       </div>
     </header>
 
-    <!-- 直近1週間のスケジュール（週間カレンダーウィジェット） -->
+    
+
+    <!-- 赤字経営・ゲームオーバー警告バー -->
+    <div id="financial-alert-banner" class="financial-alert-banner hidden"></div>
+
+    
+
+    <!-- ナビゲーションタブ（PC: コンテンツ直上 / スマホ: 画面最下部固定5分割ボトムナビ） -->
+    <nav class="tab-nav" id="main-tab-nav" aria-label="メインメニュー">
+      <button type="button" class="tab-btn" data-tab="team" id="tab-btn-team" title="チーム（順位表・得点ランク・リーグ情報）">
+        <span class="tab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+            <path d="M4 22h16"></path>
+            <path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path>
+          </svg>
+        </span>
+        <span class="tab-label-text">
+          <span class="tab-label-pc">順位表 / チーム</span>
+          <span class="tab-label-mob">チーム</span>
+        </span>
+      </button>
+
+      <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster" title="編成（作戦ボード・ピッチ編成・スタメン入替・選手一覧）">
+        <span class="tab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </span>
+        <span class="tab-label-text">
+          <span class="tab-label-pc">所属選手・戦術</span>
+          <span class="tab-label-mob">編成</span>
+        </span>
+        <span class="tab-badge mono" id="tab-badge-roster">16/25</span>
+      </button>
+
+      <button type="button" class="tab-btn tab-btn-office active" data-tab="office" id="tab-btn-office" title="本部（GM執務室：日程進行、試合情報、GM業務一覧）">
+        <div class="tab-office-circle">
+          <span class="tab-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </span>
+        </div>
+        <span class="tab-label-text">
+          <span class="tab-label-pc">本部（GM執務室）</span>
+          <span class="tab-label-mob">本部</span>
+        </span>
+      </button>
+
+      <button type="button" class="tab-btn" data-tab="facilities" id="tab-btn-facilities" title="経営（設備投資・財政・常設ユースアカデミー）">
+        <span class="tab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+            <line x1="9" y1="22" x2="9" y2="22.01"></line>
+            <line x1="15" y1="22" x2="15" y2="22.01"></line>
+            <line x1="8" y1="6" x2="8" y2="6.01"></line>
+            <line x1="16" y1="6" x2="16" y2="6.01"></line>
+            <line x1="8" y1="10" x2="8" y2="10.01"></line>
+            <line x1="16" y1="10" x2="16" y2="10.01"></line>
+            <line x1="8" y1="14" x2="8" y2="14.01"></line>
+            <line x1="16" y1="14" x2="16" y2="14.01"></line>
+          </svg>
+        </span>
+        <span class="tab-label-text">
+          <span class="tab-label-pc">クラブ経営・設備・ユース</span>
+          <span class="tab-label-mob">経営</span>
+        </span>
+      </button>
+
+      <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market" title="移籍（全20クラブ移籍市場・獲得交渉・届いたオファー）">
+        <span class="tab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+        </span>
+        <span class="tab-label-text">
+          <span class="tab-label-pc">移籍市場</span>
+          <span class="tab-label-mob">移籍</span>
+        </span>
+        <span class="tab-badge mono" id="tab-badge-market">320名</span>
+      </button>
+    </nav>
+
+    <!-- シーズン終了・決算・世代交代サマリー（オフシーズン中のみ上部表示） -->
+    <section id="season-summary-box" class="season-summary hidden">
+      <div class="summary-grid">
+        <div class="summary-banner">
+          <h3 id="summary-headline">シーズン終了・決算報告</h3>
+          <p id="summary-reward-text" class="mono"></p>
+          <p id="summary-payroll-projection" class="mono"></p>
+          <p id="summary-contract-warning" class="mono text-danger"></p>
+        </div>
+        <div class="summary-logs-wrapper">
+          <div class="summary-log-block">
+            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
+            <div id="summary-retirement-log" class="summary-retirement-list"></div>
+          </div>
+          <div class="summary-log-block">
+            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
+            <div id="summary-aging-log" class="summary-details"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- タブ1：順位表 / 日程画面 -->
+        <!-- タブ3：本部（GM執務室：日程進行、試合情報、GM業務一覧）★初期表示・中央タブ -->
+    <main id="view-office" class="tab-view office-hub-view">
+      <!-- 最上部ステータス（クラブ名、スタジアム規模、サポーター数、現在順位・目標） -->
+      <section class="office-hub-hero">
+        <div class="office-hero-top">
+          <div class="office-club-badge-row">
+            <div class="office-club-avatar mono" id="office-club-initial">LFC</div>
+            <div class="office-club-meta">
+              <h2 class="office-club-name" id="office-club-name">ロンドン・FC</h2>
+              <span class="office-gm-name">GM: <strong id="office-gm-name">A. ファーガソン</strong></span>
+            </div>
+          </div>
+          <div class="office-rank-target-row">
+            <span class="office-rank-pill mono" id="office-current-rank">現在 1位 (0pts)</span>
+            <span class="target-rank-badge mono" id="office-target-rank">目標：4位以内</span>
+          </div>
+        </div>
+
+        <div class="office-stats-grid">
+          <div class="office-stat-card">
+            <span class="office-stat-label">スタジアム規模</span>
+            <span class="office-stat-value mono" id="office-stadium-cap">Lv.1 (25,000人)</span>
+          </div>
+          <div class="office-stat-card">
+            <span class="office-stat-label">サポーター数</span>
+            <span class="office-stat-value mono accent-green" id="office-supporters-count">18,000人</span>
+          </div>
+          <div class="office-stat-card">
+            <span class="office-stat-label">クラブ資金</span>
+            <span class="office-stat-value mono accent-gold" id="office-funds">£48.0M</span>
+          </div>
+          <div class="office-stat-card">
+            <span class="office-stat-label">年間総年俸</span>
+            <span class="office-stat-value mono" id="office-payroll">£72.3M</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 中央：直近1週間のスケジュール（週間カレンダーウィジェット） -->
+<!-- 直近1週間のスケジュール（週間カレンダーウィジェット） -->
     <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="直近1週間のスケジュール">
       <div class="weekly-schedule-header">
         <div class="weekly-schedule-title-group">
@@ -92,10 +238,50 @@
       </div>
     </section>
 
-    <!-- 赤字経営・ゲームオーバー警告バー -->
-    <div id="financial-alert-banner" class="financial-alert-banner hidden"></div>
+      <!-- メインアクションボタンコントロール（本部内に集約） -->
+      <section class="office-action-section">
+        <div class="office-action-controls action-controls" id="office-action-controls">
+          <button type="button" class="btn btn-primary btn-advance-large" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">
+            <span class="btn-large-sub mono">NEXT FIXTURE</span>
+            <span class="btn-large-title">次の試合まで進める</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" title="本日の試合を開始">
+            <span class="btn-large-sub mono">MATCHDAY KICKOFF</span>
+            <span class="btn-large-title">キックオフ（試合開始）</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-advance-sub" id="btn-advance-day" title="日付を1日進める">
+            <span class="btn-sub-text mono">+1 DAY</span>
+            <span>日程を進める（翌日へ）</span>
+          </button>
+          <button type="button" class="btn btn-warning btn-advance-sub hidden" id="btn-pause-advance" title="日程の自動進行を一時停止">
+            <span>一時停止</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-skip-season">シーズン終了までスキップ</button>
+          <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
+          <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
+          <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
+        </div>
+      </section>
 
-    <!-- GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意） -->
+      <!-- 次の試合情報・直前試合結果ログ -->
+      <section class="office-match-section">
+<section class="column-side">
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title" id="log-panel-title">試合結果・進行ログ</h2>
+            <span class="panel-subtitle mono" id="log-panel-subtitle">MATCH LOG</span>
+          </div>
+          <div class="panel-body">
+            <div id="match-results-container" class="match-results-container">
+              <!-- JSで描画 -->
+            </div>
+          </div>
+        </div>
+      </section>
+      </section>
+
+      <!-- 下部：GM業務一覧パネル -->
+<!-- GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意） -->
     <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
       <div class="gm-tasks-header">
         <div class="gm-tasks-title-group">
@@ -123,102 +309,10 @@
         <!-- JSで必須・推奨・任意のタスクカードを自動描画 -->
       </div>
     </section>
+    </main>
 
-    <!-- ナビゲーションタブ（PC: コンテンツ直上 / スマホ: 画面最下部固定ボトムナビ） -->
-    <nav class="tab-nav" id="main-tab-nav" aria-label="メインメニュー">
-      <button type="button" class="tab-btn active" data-tab="standings" id="tab-btn-standings" title="日程 / 順位">
-        <span class="tab-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        </span>
-        <span class="tab-label-text">
-          <span class="tab-label-pc">順位表 / 日程</span>
-          <span class="tab-label-mob">日程 / 順位</span>
-        </span>
-      </button>
-
-      <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster" title="編成 / 戦術">
-        <span class="tab-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-        </span>
-        <span class="tab-label-text">
-          <span class="tab-label-pc">所属選手・戦術・契約</span>
-          <span class="tab-label-mob">編成 / 戦術</span>
-        </span>
-        <span class="tab-badge mono" id="tab-badge-roster">16/25</span>
-      </button>
-
-      <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market" title="移籍市場">
-        <span class="tab-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
-            <path d="M2 12h20"></path>
-          </svg>
-        </span>
-        <span class="tab-label-text">
-          <span class="tab-label-pc">移籍市場</span>
-          <span class="tab-label-mob">移籍市場</span>
-        </span>
-        <span class="tab-badge mono" id="tab-badge-market">320名</span>
-      </button>
-
-      <button type="button" class="tab-btn" data-tab="facilities" id="tab-btn-facilities" title="クラブ経営">
-        <span class="tab-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-            <line x1="9" y1="22" x2="9" y2="22.01"></line>
-            <line x1="15" y1="22" x2="15" y2="22.01"></line>
-            <line x1="8" y1="6" x2="8" y2="6.01"></line>
-            <line x1="16" y1="6" x2="16" y2="6.01"></line>
-            <line x1="8" y1="10" x2="8" y2="10.01"></line>
-            <line x1="16" y1="10" x2="16" y2="10.01"></line>
-            <line x1="8" y1="14" x2="8" y2="14.01"></line>
-            <line x1="16" y1="14" x2="16" y2="14.01"></line>
-            <line x1="8" y1="18" x2="8" y2="18.01"></line>
-            <line x1="16" y1="18" x2="16" y2="18.01"></line>
-          </svg>
-        </span>
-        <span class="tab-label-text">
-          <span class="tab-label-pc">クラブ経営・施設投資</span>
-          <span class="tab-label-mob">クラブ経営</span>
-        </span>
-      </button>
-    </nav>
-
-    <!-- シーズン終了・決算・世代交代サマリー（オフシーズン中のみ上部表示） -->
-    <section id="season-summary-box" class="season-summary hidden">
-      <div class="summary-grid">
-        <div class="summary-banner">
-          <h3 id="summary-headline">シーズン終了・決算報告</h3>
-          <p id="summary-reward-text" class="mono"></p>
-          <p id="summary-payroll-projection" class="mono"></p>
-          <p id="summary-contract-warning" class="mono text-danger"></p>
-        </div>
-        <div class="summary-logs-wrapper">
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
-            <div id="summary-retirement-log" class="summary-retirement-list"></div>
-          </div>
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
-            <div id="summary-aging-log" class="summary-details"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- タブ1：順位表 / 日程画面 -->
-    <main id="view-standings" class="tab-view dashboard-grid">
+    <!-- タブ1：リーグ順位表・得点ランキング -->
+    <main id="view-team" class="tab-view hidden view-team-layout">
       <section class="column-main">
         <!-- リーグ順位表パネル -->
         <div class="panel">
@@ -276,19 +370,7 @@
         </div>
       </section>
 
-      <section class="column-side">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title" id="log-panel-title">試合結果・進行ログ</h2>
-            <span class="panel-subtitle mono" id="log-panel-subtitle">MATCH LOG</span>
-          </div>
-          <div class="panel-body">
-            <div id="match-results-container" class="match-results-container">
-              <!-- JSで描画 -->
-            </div>
-          </div>
-        </div>
-      </section>
+      
     </main>
 
     <!-- タブ2：所属選手（スタメン・ベンチ・戦術・契約延長・放出）画面 -->
@@ -433,42 +515,7 @@
         </div>
       </div>
 
-      <!-- 常設ユースチーム（U-21 SQUAD）パネル -->
-      <div class="panel" style="margin-top: 14px;">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">常設ユースチーム（U-21 Squad / アカデミー組織）</h2>
-            <p class="panel-note">
-              16〜19歳の育成枠チームです（最大10名）。トップ登録枠（最大25名）に空きがあればいつでも「トップ昇格（プロ契約）」が可能です。
-            </p>
-          </div>
-          <div class="team-power-badges">
-            <span class="power-badge">ユース所属 <strong class="mono accent-green" id="youth-squad-count">0 / 10名</strong></span>
-            <span class="power-badge">トップ登録枠 <strong class="mono" id="youth-top-capacity">0 / 25名</strong></span>
-          </div>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table youth-squad-table">
-            <thead>
-              <tr>
-                <th class="col-pos">POS</th>
-                <th class="col-name">選手名</th>
-                <th class="col-num">年齢</th>
-                <th class="col-num">OVR</th>
-                <th class="col-growth">ポテンシャル</th>
-                <th class="col-growth">成長曲線</th>
-                <th class="col-num">攻撃</th>
-                <th class="col-num">守備</th>
-                <th class="col-num">週給</th>
-                <th class="col-action">GM昇格操作</th>
-              </tr>
-            </thead>
-            <tbody id="youth-squad-tbody">
-              <!-- JSで描画 -->
-            </tbody>
-          </table>
-        </div>
-      </div>
+      
     </main>
 
     <!-- タブ3：グローバル移籍市場画面（全20クラブの全選手） -->
@@ -580,18 +627,40 @@
         </div>
       </div>
 
-      <!-- 下部組織（常設U-21ユースアカデミー）連携案内パネル -->
-      <div class="panel youth-academy-panel" id="youth-academy-panel">
+      <!-- 常設ユースチーム（U-21 SQUAD）パネル -->
+      <div class="panel youth-squad-panel" id="youth-squad-panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">下部組織（常設U-21ユースアカデミー連携）</h2>
+            <h2 class="panel-title">常設ユースチーム（U-21 Squad / アカデミー組織）</h2>
             <p class="panel-note">
-              当クラブのU-21ユースチーム（最大10名在籍）は「所属選手・戦術・契約」タブにて常設運営されています。施設投資の「グローバルスカウト網」を強化することで、シーズン終了時に加入する新星のポテンシャル上限（★Sランク率）が永続UPします。
+              16〜19歳の育成枠チームです（最大10名）。トップ登録枠（最大25名）に空きがあればいつでも「トップ昇格（プロ契約）」が可能です。
             </p>
           </div>
           <div class="team-power-badges">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-goto-youth-squad">U-21ユースチーム一覧へ移動</button>
+            <span class="power-badge">ユース所属 <strong class="mono accent-green" id="youth-squad-count">0 / 10名</strong></span>
+            <span class="power-badge">トップ登録枠 <strong class="mono" id="youth-top-capacity">0 / 25名</strong></span>
           </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table youth-squad-table">
+            <thead>
+              <tr>
+                <th class="col-pos">POS</th>
+                <th class="col-name">選手名</th>
+                <th class="col-num">年齢</th>
+                <th class="col-num">OVR</th>
+                <th class="col-growth">ポテンシャル</th>
+                <th class="col-growth">成長曲線</th>
+                <th class="col-num">攻撃</th>
+                <th class="col-num">守備</th>
+                <th class="col-num">週給</th>
+                <th class="col-action">GM昇格操作</th>
+              </tr>
+            </thead>
+            <tbody id="youth-squad-tbody">
+              <!-- JSで描画 -->
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
