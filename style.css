@@ -2388,3 +2388,483 @@ body {
   text-decoration-color: var(--accent-green);
   background-color: rgba(46, 204, 113, 0.15);
 }
+
+/* ==========================================
+   GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意）
+   ========================================== */
+.gm-tasks-panel {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 4px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gm-tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gm-tasks-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.gm-tasks-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  letter-spacing: 0.06em;
+}
+
+.gm-tasks-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.gm-tasks-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.duty-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.duty-legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.duty-critical-dot::before {
+  background-color: var(--danger-red);
+}
+
+.duty-recommended-dot::before {
+  background-color: var(--accent-gold);
+}
+
+.duty-optional-dot::before {
+  background-color: var(--accent-green);
+}
+
+.gm-tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .gm-tasks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gm-task-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--border-color);
+  border-radius: 3px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gm-task-card.duty-critical {
+  border-left-color: var(--danger-red);
+  background-color: rgba(231, 76, 60, 0.06);
+}
+
+.gm-task-card.duty-recommended {
+  border-left-color: var(--accent-gold);
+  background-color: rgba(243, 156, 18, 0.06);
+}
+
+.gm-task-card.duty-optional {
+  border-left-color: var(--accent-green);
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.gm-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gm-task-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duty-priority-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.duty-priority-badge.badge-critical {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--danger-red);
+  border: 1px solid var(--danger-red);
+}
+
+.duty-priority-badge.badge-recommended {
+  background-color: rgba(243, 156, 18, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+}
+
+.duty-priority-badge.badge-optional {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.gm-task-headline {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-task-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-duty-action {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ==========================================
+   クラブ経営・施設投資（Facilities & Investment）
+   ========================================== */
+#view-facilities {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#view-facilities.hidden {
+  display: none;
+}
+
+.facility-feedback-banner {
+  background-color: rgba(46, 204, 113, 0.14);
+  border: 1px solid var(--accent-green);
+  border-left: 4px solid var(--accent-green);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 980px) {
+  .facilities-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.facility-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-green);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.facility-card.facility-maxed {
+  border-top-color: var(--accent-gold);
+}
+
+.facility-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.facility-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.facility-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  display: block;
+}
+
+.facility-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 2px;
+}
+
+.facility-lv-badge {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 2px;
+  background-color: rgba(46, 204, 113, 0.16);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  white-space: nowrap;
+}
+
+.facility-card.facility-maxed .facility-lv-badge {
+  background-color: rgba(243, 156, 18, 0.18);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.facility-pips-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.facility-pip {
+  height: 8px;
+  border-radius: 2px;
+  background-color: #262b30;
+  border: 1px solid #343a40;
+}
+
+.facility-pip.pip-active {
+  background-color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.facility-card.facility-maxed .facility-pip.pip-active {
+  background-color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.facility-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.facility-effect-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.facility-effect-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.facility-upgrade-footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.facility-cost-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.facility-cost-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.facility-cost-val {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+/* ==========================================
+   ユースアカデミー（新星の発掘・昇格審査）
+   ========================================== */
+.youth-academy-panel {
+  border-top: 2px solid var(--accent-green);
+}
+
+.youth-candidates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 820px) {
+  .youth-candidates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.youth-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-green);
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.youth-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.youth-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.youth-pos-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.youth-name-btn {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.youth-meta-row {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.youth-ovr-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--accent-green);
+  border-radius: 3px;
+  padding: 4px 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.youth-ovr-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.youth-ovr-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.youth-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.youth-stat-pill {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.youth-contract-note {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.youth-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
