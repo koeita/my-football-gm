@@ -5087,7 +5087,7 @@ function switchRosterSubtab(subtabKey) {
   // 作戦ボードタブの場合はスクロールを最上部に固定（スクロールなし完全フィット）
   if (subtabKey === 'board') {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    renderTacticalPitchBoard();
+    renderTacticalBoard();
   } else if (subtabKey === 'players') {
     renderRoster();
   } else if (subtabKey === 'tactics') {
@@ -5758,7 +5758,7 @@ function renderTacticalBoard() {
         return `
           <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-top-row">
-              ${formatPlayerPositionsHtml(bp)}
+              <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
               <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
             </div>
             <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
@@ -5803,7 +5803,7 @@ function renderTacticalBoard() {
         return `
           <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-top-row">
-              ${formatPlayerPositionsHtml(bp)}
+              <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
               <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
             </div>
             <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">

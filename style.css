@@ -101,6 +101,11 @@
     padding-top: 0 !important;
   }
 
+  .roster-subnav-bar {
+    max-width: 480px;
+    margin: 0 auto 12px auto;
+  }
+
   .header-nav-sticky-wrapper {
     position: sticky;
     top: 0;
@@ -5788,7 +5793,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .formation-selector-wrap {
-    width: auto !important;
+    width: 100% !important;
     gap: 4px !important;
   }
 
@@ -5798,15 +5803,18 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .formation-btn-group {
     display: flex !important;
+    width: 100% !important;
     gap: 3px !important;
   }
 
   .btn-formation {
+    flex: 1 !important;
     min-height: 26px !important;
     height: 26px !important;
-    padding: 2px 6px !important;
+    padding: 2px 4px !important;
     font-size: 11px !important;
     line-height: 20px !important;
+    text-align: center !important;
   }
 
   .tactical-board-body {
@@ -5937,16 +5945,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     touch-action: pan-x pan-y !important;
   }
 
-  /* 控え選手カード：横並び用の均一幅・高さコンパクトカード */
+  /* 控え選手カード：横並び用の均一幅・高さコンパクトカード（文字重なりを完全排除） */
   .bench-sub-item {
     flex-shrink: 0 !important;
-    width: 96px !important;
-    min-width: 96px !important;
-    max-width: 96px !important;
-    height: 64px !important;
-    min-height: 64px !important;
-    max-height: 64px !important;
-    padding: 4px 6px !important;
+    width: 104px !important;
+    min-width: 104px !important;
+    max-width: 104px !important;
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    padding: 3px 5px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
@@ -5970,24 +5978,30 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    gap: 4px !important;
+    gap: 2px !important;
+  }
+
+  .bench-sub-top-row .player-positions {
+    font-size: 8px !important;
+    line-height: 1.1 !important;
+    gap: 1px !important;
   }
 
   .bench-sub-name {
-    font-size: 11px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     color: var(--text-main, #f1f2f6) !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     text-align: left !important;
-    line-height: 1.2 !important;
-    margin: 0 !important;
+    line-height: 1.15 !important;
+    margin: 1px 0 !important;
   }
 
   .bench-sub-ovr {
     font-family: var(--font-mono, monospace) !important;
-    font-size: 10.5px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     color: var(--accent-gold, #f39c12) !important;
     flex-shrink: 0 !important;
@@ -6000,13 +6014,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .bench-fit-tag {
-    font-size: 8.5px !important;
-    padding: 1px 4px !important;
+    font-size: 8px !important;
+    padding: 1px 3px !important;
     border-radius: 2px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     max-width: 100% !important;
+    line-height: 1.1 !important;
   }
 
   /* タップ交代なし：交代ボタンは不要・非表示 */
@@ -6035,5 +6050,32 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     text-align: center !important;
     white-space: nowrap !important;
     justify-content: center !important;
+  }
+
+  /* 移籍市場フィルター：モバイルでの2列グリッド最適化 */
+  .market-filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+  }
+
+  .market-filter-bar .filter-group {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+  }
+
+  .market-filter-bar .filter-group:nth-child(4) {
+    grid-column: span 2 !important;
+  }
+
+  .market-select,
+  .market-input-search {
+    width: 100% !important;
+    height: 30px !important;
+    font-size: 11px !important;
   }
 }
