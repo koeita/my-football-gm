@@ -682,7 +682,7 @@ body {
   color: var(--danger-red);
 }
 
-/* 9ポジションタグ */
+/* 10ポジションタグ */
 .pos-tag {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -692,7 +692,7 @@ body {
 }
 
 .pos-GK { color: var(--accent-gold); }
-.pos-CB, .pos-SB { color: var(--text-main); }
+.pos-CB, .pos-LB, .pos-RB, .pos-SB { color: var(--text-main); }
 .pos-DM, .pos-CM, .pos-SM, .pos-AM { color: var(--accent-green); }
 .pos-WG, .pos-CF { color: var(--accent-gold); }
 
@@ -1033,8 +1033,9 @@ body {
 .intro-modal-card {
   max-width: 1040px;
   width: 95vw;
-  height: 90vh;
-  max-height: 700px;
+  height: 88vh;
+  max-height: 680px;
+  min-height: 460px;
   border-top-color: var(--accent-green);
   display: flex;
   flex-direction: column;
@@ -1465,6 +1466,47 @@ body {
 .btn-lg {
   padding: 9px 18px;
   font-size: 13px;
+}
+
+@media (max-height: 740px) {
+  .intro-modal-card {
+    height: 94vh;
+    min-height: 420px;
+  }
+  .modal-header {
+    padding: 10px 16px;
+  }
+  .intro-top-bar {
+    padding: 6px 12px;
+    gap: 10px;
+  }
+  .intro-story-compact {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .intro-modal-body {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+  .intro-club-detail-pane {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .detail-club-name {
+    font-size: 18px;
+  }
+  .detail-metrics-grid {
+    gap: 6px;
+  }
+  .detail-metric-card {
+    padding: 6px 10px;
+  }
+  .detail-mission-box {
+    padding: 6px 10px;
+  }
+  .intro-modal-actions {
+    padding: 8px 14px;
+  }
 }
 
 /* ==========================================

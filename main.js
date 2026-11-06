@@ -261,25 +261,27 @@ const EUROPEAN_MEGA_CLUBS = [
   { id: 'paris', name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
-// 9ポジション定義とカテゴリ分類
-const ALL_POSITIONS = ['GK', 'CB', 'SB', 'DM', 'CM', 'SM', 'AM', 'WG', 'CF'];
+// 10ポジション定義とカテゴリ分類
+const ALL_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'SM', 'AM', 'WG', 'CF'];
 
 const POS_DISPLAY_ORDER = {
   GK: 1,
   CB: 2,
-  SB: 3,
-  DM: 4,
-  CM: 5,
-  SM: 6,
-  AM: 7,
-  WG: 8,
-  CF: 9
+  LB: 3,
+  RB: 4,
+  DM: 5,
+  CM: 6,
+  SM: 7,
+  AM: 8,
+  WG: 9,
+  CF: 10
 };
 
 const POS_ROLE_GROUP = {
   GK: 'GK',
   CB: 'DF',
-  SB: 'DF',
+  LB: 'DF',
+  RB: 'DF',
   DM: 'MF',
   CM: 'MF',
   SM: 'MF',
@@ -294,10 +296,10 @@ const FORMATIONS = {
     name: '4-3-3',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 70 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 70 },
       { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 70 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 70 },
       { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
       { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
@@ -310,10 +312,10 @@ const FORMATIONS = {
     name: '4-2-3-1',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 72 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 72 },
       { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 74 },
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 74 },
-      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 72 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 72 },
       { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
       { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
       { slotIndex: 7, pos: 'SM', label: 'LSM', x: 18, y: 36 },
@@ -326,10 +328,10 @@ const FORMATIONS = {
     name: '4-4-2',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'SB', label: 'LSB', x: 15, y: 71 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 71 },
       { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'SB', label: 'RSB', x: 85, y: 71 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 71 },
       { slotIndex: 5, pos: 'SM', label: 'LSM', x: 15, y: 46 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
       { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
@@ -360,7 +362,8 @@ const FORMATIONS = {
 const REQUIRED_STARTERS = {
   GK: 1,
   CB: 2,
-  SB: 2,
+  LB: 1,
+  RB: 1,
   DM: 1,
   CM: 2,
   SM: 0,
@@ -373,7 +376,8 @@ const REQUIRED_STARTERS = {
 const SQUAD_COMPOSITION = [
   { pos: 'GK', total: 2, starters: 1 },
   { pos: 'CB', total: 3, starters: 2 },
-  { pos: 'SB', total: 2, starters: 2 },
+  { pos: 'LB', total: 1, starters: 1 },
+  { pos: 'RB', total: 1, starters: 1 },
   { pos: 'DM', total: 1, starters: 1 },
   { pos: 'CM', total: 2, starters: 2 },
   { pos: 'SM', total: 1, starters: 0 },
@@ -411,7 +415,7 @@ const TACTICS_DEFINITIONS = {
   counter: {
     name: 'カウンター（速攻）',
     badge: 'COUNTER ATTACK',
-    desc: '【カウンター（速攻）】：前線（WG/CF）の攻撃力と最終ライン（CB/SB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
+    desc: '【カウンター（速攻）】：前線（WG/CF）の攻撃力と最終ライン（CB/LB/RB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
   },
   highpress: {
     name: 'ハイプレス（前線守備）',
@@ -448,11 +452,13 @@ const NATIONALITIES = [
 // メイン適性に応じたサブ適性（secondaryPositions）候補プール
 const SECONDARY_POSITION_POOLS = {
   GK: [[]],
-  CB: [['SB'], ['DM'], ['SB', 'DM'], []],
+  CB: [['LB'], ['RB'], ['DM'], ['LB', 'DM'], ['RB', 'DM'], []],
+  LB: [['SM'], ['CB'], ['WG'], ['RB'], ['SM', 'WG']],
+  RB: [['SM'], ['CB'], ['WG'], ['LB'], ['SM', 'WG']],
   SB: [['SM'], ['CB'], ['WG'], ['SM', 'WG']],
   DM: [['CM'], ['CB'], ['CM', 'CB']],
   CM: [['DM'], ['AM'], ['SM'], ['DM', 'AM']],
-  SM: [['WG'], ['SB'], ['AM'], ['WG', 'AM']],
+  SM: [['WG'], ['LB'], ['RB'], ['AM'], ['WG', 'AM']],
   AM: [['CM'], ['WG'], ['CF'], ['CM', 'WG']],
   WG: [['CF'], ['SM'], ['AM'], ['CF', 'AM']],
   CF: [['WG'], ['AM'], ['WG', 'AM'], []]
@@ -462,6 +468,8 @@ const SECONDARY_POSITION_POOLS = {
 const PREFERRED_SQUAD_NUMBERS = {
   GK: [1, 13, 23, 31, 40],
   CB: [4, 5, 6, 15, 24, 25, 26],
+  LB: [3, 12, 21, 22, 23, 33],
+  RB: [2, 12, 21, 24, 27, 32],
   SB: [2, 3, 12, 21, 22, 27, 33],
   DM: [6, 14, 16, 18, 28, 30],
   CM: [8, 16, 18, 20, 22, 29, 32],
@@ -616,6 +624,8 @@ function getPlayerOverallRating(p) {
     case 'CB':
       raw = p.def * 0.72 + p.sta * 0.20 + p.atk * 0.08;
       break;
+    case 'LB':
+    case 'RB':
     case 'SB':
       raw = p.def * 0.52 + p.sta * 0.30 + p.atk * 0.18;
       break;
@@ -749,6 +759,16 @@ function generateUniqueName(usedNames) {
  */
 function generatePreferredFoot(pos) {
   const r = Math.random();
+  if (pos === 'LB') {
+    if (r < 0.78) return 'Left';
+    if (r < 0.90) return 'Both';
+    return 'Right';
+  }
+  if (pos === 'RB') {
+    if (r < 0.78) return 'Right';
+    if (r < 0.90) return 'Both';
+    return 'Left';
+  }
   if (pos === 'SB' || pos === 'WG' || pos === 'SM') {
     if (r < 0.56) return 'Right';
     if (r < 0.86) return 'Left';
@@ -772,6 +792,9 @@ function generatePlayerHeight(pos) {
       return randInt(177, 193);
     case 'DM':
       return randInt(176, 190);
+    case 'LB':
+    case 'RB':
+    case 'SB':
     default:
       return randInt(172, 186);
   }
@@ -792,7 +815,7 @@ function generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, pr
   if (height >= 189 && (pos === 'CB' || pos === 'CF' || pos === 'GK')) {
     candidates.push('空中戦の覇者');
   }
-  if ((pos === 'WG' || pos === 'SM' || pos === 'SB') && atk >= 66) {
+  if ((pos === 'WG' || pos === 'SM' || pos === 'LB' || pos === 'RB' || pos === 'SB') && atk >= 66) {
     candidates.push('スピードスター');
   }
   if ((pos === 'AM' || pos === 'CM' || pos === 'SM') && atk >= 68) {
@@ -845,7 +868,7 @@ function generateInitialCareerStats(pos, age) {
 
   let goalRate = 0.03;
   if (pos === 'GK') goalRate = 0;
-  else if (pos === 'CB' || pos === 'SB') goalRate = 0.04;
+  else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB') goalRate = 0.04;
   else if (pos === 'DM') goalRate = 0.06;
   else if (pos === 'CM' || pos === 'SM') goalRate = 0.12;
   else if (pos === 'AM') goalRate = 0.22;
@@ -926,6 +949,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center + 6 + randInt(-6, 9), 1, 99);
       sta = clamp(center + randInt(-6, 7), 1, 99);
       break;
+    case 'LB':
+    case 'RB':
     case 'SB':
       atk = clamp(center - 8 + randInt(-6, 8), 1, 99);
       def = clamp(center + 2 + randInt(-6, 8), 1, 99);
