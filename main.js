@@ -2651,11 +2651,13 @@ function openContractNegotiationModal(playerId) {
 
   const demandedSalary = calculatePlayerDemandSalary(target);
   const demandedYears = calculatePlayerDemandYears(target);
+  const currentContractYears = target.contractYears || 0;
+  const projectedTotalYears = Math.min(5, currentContractYears + demandedYears);
   const failCount = target.renewalFailCount || 0;
   const isRefused = Boolean(target.contractRefused);
 
   let statusType = 'info';
-  let statusMessage = `代理人：「#${target.squadNumber || '-'} ${target.name} は今季の貢献度と実力（OVR ${getPlayerOverallRating(target)} / ${target.goals}得点）を踏まえ、年俸 ${formatMoney(demandedSalary)}・${demandedYears}年契約を希望しています。」`;
+  let statusMessage = `代理人：「#${target.squadNumber || '-'} ${target.name} は今季の貢献度と実力（OVR ${getPlayerOverallRating(target)} / ${target.goals}得点）を踏まえ、年俸 ${formatMoney(demandedSalary)}・残存契約（残り${currentContractYears}年）への +${demandedYears}年上乗せ延長（合計${projectedTotalYears}年）を希望しています。」`;
 
   if (isRefused) {
     statusType = 'error';
@@ -2822,16 +2824,28 @@ function renderNegotiationModal() {
     </div>
   `;
 
-  const yearsButtonsHtml = [1, 2, 3, 4].map(yr => `
-    <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
-      ${yr}年契約
-    </button>
-  `).join('');
+  const curContractY = target.contractYears || 0;
+
+  const yearsButtonsHtml = [1, 2, 3, 4].map(yr => {
+    if (isRenewal) {
+      const resultingYears = Math.min(5, curContractY + yr);
+      return `
+        <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+          +${yr}年上乗せ (計${resultingYears}年)
+        </button>
+      `;
+    }
+    return `
+      <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+        ${yr}年契約
+      </button>
+    `;
+  }).join('');
 
   const demandRowsHtml = isRenewal ? `
     <div class="neg-demand-row">
-      <span class="neg-demand-label">現在の年俸 ／ 残り契約</span>
-      <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${target.contractYears}年</span>
+      <span class="neg-demand-label">現在の年俸 ／ 現在の残契約</span>
+      <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${curContractY}年</span>
     </div>
     <div class="neg-demand-row">
       <span class="neg-demand-label">今季の活躍度（出場 / ゴール / OVR）</span>
@@ -2842,8 +2856,8 @@ function renderNegotiationModal() {
       <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">代理人の要求契約年数</span>
-      <span class="neg-demand-val">${session.demandedYears}年契約</span>
+      <span class="neg-demand-label">代理人の希望上乗せ年数</span>
+      <span class="neg-demand-val">+${session.demandedYears}年上乗せ（合意時 計${Math.min(5, curContractY + session.demandedYears)}年）</span>
     </div>
   ` : `
     <div class="neg-demand-row">
@@ -2909,8 +2923,8 @@ function renderNegotiationModal() {
 
           <div class="neg-control-group">
             <div class="neg-control-header">
-              <span class="neg-control-label">提示契約年数（1〜4年）</span>
-              <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
+              <span class="neg-control-label">${isRenewal ? '提示延長年数（残存年数に上乗せ）' : '提示契約年数（1〜4年）'}</span>
+              <span class="mono accent-green" id="neg-offered-years-display"><strong>${isRenewal ? `+${session.offeredYears}年上乗せ（計${Math.min(5, curContractY + session.offeredYears)}年契約）` : `${session.offeredYears}年契約`}</strong></span>
             </div>
             <div class="neg-years-group" id="neg-years-group">
               ${yearsButtonsHtml}
@@ -2956,9 +2970,11 @@ function submitNegotiationOffer() {
     const requiredSalary = Math.round(session.demandedSalary * yearAdjustment);
 
     if (session.offeredSalary >= requiredSalary) {
-      // 合意（契約更新成立）
+      // 合意（契約更新成立：残存契約年数に上乗せ）
+      const prevYears = target.contractYears || 0;
+      const newContractYears = Math.min(5, prevYears + session.offeredYears);
       target.salary = session.offeredSalary;
-      target.contractYears = session.offeredYears;
+      target.contractYears = newContractYears;
       target.renewalFailCount = 0;
       target.demandedSalary = null;
       target.demandedYears = null;
@@ -2967,8 +2983,8 @@ function submitNegotiationOffer() {
 
       session.completed = true;
       session.statusType = 'success';
-      session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（年俸 ${formatMoney(session.offeredSalary)} ／ 新契約 ${session.offeredYears}年）に快く合意し、契約延長サインを完了しました！`;
-      gameState.facilityFeedback = `【契約延長合意】#${target.squadNumber || '-'} ${target.name} と年俸 ${formatMoney(session.offeredSalary)}（${session.offeredYears}年契約）で契約を更新しました。`;
+      session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（年俸 ${formatMoney(session.offeredSalary)} ／ 残存契約${prevYears}年に+${session.offeredYears}年上乗せし合計${newContractYears}年契約）に快く合意し、契約延長サインを完了しました！`;
+      gameState.facilityFeedback = `【契約延長合意】#${target.squadNumber || '-'} ${target.name} と年俸 ${formatMoney(session.offeredSalary)}（+${session.offeredYears}年上乗せ / 合計${newContractYears}年契約）で契約を更新しました。`;
       renderNegotiationModal();
       renderAll();
       return;
@@ -5609,7 +5625,17 @@ function initGame() {
           b.classList.toggle('active', b === yrBtn);
         });
         const yrDisp = document.getElementById('neg-offered-years-display');
-        if (yrDisp) yrDisp.innerHTML = `<strong>${session.offeredYears}年契約</strong>`;
+        if (yrDisp) {
+          if (session.mode === 'renewal') {
+            const playerClub = getPlayerClub();
+            const target = playerClub ? playerClub.players.find(p => p.id === session.playerId) : null;
+            const curY = target ? (target.contractYears || 0) : 0;
+            const totalY = Math.min(5, curY + session.offeredYears);
+            yrDisp.innerHTML = `<strong>+${session.offeredYears}年上乗せ（計${totalY}年契約）</strong>`;
+          } else {
+            yrDisp.innerHTML = `<strong>${session.offeredYears}年契約</strong>`;
+          }
+        }
       }
     });
   }
