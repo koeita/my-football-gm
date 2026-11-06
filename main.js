@@ -5087,12 +5087,7 @@ function renderHeader() {
     }
   }
 
-  const facilitiesBadge = document.getElementById('tab-badge-facilities');
-  if (facilitiesBadge) {
-    const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
-    facilitiesBadge.textContent = `Lv.${f.stadium}/${f.training}/${f.scouting}`;
-    facilitiesBadge.classList.remove('badge-highlight');
-  }
+
 
   const financeBadge = document.getElementById('header-finance-badge');
   financeBadge.className = 'finance-status-badge';

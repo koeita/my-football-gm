@@ -435,6 +435,9 @@ body {
   gap: 4px;
   cursor: pointer;
   text-align: left;
+  white-space: normal;
+  box-sizing: border-box;
+  min-width: 0;
   transition: all 0.15s ease;
 }
 
@@ -1924,19 +1927,53 @@ body {
 .pitch-tactics-box {
   margin-bottom: 0;
   padding: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .compact-tactics-group {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .compact-tactics-group .btn-tactic {
-  padding: 6px 8px;
+  padding: 8px 6px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
 }
 
-.compact-tactics-group .tactic-btn-sub {
+.compact-tactics-group .tactic-name {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.compact-tactics-group .tactic-desc {
   font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 2px;
+}
+
+.compact-tactics-group .btn-tactic.active .tactic-desc {
+  color: var(--text-main);
 }
 
 /* ==========================================
