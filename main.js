@@ -457,6 +457,21 @@ const NATIONALITIES = [
   'Croatia', 'Japan'
 ];
 
+const NATIONALITY_FLAG_MAP = {
+  England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  France: '🇫🇷',
+  Spain: '🇪🇸',
+  Germany: '🇩🇪',
+  Italy: '🇮🇹',
+  Netherlands: '🇳🇱',
+  Portugal: '🇵🇹',
+  Brazil: '🇧🇷',
+  Argentina: '🇦🇷',
+  Belgium: '🇧🇪',
+  Croatia: '🇭🇷',
+  Japan: '🇯🇵'
+};
+
 // メイン適性に応じたサブ適性（secondaryPositions）候補プール
 const SECONDARY_POSITION_POOLS = {
   GK: [[]],
@@ -951,6 +966,99 @@ function ensureClubSquadNumbers(club) {
 }
 
 /**
+ * 選手の5大パラメータ（決定力・パス・スピード・守備・スタミナ）を一貫して算出・保持する
+ */
+function getPlayerFiveAttributes(p) {
+  if (p.attributes && typeof p.attributes.finishing === 'number') {
+    return p.attributes;
+  }
+  const pos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
+  const atk = p.atk || 50;
+  const def = p.def || 50;
+  const sta = p.sta || 50;
+  const traits = Array.isArray(p.traits) ? p.traits : [];
+
+  let finishing, passing, pace, defending, stamina;
+  stamina = sta;
+
+  switch (pos) {
+    case 'CF':
+      finishing = clamp(Math.round(atk * 0.98 + (traits.includes('決定力の鬼') ? 4 : 0)), 1, 99);
+      passing = clamp(Math.round(atk * 0.70 + def * 0.12), 1, 99);
+      pace = clamp(Math.round(sta * 0.40 + atk * 0.55 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
+      defending = clamp(Math.round(def * 0.80), 1, 99);
+      break;
+    case 'LW':
+    case 'RW':
+    case 'WG':
+      finishing = clamp(Math.round(atk * 0.86), 1, 99);
+      passing = clamp(Math.round(atk * 0.82 + (traits.includes('チャンスメイカー') ? 4 : 0)), 1, 99);
+      pace = clamp(Math.round(sta * 0.45 + atk * 0.52 + (traits.includes('スピードスター') ? 6 : 0)), 1, 99);
+      defending = clamp(Math.round(def * 0.85), 1, 99);
+      break;
+    case 'LM':
+    case 'RM':
+    case 'SM':
+      finishing = clamp(Math.round(atk * 0.76), 1, 99);
+      passing = clamp(Math.round(atk * 0.85 + def * 0.12 + (traits.includes('高精度キッカー') ? 4 : 0)), 1, 99);
+      pace = clamp(Math.round(sta * 0.50 + atk * 0.46 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
+      defending = clamp(Math.round(def * 0.90), 1, 99);
+      break;
+    case 'AM':
+      finishing = clamp(Math.round(atk * 0.82), 1, 99);
+      passing = clamp(Math.round(atk * 0.94 + (traits.includes('高精度キッカー') ? 5 : 0)), 1, 99);
+      pace = clamp(Math.round(sta * 0.42 + atk * 0.50), 1, 99);
+      defending = clamp(Math.round(def * 0.75), 1, 99);
+      break;
+    case 'CM':
+      finishing = clamp(Math.round(atk * 0.72), 1, 99);
+      passing = clamp(Math.round(atk * 0.86 + def * 0.10 + (traits.includes('高精度キッカー') ? 4 : 0)), 1, 99);
+      pace = clamp(Math.round(sta * 0.55 + atk * 0.35), 1, 99);
+      defending = clamp(Math.round(def * 0.95), 1, 99);
+      break;
+    case 'DM':
+      finishing = clamp(Math.round(atk * 0.58), 1, 99);
+      passing = clamp(Math.round(atk * 0.80 + def * 0.15), 1, 99);
+      pace = clamp(Math.round(sta * 0.50 + def * 0.35), 1, 99);
+      defending = clamp(Math.round(def * 1.0 + (traits.includes('鉄壁の対人守備') ? 4 : 0)), 1, 99);
+      break;
+    case 'LB':
+    case 'RB':
+    case 'SB':
+      finishing = clamp(Math.round(atk * 0.52), 1, 99);
+      passing = clamp(Math.round(def * 0.45 + atk * 0.45), 1, 99);
+      pace = clamp(Math.round(sta * 0.55 + atk * 0.38 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
+      defending = clamp(Math.round(def * 0.98), 1, 99);
+      break;
+    case 'CB':
+      finishing = clamp(Math.round(atk * 0.36), 1, 99);
+      passing = clamp(Math.round(def * 0.40 + atk * 0.35), 1, 99);
+      pace = clamp(Math.round(def * 0.45 + sta * 0.40), 1, 99);
+      defending = clamp(Math.round(def * 1.02 + (traits.includes('鉄壁の対人守備') ? 4 : 0)), 1, 99);
+      break;
+    case 'GK':
+    default:
+      finishing = clamp(Math.round(atk * 0.20), 1, 99);
+      passing = clamp(Math.round(atk * 0.40 + def * 0.25), 1, 99);
+      pace = clamp(Math.round(sta * 0.45 + def * 0.30), 1, 99);
+      defending = clamp(Math.round(def * 1.05 + (traits.includes('守護神の反射神経') ? 5 : 0)), 1, 99);
+      break;
+  }
+
+  p.attributes = { finishing, passing, pace, defending, stamina };
+  return p.attributes;
+}
+
+/**
+ * 能力値（1〜99）に応じたUIクラス（80以上：緑、70台：黄、60台以下：灰）を返す
+ */
+function getStatTierClass(val) {
+  if (val >= 80) return { valClass: 'stat-high', barClass: 'bar-high' };
+  if (val >= 70) return { valClass: 'stat-mid', barClass: 'bar-mid' };
+  return { valClass: 'stat-low', barClass: 'bar-low' };
+}
+
+/**
  * 9ポジション＋複数適性＋詳細プロフィールに対応した選手1名を生成
  */
 function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null, forcedCurve = null) {
@@ -1046,6 +1154,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     squadNumber: defaultSquadNum,
     traits,
     careerStats,
+    attributes: getPlayerFiveAttributes({ primaryPosition: pos, atk, def, sta, traits }),
     assignedPos: isStarter ? pos : null,
     slotIndex: null,
     atk,
@@ -3006,7 +3115,7 @@ function renderTopScorers() {
         <td class="col-rank"><span class="${rankClass}">${rank}</span></td>
         <td class="col-pos">${formatPlayerPositionsHtml(item.player)}</td>
         <td class="col-name">
-          <button type="button" class="player-name-link" data-profile-id="${item.player.id}" title="クリックで選手詳細プロフィールを表示">
+          <button type="button" class="player-name-link clickable-player-name" data-profile-id="${item.player.id}" title="クリックで選手詳細プロフィールを表示">
             ${item.player.name}
           </button>
         </td>
@@ -3155,7 +3264,7 @@ function renderTacticalBoard() {
             <span class="pitch-node-pos">${sl.pos}</span>
             <span class="pitch-node-ovr">OVR ${effOvr}</span>
           </div>
-          <button type="button" class="pitch-node-name-btn" data-profile-id="${starter.id}" title="クリックで選手詳細プロフィールを表示">
+          <button type="button" class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="クリックで選手詳細プロフィールを表示">
             #${starter.squadNumber || '-'} ${starter.name}
           </button>
           <div class="pitch-node-meta">
@@ -3217,7 +3326,7 @@ function renderTacticalBoard() {
           <div class="bench-sub-item ${itemClass}">
             <div class="bench-sub-info">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
                 #${bp.squadNumber || '-'} ${bp.name}
               </button>
             </div>
@@ -3262,7 +3371,7 @@ function renderTacticalBoard() {
           <div class="bench-sub-item">
             <div class="bench-sub-info">
               ${formatPlayerPositionsHtml(bp)}
-              <button type="button" class="player-name-link bench-sub-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+              <button type="button" class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
                 #${bp.squadNumber || '-'} ${bp.name}
               </button>
             </div>
@@ -3390,7 +3499,7 @@ function renderRoster() {
         <td class="col-pos">${assignedPosHtml}</td>
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
-          <button type="button" class="player-name-link" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
+          <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
             <span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
           </button>
           ${fitBadge}${injuryBadge}
@@ -3475,7 +3584,7 @@ function renderMarket() {
       <tr>
         <td class="col-pos">${formatPlayerPositionsHtml(c)}</td>
         <td class="col-name">
-          <button type="button" class="player-name-link" data-profile-id="${c.id}" title="クリックで選手詳細プロフィールを表示">
+          <button type="button" class="player-name-link clickable-player-name" data-profile-id="${c.id}" title="クリックで選手詳細プロフィールを表示">
             ${c.name}
           </button>
           ${bargainBadge}
@@ -3528,7 +3637,6 @@ function openPlayerProfileModal(playerId) {
 
   const primaryPos = p.primaryPosition || p.preferredPosition || p.pos;
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
-  const subPosText = subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）';
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
   const growthLabel = getGrowthCurveLabel(p.growthCurve);
@@ -3541,136 +3649,172 @@ function openPlayerProfileModal(playerId) {
   };
   const footText = footLabelMap[p.preferredFoot] || p.preferredFoot || 'Right（右利き）';
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
-  const nationalityText = p.nationality || 'England';
+  const rawNat = p.nationality || 'England';
+  const flagEmoji = NATIONALITY_FLAG_MAP[rawNat] || '🌍';
+  const nationalityDisplay = `${flagEmoji} ${rawNat}`;
   const squadNumText = `#${p.squadNumber || 10}`;
   const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
   const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
   const careerGoals = p.careerStats ? p.careerStats.goals : p.goals;
 
-  document.getElementById('profile-squad-num').textContent = squadNumText;
-  document.getElementById('profile-club-label').textContent = `SCOUTING REPORT — ${clubName}`;
-  document.getElementById('profile-pos-pill').textContent = formatPlayerPositionsText(p, 'slash');
-  document.getElementById('profile-player-name').textContent = p.name;
+  const attrs = getPlayerFiveAttributes(p);
 
-  document.getElementById('profile-bio-row').innerHTML = `
-    <span class="profile-bio-item">国籍:<strong>${nationalityText}</strong></span>
-    <span>|</span>
-    <span class="profile-bio-item">年齢:<strong>${p.age}歳</strong></span>
-    <span>|</span>
-    <span class="profile-bio-item">利き足:<strong>${footText}</strong></span>
-    <span>|</span>
-    <span class="profile-bio-item">身長:<strong>${heightText}</strong></span>
-  `;
+  const squadNumEl = document.getElementById('profile-squad-num');
+  if (squadNumEl) squadNumEl.textContent = squadNumText;
+
+  const clubLabelEl = document.getElementById('profile-club-label');
+  if (clubLabelEl) clubLabelEl.textContent = `SCOUTING REPORT — ${clubName}`;
+
+  const posPillEl = document.getElementById('profile-pos-pill');
+  if (posPillEl) {
+    const subBadgesHtml = subPosList.length > 0
+      ? subPosList.map(sp => `<span class="profile-pos-badge-sub">SUB: ${sp}</span>`).join(' ')
+      : '<span class="profile-pos-badge-sub" style="opacity: 0.7;">SUB: なし</span>';
+    posPillEl.innerHTML = `
+      <div class="profile-pos-badges-wrap">
+        <span class="profile-pos-badge-main">MAIN: ${primaryPos}</span>
+        ${subBadgesHtml}
+      </div>
+    `;
+  }
+
+  const nameEl = document.getElementById('profile-player-name');
+  if (nameEl) nameEl.textContent = p.name;
+
+  const bioRowEl = document.getElementById('profile-bio-row');
+  if (bioRowEl) {
+    bioRowEl.innerHTML = `
+      <span class="profile-bio-item">国籍:<strong>${nationalityDisplay}</strong></span>
+      <span>|</span>
+      <span class="profile-bio-item">年齢:<strong>${p.age}歳</strong></span>
+      <span>|</span>
+      <span class="profile-bio-item">利き足:<strong>${footText}</strong></span>
+      <span>|</span>
+      <span class="profile-bio-item">身長:<strong>${heightText}</strong></span>
+    `;
+  }
 
   let currentSlotBanner = '';
   if (p.isStarter && p.assignedPos) {
     const fitInfo = getPositionFitInfo(p, p.assignedPos);
     const fitColorClass = fitInfo.type === 'main' ? 'accent-green' : (fitInfo.type === 'sub' ? 'text-cyan' : 'accent-gold');
     currentSlotBanner = `
-      <div class="profile-fit-row">
+      <div class="profile-fit-row" style="margin-top: 4px; border-color: rgba(46, 204, 113, 0.4);">
         <span class="text-muted">現在のスタメン配置枠: <strong class="mono">${p.assignedPos}</strong></span>
         <span class="mono ${fitColorClass}"><strong>${fitInfo.label} (実効OVR ${effOvr})</strong></span>
       </div>
     `;
   }
 
+  // 5大能力パラメータ定義（決定力・パス・スピード・守備・スタミナ）
+  const paramItems = [
+    { label: '決定力（Finishing）', val: attrs.finishing },
+    { label: 'パス（Passing）', val: attrs.passing },
+    { label: 'スピード（Pace）', val: attrs.pace },
+    { label: '守備（Defending）', val: attrs.defending },
+    { label: 'スタミナ（Stamina）', val: attrs.stamina }
+  ];
+
+  const statRowsHtml = paramItems.map(item => {
+    const tier = getStatTierClass(item.val);
+    const clampedVal = clamp(item.val, 5, 100);
+    return `
+      <div class="profile-stat-row">
+        <span class="profile-stat-label">${item.label}</span>
+        <span class="profile-stat-val ${tier.valClass}">${item.val}</span>
+        <div class="profile-stat-bar-bg">
+          <div class="profile-stat-bar-fill ${tier.barClass}" style="width: ${clampedVal}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   const bodyEl = document.getElementById('profile-modal-body');
-  bodyEl.innerHTML = `
-    <div class="profile-section-grid">
-      <!-- 左：能力ステータス＆成長タイプ・特徴タグ -->
-      <div class="profile-box">
-        <div class="profile-box-header">
-          <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
-          <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      <div class="profile-section-grid">
+        <!-- 左：5大パラメータバー（80以上:緑 / 70台:黄 / 60台:灰）＆ 成長タイプ・特徴タグ -->
+        <div class="profile-box">
+          <div class="profile-box-header">
+            <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
+            <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+          </div>
+
+          <div class="profile-stat-rows">
+            ${statRowsHtml}
+          </div>
+
+          <div class="profile-box-header" style="margin-top: 6px;">
+            <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
+            <span class="growth-pill growth-${p.growthCurve}">成長：${growthLabel}</span>
+          </div>
+          <div class="profile-traits-wrap">
+            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+          </div>
         </div>
 
-        <div class="profile-stat-rows">
-          <div class="profile-stat-row">
-            <span class="profile-stat-label">攻撃力 (ATK)</span>
-            <span class="profile-stat-val">${p.atk}</span>
-            <div class="profile-stat-bar-bg">
-              <div class="profile-stat-bar-fill bar-gold" style="width: ${clamp(p.atk, 5, 100)}%;"></div>
+        <!-- 右：複数ポジション適性マトリクス -->
+        <div class="profile-box">
+          <div class="profile-box-header">
+            <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+          </div>
+          <div class="profile-pos-fit-list">
+            <div class="profile-fit-row">
+              <span class="text-muted">メイン適性 (100%発揮)</span>
+              <span class="pos-tag pos-${primaryPos}"><strong>${primaryPos}</strong> (OVR ${baseOvr})</span>
             </div>
-          </div>
-          <div class="profile-stat-row">
-            <span class="profile-stat-label">守備力 (DEF)</span>
-            <span class="profile-stat-val">${p.def}</span>
-            <div class="profile-stat-bar-bg">
-              <div class="profile-stat-bar-fill bar-cyan" style="width: ${clamp(p.def, 5, 100)}%;"></div>
+            <div class="profile-fit-row">
+              <span class="text-muted">サブ適性 (92% / SUB-POS)</span>
+              <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）'}</strong></span>
             </div>
-          </div>
-          <div class="profile-stat-row">
-            <span class="profile-stat-label">スタミナ (STA)</span>
-            <span class="profile-stat-val">${p.sta}</span>
-            <div class="profile-stat-bar-bg">
-              <div class="profile-stat-bar-fill" style="width: ${clamp(p.sta, 5, 100)}%;"></div>
+            <div class="profile-fit-row">
+              <span class="text-muted">適性外配置時 (80%ペナルティ)</span>
+              <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
             </div>
+            ${currentSlotBanner}
           </div>
-        </div>
-
-        <div class="profile-box-header" style="margin-top: 4px;">
-          <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
-          <span class="growth-pill growth-${p.growthCurve}">成長：${growthLabel}</span>
-        </div>
-        <div class="profile-traits-wrap">
-          ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
         </div>
       </div>
 
-      <!-- 右：複数ポジション適性マトリクス -->
-      <div class="profile-box">
-        <div class="profile-box-header">
-          <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+      <!-- 下部：契約条件＆今季スタッツ・平均評価点・通算成績 -->
+      <div class="profile-metrics-row">
+        <div class="profile-metric-card">
+          <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
+          <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
         </div>
-        <div class="profile-pos-fit-list">
-          <div class="profile-fit-row">
-            <span>メイン適性 (100%発揮)</span>
-            <span class="pos-tag pos-${primaryPos}">${primaryPos} (OVR ${baseOvr})</span>
-          </div>
-          <div class="profile-fit-row">
-            <span>サブ適性 (92%発揮 / SUB-POS)</span>
-            <span class="mono text-cyan"><strong>${subPosText}</strong></span>
-          </div>
-          <div class="profile-fit-row">
-            <span>適性外配置時 (80%ペナルティ)</span>
-            <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
-          </div>
-          ${currentSlotBanner}
+        <div class="profile-metric-card">
+          <span class="profile-metric-label">CONTRACT（契約残年数）</span>
+          <span class="profile-metric-val">${p.contractYears}年${isMarket && p.transferFee ? ` (移籍金 ${formatMoney(p.transferFee)})` : ''}</span>
+        </div>
+        <div class="profile-metric-card">
+          <span class="profile-metric-label">APPEARANCES（今季出場数）</span>
+          <span class="profile-metric-val">${p.appearances} 試合</span>
+        </div>
+        <div class="profile-metric-card">
+          <span class="profile-metric-label">GOALS（今季ゴール数）</span>
+          <span class="profile-metric-val accent-green">${p.goals} 得点</span>
+        </div>
+        <div class="profile-metric-card">
+          <span class="profile-metric-label">AVG RATING（平均評価点）</span>
+          <span class="profile-metric-val accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
         </div>
       </div>
-    </div>
+    `;
+  }
 
-    <!-- 下部：契約条件＆今季・キャリア通算スタッツ -->
-    <div class="profile-metrics-row">
-      <div class="profile-metric-card">
-        <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
-        <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
-      </div>
-      <div class="profile-metric-card">
-        <span class="profile-metric-label">CONTRACT（契約残年数）</span>
-        <span class="profile-metric-val">${p.contractYears}年${isMarket && p.transferFee ? ` (移籍金 ${formatMoney(p.transferFee)})` : ''}</span>
-      </div>
-      <div class="profile-metric-card">
-        <span class="profile-metric-label">SEASON STATS（今季成績）</span>
-        <span class="profile-metric-val accent-green">${p.appearances}試合 / ${p.goals}得点 (評価 ${avgRating})</span>
-      </div>
-      <div class="profile-metric-card">
-        <span class="profile-metric-label">CAREER STATS（通算成績）</span>
-        <span class="profile-metric-val">${careerApps}試合 / ${careerGoals}得点</span>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('player-profile-modal-overlay').classList.remove('hidden');
+  const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  if (modalEl) {
+    modalEl.classList.remove('hidden');
+  }
 }
 
 /**
  * 選手詳細プロフィールモーダルを閉じる
  */
 function closePlayerProfileModal() {
-  const overlay = document.getElementById('player-profile-modal-overlay');
-  if (overlay) {
-    overlay.classList.add('hidden');
+  const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  if (modalEl) {
+    modalEl.classList.add('hidden');
   }
   gameState.profileModalPlayerId = null;
 }
@@ -4055,7 +4199,7 @@ function initGame() {
   if (closeProfileFooterBtn) {
     closeProfileFooterBtn.addEventListener('click', closePlayerProfileModal);
   }
-  const profileModalOverlay = document.getElementById('player-profile-modal-overlay');
+  const profileModalOverlay = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   if (profileModalOverlay) {
     profileModalOverlay.addEventListener('click', (e) => {
       if (e.target === profileModalOverlay) {

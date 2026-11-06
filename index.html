@@ -435,23 +435,23 @@
   </div>
 
   <!-- 選手詳細プロフィールモーダル（スカウティングシート風UI） -->
-  <div id="player-profile-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="profile-player-name">
-    <div class="modal-card profile-modal-card">
+  <div id="player-profile-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="profile-player-name">
+    <div class="modal-card profile-modal-card" id="player-profile-modal-card">
       <div class="profile-modal-header">
         <div class="profile-header-left">
           <div class="profile-squad-num mono" id="profile-squad-num">#10</div>
           <div class="profile-identity">
             <div class="profile-top-tags">
               <span class="modal-category mono" id="profile-club-label">SCOUTING REPORT</span>
-              <span class="profile-pos-pill mono" id="profile-pos-pill">CF / WG</span>
+              <span class="profile-pos-pill mono" id="profile-pos-pill">CF</span>
             </div>
             <h2 class="profile-player-name" id="profile-player-name">選手名</h2>
             <div class="profile-bio-row mono" id="profile-bio-row">
-              <!-- 国籍・年齢・利き足・身長 -->
+              <!-- 国籍（国旗＋国名）・年齢・利き足・身長 -->
             </div>
           </div>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-profile-modal" aria-label="閉じる">✕</button>
+        <button type="button" class="btn-modal-close mono" id="btn-close-profile-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
 
       <div class="profile-modal-body" id="profile-modal-body">
