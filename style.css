@@ -5682,7 +5682,7 @@ body.modal-open {
     max-height: none !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-x: contain !important;
-    touch-action: pan-x !important;
+    touch-action: pan-x pan-y !important;
   }
 
   /* 控え選手カード：横並び用の均一幅・高さコンパクトカード */
@@ -5701,14 +5701,14 @@ body.modal-open {
     align-items: stretch !important;
     box-sizing: border-box !important;
     border-radius: 4px !important;
-    touch-action: pan-x !important;
+    touch-action: pan-x pan-y !important;
     cursor: grab !important;
     background-color: #12181f !important;
     border: 1px solid var(--border-color, #30363d) !important;
   }
 
   .bench-sub-item * {
-    touch-action: pan-x !important;
+    touch-action: pan-x pan-y !important;
     user-select: none !important;
     -webkit-user-select: none !important;
   }
