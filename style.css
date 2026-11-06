@@ -4619,18 +4619,22 @@ body.modal-open {
     flex-shrink: 0 !important;
   }
 
-  /* 8. GM就任モーダル：スライド式1クラブカードUI（スクロールレス・1画面完結） */
+  /* 8. GM就任モーダル：完全固定サイズ・改行ガタつき根絶UI（どのクラブでもサイズ不変） */
   .intro-modal-card {
     width: 95vw !important;
     max-width: 95vw !important;
-    height: auto !important;
+    height: 575px !important;
     max-height: 94vh !important;
     border-radius: 8px !important;
     overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
 
   .intro-modal-card .modal-header {
     padding: 8px 12px !important;
+    flex-shrink: 0 !important;
   }
 
   .intro-header-row {
@@ -4671,8 +4675,12 @@ body.modal-open {
   .intro-slider-body {
     padding: 6px 10px !important;
     gap: 6px !important;
-    overflow: visible !important;
-    max-height: none !important;
+    overflow: hidden !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
   }
 
   .intro-top-bar {
@@ -4680,6 +4688,7 @@ body.modal-open {
     background-color: rgba(255, 255, 255, 0.02) !important;
     border-radius: 4px !important;
     margin: 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .intro-gm-input-wrap {
@@ -4696,16 +4705,17 @@ body.modal-open {
 
   .intro-gm-input-wrap .intro-text-input {
     flex: 1 !important;
-    min-height: 32px !important;
-    height: 32px !important;
+    min-height: 30px !important;
+    height: 30px !important;
     padding: 3px 8px !important;
     font-size: 12px !important;
   }
 
   .intro-filter-bar {
-    padding: 3px 0 !important;
+    padding: 2px 0 !important;
     border: none !important;
     background: transparent !important;
+    flex-shrink: 0 !important;
   }
 
   .club-filter-tags {
@@ -4720,7 +4730,8 @@ body.modal-open {
   .intro-slider-nav {
     padding: 4px 6px !important;
     gap: 4px !important;
-    margin: 2px 0 !important;
+    margin: 1px 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .btn-slider-arrow {
@@ -4728,10 +4739,7 @@ body.modal-open {
     height: 34px !important;
     padding: 3px 8px !important;
     font-size: 11px !important;
-  }
-
-  .slider-pager-badge {
-    font-size: 11.5px !important;
+    flex-shrink: 0 !important;
   }
 
   .slider-pager-wrap {
@@ -4757,15 +4765,34 @@ body.modal-open {
     white-space: nowrap !important;
   }
 
+  /* 1クラブ専用カード：完全固定高さでブレを排除 */
   .intro-single-card-container {
-    flex: none !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .intro-single-card {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     padding: 8px 10px !important;
-    gap: 6px !important;
     border-radius: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
+  }
+
+  .detail-header-card {
+    flex-shrink: 0 !important;
+  }
+
+  .detail-title-row {
+    padding-bottom: 2px !important;
+    margin-bottom: 2px !important;
+    border-bottom: 1px solid var(--border-color) !important;
   }
 
   .detail-club-title-group {
@@ -4777,10 +4804,10 @@ body.modal-open {
   }
 
   .detail-club-avatar {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    font-size: 10.5px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    font-size: 10px !important;
     letter-spacing: 0.03em !important;
     flex-shrink: 0 !important;
     white-space: nowrap !important;
@@ -4816,35 +4843,64 @@ body.modal-open {
     flex-shrink: 0 !important;
   }
 
+  /* クラブ説明文：常に30px（2行分）を完全確保してガタつきゼロ */
   .detail-club-desc {
     font-size: 10.5px !important;
     line-height: 1.35 !important;
-    margin: 0 !important;
+    height: 29px !important;
+    max-height: 29px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    margin: 2px 0 0 0 !important;
+    color: var(--text-muted) !important;
   }
 
+  /* 4分割メトリクスグリッド：固定高さ */
   .detail-metrics-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 4px !important;
-    margin: 1px 0 !important;
+    margin: 2px 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .detail-metric-card {
     padding: 3px 6px !important;
     border-radius: 3px !important;
+    min-height: 42px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
   }
 
   .detail-metric-label {
     font-size: 8.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .detail-metric-val {
     font-size: 11.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
+  /* 初期戦術方針ボックス：常に48pxを完全確保してガタつきゼロ */
   .detail-tactic-box {
     padding: 4px 6px !important;
-    margin-top: 1px !important;
+    margin: 0 !important;
     gap: 2px !important;
+    height: 46px !important;
+    max-height: 46px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
   }
 
   .detail-tactic-label {
@@ -4852,24 +4908,37 @@ body.modal-open {
   }
 
   .detail-tactic-name {
-    font-size: 10.5px !important;
+    font-size: 10px !important;
   }
 
   .detail-tactic-desc {
-    font-size: 9.5px !important;
+    font-size: 9px !important;
     line-height: 1.25 !important;
+    height: 23px !important;
+    max-height: 23px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    margin: 0 !important;
   }
 
+  /* 下部アクションバー：高さ完全固定 */
   .intro-modal-actions {
-    padding: 6px 10px !important;
+    padding: 6px 10px 8px !important;
     gap: 4px !important;
+    flex-shrink: 0 !important;
   }
 
   .intro-selected-summary {
     font-size: 10px !important;
-    line-height: 1.25 !important;
+    height: 16px !important;
+    line-height: 16px !important;
     width: 100% !important;
     text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .intro-modal-actions .btn {

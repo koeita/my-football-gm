@@ -17,20 +17,30 @@ const CLUB_SHORT_CODES = {
   london_fc: 'LON',
   northlondon_w: 'NLW',
   newcastle_u: 'NEW',
-  birmingham_v: 'AST',
-  liverpool_b_blue: 'EVE',
-  brighton_s: 'BRI',
-  wolverhampton_w: 'WOL',
+  aston_v: 'AST',
+  brighton_g: 'BRI',
+  eastlondon_h: 'WHU',
+  southlondon_p: 'CRY',
   westlondon_c: 'FUL',
-  crystal_s: 'CRY',
-  brentford_b: 'BRE',
-  nottingham_f: 'NFO',
-  bournemouth_b: 'BOU',
-  sheffield_u: 'SHU',
-  leeds_u: 'LEE',
-  leicester_c: 'LEI',
-  southcoast_c: 'SOU'
+  westlondon_b: 'BRE',
+  midlands_w: 'WOL',
+  merseyside_b: 'EVE',
+  southcoast_c: 'SOU',
+  nottingham_r: 'NFO',
+  leicester_f: 'LEI',
+  southampton_s: 'SHT',
+  ipswich_t: 'IPS'
 };
+
+function setBodyModalLock(locked) {
+  if (locked) {
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+  } else {
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
+  }
+}
 
 function getClubShortCode(clubOrId) {
   const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
@@ -6938,11 +6948,7 @@ function renderIntroClubDetail() {
   `;
 
   if (summaryEl) {
-    summaryEl.innerHTML = `
-      選択中：<strong class="accent-green">${club.name}</strong>
-      <span class="summary-sep">|</span> 目標：<strong>${club.targetLabel}</strong>
-      <span class="summary-sep">|</span> 予算：<strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>
-    `;
+    summaryEl.innerHTML = `選択: <strong class="accent-green">${club.name}</strong> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
   }
 }
 

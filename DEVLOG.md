@@ -1,5 +1,16 @@
 # 開発ログ：僕のサッカークラブ（仮）
 
+## 最新アップデート：GM就任モーダルのサイズ固定・改行ガタつき（レイアウトシフト）完全根絶 ＆ 全20クラブ英字コード完全網羅
+- **クラブ切り替え時のモーダルカード高さ完全固定（575pxロック）**:
+  - 各クラブの説明文、戦術解説、目標ラベル、サマリーの行数差によってモーダルカードが上下に伸縮（伸縮差数十px）し、「GMに就任してシーズンを開幕する」ボタン位置がガタついていた問題を完全解決。
+  - モバイル表示時（`@media (max-width: 768px)`）の `.intro-modal-card` を `height: 575px !important; max-height: 94vh !important; justify-content: space-between !important;` で完全ロック。
+  - クラブ説明文（`.detail-club-desc`）を `height: 29px !important; -webkit-line-clamp: 2;`、初期戦術枠（`.detail-tactic-box`）を `height: 46px !important;`、下部選択サマリー（`.intro-selected-summary`）を `height: 16px !important; white-space: nowrap !important; text-overflow: ellipsis !important;` とし、どのクラブを表示しても1ピクセルの狂いもなく全要素の配置・高さを均一化。
+  - Playwrightテストによる全20クラブの巡回自動検証で、モーダル高さ変動差分が `diff == 0px`（全クラブ575px一定）であることを確認。
+- **全20クラブの英字3文字略称コード完全網羅**:
+  - `CLUB_SHORT_CODES` 辞書を更新し、イプスウィッチ・T（`IPS`）、サウスコースト・C（`SOU`）、サウサンプトン・S（`SHT`）、レスター・F（`LEI`）等、全20クラブのエンブレムコードを完全網羅。フォールバック表示によるエンブレム不一致を解消。
+
+---
+
 ## 最新アップデート：スライダーナビ内のクラブ直接選択プルダウンの文字溢れ解消
 - **プルダウン内の不要な資金・戦力表記の削除**:
   - カード上部のクラブ直接選択セレクトボックス（`#slider-club-select`）の各項目に「`クラブ名 (£140.0M / OVR 72)`」と資金・戦力情報まで詰め込まれていたため、スマホ幅で「`マンチェスター・B (...`」と文字溢れ・省略が発生していた問題を修正。
