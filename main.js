@@ -5858,23 +5858,7 @@ function renderRoster() {
       demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
     }
 
-    const starterToggleBtn = p.isStarter
-      ? `<button type="button" class="btn btn-starter-toggle btn-starter-active" data-starter-id="${p.id}" title="クリックでベンチと入替">スタメン</button>`
-      : `<button type="button" class="btn btn-starter-toggle btn-bench-active" data-starter-id="${p.id}" title="クリックでスタメンへ昇格">ベンチ</button>`;
 
-    let assignedPosHtml = '<span class="mono text-muted">-</span>';
-    if (p.isStarter) {
-      const selectFitClass = fitInfo.type === 'sub' ? 'slot-sub' : (fitInfo.type === 'out' ? 'slot-mismatch' : '');
-      const optionsHtml = ALL_POSITIONS.map(posOpt => {
-        const selected = posOpt === assignedSlot ? 'selected' : '';
-        return `<option value="${posOpt}" ${selected}>${posOpt}</option>`;
-      }).join('');
-      assignedPosHtml = `
-        <select class="slot-select ${selectFitClass}" data-slot-player-id="${p.id}" title="配置ポジション枠を変更（サブ適性92% / 適性外80%）">
-          ${optionsHtml}
-        </select>
-      `;
-    }
 
     let fitBadge = '';
     if (p.isStarter && fitInfo.type === 'sub') {
@@ -5913,7 +5897,6 @@ function renderRoster() {
 
     return `
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
-        <td class="col-pos">${assignedPosHtml}</td>
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
