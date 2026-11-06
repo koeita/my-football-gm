@@ -8,6 +8,50 @@
 
 // イングランドリーグ（プレミア相当）全20クラブ定義（全クラブ選択可能・全38節2回戦総当たり）
 // 初期資金：£32.0M〜£140.0M（32000〜140000 £K）、サポーター規模、目標順位に差を設定
+
+const CLUB_SHORT_CODES = {
+  manchester_b: 'MCB',
+  manchester_r: 'MCR',
+  liverpool_b: 'LIV',
+  northlondon_a: 'NLA',
+  london_fc: 'LON',
+  northlondon_w: 'NLW',
+  newcastle_u: 'NEW',
+  birmingham_v: 'AST',
+  liverpool_b_blue: 'EVE',
+  brighton_s: 'BRI',
+  wolverhampton_w: 'WOL',
+  westlondon_c: 'FUL',
+  crystal_s: 'CRY',
+  brentford_b: 'BRE',
+  nottingham_f: 'NFO',
+  bournemouth_b: 'BOU',
+  sheffield_u: 'SHU',
+  leeds_u: 'LEE',
+  leicester_c: 'LEI',
+  southcoast_c: 'SOU'
+};
+
+function getClubShortCode(clubOrId) {
+  const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
+  if (id && CLUB_SHORT_CODES[id]) return CLUB_SHORT_CODES[id];
+  if (typeof clubOrId === 'object' && clubOrId && clubOrId.shortName) return clubOrId.shortName;
+  return 'LFC';
+}
+
+function setBodyModalLock(locked) {
+  if (locked) {
+    document.body.classList.add('modal-open');
+    document.documentElement.classList.add('modal-open');
+  } else {
+    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+    if (openModals.length === 0) {
+      document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
+    }
+  }
+}
+
 const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
@@ -6855,8 +6899,8 @@ function renderIntroClubDetail() {
     <div class="detail-header-card">
       <div class="detail-title-row">
         <div class="detail-club-title-group">
-          <span class="detail-club-avatar mono">${club.shortName || club.name.substring(0, 3).toUpperCase()}</span>
-          <div>
+          <span class="detail-club-avatar mono">${getClubShortCode(club)}</span>
+          <div class="detail-club-header-text">
             <h3 class="detail-club-name">${club.name}</h3>
             <span class="detail-tier-badge">${club.tier}</span>
           </div>
@@ -6927,6 +6971,7 @@ function openIntroModal(allowCancel = false) {
   renderIntroClubList();
   renderIntroClubDetail();
   overlay.classList.remove('hidden');
+  setBodyModalLock(true);
 }
 
 /**
@@ -6939,6 +6984,7 @@ function confirmIntroAndStartGame() {
 
   const overlay = document.getElementById('intro-modal-overlay');
   overlay.classList.add('hidden');
+  setBodyModalLock(false);
   gameState.hasStartedOnce = true;
 
   setupNewGame(gameState.selectedClubId);
@@ -7117,6 +7163,7 @@ function initGame() {
   document.getElementById('btn-confirm-intro').addEventListener('click', confirmIntroAndStartGame);
   document.getElementById('btn-cancel-intro').addEventListener('click', () => {
     document.getElementById('intro-modal-overlay').classList.add('hidden');
+    setBodyModalLock(false);
   });
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
