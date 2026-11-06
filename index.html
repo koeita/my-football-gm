@@ -184,8 +184,7 @@
     <!-- タブ1：順位表 / 日程画面 -->
         <!-- タブ3：本部（GM執務室：日程進行、試合情報、GM業務一覧）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
-      
-
+      <!-- GM業務タスク一覧（最上位・ファーストビュー配置） -->
       <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
       <div class="gm-tasks-header">
         <div class="gm-tasks-title-group">
@@ -214,6 +213,7 @@
       </div>
     </section>
 
+      <!-- 日程進行メインアクション（次戦・キックオフ） -->
       <section class="office-action-section">
         <div class="office-action-controls action-controls" id="office-action-controls">
           <button type="button" class="btn btn-primary btn-advance-large" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">
@@ -238,6 +238,7 @@
         </div>
       </section>
 
+      <!-- 週間スケジュール（7日間バー） -->
       <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="直近1週間のスケジュール">
       <div class="weekly-schedule-header">
         <div class="weekly-schedule-title-group">
@@ -254,6 +255,7 @@
       </div>
     </section>
 
+      <!-- 試合結果・進行ログ -->
       <section class="office-match-section">
 <section class="column-side">
         <div class="panel">
@@ -268,7 +270,7 @@
           </div>
         </div>
       </section>
-      </sec
+      </section>
     </main>
 
     <!-- タブ1：リーグ順位表・得点ランキング -->

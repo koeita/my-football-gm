@@ -5254,6 +5254,7 @@ function renderHeader() {
 function renderFinancialAlert() {
   const banner = document.getElementById('financial-alert-banner');
   const playerClub = getPlayerClub();
+  if (!banner || !playerClub) return;
 
   if (gameState.isGameOver) {
     banner.className = 'financial-alert-banner alert-gameover';
@@ -5277,6 +5278,7 @@ function renderFinancialAlert() {
  */
 function renderSeasonSettlement() {
   const summaryBox = document.getElementById('season-summary-box');
+  if (!summaryBox) return;
   if (!gameState.isSeasonOver || !gameState.lastSettlement) {
     summaryBox.classList.add('hidden');
     return;
