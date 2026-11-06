@@ -1,3 +1,23 @@
+/* ==========================================
+   PC向け：上部ステータスバー＆タブナビゲーションの常時固定（Sticky Header）
+   ========================================== */
+@media (min-width: 769px) {
+  .app-container {
+    padding-top: 0 !important;
+  }
+
+  .header-nav-sticky-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 950;
+    background: var(--bg-main, #0f1216);
+    padding-top: 10px;
+    padding-bottom: 2px;
+    margin-bottom: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
 :root {
   --bg-main: #121417;
   --bg-panel: #1a1e23;
@@ -3139,6 +3159,9 @@ body.modal-open {
 }
 
 @media (max-width: 768px) {
+  .header-nav-sticky-wrapper {
+    display: contents !important;
+  }
   .gm-task-card {
     flex-direction: column;
     align-items: flex-start;
