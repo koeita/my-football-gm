@@ -1,11 +1,17 @@
 {
   "name": "my-football-gm",
   "version": "1.0.0",
-  "description": "僕のサッカークラブ（仮） - サッカーGMシミュレーションゲーム",
+  "description": "ぼくのサッカークラブ（仮） - サッカーGMシミュレーションゲーム",
   "main": "index.html",
   "scripts": {
     "start": "serve .",
-    "dev": "serve ."
+    "dev": "serve .",
+    "test": "python tests/run_tests.py --changed",
+    "test:all": "python tests/run_tests.py --all",
+    "test:unit": "python tests/run_tests.py --changed",
+    "test:e2e": "python tests/run_e2e_tests.py",
+    "test:vitest": "vitest run --changed",
+    "test:vitest:all": "vitest run"
   },
   "keywords": [
     "game",
