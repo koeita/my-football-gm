@@ -3135,3 +3135,282 @@ body {
   color: var(--accent-gold);
   border: 1px solid var(--accent-gold);
 }
+
+/* ==========================================
+   カレンダー日程進行システム（Calendar Engine UI）
+   ========================================== */
+.calendar-date-box {
+  border-left-color: var(--accent-green);
+}
+
+.btn-kickoff-pulse {
+  background-color: var(--accent-green);
+  color: #111416;
+  font-weight: 700;
+  animation: pulse-kickoff 1.6s infinite ease-in-out;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.45);
+}
+
+@keyframes pulse-kickoff {
+  0% { transform: scale(1); box-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
+  50% { transform: scale(1.03); box-shadow: 0 0 18px rgba(46, 204, 113, 0.7); }
+  100% { transform: scale(1); box-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
+}
+
+.weekly-schedule-bar {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.weekly-schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.weekly-schedule-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weekly-schedule-label {
+  font-size: 10px;
+  color: var(--accent-green);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.weekly-schedule-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.weekly-schedule-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+}
+
+.badge-market-open {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.badge-market-closed {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.weekly-ticker-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.weekly-schedule-track {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.day-card {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.day-card.is-today {
+  border-color: var(--accent-green);
+  background-color: rgba(46, 204, 113, 0.08);
+  box-shadow: inset 0 0 0 1px var(--accent-green);
+}
+
+.day-card.is-matchday {
+  border-color: rgba(46, 204, 113, 0.6);
+}
+
+.day-card.is-today.is-matchday {
+  background-color: rgba(46, 204, 113, 0.15);
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.25), inset 0 0 0 1px var(--accent-green);
+}
+
+.day-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-card-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.day-card-today-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  background-color: var(--accent-green);
+  color: #111416;
+  padding: 1px 4px;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.day-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+
+.day-event-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 2px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.day-event-match {
+  background-color: rgba(46, 204, 113, 0.25);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  font-weight: 700;
+}
+
+.day-event-training {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.day-event-recovery {
+  color: #3498db;
+  font-size: 10px;
+  text-align: center;
+}
+
+.day-event-market {
+  color: var(--accent-gold);
+  font-size: 9px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .weekly-schedule-track {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .weekly-schedule-track {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 本日のMATCHDAYプレビューパネル */
+.matchday-card-preview {
+  background-color: var(--bg-main);
+  border: 1px solid var(--accent-green);
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.12);
+}
+
+.matchday-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.matchday-badge-big {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background-color: var(--accent-green);
+  color: #111416;
+  border-radius: 2px;
+}
+
+.matchday-vs-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 0;
+}
+
+.matchday-club-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  text-align: center;
+}
+
+.matchday-club-side.is-player-side .matchday-club-name {
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.matchday-club-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.matchday-club-ovr {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.matchday-vs-badge {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-muted);
+  padding: 0 10px;
+}
+
+.matchday-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+

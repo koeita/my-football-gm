@@ -30,8 +30,12 @@
           <span class="metric-label">SEASON</span>
           <span class="metric-value mono" id="header-season">1年目</span>
         </div>
+        <div class="metric-box calendar-date-box">
+          <span class="metric-label">CURRENT DATE</span>
+          <span class="metric-value mono accent-green" id="header-date">2026年 8月1日 (土)</span>
+        </div>
         <div class="metric-box">
-          <span class="metric-label">PHASE / WEEK</span>
+          <span class="metric-label">MATCHWEEK</span>
           <span class="metric-value mono" id="header-matchweek">第1節 / 全38節</span>
         </div>
         <div class="metric-box">
@@ -53,13 +57,34 @@
       </div>
 
       <div class="action-controls">
-        <button type="button" class="btn btn-primary" id="btn-play-next">次節をプレイ</button>
+        <button type="button" class="btn btn-secondary" id="btn-advance-day" title="日付を1日進める">日程を進める（翌日へ）</button>
+        <button type="button" class="btn btn-primary" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">次の試合まで進める</button>
+        <button type="button" class="btn btn-primary btn-kickoff-pulse hidden" id="btn-play-match" title="本日の試合を開始">キックオフ（試合開始）</button>
+        <button type="button" class="btn btn-warning hidden" id="btn-pause-advance" title="日程の自動進行を一時停止">一時停止</button>
+        <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
         <button type="button" class="btn btn-secondary" id="btn-skip-season">シーズン終了までスキップ</button>
         <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
         <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-open-intro" title="GM名・担当クラブを選び直して新規ゲームを開始">はじめから</button>
       </div>
     </header>
+
+    <!-- 直近1週間のスケジュール（週間カレンダーウィジェット） -->
+    <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="直近1週間のスケジュール">
+      <div class="weekly-schedule-header">
+        <div class="weekly-schedule-title-group">
+          <span class="weekly-schedule-label mono">WEEKLY SCHEDULE</span>
+          <h3 class="weekly-schedule-title">直近1週間のスケジュール</h3>
+        </div>
+        <div class="weekly-schedule-badges mono">
+          <span class="market-status-pill badge-market-open" id="weekly-market-badge">夏期 移籍市場 OPEN</span>
+          <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次の試合まで あと0日</span>
+        </div>
+      </div>
+      <div class="weekly-schedule-track" id="weekly-schedule-track">
+        <!-- JSで直近7日分のカレンダーカードを描画 -->
+      </div>
+    </section>
 
     <!-- 赤字経営・ゲームオーバー警告バー -->
     <div id="financial-alert-banner" class="financial-alert-banner hidden"></div>
