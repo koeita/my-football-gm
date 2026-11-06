@@ -5691,7 +5691,7 @@ function renderTacticalBoard() {
     const starterEff = getEffectivePlayerRating(selectedStarter);
     subTitleEl.textContent = `交代対象：[${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name} (実効OVR ${starterEff})`;
     clearBtnEl.classList.remove('hidden');
-    subGuideEl.textContent = `下の控え選手の「交代投入」を押すと [${selectedSlot.pos}] 枠へ即座に投入します（サブ適性は水色 SUB-POS 92% として計算されます）。`;
+    subGuideEl.textContent = `控え選手をピッチの [${selectedSlot.pos}] 枠へドラッグ＆ドロップして交代します（タップで詳細表示）。`;
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
@@ -5709,38 +5709,35 @@ function renderTacticalBoard() {
         const baseOvr = getPlayerOverallRating(bp);
 
         let itemClass = 'fit-mismatch';
-        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80% OVR ${simOvr} (${baseOvr})</span>`;
+        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80%</span>`;
         if (fitInfo.type === 'main') {
           itemClass = 'fit-match';
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100% OVR ${simOvr}</span>`;
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100%</span>`;
         } else if (fitInfo.type === 'sub') {
           itemClass = 'fit-sub';
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS 92% OVR ${simOvr} (${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB 92%</span>`;
         }
 
         return `
           <div class="bench-sub-item ${itemClass}" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-info">
-              <div class="bench-sub-main-row">
-                ${formatPlayerPositionsHtml(bp)}
-                <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
-                  #${bp.squadNumber || '-'} ${bp.name}
-                </span>
-                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
-              </div>
+            <div class="bench-sub-top-row">
+              ${formatPlayerPositionsHtml(bp)}
+              <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
             </div>
-            <div class="bench-sub-stats">
+            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+              #${bp.squadNumber || '-'} ${bp.name}
+            </div>
+            <div class="bench-sub-bottom-row">
               ${fitTag}
-              <button type="button" class="btn btn-primary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">交代投入</button>
             </div>
           </div>
         `;
       }).join('');
     }
   } else {
-    subTitleEl.textContent = `控え（ベンチ）選手一覧（${benchPlayers.length}名）`;
+    subTitleEl.textContent = `控え（ベンチ）選手（${benchPlayers.length}名） — 上のピッチへドラッグで交代`;
     clearBtnEl.classList.add('hidden');
-    subGuideEl.textContent = `ピッチ上の選手や控え選手をドラッグ＆ドロップして交代できます。カードをタップするとスカウティング詳細（プロフィール）が開きます。`;
+    subGuideEl.textContent = `控え選手をピッチ上のスロットへドラッグ＆ドロップして交代できます。タップすると詳細プロフィールが表示されます。`;
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
@@ -5759,27 +5756,24 @@ function renderTacticalBoard() {
         const hasMainSlot = formationDef.slots.some(sl => sl.pos === prefPos);
         const hasSubSlot = formationDef.slots.some(sl => subs.includes(sl.pos));
 
-        let fitTag = `<span class="bench-fit-tag fit-warn">${formationDef.name}枠外 (OVR ${baseOvr})</span>`;
+        let fitTag = `<span class="bench-fit-tag fit-warn">枠外</span>`;
         if (hasMainSlot) {
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性あり (OVR ${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性</span>`;
         } else if (hasSubSlot) {
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS対応 (OVR ${baseOvr})</span>`;
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB適性</span>`;
         }
 
         return `
           <div class="bench-sub-item" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-info">
-              <div class="bench-sub-main-row">
-                ${formatPlayerPositionsHtml(bp)}
-                <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
-                  #${bp.squadNumber || '-'} ${bp.name}
-                </span>
-                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
-              </div>
+            <div class="bench-sub-top-row">
+              ${formatPlayerPositionsHtml(bp)}
+              <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
             </div>
-            <div class="bench-sub-stats">
+            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+              #${bp.squadNumber || '-'} ${bp.name}
+            </div>
+            <div class="bench-sub-bottom-row">
               ${fitTag}
-              <button type="button" class="btn btn-secondary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">最適枠へ投入</button>
             </div>
           </div>
         `;
@@ -7180,31 +7174,46 @@ function initTacticalDragAndDrop() {
       }
     }
 
-    // タッチ時のポインタキャプチャ設定（指が外れてもイベントを維持）
-    if (dragSource && e.target.setPointerCapture) {
-      try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
-    }
+    // タッチ時のポインタキャプチャ設定はドラッグ確定時(isDragging=true)に行う
   });
 
   // Pointer Move
   document.addEventListener('pointermove', (e) => {
     if (!dragSource) return;
 
-    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-    if (!isDragging && dist > 7) {
-      isDragging = true;
-      if (dragSource.element) {
-        dragSource.element.classList.add('dragging');
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    const dist = Math.hypot(deltaX, deltaY);
+
+    if (!isDragging) {
+      // 控え選手カードの場合：指が上(ピッチ方向)へ動いていない(deltaY >= -8)かつ水平移動がある場合はカルーセル横スクロールに委ねる
+      if (dragSource.type === 'bench') {
+        if (deltaY >= -8 && Math.abs(deltaX) > 8) {
+          dragSource = null;
+          return;
+        }
       }
 
-      ghostEl = document.createElement('div');
-      ghostEl.className = 'tactical-drag-ghost';
-      ghostEl.innerHTML = `
-        <span class="ghost-pos">${dragSource.pos}</span>
-        <span class="ghost-name">#${dragSource.squadNumber} ${dragSource.name}</span>
-        <span class="ghost-ovr">OVR ${dragSource.ovr}</span>
-      `;
-      document.body.appendChild(ghostEl);
+      if (dist > 7) {
+        isDragging = true;
+        if (dragSource.element) {
+          dragSource.element.classList.add('dragging');
+        }
+
+        // ドラッグ確定時にポインタキャプチャ
+        if (e.target && e.target.setPointerCapture) {
+          try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+        }
+
+        ghostEl = document.createElement('div');
+        ghostEl.className = 'tactical-drag-ghost';
+        ghostEl.innerHTML = `
+          <span class="ghost-pos">${dragSource.pos}</span>
+          <span class="ghost-name">#${dragSource.squadNumber} ${dragSource.name}</span>
+          <span class="ghost-ovr">OVR ${dragSource.ovr}</span>
+        `;
+        document.body.appendChild(ghostEl);
+      }
     }
 
     if (isDragging && ghostEl) {
