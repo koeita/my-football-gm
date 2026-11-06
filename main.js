@@ -261,8 +261,8 @@ const EUROPEAN_MEGA_CLUBS = [
   { id: 'paris', name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
-// 10ポジション定義とカテゴリ分類
-const ALL_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'SM', 'AM', 'WG', 'CF'];
+// 12ポジション定義とカテゴリ分類
+const ALL_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF'];
 
 const POS_DISPLAY_ORDER = {
   GK: 1,
@@ -271,10 +271,12 @@ const POS_DISPLAY_ORDER = {
   RB: 4,
   DM: 5,
   CM: 6,
-  SM: 7,
-  AM: 8,
-  WG: 9,
-  CF: 10
+  LM: 7,
+  RM: 8,
+  AM: 9,
+  LW: 10,
+  RW: 11,
+  CF: 12
 };
 
 const POS_ROLE_GROUP = {
@@ -284,9 +286,11 @@ const POS_ROLE_GROUP = {
   RB: 'DF',
   DM: 'MF',
   CM: 'MF',
-  SM: 'MF',
+  LM: 'MF',
+  RM: 'MF',
   AM: 'MF',
-  WG: 'FW',
+  LW: 'FW',
+  RW: 'FW',
   CF: 'FW'
 };
 
@@ -303,9 +307,9 @@ const FORMATIONS = {
       { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
       { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
-      { slotIndex: 8, pos: 'WG', label: 'LWG', x: 20, y: 22 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 20, y: 22 },
       { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
-      { slotIndex: 10, pos: 'WG', label: 'RWG', x: 80, y: 22 }
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 80, y: 22 }
     ]
   },
   '4-2-3-1': {
@@ -318,9 +322,9 @@ const FORMATIONS = {
       { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 72 },
       { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
       { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
-      { slotIndex: 7, pos: 'SM', label: 'LSM', x: 18, y: 36 },
+      { slotIndex: 7, pos: 'LM', label: 'LM', x: 18, y: 36 },
       { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 35 },
-      { slotIndex: 9, pos: 'SM', label: 'RSM', x: 82, y: 36 },
+      { slotIndex: 9, pos: 'RM', label: 'RM', x: 82, y: 36 },
       { slotIndex: 10, pos: 'CF', label: 'CF', x: 50, y: 15 }
     ]
   },
@@ -332,10 +336,10 @@ const FORMATIONS = {
       { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
       { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 71 },
-      { slotIndex: 5, pos: 'SM', label: 'LSM', x: 15, y: 46 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 15, y: 46 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
       { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
-      { slotIndex: 8, pos: 'SM', label: 'RSM', x: 85, y: 46 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 85, y: 46 },
       { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
       { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
     ]
@@ -348,10 +352,10 @@ const FORMATIONS = {
       { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 74 },
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 76, y: 72 },
       { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 56 },
-      { slotIndex: 5, pos: 'SM', label: 'LSM', x: 14, y: 43 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 43 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 35, y: 42 },
       { slotIndex: 7, pos: 'AM', label: 'AM', x: 65, y: 42 },
-      { slotIndex: 8, pos: 'SM', label: 'RSM', x: 86, y: 43 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 43 },
       { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
       { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
     ]
@@ -366,9 +370,11 @@ const REQUIRED_STARTERS = {
   RB: 1,
   DM: 1,
   CM: 2,
-  SM: 0,
+  LM: 0,
+  RM: 0,
   AM: 0,
-  WG: 2,
+  LW: 1,
+  RW: 1,
   CF: 1
 };
 
@@ -380,10 +386,12 @@ const SQUAD_COMPOSITION = [
   { pos: 'RB', total: 1, starters: 1 },
   { pos: 'DM', total: 1, starters: 1 },
   { pos: 'CM', total: 2, starters: 2 },
-  { pos: 'SM', total: 1, starters: 0 },
+  { pos: 'LM', total: 1, starters: 0 },
+  { pos: 'RM', total: 1, starters: 0 },
   { pos: 'AM', total: 1, starters: 0 },
-  { pos: 'WG', total: 2, starters: 2 },
-  { pos: 'CF', total: 2, starters: 1 }
+  { pos: 'LW', total: 1, starters: 1 },
+  { pos: 'RW', total: 1, starters: 1 },
+  { pos: 'CF', total: 1, starters: 1 }
 ];
 
 // 所属選手の上限枠
@@ -410,12 +418,12 @@ const TACTICS_DEFINITIONS = {
   possession: {
     name: 'ポゼッション（支配）',
     badge: 'POSSESSION',
-    desc: '【ポゼッション（支配）】：中盤（DM/CM/SM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。'
+    desc: '【ポゼッション（支配）】：中盤（DM/CM/LM/RM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。'
   },
   counter: {
     name: 'カウンター（速攻）',
     badge: 'COUNTER ATTACK',
-    desc: '【カウンター（速攻）】：前線（WG/CF）の攻撃力と最終ライン（CB/LB/RB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
+    desc: '【カウンター（速攻）】：前線（LW/RW/CF）の攻撃力と最終ライン（CB/LB/RB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
   },
   highpress: {
     name: 'ハイプレス（前線守備）',
@@ -453,15 +461,19 @@ const NATIONALITIES = [
 const SECONDARY_POSITION_POOLS = {
   GK: [[]],
   CB: [['LB'], ['RB'], ['DM'], ['LB', 'DM'], ['RB', 'DM'], []],
-  LB: [['SM'], ['CB'], ['WG'], ['RB'], ['SM', 'WG']],
-  RB: [['SM'], ['CB'], ['WG'], ['LB'], ['SM', 'WG']],
-  SB: [['SM'], ['CB'], ['WG'], ['SM', 'WG']],
+  LB: [['LM'], ['CB'], ['LW'], ['RB'], ['LM', 'LW']],
+  RB: [['RM'], ['CB'], ['RW'], ['LB'], ['RM', 'RW']],
+  SB: [['LM'], ['RM'], ['CB'], ['LW'], ['RW']],
   DM: [['CM'], ['CB'], ['CM', 'CB']],
-  CM: [['DM'], ['AM'], ['SM'], ['DM', 'AM']],
-  SM: [['WG'], ['LB'], ['RB'], ['AM'], ['WG', 'AM']],
-  AM: [['CM'], ['WG'], ['CF'], ['CM', 'WG']],
-  WG: [['CF'], ['SM'], ['AM'], ['CF', 'AM']],
-  CF: [['WG'], ['AM'], ['WG', 'AM'], []]
+  CM: [['DM'], ['AM'], ['LM'], ['RM'], ['DM', 'AM']],
+  LM: [['LW'], ['LB'], ['RM'], ['AM'], ['LW', 'LB']],
+  RM: [['RW'], ['RB'], ['LM'], ['AM'], ['RW', 'RB']],
+  SM: [['LM'], ['RM'], ['LW'], ['RW'], ['AM']],
+  AM: [['CM'], ['LW'], ['RW'], ['CF'], ['CM', 'CF']],
+  LW: [['CF'], ['LM'], ['RW'], ['AM'], ['CF', 'LM']],
+  RW: [['CF'], ['RM'], ['LW'], ['AM'], ['CF', 'RM']],
+  WG: [['CF'], ['LW'], ['RW'], ['LM'], ['RM']],
+  CF: [['LW'], ['RW'], ['AM'], ['LW', 'RW'], []]
 };
 
 // ポジション系統ごとの推奨背番号プール
@@ -473,8 +485,12 @@ const PREFERRED_SQUAD_NUMBERS = {
   SB: [2, 3, 12, 21, 22, 27, 33],
   DM: [6, 14, 16, 18, 28, 30],
   CM: [8, 16, 18, 20, 22, 29, 32],
+  LM: [11, 7, 14, 17, 20, 25],
+  RM: [7, 11, 14, 17, 20, 22],
   SM: [7, 11, 14, 17, 20, 21],
   AM: [10, 8, 19, 20, 21, 34],
+  LW: [11, 7, 17, 19, 20, 29],
+  RW: [7, 11, 17, 19, 20, 24],
   WG: [7, 11, 17, 19, 20, 29],
   CF: [9, 10, 11, 18, 19, 27]
 };
@@ -635,12 +651,16 @@ function getPlayerOverallRating(p) {
     case 'CM':
       raw = p.atk * 0.38 + p.def * 0.36 + p.sta * 0.26;
       break;
+    case 'LM':
+    case 'RM':
     case 'SM':
       raw = p.atk * 0.46 + p.sta * 0.32 + p.def * 0.22;
       break;
     case 'AM':
       raw = p.atk * 0.60 + p.sta * 0.24 + p.def * 0.16;
       break;
+    case 'LW':
+    case 'RW':
     case 'WG':
       raw = p.atk * 0.64 + p.sta * 0.26 + p.def * 0.10;
       break;
@@ -759,14 +779,14 @@ function generateUniqueName(usedNames) {
  */
 function generatePreferredFoot(pos) {
   const r = Math.random();
-  if (pos === 'LB') {
-    if (r < 0.78) return 'Left';
-    if (r < 0.90) return 'Both';
+  if (pos === 'LB' || pos === 'LM' || pos === 'LW') {
+    if (r < 0.76) return 'Left';
+    if (r < 0.88) return 'Both';
     return 'Right';
   }
-  if (pos === 'RB') {
-    if (r < 0.78) return 'Right';
-    if (r < 0.90) return 'Both';
+  if (pos === 'RB' || pos === 'RM' || pos === 'RW') {
+    if (r < 0.76) return 'Right';
+    if (r < 0.88) return 'Both';
     return 'Left';
   }
   if (pos === 'SB' || pos === 'WG' || pos === 'SM') {
@@ -795,6 +815,12 @@ function generatePlayerHeight(pos) {
     case 'LB':
     case 'RB':
     case 'SB':
+    case 'LM':
+    case 'RM':
+    case 'SM':
+    case 'LW':
+    case 'RW':
+    case 'WG':
     default:
       return randInt(172, 186);
   }
@@ -815,10 +841,10 @@ function generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, pr
   if (height >= 189 && (pos === 'CB' || pos === 'CF' || pos === 'GK')) {
     candidates.push('空中戦の覇者');
   }
-  if ((pos === 'WG' || pos === 'SM' || pos === 'LB' || pos === 'RB' || pos === 'SB') && atk >= 66) {
+  if ((pos === 'LW' || pos === 'RW' || pos === 'WG' || pos === 'LM' || pos === 'RM' || pos === 'SM' || pos === 'LB' || pos === 'RB' || pos === 'SB') && atk >= 66) {
     candidates.push('スピードスター');
   }
-  if ((pos === 'AM' || pos === 'CM' || pos === 'SM') && atk >= 68) {
+  if ((pos === 'AM' || pos === 'CM' || pos === 'LM' || pos === 'RM' || pos === 'SM') && atk >= 68) {
     candidates.push('高精度キッカー');
     candidates.push('チャンスメイカー');
   }
@@ -859,7 +885,7 @@ function generateInitialCareerStats(pos, age) {
   const activeYears = Math.max(0, age - 18);
   if (activeYears === 0) {
     const apps = randInt(0, 8);
-    const goals = (pos === 'CF' || pos === 'WG') ? randInt(0, 2) : 0;
+    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, 2) : 0;
     return { appearances: apps, goals };
   }
 
@@ -870,9 +896,9 @@ function generateInitialCareerStats(pos, age) {
   if (pos === 'GK') goalRate = 0;
   else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB') goalRate = 0.04;
   else if (pos === 'DM') goalRate = 0.06;
-  else if (pos === 'CM' || pos === 'SM') goalRate = 0.12;
+  else if (pos === 'CM' || pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.12;
   else if (pos === 'AM') goalRate = 0.22;
-  else if (pos === 'WG') goalRate = 0.28;
+  else if (pos === 'LW' || pos === 'RW' || pos === 'WG') goalRate = 0.28;
   else if (pos === 'CF') goalRate = 0.42;
 
   const totalGoals = pos === 'GK'
@@ -966,6 +992,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center + randInt(-6, 8), 1, 99);
       sta = clamp(center + 4 + randInt(-5, 8), 1, 99);
       break;
+    case 'LM':
+    case 'RM':
     case 'SM':
       atk = clamp(center + 3 + randInt(-6, 8), 1, 99);
       def = clamp(center - 6 + randInt(-6, 8), 1, 99);
@@ -976,6 +1004,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center - 10 + randInt(-6, 7), 1, 99);
       sta = clamp(center + randInt(-6, 7), 1, 99);
       break;
+    case 'LW':
+    case 'RW':
     case 'WG':
       atk = clamp(center + 7 + randInt(-5, 9), 1, 99);
       def = clamp(center - 16 + randInt(-7, 6), 1, 99);

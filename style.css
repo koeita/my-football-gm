@@ -682,7 +682,7 @@ body {
   color: var(--danger-red);
 }
 
-/* 10ポジションタグ */
+/* 12ポジションタグ */
 .pos-tag {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -693,8 +693,8 @@ body {
 
 .pos-GK { color: var(--accent-gold); }
 .pos-CB, .pos-LB, .pos-RB, .pos-SB { color: var(--text-main); }
-.pos-DM, .pos-CM, .pos-SM, .pos-AM { color: var(--accent-green); }
-.pos-WG, .pos-CF { color: var(--accent-gold); }
+.pos-DM, .pos-CM, .pos-LM, .pos-RM, .pos-SM, .pos-AM { color: var(--accent-green); }
+.pos-LW, .pos-RW, .pos-WG, .pos-CF { color: var(--accent-gold); }
 
 /* 配置枠セレクトボックス */
 .slot-select {
