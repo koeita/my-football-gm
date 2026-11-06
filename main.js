@@ -4050,14 +4050,18 @@ function renderGmDuties() {
   const duties = [criticalDuty, recommendedDuty, optionalDuty];
   listEl.innerHTML = duties.map(d => `
     <div class="gm-task-card duty-${d.level}">
-      <div class="gm-task-top">
-        <span class="gm-task-priority-badge priority-${d.level}">${d.badge}</span>
-        <button type="button" class="btn btn-sm btn-duty-action" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
+      <div class="gm-task-main">
+        <div class="gm-task-header-row">
+          <span class="duty-priority-badge badge-${d.level}">${d.badge}</span>
+          <strong class="gm-task-title">${d.title}</strong>
+        </div>
+        <p class="gm-task-desc">${d.desc}</p>
+      </div>
+      <div class="gm-task-action-wrap">
+        <button type="button" class="btn btn-sm btn-duty-action ${d.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
           ${d.btnText}
         </button>
       </div>
-      <div class="gm-task-title">${d.title}</div>
-      <p class="gm-task-desc">${d.desc}</p>
     </div>
   `).join('');
 }
