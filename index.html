@@ -184,7 +184,6 @@
     <!-- タブ1：順位表 / 日程画面 -->
         <!-- タブ3：本部（GM執務室：日程進行、試合情報、GM業務一覧）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
-      <!-- 最上部ステータス（クラブ名、スタジアム規模、サポーター数、現在順位・目標） -->
       <section class="office-hub-hero">
         <div class="office-hero-top">
           <div class="office-club-badge-row">
@@ -220,69 +219,7 @@
         </div>
       </section>
 
-      <!-- 中央：直近1週間のスケジュール（週間カレンダーウィジェット） -->
-<!-- 直近1週間のスケジュール（週間カレンダーウィジェット） -->
-    <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="直近1週間のスケジュール">
-      <div class="weekly-schedule-header">
-        <div class="weekly-schedule-title-group">
-          <span class="weekly-schedule-label mono">WEEKLY SCHEDULE</span>
-          <h3 class="weekly-schedule-title">直近1週間のスケジュール</h3>
-        </div>
-        <div class="weekly-schedule-badges mono">
-          <span class="market-status-pill badge-market-open" id="weekly-market-badge">夏期 移籍市場 OPEN</span>
-          <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次の試合まで あと0日</span>
-        </div>
-      </div>
-      <div class="weekly-schedule-track" id="weekly-schedule-track">
-        <!-- JSで直近7日分のカレンダーカードを描画 -->
-      </div>
-    </section>
-
-      <!-- メインアクションボタンコントロール（本部内に集約） -->
-      <section class="office-action-section">
-        <div class="office-action-controls action-controls" id="office-action-controls">
-          <button type="button" class="btn btn-primary btn-advance-large" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">
-            <span class="btn-large-sub mono">NEXT FIXTURE</span>
-            <span class="btn-large-title">次の試合まで進める</span>
-          </button>
-          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" title="本日の試合を開始">
-            <span class="btn-large-sub mono">MATCHDAY KICKOFF</span>
-            <span class="btn-large-title">キックオフ（試合開始）</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-advance-sub" id="btn-advance-day" title="日付を1日進める">
-            <span class="btn-sub-text mono">+1 DAY</span>
-            <span>日程を進める（翌日へ）</span>
-          </button>
-          <button type="button" class="btn btn-warning btn-advance-sub hidden" id="btn-pause-advance" title="日程の自動進行を一時停止">
-            <span>一時停止</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-skip-season">シーズン終了までスキップ</button>
-          <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
-          <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
-          <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
-        </div>
-      </section>
-
-      <!-- 次の試合情報・直前試合結果ログ -->
-      <section class="office-match-section">
-<section class="column-side">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title" id="log-panel-title">試合結果・進行ログ</h2>
-            <span class="panel-subtitle mono" id="log-panel-subtitle">MATCH LOG</span>
-          </div>
-          <div class="panel-body">
-            <div id="match-results-container" class="match-results-container">
-              <!-- JSで描画 -->
-            </div>
-          </div>
-        </div>
-      </section>
-      </section>
-
-      <!-- 下部：GM業務一覧パネル -->
-<!-- GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意） -->
-    <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
+      <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
       <div class="gm-tasks-header">
         <div class="gm-tasks-title-group">
           <span class="gm-tasks-label mono">GM EXECUTIVE DUTIES</span>
@@ -309,6 +246,62 @@
         <!-- JSで必須・推奨・任意のタスクカードを自動描画 -->
       </div>
     </section>
+
+      <section class="office-action-section">
+        <div class="office-action-controls action-controls" id="office-action-controls">
+          <button type="button" class="btn btn-primary btn-advance-large" id="btn-advance-to-match" title="次の試合日または重要イベントまで連続して日程を進める">
+            <span class="btn-large-sub mono">NEXT FIXTURE</span>
+            <span class="btn-large-title">次の試合まで進める</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" title="本日の試合を開始">
+            <span class="btn-large-sub mono">MATCHDAY KICKOFF</span>
+            <span class="btn-large-title">キックオフ（試合開始）</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-advance-sub" id="btn-advance-day" title="日付を1日進める">
+            <span class="btn-sub-text mono">+1 DAY</span>
+            <span>日程を進める（翌日へ）</span>
+          </button>
+          <button type="button" class="btn btn-warning btn-advance-sub hidden" id="btn-pause-advance" title="日程の自動進行を一時停止">
+            <span>一時停止</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-skip-season">シーズン終了までスキップ</button>
+          <button type="button" class="btn btn-accent hidden" id="btn-next-season">新シーズンを開幕する</button>
+          <button type="button" class="btn btn-danger hidden" id="btn-restart-game">最初からやり直す</button>
+          <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
+        </div>
+      </section>
+
+      <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="直近1週間のスケジュール">
+      <div class="weekly-schedule-header">
+        <div class="weekly-schedule-title-group">
+          <span class="weekly-schedule-label mono">WEEKLY SCHEDULE</span>
+          <h3 class="weekly-schedule-title">直近1週間のスケジュール</h3>
+        </div>
+        <div class="weekly-schedule-badges mono">
+          <span class="market-status-pill badge-market-open" id="weekly-market-badge">夏期 移籍市場 OPEN</span>
+          <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次の試合まで あと0日</span>
+        </div>
+      </div>
+      <div class="weekly-schedule-track" id="weekly-schedule-track">
+        <!-- JSで直近7日分のカレンダーカードを描画 -->
+      </div>
+    </section>
+
+      <section class="office-match-section">
+<section class="column-side">
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title" id="log-panel-title">試合結果・進行ログ</h2>
+            <span class="panel-subtitle mono" id="log-panel-subtitle">MATCH LOG</span>
+          </div>
+          <div class="panel-body">
+            <div id="match-results-container" class="match-results-container">
+              <!-- JSで描画 -->
+            </div>
+          </div>
+        </div>
+      </section>
+      </sec
     </main>
 
     <!-- タブ1：リーグ順位表・得点ランキング -->

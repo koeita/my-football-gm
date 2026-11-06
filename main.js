@@ -1,3 +1,47 @@
+/**
+ * 本部（GM執務室）タブ上部ステータス（ヒーロー）の描画・更新
+ */
+function renderOfficeHero() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const payroll = getClubTotalPayroll(playerClub);
+  const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
+  const stadiumLv = f.stadium || 1;
+  const stadiumCap = 20000 + stadiumLv * 5000;
+
+  // 順位の算出
+  const standings = getSortedStandings();
+  const rank = standings.findIndex(c => c.id === playerClub.id) + 1;
+
+  const avatarEl = document.getElementById('office-club-initial');
+  if (avatarEl) avatarEl.textContent = getClubShortCode(playerClub);
+
+  const nameEl = document.getElementById('office-club-name');
+  if (nameEl) nameEl.textContent = playerClub.name;
+
+  const gmEl = document.getElementById('office-gm-name');
+  if (gmEl) gmEl.textContent = gameState.gmName || 'A. ファーガソン';
+
+  const rankEl = document.getElementById('office-current-rank');
+  if (rankEl) rankEl.textContent = `現在 ${rank}位 (${playerClub.pts || 0}pts)`;
+
+  const targetEl = document.getElementById('office-target-rank');
+  if (targetEl) targetEl.textContent = `目標: ${playerClub.targetLabel || '4位以内'}`;
+
+  const stadiumEl = document.getElementById('office-stadium-cap');
+  if (stadiumEl) stadiumEl.textContent = `Lv.${stadiumLv} (${stadiumCap.toLocaleString()}人)`;
+
+  const supportersEl = document.getElementById('office-supporters-count');
+  if (supportersEl) supportersEl.textContent = `${playerClub.supporters.toLocaleString()}人`;
+
+  const fundsEl = document.getElementById('office-funds');
+  if (fundsEl) fundsEl.textContent = formatMoney(playerClub.funds);
+
+  const payrollEl = document.getElementById('office-payroll');
+  if (payrollEl) payrollEl.textContent = formatMoney(payroll);
+}
+
 'use strict';
 
 /**
@@ -4962,6 +5006,7 @@ function startNextSeason() {
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
   gameState.activeTab = tabName;
+  document.body.dataset.activeTab = tabName;
 
   const tabs = ['team', 'roster', 'office', 'facilities', 'market'];
   for (const t of tabs) {
@@ -5070,6 +5115,7 @@ function handleRosterClick(playerId) {
 function renderAll() {
   if (!gameState.clubs || gameState.clubs.length === 0) return;
   renderHeader();
+  renderOfficeHero();
   renderWeeklySchedule();
   renderFinancialAlert();
   renderGmDuties();
@@ -5230,6 +5276,7 @@ function renderHeader() {
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
     }
   }
+  renderOfficeHero();
 }
 
 /**
@@ -7010,6 +7057,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.isSimulating = false;
   gameState.consecutiveDeficitSeasons = 0;
   gameState.activeTab = 'office';
+  document.body.dataset.activeTab = 'office';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;

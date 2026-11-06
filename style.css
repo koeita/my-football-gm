@@ -4193,6 +4193,11 @@ body.modal-open {
    ダークテーマ・プロフェッショナルデザイン維持 / タッチ操作最適化 / PWA全画面
    ========================================================================== */
 @media (max-width: 768px) {
+  /* スマホ表示時：本部（office）タブ以外では、上部の巨大なステータスヘッダーカードを非表示にして全画面を活用 */
+  body:not([data-active-tab="office"]) .status-header {
+    display: none !important;
+  }
+
   /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保） */
   .app-container {
     padding: 6px 8px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
