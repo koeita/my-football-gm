@@ -261,57 +261,137 @@ const EUROPEAN_MEGA_CLUBS = [
   { id: 'paris', name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
-// 9ポジション定義とカテゴリ分類
-const ALL_POSITIONS = ['GK', 'CB', 'SB', 'DM', 'CM', 'SM', 'AM', 'WG', 'CF'];
+// 12ポジション定義とカテゴリ分類
+const ALL_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF'];
 
 const POS_DISPLAY_ORDER = {
   GK: 1,
   CB: 2,
-  SB: 3,
-  DM: 4,
-  CM: 5,
-  SM: 6,
-  AM: 7,
-  WG: 8,
-  CF: 9
+  LB: 3,
+  RB: 4,
+  DM: 5,
+  CM: 6,
+  LM: 7,
+  RM: 8,
+  AM: 9,
+  LW: 10,
+  RW: 11,
+  CF: 12
 };
 
 const POS_ROLE_GROUP = {
   GK: 'GK',
   CB: 'DF',
-  SB: 'DF',
+  LB: 'DF',
+  RB: 'DF',
   DM: 'MF',
   CM: 'MF',
-  SM: 'MF',
+  LM: 'MF',
+  RM: 'MF',
   AM: 'MF',
-  WG: 'FW',
+  LW: 'FW',
+  RW: 'FW',
   CF: 'FW'
 };
 
-// スタメン11枠の標準フォーメーション構成（計11名：GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1）
+// 4種類のフォーメーション定義（ピッチ座標 x: 0〜100%, y: 0〜100% ※上が相手ゴール方向）
+const FORMATIONS = {
+  '4-3-3': {
+    name: '4-3-3',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 70 },
+      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 20, y: 22 },
+      { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 80, y: 22 }
+    ]
+  },
+  '4-2-3-1': {
+    name: '4-2-3-1',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 72 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 74 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 74 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 72 },
+      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
+      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
+      { slotIndex: 7, pos: 'LM', label: 'LM', x: 18, y: 36 },
+      { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 35 },
+      { slotIndex: 9, pos: 'RM', label: 'RM', x: 82, y: 36 },
+      { slotIndex: 10, pos: 'CF', label: 'CF', x: 50, y: 15 }
+    ]
+  },
+  '4-4-2': {
+    name: '4-4-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 71 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 71 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 15, y: 46 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 85, y: 46 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+    ]
+  },
+  '3-5-2': {
+    name: '3-5-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 24, y: 72 },
+      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 74 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 76, y: 72 },
+      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 56 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 43 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 35, y: 42 },
+      { slotIndex: 7, pos: 'AM', label: 'AM', x: 65, y: 42 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 43 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+    ]
+  }
+};
+
+// スタメン11枠の基準ポジション数（4-3-3ベース）
 const REQUIRED_STARTERS = {
   GK: 1,
   CB: 2,
-  SB: 2,
+  LB: 1,
+  RB: 1,
   DM: 1,
-  CM: 1,
-  SM: 1,
-  AM: 1,
-  WG: 1,
+  CM: 2,
+  LM: 0,
+  RM: 0,
+  AM: 0,
+  LW: 1,
+  RW: 1,
   CF: 1
 };
 
-// 1チームの初期16名構成（スタメン11名＋ベンチ5名）
+// 1チームの初期16名構成（4-3-3のスタメン11名＋各フォーメーション対応ベンチ5名）
 const SQUAD_COMPOSITION = [
   { pos: 'GK', total: 2, starters: 1 },
   { pos: 'CB', total: 3, starters: 2 },
-  { pos: 'SB', total: 2, starters: 2 },
-  { pos: 'DM', total: 2, starters: 1 },
-  { pos: 'CM', total: 2, starters: 1 },
-  { pos: 'SM', total: 1, starters: 1 },
-  { pos: 'AM', total: 1, starters: 1 },
-  { pos: 'WG', total: 1, starters: 1 },
-  { pos: 'CF', total: 2, starters: 1 }
+  { pos: 'LB', total: 1, starters: 1 },
+  { pos: 'RB', total: 1, starters: 1 },
+  { pos: 'DM', total: 1, starters: 1 },
+  { pos: 'CM', total: 2, starters: 2 },
+  { pos: 'LM', total: 1, starters: 0 },
+  { pos: 'RM', total: 1, starters: 0 },
+  { pos: 'AM', total: 1, starters: 0 },
+  { pos: 'LW', total: 1, starters: 1 },
+  { pos: 'RW', total: 1, starters: 1 },
+  { pos: 'CF', total: 1, starters: 1 }
 ];
 
 // 所属選手の上限枠
@@ -338,12 +418,12 @@ const TACTICS_DEFINITIONS = {
   possession: {
     name: 'ポゼッション（支配）',
     badge: 'POSSESSION',
-    desc: '【ポゼッション（支配）】：中盤（DM/CM/SM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。'
+    desc: '【ポゼッション（支配）】：中盤（DM/CM/LM/RM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。'
   },
   counter: {
     name: 'カウンター（速攻）',
     badge: 'COUNTER ATTACK',
-    desc: '【カウンター（速攻）】：前線（WG/CF）の攻撃力と最終ライン（CB/SB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
+    desc: '【カウンター（速攻）】：前線（LW/RW/CF）の攻撃力と最終ライン（CB/LB/RB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
   },
   highpress: {
     name: 'ハイプレス（前線守備）',
@@ -370,6 +450,51 @@ const EUROPEAN_SURNAMES = [
   'モドリッチ', 'コヴァチッチ', 'グヴァルディオル', 'ヴラホヴィッチ', 'ミリンコヴィッチ', 'シュクリニアル', 'ロボトカ', 'オブラク', 'ハキミ', 'サラー'
 ];
 
+// 国籍リスト（欧州主要国・南米・アジア）
+const NATIONALITIES = [
+  'England', 'France', 'Spain', 'Germany', 'Italy',
+  'Netherlands', 'Portugal', 'Brazil', 'Argentina', 'Belgium',
+  'Croatia', 'Japan'
+];
+
+// メイン適性に応じたサブ適性（secondaryPositions）候補プール
+const SECONDARY_POSITION_POOLS = {
+  GK: [[]],
+  CB: [['LB'], ['RB'], ['DM'], ['LB', 'DM'], ['RB', 'DM'], []],
+  LB: [['LM'], ['CB'], ['LW'], ['RB'], ['LM', 'LW']],
+  RB: [['RM'], ['CB'], ['RW'], ['LB'], ['RM', 'RW']],
+  SB: [['LM'], ['RM'], ['CB'], ['LW'], ['RW']],
+  DM: [['CM'], ['CB'], ['CM', 'CB']],
+  CM: [['DM'], ['AM'], ['LM'], ['RM'], ['DM', 'AM']],
+  LM: [['LW'], ['LB'], ['RM'], ['AM'], ['LW', 'LB']],
+  RM: [['RW'], ['RB'], ['LM'], ['AM'], ['RW', 'RB']],
+  SM: [['LM'], ['RM'], ['LW'], ['RW'], ['AM']],
+  AM: [['CM'], ['LW'], ['RW'], ['CF'], ['CM', 'CF']],
+  LW: [['CF'], ['LM'], ['RW'], ['AM'], ['CF', 'LM']],
+  RW: [['CF'], ['RM'], ['LW'], ['AM'], ['CF', 'RM']],
+  WG: [['CF'], ['LW'], ['RW'], ['LM'], ['RM']],
+  CF: [['LW'], ['RW'], ['AM'], ['LW', 'RW'], []]
+};
+
+// ポジション系統ごとの推奨背番号プール
+const PREFERRED_SQUAD_NUMBERS = {
+  GK: [1, 13, 23, 31, 40],
+  CB: [4, 5, 6, 15, 24, 25, 26],
+  LB: [3, 12, 21, 22, 23, 33],
+  RB: [2, 12, 21, 24, 27, 32],
+  SB: [2, 3, 12, 21, 22, 27, 33],
+  DM: [6, 14, 16, 18, 28, 30],
+  CM: [8, 16, 18, 20, 22, 29, 32],
+  LM: [11, 7, 14, 17, 20, 25],
+  RM: [7, 11, 14, 17, 20, 22],
+  SM: [7, 11, 14, 17, 20, 21],
+  AM: [10, 8, 19, 20, 21, 34],
+  LW: [11, 7, 17, 19, 20, 29],
+  RW: [7, 11, 17, 19, 20, 24],
+  WG: [7, 11, 17, 19, 20, 29],
+  CF: [9, 10, 11, 18, 19, 27]
+};
+
 // ゲーム全体の状態管理
 const gameState = {
   gmName: 'A. ファーガソン',
@@ -390,7 +515,9 @@ const gameState = {
   lastMatchTicker: null,
   transferMarket: [],
   lastSettlement: null,
-  selectedPlayerId: null
+  selectedPlayerId: null,
+  selectedSlotIndex: null,
+  profileModalPlayerId: null
 };
 
 let playerIdCounter = 1;
@@ -457,17 +584,64 @@ function getGrowthCurveLabel(curve) {
 }
 
 /**
+ * 選手のメイン適性とサブ適性を合わせた表記文字列を返す（例: "CF / WG", "CB (SB)"）
+ */
+function formatPlayerPositionsText(p, style = 'slash') {
+  const primary = p.primaryPosition || p.preferredPosition || p.pos;
+  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  if (subs.length === 0) return primary;
+  if (style === 'paren') {
+    return `${primary} (${subs.join('/')})`;
+  }
+  return `${primary} / ${subs.join('・')}`;
+}
+
+/**
+ * テーブル・ボード用のポジションHTMLを生成
+ */
+function formatPlayerPositionsHtml(p) {
+  const primary = p.primaryPosition || p.preferredPosition || p.pos;
+  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  if (subs.length === 0) {
+    return `<span class="pos-tag pos-${primary}">${primary}</span>`;
+  }
+  return `<span class="pos-tag pos-${primary}">${primary}</span><span class="pos-sub-text">/ ${subs.join('・')}</span>`;
+}
+
+/**
+ * 指定スロット（slotPos）に対する選手のポジション適性判定と補正係数を返す
+ * - メイン配置 (primaryPosition一致): 1.00 (100%) -> type: 'main'
+ * - サブ適性配置 (secondaryPositionsに含まれる): 0.92 (92%) -> type: 'sub'
+ * - 適性外配置 (上記以外): 0.80 (80%) -> type: 'out'
+ */
+function getPositionFitInfo(p, slotPos) {
+  const primary = p.primaryPosition || p.preferredPosition || p.pos;
+  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+
+  if (!slotPos || slotPos === primary) {
+    return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
+  }
+  if (subs.includes(slotPos)) {
+    return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
+  }
+  return { type: 'out', factor: 0.80, label: '適性外 80%' };
+}
+
+/**
  * 選手の本来の能力に基づく総合評価値（1〜99スケール）を算出
  */
 function getPlayerOverallRating(p) {
+  const prefPos = p.primaryPosition || p.preferredPosition || p.position || p.pos;
   let raw;
-  switch (p.pos) {
+  switch (prefPos) {
     case 'GK':
       raw = p.def * 0.78 + p.sta * 0.17 + p.atk * 0.05;
       break;
     case 'CB':
       raw = p.def * 0.72 + p.sta * 0.20 + p.atk * 0.08;
       break;
+    case 'LB':
+    case 'RB':
     case 'SB':
       raw = p.def * 0.52 + p.sta * 0.30 + p.atk * 0.18;
       break;
@@ -477,12 +651,16 @@ function getPlayerOverallRating(p) {
     case 'CM':
       raw = p.atk * 0.38 + p.def * 0.36 + p.sta * 0.26;
       break;
+    case 'LM':
+    case 'RM':
     case 'SM':
       raw = p.atk * 0.46 + p.sta * 0.32 + p.def * 0.22;
       break;
     case 'AM':
       raw = p.atk * 0.60 + p.sta * 0.24 + p.def * 0.16;
       break;
+    case 'LW':
+    case 'RW':
     case 'WG':
       raw = p.atk * 0.64 + p.sta * 0.26 + p.def * 0.10;
       break;
@@ -495,18 +673,36 @@ function getPlayerOverallRating(p) {
 }
 
 /**
- * 適性外ポジション配置時（20%低下）や負傷時を考慮した「実効総合力」を算出
+ * メイン適性(100%)・サブ適性(92%)・適性外配置(80%)や負傷時を考慮した「実効総合力」を算出
  */
 function getEffectivePlayerRating(p) {
   const baseOvr = getPlayerOverallRating(p);
   let factor = 1.0;
 
-  // スタメン時、適性ポジションと配置枠が異なる場合は総合値20%低下
-  if (p.isStarter && p.assignedPos && p.assignedPos !== p.pos) {
-    factor *= 0.80;
+  if (p.isStarter && p.assignedPos) {
+    const fitInfo = getPositionFitInfo(p, p.assignedPos);
+    factor *= fitInfo.factor;
   }
 
   // 負傷中にもかかわらず強行出場している場合はさらに低下
+  if (p.injuryWeeks && p.injuryWeeks > 0) {
+    factor *= 0.75;
+  }
+
+  return clamp(Math.round(baseOvr * factor), 1, 99);
+}
+
+/**
+ * 指定されたポジション枠（slotPos）に配置した場合の実効総合力をシミュレーション算出
+ */
+function getEffectivePlayerRatingForSlot(p, slotPos) {
+  const baseOvr = getPlayerOverallRating(p);
+  let factor = 1.0;
+
+  if (slotPos) {
+    const fitInfo = getPositionFitInfo(p, slotPos);
+    factor *= fitInfo.factor;
+  }
   if (p.injuryWeeks && p.injuryWeeks > 0) {
     factor *= 0.75;
   }
@@ -579,7 +775,183 @@ function generateUniqueName(usedNames) {
 }
 
 /**
- * 9ポジションに対応した選手1名を生成
+ * 利き足（'Right', 'Left', 'Both'）を生成
+ */
+function generatePreferredFoot(pos) {
+  const r = Math.random();
+  if (pos === 'LB' || pos === 'LM' || pos === 'LW') {
+    if (r < 0.76) return 'Left';
+    if (r < 0.88) return 'Both';
+    return 'Right';
+  }
+  if (pos === 'RB' || pos === 'RM' || pos === 'RW') {
+    if (r < 0.76) return 'Right';
+    if (r < 0.88) return 'Both';
+    return 'Left';
+  }
+  if (pos === 'SB' || pos === 'WG' || pos === 'SM') {
+    if (r < 0.56) return 'Right';
+    if (r < 0.86) return 'Left';
+    return 'Both';
+  }
+  if (r < 0.68) return 'Right';
+  if (r < 0.90) return 'Left';
+  return 'Both';
+}
+
+/**
+ * ポジションに応じたリアルな身長（172〜195cm）を生成
+ */
+function generatePlayerHeight(pos) {
+  switch (pos) {
+    case 'GK':
+      return randInt(186, 195);
+    case 'CB':
+      return randInt(183, 194);
+    case 'CF':
+      return randInt(177, 193);
+    case 'DM':
+      return randInt(176, 190);
+    case 'LB':
+    case 'RB':
+    case 'SB':
+    case 'LM':
+    case 'RM':
+    case 'SM':
+    case 'LW':
+    case 'RW':
+    case 'WG':
+    default:
+      return randInt(172, 186);
+  }
+}
+
+/**
+ * 選手の能力・ポジション・サブ適性に応じた特徴タグ（1〜2個）を生成
+ */
+function generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot) {
+  const candidates = [];
+
+  if (secondaryPositions && secondaryPositions.length >= 2) {
+    candidates.push('万能ユーティリティ');
+  }
+  if (preferredFoot === 'Both') {
+    candidates.push('両足のスペシャリスト');
+  }
+  if (height >= 189 && (pos === 'CB' || pos === 'CF' || pos === 'GK')) {
+    candidates.push('空中戦の覇者');
+  }
+  if ((pos === 'LW' || pos === 'RW' || pos === 'WG' || pos === 'LM' || pos === 'RM' || pos === 'SM' || pos === 'LB' || pos === 'RB' || pos === 'SB') && atk >= 66) {
+    candidates.push('スピードスター');
+  }
+  if ((pos === 'AM' || pos === 'CM' || pos === 'LM' || pos === 'RM' || pos === 'SM') && atk >= 68) {
+    candidates.push('高精度キッカー');
+    candidates.push('チャンスメイカー');
+  }
+  if (pos === 'CF' && atk >= 70) {
+    candidates.push('決定力の鬼');
+    candidates.push('ラインブレイカー');
+  }
+  if ((pos === 'CB' || pos === 'DM') && def >= 70) {
+    candidates.push('鉄壁の対人守備');
+  }
+  if (pos === 'GK' && def >= 68) {
+    candidates.push('守護神の反射神経');
+  }
+  if (sta >= 72) {
+    candidates.push('無尽蔵のスタミナ');
+  }
+  if (pos === 'DM' || pos === 'CM') {
+    candidates.push('ビルドアップの起点');
+  }
+
+  const fallbackPool = [
+    '戦術理解度◎', 'ハードワーカー', '高精度キッカー', 'スピードスター', '空中戦の覇者', '冷静沈着'
+  ];
+  for (const fb of fallbackPool) {
+    if (!candidates.includes(fb)) {
+      candidates.push(fb);
+    }
+  }
+
+  const count = Math.random() < 0.65 ? 2 : 1;
+  return candidates.slice(0, count);
+}
+
+/**
+ * 年齢とポジションに応じた初期キャリア通算成績を生成
+ */
+function generateInitialCareerStats(pos, age) {
+  const activeYears = Math.max(0, age - 18);
+  if (activeYears === 0) {
+    const apps = randInt(0, 8);
+    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, 2) : 0;
+    return { appearances: apps, goals };
+  }
+
+  const appsPerYear = randInt(16, 32);
+  const totalApps = activeYears * appsPerYear + randInt(0, 12);
+
+  let goalRate = 0.03;
+  if (pos === 'GK') goalRate = 0;
+  else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB') goalRate = 0.04;
+  else if (pos === 'DM') goalRate = 0.06;
+  else if (pos === 'CM' || pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.12;
+  else if (pos === 'AM') goalRate = 0.22;
+  else if (pos === 'LW' || pos === 'RW' || pos === 'WG') goalRate = 0.28;
+  else if (pos === 'CF') goalRate = 0.42;
+
+  const totalGoals = pos === 'GK'
+    ? 0
+    : Math.max(0, Math.round(totalApps * goalRate * (0.75 + Math.random() * 0.5)));
+
+  return {
+    appearances: totalApps,
+    goals: totalGoals
+  };
+}
+
+/**
+ * クラブ内の未使用背番号（1〜99）からポジションに合った背番号を割り当てる
+ */
+function pickAvailableSquadNumber(pos, usedNumbers) {
+  const prefList = PREFERRED_SQUAD_NUMBERS[pos] || [14, 15, 16, 17, 18, 19, 20];
+  for (const num of prefList) {
+    if (!usedNumbers.has(num)) {
+      usedNumbers.add(num);
+      return num;
+    }
+  }
+  for (let n = 1; n <= 99; n++) {
+    if (!usedNumbers.has(n)) {
+      usedNumbers.add(n);
+      return n;
+    }
+  }
+  return randInt(1, 99);
+}
+
+/**
+ * クラブ所属全選手の背番号（1〜99）を重複なく整理・補完する
+ */
+function ensureClubSquadNumbers(club) {
+  const usedNumbers = new Set();
+  for (const p of club.players) {
+    if (p.squadNumber && p.squadNumber >= 1 && p.squadNumber <= 99 && !usedNumbers.has(p.squadNumber)) {
+      usedNumbers.add(p.squadNumber);
+    } else {
+      p.squadNumber = null;
+    }
+  }
+  for (const p of club.players) {
+    if (!p.squadNumber) {
+      p.squadNumber = pickAvailableSquadNumber(p.primaryPosition || p.pos, usedNumbers);
+    }
+  }
+}
+
+/**
+ * 9ポジション＋複数適性＋詳細プロフィールに対応した選手1名を生成
  */
 function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null, forcedCurve = null) {
   const fullName = generateUniqueName(usedNames);
@@ -603,6 +975,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center + 6 + randInt(-6, 9), 1, 99);
       sta = clamp(center + randInt(-6, 7), 1, 99);
       break;
+    case 'LB':
+    case 'RB':
     case 'SB':
       atk = clamp(center - 8 + randInt(-6, 8), 1, 99);
       def = clamp(center + 2 + randInt(-6, 8), 1, 99);
@@ -618,6 +992,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center + randInt(-6, 8), 1, 99);
       sta = clamp(center + 4 + randInt(-5, 8), 1, 99);
       break;
+    case 'LM':
+    case 'RM':
     case 'SM':
       atk = clamp(center + 3 + randInt(-6, 8), 1, 99);
       def = clamp(center - 6 + randInt(-6, 8), 1, 99);
@@ -628,6 +1004,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
       def = clamp(center - 10 + randInt(-6, 7), 1, 99);
       sta = clamp(center + randInt(-6, 7), 1, 99);
       break;
+    case 'LW':
+    case 'RW':
     case 'WG':
       atk = clamp(center + 7 + randInt(-5, 9), 1, 99);
       def = clamp(center - 16 + randInt(-7, 6), 1, 99);
@@ -644,12 +1022,32 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
   const salary = calculatePlayerSalary(pos, atk, def, sta, age);
   const contractYears = randInt(1, 5);
 
+  const subPool = SECONDARY_POSITION_POOLS[pos] || [[]];
+  const secondaryPositions = [...subPool[randInt(0, subPool.length - 1)]];
+  const nationality = NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const preferredFoot = generatePreferredFoot(pos);
+  const height = generatePlayerHeight(pos);
+  const traits = generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot);
+  const careerStats = generateInitialCareerStats(pos, age);
+  const defaultSquadNum = (PREFERRED_SQUAD_NUMBERS[pos] || [14])[0];
+
   return {
     id: `p_${playerIdCounter++}`,
     name: fullName,
     age,
     pos,
+    position: pos,
+    preferredPosition: pos,
+    primaryPosition: pos,
+    secondaryPositions,
+    nationality,
+    preferredFoot,
+    height,
+    squadNumber: defaultSquadNum,
+    traits,
+    careerStats,
     assignedPos: isStarter ? pos : null,
+    slotIndex: null,
     atk,
     def,
     sta,
@@ -668,14 +1066,17 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
 }
 
 /**
- * 1クラブ分の初期選手16名を生成（9ポジション網羅）
+ * 1クラブ分の初期選手16名を生成（9ポジション網羅・重複なし背番号付与）
  */
 function createSquad(basePower, usedNames) {
   const players = [];
+  const usedNumbers = new Set();
   for (const group of SQUAD_COMPOSITION) {
     for (let i = 0; i < group.total; i++) {
       const isStarter = i < group.starters;
-      players.push(createPlayer(group.pos, basePower, isStarter, usedNames));
+      const p = createPlayer(group.pos, basePower, isStarter, usedNames);
+      p.squadNumber = pickAvailableSquadNumber(group.pos, usedNumbers);
+      players.push(p);
     }
   }
   return players;
@@ -693,11 +1094,13 @@ function generateTransferMarket() {
     }
   }
 
+  const usedMarketNums = new Set();
   const candidates = [];
   for (let i = 0; i < count; i++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
     const basePower = randInt(60, 79);
     const player = createPlayer(pos, basePower, false, usedNames, [18, 31]);
+    player.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
     // 市場候補のうち少なくとも2名は契約残り1年（格安）にする
     if (i < 2) {
       player.contractYears = 1;
@@ -713,9 +1116,109 @@ function generateTransferMarket() {
 }
 
 /**
- * クラブの総人数（最低11名）とスタメン11枠（REQUIRED_STARTERS）を検証・補完する
+ * クラブの現在選択されているフォーメーション定義を取得
+ */
+function getClubFormationDef(club) {
+  const fKey = (club && club.formation && FORMATIONS[club.formation]) ? club.formation : '4-3-3';
+  return FORMATIONS[fKey];
+}
+
+/**
+ * スタメン11名をクラブの現在フォーメーションの11スロット（0〜10）に割り当てる
+ * forceReassign = true の場合（フォーメーション変更時など）、メイン適性 ➔ サブ適性 ➔ 同系統ロール ➔ 空き枠の順で最適再配置する
+ */
+function assignStartersToFormationSlots(club, forceReassign = false) {
+  const formationDef = getClubFormationDef(club);
+  const slots = formationDef.slots;
+  const starters = club.players.filter(p => p.isStarter && !p.isRetired);
+
+  club.players.forEach(p => {
+    if (!p.isStarter) {
+      p.slotIndex = null;
+      p.assignedPos = null;
+    }
+  });
+
+  const claimedSlotIndices = new Set();
+  const remainingStarters = [];
+
+  if (!forceReassign) {
+    for (const s of starters) {
+      if (
+        Number.isInteger(s.slotIndex) &&
+        s.slotIndex >= 0 &&
+        s.slotIndex < slots.length &&
+        !claimedSlotIndices.has(s.slotIndex)
+      ) {
+        claimedSlotIndices.add(s.slotIndex);
+        s.assignedPos = slots[s.slotIndex].pos;
+      } else {
+        remainingStarters.push(s);
+      }
+    }
+  } else {
+    remainingStarters.push(...starters);
+  }
+
+  if (remainingStarters.length === 0) return;
+
+  const unassignedPlayers = [...remainingStarters];
+
+  // 第1パス：メイン適性（primaryPosition）と完全一致するスロットへ優先配置
+  for (const sl of slots) {
+    if (claimedSlotIndices.has(sl.slotIndex)) continue;
+    const matchIdx = unassignedPlayers.findIndex(p => (p.primaryPosition || p.preferredPosition || p.pos) === sl.pos);
+    if (matchIdx !== -1) {
+      const p = unassignedPlayers.splice(matchIdx, 1)[0];
+      p.slotIndex = sl.slotIndex;
+      p.assignedPos = sl.pos;
+      claimedSlotIndices.add(sl.slotIndex);
+    }
+  }
+
+  // 第2パス：サブ適性（secondaryPositions）に含まれるスロットへ優先配置（92%発揮）
+  for (const sl of slots) {
+    if (claimedSlotIndices.has(sl.slotIndex)) continue;
+    const subIdx = unassignedPlayers.findIndex(p => Array.isArray(p.secondaryPositions) && p.secondaryPositions.includes(sl.pos));
+    if (subIdx !== -1) {
+      const p = unassignedPlayers.splice(subIdx, 1)[0];
+      p.slotIndex = sl.slotIndex;
+      p.assignedPos = sl.pos;
+      claimedSlotIndices.add(sl.slotIndex);
+    }
+  }
+
+  // 第3パス：同系統ロール（GK/DF/MF/FW）が一致するスロットへ配置
+  for (const sl of slots) {
+    if (claimedSlotIndices.has(sl.slotIndex)) continue;
+    const targetGroup = POS_ROLE_GROUP[sl.pos];
+    const groupIdx = unassignedPlayers.findIndex(p => POS_ROLE_GROUP[p.primaryPosition || p.pos] === targetGroup);
+    if (groupIdx !== -1) {
+      const p = unassignedPlayers.splice(groupIdx, 1)[0];
+      p.slotIndex = sl.slotIndex;
+      p.assignedPos = sl.pos;
+      claimedSlotIndices.add(sl.slotIndex);
+    }
+  }
+
+  // 第4パス：残りの選手を空いているスロットへ順に配置
+  const finalOpenSlots = slots.filter(sl => !claimedSlotIndices.has(sl.slotIndex));
+  for (let i = 0; i < unassignedPlayers.length; i++) {
+    const p = unassignedPlayers[i];
+    const sl = finalOpenSlots[i] || slots[0];
+    p.slotIndex = sl.slotIndex;
+    p.assignedPos = sl.pos;
+  }
+}
+
+/**
+ * クラブの総人数（最低11名）とスタメン11枠（フォーメーション11スロット）を検証・補完する
  */
 function ensureValidSquadAndStarters(club, noticeLogs = null) {
+  if (!club.formation || !FORMATIONS[club.formation]) {
+    club.formation = '4-3-3';
+  }
+  const formationDef = getClubFormationDef(club);
   const usedNames = new Set(club.players.map(p => p.name));
 
   // GKが最低1名いることを保証
@@ -745,13 +1248,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     }
   }
 
-  // スタメン11枠の割り当て整理
-  const requiredSlots = [];
-  for (const [pos, count] of Object.entries(REQUIRED_STARTERS)) {
-    for (let i = 0; i < count; i++) {
-      requiredSlots.push(pos);
-    }
-  }
+  ensureClubSquadNumbers(club);
 
   let starters = club.players.filter(p => p.isStarter);
   let bench = club.players.filter(p => !p.isStarter);
@@ -763,13 +1260,18 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
       const slot = s.assignedPos || s.pos;
       filledCounts[slot] = (filledCounts[slot] || 0) + 1;
     });
-    const neededPos = ALL_POSITIONS.find(pos => (filledCounts[pos] || 0) < REQUIRED_STARTERS[pos]) || 'CM';
+
+    const neededSlot = formationDef.slots.find(sl => {
+      const reqCount = formationDef.slots.filter(x => x.pos === sl.pos).length;
+      return (filledCounts[sl.pos] || 0) < reqCount;
+    });
+    const neededPos = neededSlot ? neededSlot.pos : 'CM';
 
     bench.sort((a, b) => {
-      const aMatch = a.pos === neededPos ? 1 : 0;
-      const bMatch = b.pos === neededPos ? 1 : 0;
-      if (aMatch !== bMatch) return bMatch - aMatch;
-      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+      const aFit = getPositionFitInfo(a, neededPos).factor;
+      const bFit = getPositionFitInfo(b, neededPos).factor;
+      if (aFit !== bFit) return bFit - aFit;
+      return getEffectivePlayerRatingForSlot(b, neededPos) - getEffectivePlayerRatingForSlot(a, neededPos);
     });
 
     const promoted = bench.shift();
@@ -783,72 +1285,51 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     starters.slice(11).forEach(p => {
       p.isStarter = false;
       p.assignedPos = null;
+      p.slotIndex = null;
     });
     starters = starters.slice(0, 11);
   }
 
-  // スタメン全員に必ず11スロット（GK1, CB2, SB2, DM1, CM1, SM1, AM1, WG1, CF1）が重複・漏れなく割り当てられるよう整える
-  const slotPool = [...requiredSlots];
-  const unassignedStarters = [];
-
-  for (const s of starters) {
-    const desired = s.assignedPos || s.pos;
-    const idx = slotPool.indexOf(desired);
-    if (idx !== -1) {
-      s.assignedPos = desired;
-      slotPool.splice(idx, 1);
-    } else {
-      unassignedStarters.push(s);
-    }
-  }
-
-  for (const s of unassignedStarters) {
-    const naturalIdx = slotPool.indexOf(s.pos);
-    if (naturalIdx !== -1) {
-      s.assignedPos = s.pos;
-      slotPool.splice(naturalIdx, 1);
-    } else {
-      s.assignedPos = slotPool.shift() || s.pos;
-    }
-  }
-
-  club.players.forEach(p => {
-    if (!p.isStarter) p.assignedPos = null;
-  });
+  assignStartersToFormationSlots(club, false);
 }
 
 /**
  * CPUクラブのスタメン11名を最適配置で自動編成
  */
 function autoSelectStarters(club) {
+  if (!club.formation || !FORMATIONS[club.formation]) {
+    club.formation = '4-3-3';
+  }
+  const formationDef = getClubFormationDef(club);
+
   club.players.forEach(p => {
     p.isStarter = false;
     p.assignedPos = null;
+    p.slotIndex = null;
   });
 
   const available = [...club.players].filter(p => !p.isRetired);
 
-  for (const [pos, reqCount] of Object.entries(REQUIRED_STARTERS)) {
-    for (let i = 0; i < reqCount; i++) {
-      const candidates = available.filter(p => !p.isStarter);
-      if (candidates.length === 0) break;
+  for (const sl of formationDef.slots) {
+    const candidates = available.filter(p => !p.isStarter);
+    if (candidates.length === 0) break;
 
-      candidates.sort((a, b) => {
-        const aHealthy = (a.injuryWeeks || 0) === 0 ? 1 : 0;
-        const bHealthy = (b.injuryWeeks || 0) === 0 ? 1 : 0;
-        if (aHealthy !== bHealthy) return bHealthy - aHealthy;
+    candidates.sort((a, b) => {
+      const aHealthy = (a.injuryWeeks || 0) === 0 ? 1 : 0;
+      const bHealthy = (b.injuryWeeks || 0) === 0 ? 1 : 0;
+      if (aHealthy !== bHealthy) return bHealthy - aHealthy;
 
-        const aMatch = a.pos === pos ? 1 : 0;
-        const bMatch = b.pos === pos ? 1 : 0;
-        if (aMatch !== bMatch) return bMatch - aMatch;
+      const aFit = getPositionFitInfo(a, sl.pos).factor;
+      const bFit = getPositionFitInfo(b, sl.pos).factor;
+      if (aFit !== bFit) return bFit - aFit;
 
-        return getPlayerOverallRating(b) - getPlayerOverallRating(a);
-      });
+      return getEffectivePlayerRatingForSlot(b, sl.pos) - getEffectivePlayerRatingForSlot(a, sl.pos);
+    });
 
-      const chosen = candidates[0];
-      chosen.isStarter = true;
-      chosen.assignedPos = pos;
-    }
+    const chosen = candidates[0];
+    chosen.isStarter = true;
+    chosen.slotIndex = sl.slotIndex;
+    chosen.assignedPos = sl.pos;
   }
 
   ensureValidSquadAndStarters(club);
@@ -864,7 +1345,7 @@ function getClubTotalPayroll(club) {
 }
 
 /**
- * 8チームの2回戦総当たり（全14節・各節4試合）のスケジュールを生成
+ * 20チームの2回戦総当たり（全38節・各節10試合）のスケジュールを生成
  */
 function generateSeasonSchedule(clubs) {
   const ids = clubs.map(c => c.id);
@@ -903,7 +1384,7 @@ function generateSeasonSchedule(clubs) {
 }
 
 /**
- * チームのスタメン11名の戦術・適性外ペナルティ(-20%)・怪我状態を考慮した実効能力を計算
+ * チームのスタメン11名の戦術・複数ポジション適性(100%/92%/80%)・怪我状態を考慮した実効能力を計算
  */
 function getTeamStarterStats(club) {
   const starters = club.players.filter(p => p.isStarter && !p.isRetired);
@@ -917,8 +1398,9 @@ function getTeamStarterStats(club) {
     const slot = p.assignedPos || p.pos;
     const roleGroup = POS_ROLE_GROUP[slot] || 'MF';
 
-    // 適性外ポジションに配置された場合は総合能力が20%低下
-    const posPenaltyFactor = slot !== p.pos ? 0.80 : 1.0;
+    // メイン適性(1.00)・サブ適性(0.92)・適性外(0.80)の補正
+    const fitInfo = getPositionFitInfo(p, slot);
+    const posPenaltyFactor = fitInfo.factor;
     // 怪我人を強行出場させている場合は25%低下
     const injuryFactor = p.injuryWeeks > 0 ? 0.75 : 1.0;
 
@@ -991,14 +1473,22 @@ function simulateMatch(homeClub, awayClub) {
 }
 
 /**
- * 試合から得点者を抽出し、個人スタッツを更新する
+ * 試合から得点者を抽出し、今季＆キャリア通算スタッツを更新する
  */
 function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore) {
   const homeStarters = homeClub.players.filter(p => p.isStarter && !p.isRetired);
   const awayStarters = awayClub.players.filter(p => p.isStarter && !p.isRetired);
 
-  homeStarters.forEach(p => { p.appearances += 1; });
-  awayStarters.forEach(p => { p.appearances += 1; });
+  homeStarters.forEach(p => {
+    p.appearances += 1;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0 };
+    p.careerStats.appearances += 1;
+  });
+  awayStarters.forEach(p => {
+    p.appearances += 1;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0 };
+    p.careerStats.appearances += 1;
+  });
 
   const getScorer = (starters, tactic) => {
     const fws = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
@@ -1023,6 +1513,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     const scorer = getScorer(homeStarters, homeClub.tactic);
     if (scorer) {
       scorer.goals += 1;
+      if (scorer.careerStats) scorer.careerStats.goals += 1;
       homeScorers.push({ scorer, minute: randInt(5, 89) });
     }
   }
@@ -1032,6 +1523,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     const scorer = getScorer(awayStarters, awayClub.tactic);
     if (scorer) {
       scorer.goals += 1;
+      if (scorer.careerStats) scorer.careerStats.goals += 1;
       awayScorers.push({ scorer, minute: randInt(5, 89) });
     }
   }
@@ -1053,8 +1545,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
       const goalsInMatch = allMatchGoals.filter(s => s.scorer.id === p.id).length;
       r += goalsInMatch * 0.8;
 
-      if (p.assignedPos && p.assignedPos !== p.pos) {
-        r -= 0.4;
+      if (p.assignedPos) {
+        const fitInfo = getPositionFitInfo(p, p.assignedPos);
+        if (fitInfo.type === 'sub') r -= 0.1;
+        else if (fitInfo.type === 'out') r -= 0.4;
       }
 
       r += randInt(-2, 2) * 0.1;
@@ -1832,11 +2326,14 @@ function signMarketPlayer(candidateId) {
   playerClub.funds -= candidate.transferFee;
   candidate.isStarter = false;
   candidate.assignedPos = null;
+  candidate.slotIndex = null;
+  candidate.squadNumber = null;
   candidate.appearances = 0;
   candidate.goals = 0;
   candidate.totalRating = 0;
   candidate.contractYears = Math.max(3, candidate.contractYears);
   playerClub.players.push(candidate);
+  ensureClubSquadNumbers(playerClub);
 
   gameState.transferMarket.splice(idx, 1);
   renderAll();
@@ -1890,6 +2387,106 @@ function setTeamTactic(tacticKey) {
 }
 
 /**
+ * クラブのフォーメーション（4-3-3 / 4-2-3-1 / 4-4-2 / 3-5-2）を切り替える
+ */
+function setClubFormation(formationKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || !FORMATIONS[formationKey]) return;
+
+  playerClub.formation = formationKey;
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+
+  // 現在のスタメン11名を新しいフォーメーションの11スロットに適性優先で再配置
+  assignStartersToFormationSlots(playerClub, true);
+  renderRoster();
+}
+
+/**
+ * 作戦ボード（ピッチ）上のスロットノードをクリックした際の処理
+ */
+function handlePitchNodeClick(slotIndex) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  const formationDef = getClubFormationDef(playerClub);
+  const slotDef = formationDef.slots[slotIndex];
+  if (!slotDef) return;
+
+  const clickedStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
+
+  if (gameState.selectedSlotIndex === null) {
+    gameState.selectedSlotIndex = slotIndex;
+    gameState.selectedPlayerId = clickedStarter ? clickedStarter.id : null;
+    renderRoster();
+    return;
+  }
+
+  if (gameState.selectedSlotIndex === slotIndex) {
+    gameState.selectedSlotIndex = null;
+    gameState.selectedPlayerId = null;
+    renderRoster();
+    return;
+  }
+
+  // 既に別のピッチ枠が選択されていた場合、2つのスタメン枠の選手同士をスワップ
+  const prevSlotIndex = gameState.selectedSlotIndex;
+  const prevSlotDef = formationDef.slots[prevSlotIndex];
+  const prevStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === prevSlotIndex);
+
+  if (prevStarter && clickedStarter && prevSlotDef) {
+    prevStarter.slotIndex = slotIndex;
+    prevStarter.assignedPos = slotDef.pos;
+    clickedStarter.slotIndex = prevSlotIndex;
+    clickedStarter.assignedPos = prevSlotDef.pos;
+  }
+
+  gameState.selectedSlotIndex = null;
+  gameState.selectedPlayerId = null;
+  renderRoster();
+}
+
+/**
+ * ベンチ選手を指定スロット（または最適枠）のスタメンとワンクリックで交代する
+ */
+function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  const benchPlayer = playerClub.players.find(p => p.id === benchPlayerId && !p.isStarter);
+  if (!benchPlayer) return;
+
+  const formationDef = getClubFormationDef(playerClub);
+  const resolvedSlotIdx = targetSlotIndex !== null ? targetSlotIndex : gameState.selectedSlotIndex;
+
+  if (resolvedSlotIdx !== null && formationDef.slots[resolvedSlotIdx]) {
+    const slotDef = formationDef.slots[resolvedSlotIdx];
+    const currentStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === resolvedSlotIdx);
+
+    if (currentStarter) {
+      currentStarter.isStarter = false;
+      currentStarter.slotIndex = null;
+      currentStarter.assignedPos = null;
+    }
+
+    benchPlayer.isStarter = true;
+    benchPlayer.slotIndex = resolvedSlotIdx;
+    benchPlayer.assignedPos = slotDef.pos;
+
+    gameState.selectedSlotIndex = null;
+    gameState.selectedPlayerId = null;
+    ensureValidSquadAndStarters(playerClub);
+    renderRoster();
+    return;
+  }
+
+  // スロット未選択時は適性枠または実効OVRが最も低いフィールド枠と交代
+  togglePlayerStarter(benchPlayerId);
+}
+
+/**
  * スタメン選手の配置枠（assignedPos）をプルダウンで変更した際、該当枠のスタメンと入れ替える
  */
 function changeStarterAssignedPos(playerId, newSlotPos) {
@@ -1907,6 +2504,9 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
   );
 
   if (swapPartner) {
+    const tempSlotIndex = target.slotIndex;
+    target.slotIndex = swapPartner.slotIndex;
+    swapPartner.slotIndex = tempSlotIndex;
     swapPartner.assignedPos = oldSlot;
   }
   target.assignedPos = newSlotPos;
@@ -1930,19 +2530,23 @@ function togglePlayerStarter(playerId) {
   if (target.isStarter) {
     if (bench.length === 0) return;
     const slotToFill = target.assignedPos || target.pos;
+    const slotIdxToFill = target.slotIndex;
     bench.sort((a, b) => {
-      const aMatch = a.pos === slotToFill ? 1 : 0;
-      const bMatch = b.pos === slotToFill ? 1 : 0;
+      const aMatch = (a.preferredPosition || a.pos) === slotToFill ? 1 : 0;
+      const bMatch = (b.preferredPosition || b.pos) === slotToFill ? 1 : 0;
       if (aMatch !== bMatch) return bMatch - aMatch;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
     const promoted = bench[0];
     promoted.isStarter = true;
+    promoted.slotIndex = slotIdxToFill;
     promoted.assignedPos = slotToFill;
     target.isStarter = false;
+    target.slotIndex = null;
     target.assignedPos = null;
   } else {
-    let sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) === target.pos);
+    const prefPos = target.preferredPosition || target.pos;
+    let sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) === prefPos);
     if (sameSlotStarters.length === 0) {
       sameSlotStarters = starters.filter(s => (s.assignedPos || s.pos) !== 'GK');
     }
@@ -1950,14 +2554,19 @@ function togglePlayerStarter(playerId) {
       sameSlotStarters.sort((a, b) => getEffectivePlayerRating(a) - getEffectivePlayerRating(b));
       const demoted = sameSlotStarters[0];
       const inheritedSlot = demoted.assignedPos || demoted.pos;
+      const inheritedSlotIdx = demoted.slotIndex;
       demoted.isStarter = false;
+      demoted.slotIndex = null;
       demoted.assignedPos = null;
       target.isStarter = true;
+      target.slotIndex = inheritedSlotIdx;
       target.assignedPos = inheritedSlot;
     }
   }
 
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
+  ensureValidSquadAndStarters(playerClub);
   renderRoster();
 }
 
@@ -1999,6 +2608,7 @@ function startNextSeason() {
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
 
   for (const club of gameState.clubs) {
     club.played = 0;
@@ -2077,12 +2687,14 @@ function handleRosterClick(playerId) {
 
   if (!gameState.selectedPlayerId) {
     gameState.selectedPlayerId = playerId;
+    gameState.selectedSlotIndex = clickedPlayer.isStarter ? clickedPlayer.slotIndex : null;
     renderRoster();
     return;
   }
 
   if (gameState.selectedPlayerId === playerId) {
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
     renderRoster();
     return;
   }
@@ -2090,29 +2702,40 @@ function handleRosterClick(playerId) {
   const prevPlayer = playerClub.players.find(p => p.id === gameState.selectedPlayerId);
   if (!prevPlayer) {
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
     renderRoster();
     return;
   }
 
   if (prevPlayer.isStarter && clickedPlayer.isStarter) {
     const tempSlot = prevPlayer.assignedPos || prevPlayer.pos;
+    const tempSlotIdx = prevPlayer.slotIndex;
     prevPlayer.assignedPos = clickedPlayer.assignedPos || clickedPlayer.pos;
+    prevPlayer.slotIndex = clickedPlayer.slotIndex;
     clickedPlayer.assignedPos = tempSlot;
+    clickedPlayer.slotIndex = tempSlotIdx;
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
   } else if (prevPlayer.isStarter !== clickedPlayer.isStarter) {
     const starter = prevPlayer.isStarter ? prevPlayer : clickedPlayer;
     const benchPlayer = prevPlayer.isStarter ? clickedPlayer : prevPlayer;
     const slot = starter.assignedPos || starter.pos;
+    const slotIdx = starter.slotIndex;
 
     starter.isStarter = false;
     starter.assignedPos = null;
+    starter.slotIndex = null;
     benchPlayer.isStarter = true;
     benchPlayer.assignedPos = slot;
+    benchPlayer.slotIndex = slotIdx;
     gameState.selectedPlayerId = null;
+    gameState.selectedSlotIndex = null;
   } else {
     gameState.selectedPlayerId = playerId;
+    gameState.selectedSlotIndex = null;
   }
 
+  ensureValidSquadAndStarters(playerClub);
   renderRoster();
 }
 
@@ -2381,8 +3004,12 @@ function renderTopScorers() {
     return `
       <tr class="${rowClass}">
         <td class="col-rank"><span class="${rankClass}">${rank}</span></td>
-        <td class="col-pos"><span class="pos-tag pos-${item.player.pos}">${item.player.pos}</span></td>
-        <td class="col-name">${item.player.name}</td>
+        <td class="col-pos">${formatPlayerPositionsHtml(item.player)}</td>
+        <td class="col-name">
+          <button type="button" class="player-name-link" data-profile-id="${item.player.id}" title="クリックで選手詳細プロフィールを表示">
+            ${item.player.name}
+          </button>
+        </td>
         <td class="col-team">${item.clubName}</td>
         <td class="col-num">${item.player.appearances}</td>
         <td class="col-num accent-gold"><strong>${item.player.goals}</strong></td>
@@ -2471,10 +3098,192 @@ function formatDiffHtml(val) {
 }
 
 /**
- * 自チーム登録選手一覧の描画（9ポジション順ソート、適性外20%低下、契約延長ボタン含む）
+ * 作戦ボード（ピッチUI・フォーメーション選択・控えワンクリック入替リスト）の描画
+ */
+function renderTacticalBoard() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  ensureValidSquadAndStarters(playerClub);
+
+  const formationKey = playerClub.formation || '4-3-3';
+  const formationDef = getClubFormationDef(playerClub);
+
+  document.querySelectorAll('#formation-btn-group .btn-formation').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.formation === formationKey);
+  });
+
+  const formationLabelEl = document.getElementById('roster-formation-label');
+  if (formationLabelEl) {
+    formationLabelEl.textContent = formationDef.name;
+  }
+
+  const pitchLayer = document.getElementById('pitch-nodes-layer');
+  if (pitchLayer) {
+    pitchLayer.innerHTML = formationDef.slots.map(sl => {
+      const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === sl.slotIndex);
+      if (!starter) return '';
+
+      const fitInfo = getPositionFitInfo(starter, sl.pos);
+      const posDisplay = formatPlayerPositionsText(starter, 'slash');
+      const isSelected = gameState.selectedSlotIndex === sl.slotIndex;
+      const effOvr = getEffectivePlayerRating(starter);
+      const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
+
+      const nodeClasses = [
+        'pitch-node',
+        `pos-group-${roleGroup}`,
+        fitInfo.type === 'sub' ? 'sub-pos' : '',
+        fitInfo.type === 'out' ? 'out-of-pos' : '',
+        isSelected ? 'selected' : ''
+      ].filter(Boolean).join(' ');
+
+      let fitBadgeHtml = '';
+      if (fitInfo.type === 'sub') {
+        fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+      } else if (fitInfo.type === 'out') {
+        fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+      }
+
+      const injuryBadgeHtml = starter.injuryWeeks > 0
+        ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+        : '';
+
+      return `
+        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" style="left: ${sl.x}%; top: ${sl.y}%;" title="枠クリックで交代対象選択 / 選手名クリックでプロフィール表示">
+          <div class="pitch-node-top">
+            <span class="pitch-node-pos">${sl.pos}</span>
+            <span class="pitch-node-ovr">OVR ${effOvr}</span>
+          </div>
+          <button type="button" class="pitch-node-name-btn" data-profile-id="${starter.id}" title="クリックで選手詳細プロフィールを表示">
+            #${starter.squadNumber || '-'} ${starter.name}
+          </button>
+          <div class="pitch-node-meta">
+            <span class="pitch-node-pref">${posDisplay}</span>
+            ${fitBadgeHtml}
+            ${injuryBadgeHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 右側：控え（ベンチ）選手ワンクリック交代リスト描画
+  const subTitleEl = document.getElementById('pitch-sub-title');
+  const clearBtnEl = document.getElementById('btn-clear-slot-select');
+  const subGuideEl = document.getElementById('pitch-sub-guide');
+  const benchListEl = document.getElementById('pitch-bench-list');
+
+  if (!benchListEl) return;
+
+  const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+  const selectedSlot = gameState.selectedSlotIndex !== null ? formationDef.slots[gameState.selectedSlotIndex] : null;
+  const selectedStarter = selectedSlot
+    ? playerClub.players.find(p => p.isStarter && p.slotIndex === selectedSlot.slotIndex)
+    : null;
+
+  if (selectedSlot && selectedStarter) {
+    const starterEff = getEffectivePlayerRating(selectedStarter);
+    subTitleEl.textContent = `交代対象：[${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name} (実効OVR ${starterEff})`;
+    clearBtnEl.classList.remove('hidden');
+    subGuideEl.textContent = `下の控え選手の「交代投入」を押すと [${selectedSlot.pos}] 枠へ即座に投入します（サブ適性は水色 SUB-POS 92% として計算されます）。`;
+
+    const sortedBench = [...benchPlayers].sort((a, b) => {
+      const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
+      const bFit = getPositionFitInfo(b, selectedSlot.pos).factor;
+      if (aFit !== bFit) return bFit - aFit;
+      return getEffectivePlayerRatingForSlot(b, selectedSlot.pos) - getEffectivePlayerRatingForSlot(a, selectedSlot.pos);
+    });
+
+    if (sortedBench.length === 0) {
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+    } else {
+      benchListEl.innerHTML = sortedBench.map(bp => {
+        const fitInfo = getPositionFitInfo(bp, selectedSlot.pos);
+        const simOvr = getEffectivePlayerRatingForSlot(bp, selectedSlot.pos);
+        const baseOvr = getPlayerOverallRating(bp);
+
+        let itemClass = 'fit-mismatch';
+        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80% OVR ${simOvr} (${baseOvr})</span>`;
+        if (fitInfo.type === 'main') {
+          itemClass = 'fit-match';
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100% OVR ${simOvr}</span>`;
+        } else if (fitInfo.type === 'sub') {
+          itemClass = 'fit-sub';
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS 92% OVR ${simOvr} (${baseOvr})</span>`;
+        }
+
+        return `
+          <div class="bench-sub-item ${itemClass}">
+            <div class="bench-sub-info">
+              ${formatPlayerPositionsHtml(bp)}
+              <button type="button" class="player-name-link bench-sub-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+                #${bp.squadNumber || '-'} ${bp.name}
+              </button>
+            </div>
+            <div class="bench-sub-stats">
+              ${fitTag}
+              <button type="button" class="btn btn-primary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">交代投入</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } else {
+    subTitleEl.textContent = `控え（ベンチ）選手一覧（${benchPlayers.length}名）`;
+    clearBtnEl.classList.add('hidden');
+    subGuideEl.textContent = `ピッチ上の枠をクリックすると適性比較・交代ができます。選手名をクリックするとスカウティングシート（詳細プロフィール）が開きます。`;
+
+    const sortedBench = [...benchPlayers].sort((a, b) => {
+      const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
+      const orderB = POS_DISPLAY_ORDER[b.pos] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+    });
+
+    if (sortedBench.length === 0) {
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+    } else {
+      benchListEl.innerHTML = sortedBench.map(bp => {
+        const prefPos = bp.primaryPosition || bp.preferredPosition || bp.pos;
+        const subs = Array.isArray(bp.secondaryPositions) ? bp.secondaryPositions : [];
+        const baseOvr = getPlayerOverallRating(bp);
+        const hasMainSlot = formationDef.slots.some(sl => sl.pos === prefPos);
+        const hasSubSlot = formationDef.slots.some(sl => subs.includes(sl.pos));
+
+        let fitTag = `<span class="bench-fit-tag fit-warn">${formationDef.name}枠外 (OVR ${baseOvr})</span>`;
+        if (hasMainSlot) {
+          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性あり (OVR ${baseOvr})</span>`;
+        } else if (hasSubSlot) {
+          fitTag = `<span class="bench-fit-tag fit-sub">SUB-POS対応 (OVR ${baseOvr})</span>`;
+        }
+
+        return `
+          <div class="bench-sub-item">
+            <div class="bench-sub-info">
+              ${formatPlayerPositionsHtml(bp)}
+              <button type="button" class="player-name-link bench-sub-name" data-profile-id="${bp.id}" title="クリックで選手詳細プロフィールを表示">
+                #${bp.squadNumber || '-'} ${bp.name}
+              </button>
+            </div>
+            <div class="bench-sub-stats">
+              ${fitTag}
+              <button type="button" class="btn btn-secondary btn-sm btn-sub-bench" data-sub-bench-id="${bp.id}">最適枠へ投入</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+/**
+ * 自チーム登録選手一覧の描画（9ポジション順ソート、メイン100%/サブ92%/適性外80%、契約延長ボタン含む）
  */
 function renderRoster() {
   const playerClub = getPlayerClub();
+  renderTacticalBoard();
+
   const stats = getTeamStarterStats(playerClub);
   const payroll = getClubTotalPayroll(playerClub);
 
@@ -2512,7 +3321,7 @@ function renderRoster() {
     const baseOvr = getPlayerOverallRating(p);
     const effOvr = getEffectivePlayerRating(p);
     const assignedSlot = p.isStarter ? (p.assignedPos || p.pos) : null;
-    const isOutOfPos = p.isStarter && assignedSlot !== p.pos;
+    const fitInfo = p.isStarter ? getPositionFitInfo(p, assignedSlot) : { type: 'main', factor: 1.0 };
 
     const growthLabel = getGrowthCurveLabel(p.growthCurve);
     const growthBadge = `<span class="growth-pill growth-${p.growthCurve}">${growthLabel}</span>`;
@@ -2535,22 +3344,33 @@ function renderRoster() {
 
     let assignedPosHtml = '<span class="mono text-muted">-</span>';
     if (p.isStarter) {
+      const selectFitClass = fitInfo.type === 'sub' ? 'slot-sub' : (fitInfo.type === 'out' ? 'slot-mismatch' : '');
       const optionsHtml = ALL_POSITIONS.map(posOpt => {
         const selected = posOpt === assignedSlot ? 'selected' : '';
         return `<option value="${posOpt}" ${selected}>${posOpt}</option>`;
       }).join('');
       assignedPosHtml = `
-        <select class="slot-select ${isOutOfPos ? 'slot-mismatch' : ''}" data-slot-player-id="${p.id}" title="配置ポジション枠を変更（適性外は-20%）">
+        <select class="slot-select ${selectFitClass}" data-slot-player-id="${p.id}" title="配置ポジション枠を変更（サブ適性92% / 適性外80%）">
           ${optionsHtml}
         </select>
       `;
     }
 
-    const penaltyBadge = isOutOfPos ? '<span class="sub-badge badge-penalty">適性外-20%</span>' : '';
+    let fitBadge = '';
+    if (p.isStarter && fitInfo.type === 'sub') {
+      fitBadge = '<span class="sub-badge badge-subpos">SUB-POS 92%</span>';
+    } else if (p.isStarter && fitInfo.type === 'out') {
+      fitBadge = '<span class="sub-badge badge-penalty">適性外-20%</span>';
+    }
+
     const injuryBadge = p.injuryWeeks > 0 ? `<span class="sub-badge badge-injury">負傷:残${p.injuryWeeks}節</span>` : '';
-    const ovrDisplay = isOutOfPos || p.injuryWeeks > 0
-      ? `<span class="text-danger">${effOvr}</span> <span class="text-muted">(${baseOvr})</span>`
-      : `<strong>${effOvr}</strong>`;
+
+    let ovrDisplay = `<strong>${effOvr}</strong>`;
+    if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
+      ovrDisplay = `<span class="text-danger">${effOvr}</span> <span class="text-muted">(${baseOvr})</span>`;
+    } else if (fitInfo.type === 'sub') {
+      ovrDisplay = `<span class="text-cyan">${effOvr}</span> <span class="text-muted">(${baseOvr})</span>`;
+    }
 
     const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : '-';
 
@@ -2568,8 +3388,13 @@ function renderRoster() {
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
         <td class="col-status">${starterToggleBtn}</td>
         <td class="col-pos">${assignedPosHtml}</td>
-        <td class="col-pos"><span class="pos-tag pos-${p.pos}">${p.pos}</span></td>
-        <td class="col-name">${p.name}${penaltyBadge}${injuryBadge}</td>
+        <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
+        <td class="col-name">
+          <button type="button" class="player-name-link" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
+            <span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
+          </button>
+          ${fitBadge}${injuryBadge}
+        </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
         <td class="col-growth">${growthBadge}</td>
@@ -2595,7 +3420,7 @@ function renderRoster() {
 }
 
 /**
- * 移籍市場の描画（契約残年数・残り1年格安表示付き）
+ * 移籍市場の描画（複数適性表示・選手プロフィール起動・契約残年数付き）
  */
 function renderMarket() {
   const playerClub = getPlayerClub();
@@ -2616,9 +3441,9 @@ function renderMarket() {
 
   const noteEl = document.getElementById('market-status-note');
   if (gameState.isSeasonOver) {
-    noteEl.textContent = '【オフシーズン補強期間】契約残り1年の選手は格安の移籍金（£）で獲得可能です。新シーズン開幕時に所属全選手の年俸合計が差し引かれます。';
+    noteEl.textContent = '【オフシーズン補強期間】選手名をクリックするとスカウト詳細（サブ適性・利き足・特徴）を確認できます。残り1年の選手は格安です。';
   } else {
-    noteEl.textContent = 'シーズン中も獲得可能選手リストの閲覧および緊急補強が可能です（所属上限：最大20名）。残り1年の選手は格安で獲得できます。';
+    noteEl.textContent = 'シーズン中も獲得候補のスカウティング（選手名クリックで詳細表示）および緊急補強が可能です（所属上限：最大20名）。';
   }
 
   const tbody = document.getElementById('market-tbody');
@@ -2648,8 +3473,13 @@ function renderMarket() {
 
     return `
       <tr>
-        <td class="col-pos"><span class="pos-tag pos-${c.pos}">${c.pos}</span></td>
-        <td class="col-name">${c.name}${bargainBadge}</td>
+        <td class="col-pos">${formatPlayerPositionsHtml(c)}</td>
+        <td class="col-name">
+          <button type="button" class="player-name-link" data-profile-id="${c.id}" title="クリックで選手詳細プロフィールを表示">
+            ${c.name}
+          </button>
+          ${bargainBadge}
+        </td>
         <td class="col-num">${c.age}</td>
         <td class="col-growth">${growthBadge}</td>
         <td class="col-num">${c.atk}</td>
@@ -2667,6 +3497,182 @@ function renderMarket() {
       </tr>
     `;
   }).join('');
+}
+
+/**
+ * 全クラブまたは移籍市場から指定IDの選手と所属情報を検索する
+ */
+function findPlayerWithContextById(playerId) {
+  for (const club of gameState.clubs) {
+    const found = club.players.find(p => p.id === playerId);
+    if (found) {
+      return { player: found, clubName: club.name, isMarket: false, isPlayerClub: club.isPlayer };
+    }
+  }
+  const marketFound = gameState.transferMarket.find(p => p.id === playerId);
+  if (marketFound) {
+    return { player: marketFound, clubName: '移籍市場リスト（フリー/獲得可能）', isMarket: true, isPlayerClub: false };
+  }
+  return null;
+}
+
+/**
+ * 選手詳細プロフィールモーダル（スカウティングシート風UI）を開いて描画する
+ */
+function openPlayerProfileModal(playerId) {
+  const ctx = findPlayerWithContextById(playerId);
+  if (!ctx) return;
+
+  const { player: p, clubName, isMarket } = ctx;
+  gameState.profileModalPlayerId = p.id;
+
+  const primaryPos = p.primaryPosition || p.preferredPosition || p.pos;
+  const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  const subPosText = subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）';
+  const baseOvr = getPlayerOverallRating(p);
+  const effOvr = getEffectivePlayerRating(p);
+  const growthLabel = getGrowthCurveLabel(p.growthCurve);
+  const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+
+  const footLabelMap = {
+    Right: 'Right（右利き）',
+    Left: 'Left（左利き）',
+    Both: 'Both（両足）'
+  };
+  const footText = footLabelMap[p.preferredFoot] || p.preferredFoot || 'Right（右利き）';
+  const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
+  const nationalityText = p.nationality || 'England';
+  const squadNumText = `#${p.squadNumber || 10}`;
+  const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
+  const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
+  const careerGoals = p.careerStats ? p.careerStats.goals : p.goals;
+
+  document.getElementById('profile-squad-num').textContent = squadNumText;
+  document.getElementById('profile-club-label').textContent = `SCOUTING REPORT — ${clubName}`;
+  document.getElementById('profile-pos-pill').textContent = formatPlayerPositionsText(p, 'slash');
+  document.getElementById('profile-player-name').textContent = p.name;
+
+  document.getElementById('profile-bio-row').innerHTML = `
+    <span class="profile-bio-item">国籍:<strong>${nationalityText}</strong></span>
+    <span>|</span>
+    <span class="profile-bio-item">年齢:<strong>${p.age}歳</strong></span>
+    <span>|</span>
+    <span class="profile-bio-item">利き足:<strong>${footText}</strong></span>
+    <span>|</span>
+    <span class="profile-bio-item">身長:<strong>${heightText}</strong></span>
+  `;
+
+  let currentSlotBanner = '';
+  if (p.isStarter && p.assignedPos) {
+    const fitInfo = getPositionFitInfo(p, p.assignedPos);
+    const fitColorClass = fitInfo.type === 'main' ? 'accent-green' : (fitInfo.type === 'sub' ? 'text-cyan' : 'accent-gold');
+    currentSlotBanner = `
+      <div class="profile-fit-row">
+        <span class="text-muted">現在のスタメン配置枠: <strong class="mono">${p.assignedPos}</strong></span>
+        <span class="mono ${fitColorClass}"><strong>${fitInfo.label} (実効OVR ${effOvr})</strong></span>
+      </div>
+    `;
+  }
+
+  const bodyEl = document.getElementById('profile-modal-body');
+  bodyEl.innerHTML = `
+    <div class="profile-section-grid">
+      <!-- 左：能力ステータス＆成長タイプ・特徴タグ -->
+      <div class="profile-box">
+        <div class="profile-box-header">
+          <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
+          <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+        </div>
+
+        <div class="profile-stat-rows">
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">攻撃力 (ATK)</span>
+            <span class="profile-stat-val">${p.atk}</span>
+            <div class="profile-stat-bar-bg">
+              <div class="profile-stat-bar-fill bar-gold" style="width: ${clamp(p.atk, 5, 100)}%;"></div>
+            </div>
+          </div>
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">守備力 (DEF)</span>
+            <span class="profile-stat-val">${p.def}</span>
+            <div class="profile-stat-bar-bg">
+              <div class="profile-stat-bar-fill bar-cyan" style="width: ${clamp(p.def, 5, 100)}%;"></div>
+            </div>
+          </div>
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">スタミナ (STA)</span>
+            <span class="profile-stat-val">${p.sta}</span>
+            <div class="profile-stat-bar-bg">
+              <div class="profile-stat-bar-fill" style="width: ${clamp(p.sta, 5, 100)}%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-box-header" style="margin-top: 4px;">
+          <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
+          <span class="growth-pill growth-${p.growthCurve}">成長：${growthLabel}</span>
+        </div>
+        <div class="profile-traits-wrap">
+          ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+        </div>
+      </div>
+
+      <!-- 右：複数ポジション適性マトリクス -->
+      <div class="profile-box">
+        <div class="profile-box-header">
+          <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+        </div>
+        <div class="profile-pos-fit-list">
+          <div class="profile-fit-row">
+            <span>メイン適性 (100%発揮)</span>
+            <span class="pos-tag pos-${primaryPos}">${primaryPos} (OVR ${baseOvr})</span>
+          </div>
+          <div class="profile-fit-row">
+            <span>サブ適性 (92%発揮 / SUB-POS)</span>
+            <span class="mono text-cyan"><strong>${subPosText}</strong></span>
+          </div>
+          <div class="profile-fit-row">
+            <span>適性外配置時 (80%ペナルティ)</span>
+            <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
+          </div>
+          ${currentSlotBanner}
+        </div>
+      </div>
+    </div>
+
+    <!-- 下部：契約条件＆今季・キャリア通算スタッツ -->
+    <div class="profile-metrics-row">
+      <div class="profile-metric-card">
+        <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
+        <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
+      </div>
+      <div class="profile-metric-card">
+        <span class="profile-metric-label">CONTRACT（契約残年数）</span>
+        <span class="profile-metric-val">${p.contractYears}年${isMarket && p.transferFee ? ` (移籍金 ${formatMoney(p.transferFee)})` : ''}</span>
+      </div>
+      <div class="profile-metric-card">
+        <span class="profile-metric-label">SEASON STATS（今季成績）</span>
+        <span class="profile-metric-val accent-green">${p.appearances}試合 / ${p.goals}得点 (評価 ${avgRating})</span>
+      </div>
+      <div class="profile-metric-card">
+        <span class="profile-metric-label">CAREER STATS（通算成績）</span>
+        <span class="profile-metric-val">${careerApps}試合 / ${careerGoals}得点</span>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('player-profile-modal-overlay').classList.remove('hidden');
+}
+
+/**
+ * 選手詳細プロフィールモーダルを閉じる
+ */
+function closePlayerProfileModal() {
+  const overlay = document.getElementById('player-profile-modal-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+  gameState.profileModalPlayerId = null;
 }
 
 let introClubFilter = 'all';
@@ -2829,6 +3835,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
+  gameState.selectedSlotIndex = null;
 
   gameState.clubs = CLUB_DEFINITIONS.map(def => {
     const isPlayer = def.id === gameState.selectedClubId;
@@ -2841,6 +3848,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
       targetRank: def.targetRank,
       targetLabel: def.targetLabel,
       tactic: def.defaultTactic,
+      formation: '4-3-3',
       played: 0,
       won: 0,
       drawn: 0,
@@ -2905,6 +3913,61 @@ function initGame() {
     });
   });
 
+  // フォーメーション選択ボタン（4-3-3 / 4-2-3-1 / 4-4-2 / 3-5-2）
+  const formationBtnGroup = document.getElementById('formation-btn-group');
+  if (formationBtnGroup) {
+    formationBtnGroup.addEventListener('click', (e) => {
+      const fBtn = e.target.closest('.btn-formation');
+      if (fBtn && fBtn.dataset.formation) {
+        setClubFormation(fBtn.dataset.formation);
+      }
+    });
+  }
+
+  // 作戦ボード（ピッチ）上のスタメン枠ノードクリック（選手名クリック時はプロフィール表示）
+  const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
+  if (pitchNodesLayer) {
+    pitchNodesLayer.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
+      const nodeEl = e.target.closest('.pitch-node');
+      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
+        handlePitchNodeClick(parseInt(nodeEl.dataset.slotIndex, 10));
+      }
+    });
+  }
+
+  // 作戦ボード選択解除ボタン
+  const clearSlotBtn = document.getElementById('btn-clear-slot-select');
+  if (clearSlotBtn) {
+    clearSlotBtn.addEventListener('click', () => {
+      gameState.selectedSlotIndex = null;
+      gameState.selectedPlayerId = null;
+      renderRoster();
+    });
+  }
+
+  // 作戦ボード横の控え選手ワンクリック交代ボタン＆選手名クリック
+  const pitchBenchList = document.getElementById('pitch-bench-list');
+  if (pitchBenchList) {
+    pitchBenchList.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
+      const subBtn = e.target.closest('.btn-sub-bench');
+      if (subBtn && subBtn.dataset.subBenchId) {
+        substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
+      }
+    });
+  }
+
   document.getElementById('tactics-btn-group').addEventListener('click', (e) => {
     const tacticBtn = e.target.closest('.btn-tactic');
     if (tacticBtn && tacticBtn.dataset.tactic) {
@@ -2913,6 +3976,13 @@ function initGame() {
   });
 
   document.getElementById('roster-tbody').addEventListener('click', (e) => {
+    const profileBtn = e.target.closest('[data-profile-id]');
+    if (profileBtn) {
+      e.stopPropagation();
+      openPlayerProfileModal(profileBtn.dataset.profileId);
+      return;
+    }
+
     if (e.target.closest('.slot-select')) {
       e.stopPropagation();
       return;
@@ -2953,9 +4023,49 @@ function initGame() {
   });
 
   document.getElementById('market-tbody').addEventListener('click', (e) => {
+    const profileBtn = e.target.closest('[data-profile-id]');
+    if (profileBtn) {
+      e.stopPropagation();
+      openPlayerProfileModal(profileBtn.dataset.profileId);
+      return;
+    }
     const signBtn = e.target.closest('.btn-sign-player');
     if (signBtn) {
       signMarketPlayer(signBtn.dataset.signId);
+    }
+  });
+
+  const topScorersTbody = document.getElementById('top-scorers-tbody');
+  if (topScorersTbody) {
+    topScorersTbody.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+      }
+    });
+  }
+
+  // 選手プロフィール詳細モーダルを閉じるイベント（右上✕、下部ボタン、背景クリック、Escキー）
+  const closeProfileBtn = document.getElementById('btn-close-profile-modal');
+  if (closeProfileBtn) {
+    closeProfileBtn.addEventListener('click', closePlayerProfileModal);
+  }
+  const closeProfileFooterBtn = document.getElementById('btn-close-profile-footer');
+  if (closeProfileFooterBtn) {
+    closeProfileFooterBtn.addEventListener('click', closePlayerProfileModal);
+  }
+  const profileModalOverlay = document.getElementById('player-profile-modal-overlay');
+  if (profileModalOverlay) {
+    profileModalOverlay.addEventListener('click', (e) => {
+      if (e.target === profileModalOverlay) {
+        closePlayerProfileModal();
+      }
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && gameState.profileModalPlayerId) {
+      closePlayerProfileModal();
     }
   });
 
