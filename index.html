@@ -48,7 +48,7 @@
         </div>
         <div class="metric-box">
           <span class="metric-label">SQUAD SIZE</span>
-          <span class="metric-value mono" id="header-squad-size">16 / 20名</span>
+          <span class="metric-value mono" id="header-squad-size">18 / 25名</span>
         </div>
         <div class="metric-box">
           <span class="metric-label">SUPPORTERS</span>
@@ -322,9 +322,9 @@
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">自チーム登録選手一覧（複数ポジション適性・スカウト詳細・契約管理）</h2>
+            <h2 class="panel-title">自チーム登録選手一覧（トップチーム：最大25名）</h2>
             <p class="panel-note">
-              メイン適性配置は100%、サブ適性（SUB-POS）配置は92%、適性外配置は80%の実効能力となります。選手名をクリックすると詳細プロフィールが開きます。
+              メイン適性配置は100%、サブ適性配置は92%、適性外配置は80%の実効能力となります。選手名クリックで詳細プロフィール、契約交渉やユースへの降格が可能です。
             </p>
           </div>
           <div class="team-power-badges">
@@ -332,7 +332,7 @@
             <span class="power-badge">実効攻撃 <strong class="mono" id="team-total-atk">0</strong></span>
             <span class="power-badge">実効守備 <strong class="mono" id="team-total-def">0</strong></span>
             <span class="power-badge">平均スタミナ <strong class="mono" id="team-avg-sta">0</strong></span>
-            <span class="power-badge">年間総年俸 <strong class="mono accent-gold" id="roster-total-payroll">£0</strong></span>
+            <span class="power-badge">総人件費 <strong class="mono accent-gold" id="roster-total-payroll">£0</strong></span>
           </div>
         </div>
         <div class="table-wrapper">
@@ -353,8 +353,8 @@
                 <th class="col-num">守備</th>
                 <th class="col-num">スタミナ</th>
                 <th class="col-num">契約残</th>
-                <th class="col-num">年俸</th>
-                <th class="col-action">契約・放出</th>
+                <th class="col-num">給与 (週給)</th>
+                <th class="col-action">契約・編成</th>
               </tr>
             </thead>
             <tbody id="roster-tbody">
@@ -363,36 +363,118 @@
           </table>
         </div>
       </div>
+
+      <!-- 常設ユースチーム（U-21 SQUAD）パネル -->
+      <div class="panel" style="margin-top: 14px;">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">常設ユースチーム（U-21 Squad / アカデミー組織）</h2>
+            <p class="panel-note">
+              16〜19歳の育成枠チームです（最大10名）。トップ登録枠（最大25名）に空きがあればいつでも「トップ昇格（プロ契約）」が可能です。
+            </p>
+          </div>
+          <div class="team-power-badges">
+            <span class="power-badge">ユース所属 <strong class="mono accent-green" id="youth-squad-count">0 / 10名</strong></span>
+            <span class="power-badge">トップ登録枠 <strong class="mono" id="youth-top-capacity">0 / 25名</strong></span>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table youth-squad-table">
+            <thead>
+              <tr>
+                <th class="col-pos">POS</th>
+                <th class="col-name">選手名</th>
+                <th class="col-num">年齢</th>
+                <th class="col-num">OVR</th>
+                <th class="col-growth">ポテンシャル</th>
+                <th class="col-growth">成長曲線</th>
+                <th class="col-num">攻撃</th>
+                <th class="col-num">守備</th>
+                <th class="col-num">週給</th>
+                <th class="col-action">GM昇格操作</th>
+              </tr>
+            </thead>
+            <tbody id="youth-squad-tbody">
+              <!-- JSで描画 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </main>
 
-    <!-- タブ3：移籍市場画面 -->
+    <!-- タブ3：グローバル移籍市場画面（全20クラブの全選手） -->
     <main id="view-market" class="tab-view hidden">
       <div class="panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">欧州移籍市場（獲得可能選手リスト）</h2>
-            <p class="panel-note" id="market-status-note">契約残り1年の選手は移籍金が格安（約50%OFF）で獲得可能です（所属上限：最大20名）</p>
+            <h2 class="panel-title">プレミアリーグ・グローバル移籍市場（全20クラブマーケット）</h2>
+            <p class="panel-note" id="market-status-note">
+              全20クラブの全所属選手を閲覧・検索し、相手クラブに移籍金、選手に週給を提示して獲得オファーを送ることができます（契約残り1年は移籍金約50%OFF）。
+            </p>
           </div>
           <div class="team-power-badges" id="market-pos-summary">
-            <!-- ポジション別所属人数サマリー -->
+            <!-- 予算・登録枠・表示件数 -->
           </div>
         </div>
+
+        <!-- 移籍市場フィルターバー -->
+        <div class="market-filter-bar">
+          <div class="filter-group">
+            <label class="filter-label mono">CLUB:</label>
+            <select id="market-filter-club" class="market-select mono">
+              <option value="ALL">全20クラブ (ALL CLUBS)</option>
+              <!-- JSで全クラブを投入 -->
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label mono">POS:</label>
+            <select id="market-filter-pos" class="market-select mono">
+              <option value="ALL">全ポジション (ALL)</option>
+              <option value="GK">GK</option>
+              <option value="CB">CB</option>
+              <option value="RB">RB</option>
+              <option value="LB">LB</option>
+              <option value="DM">DM</option>
+              <option value="CM">CM</option>
+              <option value="AM">AM</option>
+              <option value="RW">RW</option>
+              <option value="LW">LW</option>
+              <option value="CF">CF</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label mono">SORT:</label>
+            <select id="market-filter-sort" class="market-select mono">
+              <option value="ovr-desc">総合力 (OVR) 高い順</option>
+              <option value="fee-desc">市場価格 (移籍金) 高い順</option>
+              <option value="fee-asc">市場価格 (移籍金) 安い順</option>
+              <option value="wage-desc">週給 高い順</option>
+              <option value="age-asc">年齢 若い順</option>
+              <option value="contract-asc">契約残 少ない順 (割安)</option>
+            </select>
+          </div>
+
+          <div class="filter-group filter-search-wrap">
+            <label class="filter-label mono">SEARCH:</label>
+            <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名で検索...">
+          </div>
+        </div>
+
         <div class="table-wrapper">
           <table class="data-table market-table">
             <thead>
               <tr>
-                <th class="col-pos">適性POS</th>
+                <th class="col-pos">POS</th>
                 <th class="col-name">選手名</th>
+                <th class="col-team">所属クラブ</th>
                 <th class="col-num">年齢</th>
-                <th class="col-growth">成長曲線</th>
-                <th class="col-num">攻撃</th>
-                <th class="col-num">守備</th>
-                <th class="col-num">スタミナ</th>
-                <th class="col-num">総合力</th>
+                <th class="col-num">OVR</th>
+                <th class="col-num">推定移籍金</th>
+                <th class="col-num">現在週給</th>
                 <th class="col-num">契約残</th>
-                <th class="col-num">移籍金</th>
-                <th class="col-num">要求年俸</th>
-                <th class="col-action">補強操作</th>
+                <th class="col-action">獲得オファー</th>
               </tr>
             </thead>
             <tbody id="market-tbody">
@@ -592,6 +674,32 @@
           <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-neg-modal">交渉を保留して閉じる</button>
           <button type="button" class="btn btn-primary btn-sm" id="btn-submit-neg-offer">条件を提示して交渉する</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 他クラブからの買取オファー（双方向オファー）モーダルダイアログ -->
+  <div id="incoming-offer-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="incoming-offer-title">
+    <div class="modal-card incoming-offer-card">
+      <div class="profile-modal-header">
+        <div class="profile-header-left">
+          <div class="profile-squad-num mono" id="incoming-offer-squad-num">#9</div>
+          <div class="profile-identity">
+            <div class="profile-top-tags">
+              <span class="modal-category mono" id="incoming-offer-category">TRANSFER OFFER RECEIVED</span>
+              <span class="profile-pos-pill mono" id="incoming-offer-pos-pill">CF</span>
+            </div>
+            <h2 class="profile-player-name" id="incoming-offer-title">買取オファーが届きました</h2>
+            <div class="profile-bio-row mono" id="incoming-offer-meta">
+              <!-- オファー元クラブ・選手詳細 -->
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-incoming-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+
+      <div class="incoming-offer-body" id="incoming-offer-body">
+        <!-- JSでオファー金額・比較・3択ボタンを描画 -->
       </div>
     </div>
   </div>
