@@ -5853,8 +5853,11 @@ function renderRoster() {
     const assignedSlot = p.isStarter ? (p.assignedPos || p.pos) : null;
     const fitInfo = p.isStarter ? getPositionFitInfo(p, assignedSlot) : { type: 'main', factor: 1.0 };
 
-    const growthLabel = getGrowthCurveLabel(p.growthCurve);
-    const growthBadge = `<span class="growth-pill growth-${p.growthCurve}">${growthLabel}</span>`;
+    const playerClub = getPlayerClub();
+  const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
+  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
+    const growthBadge = `<span class="growth-pill ${growthClass}">${growthLabel}</span>`;
 
     const atkDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.atk) : '';
     const defDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.def) : '';
@@ -6163,8 +6166,8 @@ function renderYouthSquad() {
   if (youthList.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-log-message" style="text-align: center; padding: 20px;">
-          現在ユースチーム所属選手はいません。シーズン終了時に新星アカデミー生が加入します。
+        <td colspan="8" class="empty-log-message" style="text-align: center; padding: 20px;">
+          現在ユースチーム選手はいません。シーズン終了時に新アカデミー生が入団します。
         </td>
       </tr>
     `;
@@ -6173,9 +6176,11 @@ function renderYouthSquad() {
 
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
-    const potClass = `badge-potential-${(y.potential || 'B').toLowerCase()}`;
-    const potLabel = `★ ${y.potential || 'B'} ランク`;
-    const growthLabel = getGrowthCurveLabel(y.growthCurve);
+    const canPromoteBtn = canPromote ? `
+      <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
+        昇格
+      </button>
+    ` : `<button type="button" class="btn btn-secondary btn-sm" disabled>枠上限</button>`;
 
     return `
       <tr>
@@ -6185,23 +6190,18 @@ function renderYouthSquad() {
             ${y.name}
           </button>
         </td>
-        <td class="col-num">${y.age}歳</td>
-        <td class="col-num accent-green"><strong>${ovr}</strong></td>
-        <td class="col-growth"><span class="sub-badge ${potClass}">${potLabel}</span></td>
-        <td class="col-growth"><span class="growth-pill growth-${y.growthCurve}">${growthLabel}</span></td>
-        <td class="col-num">${y.atk}</td>
-        <td class="col-num">${y.def}</td>
-        <td class="col-num mono">${formatWage(y.wage || 2)}</td>
+        <td class="col-num col-youth-age">${y.age}歳</td>
+        <td class="col-num col-youth-ovr accent-green"><strong>${ovr}</strong></td>
+        <td class="col-num col-youth-atk">${y.atk}</td>
+        <td class="col-num col-youth-def">${y.def}</td>
+        <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
-          <button type="button" class="btn btn-primary btn-sm btn-promote-youth-direct" data-youth-promote-id="${y.id}" ${canPromote ? '' : 'disabled'}>
-            ${topCount >= MAX_SQUAD_SIZE ? 'トップ枠上限' : 'トップ昇格（プロ契約）'}
-          </button>
+          ${canPromoteBtn}
         </td>
       </tr>
     `;
   }).join('');
 }
-
 /**
  * GM業務タスク一覧（必須 CRITICAL / 推奨 RECOMMENDED / 任意 OPTIONAL）を描画する
  */
@@ -6665,7 +6665,10 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
-  const growthLabel = getGrowthCurveLabel(p.growthCurve);
+  const playerClub = getPlayerClub();
+  const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
+  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
 
   const footLabelMap = {
@@ -6778,7 +6781,7 @@ function openPlayerProfileModal(playerId) {
 
           <div class="profile-box-header" style="margin-top: 6px;">
             <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
-            <span class="growth-pill growth-${p.growthCurve}">成長：${growthLabel}</span>
+            <span class="growth-pill ${growthClass}">成長：${growthLabel}</span>
           </div>
           <div class="profile-traits-wrap">
             ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}

@@ -4568,8 +4568,7 @@ body.modal-open {
   }
 
   .roster-table,
-  .market-table,
-  .youth-squad-table {
+  .market-table {
     min-width: 540px !important;
   }
 
@@ -5263,6 +5262,85 @@ body.modal-open {
     width: 100% !important;
   }
 
+  /* モバイル表示時：ユースチームテーブルを完全スクロールなし（1画面収容・ポテンシャル/成長曲線非表示） */
+  .youth-squad-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .youth-squad-table th,
+  .youth-squad-table td {
+    padding: 6px 2px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 攻撃・守備・週給を非表示にし、ポテンシャル・成長曲線列も完全撤廃 */
+  .youth-squad-table .col-youth-atk,
+  .youth-squad-table .col-youth-def,
+  .youth-squad-table .col-youth-wage,
+  .youth-squad-table .col-growth {
+    display: none !important;
+  }
+
+  .youth-squad-table .col-pos {
+    width: 36px !important;
+    text-align: center !important;
+  }
+
+  .youth-squad-table .col-name {
+    width: auto !important;
+    text-align: left !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .youth-squad-table .col-name .player-name-link {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+    font-size: 12.5px !important;
+  }
+
+  .youth-squad-table .col-youth-age {
+    width: 36px !important;
+    text-align: center !important;
+    font-size: 11px !important;
+  }
+
+  .youth-squad-table .col-youth-ovr {
+    width: 34px !important;
+    text-align: center !important;
+    font-size: 12px !important;
+  }
+
+  .youth-squad-table .col-action {
+    width: 58px !important;
+    text-align: center !important;
+    padding: 3px 2px !important;
+  }
+
+  .youth-squad-table .col-action .btn {
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 0 6px !important;
+    font-size: 11px !important;
+    width: 100% !important;
+  }
+
+  /* 親スクロールコンテナの横スクロールバーを抑止 */
+  .table-scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-scroll-container:has(.youth-squad-table) {
+    overflow-x: hidden !important;
+  }
 }
 
 
