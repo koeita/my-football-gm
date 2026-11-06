@@ -6010,19 +6010,28 @@ function renderMarket() {
     const feeA = calculateTransferFee(pA);
     const feeB = calculateTransferFee(pB);
 
-    switch (mf.sortKey) {
+    const sortKey = mf.sortKey || mf.sort || 'ovr-desc';
+    switch (sortKey) {
       case 'ovr-desc':
         return ovrB - ovrA;
+      case 'ovr-asc':
+        return ovrA - ovrB;
       case 'fee-desc':
         return feeB - feeA;
       case 'fee-asc':
         return feeA - feeB;
       case 'wage-desc':
         return (pB.wage || 0) - (pA.wage || 0);
+      case 'wage-asc':
+        return (pA.wage || 0) - (pB.wage || 0);
       case 'age-asc':
         return pA.age - pB.age;
+      case 'age-desc':
+        return pB.age - pA.age;
       case 'contract-asc':
         return pA.contractYears - pB.contractYears || feeA - feeB;
+      case 'contract-desc':
+        return pB.contractYears - pA.contractYears || feeB - feeA;
       default:
         return ovrB - ovrA;
     }
@@ -7577,20 +7586,49 @@ function initGame() {
     }
   });
 
-  // 常設ユースチーム（U-21 SQUAD）テーブルのイベント
+  // 常設ユースチーム（U-21 SQUAD）テーブルのイベント（昇格＆詳細プロフィール）
   const youthSquadTbody = document.getElementById('youth-squad-tbody');
   if (youthSquadTbody) {
     youthSquadTbody.addEventListener('click', (e) => {
+      const promoteBtn = e.target.closest('.btn-promote-youth, .btn-promote-youth-direct');
+      if (promoteBtn) {
+        const youthId = promoteBtn.dataset.promoteId || promoteBtn.dataset.promoteDirectId;
+        if (youthId) {
+          e.stopPropagation();
+          promoteYouthPlayer(youthId);
+          return;
+        }
+      }
       const profileBtn = e.target.closest('[data-profile-id]');
       if (profileBtn) {
         e.stopPropagation();
         openPlayerProfileModal(profileBtn.dataset.profileId);
         return;
       }
-      const promoteBtn = e.target.closest('.btn-promote-youth-direct');
-      if (promoteBtn && promoteBtn.dataset.promoteDirectId) {
+    });
+  }
+
+  // アカデミー施設・ユース候補リストのイベント（トップ昇格・見送り・詳細表示）
+  const youthListEl = document.getElementById('youth-list');
+  if (youthListEl) {
+    youthListEl.addEventListener('click', (e) => {
+      const promoteBtn = e.target.closest('[data-promote-youth]');
+      if (promoteBtn && promoteBtn.dataset.promoteYouth) {
         e.stopPropagation();
-        promoteYouthPlayer(promoteBtn.dataset.promoteDirectId);
+        promoteYouthCandidate(promoteBtn.dataset.promoteYouth);
+        return;
+      }
+      const dismissBtn = e.target.closest('[data-dismiss-youth]');
+      if (dismissBtn && dismissBtn.dataset.dismissYouth) {
+        e.stopPropagation();
+        dismissYouthCandidate(dismissBtn.dataset.dismissYouth);
+        return;
+      }
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
       }
     });
   }
@@ -7603,26 +7641,59 @@ function initGame() {
 
   if (marketFilterClub) {
     marketFilterClub.addEventListener('change', (e) => {
+      gameState.marketFilter.clubId = e.target.value;
       gameState.marketFilter.club = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterPos) {
     marketFilterPos.addEventListener('change', (e) => {
+      gameState.marketFilter.position = e.target.value;
       gameState.marketFilter.pos = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterSort) {
     marketFilterSort.addEventListener('change', (e) => {
+      gameState.marketFilter.sortKey = e.target.value;
       gameState.marketFilter.sort = e.target.value;
       renderMarket();
     });
   }
   if (marketFilterSearch) {
     marketFilterSearch.addEventListener('input', (e) => {
+      gameState.marketFilter.searchQuery = e.target.value.trim().toLowerCase();
       gameState.marketFilter.search = e.target.value.trim().toLowerCase();
       renderMarket();
+    });
+  }
+
+  // 移籍市場テーブルのヘッダークリックによる直感的ソート対応
+  const marketTableHead = document.querySelector('.market-table thead');
+  if (marketTableHead) {
+    marketTableHead.style.cursor = 'pointer';
+    marketTableHead.addEventListener('click', (e) => {
+      const th = e.target.closest('th');
+      if (!th) return;
+      const txt = th.textContent.trim();
+      let nextSort = null;
+      if (txt.includes('OVR')) {
+        nextSort = gameState.marketFilter.sortKey === 'ovr-desc' ? 'ovr-asc' : 'ovr-desc';
+      } else if (txt.includes('移籍金')) {
+        nextSort = gameState.marketFilter.sortKey === 'fee-desc' ? 'fee-asc' : 'fee-desc';
+      } else if (txt.includes('週給')) {
+        nextSort = gameState.marketFilter.sortKey === 'wage-desc' ? 'wage-asc' : 'wage-desc';
+      } else if (txt.includes('年齢')) {
+        nextSort = gameState.marketFilter.sortKey === 'age-asc' ? 'age-desc' : 'age-asc';
+      } else if (txt.includes('契約残')) {
+        nextSort = gameState.marketFilter.sortKey === 'contract-asc' ? 'contract-desc' : 'contract-asc';
+      }
+      if (nextSort) {
+        gameState.marketFilter.sortKey = nextSort;
+        gameState.marketFilter.sort = nextSort;
+        if (marketFilterSort) marketFilterSort.value = nextSort;
+        renderMarket();
+      }
     });
   }
 
