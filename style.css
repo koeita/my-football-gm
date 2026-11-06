@@ -3751,4 +3751,338 @@ body {
   border-left-color: #3498db;
 }
 
+/* ==========================================================================
+   モバイル向けレスポンシブスタイル（画面幅768px以下）
+   ダークテーマ・プロフェッショナルデザイン維持 / タッチ操作最適化 / PWA全画面
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 全体コンテナ */
+  .app-container {
+    padding: 6px 8px 24px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 1. ヘッダー＆ステータスバー */
+  .status-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 10px 8px;
+  }
+
+  .brand-area {
+    width: 100%;
+  }
+
+  .brand-top-row {
+    font-size: 9.5px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .club-title-row {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .club-title {
+    font-size: 16px;
+  }
+
+  .gm-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  /* ステータスメトリクス（3列グリッド配置） */
+  .status-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 100%;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .metric-box {
+    border-left: none;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .metric-box.calendar-date-box {
+    grid-column: span 2;
+  }
+
+  .metric-label {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .metric-value {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* アクションボタンバー */
+  .action-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .action-controls .btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    padding: 6px 8px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  #btn-play-match {
+    grid-column: span 2;
+    min-height: 46px;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  /* 週間スケジュールバー */
+  .weekly-schedule-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .schedule-track {
+    min-width: 560px;
+  }
+
+  /* ナビゲーションタブ */
+  .tab-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding-bottom: 2px;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* 2. メインカラムの縦積み配置（ダッシュボードグリッド） */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* 順位表テーブルの横スクロール対応 */
+  .table-responsive,
+  .table-container,
+  .table-wrapper,
+  .panel-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .standings-table,
+  .roster-table,
+  .market-table {
+    min-width: 540px;
+  }
+
+  /* 3. 作戦ボード（ピッチ）の縮小適応 */
+  .tactical-board-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .tactical-board-panel .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .formation-selector-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .formation-btn-group {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .btn-formation {
+    min-height: 38px;
+    padding: 4px 10px;
+  }
+
+  .pitch-container {
+    width: 100%;
+    min-height: 390px;
+    height: 390px;
+    max-height: 390px;
+  }
+
+  /* ピッチ上の11枠ノード：スマホ幅（375px〜430px）でもはみ出さず収まるスケール */
+  .pitch-node {
+    min-width: 68px;
+    max-width: 80px;
+    padding: 2px 4px;
+    gap: 1px;
+    border-radius: 4px;
+  }
+
+  .pitch-node-pos {
+    font-size: 8.5px;
+    padding: 0 3px;
+    line-height: 1.25;
+  }
+
+  .pitch-node-ovr {
+    font-size: 9.5px;
+  }
+
+  .pitch-node-name {
+    font-size: 9.5px;
+    max-width: 70px;
+    letter-spacing: -0.02em;
+  }
+
+  .pitch-node-pref {
+    font-size: 8px;
+  }
+
+  .pitch-node-warn,
+  .pitch-node-injury {
+    font-size: 8px;
+    padding: 0 2px;
+  }
+
+  /* 作戦ボード右側の控えリスト＆戦術 */
+  .tactical-side-column {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .bench-player-card {
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+
+  .btn-slot-substitute {
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+
+  .compact-tactics-group .btn-tactic {
+    min-height: 44px;
+    padding: 6px 4px;
+  }
+
+  /* 4. タップ領域（タッチ操作）の調整 */
+  .btn {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
+
+  /* モーダル（選手プロフィールや契約交渉、GMイベント）の最適化 */
+  .modal-overlay {
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-card,
+  .profile-modal-card,
+  .intro-modal-card {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    max-height: 85vh !important;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+  }
+
+  .modal-body,
+  .profile-modal-body,
+  .intro-modal-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(85vh - 110px);
+    padding: 10px 12px;
+  }
+
+  .modal-actions,
+  .profile-modal-footer,
+  .intro-modal-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .modal-actions .btn,
+  .profile-modal-footer .btn,
+  .intro-modal-actions .btn {
+    min-height: 44px;
+    flex: 1 1 auto;
+  }
+
+  .btn-modal-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  /* トースト通知 */
+  #toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .toast-item {
+    min-width: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* 移籍オファー受領モーダルの3択ボタン */
+  .incoming-offer-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 

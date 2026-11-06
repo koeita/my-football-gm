@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#1a1d20"/>
+  <!-- ピッチグリーン・シールド外枠 -->
+  <path d="M256 64 L394 117 C394 288 320 394 256 448 C192 394 118 288 118 117 Z" fill="none" stroke="#2ecc71" stroke-width="16" stroke-linejoin="round"/>
+  <!-- 中央のサッカーボール / タクティカルシンボル -->
+  <circle cx="256" cy="250" r="85" fill="#24282c" stroke="#2ecc71" stroke-width="10"/>
+  <path d="M256 197 L288 221 L277 261 L235 261 L224 221 Z" fill="#2ecc71"/>
+  <line x1="256" y1="197" x2="256" y2="165" stroke="#2ecc71" stroke-width="8"/>
+  <line x1="288" y1="221" x2="317" y2="208" stroke="#2ecc71" stroke-width="8"/>
+  <line x1="277" y1="261" x2="304" y2="288" stroke="#2ecc71" stroke-width="8"/>
+  <line x1="235" y1="261" x2="208" y2="288" stroke="#2ecc71" stroke-width="8"/>
+  <line x1="224" y1="221" x2="195" y2="208" stroke="#2ecc71" stroke-width="8"/>
+  <!-- GM テキストバッジ -->
+  <rect x="186" y="352" width="140" height="54" rx="10" fill="#2ecc71"/>
+  <text x="256" y="390" font-family="'Roboto Mono', monospace, sans-serif" font-size="32" font-weight="900" fill="#1a1d20" text-anchor="middle" letter-spacing="3">GM</text>
+</svg>
