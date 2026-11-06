@@ -433,23 +433,165 @@ const TACTICS_DEFINITIONS = {
   }
 };
 
-// 欧州多国籍選手名リスト
-const FIRST_INITIALS = [
-  'L.', 'M.', 'J.', 'K.', 'A.', 'R.', 'D.', 'S.', 'F.', 'C.',
-  'E.', 'G.', 'H.', 'P.', 'T.', 'V.', 'N.', 'B.', 'I.', 'O.'
-];
-
-const EUROPEAN_SURNAMES = [
-  'マルティネス', 'シルヴァ', 'ロドリゲス', 'フェルナンデス', 'ガルシア', 'ロペス', 'ペレス', 'サンチェス', 'ゴメス', 'ディアス',
-  'シュミット', 'ミュラー', 'シュナイダー', 'フィッシャー', 'ウェーバー', 'マイヤー', 'ワグナー', 'ベッカー', 'ホフマン', 'シェーファー',
-  'ロッシ', 'ルッソ', 'フェラーリ', 'エスポジト', 'ビアンキ', 'ロマーノ', 'コロンボ', 'リッチ', 'マリノ', 'グレコ',
-  'ベルナール', 'デュボワ', 'トーマ', 'ロベール', 'リシャール', 'プチ', 'デュラン', 'ルロワ', 'モロー', 'シモン',
-  'スミス', 'ジョーンズ', 'テイラー', 'ブラウン', 'ウィリアムズ', 'ウィルソン', 'ジョンソン', 'デイヴィス', 'ロビンソン', 'ライト',
-  'ウォーカー', 'トンプソン', 'ホワイト', 'ヒューズ', 'エドワーズ', 'グリーン', 'ホール', 'ルイス', 'ハリス', 'クラーク',
-  'デ・ヨング', 'ファン・ダイク', 'ベルフワイン', 'コープマイネルス', 'ガクポ', 'シモンズ', 'ティンバー', 'アケ', 'マレン', 'デパイ',
-  'ミトマ', 'クボ', 'カマダ', 'トミヤス', 'エンドウ', 'ナカムラ', 'イトウ', 'ミナミノ', 'ドウアン', 'フルハシ',
-  'モドリッチ', 'コヴァチッチ', 'グヴァルディオル', 'ヴラホヴィッチ', 'ミリンコヴィッチ', 'シュクリニアル', 'ロボトカ', 'オブラク', 'ハキミ', 'サラー'
-];
+// 国籍別・架空欧州選手名データ辞書（各First Name 25種以上、Last Name 35種以上）
+const NATIONALITY_NAME_DATABASE = {
+  England: {
+    firstNames: [
+      'Jack', 'Oliver', 'Harry', 'George', 'Noah', 'Charlie', 'Jacob', 'Alfie', 'Freddie', 'Oscar',
+      'Leo', 'Arthur', 'Thomas', 'Henry', 'William', 'Edward', 'Archie', 'Joshua', 'Mason', 'Lucas',
+      'Liam', 'Callum', 'James', 'Ethan', 'Dylan', 'Samuel', 'Daniel', 'Luke'
+    ],
+    lastNames: [
+      'Bennett', 'Cooper', 'Harrison', 'Turner', 'Palmer', 'Morgan', 'Hughes', 'Edwards', 'Foster', 'Fletcher',
+      'Carter', 'Hayes', 'Brooks', 'Jenkins', 'Collins', 'Reynolds', 'Butler', 'Shaw', 'Marshall', 'Barnes',
+      'Russell', 'Powell', 'Bryant', 'Crawford', 'Griffin', 'Wallace', 'Dixon', 'Cole', 'Barrett', 'Henderson',
+      'Pearson', 'Spencer', 'Hopkins', 'Chapman', 'Mason', 'Ellis', 'Richards'
+    ]
+  },
+  France: {
+    firstNames: [
+      'Mathis', 'Lucas', 'Theo', 'Hugo', 'Maxime', 'Arthur', 'Louis', 'Gabriel', 'Jules', 'Raphael',
+      'Antoine', 'Leo', 'Alexandre', 'Thomas', 'Paul', 'Enzo', 'Clement', 'Nathan', 'Valentin', 'Simon',
+      'Bastien', 'Julien', 'Adrien', 'Florian', 'Romain', 'Alexis', 'Pierre'
+    ],
+    lastNames: [
+      'Dubois', 'Leroy', 'Moreau', 'Laurent', 'Lefebvre', 'Roux', 'Fournier', 'Girard', 'Bonnet', 'Mercier',
+      'Blanc', 'Guerin', 'Boyer', 'Garnier', 'Chevalier', 'Francois', 'Legrand', 'Gauthier', 'Perrin', 'Robin',
+      'Clement', 'Morin', 'Nicolas', 'Roussel', 'Mathieu', 'Marchand', 'Duval', 'Denis', 'Fabre', 'Masson',
+      'Charpentier', 'Colin', 'Renard', 'Brunet', 'Picard', 'Vidal', 'Gaillard'
+    ]
+  },
+  Spain: {
+    firstNames: [
+      'Alejandro', 'Mateo', 'Lucas', 'Daniel', 'Pablo', 'Alvaro', 'Adrian', 'David', 'Diego', 'Javier',
+      'Mario', 'Marcos', 'Manuel', 'Sergio', 'Carlos', 'Hugo', 'Gonzalo', 'Martin', 'Jorge', 'Nicolas',
+      'Ivan', 'Ruben', 'Miguel', 'Raul', 'Hector', 'Fernando', 'Rodrigo'
+    ],
+    lastNames: [
+      'Vega', 'Navarro', 'Serrano', 'Romero', 'Torres', 'Ramirez', 'Flores', 'Benitez', 'Aguilar', 'Medina',
+      'Castro', 'Vargas', 'Herrera', 'Guzman', 'Mendez', 'Ortiz', 'Morales', 'Delgado', 'Pena', 'Cabrera',
+      'Rios', 'Santana', 'Cordero', 'Rivas', 'Gallego', 'Pacheco', 'Valenzuela', 'Miranda', 'Carrillo', 'Soler',
+      'Marquez', 'Duran', 'Cano', 'Garrido', 'Blanco', 'Cortez', 'Campos'
+    ]
+  },
+  Germany: {
+    firstNames: [
+      'Lukas', 'Leon', 'Luca', 'Finn', 'Jonas', 'Felix', 'Noah', 'Elias', 'Paul', 'Maximilian',
+      'Ben', 'Niklas', 'Tim', 'Julian', 'Jan', 'David', 'Philipp', 'Moritz', 'Simon', 'Florian',
+      'Erik', 'Alexander', 'Fabian', 'Sebastian', 'Tobias', 'Nico', 'Marcel'
+    ],
+    lastNames: [
+      'Richter', 'Becker', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Klein', 'Wolf', 'Schröder', 'Neumann',
+      'Schwarz', 'Zimmermann', 'Braun', 'Krüger', 'Hofmann', 'Hartmann', 'Lange', 'Schmitt', 'Werner', 'Schmitz',
+      'Krause', 'Meier', 'Lehmann', 'Schmid', 'Köhler', 'Herrmann', 'Walter', 'König', 'Mayer', 'Huber',
+      'Kaiser', 'Fuchs', 'Peters', 'Lang', 'Scholz', 'Vogel', 'Frank'
+    ]
+  },
+  Italy: {
+    firstNames: [
+      'Alessandro', 'Lorenzo', 'Mattia', 'Leonardo', 'Gabriele', 'Riccardo', 'Matteo', 'Tommaso', 'Edoardo', 'Federico',
+      'Marco', 'Andrea', 'Simone', 'Luca', 'Christian', 'Davide', 'Pietro', 'Filippo', 'Samuele', 'Alessio',
+      'Giovanni', 'Nicolo', 'Jacopo', 'Manuel', 'Daniele', 'Michele', 'Gianluca'
+    ],
+    lastNames: [
+      'Ferri', 'Bianchi', 'Romano', 'Colombo', 'Ricci', 'Marino', 'Greco', 'Bruno', 'De Luca', 'Moretti',
+      'Conti', 'Costa', 'Giordano', 'Mancini', 'Rizzo', 'Lombardi', 'Barbieri', 'Fontana', 'Santoro', 'Mariani',
+      'Rinaldi', 'Caruso', 'Ferrara', 'Galli', 'Martini', 'Leone', 'Longo', 'Gentile', 'Martinelli', 'Vitale',
+      'Serra', 'Coppola', 'De Angelis', 'Palumbo', 'Marchetti', 'Fabbri', 'Riva'
+    ]
+  },
+  Netherlands: {
+    firstNames: [
+      'Daan', 'Sem', 'Milan', 'Levi', 'Lucas', 'Luuk', 'Finn', 'Jesse', 'Bram', 'Lars',
+      'Liam', 'Thomas', 'Ruben', 'Julian', 'Thijs', 'Tim', 'Stijn', 'Mees', 'Mats', 'Sam',
+      'Max', 'Sven', 'Jasper', 'Niels', 'Jelle', 'Koen', 'Floris'
+    ],
+    lastNames: [
+      'Jansen', 'Bakker', 'Visser', 'Smit', 'Meijer', 'de Boer', 'Mulder', 'de Groot', 'Bos', 'Vos',
+      'Hendriks', 'van Leeuwen', 'Dekker', 'Brouwer', 'de Wit', 'Dijkstra', 'Smits', 'de Graaf', 'van der Meer', 'Hoekstra',
+      'Maas', 'Verhoeven', 'Willems', 'van Beek', 'Hermans', 'Martens', 'Schouten', 'Huisman', 'Sanders', 'Blom',
+      'Prins', 'van Loon', 'Post', 'Koster', 'van Vliet', 'Kramer', 'Evers'
+    ]
+  },
+  Portugal: {
+    firstNames: [
+      'Rodrigo', 'Martim', 'Afonso', 'Tomas', 'Tiago', 'Diogo', 'Lourenco', 'Miguel', 'Gabriel', 'Lucas',
+      'Duarte', 'Goncalo', 'Guilherme', 'Santiago', 'Pedro', 'Salvador', 'Joao', 'Rafael', 'Francisco', 'Vicente',
+      'Andre', 'Bruno', 'Dinis', 'Gustavo', 'Mateus', 'Ruben', 'Fabio'
+    ],
+    lastNames: [
+      'Ferreira', 'Silva', 'Santos', 'Oliveira', 'Pereira', 'Costa', 'Martins', 'Sousa', 'Rodrigues', 'Fernandes',
+      'Goncalves', 'Gomes', 'Lopes', 'Marques', 'Alves', 'Ribeiro', 'Pinto', 'Carvalho', 'Teixeira', 'Moreira',
+      'Correia', 'Mendes', 'Nunes', 'Vieira', 'Monteiro', 'Cardoso', 'Rocha', 'Neves', 'Coelho', 'Cunha',
+      'Pires', 'Ramos', 'Reis', 'Simoes', 'Faria', 'Borges', 'Tavares'
+    ]
+  },
+  Brazil: {
+    firstNames: [
+      'Gabriel', 'Lucas', 'Matheus', 'Guilherme', 'Gustavo', 'Felipe', 'Rafael', 'Leonardo', 'Vinicius', 'Rodrigo',
+      'Pedro', 'Thiago', 'Bruno', 'Caio', 'Eduardo', 'Diego', 'Henrique', 'Vitor', 'Daniel', 'Samuel',
+      'Arthur', 'Igor', 'Renan', 'Davi', 'Murilo', 'Otavio', 'Brenner'
+    ],
+    lastNames: [
+      'Barbosa', 'Ribeiro', 'Nascimento', 'Carvalho', 'Araujo', 'Souza', 'Lima', 'Rocha', 'Dias', 'Ramos',
+      'Moreira', 'Alves', 'Castro', 'Monteiro', 'Mendes', 'Barros', 'Freitas', 'Cardozo', 'Correia', 'Cunha',
+      'Farias', 'Nogueira', 'Guimaraes', 'Borges', 'Pacheco', 'Miranda', 'Rezende', 'Fonseca', 'Antunes', 'Silveira',
+      'Prado', 'Peixoto', 'Medeiros', 'Moura', 'Viana', 'Pinheiro', 'Macedo'
+    ]
+  },
+  Argentina: {
+    firstNames: [
+      'Joaquin', 'Bautista', 'Santino', 'Valentin', 'Tomas', 'Facundo', 'Benjamin', 'Lautaro', 'Thiago', 'Agustin',
+      'Nicolas', 'Franco', 'Julian', 'Martin', 'Nahuel', 'Lucas', 'Matias', 'Santiago', 'Ignacio', 'Rodrigo',
+      'Ramiro', 'Emiliano', 'Gonzalo', 'Luciano', 'Manuel', 'Maxi', 'Enzo'
+    ],
+    lastNames: [
+      'Rossi', 'Benitez', 'Medina', 'Herrera', 'Castro', 'Guzman', 'Rios', 'Peralta', 'Ibanez', 'Romero',
+      'Cardozo', 'Maidana', 'Carrizo', 'Acuna', 'Coronel', 'Quiroga', 'Farias', 'Vera', 'Godoy', 'Lucero',
+      'Paez', 'Villalba', 'Luna', 'Dominguez', 'Ferreyra', 'Toledo', 'Ponce', 'Roldan', 'Juarez', 'Bustos',
+      'Figueroa', 'Arias', 'Cabrera', 'Leiva', 'Sosa', 'Montenegro', 'Escobar'
+    ]
+  },
+  Belgium: {
+    firstNames: [
+      'Lucas', 'Louis', 'Nathan', 'Arthur', 'Noah', 'Maxime', 'Jules', 'Thomas', 'Milan', 'Hugo',
+      'Liam', 'Gabriel', 'Victor', 'Mathis', 'Adam', 'Alexander', 'Elias', 'Robin', 'Simon', 'Emile',
+      'Vincent', 'Ruben', 'Kevin', 'Cedric', 'Axel', 'Arno', 'Gilles'
+    ],
+    lastNames: [
+      'Peeters', 'Janssens', 'Maes', 'Jacobs', 'Willems', 'Mertens', 'Claes', 'Goossens', 'Wouters', 'De Smet',
+      'Vermeulen', 'Pauwels', 'Hermans', 'Aerts', 'Michiels', 'Martens', 'Thijs', 'Smets', 'Devos', 'Hendrickx',
+      'Coppens', 'Van Damme', 'De Ridder', 'Dubois', 'Lambert', 'Dupont', 'Fontaine', 'Leroy', 'Bertrand', 'Renard',
+      'Collet', 'Denis', 'Dumont', 'Gerard', 'Martin', 'Vandamme', 'Carlier'
+    ]
+  },
+  Croatia: {
+    firstNames: [
+      'Luka', 'Ivan', 'Marko', 'David', 'Filip', 'Petar', 'Josip', 'Jakov', 'Mateo', 'Fran',
+      'Leon', 'Borna', 'Roko', 'Ante', 'Mihael', 'Lovro', 'Karlo', 'Marin', 'Toni', 'Domagoj',
+      'Nikola', 'Bruno', 'Gabriel', 'Tin', 'Dario', 'Kristijan', 'Stipe'
+    ],
+    lastNames: [
+      'Horvat', 'Kovacevic', 'Babic', 'Maric', 'Juric', 'Novak', 'Kovacic', 'Vukovic', 'Knezevic', 'Markovic',
+      'Petrovic', 'Tomic', 'Bosnjak', 'Radic', 'Grgic', 'Pavlic', 'Kolar', 'Vidovic', 'Simic', 'Blazevic',
+      'Lovric', 'Grubisic', 'Bozic', 'Peric', 'Varga', 'Loncar', 'Filipovic', 'Katic', 'Saric', 'Pavic',
+      'Matos', 'Bradaric', 'Jurcevic', 'Vranjes', 'Basic', 'Bilic', 'Olic'
+    ]
+  },
+  Japan: {
+    firstNames: [
+      'Ren', 'Haruto', 'Sota', 'Yuto', 'Riku', 'Kaito', 'Minato', 'Sora', 'Takumi', 'Daiki',
+      'Ryota', 'Kensuke', 'Shota', 'Kota', 'Naoki', 'Kazuki', 'Tomoya', 'Hayato', 'Yuma', 'Ryusei',
+      'Taichi', 'Yuya', 'Keisuke', 'Tsubasa', 'Shinji', 'Kohei', 'Aoi'
+    ],
+    lastNames: [
+      'Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato',
+      'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Saito', 'Matsumoto', 'Inoue', 'Kimura', 'Hayashi', 'Shimizu',
+      'Yamazaki', 'Mori', 'Abe', 'Ikeda', 'Hashimoto', 'Yamashita', 'Ishikawa', 'Nakajima', 'Maeda', 'Fujiwara',
+      'Ogawa', 'Goto', 'Okada', 'Hasegawa', 'Murakami', 'Endo', 'Aoki'
+    ]
+  }
+};
 
 // 国籍リスト（欧州主要国・南米・アジア）
 const NATIONALITIES = [
@@ -862,22 +1004,63 @@ function calculateTransferFee(player) {
 }
 
 /**
- * 重複しない欧州スタイル選手名を生成
+ * 国籍に応じたリアルな架空欧州選手名（表示名・フルネーム）を生成
+ * 例: displayName: "J. Bennett", fullName: "Jack Bennett"
  */
-function generateUniqueName(usedNames) {
-  let fullName = '';
-  for (let i = 0; i < 120; i++) {
-    const init = FIRST_INITIALS[randInt(0, FIRST_INITIALS.length - 1)];
-    const surname = EUROPEAN_SURNAMES[randInt(0, EUROPEAN_SURNAMES.length - 1)];
-    fullName = `${init} ${surname}`;
-    if (!usedNames || !usedNames.has(fullName)) {
-      if (usedNames) usedNames.add(fullName);
-      return fullName;
+function generatePlayerName(nationality, usedNames) {
+  const natKey = (nationality && NATIONALITY_NAME_DATABASE[nationality]) ? nationality : 'England';
+  const natData = NATIONALITY_NAME_DATABASE[natKey] || NATIONALITY_NAME_DATABASE.England;
+  const firstPool = natData.firstNames;
+  const lastPool = natData.lastNames;
+
+  for (let attempt = 0; attempt < 150; attempt++) {
+    const firstName = firstPool[randInt(0, firstPool.length - 1)];
+    const lastName = lastPool[randInt(0, lastPool.length - 1)];
+    const initial = firstName.charAt(0);
+    const displayName = `${initial}. ${lastName}`;
+    const fullName = `${firstName} ${lastName}`;
+
+    if (!usedNames || (!usedNames.has(displayName) && !usedNames.has(fullName))) {
+      if (usedNames) {
+        usedNames.add(displayName);
+        usedNames.add(fullName);
+      }
+      return {
+        displayName,
+        fullName,
+        firstName,
+        lastName,
+        nationality: natKey
+      };
     }
   }
-  const fallback = `${fullName} ${randInt(2, 99)}`;
-  if (usedNames) usedNames.add(fallback);
-  return fallback;
+
+  // 150回以上重複した際のフォールバック
+  const fName = firstPool[randInt(0, firstPool.length - 1)];
+  const lName = lastPool[randInt(0, lastPool.length - 1)];
+  const suffix = randInt(2, 99);
+  const displayName = `${fName.charAt(0)}. ${lName} ${suffix}`;
+  const fullName = `${fName} ${lName} ${suffix}`;
+  if (usedNames) {
+    usedNames.add(displayName);
+    usedNames.add(fullName);
+  }
+  return {
+    displayName,
+    fullName,
+    firstName: fName,
+    lastName: `${lName} ${suffix}`,
+    nationality: natKey
+  };
+}
+
+/**
+ * 従来の互換用: 重複しない選手名（表示名）を生成
+ */
+function generateUniqueName(usedNames, nationality = null) {
+  const nat = nationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const res = generatePlayerName(nat, usedNames);
+  return res.displayName;
 }
 
 /**
@@ -1152,8 +1335,9 @@ function getStatTierClass(val) {
 /**
  * 9ポジション＋複数適性＋詳細プロフィールに対応した選手1名を生成
  */
-function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null, forcedCurve = null) {
-  const fullName = generateUniqueName(usedNames);
+function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null, forcedCurve = null, forcedNationality = null) {
+  const nationality = forcedNationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const nameData = generatePlayerName(nationality, usedNames);
   const age = customAgeRange ? randInt(customAgeRange[0], customAgeRange[1]) : randInt(18, 33);
   const growthCurve = forcedCurve || pickRandomGrowthCurve();
 
@@ -1224,7 +1408,6 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
 
   const subPool = SECONDARY_POSITION_POOLS[pos] || [[]];
   const secondaryPositions = [...subPool[randInt(0, subPool.length - 1)]];
-  const nationality = NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const traits = generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot);
@@ -1233,7 +1416,10 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
 
   return {
     id: `p_${playerIdCounter++}`,
-    name: fullName,
+    name: nameData.displayName,
+    fullName: nameData.fullName,
+    firstName: nameData.firstName,
+    lastName: nameData.lastName,
     age,
     pos,
     position: pos,
@@ -1272,9 +1458,10 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
 /**
  * 1名のユース選手（U-21アカデミー生：16〜19歳）を生成
  */
-function createYouthPlayer(pos, usedNames) {
+function createYouthPlayer(pos, usedNames, forcedNationality = null) {
   const age = randInt(16, 19);
-  const fullName = generateUniqueName(usedNames);
+  const nationality = forcedNationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const nameData = generatePlayerName(nationality, usedNames);
   const baseCenter = 56 + randInt(-4, 6);
 
   let atk = clamp(baseCenter + randInt(-5, 6), 38, 72);
@@ -1295,7 +1482,6 @@ function createYouthPlayer(pos, usedNames) {
 
   const subPool = SECONDARY_POSITION_POOLS[pos] || [[]];
   const secondaryPositions = [...subPool[randInt(0, subPool.length - 1)]];
-  const nationality = NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const growthCurve = pickRandomGrowthCurve();
@@ -1305,7 +1491,10 @@ function createYouthPlayer(pos, usedNames) {
 
   return {
     id: `p_${playerIdCounter++}`,
-    name: fullName,
+    name: nameData.displayName,
+    fullName: nameData.fullName,
+    firstName: nameData.firstName,
+    lastName: nameData.lastName,
     age,
     pos,
     position: pos,
@@ -1381,6 +1570,13 @@ function generateTransferMarket() {
   for (const club of gameState.clubs) {
     for (const p of club.players) {
       usedNames.add(p.name);
+      if (p.fullName) usedNames.add(p.fullName);
+    }
+    if (club.youthSquad) {
+      for (const y of club.youthSquad) {
+        usedNames.add(y.name);
+        if (y.fullName) usedNames.add(y.fullName);
+      }
     }
   }
 
@@ -1416,10 +1612,20 @@ function generateYouthAcademyCandidates() {
   for (const club of gameState.clubs) {
     for (const p of club.players) {
       usedNames.add(p.name);
+      if (p.fullName) usedNames.add(p.fullName);
+    }
+    if (club.youthSquad) {
+      for (const y of club.youthSquad) {
+        usedNames.add(y.name);
+        if (y.fullName) usedNames.add(y.fullName);
+      }
     }
   }
   if (Array.isArray(gameState.transferMarket)) {
-    gameState.transferMarket.forEach(p => usedNames.add(p.name));
+    gameState.transferMarket.forEach(p => {
+      usedNames.add(p.name);
+      if (p.fullName) usedNames.add(p.fullName);
+    });
   }
 
   const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
@@ -4287,7 +4493,7 @@ function upgradeFacility(facilityKey) {
       const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
       const baseTarget = clamp(randInt(64 + scoutingBonusOvr, 74 + scoutingBonusOvr), 58, 86);
       const age = randInt(19, 28);
-      const candidate = createPlayer(pos, baseTarget, usedNames, age, false);
+      const candidate = createPlayer(pos, baseTarget, false, usedNames, [age, age]);
       const ovr = getPlayerOverallRating(candidate);
       const isExpiring = candidate.contractYears === 1;
       const baseFee = Math.max(800, (ovr - 44) * 350 + (29 - candidate.age) * 180);
@@ -6396,7 +6602,13 @@ function openPlayerProfileModal(playerId) {
   }
 
   const nameEl = document.getElementById('profile-player-name');
-  if (nameEl) nameEl.textContent = p.name;
+  if (nameEl) {
+    if (p.fullName && p.fullName !== p.name) {
+      nameEl.innerHTML = `${p.name} <span class="profile-fullname-sub" style="font-size: 0.6em; font-weight: 500; color: var(--text-muted); margin-left: 8px;">(${p.fullName})</span>`;
+    } else {
+      nameEl.textContent = p.name;
+    }
+  }
 
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
