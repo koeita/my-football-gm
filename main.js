@@ -6781,78 +6781,124 @@ function matchesClubFilter(clubDef, filter) {
 /**
  * GM就任モーダル：左ペインの20クラブ選択リストを描画
  */
-function renderIntroClubList() {
-  const listEl = document.getElementById('intro-club-list');
-  if (!listEl) return;
+function getFilteredIntroClubs() {
+  return CLUB_DEFINITIONS.filter(c => matchesClubFilter(c, introClubFilter));
+}
 
-  const filteredClubs = CLUB_DEFINITIONS.filter(c => matchesClubFilter(c, introClubFilter));
+function showPrevIntroClub() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+  const currentIndex = filtered.findIndex(c => c.id === gameState.selectedClubId);
+  const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+  gameState.selectedClubId = filtered[prevIndex].id;
+  renderIntroClubDetail();
+}
 
-  listEl.innerHTML = filteredClubs.map(def => {
-    const isSelected = def.id === gameState.selectedClubId;
-    return `
-      <button type="button" class="intro-club-item ${isSelected ? 'selected' : ''}" data-club-id="${def.id}">
-        <div class="club-item-main">
-          <span class="club-item-name">${def.name}</span>
-          <span class="club-item-tier">${def.tier}</span>
-        </div>
-        <div class="club-item-metrics mono">
-          <span class="club-item-funds">${formatMoney(def.initialFunds)}</span>
-          <span class="club-item-power">OVR ${def.basePower}</span>
-        </div>
-      </button>
-    `;
-  }).join('');
+function showNextIntroClub() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+  const currentIndex = filtered.findIndex(c => c.id === gameState.selectedClubId);
+  const nextIndex = (currentIndex + 1) % filtered.length;
+  gameState.selectedClubId = filtered[nextIndex].id;
+  renderIntroClubDetail();
 }
 
 /**
- * GM就任モーダル：右ペインの選択中クラブ詳細プレビューを描画
+ * GM就任モーダル：スライダーセレクト＆1クラブカード描画
+ */
+function renderIntroClubList() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+
+  // 選択クラブがフィルター内にない場合は先頭を選択
+  if (!filtered.some(c => c.id === gameState.selectedClubId)) {
+    gameState.selectedClubId = filtered[0].id;
+  }
+
+  // セレクトボックスの選択肢を更新
+  const selectEl = document.getElementById('slider-club-select');
+  if (selectEl) {
+    selectEl.innerHTML = filtered.map(c => `
+      <option value="${c.id}" ${c.id === gameState.selectedClubId ? 'selected' : ''}>
+        ${c.name} (${formatMoney(c.initialFunds)} / OVR ${c.basePower})
+      </option>
+    `).join('');
+  }
+
+  renderIntroClubDetail();
+}
+
+/**
+ * GM就任モーダル：1クラブ専用リッチカード描画（スライド式）
  */
 function renderIntroClubDetail() {
   const detailEl = document.getElementById('intro-club-detail-pane');
   const summaryEl = document.getElementById('intro-selected-summary');
+  const pagerText = document.getElementById('slider-pager-text');
+  const selectEl = document.getElementById('slider-club-select');
   if (!detailEl) return;
 
-  const club = CLUB_DEFINITIONS.find(c => c.id === gameState.selectedClubId) || CLUB_DEFINITIONS[0];
+  const filtered = getFilteredIntroClubs();
+  const currentIndex = Math.max(0, filtered.findIndex(c => c.id === gameState.selectedClubId));
+  const club = filtered[currentIndex] || CLUB_DEFINITIONS.find(c => c.id === gameState.selectedClubId) || CLUB_DEFINITIONS[0];
   const tacticDef = TACTICS_DEFINITIONS[club.defaultTactic] || TACTICS_DEFINITIONS.possession;
+
+  if (pagerText) {
+    pagerText.textContent = `${currentIndex + 1} / ${filtered.length}`;
+  }
+
+  if (selectEl && selectEl.value !== club.id) {
+    selectEl.value = club.id;
+  }
 
   detailEl.innerHTML = `
     <div class="detail-header-card">
       <div class="detail-title-row">
-        <h3 class="detail-club-name">${club.name}</h3>
-        <span class="detail-tier-badge">${club.tier}</span>
+        <div class="detail-club-title-group">
+          <span class="detail-club-avatar mono">${club.shortName || club.name.substring(0, 3).toUpperCase()}</span>
+          <div>
+            <h3 class="detail-club-name">${club.name}</h3>
+            <span class="detail-tier-badge">${club.tier}</span>
+          </div>
+        </div>
       </div>
       <p class="detail-club-desc">${club.desc}</p>
     </div>
 
     <div class="detail-metrics-grid">
       <div class="detail-metric-card highlight">
-        <span class="detail-metric-label">CLUB FUNDS（初期資金）</span>
+        <span class="detail-metric-label">初期クラブ資金</span>
         <span class="detail-metric-val mono accent-gold">${formatMoney(club.initialFunds)}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">BOARD TARGET（理事会目標）</span>
-        <span class="detail-metric-val mono">${club.targetLabel}</span>
+        <span class="detail-metric-label">理事会目標</span>
+        <span class="detail-metric-val mono accent-green">${club.targetLabel}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">SQUAD POWER（戦力値）</span>
-        <span class="detail-metric-val mono accent-green">OVR ${club.basePower}</span>
+        <span class="detail-metric-label">チーム戦力値</span>
+        <span class="detail-metric-val mono">OVR ${club.basePower}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">SUPPORTERS（ファン数）</span>
+        <span class="detail-metric-label">サポーター規模</span>
         <span class="detail-metric-val mono">${club.supporters.toLocaleString()}人</span>
       </div>
     </div>
 
-    <div class="detail-mission-box">
-      <div class="detail-mission-title mono">BOARD MISSION / EXPECTATION</div>
-      <p class="detail-mission-text">
-        今季の理事会要求は「<strong>${club.targetLabel}</strong>」です。初期戦術方針は「${tacticDef.name}」が設定されています。目標を達成してシーズンを終えると、理事会から <strong>+£3.0M</strong> の特別ボーナスが支給されます。
-      </p>
+    <div class="detail-tactic-box">
+      <div class="detail-tactic-head">
+        <span class="detail-tactic-label">初期戦術方針:</span>
+        <strong class="detail-tactic-name mono">${tacticDef.name}</strong>
+      </div>
+      <p class="detail-tactic-desc">${tacticDef.desc}</p>
     </div>
   `;
 
   if (summaryEl) {
-    summaryEl.innerHTML = `選択中：<strong>${club.name}</strong> <span class="summary-target mono">（目標：${club.targetLabel} / 予算 ${formatMoney(club.initialFunds)}）</span>`;
+    summaryEl.innerHTML = `
+      選択中：<strong class="accent-green">${club.name}</strong>
+      <span class="summary-sep">|</span> 目標：<strong>${club.targetLabel}</strong>
+      <span class="summary-sep">|</span> 予算：<strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>
+    `;
   }
 }
 
@@ -7008,12 +7054,63 @@ function initGame() {
     }
   });
 
-  document.getElementById('intro-club-list').addEventListener('click', (e) => {
-    const item = e.target.closest('.intro-club-item');
-    if (item && item.dataset.clubId) {
-      gameState.selectedClubId = item.dataset.clubId;
-      renderIntroClubList();
+  // スライダー切り替えボタン（前へ・次へ）
+  const btnPrevClub = document.getElementById('btn-prev-club');
+  if (btnPrevClub) {
+    btnPrevClub.addEventListener('click', showPrevIntroClub);
+  }
+
+  const btnNextClub = document.getElementById('btn-next-club');
+  if (btnNextClub) {
+    btnNextClub.addEventListener('click', showNextIntroClub);
+  }
+
+  // クラブ直接選択セレクトボックス
+  const sliderClubSelect = document.getElementById('slider-club-select');
+  if (sliderClubSelect) {
+    sliderClubSelect.addEventListener('change', (e) => {
+      gameState.selectedClubId = e.target.value;
       renderIntroClubDetail();
+    });
+  }
+
+  // タッチスワイプ（左右フリック）対応
+  const cardContainer = document.getElementById('intro-single-card-container');
+  if (cardContainer) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    cardContainer.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    cardContainer.addEventListener('touchend', (e) => {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        // 横方向へのスワイプ判定（縦スクロールの誤判定防止）
+        if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (deltaX < 0) {
+            showNextIntroClub(); // 左スワイプで次へ
+          } else {
+            showPrevIntroClub(); // 右スワイプで前へ
+          }
+        }
+      }
+    }, { passive: true });
+  }
+
+  // キーボード左右矢印キー対応（モーダル表示中）
+  window.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('intro-modal-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) {
+      if (e.key === 'ArrowLeft') {
+        showPrevIntroClub();
+      } else if (e.key === 'ArrowRight') {
+        showNextIntroClub();
+      }
     }
   });
 

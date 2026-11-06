@@ -2942,6 +2942,150 @@ body {
   width: 100%;
 }
 
+
+/* ==========================================================================
+   GM就任モーダル：スライド式1クラブカードUI
+   ========================================================================== */
+
+.intro-slider-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding: 12px 16px;
+}
+
+.intro-slider-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.25);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.btn-slider-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  min-height: 36px;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.btn-slider-arrow:hover {
+  background-color: var(--bg-row-hover);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.btn-slider-arrow:active {
+  transform: scale(0.94);
+  background-color: rgba(46, 204, 113, 0.15);
+}
+
+.slider-pager-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.slider-pager-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-green);
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+.slider-club-select {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 11.5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  max-width: 170px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.intro-single-card-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.intro-single-card {
+  background-color: var(--bg-card);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  animation: cardFadeIn 0.15s ease-out;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0.5;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.detail-club-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.detail-club-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.35);
+  flex-shrink: 0;
+}
+
+.summary-sep {
+  margin: 0 6px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-confirm-wide {
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .gm-task-card {
     flex-direction: column;
@@ -4423,13 +4567,14 @@ body {
     flex-shrink: 0 !important;
   }
 
-  /* 8. GM就任モーダルのスマホ最適化（ヘッダー改行解消＆チーム選びUI改善） */
+  /* 8. GM就任モーダル：スライド式1クラブカードUI（スクロールレス・1画面完結） */
   .intro-modal-card {
     width: 95vw !important;
     max-width: 95vw !important;
-    height: 92vh !important;
-    max-height: 92vh !important;
+    height: auto !important;
+    max-height: 94vh !important;
     border-radius: 8px !important;
+    overflow: hidden !important;
   }
 
   .intro-modal-card .modal-header {
@@ -4440,7 +4585,7 @@ body {
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 3px !important;
+    gap: 2px !important;
     width: 100% !important;
   }
 
@@ -4449,7 +4594,7 @@ body {
   }
 
   .intro-modal-card .modal-category {
-    font-size: 9.5px !important;
+    font-size: 9px !important;
     letter-spacing: 0.04em !important;
     line-height: 1.2 !important;
     display: block !important;
@@ -4461,37 +4606,28 @@ body {
     color: var(--text-main) !important;
     line-height: 1.25 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
     width: 100% !important;
   }
 
   .intro-badge {
-    font-size: 9.5px !important;
+    font-size: 9px !important;
     padding: 1px 6px !important;
     align-self: flex-start !important;
     margin-top: 1px !important;
   }
 
-  .intro-top-bar {
-    flex-direction: column !important;
-    align-items: stretch !important;
+  .intro-slider-body {
+    padding: 6px 10px !important;
     gap: 6px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    padding: 8px 10px !important;
-    background-color: rgba(255, 255, 255, 0.02) !important;
-    border-radius: 4px !important;
+    overflow: visible !important;
+    max-height: none !important;
   }
 
-  .intro-story-compact {
-    width: 100% !important;
-    flex: none !important;
-    font-size: 11px !important;
-    line-height: 1.45 !important;
-    word-break: normal !important;
-    overflow-wrap: break-word !important;
-    color: var(--text-muted) !important;
+  .intro-top-bar {
+    padding: 4px 8px !important;
+    background-color: rgba(255, 255, 255, 0.02) !important;
+    border-radius: 4px !important;
+    margin: 0 !important;
   }
 
   .intro-gm-input-wrap {
@@ -4508,164 +4644,143 @@ body {
 
   .intro-gm-input-wrap .intro-text-input {
     flex: 1 !important;
-    max-width: none !important;
-    min-height: 34px !important;
-    height: 34px !important;
-    padding: 4px 8px !important;
-    font-size: 12.5px !important;
-  }
-
-  .intro-main-layout {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-    flex: 1 !important;
-    min-height: 0 !important;
-  }
-
-  /* チーム選びリストの縦幅確保＆指スクロール性 */
-  .intro-club-list-pane {
-    max-height: none !important;
-    height: 250px !important;
-    min-height: 200px !important;
-    flex: 1 1 auto !important;
-    border-radius: 4px !important;
-    background-color: #171a1d !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 3px 8px !important;
+    font-size: 12px !important;
   }
 
   .intro-filter-bar {
-    padding: 5px 8px !important;
-    gap: 4px !important;
+    padding: 3px 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 
-  .intro-pane-title {
-    font-size: 10px !important;
+  .club-filter-tags {
+    gap: 4px !important;
   }
 
   .btn-filter-tag {
     font-size: 10px !important;
-    padding: 2px 6px !important;
+    padding: 2px 7px !important;
   }
 
-  .intro-club-list {
-    padding: 3px !important;
-    gap: 2px !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+  .intro-slider-nav {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+    margin: 2px 0 !important;
   }
 
-  .intro-club-item {
-    padding: 6px 8px !important;
-    min-height: 36px !important;
-  }
-
-  .club-item-name {
-    font-size: 12px !important;
-  }
-
-  .club-item-tier {
-    font-size: 8.5px !important;
-    padding: 1px 3px !important;
-  }
-
-  .club-item-metrics {
-    font-size: 10.5px !important;
-    gap: 6px !important;
-  }
-
-  .club-item-funds {
+  .btn-slider-arrow {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 3px 8px !important;
     font-size: 11px !important;
   }
 
-  .club-item-power {
-    font-size: 9.5px !important;
+  .slider-pager-badge {
+    font-size: 11.5px !important;
   }
 
-  /* 選択中クラブ詳細ペインのコンパクト化・見切れ防止 */
-  .intro-club-detail-pane {
+  .slider-club-select {
+    max-width: 135px !important;
+    font-size: 10.5px !important;
+    padding: 2px 4px !important;
+    height: 28px !important;
+  }
+
+  .intro-single-card-container {
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  .intro-single-card {
     padding: 8px 10px !important;
     gap: 6px !important;
-    max-height: 190px !important;
-    min-height: 140px !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
   }
 
-  .detail-title-row {
-    padding-bottom: 4px !important;
-    gap: 6px !important;
+  .detail-club-title-group {
+    gap: 8px !important;
+  }
+
+  .detail-club-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 11px !important;
   }
 
   .detail-club-name {
     font-size: 16px !important;
+    line-height: 1.2 !important;
   }
 
   .detail-tier-badge {
-    font-size: 9.5px !important;
-    padding: 1px 6px !important;
+    font-size: 9px !important;
+    padding: 1px 5px !important;
   }
 
   .detail-club-desc {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     line-height: 1.35 !important;
     margin: 0 !important;
   }
 
   .detail-metrics-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 5px !important;
-    margin: 2px 0 !important;
+    gap: 4px !important;
+    margin: 1px 0 !important;
   }
 
   .detail-metric-card {
-    padding: 4px 6px !important;
+    padding: 3px 6px !important;
     border-radius: 3px !important;
   }
 
   .detail-metric-label {
     font-size: 8.5px !important;
-    letter-spacing: 0.02em !important;
   }
 
   .detail-metric-val {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
   }
 
   .detail-tactic-box {
-    padding: 5px 8px !important;
-    margin-top: 2px !important;
+    padding: 4px 6px !important;
+    margin-top: 1px !important;
     gap: 2px !important;
   }
 
   .detail-tactic-label {
-    font-size: 9.5px !important;
+    font-size: 9px !important;
   }
 
   .detail-tactic-name {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
   }
 
   .detail-tactic-desc {
-    font-size: 10px !important;
-    line-height: 1.3 !important;
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
   }
 
   .intro-modal-actions {
-    padding: 8px 10px !important;
-    gap: 6px !important;
+    padding: 6px 10px !important;
+    gap: 4px !important;
   }
 
   .intro-selected-summary {
-    font-size: 11px !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
     width: 100% !important;
     text-align: center !important;
-    line-height: 1.3 !important;
   }
 
   .intro-modal-actions .btn {
     width: 100% !important;
-    min-height: 42px !important;
-    font-size: 13.5px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
   }
 

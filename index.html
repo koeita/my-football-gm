@@ -666,10 +666,10 @@
     </main>
   </div>
 
-  <!-- ゲーム開始時：GM就任・クラブ選択モーダル -->
+  <!-- ゲーム開始時：GM就任・クラブ選択モーダル（スライド式1クラブカードUI） -->
   <div id="intro-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
     <div class="modal-card intro-modal-card">
-            <div class="modal-header">
+      <div class="modal-header">
         <div class="intro-header-row">
           <div class="intro-header-left">
             <span class="modal-category mono">INAUGURATION / PREMIER DIVISION GM APPOINTMENT</span>
@@ -678,42 +678,54 @@
           <span class="intro-badge mono">ENGLAND 20 CLUBS</span>
         </div>
       </div>
-      <div class="modal-body intro-modal-body">
-        <!-- 上部：ストーリーとGM名入力バー -->
+
+      <div class="modal-body intro-modal-body intro-slider-body">
+        <!-- 上部：GM名入力バー（コンパクト） -->
         <div class="intro-top-bar">
-          <p class="intro-story-compact">
-            欧州サッカー界へようこそ。新任GMとして名門または新興クラブの全権を託されました。全20クラブ・全38節の過酷なリーグを制覇してください。
-          </p>
           <div class="intro-gm-input-wrap">
             <label for="input-gm-name" class="intro-inline-label">GM氏名:</label>
-            <input type="text" id="input-gm-name" class="intro-text-input" value="A. ファーガソン" maxlength="20" placeholder="GM氏名を入力">
+            <input type="text" id="input-gm-name" class="intro-text-input" value="A. ファーガソン" maxlength="20" placeholder="GM氏名">
           </div>
         </div>
 
-        <!-- メイン：左リスト × 右詳細プレビューの2ペイン構造 -->
-        <div class="intro-main-layout">
-          <!-- 左ペイン：20クラブ選択リスト -->
-          <div class="intro-club-list-pane">
-            <div class="intro-filter-bar">
-              <span class="intro-pane-title">クラブ選択（20）</span>
-              <div class="club-filter-tags" id="club-filter-tags">
-                <button type="button" class="btn-filter-tag active" data-filter="all">すべて</button>
-                <button type="button" class="btn-filter-tag" data-filter="big">強豪</button>
-                <button type="button" class="btn-filter-tag" data-filter="mid">中堅</button>
-                <button type="button" class="btn-filter-tag" data-filter="challenger">古豪・昇格</button>
-              </div>
-            </div>
-            <div id="intro-club-list" class="intro-club-list">
-              <!-- JSで20クラブの行を描画 -->
-            </div>
+        <!-- カテゴリフィルタータグ -->
+        <div class="intro-filter-bar">
+          <div class="club-filter-tags" id="club-filter-tags">
+            <button type="button" class="btn-filter-tag active" data-filter="all">すべて (20)</button>
+            <button type="button" class="btn-filter-tag" data-filter="big">強豪</button>
+            <button type="button" class="btn-filter-tag" data-filter="mid">中堅</button>
+            <button type="button" class="btn-filter-tag" data-filter="challenger">古豪・昇格</button>
+          </div>
+        </div>
+
+        <!-- スライド切り替えナビゲーションバー（◀ 前へ / CLUB X / 20 / 次へ ▶） -->
+        <div class="intro-slider-nav">
+          <button type="button" class="btn-slider-arrow" id="btn-prev-club" title="前のクラブへ">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span class="btn-slider-label">前へ</span>
+          </button>
+
+          <div class="slider-pager-wrap">
+            <span class="slider-pager-badge mono" id="slider-pager-text">1 / 20</span>
+            <select id="slider-club-select" class="slider-club-select mono" title="クラブを直接選択"></select>
           </div>
 
-          <!-- 右ペイン：選択中クラブの詳細プレビュー -->
-          <div class="intro-club-detail-pane" id="intro-club-detail-pane">
-            <!-- JSで選択クラブの詳細を描画 -->
+          <button type="button" class="btn-slider-arrow" id="btn-next-club" title="次のクラブへ">
+            <span class="btn-slider-label">次へ</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        <!-- 1クラブ専用リッチカード（左右スワイプ＆ボタン送り） -->
+        <div class="intro-single-card-container" id="intro-single-card-container">
+          <div class="intro-club-detail-pane intro-single-card" id="intro-club-detail-pane">
+            <!-- JSで現在選択中の1クラブ情報を描画 -->
           </div>
         </div>
       </div>
+
+      <!-- 下部アクションバー -->
+
       <div class="modal-actions intro-modal-actions">
         <div class="intro-selected-summary" id="intro-selected-summary">
           <!-- JSで選択中クラブのサマリーを描画 -->
