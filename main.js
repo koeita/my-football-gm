@@ -5655,7 +5655,7 @@ function renderTacticalBoard() {
         : '';
 
       return `
-        <div class="${nodeClasses}" draggable="true" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
+        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
           <div class="pitch-node-top">
             <span class="pitch-node-pos">${sl.pos}</span>
             <span class="pitch-node-ovr">OVR ${effOvr}</span>
@@ -5719,7 +5719,7 @@ function renderTacticalBoard() {
         }
 
         return `
-          <div class="bench-sub-item ${itemClass}" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
+          <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-top-row">
               ${formatPlayerPositionsHtml(bp)}
               <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
@@ -5764,7 +5764,7 @@ function renderTacticalBoard() {
         }
 
         return `
-          <div class="bench-sub-item" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
+          <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-top-row">
               ${formatPlayerPositionsHtml(bp)}
               <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
@@ -7223,22 +7223,25 @@ function initTacticalDragAndDrop() {
       const isTouch = e.pointerType === 'touch';
 
       // タッチ操作時：長押し完了前（まだ掴んでいない状態）に指が動いた場合
-      // これはユーザーが「画面の縦スクロール」または「控えカルーセルの横スクロール」を行っている最中！
-      // 選手カードを一切拾わずにドラッグ処理を即座に破棄し、ブラウザのスクロールに100%委ねる！
+      // スクロール操作であるため、カードを拾わずにドラッグ処理を即座に破棄
       if (isTouch && !isTouchReady) {
-        if (dist > 8) {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-          dragSource = null;
+        if (dist > 7) {
+          cleanupDrag();
           return;
         }
         return;
       }
 
-      // 長押し完了済み、またはPCマウス操作の場合：動かしたらドラッグ開始！
+      // 長押し完了済み、またはPCマウス操作の場合：
+      // 指が動いたらドラッグ開始！
       if (dist > 6) {
+        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -10)へ向かっていることを確認
+        // もし指が水平または下向き(deltaY >= -10)なら、カルーセルの横スクロールなのでドラッグを開始しない！
+        if (dragSource.type === 'bench' && deltaY >= -10) {
+          cleanupDrag();
+          return;
+        }
+
         isDragging = true;
         if (longPressTimer) {
           clearTimeout(longPressTimer);
