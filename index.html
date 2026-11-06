@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-active-tab="office">
   <div class="app-container">
     <!-- 上部ステータスバー -->
     <header class="status-header">
@@ -184,40 +184,7 @@
     <!-- タブ1：順位表 / 日程画面 -->
         <!-- タブ3：本部（GM執務室：日程進行、試合情報、GM業務一覧）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
-      <section class="office-hub-hero">
-        <div class="office-hero-top">
-          <div class="office-club-badge-row">
-            <div class="office-club-avatar mono" id="office-club-initial">LFC</div>
-            <div class="office-club-meta">
-              <h2 class="office-club-name" id="office-club-name">ロンドン・FC</h2>
-              <span class="office-gm-name">GM: <strong id="office-gm-name">A. ファーガソン</strong></span>
-            </div>
-          </div>
-          <div class="office-rank-target-row">
-            <span class="office-rank-pill mono" id="office-current-rank">現在 1位 (0pts)</span>
-            <span class="target-rank-badge mono" id="office-target-rank">目標：4位以内</span>
-          </div>
-        </div>
-
-        <div class="office-stats-grid">
-          <div class="office-stat-card">
-            <span class="office-stat-label">スタジアム規模</span>
-            <span class="office-stat-value mono" id="office-stadium-cap">Lv.1 (25,000人)</span>
-          </div>
-          <div class="office-stat-card">
-            <span class="office-stat-label">サポーター数</span>
-            <span class="office-stat-value mono accent-green" id="office-supporters-count">18,000人</span>
-          </div>
-          <div class="office-stat-card">
-            <span class="office-stat-label">クラブ資金</span>
-            <span class="office-stat-value mono accent-gold" id="office-funds">£48.0M</span>
-          </div>
-          <div class="office-stat-card">
-            <span class="office-stat-label">年間総年俸</span>
-            <span class="office-stat-value mono" id="office-payroll">£72.3M</span>
-          </div>
-        </div>
-      </section>
+      
 
       <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
       <div class="gm-tasks-header">

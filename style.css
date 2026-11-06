@@ -4194,7 +4194,8 @@ body.modal-open {
    ========================================================================== */
 @media (max-width: 768px) {
   /* スマホ表示時：本部（office）タブ以外では、上部の巨大なステータスヘッダーカードを非表示にして全画面を活用 */
-  body:not([data-active-tab="office"]) .status-header {
+  body:not([data-active-tab="office"]) .status-header,
+  .status-header.mobile-hidden-header {
     display: none !important;
   }
 
