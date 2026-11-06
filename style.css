@@ -1997,43 +1997,55 @@ body {
 /* ==========================================
    選手詳細プロフィールモーダル（スカウティングシート風UI）
    ========================================== */
+#player-profile-modal,
+#player-profile-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 .profile-modal-card {
-  max-width: 680px;
+  max-width: 720px;
   width: 95vw;
+  border: 1px solid #3a3f45;
   border-top: 3px solid var(--accent-green);
-  background-color: var(--bg-panel);
+  background-color: #24282c;
+  border-radius: 4px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
 }
 
 .profile-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   padding: 16px 20px;
-  background-color: #1e2226;
-  border-bottom: 1px solid var(--border-color);
+  background-color: #1a1d20;
+  border-bottom: 1px solid #32383e;
 }
 
 .profile-header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 
 .profile-squad-num {
-  width: 54px;
-  height: 54px;
+  width: 58px;
+  height: 58px;
   border-radius: 4px;
-  background-color: var(--bg-main);
-  border: 1px solid var(--accent-green);
+  background-color: #15181b;
+  border: 1.5px solid var(--accent-green);
   color: var(--accent-green);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.12);
 }
 
 .profile-identity {
@@ -2055,18 +2067,36 @@ body {
   color: var(--accent-green);
 }
 
-.profile-pos-pill {
+.profile-pos-badges-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-pos-badge-main {
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  padding: 1px 7px;
+  padding: 2px 7px;
   border-radius: 2px;
-  background-color: var(--bg-main);
-  border: 1px solid var(--border-color);
-  color: var(--accent-gold);
+  background-color: rgba(46, 204, 113, 0.18);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.profile-pos-badge-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background-color: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
 }
 
 .profile-player-name {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.25;
@@ -2075,7 +2105,7 @@ body {
 .profile-bio-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   font-size: 12px;
   color: var(--text-muted);
@@ -2115,23 +2145,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background-color: #24282c;
 }
 
 .profile-section-grid {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1.2fr 1fr;
   gap: 14px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 680px) {
   .profile-section-grid {
     grid-template-columns: 1fr;
   }
 }
 
 .profile-box {
-  background-color: var(--bg-main);
-  border: 1px solid var(--border-color);
+  background-color: #1a1d20;
+  border: 1px solid #32383e;
   border-radius: 4px;
   padding: 12px 14px;
   display: flex;
@@ -2143,7 +2174,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #32383e;
   padding-bottom: 6px;
 }
 
@@ -2165,12 +2196,12 @@ body {
 .profile-stat-rows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .profile-stat-row {
   display: grid;
-  grid-template-columns: 76px 36px 1fr;
+  grid-template-columns: 108px 30px 1fr;
   align-items: center;
   gap: 8px;
   font-size: 12px;
@@ -2179,34 +2210,52 @@ body {
 .profile-stat-label {
   color: var(--text-muted);
   font-weight: 500;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .profile-stat-val {
   font-family: var(--font-mono);
   font-weight: 700;
   text-align: right;
-  color: var(--text-main);
+  font-size: 13px;
+}
+
+.profile-stat-val.stat-high {
+  color: var(--accent-green);
+}
+
+.profile-stat-val.stat-mid {
+  color: var(--accent-gold);
+}
+
+.profile-stat-val.stat-low {
+  color: #95a5a6;
 }
 
 .profile-stat-bar-bg {
-  height: 7px;
-  background-color: #262b30;
+  height: 8px;
+  background-color: #15181b;
   border-radius: 2px;
   overflow: hidden;
-  border: 1px solid #32383e;
+  border: 1px solid #2a2f34;
 }
 
 .profile-stat-bar-fill {
   height: 100%;
+  transition: width 0.3s ease;
+}
+
+.profile-stat-bar-fill.bar-high {
   background-color: var(--accent-green);
 }
 
-.profile-stat-bar-fill.bar-gold {
+.profile-stat-bar-fill.bar-mid {
   background-color: var(--accent-gold);
 }
 
-.profile-stat-bar-fill.bar-cyan {
-  background-color: #38bdf8;
+.profile-stat-bar-fill.bar-low {
+  background-color: #95a5a6;
 }
 
 .profile-pos-fit-list {
@@ -2220,9 +2269,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
+  padding: 5px 8px;
+  background-color: #202428;
+  border: 1px solid #32383e;
   border-radius: 3px;
 }
 
@@ -2244,24 +2293,24 @@ body {
 
 .profile-metrics-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 680px) {
   .profile-metrics-row {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .profile-metric-card {
-  background-color: var(--bg-main);
-  border: 1px solid var(--border-color);
+  background-color: #1a1d20;
+  border: 1px solid #32383e;
   border-radius: 3px;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .profile-metric-label {
@@ -2272,19 +2321,70 @@ body {
 
 .profile-metric-val {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-modal-footer {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background-color: #1e2226;
+  background-color: #1a1d20;
+  border-top: 1px solid #32383e;
 }
 
 .profile-footer-hint {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* 選手名クリック可能要素 */
+.clickable-player-name {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-main);
+  text-align: left;
+  transition: color 0.12s ease, text-decoration-color 0.12s ease;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+  text-underline-offset: 3px;
+}
+
+.clickable-player-name:hover {
+  color: var(--accent-green);
+  text-decoration-color: var(--accent-green);
+}
+
+.pitch-node-name-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  margin: 0 auto;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  text-underline-offset: 2px;
+  transition: all 0.12s ease;
+}
+
+.pitch-node-name-btn:hover {
+  color: var(--accent-green);
+  text-decoration-color: var(--accent-green);
+  background-color: rgba(46, 204, 113, 0.15);
 }
