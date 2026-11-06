@@ -1,19 +1,22 @@
 :root {
-  --bg-main: #1a1d20;
-  --bg-panel: #24282c;
-  --bg-row-hover: #2d3238;
-  --bg-row-player: rgba(46, 204, 113, 0.12);
-  --border-color: #3a3f45;
-  --text-main: #f0f2f5;
-  --text-muted: #9aa2ac;
+  --bg-main: #121417;
+  --bg-panel: #1a1e23;
+  --bg-surface: #22272e;
+  --bg-row-hover: #262c33;
+  --bg-row-player: rgba(46, 204, 113, 0.10);
+  --border-color: rgba(255, 255, 255, 0.09);
+  --border-focus: rgba(46, 204, 113, 0.45);
+  --text-main: #f0f3f6;
+  --text-muted: #8b949e;
   --accent-green: #2ecc71;
-  --accent-green-dark: #25a25a;
+  --accent-green-dark: #27ae60;
   --accent-gold: #f39c12;
   --accent-gold-dark: #d68910;
+  --accent-cyan: #00d2d3;
   --danger-red: #e74c3c;
   --danger-red-dark: #c0392b;
-  --font-sans: 'M PLUS Rounded 1c', sans-serif;
-  --font-mono: 'Roboto Mono', monospace;
+  --font-sans: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: 'Roboto Mono', Menlo, Consolas, monospace;
 }
 
 * {
@@ -26,8 +29,8 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13.5px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -41,30 +44,31 @@ body {
 }
 
 .app-container {
-  max-width: 1420px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 20px 36px;
+  padding: 10px 14px 28px;
 }
 
 /* 上部ステータスヘッダー */
 .status-header {
-  background-color: var(--bg-panel);
+  background: linear-gradient(180deg, #1d2228 0%, #171b1f 100%);
   border: 1px solid var(--border-color);
   border-top: 3px solid var(--accent-green);
-  border-radius: 4px;
-  padding: 14px 20px;
-  margin-bottom: 12px;
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
 .brand-area {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .brand-top-row {
@@ -76,7 +80,7 @@ body {
 
 .game-label {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   color: var(--accent-green);
   font-weight: 700;
@@ -84,12 +88,12 @@ body {
 
 .finance-status-badge {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 2px;
+  padding: 1px 6px;
+  border-radius: 3px;
   border: 1px solid var(--border-color);
-  background-color: var(--bg-main);
+  background-color: rgba(0, 0, 0, 0.25);
   color: var(--text-muted);
 }
 
@@ -114,10 +118,10 @@ body {
 }
 
 .target-rank-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 2px;
+  padding: 1px 6px;
+  border-radius: 3px;
   border: 1px solid var(--accent-gold);
   background-color: rgba(243, 156, 18, 0.14);
   color: var(--accent-gold);
@@ -126,23 +130,24 @@ body {
 .club-title-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .club-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--text-main);
+  letter-spacing: 0.02em;
+  color: #fff;
 }
 
 .gm-badge {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
-  background-color: var(--bg-main);
+  background-color: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-color);
-  padding: 1px 8px;
-  border-radius: 2px;
+  padding: 1px 7px;
+  border-radius: 3px;
 }
 
 .gm-badge strong {
@@ -153,26 +158,31 @@ body {
 .status-metrics {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
 }
 
 .metric-box {
   display: flex;
   flex-direction: column;
-  border-left: 2px solid var(--border-color);
-  padding-left: 10px;
+  border-left: 2px solid rgba(255, 255, 255, 0.12);
+  padding-left: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.metric-box:hover {
+  border-left-color: var(--accent-green);
 }
 
 .metric-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .metric-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -183,6 +193,10 @@ body {
 
 .accent-green {
   color: var(--accent-green);
+}
+
+.accent-cyan {
+  color: var(--accent-cyan);
 }
 
 .text-danger {
@@ -199,10 +213,10 @@ body {
   border: 1px solid var(--accent-gold);
   border-left: 4px solid var(--accent-gold);
   color: var(--accent-gold);
-  padding: 10px 16px;
-  border-radius: 3px;
-  margin-bottom: 12px;
-  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
   font-weight: 700;
 }
 
@@ -215,45 +229,46 @@ body {
 /* ナビゲーションタブ */
 .tab-nav {
   display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0;
   flex-wrap: wrap;
 }
 
 .tab-btn {
-  background-color: var(--bg-panel);
+  background: transparent;
   color: var(--text-muted);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 4px 4px 0 0;
+  padding: 7px 16px;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  gap: 6px;
+  transition: all 0.15s ease;
 }
 
 .tab-btn:hover {
-  background-color: var(--bg-row-hover);
+  background-color: rgba(255, 255, 255, 0.03);
   color: var(--text-main);
 }
 
 .tab-btn.active {
-  background-color: var(--bg-main);
+  background: linear-gradient(180deg, rgba(46, 204, 113, 0.12) 0%, rgba(46, 204, 113, 0.02) 100%);
   color: var(--accent-green);
-  border-color: var(--accent-green);
+  border-bottom: 3px solid var(--accent-green);
 }
 
 .tab-badge {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 2px;
-  background-color: var(--bg-main);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
 }
@@ -272,51 +287,58 @@ body {
 /* アクションボタン */
 .action-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .btn {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 8px 14px;
-  border-radius: 3px;
+  padding: 6px 12px;
+  border-radius: 4px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
   white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .btn-sm {
   font-size: 11px;
-  padding: 4px 8px;
+  padding: 3px 8px;
 }
 
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-primary {
   background-color: var(--accent-green);
   color: #111417;
+  box-shadow: 0 2px 6px rgba(46, 204, 113, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--accent-green-dark);
+  box-shadow: 0 3px 10px rgba(46, 204, 113, 0.35);
 }
 
 .btn-secondary {
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.04);
   color: var(--text-main);
   border-color: var(--border-color);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--bg-row-hover);
-  border-color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-accent {
@@ -535,6 +557,18 @@ body {
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3f45 transparent;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #3a3f45;
+  border-radius: 3px;
 }
 
 .data-table {
@@ -545,20 +579,30 @@ body {
 
 .data-table th,
 .data-table td {
-  padding: 7px 9px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border-color);
+  font-size: 12.5px;
 }
 
 .data-table thead th {
-  background-color: #1e2226;
+  background-color: #16191d;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.12);
 }
 
 .data-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.1s ease;
 }
 
 .data-table tbody tr:hover {
@@ -1628,20 +1672,21 @@ body {
 .pitch-node {
   position: absolute;
   transform: translate(-50%, -50%);
-  min-width: 92px;
-  max-width: 118px;
-  background-color: rgba(26, 29, 32, 0.92);
-  border: 1px solid #485058;
+  min-width: 104px;
+  max-width: 128px;
+  background: rgba(18, 22, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-top: 2px solid var(--accent-green);
-  border-radius: 4px;
+  border-radius: 5px;
   padding: 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   cursor: pointer;
-  transition: transform 0.14s ease, border-color 0.14s ease, background-color 0.14s ease;
+  transition: transform 0.14s ease, border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
   z-index: 2;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 }
 
 .pitch-node:hover {
@@ -1973,25 +2018,27 @@ body {
 .pitch-node-name-btn {
   background: none;
   border: none;
-  padding: 0 2px;
+  padding: 1px 3px;
   margin: 0;
   font-family: inherit;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-main);
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 106px;
+  max-width: 118px;
   text-align: center;
   cursor: pointer;
-  border-bottom: 1px dotted rgba(240, 242, 245, 0.35);
-  transition: color 0.12s ease, border-color 0.12s ease;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  transition: all 0.12s ease;
 }
 
 .pitch-node-name-btn:hover {
   color: var(--accent-green);
   border-bottom-color: var(--accent-green);
+  background-color: rgba(46, 204, 113, 0.12);
+  border-radius: 2px;
 }
 
 /* ==========================================
@@ -2362,33 +2409,6 @@ body {
   text-decoration-color: var(--accent-green);
 }
 
-.pitch-node-name-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 2px;
-  max-width: 90px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-  margin: 0 auto;
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.25);
-  text-underline-offset: 2px;
-  transition: all 0.12s ease;
-}
-
-.pitch-node-name-btn:hover {
-  color: var(--accent-green);
-  text-decoration-color: var(--accent-green);
-  background-color: rgba(46, 204, 113, 0.15);
-}
-
 /* ==========================================
    GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意）
    ========================================== */
@@ -2396,45 +2416,111 @@ body {
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-left: 3px solid var(--accent-green);
-  border-radius: 4px;
-  padding: 10px 16px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .gm-tasks-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .gm-tasks-title-group {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .gm-tasks-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--accent-green);
   letter-spacing: 0.06em;
 }
 
 .gm-tasks-title {
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--text-main);
+}
+
+.gm-tasks-count-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background-color: rgba(46, 204, 113, 0.16);
+  border: 1px solid var(--accent-green);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.gm-tasks-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-toggle-tasks {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-tasks:hover {
+  background: var(--bg-row-hover);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.gm-tasks-mini-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--danger-red);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.mini-summary-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-summary-title {
   color: var(--text-main);
 }
 
 .gm-tasks-legend {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 11px;
+  gap: 10px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -3160,35 +3246,36 @@ body {
 .weekly-schedule-bar {
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .weekly-schedule-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .weekly-schedule-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .weekly-schedule-label {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--accent-green);
   font-weight: 700;
   letter-spacing: 0.06em;
 }
 
 .weekly-schedule-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -3201,10 +3288,10 @@ body {
 }
 
 .market-status-pill {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 2px;
+  padding: 1px 6px;
+  border-radius: 3px;
   letter-spacing: 0.04em;
 }
 
@@ -3221,32 +3308,32 @@ body {
 }
 
 .weekly-ticker-hint {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
 }
 
 .weekly-schedule-track {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 .day-card {
   background-color: var(--bg-main);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  padding: 8px 6px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 72px;
+  gap: 2px;
+  min-height: 48px;
   transition: all 0.15s ease;
   position: relative;
 }
 
 .day-card.is-today {
   border-color: var(--accent-green);
-  background-color: rgba(46, 204, 113, 0.08);
+  background-color: rgba(46, 204, 113, 0.09);
   box-shadow: inset 0 0 0 1px var(--accent-green);
 }
 
@@ -3255,7 +3342,7 @@ body {
 }
 
 .day-card.is-today.is-matchday {
-  background-color: rgba(46, 204, 113, 0.15);
+  background-color: rgba(46, 204, 113, 0.16);
   box-shadow: 0 0 10px rgba(46, 204, 113, 0.25), inset 0 0 0 1px var(--accent-green);
 }
 
@@ -3267,18 +3354,18 @@ body {
 
 .day-card-date {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text-main);
 }
 
 .day-card-today-badge {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
   background-color: var(--accent-green);
   color: #111416;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-radius: 2px;
   line-height: 1;
 }
@@ -3420,13 +3507,14 @@ body {
 .market-filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px 14px;
   align-items: center;
-  background-color: var(--bg-main);
+  background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .filter-group {
@@ -3436,20 +3524,21 @@ body {
 }
 
 .filter-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text-muted);
 }
 
 .market-select {
-  background-color: var(--bg-panel);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 5px 8px;
-  border-radius: 3px;
-  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
   cursor: pointer;
   outline: none;
+  transition: border-color 0.12s ease;
 }
 
 .market-select:focus {
@@ -3463,13 +3552,14 @@ body {
 
 .market-search-input {
   width: 100%;
-  background-color: var(--bg-panel);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 5px 10px;
-  border-radius: 3px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
   outline: none;
+  transition: border-color 0.12s ease;
 }
 
 .market-search-input:focus {
@@ -3477,6 +3567,18 @@ body {
 }
 
 /* 常設ユースチーム */
+.badge-potential-s,
+.badge-potential-a,
+.badge-potential-b,
+.badge-potential-c {
+  white-space: nowrap;
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 11px;
+  text-align: center;
+}
+
 .badge-potential-s {
   background-color: rgba(241, 196, 15, 0.22);
   color: #f1c40f;
