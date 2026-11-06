@@ -530,7 +530,43 @@
 
       <div class="modal-actions profile-modal-footer">
         <span class="profile-footer-hint mono">ESC キーまたは背景クリックで閉じる</span>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-close-profile-footer">閉じる</button>
+        <div class="action-btn-group" id="profile-footer-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-close-profile-footer">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 契約更新交渉 ／ 移籍市場獲得交渉 モーダルダイアログ -->
+  <div id="negotiation-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="neg-modal-title">
+    <div class="modal-card negotiation-modal-card">
+      <div class="profile-modal-header">
+        <div class="profile-header-left">
+          <div class="profile-squad-num mono" id="neg-squad-num">#10</div>
+          <div class="profile-identity">
+            <div class="profile-top-tags">
+              <span class="modal-category mono" id="neg-modal-category">CONTRACT RENEWAL NEGOTIATION</span>
+              <span class="profile-pos-pill mono" id="neg-pos-pill">CF</span>
+            </div>
+            <h2 class="profile-player-name" id="neg-modal-title">選手名</h2>
+            <div class="profile-bio-row mono" id="neg-player-meta">
+              <!-- 年齢・OVR・今季成績・現在契約 -->
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-neg-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+
+      <div class="negotiation-modal-body" id="neg-modal-body">
+        <!-- JSで交渉条件（要求・スライダー・ステータスログ）を描画 -->
+      </div>
+
+      <div class="modal-actions profile-modal-footer">
+        <span class="profile-footer-hint mono" id="neg-footer-hint">ESC キーまたは「交渉を保留して閉じる」でいつでも中断できます</span>
+        <div class="action-btn-group">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-neg-modal">交渉を保留して閉じる</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-submit-neg-offer">条件を提示して交渉する</button>
+        </div>
       </div>
     </div>
   </div>

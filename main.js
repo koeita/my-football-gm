@@ -579,7 +579,9 @@ const gameState = {
   lastSettlement: null,
   selectedPlayerId: null,
   selectedSlotIndex: null,
-  profileModalPlayerId: null
+  profileModalPlayerId: null,
+  negotiationSession: null,
+  pendingMegaOffer: null
 };
 
 let playerIdCounter = 1;
@@ -2041,12 +2043,10 @@ function skipToSeasonEnd() {
  * 試合後のランダムGMイベントおよび欧州メガクラブ強奪オファー判定
  */
 function checkPostMatchEvents() {
-  // 第19節（前半戦終了・冬の移籍ウインドウ）は高確率で欧州メガクラブからの強奪オファーが発生
+  // 第19節（前半戦終了・冬の移籍ウインドウ）は欧州メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
   if (gameState.currentWeek === Math.floor(gameState.totalWeeks / 2)) {
-    if (Math.random() < 0.75) {
-      triggerMegaOfferEvent();
-      return;
-    }
+    triggerMegaOfferEvent(true);
+    return;
   }
 
   // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lvで負傷率軽減）
@@ -2065,11 +2065,11 @@ function checkPostMatchEvents() {
 }
 
 /**
- * 欧州大陸メガクラブ（EUROPEAN_MEGA_CLUBS）からの強奪オファーイベント
+ * 欧州大陸メガクラブ（EUROPEAN_MEGA_CLUBS）からの強奪オファーを生成し、GMタスク（CRITICAL）へ登録
  */
-function triggerMegaOfferEvent() {
+function triggerMegaOfferEvent(autoOpenModal = false) {
   const playerClub = getPlayerClub();
-  if (playerClub.players.length <= 12) return;
+  if (!playerClub || playerClub.players.length <= 12) return;
 
   const candidates = [...playerClub.players].sort((a, b) => {
     const scoreA = getPlayerOverallRating(a) + a.goals * 4 + (a.appearances > 0 ? (a.totalRating / a.appearances) * 3 : 0);
@@ -2087,32 +2087,117 @@ function triggerMegaOfferEvent() {
   const ovr = getPlayerOverallRating(target);
   const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
 
+  gameState.pendingMegaOffer = {
+    playerId: target.id,
+    playerName: target.name,
+    playerPos: target.pos,
+    squadNumber: target.squadNumber || 9,
+    playerAge: target.age,
+    ovr,
+    appearances: target.appearances,
+    goals: target.goals,
+    avgRating,
+    megaClubName: megaClubObj.name,
+    megaClubCountry: megaClubObj.country,
+    offerAmount
+  };
+
+  renderAll();
+
+  if (autoOpenModal) {
+    openMegaOfferModal();
+  }
+}
+
+/**
+ * GMタスク（CRITICAL）に届いているメガクラブ強奪オファーの決断モーダルを開く
+ */
+function openMegaOfferModal() {
+  const offer = gameState.pendingMegaOffer;
+  if (!offer) return;
+
+  const playerClub = getPlayerClub();
+  const target = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+  if (!target) {
+    gameState.pendingMegaOffer = null;
+    renderAll();
+    return;
+  }
+
+  const ovr = getPlayerOverallRating(target);
+  const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
+
   showGmModal({
-    category: 'EUROPEAN MEGA TRANSFER OFFER',
-    title: `${megaClubObj.country}の名門「${megaClubObj.name}」からの強奪オファー`,
-    description: `${gameState.gmName} GM、緊急案件です。今季活躍を見せる当クラブの主力 ${target.pos} ${target.name}（${target.age}歳）に対し、${megaClubObj.country}のメガクラブ「${megaClubObj.name}」から破格の移籍金オファーが届きました。売却して莫大なクラブ資金（£）を得るか、拒否して戦力を維持するか決断してください。`,
-    detailHtml: `対象選手：[${target.pos}] ${target.name}（総合力 ${ovr} / 今季 ${target.appearances}試合 ${target.goals}得点 / 評価 ${avgRating}）<br>提示移籍金：<strong class="accent-gold">${formatMoney(offerAmount)}</strong>（市場評価額の約2倍）`,
+    category: 'EUROPEAN MEGA TRANSFER OFFER / CRITICAL',
+    title: `${offer.megaClubName}から #${target.squadNumber || offer.squadNumber} ${target.name} に対し 移籍金${formatMoney(offer.offerAmount)} の正式オファー`,
+    description: `${gameState.gmName} GM、緊急案件です。当クラブの主力 ${target.pos} #${target.squadNumber || offer.squadNumber} ${target.name}（${target.age}歳）に対し、${offer.megaClubCountry}の名門「${offer.megaClubName}」から破格の移籍金 ${formatMoney(offer.offerAmount)} の買取オファーが届きました。受諾して莫大なクラブ資金を得るか、拒否して戦力を維持するか決断してください。`,
+    detailHtml: `対象選手：<strong>#${target.squadNumber || offer.squadNumber} [${target.pos}] ${target.name}</strong>（OVR ${ovr} / 今季 ${target.appearances}試合 ${target.goals}得点 / 平均評価 ${avgRating}）<br>買収提示額：<strong class="accent-gold">${formatMoney(offer.offerAmount)}</strong>（即時入金）<br>拒否時の影響：サポーター支持 +250人 ／ 本人のプライド上昇により次回契約更新時の要求年俸が +12% 上昇（契約残年数2年以下へ短縮）`,
     actions: [
       {
-        label: `売却を受諾する（+${formatMoney(offerAmount)}）`,
+        label: `【オファー受諾】売却して移籍金を受領（+${formatMoney(offer.offerAmount)}）`,
         className: 'btn btn-accent',
         onClick: () => {
-          playerClub.funds += offerAmount;
-          playerClub.players = playerClub.players.filter(p => p.id !== target.id);
-          ensureValidSquadAndStarters(playerClub);
-          renderAll();
+          acceptPendingMegaOffer();
         }
       },
       {
-        label: 'オファーを拒否して戦力維持（サポーター +250人）',
+        label: '【オファー拒否】戦力維持・引き止め（要求年俸上昇 / ファン+250人）',
+        className: 'btn btn-primary',
+        onClick: () => {
+          rejectPendingMegaOffer();
+        }
+      },
+      {
+        label: '保留して閉じる（GMタスクからいつでも対応可能）',
         className: 'btn btn-secondary',
         onClick: () => {
-          playerClub.supporters += 250;
           renderAll();
         }
       }
     ]
   });
+}
+
+/**
+ * メガクラブからの強奪オファーを受諾（選手離脱＋移籍金即時加算）
+ */
+function acceptPendingMegaOffer() {
+  const offer = gameState.pendingMegaOffer;
+  if (!offer) return;
+
+  const playerClub = getPlayerClub();
+  const target = playerClub.players.find(p => p.id === offer.playerId);
+  if (target) {
+    playerClub.funds += offer.offerAmount;
+    playerClub.players = playerClub.players.filter(p => p.id !== target.id);
+    ensureValidSquadAndStarters(playerClub);
+    gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(offer.offerAmount)} が即時加算されました。`;
+  }
+
+  gameState.pendingMegaOffer = null;
+  renderAll();
+}
+
+/**
+ * メガクラブからの強奪オファーを拒否（戦力維持・モチベーションおよび契約状況に影響）
+ */
+function rejectPendingMegaOffer() {
+  const offer = gameState.pendingMegaOffer;
+  if (!offer) return;
+
+  const playerClub = getPlayerClub();
+  const target = playerClub.players.find(p => p.id === offer.playerId);
+  if (target) {
+    playerClub.supporters += 250;
+    target.megaOfferRejected = true;
+    target.contractYears = Math.min(target.contractYears || 2, 2);
+    const baseDemand = calculatePlayerDemandSalary(target);
+    target.demandedSalary = Math.round((baseDemand * 1.12) / 50) * 50;
+    gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求年俸が ${formatMoney(target.demandedSalary)} に上昇・契約延長交渉が可能）。`;
+  }
+
+  gameState.pendingMegaOffer = null;
+  renderAll();
 }
 
 /**
@@ -2508,63 +2593,531 @@ function processSeasonEnd(isSkipped = false) {
 
   switchTab('market');
 
-  if (!isSkipped && Math.random() < 0.65) {
-    triggerMegaOfferEvent();
-  }
+  // シーズン終了時も海外メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
+  triggerMegaOfferEvent(!isSkipped);
 }
 
 /**
- * 選手の契約延長（年俸交渉・+3年契約更新）
+ * 選手の活躍度（今季得点・平均評価点・OVR）に応じた要求年俸（単位：£1K）を算出
  */
-function extendPlayerContract(playerId) {
+function calculatePlayerDemandSalary(player) {
+  if (player.demandedSalary && player.demandedSalary > 0) {
+    return player.demandedSalary;
+  }
+  const assessed = calculatePlayerSalary(player.pos, player.atk, player.def, player.sta, player.age);
+  const goalBonus = (player.goals || 0) * 90;
+  const avgRat = player.appearances > 0 ? player.totalRating / player.appearances : 6.4;
+  const ratingBonus = player.appearances >= 3 ? Math.max(0, Math.round((avgRat - 6.4) * 400)) : 0;
+  const baseDemand = Math.max(assessed, Math.round(player.salary * 1.05)) + goalBonus + ratingBonus;
+  const prideFactor = player.megaOfferRejected ? 1.12 : 1.0;
+  const demanded = Math.max(800, Math.round((baseDemand * prideFactor) / 50) * 50);
+  player.demandedSalary = demanded;
+  return demanded;
+}
+
+/**
+ * 選手の年齢・OVRに応じた希望契約年数（1〜4年）を算出
+ */
+function calculatePlayerDemandYears(player) {
+  if (player.demandedYears && player.demandedYears >= 1 && player.demandedYears <= 4) {
+    return player.demandedYears;
+  }
+  const ovr = getPlayerOverallRating(player);
+  let years = 3;
+  if (player.age <= 24) {
+    years = ovr >= 70 ? 4 : 3;
+  } else if (player.age <= 29) {
+    years = 3;
+  } else if (player.age <= 32) {
+    years = 2;
+  } else {
+    years = 1;
+  }
+  player.demandedYears = years;
+  return years;
+}
+
+/**
+ * 契約更新交渉モーダルを開く（契約残り1〜2年の自クラブ選手対象）
+ */
+function openContractNegotiationModal(playerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
-  const target = playerClub.players.find(p => p.id === playerId);
+  const target = playerClub ? playerClub.players.find(p => p.id === playerId) : null;
   if (!target) return;
 
-  const assessedSalary = calculatePlayerSalary(target.pos, target.atk, target.def, target.sta, target.age);
-  const newSalary = Math.max(800, Math.round(Math.max(assessedSalary, target.salary * 1.05) / 50) * 50);
+  closePlayerProfileModal();
 
-  target.salary = newSalary;
-  target.contractYears = Math.min(5, (target.contractYears || 0) + 3);
+  const demandedSalary = calculatePlayerDemandSalary(target);
+  const demandedYears = calculatePlayerDemandYears(target);
+  const failCount = target.renewalFailCount || 0;
+  const isRefused = Boolean(target.contractRefused);
 
+  let statusType = 'info';
+  let statusMessage = `代理人：「#${target.squadNumber || '-'} ${target.name} は今季の貢献度と実力（OVR ${getPlayerOverallRating(target)} / ${target.goals}得点）を踏まえ、年俸 ${formatMoney(demandedSalary)}・${demandedYears}年契約を希望しています。」`;
+
+  if (isRefused) {
+    statusType = 'error';
+    statusMessage = `【交渉打ち切り済】2回連続の条件不一致により、#${target.squadNumber || '-'} ${target.name} の代理人は契約延長交渉を打ち切りました。オフシーズンにフリー移籍での退団が確定しています。`;
+  } else if (failCount === 1) {
+    statusType = 'warn';
+    statusMessage = `【再交渉（残りチャンス1回）】前回の提示額に不満を示し、要求年俸が ${formatMoney(demandedSalary)} に引き上げられています。今回合意できない場合は交渉決裂（フリー流出確定）となります。`;
+  }
+
+  gameState.negotiationSession = {
+    mode: 'renewal',
+    playerId: target.id,
+    offeredSalary: demandedSalary,
+    offeredYears: demandedYears,
+    offeredFee: 0,
+    demandedSalary,
+    demandedYears,
+    demandedFee: 0,
+    failCount,
+    completed: isRefused,
+    statusType,
+    statusMessage
+  };
+
+  renderNegotiationModal();
+  const modalEl = document.getElementById('negotiation-modal');
+  if (modalEl) modalEl.classList.remove('hidden');
+}
+
+/**
+ * 移籍市場の獲得交渉モーダルを開く
+ */
+function openTransferNegotiationModal(candidateId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const candidate = gameState.transferMarket.find(c => c.id === candidateId);
+  if (!candidate) return;
+
+  closePlayerProfileModal();
+
+  const demandedFee = candidate.transferFee;
+  const demandedSalary = candidate.salary;
+  const demandedYears = clamp(candidate.contractYears >= 2 ? 3 : 3, 1, 4);
+  const failCount = candidate.transferFailCount || 0;
+  const isRefused = Boolean(candidate.negotiationFailed);
+
+  let statusType = 'info';
+  let statusMessage = `所属クラブは移籍金 ${formatMoney(demandedFee)}、${candidate.name} 本人は年俸 ${formatMoney(demandedSalary)}（${demandedYears}年契約）を要求しています。予算（${formatMoney(playerClub.funds)}）の範囲内で条件を提示してください。`;
+
+  if (isRefused) {
+    statusType = 'error';
+    statusMessage = `【移籍交渉決裂済】2回連続で合意に至らなかったため、所属クラブおよび代理人が今ウィンドウでの交渉を打ち切りました。`;
+  } else if (failCount === 1) {
+    statusType = 'warn';
+    statusMessage = `【再オファー（残りチャンス1回）】前回の提示条件が拒否され、相手側の要求条件が引き上げられています。今回合意できない場合は交渉打ち切りとなります。`;
+  }
+
+  gameState.negotiationSession = {
+    mode: 'transfer',
+    playerId: candidate.id,
+    offeredSalary: demandedSalary,
+    offeredYears: demandedYears,
+    offeredFee: demandedFee,
+    demandedSalary,
+    demandedYears,
+    demandedFee,
+    failCount,
+    completed: isRefused,
+    statusType,
+    statusMessage
+  };
+
+  renderNegotiationModal();
+  const modalEl = document.getElementById('negotiation-modal');
+  if (modalEl) modalEl.classList.remove('hidden');
+}
+
+/**
+ * 交渉モーダル（契約更新 / 移籍獲得）の内容を描画・同期する
+ */
+function renderNegotiationModal() {
+  const session = gameState.negotiationSession;
+  if (!session) return;
+
+  const playerClub = getPlayerClub();
+  const isRenewal = session.mode === 'renewal';
+  const target = isRenewal
+    ? (playerClub.players.find(p => p.id === session.playerId) || null)
+    : (gameState.transferMarket.find(c => c.id === session.playerId) || null);
+
+  if (!target) return;
+
+  const ovr = getPlayerOverallRating(target);
+  const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
+  const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
+
+  const squadNumEl = document.getElementById('neg-squad-num');
+  if (squadNumEl) {
+    squadNumEl.textContent = isRenewal ? `#${target.squadNumber || 10}` : 'SIGN';
+  }
+
+  const catEl = document.getElementById('neg-modal-category');
+  if (catEl) {
+    catEl.textContent = isRenewal
+      ? 'CONTRACT RENEWAL NEGOTIATION（契約延長・引き止め交渉）'
+      : 'TRANSFER MARKET NEGOTIATION（移籍金・個人条件交渉）';
+  }
+
+  const posPillEl = document.getElementById('neg-pos-pill');
+  if (posPillEl) {
+    const subText = subPosList.length > 0 ? ` / SUB: ${subPosList.join(',')}` : '';
+    posPillEl.innerHTML = `<span class="profile-pos-badge-main">MAIN: ${primaryPos}${subText}</span>`;
+  }
+
+  const titleEl = document.getElementById('neg-modal-title');
+  if (titleEl) titleEl.textContent = target.name;
+
+  const metaEl = document.getElementById('neg-player-meta');
+  if (metaEl) {
+    const avgRat = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
+    metaEl.innerHTML = isRenewal
+      ? `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>今季成績: <strong>${target.appearances}試合 ${target.goals}得点 (評価 ${avgRat})</strong></span><span>|</span><span>現契約: <strong class="accent-gold">${formatMoney(target.salary)} (残り${target.contractYears}年)</strong></span>`
+      : `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>成長型: <strong>${getGrowthCurveLabel(target.growthCurve)}</strong></span><span>|</span><span>現所属契約: <strong>残り${target.contractYears}年</strong></span>`;
+  }
+
+  const maxFails = 2;
+  const remainingTries = Math.max(0, maxFails - (session.failCount || 0));
+  let patienceClass = '';
+  let patienceLabel = `交渉猶予：残り ${remainingTries} 回`;
+  if (session.completed && session.statusType === 'success') {
+    patienceLabel = '合意成立 (AGREED)';
+  } else if (remainingTries === 1) {
+    patienceClass = 'patience-warn';
+    patienceLabel = '最終交渉 (LAST CHANCE)';
+  } else if (remainingTries === 0) {
+    patienceClass = 'patience-danger';
+    patienceLabel = '交渉決裂 (BREAKDOWN)';
+  }
+
+  // スライダー範囲の算出
+  const minSalary = Math.max(500, Math.round((session.demandedSalary * 0.65) / 50) * 50);
+  const maxSalary = Math.max(minSalary + 1000, Math.round((session.demandedSalary * 1.55) / 50) * 50);
+
+  const minFee = isRenewal ? 0 : Math.max(300, Math.round((session.demandedFee * 0.65) / 100) * 100);
+  const maxFee = isRenewal ? 0 : Math.max(minFee + 2000, Math.round((session.demandedFee * 1.45) / 100) * 100);
+
+  const feeControlHtml = isRenewal ? '' : `
+    <div class="neg-control-group">
+      <div class="neg-control-header">
+        <span class="neg-control-label">提示移籍金（所属元クラブへの支払額）</span>
+        <span class="neg-control-val" id="neg-offered-fee-display">${formatMoney(session.offeredFee)}</span>
+      </div>
+      <div class="neg-slider-row">
+        <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
+        <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+      </div>
+      <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+        <span>相手クラブ要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
+        <span>現在クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
+      </div>
+    </div>
+  `;
+
+  const curContractY = target.contractYears || 0;
+
+  const yearsButtonsHtml = [1, 2, 3, 4].map(yr => `
+    <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+      ${yr}年契約
+    </button>
+  `).join('');
+
+  const demandRowsHtml = isRenewal ? `
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">現在の年俸 ／ 現在の残契約</span>
+      <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${curContractY}年</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">今季の活躍度（出場 / ゴール / OVR）</span>
+      <span class="neg-demand-val accent-green">${target.appearances}試合 / ${target.goals}G / OVR ${ovr}</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">代理人の要求年俸</span>
+      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">代理人の要求契約期間</span>
+      <span class="neg-demand-val">${session.demandedYears}年契約</span>
+    </div>
+  ` : `
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">所属元クラブの要求移籍金</span>
+      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (残1年割安)' : ''}</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">選手本人の要求年俸</span>
+      <span class="neg-demand-val accent-green">${formatMoney(session.demandedSalary)} / 年</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">選手の希望契約期間</span>
+      <span class="neg-demand-val">${session.demandedYears}年契約</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">当クラブ予算 ／ 登録枠</span>
+      <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+    </div>
+  `;
+
+  const bodyEl = document.getElementById('neg-modal-body');
+  if (bodyEl) {
+    bodyEl.innerHTML = `
+      <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
+        ${session.statusMessage}
+      </div>
+
+      <div class="neg-grid">
+        <!-- 左：相手側（代理人・所属クラブ）の要求条件 -->
+        <div class="neg-panel-box">
+          <div class="neg-box-header">
+            <span class="neg-box-title">${isRenewal ? 'AGENT DEMANDS（代理人・選手要求）' : 'CLUB & AGENT DEMANDS（相手側要求条件）'}</span>
+            <span class="neg-patience-badge ${patienceClass}">${patienceLabel}</span>
+          </div>
+          <div class="neg-demand-list">
+            ${demandRowsHtml}
+          </div>
+        </div>
+
+        <!-- 右：GM提示条件コントロール -->
+        <div class="neg-panel-box">
+          <div class="neg-box-header">
+            <span class="neg-box-title">GM OFFER TERMS（当クラブ提示条件の調整）</span>
+            <span class="mono text-muted" style="font-size: 10px;">GBP (£)</span>
+          </div>
+
+          ${feeControlHtml}
+
+          <div class="neg-control-group">
+            <div class="neg-control-header">
+              <span class="neg-control-label">提示年俸（年間サラリー）</span>
+              <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+            </div>
+            <div class="neg-slider-row">
+              <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+              <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+            </div>
+            <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+              <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+              <span>増減ステップ: £50K</span>
+            </div>
+          </div>
+
+          <div class="neg-control-group">
+            <div class="neg-control-header">
+              <span class="neg-control-label">提示契約年数（1〜4年）</span>
+              <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
+            </div>
+            <div class="neg-years-group" id="neg-years-group">
+              ${yearsButtonsHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const submitBtn = document.getElementById('btn-submit-neg-offer');
+  const cancelBtn = document.getElementById('btn-cancel-neg-modal');
+  if (submitBtn) {
+    if (session.completed) {
+      submitBtn.classList.add('hidden');
+    } else {
+      submitBtn.classList.remove('hidden');
+      submitBtn.textContent = isRenewal ? 'この条件で契約延長オファーを提示' : 'この条件で獲得オファーを提示';
+    }
+  }
+  if (cancelBtn) {
+    cancelBtn.textContent = session.completed ? '閉じる' : '交渉を保留して閉じる';
+  }
+}
+
+/**
+ * 交渉モーダルで「オファー提示」をクリックした際の合意/保留/決裂判定ロジック
+ */
+function submitNegotiationOffer() {
+  const session = gameState.negotiationSession;
+  if (!session || session.completed) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (session.mode === 'renewal') {
+    const target = playerClub.players.find(p => p.id === session.playerId);
+    if (!target) return;
+
+    // 契約年数が要求より短い場合は年俸の要求水準がわずかに上がり、長い場合はわずかに緩和
+    const yearDiff = session.offeredYears - session.demandedYears;
+    const yearAdjustment = yearDiff >= 0 ? 0.97 : (1 + Math.abs(yearDiff) * 0.04);
+    const requiredSalary = Math.round(session.demandedSalary * yearAdjustment);
+
+    if (session.offeredSalary >= requiredSalary) {
+      // 合意（契約更新成立：既存の残り年数に提示契約年数が加算）
+      const prevYears = target.contractYears || 0;
+      const newContractYears = Math.min(5, prevYears + session.offeredYears);
+      target.salary = session.offeredSalary;
+      target.contractYears = newContractYears;
+      target.renewalFailCount = 0;
+      target.demandedSalary = null;
+      target.demandedYears = null;
+      target.megaOfferRejected = false;
+      target.contractRefused = false;
+
+      session.completed = true;
+      session.statusType = 'success';
+      session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（年俸 ${formatMoney(session.offeredSalary)} ／ ${session.offeredYears}年契約）に快く合意し、契約更新サインを完了しました！（残契約：${newContractYears}年）`;
+      gameState.facilityFeedback = `【契約更新合意】#${target.squadNumber || '-'} ${target.name} と年俸 ${formatMoney(session.offeredSalary)}（${session.offeredYears}年契約締結 / 残り${newContractYears}年）で契約を更新しました。`;
+      renderNegotiationModal();
+      renderAll();
+      return;
+    }
+
+    // 不満・決裂判定
+    target.renewalFailCount = (target.renewalFailCount || 0) + 1;
+    session.failCount = target.renewalFailCount;
+
+    if (target.renewalFailCount >= 2) {
+      // 2回連続決裂 -> 交渉打ち切り（オフにフリー流出確定）
+      target.contractRefused = true;
+      target.contractYears = Math.min(target.contractYears, 1);
+      session.completed = true;
+      session.statusType = 'error';
+      session.statusMessage = `【交渉決裂・打ち切り】2度目の低額オファー（提示 ${formatMoney(session.offeredSalary)}）に対し、#${target.squadNumber || '-'} ${target.name} 陣営が態度を硬化させ交渉打ち切りを通告しました。オフシーズンにフリー移籍での退団が確定しました。`;
+      gameState.facilityFeedback = `【契約交渉決裂】#${target.squadNumber || '-'} ${target.name} との契約延長交渉が決裂しました（オフにフリー流出確定）。`;
+    } else {
+      // 1回目不満・保留（要求引き上げ）
+      const raisedSalary = Math.round((session.demandedSalary * 1.08) / 50) * 50;
+      target.demandedSalary = raisedSalary;
+      session.demandedSalary = raisedSalary;
+      session.offeredSalary = raisedSalary;
+      session.statusType = 'warn';
+      session.statusMessage = `【不満・保留（要求引き上げ ／ 残り交渉機会1回）】代理人：「提示額（${formatMoney(session.offeredSalary)}）は当方の評価と乖離しています。」態度が硬化し、要求年俸が ${formatMoney(raisedSalary)} へ引き上げられました。次回の提示で合意できない場合、交渉は決裂します。`;
+    }
+
+    renderNegotiationModal();
+    renderAll();
+    return;
+  }
+
+  // 移籍市場獲得交渉モード（mode === 'transfer'）
+  const idx = gameState.transferMarket.findIndex(c => c.id === session.playerId);
+  if (idx === -1) return;
+  const candidate = gameState.transferMarket[idx];
+
+  if (playerClub.players.length >= MAX_SQUAD_SIZE) {
+    session.statusType = 'error';
+    session.statusMessage = `【獲得不可】チームの所属選手枠が上限（${MAX_SQUAD_SIZE}名）に達しているため獲得できません。先に選手を整理してください。`;
+    renderNegotiationModal();
+    return;
+  }
+
+  if (playerClub.funds < session.offeredFee) {
+    session.statusType = 'error';
+    session.statusMessage = `【予算不足】提示移籍金（${formatMoney(session.offeredFee)}）が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。移籍金を調整してください。`;
+    renderNegotiationModal();
+    return;
+  }
+
+  const feeThresholdFactor = candidate.contractYears === 1 ? 0.92 : 0.96;
+  const requiredFee = Math.round(session.demandedFee * feeThresholdFactor);
+  const salaryYearFactor = session.offeredYears >= session.demandedYears ? 0.96 : 1.02;
+  const requiredSalary = Math.round(session.demandedSalary * salaryYearFactor);
+
+  const clubAgreed = session.offeredFee >= requiredFee;
+  const playerAgreed = session.offeredSalary >= requiredSalary;
+
+  if (clubAgreed && playerAgreed) {
+    // 移籍成立！
+    playerClub.funds -= session.offeredFee;
+    candidate.salary = session.offeredSalary;
+    candidate.contractYears = session.offeredYears;
+    candidate.isStarter = false;
+    candidate.assignedPos = null;
+    candidate.slotIndex = null;
+    candidate.squadNumber = null;
+    candidate.appearances = 0;
+    candidate.goals = 0;
+    candidate.totalRating = 0;
+    candidate.transferFailCount = 0;
+    candidate.negotiationFailed = false;
+
+    playerClub.players.push(candidate);
+    ensureClubSquadNumbers(playerClub);
+
+    session.completed = true;
+    session.statusType = 'success';
+    session.statusMessage = `【移籍合意・獲得完了】所属元クラブおよび ${candidate.name} 本人と全面合意に達しました！移籍金 ${formatMoney(session.offeredFee)}・年俸 ${formatMoney(session.offeredSalary)}（${session.offeredYears}年契約 / 背番号 #${candidate.squadNumber}）で当クラブへ正式加入しました。`;
+    gameState.facilityFeedback = `【新戦力獲得】${candidate.pos} #${candidate.squadNumber} ${candidate.name} を移籍金 ${formatMoney(session.offeredFee)}・年俸 ${formatMoney(session.offeredSalary)} で獲得しました。`;
+
+    // モーダル再描画後に移籍市場配列から削除
+    renderNegotiationModal();
+    gameState.transferMarket.splice(idx, 1);
+    renderAll();
+    return;
+  }
+
+  // 不満・決裂判定
+  candidate.transferFailCount = (candidate.transferFailCount || 0) + 1;
+  session.failCount = candidate.transferFailCount;
+
+  if (candidate.transferFailCount >= 2) {
+    candidate.negotiationFailed = true;
+    session.completed = true;
+    session.statusType = 'error';
+    session.statusMessage = `【移籍交渉決裂】2度目のオファーも条件面で折り合わず、相手クラブおよび ${candidate.name} の代理人から交渉打ち切りが通告されました。`;
+  } else {
+    let reasonParts = [];
+    if (!clubAgreed) {
+      const raisedFee = Math.round((session.demandedFee * 1.05) / 100) * 100;
+      candidate.transferFee = raisedFee;
+      session.demandedFee = raisedFee;
+      session.offeredFee = Math.min(playerClub.funds, raisedFee);
+      reasonParts.push(`所属クラブが移籍金不足を理由に拒否（新要求額: ${formatMoney(raisedFee)}）`);
+    }
+    if (!playerAgreed) {
+      const raisedSal = Math.round((session.demandedSalary * 1.07) / 50) * 50;
+      candidate.salary = raisedSal;
+      session.demandedSalary = raisedSal;
+      session.offeredSalary = raisedSal;
+      reasonParts.push(`選手代理人が年俸不足を理由に保留（新要求年俸: ${formatMoney(raisedSal)}）`);
+    }
+    session.statusType = 'warn';
+    session.statusMessage = `【条件不一致・再交渉（残りチャンス1回）】${reasonParts.join(' ／ ')}。次回の提示で合意できない場合、移籍交渉は決裂します。`;
+  }
+
+  renderNegotiationModal();
   renderAll();
 }
 
 /**
- * 移籍市場から選手を獲得する
+ * 交渉モーダルを閉じる
+ */
+function closeNegotiationModal() {
+  const modalEl = document.getElementById('negotiation-modal');
+  if (modalEl) {
+    modalEl.classList.add('hidden');
+  }
+  gameState.negotiationSession = null;
+}
+
+/**
+ * 選手の契約延長ボタン処理（契約更新交渉モーダルを起動）
+ */
+function extendPlayerContract(playerId) {
+  openContractNegotiationModal(playerId);
+}
+
+/**
+ * 移籍市場から選手を獲得するボタン処理（移籍交渉モーダルを起動）
  */
 function signMarketPlayer(candidateId) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
-
-  const playerClub = getPlayerClub();
-  if (playerClub.players.length >= MAX_SQUAD_SIZE) {
-    return;
-  }
-
-  const idx = gameState.transferMarket.findIndex(c => c.id === candidateId);
-  if (idx === -1) return;
-
-  const candidate = gameState.transferMarket[idx];
-  if (playerClub.funds < candidate.transferFee) {
-    return;
-  }
-
-  playerClub.funds -= candidate.transferFee;
-  candidate.isStarter = false;
-  candidate.assignedPos = null;
-  candidate.slotIndex = null;
-  candidate.squadNumber = null;
-  candidate.appearances = 0;
-  candidate.goals = 0;
-  candidate.totalRating = 0;
-  candidate.contractYears = Math.max(3, candidate.contractYears);
-  playerClub.players.push(candidate);
-  ensureClubSquadNumbers(playerClub);
-
-  gameState.transferMarket.splice(idx, 1);
-  renderAll();
+  openTransferNegotiationModal(candidateId);
 }
 
 /**
@@ -2707,6 +3260,20 @@ function dismissYouthCandidate(candidateId) {
  */
 function handleGmDutyAction(actionKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
+
+  if (actionKey === 'open-mega-offer') {
+    openMegaOfferModal();
+    return;
+  }
+
+  if (actionKey && actionKey.startsWith('negotiate-player:')) {
+    const pid = actionKey.split(':')[1];
+    switchTab('roster');
+    const table = document.getElementById('roster-tbody');
+    if (table) table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    openContractNegotiationModal(pid);
+    return;
+  }
 
   if (actionKey === 'play-match') {
     switchTab('standings');
@@ -2967,10 +3534,10 @@ function startNextSeason() {
 
   const playerClub = getPlayerClub();
 
-  // 契約残り0年のまま更新されなかった選手はフリー移籍でチームを離脱
-  const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0);
+  // 契約残り0年のまま更新されなかった選手、または交渉決裂で流出確定した選手はフリー移籍でチームを離脱
+  const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 || p.contractRefused);
   if (expiredPlayers.length > 0) {
-    playerClub.players = playerClub.players.filter(p => p.contractYears > 0);
+    playerClub.players = playerClub.players.filter(p => p.contractYears > 0 && !p.contractRefused);
     ensureValidSquadAndStarters(playerClub);
   }
 
@@ -2998,6 +3565,7 @@ function startNextSeason() {
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
   gameState.selectedSlotIndex = null;
+  gameState.pendingMegaOffer = null;
 
   for (const club of gameState.clubs) {
     club.played = 0;
@@ -3737,10 +4305,13 @@ function renderRoster() {
     const canRelease = playerClub.players.length > 11 && !(p.pos === 'GK' && gkCount <= 1) && !gameState.isGameOver;
     const releaseBtnLabel = canRelease ? '自由契約' : '必須枠';
 
-    const canExtend = p.contractYears <= 1 && !gameState.isGameOver;
-    const extendBtnHtml = canExtend
-      ? `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="年俸を改定し契約期間を+3年延長">契約延長</button>`
-      : '';
+    const canExtend = p.contractYears <= 2 && !gameState.isGameOver;
+    let extendBtnHtml = '';
+    if (p.contractRefused) {
+      extendBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled title="交渉決裂のためオフシーズンにフリー流出確定">交渉決裂</button>`;
+    } else if (canExtend) {
+      extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
+    }
 
     const starterToggleBtn = p.isStarter
       ? `<button type="button" class="btn btn-starter-toggle btn-starter-active" data-starter-id="${p.id}" title="クリックでベンチと入替">スタメン</button>`
@@ -3768,6 +4339,8 @@ function renderRoster() {
     }
 
     const injuryBadge = p.injuryWeeks > 0 ? `<span class="sub-badge badge-injury">負傷:残${p.injuryWeeks}節</span>` : '';
+    const refusedBadge = p.contractRefused ? `<span class="sub-badge badge-refused">流出確定</span>` : '';
+    const moraleBadge = (!p.contractRefused && p.megaOfferRejected) ? `<span class="sub-badge badge-morale-down">昇給要求</span>` : '';
 
     let ovrDisplay = `<strong>${effOvr}</strong>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
@@ -3780,12 +4353,17 @@ function renderRoster() {
 
     let contractClass = '';
     let contractText = `${p.contractYears}年`;
-    if (p.contractYears <= 0) {
+    if (p.contractRefused) {
+      contractClass = 'contract-expired';
+      contractText = '決裂(流出)';
+    } else if (p.contractYears <= 0) {
       contractClass = 'contract-expired';
       contractText = '満了(0年)';
     } else if (p.contractYears === 1) {
       contractClass = 'contract-expiring';
       contractText = '残り1年';
+    } else if (p.contractYears === 2) {
+      contractText = '残り2年';
     }
 
     return `
@@ -3797,7 +4375,7 @@ function renderRoster() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
             <span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
           </button>
-          ${fitBadge}${injuryBadge}
+          ${fitBadge}${injuryBadge}${refusedBadge}${moraleBadge}
         </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
@@ -3824,7 +4402,7 @@ function renderRoster() {
 }
 
 /**
- * 移籍市場の描画（複数適性表示・選手プロフィール起動・契約残年数付き）
+ * 移籍市場の描画（複数適性表示・選手プロフィール起動・移籍交渉モーダル起動付き）
  */
 function renderMarket() {
   const playerClub = getPlayerClub();
@@ -3845,9 +4423,9 @@ function renderMarket() {
 
   const noteEl = document.getElementById('market-status-note');
   if (gameState.isSeasonOver) {
-    noteEl.textContent = '【オフシーズン補強期間】選手名をクリックするとスカウト詳細（サブ適性・利き足・特徴）を確認できます。残り1年の選手は格安です。';
+    noteEl.textContent = '【オフシーズン補強期間】「獲得交渉」ボタンから移籍金と個人年俸を提示して交渉できます。残り1年の選手は移籍金が割安です。';
   } else {
-    noteEl.textContent = 'シーズン中も獲得候補のスカウティング（選手名クリックで詳細表示）および緊急補強が可能です（所属上限：最大20名）。';
+    noteEl.textContent = 'シーズン中も獲得候補のスカウティング（選手名クリックで詳細表示）および「獲得交渉」による緊急補強が可能です（最大20名）。';
   }
 
   const tbody = document.getElementById('market-tbody');
@@ -3864,15 +4442,19 @@ function renderMarket() {
     const ovr = getPlayerOverallRating(c);
     const growthLabel = getGrowthCurveLabel(c.growthCurve);
     const growthBadge = `<span class="growth-pill growth-${c.growthCurve}">${growthLabel}</span>`;
-    const canAfford = playerClub.funds >= c.transferFee;
-    const canSign = !isFull && canAfford && !gameState.isGameOver && !gameState.isSimulating;
+    const minPossibleFee = Math.round(c.transferFee * 0.90);
+    const canAfford = playerClub.funds >= minPossibleFee;
+    const isFailed = Boolean(c.negotiationFailed);
+    const canSign = !isFull && canAfford && !isFailed && !gameState.isGameOver && !gameState.isSimulating;
 
-    let btnText = '獲得する';
-    if (isFull) btnText = '枠上限(20名)';
+    let btnText = '獲得交渉';
+    if (isFailed) btnText = '交渉決裂';
+    else if (isFull) btnText = '枠上限(20名)';
     else if (!canAfford) btnText = '資金不足';
 
     const isBargain = c.contractYears === 1;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・格安</span>' : '';
+    const failedBadge = isFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
     const contractText = isBargain ? '<span class="contract-expiring">残り1年</span>' : `${c.contractYears}年`;
 
     return `
@@ -3882,7 +4464,7 @@ function renderMarket() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${c.id}" title="クリックで選手詳細プロフィールを表示">
             ${c.name}
           </button>
-          ${bargainBadge}
+          ${bargainBadge}${failedBadge}
         </td>
         <td class="col-num">${c.age}</td>
         <td class="col-growth">${growthBadge}</td>
@@ -3918,6 +4500,26 @@ function renderGmDuties() {
     subtitleEl.textContent = gameState.isSeasonOver
       ? `Season ${gameState.season} オフシーズン経営・編成タスク`
       : `Season ${gameState.season} / 第${Math.min(gameState.currentWeek + 1, gameState.totalWeeks)}節 優先業務`;
+  }
+
+  const duties = [];
+
+  // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
+  if (gameState.pendingMegaOffer) {
+    const offer = gameState.pendingMegaOffer;
+    const targetExists = playerClub.players.some(p => p.id === offer.playerId);
+    if (targetExists) {
+      duties.push({
+        level: 'critical',
+        badge: '緊急オファー / CRITICAL',
+        title: `${offer.megaClubName}から #${offer.squadNumber} ${offer.playerName} に対し 移籍金${formatMoney(offer.offerAmount)} の正式オファーが届きました`,
+        desc: `${offer.megaClubCountry}の名門「${offer.megaClubName}」が主力 ${offer.playerPos} #${offer.squadNumber} ${offer.playerName}（OVR ${offer.ovr}）の獲得を要請しています。受諾（+${formatMoney(offer.offerAmount)}）か拒否（戦力維持）か決断してください。`,
+        btnText: 'オファー対応',
+        action: 'open-mega-offer'
+      });
+    } else {
+      gameState.pendingMegaOffer = null;
+    }
   }
 
   // 1. 必須タスク（CRITICAL / 赤）
@@ -3962,11 +4564,15 @@ function renderGmDuties() {
       action: 'play-match'
     };
   }
+  duties.push(criticalDuty);
 
   // 2. 推奨タスク（RECOMMENDED / 黄）
   const starters = playerClub.players.filter(p => p.isStarter);
   const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
-  const expiringPlayers = playerClub.players.filter(p => p.contractYears <= 1);
+  const expiringPlayers = playerClub.players
+    .filter(p => p.contractYears <= 2 && !p.contractRefused)
+    .sort((a, b) => a.contractYears - b.contractYears || getPlayerOverallRating(b) - getPlayerOverallRating(a));
+  const urgentExpiring = expiringPlayers.filter(p => p.contractYears <= 1 || p.megaOfferRejected);
   const outOfPosStarters = starters.filter(p => getPositionFitInfo(p, p.assignedPos || p.pos).type === 'out');
 
   let recommendedDuty = null;
@@ -3979,12 +4585,13 @@ function renderGmDuties() {
       btnText: '作戦ボードへ移動',
       action: 'goto-pitch'
     };
-  } else if (expiringPlayers.length > 0) {
+  } else if (urgentExpiring.length > 0) {
+    const topTarget = urgentExpiring[0];
     recommendedDuty = {
       level: 'recommended',
       badge: '推奨 / RECOMMENDED',
-      title: `契約延長交渉（残り1年以下：${expiringPlayers.length}名）`,
-      desc: `${expiringPlayers[0].name} ら${expiringPlayers.length}名が契約満了間近です。放置するとオフにフリー移籍で離脱します。`,
+      title: `契約延長交渉（残り1年以下・昇給要求：${urgentExpiring.length}名）`,
+      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} ら${urgentExpiring.length}名が契約更新時期を迎えています。交渉画面または契約一覧から引き止め交渉を行ってください。`,
       btnText: '契約一覧へ移動',
       action: 'goto-roster-table'
     };
@@ -3997,6 +4604,16 @@ function renderGmDuties() {
       btnText: '作戦ボードへ移動',
       action: 'goto-pitch'
     };
+  } else if (expiringPlayers.length > 0) {
+    const topTarget = expiringPlayers[0];
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '推奨 / RECOMMENDED',
+      title: `契約延長交渉（残り2年以内：${expiringPlayers.length}名）`,
+      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} ら${expiringPlayers.length}名と早期の契約延長交渉が可能です。`,
+      btnText: '契約一覧へ移動',
+      action: 'goto-roster-table'
+    };
   } else {
     recommendedDuty = {
       level: 'recommended',
@@ -4007,6 +4624,7 @@ function renderGmDuties() {
       action: 'goto-pitch'
     };
   }
+  duties.push(recommendedDuty);
 
   // 3. 任意タスク（OPTIONAL / 緑）
   const youthCount = (gameState.youthCandidates || []).length;
@@ -4041,13 +4659,13 @@ function renderGmDuties() {
       level: 'optional',
       badge: '任意 / OPTIONAL',
       title: `移籍市場スカウティング（候補 ${gameState.transferMarket.length}名）`,
-      desc: '移籍市場リストから掘り出し物（契約残り1年の格安選手や若手有望株）のスカウトレポートを確認できます。',
+      desc: '移籍市場リストから掘り出し物（契約残り1年の格安選手や若手有望株）の獲得交渉を行えます。',
       btnText: '移籍市場へ移動',
       action: 'goto-market'
     };
   }
+  duties.push(optionalDuty);
 
-  const duties = [criticalDuty, recommendedDuty, optionalDuty];
   listEl.innerHTML = duties.map(d => `
     <div class="gm-task-card duty-${d.level}">
       <div class="gm-task-main">
@@ -4453,6 +5071,21 @@ function openPlayerProfileModal(playerId) {
     `;
   }
 
+  const footerActionsEl = document.getElementById('profile-footer-actions');
+  if (footerActionsEl) {
+    const isYouth = (gameState.youthCandidates || []).some(y => y.id === p.id);
+    let extraActionBtnHtml = '';
+    if (ctx.isPlayerClub && !isYouth && p.contractYears <= 2) {
+      extraActionBtnHtml = `<button type="button" class="btn btn-accent btn-sm" data-profile-negotiate-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''}>${p.contractRefused ? '交渉決裂（流出確定）' : '契約延長交渉を開く'}</button>`;
+    } else if (isMarket) {
+      extraActionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-profile-negotiate-transfer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>${p.negotiationFailed ? '移籍交渉決裂済' : '移籍獲得交渉を開く'}</button>`;
+    }
+    footerActionsEl.innerHTML = `
+      ${extraActionBtnHtml}
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-close-profile-footer">閉じる</button>
+    `;
+  }
+
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   if (modalEl) {
     modalEl.classList.remove('hidden');
@@ -4633,6 +5266,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.selectedSlotIndex = null;
   gameState.facilities = { stadium: 1, training: 1, scouting: 1 };
   gameState.facilityFeedback = '';
+  gameState.negotiationSession = null;
+  gameState.pendingMegaOffer = null;
 
   gameState.clubs = CLUB_DEFINITIONS.map(def => {
     const isPlayer = def.id === gameState.selectedClubId;
@@ -4888,14 +5523,28 @@ function initGame() {
     });
   }
 
-  // 選手プロフィール詳細モーダルを閉じるイベント（右上✕、下部ボタン、背景クリック、Escキー）
+  // 選手プロフィール詳細モーダルを閉じるイベント＆交渉起動イベント
   const closeProfileBtn = document.getElementById('btn-close-profile-modal');
   if (closeProfileBtn) {
     closeProfileBtn.addEventListener('click', closePlayerProfileModal);
   }
-  const closeProfileFooterBtn = document.getElementById('btn-close-profile-footer');
-  if (closeProfileFooterBtn) {
-    closeProfileFooterBtn.addEventListener('click', closePlayerProfileModal);
+  const profileFooterActions = document.getElementById('profile-footer-actions');
+  if (profileFooterActions) {
+    profileFooterActions.addEventListener('click', (e) => {
+      if (e.target.closest('#btn-close-profile-footer')) {
+        closePlayerProfileModal();
+        return;
+      }
+      const renewalBtn = e.target.closest('[data-profile-negotiate-renewal]');
+      if (renewalBtn && renewalBtn.dataset.profileNegotiateRenewal) {
+        openContractNegotiationModal(renewalBtn.dataset.profileNegotiateRenewal);
+        return;
+      }
+      const transferBtn = e.target.closest('[data-profile-negotiate-transfer]');
+      if (transferBtn && transferBtn.dataset.profileNegotiateTransfer) {
+        openTransferNegotiationModal(transferBtn.dataset.profileNegotiateTransfer);
+      }
+    });
   }
   const profileModalOverlay = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   if (profileModalOverlay) {
@@ -4905,9 +5554,84 @@ function initGame() {
       }
     });
   }
+
+  // 契約更新・移籍獲得交渉モーダルのイベント
+  const negModalOverlay = document.getElementById('negotiation-modal');
+  const closeNegBtn = document.getElementById('btn-close-neg-modal');
+  const cancelNegBtn = document.getElementById('btn-cancel-neg-modal');
+  const submitNegBtn = document.getElementById('btn-submit-neg-offer');
+  const negModalBody = document.getElementById('neg-modal-body');
+
+  if (closeNegBtn) closeNegBtn.addEventListener('click', closeNegotiationModal);
+  if (cancelNegBtn) cancelNegBtn.addEventListener('click', closeNegotiationModal);
+  if (submitNegBtn) submitNegBtn.addEventListener('click', submitNegotiationOffer);
+  if (negModalOverlay) {
+    negModalOverlay.addEventListener('click', (e) => {
+      if (e.target === negModalOverlay) {
+        closeNegotiationModal();
+      }
+    });
+  }
+
+  if (negModalBody) {
+    negModalBody.addEventListener('input', (e) => {
+      const session = gameState.negotiationSession;
+      if (!session || session.completed) return;
+
+      if (e.target.id === 'neg-salary-slider' || e.target.id === 'neg-salary-input') {
+        const val = Math.max(100, parseInt(e.target.value, 10) || session.demandedSalary);
+        session.offeredSalary = val;
+        const slider = document.getElementById('neg-salary-slider');
+        const numInput = document.getElementById('neg-salary-input');
+        const disp = document.getElementById('neg-offered-salary-display');
+        const ratioEl = document.getElementById('neg-salary-ratio-text');
+        if (slider && e.target !== slider) slider.value = val;
+        if (numInput && e.target !== numInput) numInput.value = val;
+        if (disp) disp.textContent = formatMoney(val);
+        if (ratioEl) ratioEl.textContent = `${Math.round((val / Math.max(1, session.demandedSalary)) * 100)}%`;
+      }
+
+      if (e.target.id === 'neg-fee-slider' || e.target.id === 'neg-fee-input') {
+        const val = Math.max(100, parseInt(e.target.value, 10) || session.demandedFee);
+        session.offeredFee = val;
+        const slider = document.getElementById('neg-fee-slider');
+        const numInput = document.getElementById('neg-fee-input');
+        const disp = document.getElementById('neg-offered-fee-display');
+        if (slider && e.target !== slider) slider.value = val;
+        if (numInput && e.target !== numInput) numInput.value = val;
+        if (disp) disp.textContent = formatMoney(val);
+      }
+    });
+
+    negModalBody.addEventListener('click', (e) => {
+      const yrBtn = e.target.closest('.btn-neg-year');
+      if (yrBtn && yrBtn.dataset.negYear) {
+        const session = gameState.negotiationSession;
+        if (!session || session.completed) return;
+        session.offeredYears = parseInt(yrBtn.dataset.negYear, 10) || 3;
+        document.querySelectorAll('#neg-years-group .btn-neg-year').forEach(b => {
+          b.classList.toggle('active', b === yrBtn);
+        });
+        const yrDisp = document.getElementById('neg-offered-years-display');
+        if (yrDisp) {
+          yrDisp.innerHTML = `<strong>${session.offeredYears}年契約</strong>`;
+        }
+      }
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && gameState.profileModalPlayerId) {
-      closePlayerProfileModal();
+    if (e.key === 'Escape') {
+      if (gameState.negotiationSession) {
+        closeNegotiationModal();
+      } else if (gameState.profileModalPlayerId) {
+        closePlayerProfileModal();
+      } else {
+        const gmOverlay = document.getElementById('gm-modal-overlay');
+        if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
+          gmOverlay.classList.add('hidden');
+        }
+      }
     }
   });
 
