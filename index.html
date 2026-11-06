@@ -77,7 +77,29 @@
         移籍市場
         <span class="tab-badge mono" id="tab-badge-market">OFFSEASON</span>
       </button>
+      <button type="button" class="tab-btn" data-tab="facilities" id="tab-btn-facilities">
+        クラブ経営・施設投資
+        <span class="tab-badge mono" id="tab-badge-facilities">Lv.1</span>
+      </button>
     </nav>
+
+    <!-- GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意） -->
+    <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
+      <div class="gm-tasks-header">
+        <div class="gm-tasks-title-group">
+          <span class="gm-tasks-label mono">GM EXECUTIVE DUTIES</span>
+          <h2 class="gm-tasks-title">GM業務タスク一覧（優先度別アクション）</h2>
+        </div>
+        <div class="gm-tasks-legend mono">
+          <span class="duty-legend-item duty-critical-dot">CRITICAL (必須)</span>
+          <span class="duty-legend-item duty-recommended-dot">RECOMMENDED (推奨)</span>
+          <span class="duty-legend-item duty-optional-dot">OPTIONAL (任意)</span>
+        </div>
+      </div>
+      <div class="gm-tasks-grid" id="gm-tasks-list">
+        <!-- JSで必須・推奨・任意のタスクカードを自動描画 -->
+      </div>
+    </section>
 
     <!-- シーズン終了・決算・世代交代サマリー（オフシーズン中のみ上部表示） -->
     <section id="season-summary-box" class="season-summary hidden">
@@ -352,6 +374,54 @@
               <!-- JSで描画 -->
             </tbody>
           </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- タブ4：クラブ経営・施設投資 ＆ ユースアカデミー画面 -->
+    <main id="view-facilities" class="tab-view hidden">
+      <!-- 投資・昇格アクションの通知フィードバックバー -->
+      <div id="facility-feedback-banner" class="facility-feedback-banner hidden"></div>
+
+      <!-- クラブ設備投資（3施設：Lv.1〜Lv.5）パネル -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">クラブ設備投資（インフラ改修・長期経営基盤の強化）</h2>
+            <p class="panel-note">
+              クラブ資金（£）を投じて「スタジアム」「トレーニング＆メディカル施設」「グローバルスカウト網」を改修・レベルアップ（最大 Lv.5）できます。効果は永続的に発動します。
+            </p>
+          </div>
+          <div class="team-power-badges">
+            <span class="power-badge">現在資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
+            <span class="power-badge">ホーム収入補正 <strong class="mono accent-green" id="facilities-stadium-bonus">+0%</strong></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="facilities-grid" id="facilities-grid">
+            <!-- JSで3つの施設カード（スタジアム、トレーニング＆メディカル、スカウト網）を描画 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ユースアカデミー（新星の発掘・トップチーム昇格審査）パネル -->
+      <div class="panel youth-academy-panel" id="youth-academy-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">ユースアカデミー（下部組織・16〜18歳の新星発掘）</h2>
+            <p class="panel-note">
+              毎シーズン、クラブの下部組織（アカデミー）から将来有望な若手候補2名（16〜18歳）が選出されます。「トップチーム昇格（移籍金 £0・最低年俸 £800K）」または「見送り（他クラブ放出）」を決断してください。
+            </p>
+          </div>
+          <div class="team-power-badges">
+            <span class="power-badge">昇格待機候補 <strong class="mono accent-green" id="youth-candidates-count">0名</strong></span>
+            <span class="power-badge">トップ登録枠 <strong class="mono" id="youth-squad-capacity">16 / 20名</strong></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="youth-candidates-grid" id="youth-candidates-grid">
+            <!-- JSでユース昇格候補2名のカードを描画 -->
+          </div>
         </div>
       </div>
     </main>

@@ -510,6 +510,46 @@ const PREFERRED_SQUAD_NUMBERS = {
   CF: [9, 10, 11, 18, 19, 27]
 };
 
+// クラブ設備投資（3施設：Lv.1〜Lv.5）定義（単位：£1K）
+const FACILITY_DEFINITIONS = {
+  stadium: {
+    id: 'stadium',
+    code: 'STADIUM EXPANSION',
+    iconLabel: 'STADIUM',
+    name: 'スタジアム拡張',
+    maxLevel: 5,
+    // Lv.1->2: £10M, Lv.2->3: £15M, Lv.3->4: £22M, Lv.4->5: £30M
+    costs: [0, 10000, 15000, 22000, 30000],
+    desc: '観客席の増設とホスピタリティエリアの拡充を行い、ホーム開催時の入場料・グッズ売上を1レベルごとに+15%永続向上させます。',
+    getEffectText: (lv) => `ホーム戦収入 +${(lv - 1) * 15}%（基準比 ${100 + (lv - 1) * 15}%）`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `ホーム戦収入 +${lv * 15}% / サポーター +1,200人`
+  },
+  training: {
+    id: 'training',
+    code: 'TRAINING & MEDICAL',
+    iconLabel: 'TRAINING',
+    name: 'トレーニング＆メディカル施設',
+    maxLevel: 5,
+    // Lv.1->2: £8M, Lv.2->3: £13M, Lv.3->4: £19M, Lv.4->5: £25M
+    costs: [0, 8000, 13000, 19000, 25000],
+    desc: '最新鋭のフィジカル機器とスポーツ医療設備を導入し、シーズン終了時の若手成長率UPおよび試合時のスタミナ消耗・負傷発生率を軽減します。',
+    getEffectText: (lv) => `若手成長率 +${(lv - 1) * 20}% / 疲労・負傷率 -${(lv - 1) * 18}%`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `若手成長率 +${lv * 20}% / 疲労・負傷率 -${lv * 18}%`
+  },
+  scouting: {
+    id: 'scouting',
+    code: 'GLOBAL SCOUTING NET',
+    iconLabel: 'SCOUTING',
+    name: 'グローバルスカウト網',
+    maxLevel: 5,
+    // Lv.1->2: £5M, Lv.2->3: £10M, Lv.3->4: £15M, Lv.4->5: £20M
+    costs: [0, 5000, 10000, 15000, 20000],
+    desc: '欧州全土・南米・アジアに専属スカウトを派遣し、移籍市場に登場する有望選手の人数と能力上限（OVR）、ユース発掘精度を引き上げます。',
+    getEffectText: (lv) => `移籍市場リスト +${(lv - 1) * 2}名 / 候補能力上限 +${(lv - 1) * 2} OVR`,
+    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `移籍市場候補 +${lv * 2}名 / 候補能力上限 +${lv * 2} OVR`
+  }
+};
+
 // ゲーム全体の状態管理
 const gameState = {
   gmName: 'A. ファーガソン',
@@ -529,6 +569,13 @@ const gameState = {
   lastWeekResults: [],
   lastMatchTicker: null,
   transferMarket: [],
+  youthCandidates: [],
+  facilities: {
+    stadium: 1,
+    training: 1,
+    scouting: 1
+  },
+  facilityFeedback: '',
   lastSettlement: null,
   selectedPlayerId: null,
   selectedSlotIndex: null,
@@ -1192,10 +1239,11 @@ function createSquad(basePower, usedNames) {
 }
 
 /**
- * 移籍市場候補選手（6〜8名）を生成
+ * 移籍市場候補選手（6〜8名＋スカウト網Lv補正）を生成
  */
 function generateTransferMarket() {
-  const count = randInt(6, 8);
+  const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  const count = randInt(6, 8) + (scoutingLv - 1) * 2;
   const usedNames = new Set();
   for (const club of gameState.clubs) {
     for (const p of club.players) {
@@ -1205,9 +1253,12 @@ function generateTransferMarket() {
 
   const usedMarketNums = new Set();
   const candidates = [];
+  const minPower = 60 + (scoutingLv - 1) * 2;
+  const maxPower = Math.min(88, 79 + (scoutingLv - 1) * 2);
+
   for (let i = 0; i < count; i++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-    const basePower = randInt(60, 79);
+    const basePower = randInt(minPower, maxPower);
     const player = createPlayer(pos, basePower, false, usedNames, [18, 31]);
     player.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
     // 市場候補のうち少なくとも2名は契約残り1年（格安）にする
@@ -1222,6 +1273,43 @@ function generateTransferMarket() {
 
   candidates.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
   gameState.transferMarket = candidates;
+}
+
+/**
+ * ユースアカデミー（下部組織）の昇格候補選手2名（16〜18歳）を生成
+ */
+function generateYouthAcademyCandidates() {
+  const usedNames = new Set();
+  for (const club of gameState.clubs) {
+    for (const p of club.players) {
+      usedNames.add(p.name);
+    }
+  }
+  if (Array.isArray(gameState.transferMarket)) {
+    gameState.transferMarket.forEach(p => usedNames.add(p.name));
+  }
+
+  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+  const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  const facilityBonus = Math.floor(((trainingLv - 1) + (scoutingLv - 1)) * 0.8);
+
+  const youthCurves = ['early', 'late', 'early', 'fragile'];
+  const usedYouthNums = new Set([41, 42, 45, 47]);
+  const prospects = [];
+
+  for (let i = 0; i < 2; i++) {
+    const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
+    const curve = youthCurves[randInt(0, youthCurves.length - 1)];
+    const basePower = clamp(randInt(60, 68) + facilityBonus, 59, 73);
+    const prospect = createPlayer(pos, basePower, false, usedNames, [16, 18], curve);
+    prospect.salary = 800; // 最低年俸 £800K
+    prospect.contractYears = 4;
+    prospect.transferFee = 0;
+    prospect.squadNumber = pickAvailableSquadNumber(pos, usedYouthNums);
+    prospects.push(prospect);
+  }
+
+  gameState.youthCandidates = prospects;
 }
 
 /**
@@ -1673,11 +1761,15 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   assignRatings(homeStarters, homeScore, awayScore, isHomeWin, isDraw);
   assignRatings(awayStarters, awayScore, homeScore, isAwayWin, isDraw);
 
-  // ハイプレス選択時はスタメンのスタミナが微減（全38節に合わせ20%確率）
-  if (homeClub.tactic === 'highpress' && Math.random() < 0.20) {
+  // ハイプレス選択時はスタメンのスタミナが微減（トレーニング＆メディカル施設Lvで軽減）
+  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+  const homeFatigueProb = homeClub.isPlayer ? Math.max(0.05, 0.20 * (1 - (trainingLv - 1) * 0.18)) : 0.20;
+  const awayFatigueProb = awayClub.isPlayer ? Math.max(0.05, 0.20 * (1 - (trainingLv - 1) * 0.18)) : 0.20;
+
+  if (homeClub.tactic === 'highpress' && Math.random() < homeFatigueProb) {
     homeStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
   }
-  if (awayClub.tactic === 'highpress' && Math.random() < 0.20) {
+  if (awayClub.tactic === 'highpress' && Math.random() < awayFatigueProb) {
     awayStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
   }
 
@@ -1730,10 +1822,12 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
   });
 
   if (isPlayerHome && matchIncome > 0) {
+    const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+    const bonusNote = stadiumLv > 1 ? ` (スタジアムLv.${stadiumLv}効果 +${(stadiumLv - 1) * 15}%)` : '';
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `[ホーム開催] マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)} を計上`
+      text: `[ホーム開催] マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)}${bonusNote} を計上`
     });
   } else if (!isPlayerHome) {
     events.push({
@@ -1760,7 +1854,7 @@ function advanceInjuryRecovery() {
 }
 
 /**
- * 1節分（4試合）を進行する
+ * 1節分（10試合）を進行する
  */
 function playNextMatchweek(skipAnimation = false) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.currentWeek >= gameState.totalWeeks) {
@@ -1779,6 +1873,9 @@ function playNextMatchweek(skipAnimation = false) {
   let playerHomeScorers = [];
   let playerAwayScorers = [];
 
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const stadiumMultiplier = 1 + (stadiumLv - 1) * 0.15;
+
   for (const match of weekMatches) {
     const homeClub = getClubById(match.homeId);
     const awayClub = getClubById(match.awayId);
@@ -1788,8 +1885,10 @@ function playNextMatchweek(skipAnimation = false) {
     match.awayScore = awayScore;
     match.played = true;
 
-    // ホーム開催時（全19試合）：サポーター規模に応じ1試合 £900K〜£2.2M（900〜2200 £K）のマッチデイ収入
-    const matchIncome = Math.round((homeClub.supporters * 0.092 + randInt(-40, 40)) / 10) * 10;
+    // ホーム開催時（全19試合）：サポーター規模＋スタジアム拡張Lv補正（Lvごとに+15%）に応じたマッチデイ収入
+    const rawIncome = homeClub.supporters * 0.092 + randInt(-40, 40);
+    const effectiveIncome = homeClub.isPlayer ? rawIncome * stadiumMultiplier : rawIncome;
+    const matchIncome = Math.round(effectiveIncome / 10) * 10;
     homeClub.funds += matchIncome;
     match.homeRevenue = matchIncome;
 
@@ -1950,10 +2049,12 @@ function checkPostMatchEvents() {
     }
   }
 
-  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生
+  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lvで負傷率軽減）
   if (Math.random() < 0.18) {
+    const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+    const injuryThreshold = Math.max(0.10, 0.36 * (1 - (trainingLv - 1) * 0.18));
     const roll = Math.random();
-    if (roll < 0.36) {
+    if (roll < injuryThreshold) {
       triggerInjuryEvent();
     } else if (roll < 0.68) {
       triggerYouthPromotionEvent();
@@ -2184,9 +2285,9 @@ function showGmModal({ category, title, description, detailHtml, actions }) {
 }
 
 /**
- * 成長曲線（growthCurve）と年齢に応じた能力変動値を算出
+ * 成長曲線（growthCurve）・年齢・トレーニング施設Lvに応じた能力変動値を算出
  */
-function computeStatGrowth(player) {
+function computeStatGrowth(player, isPlayerClub = false) {
   const age = player.age;
   const curve = player.growthCurve === 'normal' ? 'standard' : (player.growthCurve || 'standard');
 
@@ -2254,11 +2355,23 @@ function computeStatGrowth(player) {
     }
   }
 
-  return {
-    dAtk: randInt(atkRange[0], atkRange[1]),
-    dDef: randInt(defRange[0], defRange[1]),
-    dSta: randInt(staRange[0], staRange[1])
-  };
+  let dAtk = randInt(atkRange[0], atkRange[1]);
+  let dDef = randInt(defRange[0], defRange[1]);
+  let dSta = randInt(staRange[0], staRange[1]);
+
+  // トレーニング＆メディカル施設Lvによる若手・成長期ボーナス
+  if (isPlayerClub) {
+    const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+    if (trainingLv > 1 && age <= 26) {
+      const bonusChance = (trainingLv - 1) * 0.25;
+      const extraBonus = (trainingLv >= 4 && age <= 22) ? 1 : 0;
+      if (Math.random() < bonusChance) dAtk += 1 + extraBonus;
+      if (Math.random() < bonusChance) dDef += 1 + extraBonus;
+      if (Math.random() < bonusChance) dSta += 1;
+    }
+  }
+
+  return { dAtk, dDef, dSta };
 }
 
 /**
@@ -2329,7 +2442,7 @@ function processSeasonEnd(isSkipped = false) {
         continue;
       }
 
-      const { dAtk, dDef, dSta } = computeStatGrowth(p);
+      const { dAtk, dDef, dSta } = computeStatGrowth(p, club.isPlayer);
       const oldAtk = p.atk;
       const oldDef = p.def;
       const oldSta = p.sta;
@@ -2337,6 +2450,8 @@ function processSeasonEnd(isSkipped = false) {
       p.atk = clamp(p.atk + dAtk, 1, 99);
       p.def = clamp(p.def + dDef, 1, 99);
       p.sta = clamp(p.sta + dSta, 1, 99);
+      p.attributes = null;
+      getPlayerFiveAttributes(p);
 
       p.lastDiff = {
         atk: p.atk - oldAtk,
@@ -2372,6 +2487,10 @@ function processSeasonEnd(isSkipped = false) {
   }
 
   generateTransferMarket();
+  generateYouthAcademyCandidates();
+  playerRetirementLogs.push(
+    `[ユースアカデミー] 今季のユース昇格候補2名（16〜18歳）が選出されました（「クラブ経営・施設投資」タブから昇格審査が可能）`
+  );
 
   gameState.lastSettlement = {
     season: gameState.season,
@@ -2472,6 +2591,167 @@ function releaseRosterPlayer(playerId) {
 
   ensureValidSquadAndStarters(playerClub);
   renderAll();
+}
+
+/**
+ * クラブ施設（スタジアム / トレーニング＆メディカル / グローバルスカウト網）をアップグレードする
+ */
+function upgradeFacility(facilityKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const def = FACILITY_DEFINITIONS[facilityKey];
+  if (!def) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (!gameState.facilities) {
+    gameState.facilities = { stadium: 1, training: 1, scouting: 1 };
+  }
+
+  const currentLv = gameState.facilities[facilityKey] || 1;
+  if (currentLv >= def.maxLevel) return;
+
+  const cost = def.costs[currentLv];
+  if (playerClub.funds < cost) return;
+
+  playerClub.funds -= cost;
+  const nextLv = currentLv + 1;
+  gameState.facilities[facilityKey] = nextLv;
+
+  if (facilityKey === 'stadium') {
+    playerClub.supporters += 1200;
+    const bonusPct = (nextLv - 1) * 15;
+    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡張しました（投資額: ${formatMoney(cost)} / ホーム興行収入 +${bonusPct}%・サポーター +1,200人）`;
+  } else if (facilityKey === 'training') {
+    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ強化しました（投資額: ${formatMoney(cost)} / 若手成長率UP・負傷率およびスタミナ消耗軽減）`;
+  } else if (facilityKey === 'scouting') {
+    // スカウト網強化時は即座に新規候補を2名追加リストアップ
+    const usedNames = new Set();
+    for (const club of gameState.clubs) {
+      for (const p of club.players) usedNames.add(p.name);
+    }
+    for (const c of gameState.transferMarket) usedNames.add(c.name);
+    for (const y of (gameState.youthCandidates || [])) usedNames.add(y.name);
+
+    const scoutingBonusOvr = (nextLv - 1) * 2;
+    for (let i = 0; i < 2; i++) {
+      const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
+      const baseTarget = clamp(randInt(64 + scoutingBonusOvr, 74 + scoutingBonusOvr), 58, 86);
+      const age = randInt(19, 28);
+      const candidate = createPlayer(pos, baseTarget, usedNames, age, false);
+      const ovr = getPlayerOverallRating(candidate);
+      const isExpiring = candidate.contractYears === 1;
+      const baseFee = Math.max(800, (ovr - 44) * 350 + (29 - candidate.age) * 180);
+      candidate.transferFee = Math.max(500, Math.round((isExpiring ? baseFee * 0.55 : baseFee) / 100) * 100);
+      gameState.transferMarket.push(candidate);
+    }
+    gameState.transferMarket.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡大しました（投資額: ${formatMoney(cost)} / 移籍市場に高OVR候補2名を即時追加リストアップ）`;
+  }
+
+  renderAll();
+}
+
+/**
+ * ユースアカデミー候補選手をトップチームへ昇格させる（移籍金 £0・最低年俸 £800K）
+ */
+function promoteYouthCandidate(candidateId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || playerClub.players.length >= MAX_SQUAD_SIZE) return;
+
+  const idx = (gameState.youthCandidates || []).findIndex(y => y.id === candidateId);
+  if (idx === -1) return;
+
+  const prospect = gameState.youthCandidates[idx];
+  prospect.isStarter = false;
+  prospect.assignedPos = null;
+  prospect.slotIndex = null;
+  prospect.squadNumber = null;
+  prospect.salary = 800; // 最低年俸 £800K
+  prospect.contractYears = 4;
+
+  playerClub.players.push(prospect);
+  ensureClubSquadNumbers(playerClub);
+  gameState.youthCandidates.splice(idx, 1);
+
+  gameState.facilityFeedback = `【ユース昇格完了】${prospect.pos} ${prospect.name}（${prospect.age}歳 / OVR ${getPlayerOverallRating(prospect)}）とプロ契約（移籍金 £0・年俸 £800K）を締結しトップチームへ登録しました。`;
+  renderAll();
+}
+
+/**
+ * ユースアカデミー候補選手の昇格を見送る（他クラブへ放出し育成補償金 £300K を獲得）
+ */
+function dismissYouthCandidate(candidateId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  const playerClub = getPlayerClub();
+  const idx = (gameState.youthCandidates || []).findIndex(y => y.id === candidateId);
+  if (idx === -1) return;
+
+  const prospect = gameState.youthCandidates[idx];
+  gameState.youthCandidates.splice(idx, 1);
+
+  if (playerClub) {
+    playerClub.funds += 300;
+  }
+
+  gameState.facilityFeedback = `【ユース昇格見送り】${prospect.pos} ${prospect.name}（${prospect.age}歳）のトップ昇格を見送り、他クラブ移籍に伴う育成補償金 +£300K を受領しました。`;
+  renderAll();
+}
+
+/**
+ * GM業務タスク（GM Dashboard）の「実行 / 移動」ボタン処理
+ */
+function handleGmDutyAction(actionKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+
+  if (actionKey === 'play-match') {
+    switchTab('standings');
+    playNextMatchweek(false);
+    return;
+  }
+
+  if (actionKey === 'start-next-season') {
+    startNextSeason();
+    return;
+  }
+
+  if (actionKey === 'goto-pitch') {
+    switchTab('roster');
+    const board = document.getElementById('tactical-board-container');
+    if (board) board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  if (actionKey === 'goto-roster-table') {
+    switchTab('roster');
+    const table = document.getElementById('roster-tbody');
+    if (table) table.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  if (actionKey === 'goto-market') {
+    switchTab('market');
+    const view = document.getElementById('view-market');
+    if (view) view.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  if (actionKey === 'goto-facilities') {
+    switchTab('facilities');
+    const grid = document.getElementById('facilities-grid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  if (actionKey === 'goto-youth') {
+    switchTab('facilities');
+    const panel = document.getElementById('youth-academy-panel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 /**
@@ -2748,10 +3028,11 @@ function startNextSeason() {
 function switchTab(tabName) {
   gameState.activeTab = tabName;
 
-  const tabs = ['standings', 'roster', 'market'];
+  const tabs = ['standings', 'roster', 'market', 'facilities'];
   for (const t of tabs) {
     const btn = document.getElementById(`tab-btn-${t}`);
     const view = document.getElementById(`view-${t}`);
+    if (!btn || !view) continue;
     if (t === tabName) {
       btn.classList.add('active');
       view.classList.remove('hidden');
@@ -2855,12 +3136,14 @@ function renderAll() {
   if (!gameState.clubs || gameState.clubs.length === 0) return;
   renderHeader();
   renderFinancialAlert();
+  renderGmDuties();
   renderSeasonSettlement();
   renderStandings();
   renderTopScorers();
   renderMatchLog();
   renderRoster();
   renderMarket();
+  renderFacilitiesAndYouth();
 }
 
 /**
@@ -2908,6 +3191,18 @@ function renderHeader() {
     marketBadge.classList.add('badge-highlight');
   } else {
     marketBadge.classList.remove('badge-highlight');
+  }
+
+  const facilitiesBadge = document.getElementById('tab-badge-facilities');
+  if (facilitiesBadge) {
+    const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
+    const youthCount = (gameState.youthCandidates || []).length;
+    facilitiesBadge.textContent = youthCount > 0 ? `Lv.${f.stadium}/${f.training}/${f.scouting}・候補${youthCount}` : `Lv.${f.stadium}/${f.training}/${f.scouting}`;
+    if (youthCount > 0 && gameState.isSeasonOver) {
+      facilitiesBadge.classList.add('badge-highlight');
+    } else {
+      facilitiesBadge.classList.remove('badge-highlight');
+    }
   }
 
   const financeBadge = document.getElementById('header-finance-badge');
@@ -3609,7 +3904,353 @@ function renderMarket() {
 }
 
 /**
- * 全クラブまたは移籍市場から指定IDの選手と所属情報を検索する
+ * GM業務タスク一覧（必須 CRITICAL / 推奨 RECOMMENDED / 任意 OPTIONAL）を描画する
+ */
+function renderGmDuties() {
+  const listEl = document.getElementById('gm-tasks-list');
+  const subtitleEl = document.getElementById('gm-tasks-subtitle');
+  if (!listEl) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (subtitleEl) {
+    subtitleEl.textContent = gameState.isSeasonOver
+      ? `Season ${gameState.season} オフシーズン経営・編成タスク`
+      : `Season ${gameState.season} / 第${Math.min(gameState.currentWeek + 1, gameState.totalWeeks)}節 優先業務`;
+  }
+
+  // 1. 必須タスク（CRITICAL / 赤）
+  let criticalDuty = null;
+  if (playerClub.funds < 0) {
+    criticalDuty = {
+      level: 'critical',
+      badge: '必須 / CRITICAL',
+      title: '財政危機対応（債務超過の解消）',
+      desc: `現在のクラブ資金が ${formatMoney(playerClub.funds)} の赤字です。高年俸選手の自由契約（放出）で年俸総額を圧縮してください。`,
+      btnText: '契約・編成へ移動',
+      action: 'goto-roster-table'
+    };
+  } else if (gameState.isSeasonOver) {
+    criticalDuty = {
+      level: 'critical',
+      badge: '必須 / CRITICAL',
+      title: `第${gameState.season + 1}シーズン 開幕手続き`,
+      desc: 'オフシーズンの補強・契約更新・ユース昇格審査を終えたら、新シーズンを開幕してください。',
+      btnText: '次シーズン開幕',
+      action: 'start-next-season'
+    };
+  } else {
+    const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
+    let opponentText = 'リーグ公式戦';
+    const weekFixtures = gameState.schedule && gameState.schedule[gameState.currentWeek];
+    if (weekFixtures) {
+      const myFixture = weekFixtures.find(f => f.homeId === playerClub.id || f.awayId === playerClub.id);
+      if (myFixture) {
+        const oppId = myFixture.homeId === playerClub.id ? myFixture.awayId : myFixture.homeId;
+        const oppClub = getClubById(oppId);
+        const venue = myFixture.homeId === playerClub.id ? 'HOME' : 'AWAY';
+        if (oppClub) opponentText = `vs ${oppClub.name} (${venue})`;
+      }
+    }
+    criticalDuty = {
+      level: 'critical',
+      badge: '必須 / CRITICAL',
+      title: `第${nextWeek}節 キックオフ（${opponentText}）`,
+      desc: 'スタメン11名と戦術を確認し、今節の公式戦シミュレーションを実行してください。',
+      btnText: '第' + nextWeek + '節を実行',
+      action: 'play-match'
+    };
+  }
+
+  // 2. 推奨タスク（RECOMMENDED / 黄）
+  const starters = playerClub.players.filter(p => p.isStarter);
+  const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
+  const expiringPlayers = playerClub.players.filter(p => p.contractYears <= 1);
+  const outOfPosStarters = starters.filter(p => getPositionFitInfo(p, p.assignedPos || p.pos).type === 'out');
+
+  let recommendedDuty = null;
+  if (injuredStarters.length > 0) {
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '推奨 / RECOMMENDED',
+      title: `負傷者の代役選定（スタメン負傷 ${injuredStarters.length}名）`,
+      desc: `${injuredStarters[0].name} ほか計${injuredStarters.length}名が負傷中です。作戦ボードで控え選手との交代を推奨します。`,
+      btnText: '作戦ボードへ移動',
+      action: 'goto-pitch'
+    };
+  } else if (expiringPlayers.length > 0) {
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '推奨 / RECOMMENDED',
+      title: `契約延長交渉（残り1年以下：${expiringPlayers.length}名）`,
+      desc: `${expiringPlayers[0].name} ら${expiringPlayers.length}名が契約満了間近です。放置するとオフにフリー移籍で離脱します。`,
+      btnText: '契約一覧へ移動',
+      action: 'goto-roster-table'
+    };
+  } else if (outOfPosStarters.length > 0) {
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '推奨 / RECOMMENDED',
+      title: `適性外配置の見直し（${outOfPosStarters.length}枠）`,
+      desc: `${outOfPosStarters[0].name} が適性外スロット（能力80%）に配置されています。フォーメーションまたは配置の調整を推奨します。`,
+      btnText: '作戦ボードへ移動',
+      action: 'goto-pitch'
+    };
+  } else {
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '推奨 / RECOMMENDED',
+      title: '戦術・コンディション点検',
+      desc: 'スタメン全員が適性枠かつ健康です。対戦相手に応じたフォーメーションや戦術方針の微調整を行えます。',
+      btnText: '作戦ボードを確認',
+      action: 'goto-pitch'
+    };
+  }
+
+  // 3. 任意タスク（OPTIONAL / 緑）
+  const youthCount = (gameState.youthCandidates || []).length;
+  const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
+  const minUpgradeCost = Math.min(
+    f.stadium < 5 ? FACILITY_DEFINITIONS.stadium.costs[f.stadium] : Infinity,
+    f.training < 5 ? FACILITY_DEFINITIONS.training.costs[f.training] : Infinity,
+    f.scouting < 5 ? FACILITY_DEFINITIONS.scouting.costs[f.scouting] : Infinity
+  );
+
+  let optionalDuty = null;
+  if (youthCount > 0 && playerClub.players.length < MAX_SQUAD_SIZE) {
+    optionalDuty = {
+      level: 'optional',
+      badge: '任意 / OPTIONAL',
+      title: `ユース視察・昇格審査（候補 ${youthCount}名）`,
+      desc: `アカデミーから16〜18歳の有望株${youthCount}名が推薦されています。移籍金ゼロ・最低年俸 £800K でトップ昇格可能です。`,
+      btnText: 'ユース視察へ移動',
+      action: 'goto-youth'
+    };
+  } else if (playerClub.funds >= minUpgradeCost && minUpgradeCost !== Infinity) {
+    optionalDuty = {
+      level: 'optional',
+      badge: '任意 / OPTIONAL',
+      title: 'クラブ設備投資の検討',
+      desc: `現在の予算（${formatMoney(playerClub.funds)}）でスタジアム・練習施設・スカウト網のレベルアップが可能です。`,
+      btnText: '施設投資へ移動',
+      action: 'goto-facilities'
+    };
+  } else {
+    optionalDuty = {
+      level: 'optional',
+      badge: '任意 / OPTIONAL',
+      title: `移籍市場スカウティング（候補 ${gameState.transferMarket.length}名）`,
+      desc: '移籍市場リストから掘り出し物（契約残り1年の格安選手や若手有望株）のスカウトレポートを確認できます。',
+      btnText: '移籍市場へ移動',
+      action: 'goto-market'
+    };
+  }
+
+  const duties = [criticalDuty, recommendedDuty, optionalDuty];
+  listEl.innerHTML = duties.map(d => `
+    <div class="gm-task-card duty-${d.level}">
+      <div class="gm-task-main">
+        <div class="gm-task-header-row">
+          <span class="duty-priority-badge badge-${d.level}">${d.badge}</span>
+          <strong class="gm-task-title">${d.title}</strong>
+        </div>
+        <p class="gm-task-desc">${d.desc}</p>
+      </div>
+      <div class="gm-task-action-wrap">
+        <button type="button" class="btn btn-sm btn-duty-action ${d.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
+          ${d.btnText}
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/**
+ * クラブ経営・施設投資（スタジアム / 練習施設 / スカウト網）およびユースアカデミー画面を描画する
+ */
+function renderFacilitiesAndYouth() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
+  const fundsEl = document.getElementById('facilities-current-funds');
+  if (fundsEl) fundsEl.textContent = formatMoney(playerClub.funds);
+
+  const stadiumBonusEl = document.getElementById('facilities-stadium-bonus');
+  if (stadiumBonusEl) {
+    const bonusPct = ((f.stadium || 1) - 1) * 15;
+    stadiumBonusEl.textContent = `+${bonusPct}% (Lv.${f.stadium || 1})`;
+  }
+
+  const feedbackBanner = document.getElementById('facility-feedback-banner');
+  if (feedbackBanner) {
+    if (gameState.facilityFeedback) {
+      feedbackBanner.textContent = gameState.facilityFeedback;
+      feedbackBanner.classList.remove('hidden');
+    } else {
+      feedbackBanner.classList.add('hidden');
+    }
+  }
+
+  const facilitiesGrid = document.getElementById('facilities-grid');
+  if (facilitiesGrid) {
+    const keys = ['stadium', 'training', 'scouting'];
+    facilitiesGrid.innerHTML = keys.map(key => {
+      const def = FACILITY_DEFINITIONS[key];
+      const lv = f[key] || 1;
+      const isMax = lv >= def.maxLevel;
+      const nextCost = isMax ? 0 : def.costs[lv];
+      const canAfford = !isMax && playerClub.funds >= nextCost && !gameState.isGameOver && !gameState.isSimulating;
+
+      let pipsHtml = '';
+      for (let i = 1; i <= def.maxLevel; i++) {
+        pipsHtml += `<span class="facility-pip ${i <= lv ? 'active' : ''}"></span>`;
+      }
+
+      let btnLabel = isMax ? 'MAX LEVEL 達成済' : `Lv.${lv + 1} へ投資する（${formatMoney(nextCost)}）`;
+      if (!isMax && playerClub.funds < nextCost) {
+        btnLabel = `資金不足（必要: ${formatMoney(nextCost)}）`;
+      }
+
+      return `
+        <div class="facility-card">
+          <div class="facility-card-header">
+            <div>
+              <span class="facility-code">${def.iconLabel || def.code || 'FACILITY'}</span>
+              <h3 class="facility-name">${def.name}</h3>
+            </div>
+            <span class="facility-level-badge">Lv.${lv} / ${def.maxLevel}</span>
+          </div>
+
+          <div class="facility-pips-row">
+            ${pipsHtml}
+          </div>
+
+          <p class="facility-desc">${def.desc}</p>
+
+          <div class="facility-effect-box">
+            <div class="facility-effect-row">
+              <span class="text-muted">現在の稼働効果</span>
+              <span class="facility-effect-current">${typeof def.getEffectText === 'function' ? def.getEffectText(lv) : ''}</span>
+            </div>
+            <div class="facility-effect-row">
+              <span class="text-muted">次段階の強化効果</span>
+              <span class="facility-effect-next">${typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大拡張レベル達成済' : '効果増大')}</span>
+            </div>
+          </div>
+
+          <div class="facility-card-footer">
+            <div>
+              <span class="facility-cost-label">${isMax ? 'STATUS' : 'NEXT INVESTMENT'}</span>
+              <span class="facility-cost-val">${isMax ? '最大拡張済' : formatMoney(nextCost)}</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" data-upgrade-facility="${key}" ${canAfford ? '' : 'disabled'}>
+              ${btnLabel}
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ユースアカデミー（若手昇格候補2名）描画
+  const candidates = gameState.youthCandidates || [];
+  const countEl = document.getElementById('youth-candidates-count');
+  if (countEl) countEl.textContent = `${candidates.length}名`;
+
+  const capEl = document.getElementById('youth-squad-capacity');
+  if (capEl) capEl.textContent = `${playerClub.players.length} / ${MAX_SQUAD_SIZE}名`;
+
+  const youthGrid = document.getElementById('youth-candidates-grid');
+  if (youthGrid) {
+    if (candidates.length === 0) {
+      youthGrid.innerHTML = `
+        <div class="youth-empty-box">
+          今季のユースアカデミー昇格候補に対する審査（昇格または見送り）はすべて完了しています。<br />
+          次のオフシーズン突入時に、アカデミーから新たな16〜18歳の有望株2名が選出されます。
+        </div>
+      `;
+      return;
+    }
+
+    const isSquadFull = playerClub.players.length >= MAX_SQUAD_SIZE;
+
+    youthGrid.innerHTML = candidates.map(y => {
+      const ovr = getPlayerOverallRating(y);
+      const growthLabel = getGrowthCurveLabel(y.growthCurve);
+      const rawNat = y.nationality || 'England';
+      const flagEmoji = NATIONALITY_FLAG_MAP[rawNat] || '🌍';
+      const traits = Array.isArray(y.traits) ? y.traits : [];
+
+      return `
+        <div class="youth-card">
+          <div class="youth-card-top">
+            <div class="youth-name-wrap">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                ${formatPlayerPositionsHtml(y)}
+                <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="クリックで選手詳細プロフィールを表示">
+                  ${y.name}
+                </button>
+              </div>
+              <div class="youth-meta-row">
+                <span>${flagEmoji} ${rawNat}</span>
+                <span>|</span>
+                <span><strong>${y.age}歳</strong>（ユース有望株）</span>
+                <span>|</span>
+                <span>身長 ${y.height}cm / ${y.preferredFoot}</span>
+              </div>
+            </div>
+            <div class="youth-ovr-box">
+              <span class="youth-ovr-label">CURRENT OVR</span>
+              <span class="youth-ovr-val">${ovr}</span>
+            </div>
+          </div>
+
+          <div class="youth-stats-strip">
+            <div class="youth-stat-cell">
+              <span class="youth-stat-cell-label">ATK（攻撃）</span>
+              <span class="youth-stat-cell-val">${y.atk}</span>
+            </div>
+            <div class="youth-stat-cell">
+              <span class="youth-stat-cell-label">DEF（守備）</span>
+              <span class="youth-stat-cell-val">${y.def}</span>
+            </div>
+            <div class="youth-stat-cell">
+              <span class="youth-stat-cell-label">STA（体力）</span>
+              <span class="youth-stat-cell-val">${y.sta}</span>
+            </div>
+            <div class="youth-stat-cell">
+              <span class="youth-stat-cell-label">成長曲線</span>
+              <span class="growth-pill growth-${y.growthCurve}">${growthLabel}</span>
+            </div>
+          </div>
+
+          <div class="profile-traits-wrap">
+            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+          </div>
+
+          <div class="youth-contract-note">
+            <span>昇格条件：<strong>移籍金 £0 / 年俸 £800K（4年契約）</strong></span>
+            <span>見送り時：<strong>育成補償金 +£300K</strong></span>
+          </div>
+
+          <div class="youth-actions-row">
+            <button type="button" class="btn btn-primary btn-sm" data-promote-youth="${y.id}" ${!isSquadFull && !gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
+              ${isSquadFull ? '所属枠上限 (20名)' : 'トップチーム昇格（£0 / 年俸£800K）'}
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss-youth="${y.id}" ${!gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
+              見送り（他クラブへ放出）
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+/**
+ * 全クラブ・移籍市場・ユース候補から指定IDの選手と所属情報を検索する
  */
 function findPlayerWithContextById(playerId) {
   for (const club of gameState.clubs) {
@@ -3621,6 +4262,16 @@ function findPlayerWithContextById(playerId) {
   const marketFound = gameState.transferMarket.find(p => p.id === playerId);
   if (marketFound) {
     return { player: marketFound, clubName: '移籍市場リスト（フリー/獲得可能）', isMarket: true, isPlayerClub: false };
+  }
+  const youthFound = (gameState.youthCandidates || []).find(p => p.id === playerId);
+  if (youthFound) {
+    const playerClub = getPlayerClub();
+    return {
+      player: youthFound,
+      clubName: `${playerClub ? playerClub.name : 'クラブ'} ユースアカデミー（昇格候補）`,
+      isMarket: false,
+      isPlayerClub: true
+    };
   }
   return null;
 }
@@ -3980,6 +4631,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
   gameState.selectedSlotIndex = null;
+  gameState.facilities = { stadium: 1, training: 1, scouting: 1 };
+  gameState.facilityFeedback = '';
 
   gameState.clubs = CLUB_DEFINITIONS.map(def => {
     const isPlayer = def.id === gameState.selectedClubId;
@@ -4012,6 +4665,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
 
   gameState.schedule = generateSeasonSchedule(gameState.clubs);
   generateTransferMarket();
+  generateYouthAcademyCandidates();
   switchTab('standings');
 }
 
@@ -4186,6 +4840,50 @@ function initGame() {
       if (profileBtn) {
         e.stopPropagation();
         openPlayerProfileModal(profileBtn.dataset.profileId);
+      }
+    });
+  }
+
+  // GM業務タスク一覧（実行 / 移動ボタン）のイベント
+  const gmTasksList = document.getElementById('gm-tasks-list');
+  if (gmTasksList) {
+    gmTasksList.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('[data-duty-action]');
+      if (actionBtn && actionBtn.dataset.dutyAction) {
+        handleGmDutyAction(actionBtn.dataset.dutyAction);
+      }
+    });
+  }
+
+  // クラブ施設投資（アップグレードボタン）のイベント
+  const facilitiesGrid = document.getElementById('facilities-grid');
+  if (facilitiesGrid) {
+    facilitiesGrid.addEventListener('click', (e) => {
+      const upgradeBtn = e.target.closest('[data-upgrade-facility]');
+      if (upgradeBtn && upgradeBtn.dataset.upgradeFacility) {
+        upgradeFacility(upgradeBtn.dataset.upgradeFacility);
+      }
+    });
+  }
+
+  // ユースアカデミー（選手名プロフィール・トップ昇格・見送りボタン）のイベント
+  const youthGrid = document.getElementById('youth-candidates-grid');
+  if (youthGrid) {
+    youthGrid.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
+      const promoteBtn = e.target.closest('[data-promote-youth]');
+      if (promoteBtn && promoteBtn.dataset.promoteYouth) {
+        promoteYouthCandidate(promoteBtn.dataset.promoteYouth);
+        return;
+      }
+      const dismissBtn = e.target.closest('[data-dismiss-youth]');
+      if (dismissBtn && dismissBtn.dataset.dismissYouth) {
+        dismissYouthCandidate(dismissBtn.dataset.dismissYouth);
       }
     });
   }
