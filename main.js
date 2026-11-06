@@ -7572,8 +7572,15 @@ function initGame() {
   });
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      switchTab(btn.dataset.tab);
+    const onSelectTab = (e) => {
+      const tab = btn.dataset.tab;
+      if (tab) {
+        switchTab(tab);
+      }
+    };
+    btn.addEventListener('click', onSelectTab);
+    btn.addEventListener('touchend', (e) => {
+      onSelectTab(e);
     });
   });
 
@@ -8026,14 +8033,16 @@ function initGame() {
   // 編成サブタブ（作戦ボード / 選手一覧 / 戦術）の切り替え
   const rosterSubnav = document.getElementById('roster-subnav-bar');
   if (rosterSubnav) {
-    rosterSubnav.addEventListener('click', (e) => {
+    const onSelectSubtab = (e) => {
       const btn = e.target.closest('.roster-subtab-btn');
       if (!btn) return;
       const subtabKey = btn.dataset.subtab;
       if (subtabKey) {
         switchRosterSubtab(subtabKey);
       }
-    });
+    };
+    rosterSubnav.addEventListener('click', onSelectSubtab);
+    rosterSubnav.addEventListener('touchend', onSelectSubtab);
   }
 
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
