@@ -1,3 +1,4 @@
+
 'use strict';
 
 /**
@@ -8,6 +9,60 @@
 
 // イングランドリーグ（プレミア相当）全20クラブ定義（全クラブ選択可能・全38節2回戦総当たり）
 // 初期資金：£32.0M〜£140.0M（32000〜140000 £K）、サポーター規模、目標順位に差を設定
+
+const CLUB_SHORT_CODES = {
+  manchester_b: 'MCB',
+  manchester_r: 'MCR',
+  liverpool_b: 'LIV',
+  northlondon_a: 'NLA',
+  london_fc: 'LON',
+  northlondon_w: 'NLW',
+  newcastle_u: 'NEW',
+  aston_v: 'AST',
+  brighton_g: 'BRI',
+  eastlondon_h: 'WHU',
+  southlondon_p: 'CRY',
+  westlondon_c: 'FUL',
+  westlondon_b: 'BRE',
+  midlands_w: 'WOL',
+  merseyside_b: 'EVE',
+  southcoast_c: 'SOU',
+  nottingham_r: 'NFO',
+  leicester_f: 'LEI',
+  southampton_s: 'SHT',
+  ipswich_t: 'IPS'
+};
+
+function setBodyModalLock(locked) {
+  if (locked) {
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+  } else {
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
+  }
+}
+
+function getClubShortCode(clubOrId) {
+  const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
+  if (id && CLUB_SHORT_CODES[id]) return CLUB_SHORT_CODES[id];
+  if (typeof clubOrId === 'object' && clubOrId && clubOrId.shortName) return clubOrId.shortName;
+  return 'LFC';
+}
+
+function setBodyModalLock(locked) {
+  if (locked) {
+    document.body.classList.add('modal-open');
+    document.documentElement.classList.add('modal-open');
+  } else {
+    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+    if (openModals.length === 0) {
+      document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
+    }
+  }
+}
+
 const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
@@ -705,7 +760,7 @@ const gameState = {
   isGameOver: false,
   isSimulating: false,
   consecutiveDeficitSeasons: 0,
-  activeTab: 'standings',
+  activeTab: 'office',
   clubs: [],
   europeanMegaClubs: [...EUROPEAN_MEGA_CLUBS],
   schedule: [],
@@ -4577,7 +4632,7 @@ function handleGmDutyAction(actionKey) {
   }
 
   if (actionKey === 'play-match') {
-    switchTab('standings');
+    switchTab('office');
     if (isTodayMatchDayPending()) {
       playCurrentMatchday(false);
     } else {
@@ -4620,7 +4675,7 @@ function handleGmDutyAction(actionKey) {
   }
 
   if (actionKey === 'goto-youth') {
-    switchTab('roster');
+    switchTab('facilities');
     const panel = document.getElementById('youth-squad-panel') || document.getElementById('youth-squad-tbody');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -4898,17 +4953,51 @@ function startNextSeason() {
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: `Season ${gameState.season} が開幕しました！目標順位達成に向けてチームを指揮しましょう。` }
   ];
-  switchTab('standings');
+  switchTab('office');
   renderAll();
 }
 
 /**
  * タブ切り替え
  */
+// 各タブのスクロール位置を記憶するキャッシュマップ
+const tabScrollPositions = {
+  office: 0,
+  team: 0,
+  roster: 0,
+  facilities: 0,
+  market: 0
+};
+
+function resetTabScrollPositions() {
+  for (const k of Object.keys(tabScrollPositions)) {
+    tabScrollPositions[k] = 0;
+  }
+}
+
+/**
+ * タブ切り替え（各タブごとのスクロール位置保持・個別復元に対応）
+ */
 function switchTab(tabName) {
+  if (tabName === 'standings') tabName = 'team';
+  if (!tabName) return;
+
+  // 1. 直前のタブのスクロール位置を保存
+  const previousTab = gameState.activeTab;
+  if (previousTab) {
+    const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    tabScrollPositions[previousTab] = currentScrollY;
+  }
+
   gameState.activeTab = tabName;
 
-  const tabs = ['standings', 'roster', 'market', 'facilities'];
+  // タブ属性を body と html の両方にセット
+  document.body.dataset.activeTab = tabName;
+  document.body.setAttribute('data-active-tab', tabName);
+  document.documentElement.setAttribute('data-active-tab', tabName);
+
+  // 各タブ要素の表示・非表示切り替え
+  const tabs = ['team', 'roster', 'office', 'facilities', 'market'];
   for (const t of tabs) {
     const btn = document.getElementById(`tab-btn-${t}`);
     const view = document.getElementById(`view-${t}`);
@@ -4923,6 +5012,23 @@ function switchTab(tabName) {
   }
 
   renderAll();
+
+  // 2. 切り替え先タブの前回スクロール位置を復元（未スクロール時は 0: 最上部）
+  const targetScrollY = tabScrollPositions[tabName] || 0;
+  window.scrollTo({
+    top: targetScrollY,
+    left: 0,
+    behavior: 'instant'
+  });
+
+  // レンダリング完了後の高さ確定時にも念のため位置を適用
+  requestAnimationFrame(() => {
+    window.scrollTo({
+      top: targetScrollY,
+      left: 0,
+      behavior: 'instant'
+    });
+  });
 }
 
 /**
@@ -5164,7 +5270,7 @@ function renderHeader() {
       if (btnPlayMatch) {
         btnPlayMatch.classList.remove('hidden');
         const matchWeekNum = currentDay ? currentDay.matchWeek : gameState.currentWeek + 1;
-        btnPlayMatch.textContent = `キックオフ（第${matchWeekNum}節）`;
+        btnPlayMatch.innerHTML = `<span class="btn-large-sub mono">MATCHDAY READY</span><span class="btn-large-title">キックオフ（第${matchWeekNum}節）</span>`;
       }
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
@@ -5183,6 +5289,7 @@ function renderHeader() {
 function renderFinancialAlert() {
   const banner = document.getElementById('financial-alert-banner');
   const playerClub = getPlayerClub();
+  if (!banner || !playerClub) return;
 
   if (gameState.isGameOver) {
     banner.className = 'financial-alert-banner alert-gameover';
@@ -5206,6 +5313,7 @@ function renderFinancialAlert() {
  */
 function renderSeasonSettlement() {
   const summaryBox = document.getElementById('season-summary-box');
+  if (!summaryBox) return;
   if (!gameState.isSeasonOver || !gameState.lastSettlement) {
     summaryBox.classList.add('hidden');
     return;
@@ -6780,78 +6888,117 @@ function matchesClubFilter(clubDef, filter) {
 /**
  * GM就任モーダル：左ペインの20クラブ選択リストを描画
  */
-function renderIntroClubList() {
-  const listEl = document.getElementById('intro-club-list');
-  if (!listEl) return;
+function getFilteredIntroClubs() {
+  return CLUB_DEFINITIONS.filter(c => matchesClubFilter(c, introClubFilter));
+}
 
-  const filteredClubs = CLUB_DEFINITIONS.filter(c => matchesClubFilter(c, introClubFilter));
+function showPrevIntroClub() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+  const currentIndex = filtered.findIndex(c => c.id === gameState.selectedClubId);
+  const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+  gameState.selectedClubId = filtered[prevIndex].id;
+  renderIntroClubDetail();
+}
 
-  listEl.innerHTML = filteredClubs.map(def => {
-    const isSelected = def.id === gameState.selectedClubId;
-    return `
-      <button type="button" class="intro-club-item ${isSelected ? 'selected' : ''}" data-club-id="${def.id}">
-        <div class="club-item-main">
-          <span class="club-item-name">${def.name}</span>
-          <span class="club-item-tier">${def.tier}</span>
-        </div>
-        <div class="club-item-metrics mono">
-          <span class="club-item-funds">${formatMoney(def.initialFunds)}</span>
-          <span class="club-item-power">OVR ${def.basePower}</span>
-        </div>
-      </button>
-    `;
-  }).join('');
+function showNextIntroClub() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+  const currentIndex = filtered.findIndex(c => c.id === gameState.selectedClubId);
+  const nextIndex = (currentIndex + 1) % filtered.length;
+  gameState.selectedClubId = filtered[nextIndex].id;
+  renderIntroClubDetail();
 }
 
 /**
- * GM就任モーダル：右ペインの選択中クラブ詳細プレビューを描画
+ * GM就任モーダル：スライダーセレクト＆1クラブカード描画
+ */
+function renderIntroClubList() {
+  const filtered = getFilteredIntroClubs();
+  if (filtered.length === 0) return;
+
+  // 選択クラブがフィルター内にない場合は先頭を選択
+  if (!filtered.some(c => c.id === gameState.selectedClubId)) {
+    gameState.selectedClubId = filtered[0].id;
+  }
+
+  // セレクトボックスの選択肢を更新
+  const selectEl = document.getElementById('slider-club-select');
+  if (selectEl) {
+    selectEl.innerHTML = filtered.map(c => `
+      <option value="${c.id}" ${c.id === gameState.selectedClubId ? 'selected' : ''}>
+        ${c.name}
+      </option>
+    `).join('');
+  }
+
+  renderIntroClubDetail();
+}
+
+/**
+ * GM就任モーダル：1クラブ専用リッチカード描画（スライド式）
  */
 function renderIntroClubDetail() {
   const detailEl = document.getElementById('intro-club-detail-pane');
   const summaryEl = document.getElementById('intro-selected-summary');
+  const pagerText = document.getElementById('slider-pager-text');
+  const selectEl = document.getElementById('slider-club-select');
   if (!detailEl) return;
 
-  const club = CLUB_DEFINITIONS.find(c => c.id === gameState.selectedClubId) || CLUB_DEFINITIONS[0];
+  const filtered = getFilteredIntroClubs();
+  const currentIndex = Math.max(0, filtered.findIndex(c => c.id === gameState.selectedClubId));
+  const club = filtered[currentIndex] || CLUB_DEFINITIONS.find(c => c.id === gameState.selectedClubId) || CLUB_DEFINITIONS[0];
   const tacticDef = TACTICS_DEFINITIONS[club.defaultTactic] || TACTICS_DEFINITIONS.possession;
+
+  if (pagerText) {
+    pagerText.textContent = `${currentIndex + 1} / ${filtered.length}`;
+  }
+
+  if (selectEl && selectEl.value !== club.id) {
+    selectEl.value = club.id;
+  }
 
   detailEl.innerHTML = `
     <div class="detail-header-card">
       <div class="detail-title-row">
-        <h3 class="detail-club-name">${club.name}</h3>
-        <span class="detail-tier-badge">${club.tier}</span>
+        <div class="detail-club-title-group">
+          <span class="detail-club-avatar mono">${getClubShortCode(club)}</span>
+          <div class="detail-club-header-text">
+            <h3 class="detail-club-name">${club.name}</h3>
+            <span class="detail-tier-badge">${club.tier}</span>
+          </div>
+        </div>
       </div>
       <p class="detail-club-desc">${club.desc}</p>
     </div>
 
     <div class="detail-metrics-grid">
       <div class="detail-metric-card highlight">
-        <span class="detail-metric-label">CLUB FUNDS（初期資金）</span>
+        <span class="detail-metric-label">初期クラブ資金</span>
         <span class="detail-metric-val mono accent-gold">${formatMoney(club.initialFunds)}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">BOARD TARGET（理事会目標）</span>
-        <span class="detail-metric-val mono">${club.targetLabel}</span>
+        <span class="detail-metric-label">理事会目標</span>
+        <span class="detail-metric-val mono accent-green">${club.targetLabel}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">SQUAD POWER（戦力値）</span>
-        <span class="detail-metric-val mono accent-green">OVR ${club.basePower}</span>
+        <span class="detail-metric-label">チーム戦力値</span>
+        <span class="detail-metric-val mono">OVR ${club.basePower}</span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">SUPPORTERS（ファン数）</span>
+        <span class="detail-metric-label">サポーター規模</span>
         <span class="detail-metric-val mono">${club.supporters.toLocaleString()}人</span>
       </div>
     </div>
 
-    <div class="detail-mission-box">
-      <div class="detail-mission-title mono">BOARD MISSION / EXPECTATION</div>
-      <p class="detail-mission-text">
-        今季の理事会要求は「<strong>${club.targetLabel}</strong>」です。初期戦術方針は「${tacticDef.name}」が設定されています。目標を達成してシーズンを終えると、理事会から <strong>+£3.0M</strong> の特別ボーナスが支給されます。
-      </p>
+    <div class="detail-tactic-box">
+      <span class="detail-tactic-label">初期戦術方針:</span>
+      <strong class="detail-tactic-name mono">${tacticDef.name}</strong>
     </div>
   `;
 
   if (summaryEl) {
-    summaryEl.innerHTML = `選択中：<strong>${club.name}</strong> <span class="summary-target mono">（目標：${club.targetLabel} / 予算 ${formatMoney(club.initialFunds)}）</span>`;
+    summaryEl.innerHTML = `選択: <strong class="accent-green">${club.name}</strong> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
   }
 }
 
@@ -6880,6 +7027,7 @@ function openIntroModal(allowCancel = false) {
   renderIntroClubList();
   renderIntroClubDetail();
   overlay.classList.remove('hidden');
+  setBodyModalLock(true);
 }
 
 /**
@@ -6892,6 +7040,7 @@ function confirmIntroAndStartGame() {
 
   const overlay = document.getElementById('intro-modal-overlay');
   overlay.classList.add('hidden');
+  setBodyModalLock(false);
   gameState.hasStartedOnce = true;
 
   setupNewGame(gameState.selectedClubId);
@@ -6901,6 +7050,7 @@ function confirmIntroAndStartGame() {
  * 指定されたクラブIDをプレイヤー担当クラブとして新規ゲームをセットアップ
  */
 function setupNewGame(playerClubId = gameState.selectedClubId) {
+  resetTabScrollPositions();
   const usedNames = new Set();
   playerIdCounter = 1;
 
@@ -6913,7 +7063,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.isGameOver = false;
   gameState.isSimulating = false;
   gameState.consecutiveDeficitSeasons = 0;
-  gameState.activeTab = 'standings';
+  gameState.activeTab = 'office';
+  document.body.dataset.activeTab = 'office';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
@@ -6963,7 +7114,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   ];
   generateTransferMarket();
   generateYouthAcademyCandidates();
-  switchTab('standings');
+  switchTab('office');
 }
 
 /**
@@ -7007,18 +7158,70 @@ function initGame() {
     }
   });
 
-  document.getElementById('intro-club-list').addEventListener('click', (e) => {
-    const item = e.target.closest('.intro-club-item');
-    if (item && item.dataset.clubId) {
-      gameState.selectedClubId = item.dataset.clubId;
-      renderIntroClubList();
+  // スライダー切り替えボタン（前へ・次へ）
+  const btnPrevClub = document.getElementById('btn-prev-club');
+  if (btnPrevClub) {
+    btnPrevClub.addEventListener('click', showPrevIntroClub);
+  }
+
+  const btnNextClub = document.getElementById('btn-next-club');
+  if (btnNextClub) {
+    btnNextClub.addEventListener('click', showNextIntroClub);
+  }
+
+  // クラブ直接選択セレクトボックス
+  const sliderClubSelect = document.getElementById('slider-club-select');
+  if (sliderClubSelect) {
+    sliderClubSelect.addEventListener('change', (e) => {
+      gameState.selectedClubId = e.target.value;
       renderIntroClubDetail();
+    });
+  }
+
+  // タッチスワイプ（左右フリック）対応
+  const cardContainer = document.getElementById('intro-single-card-container');
+  if (cardContainer) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    cardContainer.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    cardContainer.addEventListener('touchend', (e) => {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        // 横方向へのスワイプ判定（縦スクロールの誤判定防止）
+        if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (deltaX < 0) {
+            showNextIntroClub(); // 左スワイプで次へ
+          } else {
+            showPrevIntroClub(); // 右スワイプで前へ
+          }
+        }
+      }
+    }, { passive: true });
+  }
+
+  // キーボード左右矢印キー対応（モーダル表示中）
+  window.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('intro-modal-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) {
+      if (e.key === 'ArrowLeft') {
+        showPrevIntroClub();
+      } else if (e.key === 'ArrowRight') {
+        showNextIntroClub();
+      }
     }
   });
 
   document.getElementById('btn-confirm-intro').addEventListener('click', confirmIntroAndStartGame);
   document.getElementById('btn-cancel-intro').addEventListener('click', () => {
     document.getElementById('intro-modal-overlay').classList.add('hidden');
+    setBodyModalLock(false);
   });
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
