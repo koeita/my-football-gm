@@ -113,13 +113,24 @@
       <div class="gm-tasks-header">
         <div class="gm-tasks-title-group">
           <span class="gm-tasks-label mono">GM EXECUTIVE DUTIES</span>
-          <h2 class="gm-tasks-title">GM業務タスク一覧（優先度別アクション）</h2>
+          <h2 class="gm-tasks-title">GM業務タスク一覧</h2>
+          <span class="gm-tasks-count-badge mono" id="gm-tasks-count-badge">3件</span>
         </div>
-        <div class="gm-tasks-legend mono">
-          <span class="duty-legend-item duty-critical-dot">CRITICAL (必須)</span>
-          <span class="duty-legend-item duty-recommended-dot">RECOMMENDED (推奨)</span>
-          <span class="duty-legend-item duty-optional-dot">OPTIONAL (任意)</span>
+        <div class="gm-tasks-header-right">
+          <div class="gm-tasks-legend mono">
+            <span class="duty-legend-item duty-critical-dot">CRITICAL</span>
+            <span class="duty-legend-item duty-recommended-dot">RECOMMENDED</span>
+            <span class="duty-legend-item duty-optional-dot">OPTIONAL</span>
+          </div>
+          <button type="button" class="btn-toggle-tasks mono" id="btn-toggle-gm-tasks" aria-expanded="true" title="タスクパネルの展開/折りたたみ">
+            <span id="gm-tasks-toggle-text">折りたたむ</span>
+            <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
+          </button>
         </div>
+      </div>
+      <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
+      <div class="gm-tasks-mini-summary hidden" id="gm-tasks-mini-summary">
+        <!-- JSで最優先タスクを1行描画 -->
       </div>
       <div class="gm-tasks-grid" id="gm-tasks-list">
         <!-- JSで必須・推奨・任意のタスクカードを自動描画 -->

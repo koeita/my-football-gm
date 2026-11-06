@@ -6074,22 +6074,59 @@ function renderGmDuties() {
   }
   duties.push(optionalDuty);
 
-  listEl.innerHTML = duties.map(d => `
-    <div class="gm-task-card duty-${d.level}">
-      <div class="gm-task-main">
-        <div class="gm-task-header-row">
-          <span class="duty-priority-badge badge-${d.level}">${d.badge}</span>
-          <strong class="gm-task-title">${d.title}</strong>
+  const countBadgeEl = document.getElementById('gm-tasks-count-badge');
+  if (countBadgeEl) {
+    countBadgeEl.textContent = `${duties.length}件`;
+  }
+
+  const isCollapsed = Boolean(gameState.gmTasksCollapsed);
+  const toggleBtnText = document.getElementById('gm-tasks-toggle-text');
+  const toggleBtnIcon = document.getElementById('gm-tasks-toggle-icon');
+  const miniSummaryEl = document.getElementById('gm-tasks-mini-summary');
+
+  if (toggleBtnText) toggleBtnText.textContent = isCollapsed ? '全タスク表示' : '折りたたむ';
+  if (toggleBtnIcon) toggleBtnIcon.textContent = isCollapsed ? '▼' : '▲';
+
+  // 折りたたみ時の1行サマリー表示
+  if (miniSummaryEl) {
+    if (isCollapsed) {
+      const topDuty = duties[0];
+      miniSummaryEl.classList.remove('hidden');
+      miniSummaryEl.innerHTML = `
+        <div class="mini-summary-content">
+          <span class="duty-priority-badge badge-${topDuty.level}">${topDuty.badge}</span>
+          <span class="mini-summary-title"><strong>${topDuty.title}</strong></span>
         </div>
-        <p class="gm-task-desc">${d.desc}</p>
-      </div>
-      <div class="gm-task-action-wrap">
-        <button type="button" class="btn btn-sm btn-duty-action ${d.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
-          ${d.btnText}
+        <button type="button" class="btn btn-sm btn-duty-action ${topDuty.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${topDuty.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
+          ${topDuty.btnText}
         </button>
+      `;
+    } else {
+      miniSummaryEl.classList.add('hidden');
+    }
+  }
+
+  if (isCollapsed) {
+    listEl.classList.add('hidden');
+  } else {
+    listEl.classList.remove('hidden');
+    listEl.innerHTML = duties.map(d => `
+      <div class="gm-task-card duty-${d.level}">
+        <div class="gm-task-main">
+          <div class="gm-task-header-row">
+            <span class="duty-priority-badge badge-${d.level}">${d.badge}</span>
+            <strong class="gm-task-title">${d.title}</strong>
+          </div>
+          <p class="gm-task-desc">${d.desc}</p>
+        </div>
+        <div class="gm-task-action-wrap">
+          <button type="button" class="btn btn-sm btn-duty-action ${d.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
+            ${d.btnText}
+          </button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
 }
 
 /**
@@ -6976,7 +7013,25 @@ function initGame() {
     });
   }
 
-  // GM業務タスク一覧（実行 / 移動ボタン）のイベント
+  // GM業務タスク一覧（折りたたみトグル＆実行ボタン）のイベント
+  const btnToggleGmTasks = document.getElementById('btn-toggle-gm-tasks');
+  if (btnToggleGmTasks) {
+    btnToggleGmTasks.addEventListener('click', () => {
+      gameState.gmTasksCollapsed = !gameState.gmTasksCollapsed;
+      renderGmDuties();
+    });
+  }
+
+  const gmTasksMiniSummary = document.getElementById('gm-tasks-mini-summary');
+  if (gmTasksMiniSummary) {
+    gmTasksMiniSummary.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('[data-duty-action]');
+      if (actionBtn && actionBtn.dataset.dutyAction) {
+        handleGmDutyAction(actionBtn.dataset.dutyAction);
+      }
+    });
+  }
+
   const gmTasksList = document.getElementById('gm-tasks-list');
   if (gmTasksList) {
     gmTasksList.addEventListener('click', (e) => {
