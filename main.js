@@ -7959,9 +7959,68 @@ function initGame() {
     }
   });
 
+  // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
+  initReloadPrevention();
+
   // 背景のダッシュボードを初期描画した上で、初回起動時のGM就任モーダルを表示
   setupNewGame(gameState.selectedClubId);
   openIntroModal(false);
+}
+
+/**
+ * モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤操作リロード防止
+ */
+function initReloadPrevention() {
+  let touchStartY = 0;
+
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const touchCurrentY = e.touches[0].clientY;
+    const deltaY = touchCurrentY - touchStartY;
+
+    // ページの最上部で下方向へスワイプしようとした場合（ブラウザのプルリフレッシュ挙動）
+    const isAtTop = (window.scrollY <= 0 && document.documentElement.scrollTop <= 0);
+
+    if (isAtTop && deltaY > 0) {
+      // 内部スクロール要素（モーダルなど）が途中でスクロールされているか確認
+      let target = e.target;
+      let hasScrolledInternalElement = false;
+      while (target && target !== document.body && target !== document.documentElement) {
+        if (target.scrollHeight > target.clientHeight) {
+          const overflowY = window.getComputedStyle(target).overflowY;
+          if ((overflowY === 'auto' || overflowY === 'scroll') && target.scrollTop > 0) {
+            hasScrolledInternalElement = true;
+            break;
+          }
+        }
+        target = target.parentElement;
+      }
+
+      if (!hasScrolledInternalElement && e.cancelable) {
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
+
+  // 誤リロード・誤離脱時の確認ダイアログ
+  window.addEventListener('beforeunload', (e) => {
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  });
+
+  // リロードキーショートカット（F5, Ctrl+R, Cmd+R）のブロック
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) {
+      e.preventDefault();
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initGame);

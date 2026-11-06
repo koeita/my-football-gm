@@ -60,6 +60,17 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         for dom_id in required_ids:
             self.assertIn(f'id="{dom_id}"', html, f"DOM ID #{dom_id} must exist in index.html")
 
+    def test_reload_prevention_mechanisms(self):
+        """モバイルでのプルダウンリロード防止設定（CSS overscroll-behavior-y: none および JS initReloadPrevention）が設定されていること"""
+        with open(self.style_css_path, 'r', encoding='utf-8') as f:
+            css = f.read()
+        with open(self.main_js_path, 'r', encoding='utf-8') as f:
+            js = f.read()
+
+        self.assertIn('overscroll-behavior-y: none', css, "style.css must have overscroll-behavior-y: none")
+        self.assertIn('initReloadPrevention', js, "main.js must define and call initReloadPrevention")
+        self.assertIn('beforeunload', js, "main.js must handle beforeunload to prevent accidental reload")
+
     def test_bench_carousel_css_properties(self):
         """控え選手カルーセルの横スクロールプロパティが正しく定義されていること"""
         with open(self.style_css_path, 'r', encoding='utf-8') as f:

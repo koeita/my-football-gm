@@ -45,9 +45,16 @@
   padding: 0;
 }
 
+html {
+  overscroll-behavior-y: none;
+  overscroll-behavior: none;
+}
+
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
+  overscroll-behavior-y: none;
+  overscroll-behavior: none;
   font-family: var(--font-sans);
   font-size: 13.5px;
   line-height: 1.45;
