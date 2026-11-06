@@ -6864,7 +6864,7 @@ function renderIntroClubList() {
   if (selectEl) {
     selectEl.innerHTML = filtered.map(c => `
       <option value="${c.id}" ${c.id === gameState.selectedClubId ? 'selected' : ''}>
-        ${c.name} (${formatMoney(c.initialFunds)} / OVR ${c.basePower})
+        ${c.name}
       </option>
     `).join('');
   }
