@@ -355,31 +355,31 @@ const FORMATIONS = {
     name: '4-3-3',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 70 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 70 },
-      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 54 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 28, y: 43 },
-      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 72, y: 43 },
-      { slotIndex: 8, pos: 'LW', label: 'LW', x: 20, y: 22 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 69 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 75 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 75 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 69 },
+      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 57 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 26, y: 42 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 74, y: 42 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 18, y: 22 },
       { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
-      { slotIndex: 10, pos: 'RW', label: 'RW', x: 80, y: 22 }
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 82, y: 22 }
     ]
   },
   '4-2-3-1': {
     name: '4-2-3-1',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 72 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 74 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 74 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 72 },
-      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 35, y: 55 },
-      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 65, y: 55 },
-      { slotIndex: 7, pos: 'LM', label: 'LM', x: 18, y: 36 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
+      { slotIndex: 5, pos: 'DM', label: 'LDM', x: 33, y: 56 },
+      { slotIndex: 6, pos: 'DM', label: 'RDM', x: 67, y: 56 },
+      { slotIndex: 7, pos: 'LM', label: 'LM', x: 16, y: 36 },
       { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 35 },
-      { slotIndex: 9, pos: 'RM', label: 'RM', x: 82, y: 36 },
+      { slotIndex: 9, pos: 'RM', label: 'RM', x: 84, y: 36 },
       { slotIndex: 10, pos: 'CF', label: 'CF', x: 50, y: 15 }
     ]
   },
@@ -387,32 +387,32 @@ const FORMATIONS = {
     name: '4-4-2',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'LB', label: 'LB', x: 15, y: 71 },
-      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 38, y: 73 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 62, y: 73 },
-      { slotIndex: 4, pos: 'RB', label: 'RB', x: 85, y: 71 },
-      { slotIndex: 5, pos: 'LM', label: 'LM', x: 15, y: 46 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 38, y: 48 },
-      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 62, y: 48 },
-      { slotIndex: 8, pos: 'RM', label: 'RM', x: 85, y: 46 },
-      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
-      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 69 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 75 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 75 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 69 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 46 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 37, y: 49 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 63, y: 49 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 46 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
     ]
   },
   '3-5-2': {
     name: '3-5-2',
     slots: [
       { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
-      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 24, y: 72 },
-      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 74 },
-      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 76, y: 72 },
-      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 56 },
-      { slotIndex: 5, pos: 'LM', label: 'LM', x: 14, y: 43 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 35, y: 42 },
-      { slotIndex: 7, pos: 'AM', label: 'AM', x: 65, y: 42 },
-      { slotIndex: 8, pos: 'RM', label: 'RM', x: 86, y: 43 },
-      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 35, y: 18 },
-      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 65, y: 18 }
+      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 22, y: 73 },
+      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 78, y: 73 },
+      { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 57 },
+      { slotIndex: 5, pos: 'LM', label: 'LM', x: 13, y: 43 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 34, y: 41 },
+      { slotIndex: 7, pos: 'AM', label: 'AM', x: 66, y: 41 },
+      { slotIndex: 8, pos: 'RM', label: 'RM', x: 87, y: 43 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
     ]
   }
 };
@@ -5721,10 +5721,13 @@ function renderTacticalBoard() {
         return `
           <div class="bench-sub-item ${itemClass}" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-info">
-              ${formatPlayerPositionsHtml(bp)}
-              <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
-                #${bp.squadNumber || '-'} ${bp.name}
-              </span>
+              <div class="bench-sub-main-row">
+                ${formatPlayerPositionsHtml(bp)}
+                <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
+                  #${bp.squadNumber || '-'} ${bp.name}
+                </span>
+                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+              </div>
             </div>
             <div class="bench-sub-stats">
               ${fitTag}
@@ -5766,10 +5769,13 @@ function renderTacticalBoard() {
         return `
           <div class="bench-sub-item" draggable="true" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
             <div class="bench-sub-info">
-              ${formatPlayerPositionsHtml(bp)}
-              <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
-                #${bp.squadNumber || '-'} ${bp.name}
-              </span>
+              <div class="bench-sub-main-row">
+                ${formatPlayerPositionsHtml(bp)}
+                <span class="player-name-link bench-sub-name clickable-player-name" data-profile-id="${bp.id}">
+                  #${bp.squadNumber || '-'} ${bp.name}
+                </span>
+                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+              </div>
             </div>
             <div class="bench-sub-stats">
               ${fitTag}
@@ -7117,11 +7123,9 @@ function initTacticalDragAndDrop() {
   // Pointer Down
   document.addEventListener('pointerdown', (e) => {
     const rosterView = document.getElementById('view-roster');
-    if (!rosterView || rosterView.classList.contains('hidden')) {
-      return;
-    }
+    if (!rosterView || rosterView.classList.contains('hidden')) return;
 
-    // ボタンやセレクトボックス、リンクの場合は通常クリックを優先
+    // ボタンや入力要素は通常のクリック操作を優先
     if (e.target.closest('button, select, input, a')) return;
 
     const pitchNode = e.target.closest('.pitch-node');
@@ -7166,6 +7170,11 @@ function initTacticalDragAndDrop() {
         };
       }
     }
+
+    // タッチ時のポインタキャプチャ設定（指が外れてもイベントを維持）
+    if (dragSource && e.target.setPointerCapture) {
+      try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+    }
   });
 
   // Pointer Move
@@ -7173,7 +7182,7 @@ function initTacticalDragAndDrop() {
     if (!dragSource) return;
 
     const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-    if (!isDragging && dist > 6) {
+    if (!isDragging && dist > 7) {
       isDragging = true;
       if (dragSource.element) {
         dragSource.element.classList.add('dragging');
@@ -7192,10 +7201,18 @@ function initTacticalDragAndDrop() {
     if (isDragging && ghostEl) {
       if (e.cancelable) e.preventDefault();
 
-      ghostEl.style.left = `${e.clientX}px`;
-      ghostEl.style.top = `${e.clientY}px`;
+      // モバイルで指の真下ではなく指の少し上(45px上)にオフセット表示して指で隠れないようにする！
+      const isTouch = e.pointerType === 'touch';
+      const offsetY = isTouch ? -45 : 0;
 
-      const targetUnderPointer = document.elementFromPoint(e.clientX, e.clientY);
+      ghostEl.style.left = `${e.clientX}px`;
+      ghostEl.style.top = `${e.clientY + offsetY}px`;
+
+      // 判定座標（タッチ時は指の上端付近もカバー）
+      const checkX = e.clientX;
+      const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+
+      const targetUnderPointer = document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY);
       document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
 
       if (targetUnderPointer) {
@@ -7225,8 +7242,13 @@ function initTacticalDragAndDrop() {
 
     const source = dragSource;
 
+    // キャプチャ解除
+    if (e.target.releasePointerCapture) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
+
     if (!isDragging) {
-      // タップ（クリック）動作：選手詳細スカウティングレポートを表示！
+      // 単なるタップ/クリック: 詳細スカウティングレポートを開く！
       cleanupDrag();
       lastHoverDropTarget = null;
       if (source.playerId) {
@@ -7241,11 +7263,16 @@ function initTacticalDragAndDrop() {
       setTimeout(() => window.__setJustFinishedDragging(false), 200);
     }
 
-    // ゴースト要素を先に完全消去し、真下の要素を確実に検出可能にする
+    // ゴースト要素を消去
     cleanupDrag();
 
-    const targetUnderPointer = (e.clientX !== undefined && e.clientY !== undefined)
-      ? document.elementFromPoint(e.clientX, e.clientY)
+    const isTouch = e.pointerType === 'touch';
+    const offsetY = isTouch ? -45 : 0;
+    const checkX = e.clientX;
+    const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+
+    const targetUnderPointer = (checkX !== undefined && checkY !== undefined)
+      ? (document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY))
       : null;
 
     const resolvedTarget = targetUnderPointer || lastHoverDropTarget;
@@ -7286,7 +7313,10 @@ function initTacticalDragAndDrop() {
   });
 
   // Pointer Cancel
-  document.addEventListener('pointercancel', () => {
+  document.addEventListener('pointercancel', (e) => {
+    if (e.target.releasePointerCapture) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
     cleanupDrag();
     lastHoverDropTarget = null;
   });

@@ -5398,7 +5398,7 @@ body.modal-open {
 .bench-sub-item {
   user-select: none;
   -webkit-user-select: none;
-  touch-action: pan-y;
+  touch-action: none !important;
 }
 
 .pitch-node {
@@ -5482,4 +5482,165 @@ body.modal-open {
   font-size: 11px;
   font-weight: 800;
   color: var(--accent-gold, #f39c12);
+}
+
+
+/* ==========================================================================
+   モバイル専用 作戦ボード & 控え選手カード 最適化レイアウト
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* ピッチ上の選手カード：4バック・中盤が重ならないコンパクトサイズ */
+  .pitch-node {
+    min-width: 48px !important;
+    max-width: 58px !important;
+    padding: 2px 2px !important;
+    gap: 1px !important;
+    border-radius: 4px !important;
+    touch-action: none !important;
+  }
+
+  .pitch-node-top {
+    gap: 1px !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .pitch-node-pos {
+    font-size: 7.5px !important;
+    padding: 0 2px !important;
+    line-height: 1.15 !important;
+    border-radius: 2px !important;
+  }
+
+  .pitch-node-ovr {
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+  }
+
+  .pitch-node-name,
+  .pitch-node-name-btn {
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+    max-width: 52px !important;
+    letter-spacing: -0.03em !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    padding: 0 !important;
+    text-align: center !important;
+  }
+
+  .pitch-node-meta {
+    gap: 1px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .pitch-node-pref {
+    font-size: 7px !important;
+    line-height: 1.1 !important;
+  }
+
+  .pitch-node-warn,
+  .pitch-node-subpos,
+  .pitch-node-injury {
+    font-size: 6.5px !important;
+    padding: 0 1px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* 控え選手カード：2段構成レイアウトで選手名と適性をフル表示 */
+  .pitch-bench-list {
+    max-height: 280px !important;
+    gap: 6px !important;
+  }
+
+  .bench-sub-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    padding: 6px 8px !important;
+    border-radius: 4px !important;
+    touch-action: none !important;
+    cursor: grab !important;
+    background-color: var(--bg-panel, #161b22) !important;
+  }
+
+  .bench-sub-info {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .bench-sub-main-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+
+  .bench-sub-name {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--text-main, #f1f2f6) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 190px !important;
+  }
+
+  .bench-sub-ovr {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--accent-gold, #f39c12) !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  .bench-sub-stats {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .bench-fit-tag {
+    font-size: 9.5px !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    white-space: nowrap !important;
+  }
+
+  .btn-sub-bench {
+    font-size: 11px !important;
+    padding: 3px 10px !important;
+    height: 26px !important;
+    line-height: 20px !important;
+    white-space: nowrap !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* チーム総合指標バッジ：4枚が均等に収まり左が見切れないレイアウト */
+  .tactical-board-summary,
+  .roster-summary-metrics,
+  .power-badges-wrap {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  .power-badge {
+    font-size: 9.5px !important;
+    padding: 3px 2px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+  }
 }
