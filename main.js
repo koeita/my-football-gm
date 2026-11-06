@@ -4414,9 +4414,9 @@ function handleGmDutyAction(actionKey) {
   }
 
   if (actionKey === 'goto-youth') {
-    switchTab('facilities');
-    const panel = document.getElementById('youth-academy-panel');
-    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    switchTab('roster');
+    const panel = document.getElementById('youth-squad-panel') || document.getElementById('youth-squad-tbody');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -4868,24 +4868,24 @@ function renderHeader() {
   document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
 
   document.getElementById('tab-badge-roster').textContent = `${squadCount}/${MAX_SQUAD_SIZE}`;
+
+  // 移籍市場バッジ：グローバル移籍市場（全20クラブの登録選手総数）を表示
+  const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
   const marketBadge = document.getElementById('tab-badge-market');
-  marketBadge.textContent = `${gameState.transferMarket.length}名`;
-  if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
-    marketBadge.classList.add('badge-highlight');
-  } else {
-    marketBadge.classList.remove('badge-highlight');
+  if (marketBadge) {
+    marketBadge.textContent = `${totalMarketPlayers}名`;
+    if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
+      marketBadge.classList.add('badge-highlight');
+    } else {
+      marketBadge.classList.remove('badge-highlight');
+    }
   }
 
   const facilitiesBadge = document.getElementById('tab-badge-facilities');
   if (facilitiesBadge) {
     const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
-    const youthCount = (gameState.youthCandidates || []).length;
-    facilitiesBadge.textContent = youthCount > 0 ? `Lv.${f.stadium}/${f.training}/${f.scouting}・候補${youthCount}` : `Lv.${f.stadium}/${f.training}/${f.scouting}`;
-    if (youthCount > 0 && gameState.isSeasonOver) {
-      facilitiesBadge.classList.add('badge-highlight');
-    } else {
-      facilitiesBadge.classList.remove('badge-highlight');
-    }
+    facilitiesBadge.textContent = `Lv.${f.stadium}/${f.training}/${f.scouting}`;
+    facilitiesBadge.classList.remove('badge-highlight');
   }
 
   const financeBadge = document.getElementById('header-finance-badge');
@@ -6035,7 +6035,9 @@ function renderGmDuties() {
   duties.push(recommendedDuty);
 
   // 3. 任意タスク（OPTIONAL / 緑）
-  const youthCount = (gameState.youthCandidates || []).length;
+  const youthSquad = playerClub.youthSquad || [];
+  const topCount = playerClub.players.length;
+  const canPromote = topCount < MAX_SQUAD_SIZE;
   const f = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
   const minUpgradeCost = Math.min(
     f.stadium < 5 ? FACILITY_DEFINITIONS.stadium.costs[f.stadium] : Infinity,
@@ -6044,13 +6046,13 @@ function renderGmDuties() {
   );
 
   let optionalDuty = null;
-  if (youthCount > 0 && playerClub.players.length < MAX_SQUAD_SIZE) {
+  if (canPromote && youthSquad.length > 0) {
     optionalDuty = {
       level: 'optional',
       badge: '任意 / OPTIONAL',
-      title: `ユース視察・昇格審査（候補 ${youthCount}名）`,
-      desc: `アカデミーから16〜18歳の有望株${youthCount}名が推薦されています。移籍金ゼロ・最低年俸 £800K でトップ昇格可能です。`,
-      btnText: 'ユース視察へ移動',
+      title: `U-21ユース視察・昇格検討（在籍 ${youthSquad.length}名 / トップ枠空きあり）`,
+      desc: `U-21アカデミーに16〜19歳の若手有望株${youthSquad.length}名が在籍しています。トップ登録枠（現在 ${topCount}/${MAX_SQUAD_SIZE}名）に昇格させプロ契約を締結することが可能です。`,
+      btnText: 'ユース一覧へ移動',
       action: 'goto-youth'
     };
   } else if (playerClub.funds >= minUpgradeCost && minUpgradeCost !== Infinity) {
@@ -6063,11 +6065,12 @@ function renderGmDuties() {
       action: 'goto-facilities'
     };
   } else {
+    const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
     optionalDuty = {
       level: 'optional',
       badge: '任意 / OPTIONAL',
-      title: `移籍市場スカウティング（候補 ${gameState.transferMarket.length}名）`,
-      desc: '移籍市場リストから掘り出し物（契約残り1年の格安選手や若手有望株）の獲得交渉を行えます。',
+      title: `移籍市場スカウティング（全20クラブ ${totalMarketPlayers}名）`,
+      desc: 'グローバル移籍市場から掘り出し物（契約残り1年の格安選手や若手有望株）の獲得交渉を行えます。',
       btnText: '移籍市場へ移動',
       action: 'goto-market'
     };
@@ -7054,23 +7057,13 @@ function initGame() {
   }
 
   // ユースアカデミー（選手名プロフィール・トップ昇格・見送りボタン）のイベント
-  const youthGrid = document.getElementById('youth-candidates-grid');
-  if (youthGrid) {
-    youthGrid.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
-        e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
-        return;
-      }
-      const promoteBtn = e.target.closest('[data-promote-youth]');
-      if (promoteBtn && promoteBtn.dataset.promoteYouth) {
-        promoteYouthCandidate(promoteBtn.dataset.promoteYouth);
-        return;
-      }
-      const dismissBtn = e.target.closest('[data-dismiss-youth]');
-      if (dismissBtn && dismissBtn.dataset.dismissYouth) {
-        dismissYouthCandidate(dismissBtn.dataset.dismissYouth);
+  const btnGotoYouthSquad = document.getElementById('btn-goto-youth-squad');
+  if (btnGotoYouthSquad) {
+    btnGotoYouthSquad.addEventListener('click', () => {
+      switchTab('roster');
+      const panel = document.getElementById('youth-squad-panel') || document.getElementById('youth-squad-tbody');
+      if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
   }

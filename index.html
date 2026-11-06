@@ -89,25 +89,6 @@
     <!-- 赤字経営・ゲームオーバー警告バー -->
     <div id="financial-alert-banner" class="financial-alert-banner hidden"></div>
 
-    <!-- ナビゲーションタブ -->
-    <nav class="tab-nav" aria-label="メインメニュー">
-      <button type="button" class="tab-btn active" data-tab="standings" id="tab-btn-standings">
-        順位表 / 日程
-      </button>
-      <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster">
-        所属選手・戦術・契約
-        <span class="tab-badge mono" id="tab-badge-roster">16/20</span>
-      </button>
-      <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market">
-        移籍市場
-        <span class="tab-badge mono" id="tab-badge-market">OFFSEASON</span>
-      </button>
-      <button type="button" class="tab-btn" data-tab="facilities" id="tab-btn-facilities">
-        クラブ経営・施設投資
-        <span class="tab-badge mono" id="tab-badge-facilities">Lv.1</span>
-      </button>
-    </nav>
-
     <!-- GM業務タスク一覧（GM Dashboard：必須 / 推奨 / 任意） -->
     <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="GM業務タスク一覧">
       <div class="gm-tasks-header">
@@ -136,6 +117,25 @@
         <!-- JSで必須・推奨・任意のタスクカードを自動描画 -->
       </div>
     </section>
+
+    <!-- ナビゲーションタブ（コンテンツの直上に配置） -->
+    <nav class="tab-nav" aria-label="メインメニュー">
+      <button type="button" class="tab-btn active" data-tab="standings" id="tab-btn-standings">
+        順位表 / 日程
+      </button>
+      <button type="button" class="tab-btn" data-tab="roster" id="tab-btn-roster">
+        所属選手・戦術・契約
+        <span class="tab-badge mono" id="tab-badge-roster">16/25</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="market" id="tab-btn-market">
+        移籍市場
+        <span class="tab-badge mono" id="tab-badge-market">320名</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="facilities" id="tab-btn-facilities">
+        クラブ経営・施設投資
+        <span class="tab-badge mono" id="tab-badge-facilities">Lv.1/1/1</span>
+      </button>
+    </nav>
 
     <!-- シーズン終了・決算・世代交代サマリー（オフシーズン中のみ上部表示） -->
     <section id="season-summary-box" class="season-summary hidden">
@@ -522,23 +522,17 @@
         </div>
       </div>
 
-      <!-- ユースアカデミー（新星の発掘・トップチーム昇格審査）パネル -->
+      <!-- 下部組織（常設U-21ユースアカデミー）連携案内パネル -->
       <div class="panel youth-academy-panel" id="youth-academy-panel">
         <div class="panel-header">
           <div>
-            <h2 class="panel-title">ユースアカデミー（下部組織・16〜18歳の新星発掘）</h2>
+            <h2 class="panel-title">下部組織（常設U-21ユースアカデミー連携）</h2>
             <p class="panel-note">
-              毎シーズン、クラブの下部組織（アカデミー）から将来有望な若手候補2名（16〜18歳）が選出されます。「トップチーム昇格（移籍金 £0・最低年俸 £800K）」または「見送り（他クラブ放出）」を決断してください。
+              当クラブのU-21ユースチーム（最大10名在籍）は「所属選手・戦術・契約」タブにて常設運営されています。施設投資の「グローバルスカウト網」を強化することで、シーズン終了時に加入する新星のポテンシャル上限（★Sランク率）が永続UPします。
             </p>
           </div>
           <div class="team-power-badges">
-            <span class="power-badge">昇格待機候補 <strong class="mono accent-green" id="youth-candidates-count">0名</strong></span>
-            <span class="power-badge">トップ登録枠 <strong class="mono" id="youth-squad-capacity">16 / 20名</strong></span>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="youth-candidates-grid" id="youth-candidates-grid">
-            <!-- JSでユース昇格候補2名のカードを描画 -->
+            <button type="button" class="btn btn-primary btn-sm" id="btn-goto-youth-squad">U-21ユースチーム一覧へ移動</button>
           </div>
         </div>
       </div>
