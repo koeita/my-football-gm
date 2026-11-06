@@ -4969,15 +4969,7 @@ function switchTab(tabName) {
   document.body.setAttribute('data-active-tab', tabName);
   document.documentElement.setAttribute('data-active-tab', tabName);
 
-  // スマホ時に本部タブ以外なら上部チームカード（.status-header）に直接非表示クラスを付与
-  const header = document.querySelector('.status-header');
-  if (header) {
-    if (tabName === 'office') {
-      header.classList.remove('mobile-hidden-header');
-    } else {
-      header.classList.add('mobile-hidden-header');
-    }
-  }
+// ミニヘッダーは全タブで常設表示
 
   const tabs = ['team', 'roster', 'office', 'facilities', 'market'];
   for (const t of tabs) {

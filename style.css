@@ -4207,74 +4207,150 @@ body.modal-open {
   }
 
   /* 1. ヘッダー＆ステータスバーのコンパクト化 */
+  /* 1. 『ぼくのプロ野球』風 2行ミニステータスヘッダー（高さ約52px・全タブ常設） */
   .status-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px 10px 8px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 3px !important;
+    padding: 5px 10px 5px !important;
+    margin: 0 0 6px 0 !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top: 2px solid var(--accent-green) !important;
+    background: linear-gradient(180deg, #1a1f26 0%, #121519 100%) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   }
 
+  /* 上段：クラブ名 ＆ 右側ステータスバッジ（健全度・目標） */
   .brand-area {
-    width: 100%;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
 
   .brand-top-row {
-    font-size: 9px;
-    gap: 4px;
-    flex-wrap: wrap;
+    font-size: 9px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    order: 2 !important;
+  }
+
+  .game-label {
+    display: none !important; /* 長いタイトルは非表示で省スペース化 */
   }
 
   .club-title-row {
-    width: 100%;
-    justify-content: space-between;
-    align-items: center;
+    width: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    order: 1 !important;
   }
 
   .club-title {
-    font-size: 15px;
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    color: var(--text-main, #ffffff) !important;
+    letter-spacing: -0.01em !important;
+    white-space: nowrap !important;
   }
 
   .gm-badge {
-    font-size: 9.5px;
-    padding: 1px 5px;
+    display: none !important; /* GM名は非表示で省スペース化 */
   }
 
-  /* ステータスメトリクス（2列グリッドで高さを抑制） */
+  .finance-status-badge {
+    font-size: 8.5px !important;
+    padding: 1px 4px !important;
+  }
+
+  .target-rank-badge {
+    font-size: 8.5px !important;
+    padding: 1px 4px !important;
+  }
+
+  /* 下段：日付、節数、資金の主要3項目を横1行に完全固定（折り返し禁止） */
   .status-metrics {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 4px 8px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
     width: 100% !important;
-    padding: 4px 0 !important;
+    height: 18px !important;
+    max-height: 18px !important;
+    padding: 2px 0 0 !important;
+    margin: 0 !important;
+    border: none !important;
     border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    gap: 6px !important;
+    overflow: hidden !important;
   }
 
   .metric-box {
-    border-left: none !important;
-    padding: 3px 6px !important;
-    background: rgba(0, 0, 0, 0.25) !important;
-    border-radius: 3px !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  }
-
-  .metric-box.calendar-date-box {
-    grid-column: span 2 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 3px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .metric-label {
-    font-size: 8px !important;
-    letter-spacing: 0.03em !important;
-    line-height: 1.1 !important;
+    display: none !important; /* 省スペース化のため非表示 */
   }
 
   .metric-value {
-    font-size: 11.5px !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.3 !important;
   }
+
+  /* 日付ボックス */
+  .metric-box.calendar-date-box::before {
+    content: "📅";
+    font-size: 9px;
+  }
+
+  /* 節数ボックス */
+  .metric-box:nth-child(3)::before {
+    content: "⚽";
+    font-size: 9px;
+  }
+
+  /* 資金ボックス */
+  .metric-box:nth-child(4)::before {
+    content: "💰";
+    font-size: 9px;
+  }
+
+  /* 登録枠ボックス */
+  .metric-box:nth-child(6)::before {
+    content: "👥";
+    font-size: 9px;
+  }
+
+  /* 1行でブレなく収めるため、下段は日付・節・資金の3つに絞る（枠数はロスタータブ等で確認） */
+  .metric-box:nth-child(1), /* SEASON */
+  .metric-box:nth-child(5), /* PAYROLL */
+  .metric-box:nth-child(6), /* SQUAD */
+  .metric-box:nth-child(7)  /* SUPPORTERS */
+  {
+    display: none !important;
+  }
+
+  .header-utility-actions {
+    display: none !important; /* はじめからはモーダルや設定で呼び出し */
+  }
+
 
   /* アクションボタンバー */
   .action-controls {
