@@ -4960,8 +4960,35 @@ function startNextSeason() {
 /**
  * タブ切り替え
  */
+// 各タブのスクロール位置を記憶するキャッシュマップ
+const tabScrollPositions = {
+  office: 0,
+  team: 0,
+  roster: 0,
+  facilities: 0,
+  market: 0
+};
+
+function resetTabScrollPositions() {
+  for (const k of Object.keys(tabScrollPositions)) {
+    tabScrollPositions[k] = 0;
+  }
+}
+
+/**
+ * タブ切り替え（各タブごとのスクロール位置保持・個別復元に対応）
+ */
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
+  if (!tabName) return;
+
+  // 1. 直前のタブのスクロール位置を保存
+  const previousTab = gameState.activeTab;
+  if (previousTab) {
+    const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    tabScrollPositions[previousTab] = currentScrollY;
+  }
+
   gameState.activeTab = tabName;
 
   // タブ属性を body と html の両方にセット
@@ -4969,8 +4996,7 @@ function switchTab(tabName) {
   document.body.setAttribute('data-active-tab', tabName);
   document.documentElement.setAttribute('data-active-tab', tabName);
 
-// ミニヘッダーは全タブで常設表示
-
+  // 各タブ要素の表示・非表示切り替え
   const tabs = ['team', 'roster', 'office', 'facilities', 'market'];
   for (const t of tabs) {
     const btn = document.getElementById(`tab-btn-${t}`);
@@ -4986,6 +5012,23 @@ function switchTab(tabName) {
   }
 
   renderAll();
+
+  // 2. 切り替え先タブの前回スクロール位置を復元（未スクロール時は 0: 最上部）
+  const targetScrollY = tabScrollPositions[tabName] || 0;
+  window.scrollTo({
+    top: targetScrollY,
+    left: 0,
+    behavior: 'instant'
+  });
+
+  // レンダリング完了後の高さ確定時にも念のため位置を適用
+  requestAnimationFrame(() => {
+    window.scrollTo({
+      top: targetScrollY,
+      left: 0,
+      behavior: 'instant'
+    });
+  });
 }
 
 /**
@@ -7007,6 +7050,7 @@ function confirmIntroAndStartGame() {
  * 指定されたクラブIDをプレイヤー担当クラブとして新規ゲームをセットアップ
  */
 function setupNewGame(playerClubId = gameState.selectedClubId) {
+  resetTabScrollPositions();
   const usedNames = new Set();
   playerIdCounter = 1;
 
