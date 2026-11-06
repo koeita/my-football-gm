@@ -278,6 +278,18 @@ body {
   color: var(--accent-green);
 }
 
+.tab-icon {
+  display: none;
+}
+
+.tab-label-pc {
+  display: inline;
+}
+
+.tab-label-mob {
+  display: none;
+}
+
 .tab-badge.badge-highlight {
   background-color: rgba(243, 156, 18, 0.18);
   border-color: var(--accent-gold);
@@ -3756,9 +3768,9 @@ body {
    ダークテーマ・プロフェッショナルデザイン維持 / タッチ操作最適化 / PWA全画面
    ========================================================================== */
 @media (max-width: 768px) {
-  /* 全体コンテナ */
+  /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保） */
   .app-container {
-    padding: 6px 8px 24px;
+    padding: 6px 8px calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     max-width: 100%;
     overflow-x: hidden;
   }
@@ -3890,33 +3902,100 @@ body {
     padding: 4px 6px !important;
   }
 
-  /* 3. ナビゲーションタブ（横スクロール保証・見切れ防止） */
+  /* 3. 画面最下部固定ボトムナビゲーションバー（ネイティブアプリ風・セーフエリア対応） */
   .tab-nav {
-    overflow-x: auto !important;
-    white-space: nowrap !important;
-    flex-wrap: nowrap !important;
-    -webkit-overflow-scrolling: touch !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background-color: #1a1d20 !important;
+    border-top: 1px solid #3a3f45 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.55) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 6px 4px max(env(safe-area-inset-bottom, 0px), 12px) !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    gap: 4px !important;
-    margin-bottom: 8px !important;
-    padding-bottom: 3px !important;
-    scrollbar-width: none !important;
-  }
-
-  .tab-nav::-webkit-scrollbar {
-    display: none !important;
+    overflow: visible !important;
   }
 
   .tab-btn {
-    flex-shrink: 0 !important;
-    white-space: nowrap !important;
-    padding: 7px 12px !important;
-    font-size: 12px !important;
-    min-height: 40px !important;
-    display: inline-flex !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    gap: 4px !important;
+    justify-content: center !important;
+    padding: 5px 2px 3px !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: #8c9ba5 !important;
+    background: transparent !important;
+    border: none !important;
+    border-top: 2px solid transparent !important;
+    border-radius: 0 !important;
+    position: relative !important;
+    cursor: pointer !important;
+    transition: transform 0.08s ease, color 0.12s ease !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    line-height: 1.2 !important;
+  }
+
+  .tab-btn:active {
+    transform: scale(0.92);
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  .tab-btn.active {
+    color: var(--accent-green) !important;
+    border-top-color: var(--accent-green) !important;
+    background: linear-gradient(180deg, rgba(46, 204, 113, 0.12) 0%, transparent 100%) !important;
+  }
+
+  .tab-btn.active .tab-icon svg {
+    stroke: var(--accent-green) !important;
+  }
+
+  .tab-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 3px !important;
+    color: inherit !important;
+  }
+
+  .tab-icon svg {
+    stroke: currentColor !important;
+    transition: stroke 0.12s ease !important;
+  }
+
+  .tab-label-pc {
+    display: none !important;
+  }
+
+  .tab-label-mob {
+    display: inline !important;
+    font-size: 10.5px !important;
+    white-space: nowrap !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .tab-badge {
+    position: absolute !important;
+    top: 2px !important;
+    right: 8% !important;
+    font-size: 8px !important;
+    padding: 0 4px !important;
+    line-height: 1.25 !important;
+    border-radius: 6px !important;
+    transform: scale(0.85) !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
   }
 
   /* 4. メインカラムの縦積み配置（ダッシュボードグリッド） */
