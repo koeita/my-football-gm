@@ -413,8 +413,45 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit) {
   ctx.stroke();
 }
 
+// ---------------------------------------------------------------------------
+// インメモリ 32x32 マスターCanvas & DataURL キャッシュ
+// ---------------------------------------------------------------------------
+const PLAYER_AVATAR_CANVAS_CACHE = new Map();
+const PLAYER_AVATAR_CACHE = new Map();
+const PLAYER_AVATAR_CACHE_LIMIT = 1500;
+const PLAYER_AVATAR_LOOKUP = new Map();
+let sharedAvatarCanvas = null;
+
+function getAvatarCacheKey(genes, kit, age) {
+  const ageBand = age >= 34 ? 'g' : age >= 31 ? 's' : age >= 28 ? 'm' : 'y';
+  return [
+    genes.skinColor, genes.hairStyle, genes.hairColor, genes.facialHair,
+    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand
+  ].join('|');
+}
+
+function getOrCreateMasterAvatarCanvas(genes, age, kit) {
+  const key = getAvatarCacheKey(genes, kit, age);
+  const cached = PLAYER_AVATAR_CANVAS_CACHE.get(key);
+  if (cached) return cached;
+
+  if (typeof document === 'undefined') return null;
+  const master = document.createElement('canvas');
+  master.width = 32;
+  master.height = 32;
+  const mctx = master.getContext('2d');
+  mctx.imageSmoothingEnabled = false;
+  drawPixelAvatarOnContext(mctx, genes, age, kit);
+
+  if (PLAYER_AVATAR_CANVAS_CACHE.size >= PLAYER_AVATAR_CACHE_LIMIT) {
+    PLAYER_AVATAR_CANVAS_CACHE.delete(PLAYER_AVATAR_CANVAS_CACHE.keys().next().value);
+  }
+  PLAYER_AVATAR_CANVAS_CACHE.set(key, master);
+  return master;
+}
+
 /**
- * 選手のアバターを指定Canvasに描画（Canvasサイズに応じて整数倍スケール）
+ * 選手のアバターを指定Canvas（32x32 / 48x48 / 64x64 等）に鮮明描画
  * @param {object} player
  * @param {HTMLCanvasElement} canvas
  * @param {object} [club] 所属クラブ（省略時は自動検索）
@@ -424,31 +461,29 @@ function generatePlayerAvatar(player, canvas, club = null) {
   const genes = ensurePlayerAvatarData(player);
   const kit = getAvatarKitColors(player, club);
   genes.jerseyColor = kit[0];
+  const age = player.age || 25;
 
   const ctx = canvas.getContext('2d');
-  const scale = canvas.width / 32;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.imageSmoothingEnabled = false;
-  drawPixelAvatarOnContext(ctx, genes, player.age || 25, kit);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+
+  const master = getOrCreateMasterAvatarCanvas(genes, age, kit);
+  if (master) {
+    ctx.drawImage(master, 0, 0, canvas.width, canvas.height);
+  } else {
+    const scale = canvas.width / 32;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    drawPixelAvatarOnContext(ctx, genes, age, kit);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
 }
 
-// ---------------------------------------------------------------------------
-// dataURL キャッシュ（一覧・ピッチ等の大量表示向け）
-// ---------------------------------------------------------------------------
-const PLAYER_AVATAR_CACHE = new Map();
-const PLAYER_AVATAR_CACHE_LIMIT = 1500;
-let sharedAvatarCanvas = null;
-
-function getPlayerAvatarDataUrl(player, club = null, pixelSize = 64) {
+function getPlayerAvatarDataUrl(player, club = null, pixelSize = 48) {
   const genes = ensurePlayerAvatarData(player);
   const kit = getAvatarKitColors(player, club);
   const age = player.age || 25;
-  const ageBand = age >= 34 ? 'g' : age >= 31 ? 's' : age >= 28 ? 'm' : 'y';
-  const key = [
-    genes.skinColor, genes.hairStyle, genes.hairColor, genes.facialHair,
-    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand, pixelSize
-  ].join('|');
+  const key = `${getAvatarCacheKey(genes, kit, age)}|${pixelSize}`;
 
   const cached = PLAYER_AVATAR_CACHE.get(key);
   if (cached) return cached;
@@ -468,18 +503,38 @@ function getPlayerAvatarDataUrl(player, club = null, pixelSize = 64) {
 }
 
 /**
- * innerHTML 用のアバター <img> タグを生成
+ * innerHTML 用のアバター <canvas> タグを生成（内部解像度 48x48px でクッキリ描画）
  * @param {object} player
  * @param {object} [club]
- * @param {string} [extraClass] 'avatar-xs' | 'avatar-sm' | 'avatar-md' など
+ * @param {string} [extraClass] 'pitch-node-avatar' | 'bench-sub-avatar' | 'table-avatar' など
+ * @param {number} [canvasSize=48]
  */
-function getPlayerAvatarHtml(player, club = null, extraClass = 'avatar-sm') {
+function getPlayerAvatarHtml(player, club = null, extraClass = 'avatar-sm', canvasSize = 48) {
   if (!player) return '';
   try {
-    const url = getPlayerAvatarDataUrl(player, club);
-    if (!url) return '';
-    return `<img class="player-avatar ${extraClass}" src="${url}" alt="" aria-hidden="true" draggable="false">`;
+    if (player.id !== undefined && player.id !== null) {
+      PLAYER_AVATAR_LOOKUP.set(String(player.id), { player, club });
+    }
+    const url = getPlayerAvatarDataUrl(player, club, canvasSize);
+    const bgStyle = url ? ` style="background-image:url('${url}');background-size:100% 100%;"` : '';
+    const pidAttr = player.id !== undefined && player.id !== null ? ` data-avatar-pid="${player.id}"` : '';
+    return `<canvas class="player-avatar ${extraClass}" width="${canvasSize}" height="${canvasSize}"${pidAttr}${bgStyle} aria-hidden="true"></canvas>`;
   } catch (e) {
     return '';
   }
+}
+
+/**
+ * DOM内の <canvas class="player-avatar"> に2Dコンテキスト描画を反映
+ */
+function renderAvatarCanvases(root = document) {
+  if (!root || typeof root.querySelectorAll !== 'function') return;
+  const canvases = root.querySelectorAll('canvas.player-avatar[data-avatar-pid]');
+  canvases.forEach(cv => {
+    const pid = cv.getAttribute('data-avatar-pid');
+    const entry = PLAYER_AVATAR_LOOKUP.get(String(pid));
+    if (entry && entry.player) {
+      generatePlayerAvatar(entry.player, cv, entry.club);
+    }
+  });
 }
