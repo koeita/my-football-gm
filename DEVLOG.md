@@ -1,5 +1,15 @@
 # 開発ログ：僕のサッカークラブ（仮）
 
+## 最新アップデート：選手一覧および順位表テーブルの固定列（適性・選手名）WebKit座標ズレ・右移動バグの解消
+- **WebKitにおける `position: sticky` 座標計算の破壊要因を完全排除**:
+  - `th.col-pos`, `td.col-pos`, `th.col-name`, `td.col-name`（および順位表の `col-rank`, `col-team`）に付与されていた `transform: translateZ(0) !important;` および `-webkit-backface-visibility: hidden !important;` を完全に削除。
+  - WebKit（iOS Safari）では `sticky` 指定されたテーブルセルに 3D Transform レイヤー生成プロパティが直接適用されていると、スクロール時に 2D スクロール座標と 3D GPU レイヤーの座標系が競合し、固定要素の座標を見失って右方向へズレ飛んでしまう（右に動いてしまう）固有のレンダリングバグを根本解決しました。
+- **WebKitベンダープレフィックスおよびコンテナ基準の強化**:
+  - 全ての固定列に対して `position: -webkit-sticky !important; position: sticky !important;` を完全担保。
+  - 親ラッパー `.table-wrapper` に `position: relative !important;` を付与し、テーブルコンテナの基準位置を強固に固定。テーブル自体にも `margin: 0 !important;` を明示し、余計なオフセットによるズレを防止しました。
+
+---
+
 ## 最新アップデート：順位表および選手一覧テーブルの縦横スクロール引っかかり解消とタッチジェスチャー判定最適化
 - **タッチ操作時のスクロールキャンセル・引っかかりを完全解消**:
   - モバイルのプルダウンリロード防止関数（`initReloadPrevention`）において、横方向スワイプ（`Math.abs(deltaX) >= Math.abs(deltaY)`）および横スクロールコンテナ（`.table-wrapper`, `.pitch-bench-list` 等）内でのタッチ操作時は `e.preventDefault()` を絶対に呼び出さないよう精密な判定ロジックを追加。ページ最上部付近でのスワイプ時にブラウザのネイティブスクロールジェスチャーが強制中断される問題を解消しました。

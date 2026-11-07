@@ -702,6 +702,7 @@ body {
 
 /* データテーブル */
 .table-wrapper {
+  position: relative;
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
@@ -4739,6 +4740,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .table-responsive,
   .table-container,
   .table-wrapper {
+    position: relative !important;
     width: 100% !important;
     overflow-x: auto !important;
     overflow-y: visible !important;
@@ -4772,11 +4774,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     min-width: 580px !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
+    margin: 0 !important;
   }
 
-  /* 順位表テーブル：順位列・クラブ名列の完全sticky固定 & 完全不透明化（WebKitブレ＆透過ゼロ保証） */
+  /* 順位表テーブル：順位列・クラブ名列の完全sticky固定 & 完全不透明化（WebKit座標ブレ・ズレ防止） */
   .standings-table th.col-rank,
   .standings-table td.col-rank {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 0 !important;
     z-index: 10 !important;
@@ -4787,8 +4791,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     text-align: center !important;
     padding: 6px 2px !important;
     background-color: #161a1f !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -4800,6 +4802,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .standings-table th.col-team,
   .standings-table td.col-team {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 42px !important;
     z-index: 10 !important;
@@ -4814,8 +4817,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     background-color: #161a1f !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4) !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -5799,9 +5800,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
     overflow: hidden !important;
   }
-  /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化 */
+  /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化（WebKit座標ズレ防止） */
   .roster-table th.col-pos,
   .roster-table td.col-pos {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 0 !important;
     z-index: 10 !important;
@@ -5812,8 +5814,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
     text-align: center !important;
     padding: 5px 2px !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -5839,6 +5839,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .roster-table th.col-name,
   .roster-table td.col-name {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 64px !important;
     z-index: 10 !important;
@@ -5853,8 +5854,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     padding: 5px 8px !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 4px 0 8px rgba(0, 0, 0, 0.45) !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
