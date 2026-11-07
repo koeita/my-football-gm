@@ -9651,26 +9651,10 @@ function initTacticalDragAndDrop() {
 
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
-      const isMobileTouch = isTouch && window.innerWidth <= 768;
 
-      // モバイルタッチ環境の控え選手カードのみ：水平方向へのスワイプ（カルーセル横スクロール）ならドラッグ処理を即座に破棄
-      if (isMobileTouch && dragSource.type === 'bench' && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
-        cleanupDrag();
-        return;
-      }
-
-      // ポインタ/指が動いたらドラッグ開始！PCマウスは閾値3pxで即座に開始
-      const dragThreshold = isTouch ? 5 : 3;
+      // ポインタ/指が動いたら即座にドラッグ開始（PC/モバイル共通で快適に追従）
+      const dragThreshold = isTouch ? 4 : 3;
       if (dist > dragThreshold) {
-        // モバイルタッチ環境の控え選手カードのみ：指が上(ピッチ方向 deltaY < -4)へ動いた時にドラッグ開始
-        if (isMobileTouch && dragSource.type === 'bench' && deltaY >= -4) {
-          if (dist > 12) {
-            cleanupDrag();
-            return;
-          }
-          return;
-        }
-
         isDragging = true;
         if (longPressTimer) {
           clearTimeout(longPressTimer);
@@ -10041,7 +10025,7 @@ function initGame() {
   window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
   window.__getJustFinishedDragging = function() { return justFinishedDragging; };
 
-  // 作戦ボード（ピッチ）のスタメン枠クリック：スロット選択 / スワップ交代
+  // 作戦ボード（ピッチ）のスタメン枠クリック：詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
@@ -10050,10 +10034,9 @@ function initGame() {
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
+      if (nodeEl && nodeEl.dataset.playerId) {
         e.stopPropagation();
-        const slotIdx = parseInt(nodeEl.dataset.slotIndex, 10);
-        handlePitchNodeClick(slotIdx);
+        openPlayerProfileModal(nodeEl.dataset.playerId);
       }
     });
   }
@@ -10068,7 +10051,7 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手リスト：クリックで選択中のスタメン枠と交代！
+  // 作戦ボード横の控え選手リスト：クリック時は詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
@@ -10079,8 +10062,7 @@ function initGame() {
       const itemEl = e.target.closest('.bench-sub-item');
       if (itemEl && itemEl.dataset.playerId) {
         e.stopPropagation();
-        // スタメン枠が選択中ならその枠と交代！未選択なら最適枠と自動交代
-        substituteBenchPlayerToSlot(itemEl.dataset.playerId, gameState.selectedSlotIndex);
+        openPlayerProfileModal(itemEl.dataset.playerId);
       }
     });
   }

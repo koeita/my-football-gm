@@ -6742,19 +6742,18 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
    ========================================================================== */
 .pitch-node,
 .bench-sub-item {
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: pan-y;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  touch-action: none !important;
+  cursor: grab !important;
 }
 
-.pitch-node {
-  cursor: grab;
-  touch-action: pan-y;
-}
-
-.bench-sub-item {
-  cursor: grab;
-  touch-action: pan-x pan-y;
+.pitch-node *,
+.bench-sub-item * {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 .pitch-node:active,
@@ -7282,7 +7281,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     max-height: none !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-x: contain !important;
-    touch-action: pan-x pan-y !important;
+    touch-action: pan-x !important;
   }
 
   /* 控え選手カード：横並び用の均一幅・高さコンパクトカード（文字重なりを完全排除） */
@@ -7318,14 +7317,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     align-items: stretch !important;
     box-sizing: border-box !important;
     border-radius: 4px !important;
-    touch-action: pan-x pan-y !important;
+    touch-action: none !important;
     cursor: grab !important;
     background-color: #12181f !important;
     border: 1px solid var(--border-color, #30363d) !important;
   }
 
   .bench-sub-item * {
-    touch-action: pan-x pan-y !important;
+    touch-action: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
   }
