@@ -7250,6 +7250,7 @@ function initTacticalDragAndDrop() {
       const slotIndex = parseInt(pitchNode.dataset.slotIndex, 10);
       const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
       if (starter) {
+        const rect = pitchNode.getBoundingClientRect();
         dragSource = {
           type: 'starter',
           playerId: starter.id,
@@ -7258,12 +7259,17 @@ function initTacticalDragAndDrop() {
           name: starter.name,
           pos: starter.assignedPos || starter.pos,
           ovr: getEffectivePlayerRating(starter),
-          element: pitchNode
+          element: pitchNode,
+          cardWidth: rect.width,
+          cardHeight: rect.height,
+          grabOffsetX: e.clientX - rect.left,
+          grabOffsetY: e.clientY - rect.top
         };
       }
     } else if (benchItem && benchItem.dataset.playerId) {
       const benchPlayer = playerClub.players.find(p => p.id === benchItem.dataset.playerId && !p.isStarter);
       if (benchPlayer) {
+        const rect = benchItem.getBoundingClientRect();
         dragSource = {
           type: 'bench',
           playerId: benchPlayer.id,
@@ -7272,7 +7278,11 @@ function initTacticalDragAndDrop() {
           name: benchPlayer.name,
           pos: benchPlayer.primaryPosition || benchPlayer.pos,
           ovr: getPlayerOverallRating(benchPlayer),
-          element: benchItem
+          element: benchItem,
+          cardWidth: rect.width,
+          cardHeight: rect.height,
+          grabOffsetX: e.clientX - rect.left,
+          grabOffsetY: e.clientY - rect.top
         };
       }
     }
@@ -7344,13 +7354,34 @@ function initTacticalDragAndDrop() {
           try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
         }
 
-        ghostEl = document.createElement('div');
-        ghostEl.className = 'tactical-drag-ghost';
-        ghostEl.innerHTML = `
-          <span class="ghost-pos">${dragSource.pos}</span>
-          <span class="ghost-name">#${dragSource.squadNumber} ${dragSource.name}</span>
-          <span class="ghost-ovr">OVR ${dragSource.ovr}</span>
-        `;
+        // 元のカードそのままの形状・見た目でクローンして持ち上げる
+        ghostEl = dragSource.element.cloneNode(true);
+        ghostEl.removeAttribute('id');
+        ghostEl.classList.remove('dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+        ghostEl.classList.add('tactical-drag-ghost-card');
+        ghostEl.style.width = `${dragSource.cardWidth}px`;
+        ghostEl.style.minWidth = `${dragSource.cardWidth}px`;
+        ghostEl.style.maxWidth = `${dragSource.cardWidth}px`;
+        ghostEl.style.height = `${dragSource.cardHeight}px`;
+        ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
+        ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
+
+        // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
+        const srcCanvases = dragSource.element.querySelectorAll('canvas');
+        const dstCanvases = ghostEl.querySelectorAll('canvas');
+        srcCanvases.forEach((srcC, idx) => {
+          const dstC = dstCanvases[idx];
+          if (dstC && srcC.width && srcC.height) {
+            dstC.width = srcC.width;
+            dstC.height = srcC.height;
+            const ctx = dstC.getContext('2d');
+            if (ctx) {
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(srcC, 0, 0);
+            }
+          }
+        });
+
         document.body.appendChild(ghostEl);
       }
     }
@@ -7358,16 +7389,15 @@ function initTacticalDragAndDrop() {
     if (isDragging && ghostEl) {
       if (e.cancelable) e.preventDefault();
 
-      // モバイルで指の真下ではなく指の少し上(45px上)にオフセット表示して指で隠れないようにする！
-      const isTouch = e.pointerType === 'touch';
-      const offsetY = isTouch ? -45 : 0;
+      // 指で掴んだ位置のまま追従（上方向へのジャンプなし）
+      const cardLeft = e.clientX - dragSource.grabOffsetX;
+      const cardTop = e.clientY - dragSource.grabOffsetY;
+      ghostEl.style.left = `${cardLeft}px`;
+      ghostEl.style.top = `${cardTop}px`;
 
-      ghostEl.style.left = `${e.clientX}px`;
-      ghostEl.style.top = `${e.clientY + offsetY}px`;
-
-      // 判定座標（タッチ時は指の上端付近もカバー）
-      const checkX = e.clientX;
-      const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+      // 判定座標（持ち上げたカードの中心位置、またはポインタ直下）
+      const checkX = cardLeft + (dragSource.cardWidth / 2);
+      const checkY = cardTop + (dragSource.cardHeight / 2);
 
       const targetUnderPointer = document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY);
       document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
@@ -7429,10 +7459,8 @@ function initTacticalDragAndDrop() {
     // ゴースト要素を消去
     cleanupDrag();
 
-    const isTouch = e.pointerType === 'touch';
-    const offsetY = isTouch ? -45 : 0;
-    const checkX = e.clientX;
-    const checkY = isTouch ? (e.clientY + offsetY) : e.clientY;
+    const checkX = e.clientX - (source.grabOffsetX || 0) + ((source.cardWidth || 0) / 2);
+    const checkY = e.clientY - (source.grabOffsetY || 0) + ((source.cardHeight || 0) / 2);
 
     const targetUnderPointer = (checkX !== undefined && checkY !== undefined)
       ? (document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY))

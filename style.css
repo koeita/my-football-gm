@@ -5641,9 +5641,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   cursor: grabbing;
 }
 
-.pitch-node.touch-drag-ready,
+.pitch-node.touch-drag-ready {
+  transform: translate(-50%, -50%) scale(1.06) !important;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
+  border-color: #2ecc71 !important;
+  z-index: 100 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
 .bench-sub-item.touch-drag-ready {
-  transform: scale(1.08) !important;
+  transform: scale(1.04) !important;
   box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
   border-color: #2ecc71 !important;
   z-index: 100 !important;
@@ -5652,8 +5659,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .pitch-node.dragging,
 .bench-sub-item.dragging {
-  opacity: 0.45;
-  filter: grayscale(30%);
+  opacity: 0.35;
+  filter: grayscale(35%);
+}
+
+/* 元のカード形状のまま追従するドラッグクローン */
+.tactical-drag-ghost-card,
+.pitch-node.tactical-drag-ghost-card,
+.bench-sub-item.tactical-drag-ghost-card {
+  position: fixed !important;
+  z-index: 999999 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  transform: scale(1.05) !important;
+  opacity: 0.96 !important;
+  filter: none !important;
+  border-color: #2ecc71 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(46, 204, 113, 0.55) !important;
+  transition: none !important;
 }
 
 /* ドロップターゲットのハイライト発光 */
