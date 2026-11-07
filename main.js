@@ -3016,6 +3016,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
       r += randInt(-2, 2) * 0.1;
       r = clamp(r, 5.0, 9.5);
+      p.lastMatchRating = Number(r.toFixed(1));
       p.totalRating += r;
     });
   };
@@ -3200,6 +3201,9 @@ function playNextMatchweek(skipAnimation = false) {
     awayClub.ga += homeScore;
     awayClub.gd = awayClub.gf - awayClub.ga;
 
+    const prevHomeSupporters = homeClub.supporters;
+    const prevAwaySupporters = awayClub.supporters;
+
     if (homeScore > awayScore) {
       homeClub.won += 1;
       homeClub.pts += 3;
@@ -3221,6 +3225,9 @@ function playNextMatchweek(skipAnimation = false) {
       awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-10, 60));
     }
 
+    const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;
+    const awaySupportersDelta = awayClub.supporters - prevAwaySupporters;
+
     const { homeScorers, awayScorers } = processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore);
 
     const matchObj = {
@@ -3236,7 +3243,10 @@ function playNextMatchweek(skipAnimation = false) {
       isPlayerHome: homeClub.isPlayer,
       isPlayerMatch: homeClub.isPlayer || awayClub.isPlayer,
       matchIncome,
-      awayBroadcastingFee
+      awayBroadcastingFee,
+      playerSupportersDelta: homeClub.isPlayer ? homeSupportersDelta : awaySupportersDelta,
+      homeScorers,
+      awayScorers
     };
     results.push(matchObj);
 
@@ -3257,7 +3267,7 @@ function playNextMatchweek(skipAnimation = false) {
   gameState.lastMatchTicker = {
     week: weekIndex + 1,
     events: tickerEvents,
-    completed: skipAnimation
+    completed: true
   };
 
   const isFinalWeek = gameState.currentWeek === gameState.totalWeeks;
@@ -3270,58 +3280,871 @@ function playNextMatchweek(skipAnimation = false) {
     return;
   }
 
-  runMatchTickerAnimation(tickerEvents, () => {
+  if (playerMatchData) {
+    openMatchEventModal(playerMatchData, playerHomeScorers, playerAwayScorers, () => {
+      if (isFinalWeek) {
+        processSeasonEnd(false);
+      } else {
+        checkPostMatchEvents();
+      }
+      renderAll();
+    });
+  } else {
     if (isFinalWeek) {
       processSeasonEnd(false);
     } else {
       checkPostMatchEvents();
     }
     renderAll();
-  });
+  }
 }
 
 /**
- * テキスト速報ログアニメーション演出（約1秒）
+ * 試合経過（2Dサッカーコート）＆マッチサマリー（案A）の2段階モーダル制御
  */
-function runMatchTickerAnimation(events, onComplete) {
-  gameState.isSimulating = true;
-  renderHeader();
+const matchLiveState = {
+  timerId: null,
+  popupTimeoutId: null,
+  autoSummaryTimeoutId: null,
+  minute: 0,
+  speed: 1,
+  status: 'IDLE', // 'FIRST_HALF' | 'HALFTIME' | 'SECOND_HALF' | 'FULLTIME' | 'SUMMARY'
+  matchData: null,
+  homeScorers: [],
+  awayScorers: [],
+  timelineByMinute: {},
+  allHighlights: [],
+  liveHomeScore: 0,
+  liveAwayScore: 0,
+  liveHomeShots: 0,
+  liveAwayShots: 0,
+  homeBaseTokens: [],
+  awayBaseTokens: [],
+  onComplete: null,
+  eventsBound: false
+};
 
-  const container = document.getElementById('match-results-container');
-  const subtitle = document.getElementById('log-panel-subtitle');
-  subtitle.textContent = `MATCHWEEK ${gameState.currentWeek} LIVE TICKER`;
+function clearMatchLiveTimers() {
+  if (matchLiveState.timerId) {
+    clearInterval(matchLiveState.timerId);
+    matchLiveState.timerId = null;
+  }
+  if (matchLiveState.popupTimeoutId) {
+    clearTimeout(matchLiveState.popupTimeoutId);
+    matchLiveState.popupTimeoutId = null;
+  }
+  if (matchLiveState.autoSummaryTimeoutId) {
+    clearTimeout(matchLiveState.autoSummaryTimeoutId);
+    matchLiveState.autoSummaryTimeoutId = null;
+  }
+}
 
-  container.innerHTML = `
-    <div class="match-ticker-box">
-      <div class="ticker-header">
-        <span class="ticker-title">第${gameState.currentWeek}節 自チーム速報</span>
-        <span class="ticker-live-badge">MATCH IN PROGRESS</span>
-      </div>
-      <div class="ticker-feed" id="ticker-feed"></div>
+/**
+ * 90分間の詳細な試合経過タイムライン（ゴール・セーブ・シュート・攻防）を構築
+ */
+function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
+  const { homeClub, awayClub, homeShots, awayShots } = matchData;
+  const byMinute = {};
+  const highlights = [];
+
+  const homeStarters = homeClub.players.slice(0, 11);
+  const awayStarters = awayClub.players.slice(0, 11);
+  const homeGk = homeStarters.find(p => (p.assignedPos || p.pos) === 'GK') || homeStarters[0];
+  const awayGk = awayStarters.find(p => (p.assignedPos || p.pos) === 'GK') || awayStarters[0];
+
+  const getFreeMinute = (rawMin, isFirstHalfPref = null) => {
+    let m = clamp(rawMin, 1, 89);
+    if (m === 45) m = 44;
+    const minBound = isFirstHalfPref === true ? 2 : (isFirstHalfPref === false ? 46 : 2);
+    const maxBound = isFirstHalfPref === true ? 44 : (isFirstHalfPref === false ? 89 : 89);
+    m = clamp(m, minBound, maxBound);
+    let offset = 0;
+    while (offset < 45) {
+      const cand1 = m + offset;
+      if (cand1 <= maxBound && cand1 !== 45 && !byMinute[cand1]) return cand1;
+      const cand2 = m - offset;
+      if (cand2 >= minBound && cand2 !== 45 && !byMinute[cand2]) return cand2;
+      offset++;
+    }
+    return m;
+  };
+
+  const fmtNum = (p) => (p && p.squadNumber ? `#${p.squadNumber} ` : '');
+
+  // 1. ゴールイベントを配置
+  homeScorers.forEach(g => {
+    const isFH = g.minute <= 45;
+    const min = getFreeMinute(g.minute, isFH);
+    g.minute = min;
+    const assistText = g.assister ? ` (アシスト: ${fmtNum(g.assister)}${g.assister.name})` : '';
+    const ev = {
+      minute: min,
+      type: 'goal',
+      side: 'home',
+      club: homeClub,
+      actor: g.scorer,
+      assister: g.assister || null,
+      text: `⚽ GOAL!! ${homeClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がネットを揺らす！${assistText}`
+    };
+    byMinute[min] = ev;
+    highlights.push(ev);
+  });
+
+  awayScorers.forEach(g => {
+    const isFH = g.minute <= 45;
+    const min = getFreeMinute(g.minute, isFH);
+    g.minute = min;
+    const assistText = g.assister ? ` (アシスト: ${fmtNum(g.assister)}${g.assister.name})` : '';
+    const ev = {
+      minute: min,
+      type: 'goal',
+      side: 'away',
+      club: awayClub,
+      actor: g.scorer,
+      assister: g.assister || null,
+      text: `⚽ GOAL!! ${awayClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がゴールを決めた！${assistText}`
+    };
+    byMinute[min] = ev;
+    highlights.push(ev);
+  });
+
+  // 2. 決定機・セーブ・シュートイベントを前後半にバランス良く配置
+  const pickAttacker = (starters) => {
+    const attackers = starters.filter(p => (p.assignedPos || p.pos) !== 'GK');
+    return attackers[randInt(0, Math.max(0, attackers.length - 1))] || starters[0];
+  };
+
+  const extraHomeShots = Math.max(2, Math.min(5, (homeShots || 6) - homeScorers.length));
+  const extraAwayShots = Math.max(2, Math.min(5, (awayShots || 6) - awayScorers.length));
+  const subHighlights = [];
+
+  for (let i = 0; i < extraHomeShots; i++) {
+    const isFH = i % 2 === 0;
+    const rawMin = isFH ? randInt(4, 42) : randInt(48, 87);
+    const min = getFreeMinute(rawMin, isFH);
+    const shooter = pickAttacker(homeStarters);
+    const isSave = i % 2 === 0;
+    const ev = {
+      minute: min,
+      type: isSave ? 'save' : 'shot',
+      side: 'home',
+      club: homeClub,
+      actor: shooter,
+      keeper: awayGk,
+      text: isSave
+        ? `🧤 SUPER SAVE! ${homeClub.name} ${fmtNum(shooter)}${shooter.name} の鋭いシュートをGK ${awayGk.name} が好セーブ！`
+        : `⚡ 惜しい！ ${homeClub.name} ${fmtNum(shooter)}${shooter.name} のミドルシュートはわずかに枠の外！`
+    };
+    byMinute[min] = ev;
+    if (isSave) subHighlights.push(ev);
+  }
+
+  for (let i = 0; i < extraAwayShots; i++) {
+    const isFH = i % 2 === 1;
+    const rawMin = isFH ? randInt(5, 43) : randInt(49, 88);
+    const min = getFreeMinute(rawMin, isFH);
+    const shooter = pickAttacker(awayStarters);
+    const isSave = i % 2 === 0;
+    const ev = {
+      minute: min,
+      type: isSave ? 'save' : 'shot',
+      side: 'away',
+      club: awayClub,
+      actor: shooter,
+      keeper: homeGk,
+      text: isSave
+        ? `🧤 ナイスセーブ！ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} の決定機をGK ${fmtNum(homeGk)}${homeGk.name} が阻止！`
+        : `⚡ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} がペナルティエリア内から狙うも枠を捉えきれず！`
+    };
+    byMinute[min] = ev;
+    if (isSave) subHighlights.push(ev);
+  }
+
+  // ゴールを最優先しつつ最大4件のハイライトを時系列順に構成
+  for (const sh of subHighlights) {
+    if (highlights.length >= 4) break;
+    highlights.push(sh);
+  }
+  highlights.sort((a, b) => a.minute - b.minute);
+  return { byMinute, highlights };
+}
+
+/**
+ * 2Dサッカーコート上の22名の選手ピン初期配置を計算・生成
+ */
+function setupMatch2DPitchTokens(homeClub, awayClub) {
+  const tokensLayer = document.getElementById('match-pitch-tokens');
+  const svgEl = document.getElementById('match-pitch-svg');
+  if (!tokensLayer) return;
+  tokensLayer.innerHTML = '';
+  if (svgEl) svgEl.innerHTML = '';
+
+  const hDef = getClubFormationDef(homeClub);
+  const aDef = getClubFormationDef(awayClub);
+  const homeStarters = homeClub.players.slice(0, 11);
+  const awayStarters = awayClub.players.slice(0, 11);
+
+  matchLiveState.homeBaseTokens = [];
+  matchLiveState.awayBaseTokens = [];
+
+  // ホーム（左コート ➔ 右へ攻める）
+  hDef.slots.forEach((slot, idx) => {
+    const p = homeStarters[idx];
+    const isGk = slot.pos === 'GK';
+    const baseX = isGk ? 6 : clamp(10 + ((90 - slot.y) / 75) * 36, 12, 46);
+    const baseY = clamp(slot.x, 12, 88);
+    const el = document.createElement('div');
+    el.className = `pitch-2d-token home-token ${isGk ? 'is-gk' : ''}`;
+    el.style.left = `${baseX}%`;
+    el.style.top = `${baseY}%`;
+    el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
+    tokensLayer.appendChild(el);
+    matchLiveState.homeBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+  });
+
+  // アウェイ（右コート ➔ 左へ攻める）
+  aDef.slots.forEach((slot, idx) => {
+    const p = awayStarters[idx];
+    const isGk = slot.pos === 'GK';
+    const baseX = isGk ? 94 : clamp(90 - ((90 - slot.y) / 75) * 36, 54, 88);
+    const baseY = clamp(100 - slot.x, 12, 88);
+    const el = document.createElement('div');
+    el.className = `pitch-2d-token away-token ${isGk ? 'is-gk' : ''}`;
+    el.style.left = `${baseX}%`;
+    el.style.top = `${baseY}%`;
+    el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
+    tokensLayer.appendChild(el);
+    matchLiveState.awayBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+  });
+
+  const ballEl = document.getElementById('match-pitch-ball');
+  if (ballEl) {
+    ballEl.style.left = '50%';
+    ballEl.style.top = '50%';
+  }
+}
+
+/**
+ * 1分ごとの2Dコート上の選手ピン・ボール・シュート軌跡のアニメーション更新
+ */
+function animatePitchStep(minute, ev) {
+  const ballEl = document.getElementById('match-pitch-ball');
+  const svgEl = document.getElementById('match-pitch-svg');
+  if (svgEl) svgEl.innerHTML = '';
+
+  const allTokens = matchLiveState.homeBaseTokens.concat(matchLiveState.awayBaseTokens);
+  allTokens.forEach(t => t.el.classList.remove('active-actor'));
+
+  const homePoss = (matchLiveState.matchData && matchLiveState.matchData.homePossession) || 50;
+  const attackingSide = ev ? ev.side : (Math.random() * 100 < homePoss ? 'home' : 'away');
+  const shiftX = attackingSide === 'home' ? randInt(6, 16) : randInt(-16, -6);
+
+  matchLiveState.homeBaseTokens.forEach(t => {
+    if (t.isGk) {
+      t.curX = 6;
+      t.curY = 50 + randInt(-4, 4);
+    } else {
+      t.curX = clamp(t.baseX + shiftX + randInt(-4, 5), 12, 86);
+      t.curY = clamp(t.baseY + randInt(-6, 6), 10, 90);
+    }
+    t.el.style.left = `${t.curX}%`;
+    t.el.style.top = `${t.curY}%`;
+  });
+
+  matchLiveState.awayBaseTokens.forEach(t => {
+    if (t.isGk) {
+      t.curX = 94;
+      t.curY = 50 + randInt(-4, 4);
+    } else {
+      t.curX = clamp(t.baseX + shiftX + randInt(-5, 4), 14, 88);
+      t.curY = clamp(t.baseY + randInt(-6, 6), 10, 90);
+    }
+    t.el.style.left = `${t.curX}%`;
+    t.el.style.top = `${t.curY}%`;
+  });
+
+  if (!ev) {
+    // 通常のパス回し・攻防
+    const sideTokens = attackingSide === 'home'
+      ? matchLiveState.homeBaseTokens.filter(t => !t.isGk)
+      : matchLiveState.awayBaseTokens.filter(t => !t.isGk);
+    const holder = sideTokens[randInt(0, sideTokens.length - 1)];
+    if (holder && ballEl) {
+      holder.el.classList.add('active-actor');
+      ballEl.style.left = `${holder.curX}%`;
+      ballEl.style.top = `${holder.curY}%`;
+    }
+    return;
+  }
+
+  // イベント発生時（ゴール・セーブ・シュート）
+  const isHome = ev.side === 'home';
+  const sideTokens = isHome ? matchLiveState.homeBaseTokens : matchLiveState.awayBaseTokens;
+  let actorToken = sideTokens.find(t => t.player && ev.actor && t.player.id === ev.actor.id);
+  if (!actorToken) {
+    const fieldTokens = sideTokens.filter(t => !t.isGk);
+    actorToken = fieldTokens[fieldTokens.length - 1] || sideTokens[0];
+  }
+
+  // シューターを敵陣ゴール前へ移動
+  const shootX = isHome ? randInt(76, 86) : randInt(14, 24);
+  const shootY = randInt(28, 72);
+  if (actorToken) {
+    actorToken.curX = shootX;
+    actorToken.curY = shootY;
+    actorToken.el.style.left = `${shootX}%`;
+    actorToken.el.style.top = `${shootY}%`;
+    actorToken.el.classList.add('active-actor');
+  }
+
+  let targetX = isHome ? 98.5 : 1.5;
+  let targetY = 50;
+  let lineColor = '#f1c40f';
+
+  if (ev.type === 'save') {
+    targetX = isHome ? 93.5 : 6.5;
+    targetY = randInt(43, 57);
+    lineColor = '#60a5fa';
+  } else if (ev.type === 'shot') {
+    targetX = isHome ? 99 : 1;
+    targetY = Math.random() < 0.5 ? randInt(18, 32) : randInt(68, 82);
+    lineColor = '#94a3b8';
+  }
+
+  if (svgEl) {
+    svgEl.innerHTML = `
+      <line x1="${shootX}" y1="${shootY}" x2="${targetX}" y2="${targetY}"
+        stroke="${lineColor}" stroke-width="1.2" stroke-dasharray="${ev.type === 'goal' ? 'none' : '2,2'}" />
+    `;
+  }
+
+  if (ballEl) {
+    ballEl.style.left = `${targetX}%`;
+    ballEl.style.top = `${targetY}%`;
+  }
+
+  if (ev.type === 'goal' || ev.type === 'save') {
+    showMatchPitchPopup(ev);
+  }
+}
+
+/**
+ * ゴールやスーパーセーブ発生時にコート中央へポップアップバナーを表示
+ */
+function showMatchPitchPopup(ev) {
+  const popupEl = document.getElementById('match-pitch-event-popup');
+  if (!popupEl) return;
+
+  if (matchLiveState.popupTimeoutId) {
+    clearTimeout(matchLiveState.popupTimeoutId);
+  }
+
+  const isGoal = ev.type === 'goal';
+  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'}`;
+
+  const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
+  const badgeText = isGoal ? `⚽ GOAL!! (${ev.minute}')` : `🧤 SUPER SAVE! (${ev.minute}')`;
+  const subText = isGoal
+    ? `${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
+    : `${ev.actor ? ev.actor.name : ''} の決定機を阻止！`;
+  const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
+  const avatarHtml = (targetPlayer && typeof getPlayerAvatarHtml === 'function')
+    ? getPlayerAvatarHtml(targetPlayer, ev.club, 'avatar-md', 42)
+    : '';
+
+  popupEl.innerHTML = `
+    ${avatarHtml}
+    <div class="event-popup-info">
+      <span class="event-popup-badge">${badgeText}</span>
+      <span class="event-popup-player">${numLabel}${targetPlayer ? targetPlayer.name : ''}</span>
+      <span class="event-popup-sub">${subText}</span>
     </div>
   `;
 
-  const feedEl = document.getElementById('ticker-feed');
-  const stepDelay = Math.max(150, Math.floor(900 / Math.max(events.length, 1)));
-  let eventIdx = 0;
+  popupEl.classList.remove('hidden');
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(popupEl);
+  }
 
-  const intervalId = setInterval(() => {
-    if (eventIdx < events.length) {
-      const ev = events[eventIdx];
-      const lineEl = document.createElement('div');
-      lineEl.className = `ticker-line ticker-${ev.type}`;
-      lineEl.innerHTML = `<span class="ticker-time">${ev.time}</span><span class="ticker-text">${ev.text}</span>`;
-      feedEl.appendChild(lineEl);
-      eventIdx++;
-    } else {
-      clearInterval(intervalId);
-      gameState.isSimulating = false;
-      if (gameState.lastMatchTicker) {
-        gameState.lastMatchTicker.completed = true;
-      }
-      if (onComplete) onComplete();
+  matchLiveState.popupTimeoutId = setTimeout(() => {
+    popupEl.classList.add('hidden');
+  }, 1350);
+}
+
+/**
+ * 実況ティッカーに1行追加
+ */
+function appendLiveCommentary(minLabel, text, typeClass = '') {
+  const feedEl = document.getElementById('match-live-commentary-feed');
+  if (!feedEl) return;
+  const line = document.createElement('div');
+  line.className = `commentary-line ${typeClass}`;
+  line.innerHTML = `<span class="commentary-min">${minLabel}</span><span>${text}</span>`;
+  feedEl.appendChild(line);
+  feedEl.scrollTop = feedEl.scrollHeight;
+}
+
+/**
+ * 試合経過タイマーの開始・再開
+ */
+function startMatchLiveTimer() {
+  if (matchLiveState.timerId) {
+    clearInterval(matchLiveState.timerId);
+    matchLiveState.timerId = null;
+  }
+
+  const baseInterval = matchLiveState.speed === 4 ? 25 : (matchLiveState.speed === 2 ? 50 : 90);
+
+  matchLiveState.timerId = setInterval(() => {
+    if (matchLiveState.status !== 'FIRST_HALF' && matchLiveState.status !== 'SECOND_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      return;
     }
-  }, stepDelay);
+
+    matchLiveState.minute += 1;
+    const min = matchLiveState.minute;
+
+    const clockEl = document.getElementById('match-live-clock');
+    if (clockEl) clockEl.textContent = `${String(min).padStart(2, '0')}'`;
+
+    const ev = matchLiveState.timelineByMinute[min] || null;
+    animatePitchStep(min, ev);
+
+    if (ev) {
+      if (ev.type === 'goal') {
+        if (ev.side === 'home') {
+          matchLiveState.liveHomeScore += 1;
+          matchLiveState.liveHomeShots += 1;
+        } else {
+          matchLiveState.liveAwayScore += 1;
+          matchLiveState.liveAwayShots += 1;
+        }
+        const shEl = document.getElementById('match-live-score-home');
+        const saEl = document.getElementById('match-live-score-away');
+        if (shEl) shEl.textContent = matchLiveState.liveHomeScore;
+        if (saEl) saEl.textContent = matchLiveState.liveAwayScore;
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-goal');
+      } else if (ev.type === 'save') {
+        if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
+        else matchLiveState.liveAwayShots += 1;
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-save');
+      } else if (ev.type === 'shot') {
+        if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
+        else matchLiveState.liveAwayShots += 1;
+        appendLiveCommentary(`${min}'`, ev.text, '');
+      }
+    }
+
+    // ★ 前半45分到達時：ハーフタイムで必ず一時停止！
+    if (min === 45 && matchLiveState.status === 'FIRST_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      matchLiveState.status = 'HALFTIME';
+
+      const periodEl = document.getElementById('match-live-period');
+      if (periodEl) periodEl.textContent = 'HALF TIME';
+
+      appendLiveCommentary(`45'`, '前半終了のホイッスル！ハーフタイムに入ります。', 'ev-period');
+
+      const htOverlay = document.getElementById('match-halftime-overlay');
+      const htScore = document.getElementById('halftime-score-display');
+      const htStats = document.getElementById('halftime-stats-mini');
+      const md = matchLiveState.matchData;
+      if (htScore) htScore.textContent = `${matchLiveState.liveHomeScore} - ${matchLiveState.liveAwayScore}`;
+      if (htStats && md) {
+        htStats.textContent = `支配率 ${md.homePossession}% : ${md.awayPossession}% ｜ シュート ${matchLiveState.liveHomeShots} : ${matchLiveState.liveAwayShots}`;
+      }
+      if (htOverlay) htOverlay.classList.remove('hidden');
+      return;
+    }
+
+    // ★ 後半90分到達時：試合終了（FULL TIME）➔ サマリーへ
+    if (min >= 90 && matchLiveState.status === 'SECOND_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      matchLiveState.status = 'FULLTIME';
+
+      const periodEl = document.getElementById('match-live-period');
+      if (periodEl) periodEl.textContent = 'FULL TIME';
+
+      const md = matchLiveState.matchData;
+      if (md) {
+        const shEl = document.getElementById('match-live-score-home');
+        const saEl = document.getElementById('match-live-score-away');
+        if (shEl) shEl.textContent = md.homeScore;
+        if (saEl) saEl.textContent = md.awayScore;
+        appendLiveCommentary(`90'`, `試合終了！ ${md.homeClub.name} ${md.homeScore} - ${md.awayScore} ${md.awayClub.name}`, 'ev-period');
+      }
+
+      const btnSummaryFooter = document.getElementById('btn-match-to-summary-footer');
+      if (btnSummaryFooter) btnSummaryFooter.classList.remove('hidden');
+
+      matchLiveState.autoSummaryTimeoutId = setTimeout(() => {
+        if (matchLiveState.status === 'FULLTIME') {
+          transitionToMatchSummary();
+        }
+      }, 1100);
+    }
+  }, baseInterval);
+}
+
+/**
+ * ハーフタイムから後半（45'〜90'）を再開
+ */
+function resumeSecondHalfMatch() {
+  if (matchLiveState.status !== 'HALFTIME') return;
+  const htOverlay = document.getElementById('match-halftime-overlay');
+  if (htOverlay) htOverlay.classList.add('hidden');
+
+  const popupEl = document.getElementById('match-pitch-event-popup');
+  if (popupEl) popupEl.classList.add('hidden');
+
+  matchLiveState.status = 'SECOND_HALF';
+  const periodEl = document.getElementById('match-live-period');
+  if (periodEl) periodEl.textContent = '後半';
+
+  const ballEl = document.getElementById('match-pitch-ball');
+  if (ballEl) {
+    ballEl.style.left = '50%';
+    ballEl.style.top = '50%';
+  }
+
+  appendLiveCommentary(`46'`, '後半キックオフ！', 'ev-period');
+  startMatchLiveTimer();
+}
+
+/**
+ * Phase 2（案A：王道マッチサマリー＆GMレポート画面）へ遷移・描画
+ */
+function transitionToMatchSummary() {
+  clearMatchLiveTimers();
+  matchLiveState.status = 'SUMMARY';
+
+  const phasePitch = document.getElementById('match-phase-pitch');
+  const phaseSummary = document.getElementById('match-phase-summary');
+  const btnSkip = document.getElementById('btn-match-skip-to-summary');
+  const btnClose = document.getElementById('btn-close-match-modal');
+  const summaryBody = document.getElementById('match-summary-body');
+
+  if (phasePitch) phasePitch.classList.add('hidden');
+  if (phaseSummary) phaseSummary.classList.remove('hidden');
+  if (btnSkip) btnSkip.classList.add('hidden');
+  if (btnClose) btnClose.classList.remove('hidden');
+  if (!summaryBody || !matchLiveState.matchData) return;
+
+  const md = matchLiveState.matchData;
+  const { homeClub, awayClub, homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots, isPlayerHome, matchIncome, awayBroadcastingFee, playerSupportersDelta } = md;
+  const homeScorers = matchLiveState.homeScorers || [];
+  const awayScorers = matchLiveState.awayScorers || [];
+
+  const myScore = isPlayerHome ? homeScore : awayScore;
+  const oppScore = isPlayerHome ? awayScore : homeScore;
+  const resType = myScore > oppScore ? 'win' : (myScore < oppScore ? 'lose' : 'draw');
+  const resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+
+  const homeScorersHtml = homeScorers.length > 0
+    ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
+    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
+
+  const awayScorersHtml = awayScorers.length > 0
+    ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
+    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
+
+  // 枠内シュート数算出
+  const homeOnTarget = Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
+  const awayOnTarget = Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
+
+  const totalShots = Math.max(1, homeShots + awayShots);
+  const homeShotsPct = Math.round((homeShots / totalShots) * 100);
+  const awayShotsPct = 100 - homeShotsPct;
+
+  const totalOnTarget = Math.max(1, homeOnTarget + awayOnTarget);
+  const homeOtPct = Math.round((homeOnTarget / totalOnTarget) * 100);
+  const awayOtPct = 100 - homeOtPct;
+
+  // ハイライト一覧（最大4件）
+  const highlights = matchLiveState.allHighlights.slice(0, 4);
+  const highlightsHtml = highlights.length > 0
+    ? highlights.map(h => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:28px;">[${h.minute}']</span><span>${h.text}</span></div>`).join('')
+    : `<div class="summary-highlight-item" style="color:var(--text-muted);">両チーム堅い守備で決定機を許さずタイムアップ。</div>`;
+
+  // GM収支＆サポーター増減
+  const revenueAmount = isPlayerHome ? matchIncome : (awayBroadcastingFee || 1600);
+  const revenueTypeLabel = isPlayerHome ? 'ホーム入場料・グッズ収入' : 'アウェイ放映権分配金';
+  const supDelta = typeof playerSupportersDelta === 'number' ? playerSupportersDelta : 0;
+  const supSign = supDelta >= 0 ? '+' : '';
+  const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';
+  const playerClub = isPlayerHome ? homeClub : awayClub;
+
+  // MOM（最優秀選手）選出
+  const allStarters = homeClub.players.slice(0, 11).map(p => ({ p, club: homeClub }))
+    .concat(awayClub.players.slice(0, 11).map(p => ({ p, club: awayClub })));
+  allStarters.sort((a, b) => (b.p.lastMatchRating || 6.5) - (a.p.lastMatchRating || 6.5));
+  const momEntry = allStarters[0];
+  const momPlayer = momEntry ? momEntry.p : null;
+  const momClub = momEntry ? momEntry.club : homeClub;
+  const momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
+
+  summaryBody.innerHTML = `
+    <!-- スコア＆得点者ボード -->
+    <div class="summary-hero-box">
+      <div class="summary-score-row">
+        <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+          <span class="summary-club-name">${homeClub.name}</span>
+          <span class="mono" style="font-size:10px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+        </div>
+        <div class="summary-score-center">
+          <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
+          <span class="summary-result-pill res-${resType}">${resLabel}</span>
+        </div>
+        <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+          <span class="summary-club-name">${awayClub.name}</span>
+          <span class="mono" style="font-size:10px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
+        </div>
+      </div>
+      <div class="summary-scorers-grid">
+        <div class="summary-scorers-col home">${homeScorersHtml}</div>
+        <div class="summary-scorers-col away">${awayScorersHtml}</div>
+      </div>
+    </div>
+
+    <!-- チームスタッツ比較 -->
+    <div class="summary-section-card">
+      <div class="summary-section-title">▼ チームスタッツ比較</div>
+      <div class="stat-compare-row">
+        <div class="stat-compare-labels mono">
+          <span style="color:#2ecc71;">${homePossession}%</span>
+          <span style="color:var(--text-muted);font-size:10px;">ボール支配率</span>
+          <span style="color:#60a5fa;">${awayPossession}%</span>
+        </div>
+        <div class="stat-compare-bar-track">
+          <div class="stat-bar-home" style="width:${homePossession}%;"></div>
+          <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
+        </div>
+      </div>
+      <div class="stat-compare-row">
+        <div class="stat-compare-labels mono">
+          <span style="color:#2ecc71;">${homeShots}本</span>
+          <span style="color:var(--text-muted);font-size:10px;">シュート数</span>
+          <span style="color:#60a5fa;">${awayShots}本</span>
+        </div>
+        <div class="stat-compare-bar-track">
+          <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
+          <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
+        </div>
+      </div>
+      <div class="stat-compare-row">
+        <div class="stat-compare-labels mono">
+          <span style="color:#2ecc71;">${homeOnTarget}本</span>
+          <span style="color:var(--text-muted);font-size:10px;">枠内シュート</span>
+          <span style="color:#60a5fa;">${awayOnTarget}本</span>
+        </div>
+        <div class="stat-compare-bar-track">
+          <div class="stat-bar-home" style="width:${homeOtPct}%;"></div>
+          <div class="stat-bar-away" style="width:${awayOtPct}%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- マッチハイライト -->
+    <div class="summary-section-card">
+      <div class="summary-section-title">▼ マッチハイライト・重要イベント</div>
+      <div class="summary-highlights-list">
+        ${highlightsHtml}
+      </div>
+    </div>
+
+    <!-- GMマッチデイ収支＆MOM -->
+    <div class="summary-section-card">
+      <div class="summary-section-title">▼ GMマッチデイ収支＆影響</div>
+      <div class="summary-gm-grid">
+        <div class="summary-gm-metric">
+          <span class="gm-metric-label">${revenueTypeLabel}</span>
+          <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
+        </div>
+        <div class="summary-gm-metric">
+          <span class="gm-metric-label">サポーター増減 (計 ${playerClub.supporters.toLocaleString()}人)</span>
+          <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+        </div>
+      </div>
+      ${momPlayer ? `
+        <div class="summary-mom-box">
+          <div class="mom-left">
+            ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-md', 38) : ''}
+            <div class="mom-info">
+              <span class="mom-tag">★ MAN OF THE MATCH (最優秀選手)</span>
+              <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos} / ${momClub.name})</span>
+            </div>
+          </div>
+          <span class="mom-rating-badge">Rating ${momRating}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(summaryBody);
+  }
+}
+
+/**
+ * 試合モーダルを閉じて本部画面へ戻る
+ */
+function closeMatchEventModal() {
+  clearMatchLiveTimers();
+  matchLiveState.status = 'IDLE';
+  gameState.isSimulating = false;
+
+  const modal = document.getElementById('match-event-modal');
+  if (modal) modal.classList.add('hidden');
+
+  const cb = matchLiveState.onComplete;
+  matchLiveState.onComplete = null;
+  if (typeof cb === 'function') {
+    cb();
+  } else {
+    renderAll();
+  }
+}
+
+/**
+ * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
+ */
+function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
+  clearMatchLiveTimers();
+  gameState.isSimulating = true;
+
+  matchLiveState.minute = 0;
+  matchLiveState.status = 'FIRST_HALF';
+  matchLiveState.matchData = matchData;
+  matchLiveState.homeScorers = homeScorers || [];
+  matchLiveState.awayScorers = awayScorers || [];
+  matchLiveState.liveHomeScore = 0;
+  matchLiveState.liveAwayScore = 0;
+  matchLiveState.liveHomeShots = 0;
+  matchLiveState.liveAwayShots = 0;
+  matchLiveState.onComplete = onComplete;
+
+  const { byMinute, highlights } = buildLiveMatchTimeline(matchData, matchLiveState.homeScorers, matchLiveState.awayScorers);
+  matchLiveState.timelineByMinute = byMinute;
+  matchLiveState.allHighlights = highlights;
+
+  const modal = document.getElementById('match-event-modal');
+  const phasePitch = document.getElementById('match-phase-pitch');
+  const phaseSummary = document.getElementById('match-phase-summary');
+  const btnSkip = document.getElementById('btn-match-skip-to-summary');
+  const btnClose = document.getElementById('btn-close-match-modal');
+  const btnSummaryFooter = document.getElementById('btn-match-to-summary-footer');
+  const htOverlay = document.getElementById('match-halftime-overlay');
+  const popupEl = document.getElementById('match-pitch-event-popup');
+
+  if (!modal) {
+    gameState.isSimulating = false;
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // ヘッダー情報設定
+  const { homeClub, awayClub, week } = matchData;
+  const weekBadge = document.getElementById('match-modal-week-badge');
+  const venueEl = document.getElementById('match-modal-venue');
+  const attEl = document.getElementById('match-modal-attendance');
+  const attendance = Math.min(60000, Math.round(homeClub.supporters * 0.95 + randInt(120, 850)));
+
+  if (weekBadge) weekBadge.textContent = `第${week}節 公式戦`;
+  if (venueEl) venueEl.textContent = `${homeClub.name}・スタジアム`;
+  if (attEl) attEl.textContent = `観客 ${attendance.toLocaleString()}人`;
+
+  // スコアボード初期化
+  const homeBox = document.getElementById('match-live-home-box');
+  const awayBox = document.getElementById('match-live-away-box');
+  const homeName = document.getElementById('match-live-home-name');
+  const awayName = document.getElementById('match-live-away-name');
+  const homeSub = document.getElementById('match-live-home-sub');
+  const awaySub = document.getElementById('match-live-away-sub');
+  const shEl = document.getElementById('match-live-score-home');
+  const saEl = document.getElementById('match-live-score-away');
+  const periodEl = document.getElementById('match-live-period');
+  const clockEl = document.getElementById('match-live-clock');
+
+  const hTac = (TACTICS_DEFINITIONS[normalizeTacticKey(homeClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
+  const aTac = (TACTICS_DEFINITIONS[normalizeTacticKey(awayClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
+
+  if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
+  if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
+  if (homeName) homeName.textContent = homeClub.name;
+  if (awayName) awayName.textContent = awayClub.name;
+  if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
+  if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
+  if (shEl) shEl.textContent = '0';
+  if (saEl) saEl.textContent = '0';
+  if (periodEl) periodEl.textContent = '前半';
+  if (clockEl) clockEl.textContent = "00'";
+
+  // 表示状態リセット
+  if (phasePitch) phasePitch.classList.remove('hidden');
+  if (phaseSummary) phaseSummary.classList.add('hidden');
+  if (btnSkip) btnSkip.classList.remove('hidden');
+  if (btnClose) btnClose.classList.add('hidden');
+  if (btnSummaryFooter) btnSummaryFooter.classList.add('hidden');
+  if (htOverlay) htOverlay.classList.add('hidden');
+  if (popupEl) popupEl.classList.add('hidden');
+
+  const feedEl = document.getElementById('match-live-commentary-feed');
+  if (feedEl) feedEl.innerHTML = '';
+
+  // 2Dコート上の選手ピン・ボール初期配置
+  setupMatch2DPitchTokens(homeClub, awayClub);
+  appendLiveCommentary(`00'`, `前半キックオフ！ ${homeClub.name} vs ${awayClub.name}`, 'ev-period');
+
+  // イベントバインド（初回のみ）
+  if (!matchLiveState.eventsBound) {
+    matchLiveState.eventsBound = true;
+
+    if (btnSkip) {
+      btnSkip.addEventListener('click', () => {
+        transitionToMatchSummary();
+      });
+    }
+    const btnResume = document.getElementById('btn-match-resume-second-half');
+    if (btnResume) {
+      btnResume.addEventListener('click', () => {
+        resumeSecondHalfMatch();
+      });
+    }
+    if (btnSummaryFooter) {
+      btnSummaryFooter.addEventListener('click', () => {
+        transitionToMatchSummary();
+      });
+    }
+    const btnSummaryOk = document.getElementById('btn-match-summary-ok');
+    if (btnSummaryOk) {
+      btnSummaryOk.addEventListener('click', () => {
+        closeMatchEventModal();
+      });
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        closeMatchEventModal();
+      });
+    }
+    document.querySelectorAll('#match-event-modal .btn-speed').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sp = Number(btn.dataset.speed) || 1;
+        matchLiveState.speed = sp;
+        document.querySelectorAll('#match-event-modal .btn-speed').forEach(b => {
+          b.classList.toggle('active', Number(b.dataset.speed) === sp);
+        });
+        if (matchLiveState.status === 'FIRST_HALF' || matchLiveState.status === 'SECOND_HALF') {
+          startMatchLiveTimer();
+        }
+      });
+    });
+  }
+
+  modal.classList.remove('hidden');
+  startMatchLiveTimer();
 }
 
 /**

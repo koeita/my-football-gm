@@ -1126,7 +1126,124 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261107_2215"></script>
-  <script src="main.js?v=20261107_2215"></script>
+  <!-- 試合経過＆マッチサマリー（2段階）モーダル -->
+  <div id="match-event-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="match-modal-week-badge">
+    <div class="modal-card match-event-modal-card">
+      <!-- モーダル共通ヘッダー -->
+      <div class="match-modal-header">
+        <div class="match-modal-header-left">
+          <span class="matchday-badge-big mono" id="match-modal-week-badge">第1節 公式戦</span>
+          <span class="match-modal-venue" id="match-modal-venue">スタジアム</span>
+          <span class="match-modal-attendance mono" id="match-modal-attendance">観客 18,000人</span>
+        </div>
+        <div class="match-modal-header-right">
+          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-match-skip-to-summary" title="試合経過をスキップして結果サマリーを表示">⏩ 結果へスキップ</button>
+          <button type="button" class="btn-modal-close mono hidden" id="btn-close-match-modal" aria-label="閉じる">✕</button>
+        </div>
+      </div>
+
+      <!-- 【Phase 1】サッカーコート試合経過ビュー -->
+      <div id="match-phase-pitch" class="match-phase-container">
+        <!-- ライブスコア＆試合時計 -->
+        <div class="match-live-scoreboard">
+          <div class="match-live-team home" id="match-live-home-box">
+            <span class="match-live-team-name" id="match-live-home-name">HOME</span>
+            <span class="match-live-team-sub mono" id="match-live-home-sub">4-3-3</span>
+          </div>
+          <div class="match-live-center">
+            <div class="match-live-score mono">
+              <span id="match-live-score-home">0</span>
+              <span class="score-divider">-</span>
+              <span id="match-live-score-away">0</span>
+            </div>
+            <div class="match-live-clock-row">
+              <span class="match-period-badge mono" id="match-live-period">前半</span>
+              <span class="match-clock-text mono" id="match-live-clock">00'</span>
+            </div>
+          </div>
+          <div class="match-live-team away" id="match-live-away-box">
+            <span class="match-live-team-name" id="match-live-away-name">AWAY</span>
+            <span class="match-live-team-sub mono" id="match-live-away-sub">4-4-2</span>
+          </div>
+        </div>
+
+        <!-- 2Dミニサッカーコート -->
+        <div class="match-pitch-stage" id="match-pitch-stage">
+          <div class="match-2d-pitch" id="match-2d-pitch">
+            <div class="pitch-half-line"></div>
+            <div class="pitch-center-circle"></div>
+            <div class="pitch-center-spot"></div>
+            <div class="pitch-penalty-box left"></div>
+            <div class="pitch-goal-box left"></div>
+            <div class="pitch-goal-net left"></div>
+            <div class="pitch-penalty-box right"></div>
+            <div class="pitch-goal-box right"></div>
+            <div class="pitch-goal-net right"></div>
+
+            <!-- シュート軌跡SVG -->
+            <svg class="pitch-trajectory-svg" id="match-pitch-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+
+            <!-- 選手ピンレイヤー -->
+            <div class="pitch-tokens-layer" id="match-pitch-tokens"></div>
+
+            <!-- ボール -->
+            <div class="pitch-ball" id="match-pitch-ball" style="left: 50%; top: 50%;">⚽</div>
+
+            <!-- ゴール・決定機ポップアップバナー -->
+            <div class="match-pitch-event-popup hidden" id="match-pitch-event-popup"></div>
+
+            <!-- ハーフタイム一時停止オーバーレイ（45分到達時に表示） -->
+            <div class="match-halftime-overlay hidden" id="match-halftime-overlay">
+              <div class="halftime-card">
+                <span class="halftime-badge mono">HALF TIME / 前半終了</span>
+                <div class="halftime-score mono" id="halftime-score-display">0 - 0</div>
+                <div class="halftime-stats-mini mono" id="halftime-stats-mini">支配率 50% : 50%</div>
+                <button type="button" class="btn btn-primary btn-halftime-resume" id="btn-match-resume-second-half">
+                  ▶ 後半キックオフ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- リアルタイム実況ティッカー -->
+        <div class="match-live-commentary-box">
+          <div class="commentary-header mono">
+            <span class="live-dot"></span>
+            <span>MATCH COMMENTARY</span>
+          </div>
+          <div class="commentary-feed" id="match-live-commentary-feed"></div>
+        </div>
+
+        <!-- 下部コントロールバー -->
+        <div class="match-live-controls">
+          <div class="speed-btn-group mono" role="group" aria-label="再生速度">
+            <span class="speed-label">速度:</span>
+            <button type="button" class="btn-speed active" data-speed="1">1x</button>
+            <button type="button" class="btn-speed" data-speed="2">2x</button>
+            <button type="button" class="btn-speed" data-speed="4">4x</button>
+          </div>
+          <div class="match-live-action-right">
+            <button type="button" class="btn btn-primary btn-sm hidden" id="btn-match-to-summary-footer">
+              試合結果サマリーへ ▶
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 【Phase 2】マッチサマリー＆GMレポートビュー（案A） -->
+      <div id="match-phase-summary" class="match-phase-container hidden">
+        <div class="match-summary-body" id="match-summary-body"></div>
+        <div class="match-summary-footer">
+          <button type="button" class="btn btn-primary btn-match-finish" id="btn-match-summary-ok">
+            次の日程へ進む (OK)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="avatar.js?v=20261108_0125"></script>
+  <script src="main.js?v=20261108_0125"></script>
 </body>
 </html>
