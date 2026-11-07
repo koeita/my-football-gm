@@ -5716,7 +5716,7 @@ function renderTacticalBoard() {
         </div>
       `;
     }).join('');
-    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(nodesLayer);
+    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(pitchLayer);
   }
 
   // 右側：控え（ベンチ）選手ワンクリック交代リスト描画
