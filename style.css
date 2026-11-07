@@ -704,8 +704,23 @@ body {
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   scrollbar-color: #3a3f45 transparent;
+  scroll-behavior: auto;
+}
+
+.table-wrapper table,
+.table-wrapper thead,
+.table-wrapper tbody,
+.table-wrapper tr,
+.table-wrapper th,
+.table-wrapper td,
+.table-wrapper .player-name-link {
+  touch-action: pan-x pan-y;
 }
 
 .table-wrapper::-webkit-scrollbar {
@@ -4712,16 +4727,43 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     overflow: hidden !important;
   }
 
-  /* 5. 順位表テーブルの横スクロール対応 & クラブ名固定 */
+  /* テーブルを持つパネルはoverflow:visibleでジェスチャー遮断・引っかかりを排除 */
+  .panel:has(.table-wrapper),
+  .view-team-layout .panel,
+  #roster-subview-players .panel,
+  #view-market .panel {
+    overflow: visible !important;
+  }
+
+  /* 5. 順位表・選手一覧テーブルの縦横スムーズスクロール最適化 */
   .table-responsive,
   .table-container,
-  .table-wrapper,
-  .panel-body {
+  .table-wrapper {
     width: 100% !important;
     overflow-x: auto !important;
+    overflow-y: visible !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y !important;
+    overscroll-behavior-x: contain !important;
+    overscroll-behavior-y: auto !important;
     scrollbar-width: thin !important;
     box-sizing: border-box !important;
+    scroll-behavior: auto !important;
+  }
+
+  .panel-body {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-wrapper table,
+  .table-wrapper thead,
+  .table-wrapper tbody,
+  .table-wrapper tr,
+  .table-wrapper th,
+  .table-wrapper td,
+  .table-wrapper .player-name-link {
+    touch-action: pan-x pan-y !important;
   }
 
   .standings-table,

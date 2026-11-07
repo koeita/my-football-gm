@@ -8077,37 +8077,62 @@ function initGame() {
 
 /**
  * モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤操作リロード防止
+ * ※テーブルやカルーセル等の横スクロール・縦スクロール操作を絶対に阻害しない高精度判定
  */
 function initReloadPrevention() {
+  let touchStartX = 0;
   let touchStartY = 0;
 
   window.addEventListener('touchstart', (e) => {
     if (e.touches && e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
     }
   }, { passive: true });
 
   window.addEventListener('touchmove', (e) => {
     if (!e.touches || e.touches.length !== 1) return;
+    const touchCurrentX = e.touches[0].clientX;
     const touchCurrentY = e.touches[0].clientY;
+    const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
 
-    // ページの最上部で下方向へスワイプしようとした場合（ブラウザのプルリフレッシュ挙動）
+    // 横方向へのスワイプ（テーブルやカルーセルの横スクロール等）は一切ブロックしない
+    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+      return;
+    }
+
+    // 横スクロール可能なコンテナ（.table-wrapper や .pitch-bench-list など）内での操作は邪魔しない
+    let target = e.target;
+    while (target && target !== document.body && target !== document.documentElement) {
+      if (target.classList && (target.classList.contains('table-wrapper') || target.classList.contains('pitch-bench-list'))) {
+        return;
+      }
+      if (target.scrollWidth > target.clientWidth + 2) {
+        const overflowX = window.getComputedStyle(target).overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          return;
+        }
+      }
+      target = target.parentElement;
+    }
+
+    // ページの最上部で真下方向へスワイプしようとした場合のみ（ブラウザのプルリフレッシュ挙動を遮断）
     const isAtTop = (window.scrollY <= 0 && document.documentElement.scrollTop <= 0);
 
-    if (isAtTop && deltaY > 0) {
+    if (isAtTop && deltaY > 8) {
       // 内部スクロール要素（モーダルなど）が途中でスクロールされているか確認
-      let target = e.target;
+      let scrollTarget = e.target;
       let hasScrolledInternalElement = false;
-      while (target && target !== document.body && target !== document.documentElement) {
-        if (target.scrollHeight > target.clientHeight) {
-          const overflowY = window.getComputedStyle(target).overflowY;
-          if ((overflowY === 'auto' || overflowY === 'scroll') && target.scrollTop > 0) {
+      while (scrollTarget && scrollTarget !== document.body && scrollTarget !== document.documentElement) {
+        if (scrollTarget.scrollHeight > scrollTarget.clientHeight) {
+          const overflowY = window.getComputedStyle(scrollTarget).overflowY;
+          if ((overflowY === 'auto' || overflowY === 'scroll') && scrollTarget.scrollTop > 0) {
             hasScrolledInternalElement = true;
             break;
           }
         }
-        target = target.parentElement;
+        scrollTarget = scrollTarget.parentElement;
       }
 
       if (!hasScrolledInternalElement && e.cancelable) {
