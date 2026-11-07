@@ -5911,19 +5911,19 @@ function renderHeader() {
     if (btnSkipSeason) btnSkipSeason.classList.remove('hidden');
 
     if (isMatchPending) {
-      // 本日未消化の試合日
+      // 本日未消化の試合日：キックオフボタンのみをメイン表示（「次の試合まで進める」は非表示）
       if (btnPlayMatch) {
         btnPlayMatch.classList.remove('hidden');
         const matchWeekNum = currentDay ? currentDay.matchWeek : gameState.currentWeek + 1;
         btnPlayMatch.innerHTML = `<span class="btn-large-sub mono">MATCHDAY READY</span><span class="btn-large-title">キックオフ（第${matchWeekNum}節）</span>`;
       }
+      if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
-      if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
     } else {
-      // 通常平日、または本日の試合消化済み
+      // 通常平日、または本日の試合消化済み：次の試合まで進めるボタンのみをメイン表示
       if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
-      if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
+      if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
     }
   }
 }
@@ -7017,8 +7017,8 @@ function renderGmDuties() {
       badge: '重要',
       title: `第${nextWeek}節 ${opponentText}`,
       desc: 'スタメンと戦術を確認し、今節の試合シミュレーションを実行します。',
-      btnText: '第' + nextWeek + '節を実行',
-      action: 'play-match'
+      btnText: '作戦確認',
+      action: 'goto-pitch'
     };
   }
   duties.push(criticalDuty);
