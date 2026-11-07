@@ -3668,7 +3668,7 @@ function showMatchPitchPopup(ev) {
 
   matchLiveState.popupTimeoutId = setTimeout(() => {
     popupEl.classList.add('hidden');
-  }, 1350);
+  }, 2000);
 }
 
 /**
@@ -3693,7 +3693,8 @@ function startMatchLiveTimer() {
     matchLiveState.timerId = null;
   }
 
-  const baseInterval = matchLiveState.speed === 4 ? 25 : (matchLiveState.speed === 2 ? 50 : 90);
+  // 1x: 300ms/分 (45分で約13.5秒), 2x: 150ms/分, 4x: 70ms/分
+  const baseInterval = matchLiveState.speed === 4 ? 70 : (matchLiveState.speed === 2 ? 150 : 300);
 
   matchLiveState.timerId = setInterval(() => {
     if (matchLiveState.status !== 'FIRST_HALF' && matchLiveState.status !== 'SECOND_HALF') {
@@ -3733,6 +3734,19 @@ function startMatchLiveTimer() {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
         appendLiveCommentary(`${min}'`, ev.text, '');
+      }
+    } else if (min % 9 === 0 && min < 44 || (min > 46 && min < 88 && min % 9 === 0)) {
+      const md = matchLiveState.matchData;
+      if (md) {
+        const isHomeAtk = Math.random() * 100 < (md.homePossession || 50);
+        const atkClub = isHomeAtk ? md.homeClub : md.awayClub;
+        const playTexts = [
+          `${atkClub.name} が中盤でパスを繋ぎながら相手ブロックの隙を窺う。`,
+          `${atkClub.name} がサイドへ大きく展開し、クロスからチャンスを模索。`,
+          `中盤での激しいボールの奪い合い。両チーム集中した守備を見せる。`,
+          `${atkClub.name} が前線から連動したプレスをかけてボールを奪取！`
+        ];
+        appendLiveCommentary(`${min}'`, playTexts[randInt(0, playTexts.length - 1)], '');
       }
     }
 
