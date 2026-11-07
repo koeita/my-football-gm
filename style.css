@@ -702,10 +702,25 @@ body {
 
 /* データテーブル */
 .table-wrapper {
+  position: relative;
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: none;
   scrollbar-width: thin;
   scrollbar-color: #3a3f45 transparent;
+  scroll-behavior: auto;
+}
+
+.table-wrapper table,
+.table-wrapper thead,
+.table-wrapper tbody,
+.table-wrapper tr,
+.table-wrapper th,
+.table-wrapper td,
+.table-wrapper .player-name-link {
+  touch-action: pan-x pan-y;
 }
 
 .table-wrapper::-webkit-scrollbar {
@@ -4712,16 +4727,43 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     overflow: hidden !important;
   }
 
-  /* 5. 順位表テーブルの横スクロール対応 & クラブ名固定 */
+  /* テーブルを持つパネルはoverflow:visibleでジェスチャー遮断・引っかかりを排除 */
+  .panel:has(.table-wrapper),
+  .view-team-layout .panel,
+  #roster-subview-players .panel,
+  #view-market .panel {
+    overflow: visible !important;
+  }
+
+  /* 5. 順位表・選手一覧テーブルの縦横スムーズスクロール最適化 */
   .table-responsive,
   .table-container,
-  .table-wrapper,
-  .panel-body {
+  .table-wrapper {
+    position: relative !important;
     width: 100% !important;
     overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    overflow-y: visible !important;
+    touch-action: pan-x pan-y !important;
+    overscroll-behavior-x: none !important;
+    overscroll-behavior-y: auto !important;
     scrollbar-width: thin !important;
     box-sizing: border-box !important;
+    scroll-behavior: auto !important;
+  }
+
+  .panel-body {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-wrapper table,
+  .table-wrapper thead,
+  .table-wrapper tbody,
+  .table-wrapper tr,
+  .table-wrapper th,
+  .table-wrapper td,
+  .table-wrapper .player-name-link {
+    touch-action: pan-x pan-y !important;
   }
 
   .standings-table,
@@ -4730,11 +4772,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     min-width: 580px !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
+    margin: 0 !important;
   }
 
-  /* 順位表テーブル：順位列・クラブ名列の完全sticky固定 & 完全不透明化（WebKitブレ＆透過ゼロ保証） */
+  /* 順位表テーブル：順位列・クラブ名列の完全sticky固定 & 完全不透明化（WebKit座標ブレ・ズレ防止） */
   .standings-table th.col-rank,
   .standings-table td.col-rank {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 0 !important;
     z-index: 10 !important;
@@ -4745,8 +4789,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     text-align: center !important;
     padding: 6px 2px !important;
     background-color: #161a1f !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -4758,6 +4800,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .standings-table th.col-team,
   .standings-table td.col-team {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 42px !important;
     z-index: 10 !important;
@@ -4772,8 +4815,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     background-color: #161a1f !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4) !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -5757,9 +5798,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
     overflow: hidden !important;
   }
-  /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化 */
+  /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化（WebKit座標ズレ防止） */
   .roster-table th.col-pos,
   .roster-table td.col-pos {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 0 !important;
     z-index: 10 !important;
@@ -5770,8 +5812,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
     text-align: center !important;
     padding: 5px 2px !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -5797,6 +5837,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .roster-table th.col-name,
   .roster-table td.col-name {
+    position: -webkit-sticky !important;
     position: sticky !important;
     left: 64px !important;
     z-index: 10 !important;
@@ -5811,8 +5852,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     padding: 5px 8px !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 4px 0 8px rgba(0, 0, 0, 0.45) !important;
-    -webkit-backface-visibility: hidden !important;
-    transform: translateZ(0) !important;
     background-clip: padding-box !important;
   }
 
@@ -6545,5 +6584,67 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 56px !important;
     height: 24px !important;
     font-size: 14px !important;
+  }
+}
+
+/* ==========================================================================
+   固定列（sticky）の罫線透け防止：罫線・背景をすべて不透明色で塗りつぶす
+   （半透明の罫線やpadding-box背景だと、横スクロール時に下を通過するセルの線や文字が透ける）
+   ========================================================================== */
+@media (max-width: 768px) {
+  .standings-table th.col-rank,
+  .standings-table td.col-rank,
+  .standings-table th.col-team,
+  .standings-table td.col-team,
+  .roster-table th.col-pos,
+  .roster-table td.col-pos,
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    background-clip: border-box !important;
+    border-bottom: 1px solid #2a2e33 !important;
+    border-left: none !important;
+    border-top: none !important;
+    transition: none !important;
+  }
+
+  .standings-table th.col-rank,
+  .standings-table td.col-rank,
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    border-right: none !important;
+    box-shadow: none !important;
+  }
+
+  .standings-table th.col-team,
+  .standings-table td.col-team,
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    border-right: 2px solid #3a3f45 !important;
+    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .standings-table thead th.col-rank,
+  .standings-table thead th.col-team,
+  .roster-table thead th.col-pos,
+  .roster-table thead th.col-name {
+    border-bottom: 2px solid #33383e !important;
+  }
+
+  .standings-table tbody tr:last-child td.col-rank,
+  .standings-table tbody tr:last-child td.col-team,
+  .roster-table tbody tr:last-child td.col-pos,
+  .roster-table tbody tr:last-child td.col-name {
+    border-bottom: none !important;
+  }
+
+  /* 非固定セルの罫線も同じ不透明色に揃えて、固定列との境目で線の濃さが変わらないようにする */
+  .standings-table tbody td,
+  .roster-table tbody td {
+    border-bottom-color: #2a2e33 !important;
+  }
+
+  .standings-table thead th,
+  .roster-table thead th {
+    border-bottom: 2px solid #33383e !important;
   }
 }
