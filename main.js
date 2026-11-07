@@ -3016,6 +3016,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
       r += randInt(-2, 2) * 0.1;
       r = clamp(r, 5.0, 9.5);
+      p.lastMatchRating = Number(r.toFixed(1));
       p.totalRating += r;
     });
   };
@@ -3200,6 +3201,9 @@ function playNextMatchweek(skipAnimation = false) {
     awayClub.ga += homeScore;
     awayClub.gd = awayClub.gf - awayClub.ga;
 
+    const prevHomeSupporters = homeClub.supporters;
+    const prevAwaySupporters = awayClub.supporters;
+
     if (homeScore > awayScore) {
       homeClub.won += 1;
       homeClub.pts += 3;
@@ -3221,6 +3225,9 @@ function playNextMatchweek(skipAnimation = false) {
       awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-10, 60));
     }
 
+    const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;
+    const awaySupportersDelta = awayClub.supporters - prevAwaySupporters;
+
     const { homeScorers, awayScorers } = processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore);
 
     const matchObj = {
@@ -3236,7 +3243,10 @@ function playNextMatchweek(skipAnimation = false) {
       isPlayerHome: homeClub.isPlayer,
       isPlayerMatch: homeClub.isPlayer || awayClub.isPlayer,
       matchIncome,
-      awayBroadcastingFee
+      awayBroadcastingFee,
+      playerSupportersDelta: homeClub.isPlayer ? homeSupportersDelta : awaySupportersDelta,
+      homeScorers,
+      awayScorers
     };
     results.push(matchObj);
 
@@ -3257,7 +3267,7 @@ function playNextMatchweek(skipAnimation = false) {
   gameState.lastMatchTicker = {
     week: weekIndex + 1,
     events: tickerEvents,
-    completed: skipAnimation
+    completed: true
   };
 
   const isFinalWeek = gameState.currentWeek === gameState.totalWeeks;
@@ -3270,58 +3280,1089 @@ function playNextMatchweek(skipAnimation = false) {
     return;
   }
 
-  runMatchTickerAnimation(tickerEvents, () => {
+  if (playerMatchData) {
+    openMatchEventModal(playerMatchData, playerHomeScorers, playerAwayScorers, () => {
+      if (isFinalWeek) {
+        processSeasonEnd(false);
+      } else {
+        checkPostMatchEvents();
+      }
+      renderAll();
+    });
+  } else {
     if (isFinalWeek) {
       processSeasonEnd(false);
     } else {
       checkPostMatchEvents();
     }
     renderAll();
-  });
+  }
 }
 
 /**
- * テキスト速報ログアニメーション演出（約1秒）
+ * 試合経過（2Dサッカーコート）＆マッチサマリー（案A）の2段階モーダル制御
  */
-function runMatchTickerAnimation(events, onComplete) {
-  gameState.isSimulating = true;
-  renderHeader();
+const matchLiveState = {
+  timerId: null,
+  popupTimeoutId: null,
+  autoSummaryTimeoutId: null,
+  minute: 0,
+  speed: 1,
+  status: 'IDLE', // 'FIRST_HALF' | 'HALFTIME' | 'SECOND_HALF' | 'FULLTIME' | 'SUMMARY'
+  matchData: null,
+  homeScorers: [],
+  awayScorers: [],
+  timelineByMinute: {},
+  allHighlights: [],
+  liveHomeScore: 0,
+  liveAwayScore: 0,
+  liveHomeShots: 0,
+  liveAwayShots: 0,
+  homeBaseTokens: [],
+  awayBaseTokens: [],
+  onComplete: null,
+  eventsBound: false
+};
 
-  const container = document.getElementById('match-results-container');
-  const subtitle = document.getElementById('log-panel-subtitle');
-  subtitle.textContent = `MATCHWEEK ${gameState.currentWeek} LIVE TICKER`;
+function clearMatchLiveTimers() {
+  if (matchLiveState.timerId) {
+    clearInterval(matchLiveState.timerId);
+    matchLiveState.timerId = null;
+  }
+  if (matchLiveState.popupTimeoutId) {
+    clearTimeout(matchLiveState.popupTimeoutId);
+    matchLiveState.popupTimeoutId = null;
+  }
+  if (matchLiveState.autoSummaryTimeoutId) {
+    clearTimeout(matchLiveState.autoSummaryTimeoutId);
+    matchLiveState.autoSummaryTimeoutId = null;
+  }
+}
 
-  container.innerHTML = `
-    <div class="match-ticker-box">
-      <div class="ticker-header">
-        <span class="ticker-title">第${gameState.currentWeek}節 自チーム速報</span>
-        <span class="ticker-live-badge">MATCH IN PROGRESS</span>
-      </div>
-      <div class="ticker-feed" id="ticker-feed"></div>
+/**
+ * 90分間の詳細な試合経過タイムライン（ゴール・セーブ・シュート・攻防）を構築
+ */
+function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
+  const { homeClub, awayClub, homeShots, awayShots } = matchData;
+  const byMinute = {};
+  const highlights = [];
+
+  const homeStarters = homeClub.players.slice(0, 11);
+  const awayStarters = awayClub.players.slice(0, 11);
+  const homeGk = homeStarters.find(p => (p.assignedPos || p.pos) === 'GK') || homeStarters[0];
+  const awayGk = awayStarters.find(p => (p.assignedPos || p.pos) === 'GK') || awayStarters[0];
+
+  const getFreeMinute = (rawMin, isFirstHalfPref = null) => {
+    let m = clamp(rawMin, 1, 89);
+    if (m === 45) m = 44;
+    const minBound = isFirstHalfPref === true ? 2 : (isFirstHalfPref === false ? 46 : 2);
+    const maxBound = isFirstHalfPref === true ? 44 : (isFirstHalfPref === false ? 89 : 89);
+    m = clamp(m, minBound, maxBound);
+    let offset = 0;
+    while (offset < 45) {
+      const cand1 = m + offset;
+      if (cand1 <= maxBound && cand1 !== 45 && !byMinute[cand1]) return cand1;
+      const cand2 = m - offset;
+      if (cand2 >= minBound && cand2 !== 45 && !byMinute[cand2]) return cand2;
+      offset++;
+    }
+    return m;
+  };
+
+  const fmtNum = (p) => (p && p.squadNumber ? `#${p.squadNumber} ` : '');
+
+  // 1. ゴールイベントを配置
+  homeScorers.forEach(g => {
+    const isFH = g.minute <= 45;
+    const min = getFreeMinute(g.minute, isFH);
+    g.minute = min;
+    const assistText = g.assister ? ` (アシスト: ${fmtNum(g.assister)}${g.assister.name})` : '';
+    const ev = {
+      minute: min,
+      type: 'goal',
+      side: 'home',
+      club: homeClub,
+      actor: g.scorer,
+      assister: g.assister || null,
+      text: `⚽ GOAL!! ${homeClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がネットを揺らす！${assistText}`
+    };
+    byMinute[min] = ev;
+    highlights.push(ev);
+  });
+
+  awayScorers.forEach(g => {
+    const isFH = g.minute <= 45;
+    const min = getFreeMinute(g.minute, isFH);
+    g.minute = min;
+    const assistText = g.assister ? ` (アシスト: ${fmtNum(g.assister)}${g.assister.name})` : '';
+    const ev = {
+      minute: min,
+      type: 'goal',
+      side: 'away',
+      club: awayClub,
+      actor: g.scorer,
+      assister: g.assister || null,
+      text: `⚽ GOAL!! ${awayClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がゴールを決めた！${assistText}`
+    };
+    byMinute[min] = ev;
+    highlights.push(ev);
+  });
+
+  // 2. 決定機・セーブ・シュートイベントを前後半にバランス良く配置
+  const pickAttacker = (starters) => {
+    const attackers = starters.filter(p => (p.assignedPos || p.pos) !== 'GK');
+    return attackers[randInt(0, Math.max(0, attackers.length - 1))] || starters[0];
+  };
+
+  const extraHomeShots = Math.max(2, Math.min(5, (homeShots || 6) - homeScorers.length));
+  const extraAwayShots = Math.max(2, Math.min(5, (awayShots || 6) - awayScorers.length));
+  const subHighlights = [];
+
+  for (let i = 0; i < extraHomeShots; i++) {
+    const isFH = i % 2 === 0;
+    const rawMin = isFH ? randInt(4, 42) : randInt(48, 87);
+    const min = getFreeMinute(rawMin, isFH);
+    const shooter = pickAttacker(homeStarters);
+    const isSave = i % 2 === 0;
+    const ev = {
+      minute: min,
+      type: isSave ? 'save' : 'shot',
+      side: 'home',
+      club: homeClub,
+      actor: shooter,
+      keeper: awayGk,
+      text: isSave
+        ? `🧤 SUPER SAVE! ${homeClub.name} ${fmtNum(shooter)}${shooter.name} の鋭いシュートをGK ${awayGk.name} が好セーブ！`
+        : `⚡ 惜しい！ ${homeClub.name} ${fmtNum(shooter)}${shooter.name} のミドルシュートはわずかに枠の外！`
+    };
+    byMinute[min] = ev;
+    if (isSave) subHighlights.push(ev);
+  }
+
+  for (let i = 0; i < extraAwayShots; i++) {
+    const isFH = i % 2 === 1;
+    const rawMin = isFH ? randInt(5, 43) : randInt(49, 88);
+    const min = getFreeMinute(rawMin, isFH);
+    const shooter = pickAttacker(awayStarters);
+    const isSave = i % 2 === 0;
+    const ev = {
+      minute: min,
+      type: isSave ? 'save' : 'shot',
+      side: 'away',
+      club: awayClub,
+      actor: shooter,
+      keeper: homeGk,
+      text: isSave
+        ? `🧤 ナイスセーブ！ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} の決定機をGK ${fmtNum(homeGk)}${homeGk.name} が阻止！`
+        : `⚡ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} がペナルティエリア内から狙うも枠を捉えきれず！`
+    };
+    byMinute[min] = ev;
+    if (isSave) subHighlights.push(ev);
+  }
+
+  // ゴールを最優先しつつ最大4件のハイライトを時系列順に構成
+  for (const sh of subHighlights) {
+    if (highlights.length >= 4) break;
+    highlights.push(sh);
+  }
+  highlights.sort((a, b) => a.minute - b.minute);
+  return { byMinute, highlights };
+}
+
+/**
+ * 2Dサッカーコート上の22名の選手ピン初期配置を計算・生成
+ */
+function setupMatch2DPitchTokens(homeClub, awayClub) {
+  const tokensLayer = document.getElementById('match-pitch-tokens');
+  const svgEl = document.getElementById('match-pitch-svg');
+  if (!tokensLayer) return;
+  tokensLayer.innerHTML = '';
+  if (svgEl) svgEl.innerHTML = '';
+
+  const hDef = getClubFormationDef(homeClub);
+  const aDef = getClubFormationDef(awayClub);
+  const homeStarters = homeClub.players.slice(0, 11);
+  const awayStarters = awayClub.players.slice(0, 11);
+
+  matchLiveState.homeBaseTokens = [];
+  matchLiveState.awayBaseTokens = [];
+
+  // ホーム（左コート ➔ 右へ攻める）
+  hDef.slots.forEach((slot, idx) => {
+    const p = homeStarters[idx];
+    const isGk = slot.pos === 'GK';
+    const baseX = isGk ? 6 : clamp(10 + ((90 - slot.y) / 75) * 36, 12, 46);
+    const baseY = clamp(slot.x, 12, 88);
+    const el = document.createElement('div');
+    el.className = `pitch-2d-token home-token ${isGk ? 'is-gk' : ''}`;
+    el.style.left = `${baseX}%`;
+    el.style.top = `${baseY}%`;
+    el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
+    tokensLayer.appendChild(el);
+    matchLiveState.homeBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+  });
+
+  // アウェイ（右コート ➔ 左へ攻める）
+  aDef.slots.forEach((slot, idx) => {
+    const p = awayStarters[idx];
+    const isGk = slot.pos === 'GK';
+    const baseX = isGk ? 94 : clamp(90 - ((90 - slot.y) / 75) * 36, 54, 88);
+    const baseY = clamp(100 - slot.x, 12, 88);
+    const el = document.createElement('div');
+    el.className = `pitch-2d-token away-token ${isGk ? 'is-gk' : ''}`;
+    el.style.left = `${baseX}%`;
+    el.style.top = `${baseY}%`;
+    el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
+    tokensLayer.appendChild(el);
+    matchLiveState.awayBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+  });
+
+  const ballEl = document.getElementById('match-pitch-ball');
+  if (ballEl) {
+    ballEl.style.left = '50%';
+    ballEl.style.top = '50%';
+  }
+}
+
+/**
+ * 1分ごとの2Dコート上の選手ピン・ボール・シュート軌跡のアニメーション更新
+ */
+function animatePitchStep(minute, ev) {
+  const ballEl = document.getElementById('match-pitch-ball');
+  const svgEl = document.getElementById('match-pitch-svg');
+  if (svgEl) svgEl.innerHTML = '';
+
+  const allTokens = matchLiveState.homeBaseTokens.concat(matchLiveState.awayBaseTokens);
+  allTokens.forEach(t => t.el.classList.remove('active-actor'));
+
+  const homePoss = (matchLiveState.matchData && matchLiveState.matchData.homePossession) || 50;
+  const attackingSide = ev ? ev.side : (Math.random() * 100 < homePoss ? 'home' : 'away');
+  const shiftX = attackingSide === 'home' ? randInt(6, 16) : randInt(-16, -6);
+
+  matchLiveState.homeBaseTokens.forEach(t => {
+    if (t.isGk) {
+      t.curX = 6;
+      t.curY = 50 + randInt(-4, 4);
+    } else {
+      t.curX = clamp(t.baseX + shiftX + randInt(-4, 5), 12, 86);
+      t.curY = clamp(t.baseY + randInt(-6, 6), 10, 90);
+    }
+    t.el.style.left = `${t.curX}%`;
+    t.el.style.top = `${t.curY}%`;
+  });
+
+  matchLiveState.awayBaseTokens.forEach(t => {
+    if (t.isGk) {
+      t.curX = 94;
+      t.curY = 50 + randInt(-4, 4);
+    } else {
+      t.curX = clamp(t.baseX + shiftX + randInt(-5, 4), 14, 88);
+      t.curY = clamp(t.baseY + randInt(-6, 6), 10, 90);
+    }
+    t.el.style.left = `${t.curX}%`;
+    t.el.style.top = `${t.curY}%`;
+  });
+
+  if (!ev) {
+    // 通常のパス回し・攻防
+    const sideTokens = attackingSide === 'home'
+      ? matchLiveState.homeBaseTokens.filter(t => !t.isGk)
+      : matchLiveState.awayBaseTokens.filter(t => !t.isGk);
+    const holder = sideTokens[randInt(0, sideTokens.length - 1)];
+    if (holder && ballEl) {
+      holder.el.classList.add('active-actor');
+      ballEl.style.left = `${holder.curX}%`;
+      ballEl.style.top = `${holder.curY}%`;
+    }
+    return;
+  }
+
+  // イベント発生時（ゴール・セーブ・シュート）
+  const isHome = ev.side === 'home';
+  const sideTokens = isHome ? matchLiveState.homeBaseTokens : matchLiveState.awayBaseTokens;
+  let actorToken = sideTokens.find(t => t.player && ev.actor && t.player.id === ev.actor.id);
+  if (!actorToken) {
+    const fieldTokens = sideTokens.filter(t => !t.isGk);
+    actorToken = fieldTokens[fieldTokens.length - 1] || sideTokens[0];
+  }
+
+  // シューターを敵陣ゴール前へ移動
+  const shootX = isHome ? randInt(76, 86) : randInt(14, 24);
+  const shootY = randInt(28, 72);
+  if (actorToken) {
+    actorToken.curX = shootX;
+    actorToken.curY = shootY;
+    actorToken.el.style.left = `${shootX}%`;
+    actorToken.el.style.top = `${shootY}%`;
+    actorToken.el.classList.add('active-actor');
+  }
+
+  let targetX = isHome ? 98.5 : 1.5;
+  let targetY = 50;
+  let lineColor = '#f1c40f';
+
+  if (ev.type === 'save') {
+    targetX = isHome ? 93.5 : 6.5;
+    targetY = randInt(43, 57);
+    lineColor = '#60a5fa';
+  } else if (ev.type === 'shot') {
+    targetX = isHome ? 99 : 1;
+    targetY = Math.random() < 0.5 ? randInt(18, 32) : randInt(68, 82);
+    lineColor = '#94a3b8';
+  }
+
+  if (svgEl) {
+    svgEl.innerHTML = `
+      <line x1="${shootX}" y1="${shootY}" x2="${targetX}" y2="${targetY}"
+        stroke="${lineColor}" stroke-width="1.2" stroke-dasharray="${ev.type === 'goal' ? 'none' : '2,2'}" />
+    `;
+  }
+
+  if (ballEl) {
+    ballEl.style.left = `${targetX}%`;
+    ballEl.style.top = `${targetY}%`;
+  }
+
+  if (ev.type === 'goal' || ev.type === 'save') {
+    showMatchPitchPopup(ev);
+  }
+}
+
+/**
+ * ゴールやスーパーセーブ発生時にコート中央へポップアップバナーを表示
+ */
+function showMatchPitchPopup(ev) {
+  const popupEl = document.getElementById('match-pitch-event-popup');
+  if (!popupEl) return;
+
+  if (matchLiveState.popupTimeoutId) {
+    clearTimeout(matchLiveState.popupTimeoutId);
+  }
+
+  const isGoal = ev.type === 'goal';
+  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'}`;
+
+  const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
+  const badgeText = isGoal ? `⚽ GOAL!! (${ev.minute}')` : `🧤 SUPER SAVE! (${ev.minute}')`;
+  const subText = isGoal
+    ? `${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
+    : `${ev.actor ? ev.actor.name : ''} の決定機を阻止！`;
+  const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
+  const avatarHtml = (targetPlayer && typeof getPlayerAvatarHtml === 'function')
+    ? getPlayerAvatarHtml(targetPlayer, ev.club, 'avatar-md', 42)
+    : '';
+
+  popupEl.innerHTML = `
+    ${avatarHtml}
+    <div class="event-popup-info">
+      <span class="event-popup-badge">${badgeText}</span>
+      <span class="event-popup-player">${numLabel}${targetPlayer ? targetPlayer.name : ''}</span>
+      <span class="event-popup-sub">${subText}</span>
     </div>
   `;
 
-  const feedEl = document.getElementById('ticker-feed');
-  const stepDelay = Math.max(150, Math.floor(900 / Math.max(events.length, 1)));
-  let eventIdx = 0;
+  popupEl.classList.remove('hidden');
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(popupEl);
+  }
 
-  const intervalId = setInterval(() => {
-    if (eventIdx < events.length) {
-      const ev = events[eventIdx];
-      const lineEl = document.createElement('div');
-      lineEl.className = `ticker-line ticker-${ev.type}`;
-      lineEl.innerHTML = `<span class="ticker-time">${ev.time}</span><span class="ticker-text">${ev.text}</span>`;
-      feedEl.appendChild(lineEl);
-      eventIdx++;
-    } else {
-      clearInterval(intervalId);
-      gameState.isSimulating = false;
-      if (gameState.lastMatchTicker) {
-        gameState.lastMatchTicker.completed = true;
-      }
-      if (onComplete) onComplete();
+  matchLiveState.popupTimeoutId = setTimeout(() => {
+    popupEl.classList.add('hidden');
+  }, 2000);
+}
+
+/**
+ * 実況ティッカーに1行追加
+ */
+function appendLiveCommentary(minLabel, text, typeClass = '') {
+  const feedEl = document.getElementById('match-live-commentary-feed');
+  if (!feedEl) return;
+  const line = document.createElement('div');
+  line.className = `commentary-line ${typeClass}`;
+  line.innerHTML = `<span class="commentary-min">${minLabel}</span><span>${text}</span>`;
+  feedEl.appendChild(line);
+  feedEl.scrollTop = feedEl.scrollHeight;
+}
+
+/**
+ * 試合経過タイマーの開始・再開
+ */
+function startMatchLiveTimer() {
+  if (matchLiveState.timerId) {
+    clearInterval(matchLiveState.timerId);
+    matchLiveState.timerId = null;
+  }
+
+  // 1x: 300ms/分 (45分で約13.5秒), 2x: 150ms/分, 4x: 70ms/分
+  const baseInterval = matchLiveState.speed === 4 ? 70 : (matchLiveState.speed === 2 ? 150 : 300);
+
+  matchLiveState.timerId = setInterval(() => {
+    if (matchLiveState.status !== 'FIRST_HALF' && matchLiveState.status !== 'SECOND_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      return;
     }
-  }, stepDelay);
+
+    matchLiveState.minute += 1;
+    const min = matchLiveState.minute;
+
+    const clockEl = document.getElementById('match-live-clock');
+    if (clockEl) clockEl.textContent = `${String(min).padStart(2, '0')}'`;
+
+    const ev = matchLiveState.timelineByMinute[min] || null;
+    animatePitchStep(min, ev);
+
+    if (ev) {
+      if (ev.type === 'goal') {
+        if (ev.side === 'home') {
+          matchLiveState.liveHomeScore += 1;
+          matchLiveState.liveHomeShots += 1;
+        } else {
+          matchLiveState.liveAwayScore += 1;
+          matchLiveState.liveAwayShots += 1;
+        }
+        const shEl = document.getElementById('match-live-score-home');
+        const saEl = document.getElementById('match-live-score-away');
+        if (shEl) shEl.textContent = matchLiveState.liveHomeScore;
+        if (saEl) saEl.textContent = matchLiveState.liveAwayScore;
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-goal');
+      } else if (ev.type === 'save') {
+        if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
+        else matchLiveState.liveAwayShots += 1;
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-save');
+      } else if (ev.type === 'shot') {
+        if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
+        else matchLiveState.liveAwayShots += 1;
+        appendLiveCommentary(`${min}'`, ev.text, '');
+      }
+    } else if (min % 9 === 0 && min < 44 || (min > 46 && min < 88 && min % 9 === 0)) {
+      const md = matchLiveState.matchData;
+      if (md) {
+        const isHomeAtk = Math.random() * 100 < (md.homePossession || 50);
+        const atkClub = isHomeAtk ? md.homeClub : md.awayClub;
+        const playTexts = [
+          `${atkClub.name} が中盤でパスを繋ぎながら相手ブロックの隙を窺う。`,
+          `${atkClub.name} がサイドへ大きく展開し、クロスからチャンスを模索。`,
+          `中盤での激しいボールの奪い合い。両チーム集中した守備を見せる。`,
+          `${atkClub.name} が前線から連動したプレスをかけてボールを奪取！`
+        ];
+        appendLiveCommentary(`${min}'`, playTexts[randInt(0, playTexts.length - 1)], '');
+      }
+    }
+
+    // ★ 前半45分到達時：ハーフタイムで必ず一時停止！
+    if (min === 45 && matchLiveState.status === 'FIRST_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      matchLiveState.status = 'HALFTIME';
+
+      const periodEl = document.getElementById('match-live-period');
+      if (periodEl) periodEl.textContent = 'HALF TIME';
+
+      appendLiveCommentary(`45'`, '前半終了のホイッスル！ハーフタイムに入ります。', 'ev-period');
+
+      const htOverlay = document.getElementById('match-halftime-overlay');
+      const htScore = document.getElementById('halftime-score-display');
+      const htStats = document.getElementById('halftime-stats-mini');
+      const md = matchLiveState.matchData;
+      if (htScore) htScore.textContent = `${matchLiveState.liveHomeScore} - ${matchLiveState.liveAwayScore}`;
+      if (htStats && md) {
+        htStats.textContent = `支配率 ${md.homePossession}% : ${md.awayPossession}% ｜ シュート ${matchLiveState.liveHomeShots} : ${matchLiveState.liveAwayShots}`;
+      }
+      if (htOverlay) htOverlay.classList.remove('hidden');
+      return;
+    }
+
+    // ★ 後半90分到達時：試合終了（FULL TIME）➔ サマリーへ
+    if (min >= 90 && matchLiveState.status === 'SECOND_HALF') {
+      clearInterval(matchLiveState.timerId);
+      matchLiveState.timerId = null;
+      matchLiveState.status = 'FULLTIME';
+
+      const periodEl = document.getElementById('match-live-period');
+      if (periodEl) periodEl.textContent = 'FULL TIME';
+
+      const md = matchLiveState.matchData;
+      if (md) {
+        const shEl = document.getElementById('match-live-score-home');
+        const saEl = document.getElementById('match-live-score-away');
+        if (shEl) shEl.textContent = md.homeScore;
+        if (saEl) saEl.textContent = md.awayScore;
+        appendLiveCommentary(`90'`, `試合終了！ ${md.homeClub.name} ${md.homeScore} - ${md.awayScore} ${md.awayClub.name}`, 'ev-period');
+      }
+
+      const btnSummaryFooter = document.getElementById('btn-match-to-summary-footer');
+      if (btnSummaryFooter) {
+        btnSummaryFooter.classList.remove('hidden');
+        btnSummaryFooter.classList.add('btn-match-to-summary-pulse');
+      }
+      // ユーザーの指示：ボタンを押すまで自動で遷移せず待機する
+    }
+  }, baseInterval);
+}
+
+/**
+ * ハーフタイムから後半（45'〜90'）を再開
+ */
+function resumeSecondHalfMatch() {
+  if (matchLiveState.status !== 'HALFTIME') return;
+  const htOverlay = document.getElementById('match-halftime-overlay');
+  if (htOverlay) htOverlay.classList.add('hidden');
+
+  const popupEl = document.getElementById('match-pitch-event-popup');
+  if (popupEl) popupEl.classList.add('hidden');
+
+  matchLiveState.status = 'SECOND_HALF';
+  const periodEl = document.getElementById('match-live-period');
+  if (periodEl) periodEl.textContent = '後半';
+
+  const ballEl = document.getElementById('match-pitch-ball');
+  if (ballEl) {
+    ballEl.style.left = '50%';
+    ballEl.style.top = '50%';
+  }
+
+  appendLiveCommentary(`46'`, '後半キックオフ！', 'ev-period');
+  startMatchLiveTimer();
+}
+
+/**
+ * Phase 2（案A：王道マッチサマリー＆GMレポート画面）へ遷移・描画
+ */
+function transitionToMatchSummary() {
+  clearMatchLiveTimers();
+  matchLiveState.status = 'SUMMARY';
+
+  const phasePitch = document.getElementById('match-phase-pitch');
+  const phaseSummary = document.getElementById('match-phase-summary');
+  const btnSkip = document.getElementById('btn-match-skip-to-summary');
+  const btnClose = document.getElementById('btn-close-match-modal');
+  const summaryBody = document.getElementById('match-summary-body');
+
+  if (phasePitch) phasePitch.classList.add('hidden');
+  if (phaseSummary) phaseSummary.classList.remove('hidden');
+  if (btnSkip) btnSkip.classList.add('hidden');
+  if (btnClose) btnClose.classList.add('hidden'); // ユーザー指示：マッチサマリー右上の✕ボタンをなくす
+  if (!summaryBody || !matchLiveState.matchData) return;
+
+  const md = matchLiveState.matchData;
+  const { homeClub, awayClub, homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots, isPlayerHome, matchIncome, awayBroadcastingFee, playerSupportersDelta } = md;
+  const homeScorers = matchLiveState.homeScorers || [];
+  const awayScorers = matchLiveState.awayScorers || [];
+
+  const myScore = isPlayerHome ? homeScore : awayScore;
+  const oppScore = isPlayerHome ? awayScore : homeScore;
+  const resType = myScore > oppScore ? 'win' : (myScore < oppScore ? 'lose' : 'draw');
+  const resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+
+  const homeScorersHtml = homeScorers.length > 0
+    ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
+    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
+
+  const awayScorersHtml = awayScorers.length > 0
+    ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
+    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
+
+  // 枠内シュート数算出
+  const homeOnTarget = Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
+  const awayOnTarget = Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
+
+  const totalShots = Math.max(1, homeShots + awayShots);
+  const homeShotsPct = Math.round((homeShots / totalShots) * 100);
+  const awayShotsPct = 100 - homeShotsPct;
+
+  const totalOnTarget = Math.max(1, homeOnTarget + awayOnTarget);
+  const homeOtPct = Math.round((homeOnTarget / totalOnTarget) * 100);
+  const awayOtPct = 100 - homeOtPct;
+
+  // ハイライト一覧（最大3件に絞りスクロールなしで収容）
+  const highlights = matchLiveState.allHighlights.slice(0, 3);
+  const highlightsHtml = highlights.length > 0
+    ? highlights.map(h => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:26px;">[${h.minute}']</span><span>${h.text}</span></div>`).join('')
+    : `<div class="summary-highlight-item" style="color:var(--text-muted);">両チーム堅い守備で決定機を許さずタイムアップ。</div>`;
+
+  // GM収支＆サポーター増減
+  const revenueAmount = isPlayerHome ? matchIncome : (awayBroadcastingFee || 1600);
+  const revenueTypeLabel = isPlayerHome ? '入場料・グッズ' : '放映権分配金';
+  const supDelta = typeof playerSupportersDelta === 'number' ? playerSupportersDelta : 0;
+  const supSign = supDelta >= 0 ? '+' : '';
+  const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';
+  const playerClub = isPlayerHome ? homeClub : awayClub;
+
+  // MOM（最優秀選手）選出
+  const allStarters = homeClub.players.slice(0, 11).map(p => ({ p, club: homeClub }))
+    .concat(awayClub.players.slice(0, 11).map(p => ({ p, club: awayClub })));
+  allStarters.sort((a, b) => (b.p.lastMatchRating || 6.5) - (a.p.lastMatchRating || 6.5));
+  const momEntry = allStarters[0];
+  const momPlayer = momEntry ? momEntry.p : null;
+  const momClub = momEntry ? momEntry.club : homeClub;
+  const momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
+
+  summaryBody.innerHTML = `
+    <div class="summary-grid-layout">
+      <!-- 左列：スコアボード ＆ スタッツ比較 -->
+      <div class="summary-col-left">
+        <!-- スコア＆得点者ボード -->
+        <div class="summary-hero-box">
+          <div class="summary-score-row">
+            <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+              <span class="summary-club-name">${homeClub.name}</span>
+              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+            </div>
+            <div class="summary-score-center">
+              <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
+              <span class="summary-result-pill res-${resType}">${resLabel}</span>
+            </div>
+            <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+              <span class="summary-club-name">${awayClub.name}</span>
+              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
+            </div>
+          </div>
+          <div class="summary-scorers-grid">
+            <div class="summary-scorers-col home">${homeScorersHtml}</div>
+            <div class="summary-scorers-col away">${awayScorersHtml}</div>
+          </div>
+        </div>
+
+        <!-- チームスタッツ比較 -->
+        <div class="summary-section-card summary-stats-card">
+          <div class="summary-section-title">▼ チームスタッツ比較</div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homePossession}%</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">ボール支配率</span>
+              <span style="color:#60a5fa;">${awayPossession}%</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homePossession}%;"></div>
+              <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
+            </div>
+          </div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homeShots}本</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">シュート数</span>
+              <span style="color:#60a5fa;">${awayShots}本</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
+            </div>
+          </div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homeOnTarget}本</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">枠内シュート</span>
+              <span style="color:#60a5fa;">${awayOnTarget}本</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homeOtPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayOtPct}%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右列：ハイライト ＆ GM収支・MOM -->
+      <div class="summary-col-right">
+        <!-- マッチハイライト -->
+        <div class="summary-section-card summary-highlights-card">
+          <div class="summary-section-title">▼ マッチハイライト</div>
+          <div class="summary-highlights-list">
+            ${highlightsHtml}
+          </div>
+        </div>
+
+        <!-- GMマッチデイ収支＆MOM -->
+        <div class="summary-section-card summary-gm-card">
+          <div class="summary-section-title">▼ GM収支＆MOM</div>
+          <div class="summary-gm-grid">
+            <div class="summary-gm-metric">
+              <span class="gm-metric-label">${revenueTypeLabel}</span>
+              <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
+            </div>
+            <div class="summary-gm-metric">
+              <span class="gm-metric-label">サポーター (${playerClub.supporters.toLocaleString()}人)</span>
+              <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+            </div>
+          </div>
+          ${momPlayer ? `
+            <div class="summary-mom-box">
+              <div class="mom-left">
+                ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-sm', 32) : ''}
+                <div class="mom-info">
+                  <span class="mom-tag">★ MAN OF THE MATCH</span>
+                  <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
+                </div>
+              </div>
+              <span class="mom-rating-badge">Rating ${momRating}</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(summaryBody);
+  }
+}
+
+/**
+ * 試合モーダルを閉じて本部画面へ戻る
+ */
+function closeMatchEventModal() {
+  clearMatchLiveTimers();
+  matchLiveState.status = 'IDLE';
+  gameState.isSimulating = false;
+
+  const modal = document.getElementById('match-event-modal');
+  if (modal) modal.classList.add('hidden');
+
+  document.documentElement.classList.remove('modal-locked');
+  document.body.classList.remove('modal-locked');
+
+  const cb = matchLiveState.onComplete;
+  matchLiveState.onComplete = null;
+  if (typeof cb === 'function') {
+    cb();
+  } else {
+    renderAll();
+  }
+}
+
+/**
+ * 試合前 作戦最終確認モーダルの開閉
+ */
+function closeMatchPrecheckModal() {
+  const modal = document.getElementById('match-precheck-modal');
+  if (modal) modal.classList.add('hidden');
+  document.documentElement.classList.remove('modal-locked');
+  document.body.classList.remove('modal-locked');
+}
+
+function openMatchPrecheckModal() {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
+  const currentDay = getCurrentCalendarDay();
+  if (!currentDay || !currentDay.isMatchDay || currentDay.played) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  ensureValidSquadAndStarters(playerClub);
+
+  const modal = document.getElementById('match-precheck-modal');
+  const body = document.getElementById('precheck-modal-body');
+  const weekBadge = document.getElementById('precheck-week-badge');
+  if (!modal || !body) {
+    playCurrentMatchday(false);
+    return;
+  }
+
+  if (weekBadge) weekBadge.textContent = `第${currentDay.matchWeek}節 公式戦`;
+
+  // 対戦相手情報
+  let opponentClub = null;
+  let isHome = true;
+  if (currentDay.matchFixture) {
+    const myMatch = currentDay.matchFixture.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+    if (myMatch) {
+      isHome = myMatch.homeId === playerClub.id;
+      const oppId = isHome ? myMatch.awayId : myMatch.homeId;
+      opponentClub = getClubById(oppId);
+    }
+  }
+
+  const oppName = opponentClub ? opponentClub.name : '対戦相手';
+  const oppOvr = opponentClub
+    ? Math.round(opponentClub.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / 11)
+    : 70;
+
+  const formationKey = playerClub.formation || '4-3-3';
+  const formationDef = getClubFormationDef(playerClub);
+  const tacticKey = normalizeTacticKey(playerClub.tactic);
+  const tacticDef = TACTICS_DEFINITIONS[tacticKey] || TACTICS_DEFINITIONS.possession;
+
+  // 自チームスタメン情報
+  const starters = playerClub.players.filter(p => p.isStarter);
+  const homeAvgOvr = starters.length > 0
+    ? Math.round(starters.reduce((s, p) => s + getPlayerOverallRating(p), 0) / starters.length)
+    : 70;
+  const homeTotalAtk = starters.reduce((s, p) => s + (p.atk || 0), 0);
+  const homeTotalDef = starters.reduce((s, p) => s + (p.def || 0), 0);
+  const homeAvgSta = starters.length > 0
+    ? Math.round(starters.reduce((s, p) => s + (p.sta || 100), 0) / starters.length)
+    : 100;
+
+  // 各スロットの選手行
+  let startersRowsHtml = '';
+  formationDef.slots.forEach(slot => {
+    const p = playerClub.players.find(x => x.isStarter && x.slotIndex === slot.slotIndex);
+    if (!p) return;
+    const fitInfo = getPositionFitInfo(p, slot.pos);
+    const effOvr = Math.round(getPlayerOverallRating(p) * fitInfo.factor);
+    const roleGroup = POS_ROLE_GROUP[slot.pos] || 'MF';
+    const isOutOfPos = fitInfo.type !== 'main';
+
+    let fitBadge = '';
+    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(52,152,219,0.2);color:#3498db;font-size:9px;">SUB</span>';
+    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">-20%</span>';
+
+    const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
+
+    startersRowsHtml += `
+      <div class="precheck-player-row ${isOutOfPos ? 'is-warn' : ''}">
+        <span class="precheck-pos-badge pos-${roleGroup}">${slot.pos}</span>
+        <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
+        <span class="precheck-name">${p.name} ${fitBadge}</span>
+        <span class="precheck-ovr mono">${effOvr}</span>
+        <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
+      </div>
+    `;
+  });
+
+  body.innerHTML = `
+    <div class="precheck-body-grid">
+      <!-- 左列：対戦カード＆作戦概要（余白なくリッチに展開） -->
+      <div class="precheck-left-col">
+        <!-- 対戦カード概要 -->
+        <div class="precheck-hero-card">
+          <div class="precheck-card-subhead mono">MATCHDAY FIXTURE</div>
+          <div class="precheck-vs-row">
+            <div class="precheck-club-box is-player">
+              <span class="precheck-club-name">${playerClub.name}</span>
+              <div class="precheck-club-meta">
+                <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
+                <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
+              </div>
+            </div>
+            <div class="precheck-vs-badge">VS</div>
+            <div class="precheck-club-box">
+              <span class="precheck-club-name">${oppName}</span>
+              <div class="precheck-club-meta">
+                <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
+                <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 自チーム作戦・戦力設定 -->
+        <div class="precheck-tactics-bar">
+          <div class="precheck-card-subhead mono">TACTICS & STRENGTH</div>
+          <div class="precheck-tactics-info-grid">
+            <div class="precheck-tactics-item">
+              <span class="precheck-label">陣形:</span>
+              <strong class="mono precheck-val-highlight">${formationKey}</strong>
+            </div>
+            <div class="precheck-tactics-item">
+              <span class="precheck-label">戦術:</span>
+              <span class="precheck-tag precheck-tag-full">${tacticDef.name}</span>
+              <span class="precheck-tag precheck-tag-short">${tacticDef.name.split('（')[0].split('(')[0]}</span>
+              <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+            </div>
+          </div>
+          <div class="precheck-tactics-aim">
+            <span class="mono" style="color:var(--text-muted);font-size:10px;">方針:</span>
+            <span>${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}</span>
+          </div>
+          <div class="precheck-power-metrics">
+            <div class="power-metric-box">
+              <span class="mono power-lbl">攻撃力</span>
+              <span class="mono power-val text-accent">${homeTotalAtk}</span>
+            </div>
+            <div class="power-metric-box">
+              <span class="mono power-lbl">守備力</span>
+              <span class="mono power-val text-blue">${homeTotalDef}</span>
+            </div>
+            <div class="power-metric-box">
+              <span class="mono power-lbl">平均ST</span>
+              <span class="mono power-val text-gold">${homeAvgSta}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右列：スタメン11名確認 -->
+      <div class="precheck-right-col">
+        <div class="precheck-starters-card">
+          <div class="precheck-starters-head">
+            <span class="precheck-card-subhead mono">STARTING XI (11名)</span>
+            <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
+          </div>
+          <div class="precheck-starters-list">
+            ${startersRowsHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // イベントバインド
+  const btnClose = document.getElementById('btn-close-precheck-modal');
+  if (btnClose) {
+    btnClose.onclick = closeMatchPrecheckModal;
+  }
+  const btnGotoRoster = document.getElementById('btn-precheck-goto-roster');
+  if (btnGotoRoster) {
+    btnGotoRoster.onclick = () => {
+      closeMatchPrecheckModal();
+      switchTab('roster');
+    };
+  }
+  const btnStartMatch = document.getElementById('btn-precheck-start-match');
+  if (btnStartMatch) {
+    btnStartMatch.onclick = () => {
+      closeMatchPrecheckModal();
+      playCurrentMatchday(false);
+    };
+  }
+
+  document.documentElement.classList.add('modal-locked');
+  document.body.classList.add('modal-locked');
+  modal.classList.remove('hidden');
+}
+
+/**
+ * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
+ */
+function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
+  clearMatchLiveTimers();
+  gameState.isSimulating = true;
+
+  document.documentElement.classList.add('modal-locked');
+  document.body.classList.add('modal-locked');
+
+  matchLiveState.minute = 0;
+  matchLiveState.status = 'FIRST_HALF';
+  matchLiveState.matchData = matchData;
+  matchLiveState.homeScorers = homeScorers || [];
+  matchLiveState.awayScorers = awayScorers || [];
+  matchLiveState.liveHomeScore = 0;
+  matchLiveState.liveAwayScore = 0;
+  matchLiveState.liveHomeShots = 0;
+  matchLiveState.liveAwayShots = 0;
+  matchLiveState.onComplete = onComplete;
+
+  const { byMinute, highlights } = buildLiveMatchTimeline(matchData, matchLiveState.homeScorers, matchLiveState.awayScorers);
+  matchLiveState.timelineByMinute = byMinute;
+  matchLiveState.allHighlights = highlights;
+
+  const modal = document.getElementById('match-event-modal');
+  const phasePitch = document.getElementById('match-phase-pitch');
+  const phaseSummary = document.getElementById('match-phase-summary');
+  const btnSkip = document.getElementById('btn-match-skip-to-summary');
+  const btnClose = document.getElementById('btn-close-match-modal');
+  const btnSummaryFooter = document.getElementById('btn-match-to-summary-footer');
+  const htOverlay = document.getElementById('match-halftime-overlay');
+  const popupEl = document.getElementById('match-pitch-event-popup');
+
+  if (!modal) {
+    gameState.isSimulating = false;
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // ヘッダー情報設定
+  const { homeClub, awayClub, week } = matchData;
+  const weekBadge = document.getElementById('match-modal-week-badge');
+  const venueEl = document.getElementById('match-modal-venue');
+  const attEl = document.getElementById('match-modal-attendance');
+  const attendance = Math.min(60000, Math.round(homeClub.supporters * 0.95 + randInt(120, 850)));
+
+  if (weekBadge) weekBadge.textContent = `第${week}節 公式戦`;
+  if (venueEl) venueEl.textContent = `${homeClub.name}・スタジアム`;
+  if (attEl) attEl.textContent = `観客 ${attendance.toLocaleString()}人`;
+
+  // スコアボード初期化
+  const homeBox = document.getElementById('match-live-home-box');
+  const awayBox = document.getElementById('match-live-away-box');
+  const homeName = document.getElementById('match-live-home-name');
+  const awayName = document.getElementById('match-live-away-name');
+  const homeSub = document.getElementById('match-live-home-sub');
+  const awaySub = document.getElementById('match-live-away-sub');
+  const shEl = document.getElementById('match-live-score-home');
+  const saEl = document.getElementById('match-live-score-away');
+  const periodEl = document.getElementById('match-live-period');
+  const clockEl = document.getElementById('match-live-clock');
+
+  const hTac = (TACTICS_DEFINITIONS[normalizeTacticKey(homeClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
+  const aTac = (TACTICS_DEFINITIONS[normalizeTacticKey(awayClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
+
+  if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
+  if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
+  if (homeName) homeName.textContent = homeClub.name;
+  if (awayName) awayName.textContent = awayClub.name;
+  if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
+  if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
+  if (shEl) shEl.textContent = '0';
+  if (saEl) saEl.textContent = '0';
+  if (periodEl) periodEl.textContent = '前半';
+  if (clockEl) clockEl.textContent = "00'";
+
+  // 表示状態リセット
+  if (phasePitch) phasePitch.classList.remove('hidden');
+  if (phaseSummary) phaseSummary.classList.add('hidden');
+  if (btnSkip) btnSkip.classList.remove('hidden');
+  if (btnClose) btnClose.classList.add('hidden');
+  if (btnSummaryFooter) btnSummaryFooter.classList.add('hidden');
+  if (htOverlay) htOverlay.classList.add('hidden');
+  if (popupEl) popupEl.classList.add('hidden');
+
+  const feedEl = document.getElementById('match-live-commentary-feed');
+  if (feedEl) feedEl.innerHTML = '';
+
+  // 2Dコート上の選手ピン・ボール初期配置
+  setupMatch2DPitchTokens(homeClub, awayClub);
+  appendLiveCommentary(`00'`, `前半キックオフ！ ${homeClub.name} vs ${awayClub.name}`, 'ev-period');
+
+  // イベントバインド（初回のみ）
+  if (!matchLiveState.eventsBound) {
+    matchLiveState.eventsBound = true;
+
+    if (btnSkip) {
+      btnSkip.addEventListener('click', () => {
+        transitionToMatchSummary();
+      });
+    }
+    const btnResume = document.getElementById('btn-match-resume-second-half');
+    if (btnResume) {
+      btnResume.addEventListener('click', () => {
+        resumeSecondHalfMatch();
+      });
+    }
+    if (btnSummaryFooter) {
+      btnSummaryFooter.addEventListener('click', () => {
+        transitionToMatchSummary();
+      });
+    }
+    const btnSummaryOk = document.getElementById('btn-match-summary-ok');
+    if (btnSummaryOk) {
+      btnSummaryOk.addEventListener('click', () => {
+        closeMatchEventModal();
+      });
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        closeMatchEventModal();
+      });
+    }
+    document.querySelectorAll('#match-event-modal .btn-speed').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sp = Number(btn.dataset.speed) || 1;
+        matchLiveState.speed = sp;
+        document.querySelectorAll('#match-event-modal .btn-speed').forEach(b => {
+          b.classList.toggle('active', Number(b.dataset.speed) === sp);
+        });
+        if (matchLiveState.status === 'FIRST_HALF' || matchLiveState.status === 'SECOND_HALF') {
+          startMatchLiveTimer();
+        }
+      });
+    });
+  }
+
+  modal.classList.remove('hidden');
+  startMatchLiveTimer();
 }
 
 /**
@@ -6104,19 +7145,18 @@ function renderTopScorers() {
 }
 
 /**
- * 試合結果ログおよびテキスト速報の描画
+ * 試合結果ログおよびMATCHDAY対戦カードの描画
  */
 function renderMatchLog() {
   if (gameState.isSimulating) {
     return;
   }
 
+  const matchdaySection = document.getElementById('office-matchday-section');
+  const matchdayHero = document.getElementById('matchday-hero-container');
   const container = document.getElementById('match-results-container');
   const panelTitle = document.getElementById('log-panel-title');
   const subtitle = document.getElementById('log-panel-subtitle');
-  const matchdaySection = document.getElementById('office-matchday-section');
-  const matchdayHero = document.getElementById('matchday-hero-container');
-  if (!container) return;
 
   const playerClub = getPlayerClub();
   const currentDay = getCurrentCalendarDay();
@@ -6163,6 +7203,14 @@ function renderMatchLog() {
       matchdaySection.classList.remove('hidden');
       matchdayHero.innerHTML = myMatchHtml;
 
+      // MATCHDAY内のキックオフボタンのイベントバインド（試合前に作戦最終確認を開く）
+      const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
+      if (panelKickoffBtn) {
+        panelKickoffBtn.addEventListener('click', () => openMatchPrecheckModal());
+      }
+    }
+
+    if (container) {
       if (panelTitle) panelTitle.textContent = '本日の同日開催カード';
       if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 他9試合`;
 
@@ -6181,32 +7229,6 @@ function renderMatchLog() {
         }).join('')}
       `;
       container.innerHTML = otherMatchesHtml;
-    } else {
-      // フォールバック
-      if (panelTitle) panelTitle.textContent = 'MATCHDAY - 本日の試合';
-      if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 KICKOFF READY`;
-      const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
-      const otherMatchesHtml = `
-        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">同日開催カード（他9試合）</div>
-        ${otherMatches.map(m => {
-          const h = getClubById(m.homeId);
-          const a = getClubById(m.awayId);
-          return `
-            <div class="match-card">
-              <div class="match-team home">${h.name}</div>
-              <div class="match-score-box">VS</div>
-              <div class="match-team away">${a.name}</div>
-            </div>
-          `;
-        }).join('')}
-      `;
-      container.innerHTML = myMatchHtml + otherMatchesHtml;
-    }
-
-    // MATCHDAY内のキックオフボタンのイベントバインド
-    const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
-    if (panelKickoffBtn) {
-      panelKickoffBtn.addEventListener('click', () => playCurrentMatchday(false));
     }
     return;
   }
@@ -6217,7 +7239,10 @@ function renderMatchLog() {
     if (matchdayHero) matchdayHero.innerHTML = '';
   }
 
-  // パターン2：試合直後または試合消化済み
+  // 画面下に試合ログコンテナが存在しない場合はここで終了
+  if (!container) return;
+
+  // パターン2：試合直後または試合消化済み（コンテナが存在する場合の後方互換）
   if (panelTitle) panelTitle.textContent = '試合結果・進行ログ';
 
   if (gameState.lastWeekResults.length === 0) {
@@ -6472,33 +7497,41 @@ function renderTacticalBoard() {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const fitInfo = getPositionFitInfo(bp, selectedSlot.pos);
         const simOvr = getEffectivePlayerRatingForSlot(bp, selectedSlot.pos);
-        const baseOvr = getPlayerOverallRating(bp);
+        const posDisplay = formatPlayerPositionsText(bp, 'slash');
+        const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
-        let itemClass = 'fit-mismatch';
-        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80%</span>`;
+        let itemClass = '';
+        let fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
         if (fitInfo.type === 'main') {
-          itemClass = 'fit-match';
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="メイン適性（実効能力100%）">MAIN</span>`;
         } else if (fitInfo.type === 'sub') {
-          itemClass = 'fit-sub';
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB 92%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+          itemClass = 'sub-pos';
+        } else {
+          itemClass = 'out-of-pos';
         }
 
+        const injuryBadgeHtml = bp.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+          : '';
+
         return `
-          <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-avatar-wrap">
-              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
+          <div class="pitch-node pos-group-${roleGroup} bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
             </div>
-            <div class="bench-sub-info">
-              <div class="bench-sub-top-row">
-                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-                <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${bp.pos}</span>
+                <span class="pitch-node-ovr">OVR ${simOvr}</span>
               </div>
-              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              <div class="pitch-node-name-btn">
+                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
               </div>
-              <div class="bench-sub-bottom-row">
-                ${fitTag}
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${fitBadgeHtml}
+                ${injuryBadgeHtml}
               </div>
             </div>
           </div>
@@ -6522,31 +7555,40 @@ function renderTacticalBoard() {
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const baseOvr = getPlayerOverallRating(bp);
+        const posDisplay = formatPlayerPositionsText(bp, 'slash');
+        const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
+
         const hasMainSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'main');
         const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub');
 
-        let fitTag = `<span class="bench-fit-tag fit-warn">枠外</span>`;
+        let fitBadgeHtml = `<span class="pitch-node-warn" title="フォーメーション外">枠外</span>`;
         if (hasMainSlot) {
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="MAIN適性スロットあり">MAIN</span>`;
         } else if (hasSubSlot) {
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="SUB適性スロットあり">SUB</span>`;
         }
 
+        const injuryBadgeHtml = bp.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+          : '';
+
         return `
-          <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-avatar-wrap">
-              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
+          <div class="pitch-node pos-group-${roleGroup} bench-sub-item" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
             </div>
-            <div class="bench-sub-info">
-              <div class="bench-sub-top-row">
-                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${bp.pos}</span>
+                <span class="pitch-node-ovr">OVR ${baseOvr}</span>
               </div>
-              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              <div class="pitch-node-name-btn">
+                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
               </div>
-              <div class="bench-sub-bottom-row">
-                ${fitTag}
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${fitBadgeHtml}
+                ${injuryBadgeHtml}
               </div>
             </div>
           </div>
@@ -8508,6 +9550,95 @@ function initTacticalDragAndDrop() {
     }
   });
 
+  // ドロップ先の最適ターゲット検出（ポインタ直下 ＋ ゴースト矩形重なり・近접判定）
+  function findBestDropTarget(clientX, clientY, ghostRect, source) {
+    const elAtPoint = document.elementFromPoint(clientX, clientY);
+    if (elAtPoint) {
+      const starterNode = elAtPoint.closest('.pitch-node[data-slot-index]');
+      if (starterNode && starterNode !== source.element) {
+        return { type: 'starter', element: starterNode };
+      }
+      const benchNode = elAtPoint.closest('.bench-sub-item[data-player-id]');
+      if (benchNode && benchNode !== source.element) {
+        return { type: 'bench-item', element: benchNode };
+      }
+    }
+
+    const gCenterX = ghostRect ? (ghostRect.left + ghostRect.width / 2) : clientX;
+    const gCenterY = ghostRect ? (ghostRect.top + ghostRect.height / 2) : clientY;
+
+    // ピッチ上のスタメン枠との重なり・近接判定
+    const starterNodes = document.querySelectorAll('#pitch-nodes-layer .pitch-node[data-slot-index]');
+    let bestStarter = null;
+    let bestDist = Infinity;
+
+    starterNodes.forEach(node => {
+      if (node === source.element) return;
+      const r = node.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+
+      const nCenterX = r.left + r.width / 2;
+      const nCenterY = r.top + r.height / 2;
+      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+
+      const isOverlapping = ghostRect && !(
+        ghostRect.right < r.left ||
+        ghostRect.left > r.right ||
+        ghostRect.bottom < r.top ||
+        ghostRect.top > r.bottom
+      );
+
+      if ((isOverlapping || dist < 80) && dist < bestDist) {
+        bestDist = dist;
+        bestStarter = node;
+      }
+    });
+
+    if (bestStarter) {
+      return { type: 'starter', element: bestStarter };
+    }
+
+    // 控え選手カードとの重なり・近接判定
+    const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id]');
+    let bestBench = null;
+    let bestBenchDist = Infinity;
+
+    benchNodes.forEach(node => {
+      if (node === source.element) return;
+      const r = node.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+
+      const nCenterX = r.left + r.width / 2;
+      const nCenterY = r.top + r.height / 2;
+      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+
+      const isOverlapping = ghostRect && !(
+        ghostRect.right < r.left ||
+        ghostRect.left > r.right ||
+        ghostRect.bottom < r.top ||
+        ghostRect.top > r.bottom
+      );
+
+      if ((isOverlapping || dist < 70) && dist < bestBenchDist) {
+        bestBenchDist = dist;
+        bestBench = node;
+      }
+    });
+
+    if (bestBench) {
+      return { type: 'bench-item', element: bestBench };
+    }
+
+    if (source.type === 'starter' && elAtPoint) {
+      const benchList = elAtPoint.closest('#pitch-bench-list, .pitch-sub-box');
+      if (benchList) {
+        return { type: 'bench-list', element: document.getElementById('pitch-bench-list') || benchList };
+      }
+    }
+
+    return null;
+  }
+
   // Pointer Down
   document.addEventListener('pointerdown', (e) => {
     const rosterView = document.getElementById('view-roster');
@@ -8516,9 +9647,9 @@ function initTacticalDragAndDrop() {
     // ボタンや入力要素は通常のクリック操作を優先
     if (e.target.closest('button, select, input, a')) return;
 
-    const pitchNode = e.target.closest('.pitch-node');
-    const benchItem = e.target.closest('.bench-sub-item');
-    if (!pitchNode && !benchItem) return;
+    const starterNode = e.target.closest('.pitch-node[data-slot-index]');
+    const benchItem = e.target.closest('.bench-sub-item[data-player-id]');
+    if (!starterNode && !benchItem) return;
 
     const playerClub = getPlayerClub();
     if (!playerClub) return;
@@ -8534,11 +9665,11 @@ function initTacticalDragAndDrop() {
     isTouchReady = false;
     lastHoverDropTarget = null;
 
-    if (pitchNode && pitchNode.dataset.slotIndex !== undefined) {
-      const slotIndex = parseInt(pitchNode.dataset.slotIndex, 10);
+    if (starterNode && starterNode.dataset.slotIndex !== undefined) {
+      const slotIndex = parseInt(starterNode.dataset.slotIndex, 10);
       const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
       if (starter) {
-        const rect = pitchNode.getBoundingClientRect();
+        const rect = starterNode.getBoundingClientRect();
         dragSource = {
           type: 'starter',
           playerId: starter.id,
@@ -8547,7 +9678,7 @@ function initTacticalDragAndDrop() {
           name: starter.name,
           pos: starter.assignedPos || starter.pos,
           ovr: getEffectivePlayerRating(starter),
-          element: pitchNode,
+          element: starterNode,
           cardWidth: rect.width,
           cardHeight: rect.height,
           grabOffsetX: e.clientX - rect.left,
@@ -8577,9 +9708,6 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
-    // タッチ端末での誤取得防止と快適な操作性の両立：
-    // 作戦ボードタブは画面全体のスクロールがないため、長押しタイマーは短縮(60ms)し、
-    // 指を置いて軽く動かすだけですぐにドラッグ開始できるようにする。
     const isTouch = e.pointerType === 'touch';
     if (isTouch) {
       const targetEl = dragSource.element;
@@ -8592,9 +9720,8 @@ function initTacticalDragAndDrop() {
             try { navigator.vibrate(15); } catch(err) {}
           }
         }
-      }, 60);
+      }, 50);
     } else {
-      // PCマウス操作は即座にドラッグ可能
       isTouchReady = true;
     }
   });
@@ -8609,24 +9736,8 @@ function initTacticalDragAndDrop() {
 
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
-
-      // 控え選手カードの場合：水平方向へのスワイプ（カルーセル横スクロール）ならドラッグ処理を即座に破棄
-      if (dragSource.type === 'bench' && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
-        cleanupDrag();
-        return;
-      }
-
-      // 指が動いたらドラッグ開始！
-      if (dist > 5) {
-        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -4)へ動いた時にドラッグ開始
-        if (dragSource.type === 'bench' && deltaY >= -4) {
-          if (dist > 12) {
-            cleanupDrag();
-            return;
-          }
-          return;
-        }
-
+      const dragThreshold = isTouch ? 3 : 2;
+      if (dist > dragThreshold) {
         isDragging = true;
         if (longPressTimer) {
           clearTimeout(longPressTimer);
@@ -8637,22 +9748,25 @@ function initTacticalDragAndDrop() {
           dragSource.element.classList.add('dragging');
         }
 
-        // ドラッグ確定時にポインタキャプチャ
-        if (e.target && e.target.setPointerCapture) {
-          try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
-        }
-
-        // 元のカードそのままの形状・見た目でクローンして持ち上げる
+        // スタメンおよび控え選手カードをクローンして持ち上げる
+        // ※ bench-sub-item クラスが残ると CSS の left: auto !important 等が競合するため確実に除去する
         ghostEl = dragSource.element.cloneNode(true);
         ghostEl.removeAttribute('id');
-        ghostEl.classList.remove('dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+        ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
         ghostEl.classList.add('tactical-drag-ghost-card');
-        ghostEl.style.width = `${dragSource.cardWidth}px`;
-        ghostEl.style.minWidth = `${dragSource.cardWidth}px`;
-        ghostEl.style.maxWidth = `${dragSource.cardWidth}px`;
-        ghostEl.style.height = `${dragSource.cardHeight}px`;
-        ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
-        ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
+
+        const initLeft = e.clientX - dragSource.grabOffsetX;
+        const initTop = e.clientY - dragSource.grabOffsetY;
+        ghostEl.style.setProperty('position', 'fixed', 'important');
+        ghostEl.style.setProperty('width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('min-width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('max-width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('height', `${dragSource.cardHeight}px`, 'important');
+        ghostEl.style.setProperty('left', `${initLeft}px`, 'important');
+        ghostEl.style.setProperty('top', `${initTop}px`, 'important');
+        ghostEl.style.setProperty('transform', 'scale(1.06)', 'important');
+        ghostEl.style.setProperty('pointer-events', 'none', 'important');
+        ghostEl.style.setProperty('z-index', '999999', 'important');
 
         // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
         const srcCanvases = dragSource.element.querySelectorAll('canvas');
@@ -8677,36 +9791,28 @@ function initTacticalDragAndDrop() {
     if (isDragging && ghostEl) {
       if (e.cancelable) e.preventDefault();
 
-      // 指で掴んだ位置のまま追従（上方向へのジャンプなし）
       const cardLeft = e.clientX - dragSource.grabOffsetX;
       const cardTop = e.clientY - dragSource.grabOffsetY;
-      ghostEl.style.left = `${cardLeft}px`;
-      ghostEl.style.top = `${cardTop}px`;
+      ghostEl.style.setProperty('left', `${cardLeft}px`, 'important');
+      ghostEl.style.setProperty('top', `${cardTop}px`, 'important');
 
-      // 判定座標（持ち上げたカードの中心位置、またはポインタ直下）
-      const checkX = cardLeft + (dragSource.cardWidth / 2);
-      const checkY = cardTop + (dragSource.cardHeight / 2);
+      const ghostRect = {
+        left: cardLeft,
+        top: cardTop,
+        right: cardLeft + dragSource.cardWidth,
+        bottom: cardTop + dragSource.cardHeight,
+        width: dragSource.cardWidth,
+        height: dragSource.cardHeight
+      };
 
-      const targetUnderPointer = document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY);
       document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
 
-      if (targetUnderPointer) {
-        const hoverPitchNode = targetUnderPointer.closest('.pitch-node');
-        const hoverBenchItem = targetUnderPointer.closest('.bench-sub-item');
-        const hoverBenchList = targetUnderPointer.closest('#pitch-bench-list');
-
-        if (hoverPitchNode && hoverPitchNode !== dragSource.element) {
-          hoverPitchNode.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverPitchNode;
-        } else if (hoverBenchItem && hoverBenchItem !== dragSource.element) {
-          hoverBenchItem.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverBenchItem;
-        } else if (hoverBenchList && dragSource.type === 'starter') {
-          hoverBenchList.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverBenchList;
-        } else {
-          lastHoverDropTarget = null;
-        }
+      const match = findBestDropTarget(e.clientX, e.clientY, ghostRect, dragSource);
+      if (match && match.element) {
+        match.element.classList.add('drag-drop-target-active');
+        lastHoverDropTarget = match;
+      } else {
+        lastHoverDropTarget = null;
       }
     }
   }, { passive: false });
@@ -8722,46 +9828,37 @@ function initTacticalDragAndDrop() {
 
     const source = dragSource;
 
-    // キャプチャ解除
-    if (e.target.releasePointerCapture) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
-    }
-
     if (!isDragging) {
-      // 単なるタップ/クリック、または長押ししただけで動かさずに離した場合:
-      // 詳細スカウティングレポートを開く！
       cleanupDrag();
       lastHoverDropTarget = null;
-      if (source.playerId) {
-        openPlayerProfileModal(source.playerId);
-      }
       return;
     }
 
-    // ドラッグ完了フラグ
     if (window.__setJustFinishedDragging) {
       window.__setJustFinishedDragging(true);
       setTimeout(() => window.__setJustFinishedDragging(false), 200);
     }
 
-    // ゴースト要素を消去
+    const cardLeft = e.clientX - (source.grabOffsetX || 0);
+    const cardTop = e.clientY - (source.grabOffsetY || 0);
+    const ghostRect = {
+      left: cardLeft,
+      top: cardTop,
+      right: cardLeft + (source.cardWidth || 120),
+      bottom: cardTop + (source.cardHeight || 50),
+      width: source.cardWidth || 120,
+      height: source.cardHeight || 50
+    };
+
     cleanupDrag();
 
-    const checkX = e.clientX - (source.grabOffsetX || 0) + ((source.cardWidth || 0) / 2);
-    const checkY = e.clientY - (source.grabOffsetY || 0) + ((source.cardHeight || 0) / 2);
-
-    const targetUnderPointer = (checkX !== undefined && checkY !== undefined)
-      ? (document.elementFromPoint(checkX, checkY) || document.elementFromPoint(e.clientX, e.clientY))
-      : null;
-
-    const resolvedTarget = targetUnderPointer || lastHoverDropTarget;
-    const dropPitchNode = resolvedTarget ? resolvedTarget.closest('.pitch-node') : null;
-    const dropBenchItem = resolvedTarget ? resolvedTarget.closest('.bench-sub-item') : null;
-    const dropBenchList = resolvedTarget ? resolvedTarget.closest('#pitch-bench-list') : null;
+    const finalMatch = findBestDropTarget(e.clientX, e.clientY, ghostRect, source) || lastHoverDropTarget;
     lastHoverDropTarget = null;
 
-    if (dropPitchNode && dropPitchNode.dataset.slotIndex !== undefined) {
-      const targetSlotIndex = parseInt(dropPitchNode.dataset.slotIndex, 10);
+    if (!finalMatch || !finalMatch.element) return;
+
+    if (finalMatch.type === 'starter' && finalMatch.element.dataset.slotIndex !== undefined) {
+      const targetSlotIndex = parseInt(finalMatch.element.dataset.slotIndex, 10);
       if (source.type === 'starter') {
         if (source.slotIndex !== targetSlotIndex) {
           swapStarterSlots(source.slotIndex, targetSlotIndex);
@@ -8769,12 +9866,12 @@ function initTacticalDragAndDrop() {
       } else if (source.type === 'bench') {
         substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
       }
-    } else if (dropBenchItem && dropBenchItem.dataset.playerId) {
-      const benchPlayerId = dropBenchItem.dataset.playerId;
+    } else if (finalMatch.type === 'bench-item' && finalMatch.element.dataset.playerId) {
+      const benchPlayerId = finalMatch.element.dataset.playerId;
       if (source.type === 'starter') {
         substituteBenchPlayerToSlot(benchPlayerId, source.slotIndex);
       }
-    } else if (dropBenchList && source.type === 'starter') {
+    } else if (finalMatch.type === 'bench-list' && source.type === 'starter') {
       const playerClub = getPlayerClub();
       const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
       if (benchPlayers.length > 0) {
@@ -8797,9 +9894,6 @@ function initTacticalDragAndDrop() {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
-    if (e.target.releasePointerCapture) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
-    }
     cleanupDrag();
     lastHoverDropTarget = null;
   });
@@ -8817,7 +9911,7 @@ function initGame() {
   }
   const btnPlayMatch = document.getElementById('btn-play-match');
   if (btnPlayMatch) {
-    btnPlayMatch.addEventListener('click', () => playCurrentMatchday(false));
+    btnPlayMatch.addEventListener('click', () => openMatchPrecheckModal());
   }
   const btnPauseAdvance = document.getElementById('btn-pause-advance');
   if (btnPauseAdvance) {
@@ -8825,7 +9919,7 @@ function initGame() {
   }
   const btnPlayNext = document.getElementById('btn-play-next');
   if (btnPlayNext) {
-    btnPlayNext.addEventListener('click', () => playCurrentMatchday(false));
+    btnPlayNext.addEventListener('click', () => openMatchPrecheckModal());
   }
   document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
   document.getElementById('btn-next-season').addEventListener('click', startNextSeason);
@@ -8947,6 +10041,7 @@ function initGame() {
   window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
   window.__getJustFinishedDragging = function() { return justFinishedDragging; };
 
+  // 作戦ボード（ピッチ）のスタメン枠クリック：詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
@@ -8972,18 +10067,12 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手リスト：交代投入ボタン＆カード全体タップでプロフィール表示
+  // 作戦ボード横の控え選手リスト：クリック時は詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
       if (justFinishedDragging) {
         e.stopPropagation();
-        return;
-      }
-      const subBtn = e.target.closest('.btn-sub-bench');
-      if (subBtn && subBtn.dataset.subBenchId) {
-        e.stopPropagation();
-        substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
         return;
       }
       const itemEl = e.target.closest('.bench-sub-item');
