@@ -372,6 +372,28 @@
 html {
   overscroll-behavior-y: none;
   overscroll-behavior: none;
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  scrollbar-color: #333a42 var(--bg-main, #14171a);
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track {
+  background: var(--bg-main, #14171a);
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #333a42;
+  border-radius: 5px;
+  border: 2px solid var(--bg-main, #14171a);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #46505c;
 }
 
 body {
