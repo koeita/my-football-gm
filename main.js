@@ -3811,17 +3811,16 @@ function renderNegotiationModal() {
   }
 
   const submitBtn = document.getElementById('btn-submit-neg-offer');
-  const cancelBtn = document.getElementById('btn-cancel-neg-modal');
+  const negFooterEl = document.getElementById('neg-modal-footer');
   if (submitBtn) {
     if (session.completed) {
       submitBtn.classList.add('hidden');
+      if (negFooterEl) negFooterEl.classList.add('hidden');
     } else {
       submitBtn.classList.remove('hidden');
+      if (negFooterEl) negFooterEl.classList.remove('hidden');
       submitBtn.textContent = isRenewal ? 'この条件で契約延長オファーを提示' : 'この条件で獲得オファーを提示';
     }
-  }
-  if (cancelBtn) {
-    cancelBtn.textContent = session.completed ? '閉じる' : '交渉を保留して閉じる';
   }
 }
 
@@ -7008,6 +7007,7 @@ function openPlayerProfileModal(playerId) {
     `;
   }
 
+  const footerEl = document.getElementById('profile-modal-footer');
   const footerActionsEl = document.getElementById('profile-footer-actions');
   if (footerActionsEl) {
     const isYouth = (gameState.youthCandidates || []).some(y => y.id === p.id);
@@ -7017,10 +7017,14 @@ function openPlayerProfileModal(playerId) {
     } else if (isMarket) {
       extraActionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-profile-negotiate-transfer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>${p.negotiationFailed ? '移籍交渉決裂済' : '移籍獲得交渉を開く'}</button>`;
     }
-    footerActionsEl.innerHTML = `
-      ${extraActionBtnHtml}
-      <button type="button" class="btn btn-secondary btn-sm" id="btn-close-profile-footer">閉じる</button>
-    `;
+    footerActionsEl.innerHTML = extraActionBtnHtml;
+    if (footerEl) {
+      if (extraActionBtnHtml) {
+        footerEl.classList.remove('hidden');
+      } else {
+        footerEl.classList.add('hidden');
+      }
+    }
   }
 
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
@@ -8195,7 +8199,14 @@ function initGame() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (gameState.incomingTransferOffer) {
+      const recordsOverlay = document.getElementById('records-modal-overlay');
+      const settingsOverlay = document.getElementById('settings-modal-overlay');
+      if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
+        closeRecordsModal();
+      } else if (settingsOverlay && !settingsOverlay.classList.contains('hidden')) {
+        saveSettingsToStorage();
+        closeSettingsModal();
+      } else if (gameState.incomingTransferOffer) {
         closeIncomingOfferModal();
       } else if (gameState.negotiationSession) {
         closeNegotiationModal();
@@ -8506,6 +8517,13 @@ function openRecordsModal() {
     </div>
   `;
 
+  if (!overlay._hasOverlayListener) {
+    overlay._hasOverlayListener = true;
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeRecordsModal();
+    });
+  }
+
   overlay.classList.remove('hidden');
   setBodyModalLock(true);
 }
@@ -8526,6 +8544,15 @@ function openSettingsModal() {
   if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
   if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
   if (overlay) {
+    if (!overlay._hasOverlayListener) {
+      overlay._hasOverlayListener = true;
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          saveSettingsToStorage();
+          closeSettingsModal();
+        }
+      });
+    }
     overlay.classList.remove('hidden');
     setBodyModalLock(true);
   }

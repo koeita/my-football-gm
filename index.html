@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261107_1903">
+  <link rel="stylesheet" href="style.css?v=20261107_1917">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -827,10 +827,10 @@
         <!-- JSでスカウティングシート詳細を描画 -->
       </div>
 
-      <div class="modal-actions profile-modal-footer">
+      <div class="modal-actions profile-modal-footer hidden" id="profile-modal-footer">
         <span class="profile-footer-hint mono">ESC キーまたは背景クリックで閉じる</span>
         <div class="action-btn-group" id="profile-footer-actions">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-close-profile-footer">閉じる</button>
+          <!-- 契約延長・移籍獲得交渉ボタン等の主アクションのみ動的生成 -->
         </div>
       </div>
     </div>
@@ -860,10 +860,9 @@
         <!-- JSで交渉条件（要求・スライダー・ステータスログ）を描画 -->
       </div>
 
-      <div class="modal-actions profile-modal-footer">
-        <span class="profile-footer-hint mono" id="neg-footer-hint">ESC キーまたは「交渉を保留して閉じる」でいつでも中断できます</span>
-        <div class="action-btn-group">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-neg-modal">交渉を保留して閉じる</button>
+      <div class="modal-actions profile-modal-footer" id="neg-modal-footer">
+        <span class="profile-footer-hint mono" id="neg-footer-hint">ESC キーまたは右上の「✕」でいつでも交渉を保留して中断できます</span>
+        <div class="action-btn-group" id="neg-footer-actions">
           <button type="button" class="btn btn-primary btn-sm" id="btn-submit-neg-offer">条件を提示して交渉する</button>
         </div>
       </div>
@@ -910,9 +909,6 @@
       </div>
       <div class="modal-body" id="records-modal-body">
         <!-- JSで通算記録・歴代得点王を描画 -->
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="btn-close-records-footer">閉じる</button>
       </div>
     </div>
   </div>
@@ -962,13 +958,10 @@
           </div>
         </div>
       </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-primary" id="btn-close-settings-footer">設定を保存して閉じる</button>
-      </div>
     </div>
   </div>
 
-  <script src="avatar.js?v=20261107_1903"></script>
-  <script src="main.js?v=20261107_1903"></script>
+  <script src="avatar.js?v=20261107_1917"></script>
+  <script src="main.js?v=20261107_1917"></script>
 </body>
 </html>
