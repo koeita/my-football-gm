@@ -4132,14 +4132,14 @@ function renderNegotiationModal() {
   const catEl = document.getElementById('neg-modal-category');
   if (catEl) {
     catEl.textContent = isRenewal
-      ? 'CONTRACT RENEWAL NEGOTIATION（契約延長・引き止め交渉）'
-      : `TRANSFER OFFER NEGOTIATION（獲得交渉 — ${sellerClub ? sellerClub.name : '相手クラブ'}）`;
+      ? '契約延長交渉'
+      : `獲得交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
   if (posPillEl) {
-    const subText = subPosList.length > 0 ? ` / SUB: ${subPosList.join(',')}` : '';
-    posPillEl.innerHTML = `<span class="profile-pos-badge-main">MAIN: ${primaryPos}${subText}</span>`;
+    const subText = subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : '';
+    posPillEl.innerHTML = `<span class="profile-pos-badge-main">${primaryPos}${subText}</span>`;
   }
 
   const titleEl = document.getElementById('neg-modal-title');
@@ -4156,15 +4156,15 @@ function renderNegotiationModal() {
   const maxFails = 2;
   const remainingTries = Math.max(0, maxFails - (session.failCount || 0));
   let patienceClass = '';
-  let patienceLabel = `交渉猶予：残り ${remainingTries} 回`;
+  let patienceLabel = `残り ${remainingTries} 回`;
   if (session.completed && session.statusType === 'success') {
-    patienceLabel = '合意成立 (AGREED)';
+    patienceLabel = '合意成立';
   } else if (remainingTries === 1) {
     patienceClass = 'patience-warn';
-    patienceLabel = '最終交渉 (LAST CHANCE)';
+    patienceLabel = '最終交渉';
   } else if (remainingTries === 0) {
     patienceClass = 'patience-danger';
-    patienceLabel = '交渉決裂 (BREAKDOWN)';
+    patienceLabel = '交渉決裂';
   }
 
   // スライダー範囲の算出
@@ -4177,7 +4177,7 @@ function renderNegotiationModal() {
   const feeControlHtml = isRenewal ? '' : `
     <div class="neg-control-group">
       <div class="neg-control-header">
-        <span class="neg-control-label">提示移籍金（所属元クラブへの支払額）</span>
+        <span class="neg-control-label">提示移籍金</span>
         <span class="neg-control-val" id="neg-offered-fee-display">${formatMoney(session.offeredFee)}</span>
       </div>
       <div class="neg-slider-row">
@@ -4185,8 +4185,8 @@ function renderNegotiationModal() {
         <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
       </div>
       <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-        <span>相手クラブ要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
-        <span>現在クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
+        <span>要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
+        <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
       </div>
     </div>
   `;
@@ -4201,11 +4201,11 @@ function renderNegotiationModal() {
 
   const demandRowsHtml = isRenewal ? `
     <div class="neg-demand-row">
-      <span class="neg-demand-label">現在の年俸 ／ 現在の残契約</span>
+      <span class="neg-demand-label">現在年俸 / 残契約</span>
       <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${curContractY}年</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">今季の活躍度（出場 / ゴール / OVR）</span>
+      <span class="neg-demand-label">今季成績</span>
       <span class="neg-demand-val accent-green">${target.appearances}試合 / ${target.goals}G / OVR ${ovr}</span>
     </div>
     <div class="neg-demand-row">
@@ -4213,24 +4213,24 @@ function renderNegotiationModal() {
       <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">代理人の要求契約期間</span>
+      <span class="neg-demand-label">代理人の要求期間</span>
       <span class="neg-demand-val">${session.demandedYears}年契約</span>
     </div>
   ` : `
     <div class="neg-demand-row">
-      <span class="neg-demand-label">所属元クラブの要求移籍金</span>
+      <span class="neg-demand-label">要求移籍金</span>
       <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (残1年割安)' : ''}</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">選手本人の要求年俸</span>
+      <span class="neg-demand-label">要求年俸</span>
       <span class="neg-demand-val accent-green">${formatMoney(session.demandedSalary)} / 年</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">選手の希望契約期間</span>
+      <span class="neg-demand-label">希望期間</span>
       <span class="neg-demand-val">${session.demandedYears}年契約</span>
     </div>
     <div class="neg-demand-row">
-      <span class="neg-demand-label">当クラブ予算 ／ 登録枠</span>
+      <span class="neg-demand-label">当クラブ予算 / 枠</span>
       <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
     </div>
   `;
@@ -4246,7 +4246,7 @@ function renderNegotiationModal() {
         <!-- 左：相手側（代理人・所属クラブ）の要求条件 -->
         <div class="neg-panel-box">
           <div class="neg-box-header">
-            <span class="neg-box-title">${isRenewal ? 'AGENT DEMANDS（代理人・選手要求）' : 'CLUB & AGENT DEMANDS（相手側要求条件）'}</span>
+            <span class="neg-box-title">${isRenewal ? '要求条件' : '相手側要求'}</span>
             <span class="neg-patience-badge ${patienceClass}">${patienceLabel}</span>
           </div>
           <div class="neg-demand-list">
@@ -4257,7 +4257,7 @@ function renderNegotiationModal() {
         <!-- 右：GM提示条件コントロール -->
         <div class="neg-panel-box">
           <div class="neg-box-header">
-            <span class="neg-box-title">GM OFFER TERMS（当クラブ提示条件の調整）</span>
+            <span class="neg-box-title">提示条件</span>
             <span class="mono text-muted" style="font-size: 10px;">GBP (£)</span>
           </div>
 
@@ -4265,7 +4265,7 @@ function renderNegotiationModal() {
 
           <div class="neg-control-group">
             <div class="neg-control-header">
-              <span class="neg-control-label">提示年俸（年間サラリー）</span>
+              <span class="neg-control-label">提示年俸</span>
               <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
             </div>
             <div class="neg-slider-row">
@@ -4274,13 +4274,13 @@ function renderNegotiationModal() {
             </div>
             <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
               <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
-              <span>増減ステップ: £50K</span>
+              <span>増減: £50K</span>
             </div>
           </div>
 
           <div class="neg-control-group">
             <div class="neg-control-header">
-              <span class="neg-control-label">提示契約年数（1〜4年）</span>
+              <span class="neg-control-label">提示契約年数</span>
               <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
             </div>
             <div class="neg-years-group" id="neg-years-group">
@@ -6318,9 +6318,9 @@ function renderTacticalBoard() {
 
   if (selectedSlot && selectedStarter) {
     const starterEff = getEffectivePlayerRating(selectedStarter);
-    subTitleEl.textContent = `交代対象：[${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name} (実効OVR ${starterEff})`;
-    clearBtnEl.classList.remove('hidden');
-    subGuideEl.textContent = `控え選手をピッチの [${selectedSlot.pos}] 枠へドラッグ＆ドロップして交代します（タップで詳細表示）。`;
+    if (subTitleEl) subTitleEl.textContent = `交代枠: [${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name}`;
+    if (clearBtnEl) clearBtnEl.classList.remove('hidden');
+    if (subGuideEl) subGuideEl.textContent = '';
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
@@ -6369,9 +6369,9 @@ function renderTacticalBoard() {
       }).join('');
     }
   } else {
-    subTitleEl.textContent = `控え（ベンチ）選手（${benchPlayers.length}名） — 上のピッチへドラッグで交代`;
-    clearBtnEl.classList.add('hidden');
-    subGuideEl.textContent = `控え選手をピッチ上のスロットへドラッグ＆ドロップして交代できます。タップすると詳細プロフィールが表示されます。`;
+    if (subTitleEl) subTitleEl.textContent = `控え選手（${benchPlayers.length}名）`;
+    if (clearBtnEl) clearBtnEl.classList.add('hidden');
+    if (subGuideEl) subGuideEl.textContent = '';
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
       const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
@@ -6609,7 +6609,7 @@ function renderMarket() {
   const clubSelect = document.getElementById('market-filter-club');
   if (clubSelect && clubSelect.options.length <= 1) {
     clubSelect.innerHTML = `
-      <option value="ALL">全20クラブ (ALL CLUBS)</option>
+      <option value="ALL">全クラブ</option>
       ${gameState.clubs.map(c => `
         <option value="${c.id}">${c.name}${c.isPlayer ? ' (自チーム)' : ''}</option>
       `).join('')}
@@ -6875,46 +6875,46 @@ function renderGmDuties() {
   if (playerClub.funds < 0) {
     criticalDuty = {
       level: 'critical',
-      badge: '必須 / CRITICAL',
-      title: '財政危機対応（債務超過の解消）',
-      desc: `現在のクラブ資金が ${formatMoney(playerClub.funds)} の赤字です。高年俸選手の自由契約（放出）で年俸総額を圧縮してください。`,
-      btnText: '契約・編成へ移動',
+      badge: '重要',
+      title: '赤字解消・人件費削減',
+      desc: `資金が ${formatMoney(playerClub.funds)} の赤字です。選手の自由契約等で総年俸を圧縮してください。`,
+      btnText: '契約・編成へ',
       action: 'goto-roster-table'
     };
   } else if (gameState.isSeasonOver) {
     criticalDuty = {
       level: 'critical',
-      badge: '必須 / CRITICAL',
-      title: `第${gameState.season + 1}シーズン 開幕手続き`,
-      desc: 'オフシーズンの補強・契約更新・ユース昇格審査を終えたら、新シーズンを開幕してください。',
+      badge: '重要',
+      title: '新シーズン開幕手続き',
+      desc: '補強や契約更新、ユース昇格を終えたら新シーズンを開幕してください。',
       btnText: '次シーズン開幕',
       action: 'start-next-season'
     };
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
-    let opponentText = 'リーグ公式戦';
+    let opponentText = '公式戦';
     const weekFixtures = gameState.schedule && gameState.schedule[gameState.currentWeek];
     if (weekFixtures) {
       const myFixture = weekFixtures.find(f => f.homeId === playerClub.id || f.awayId === playerClub.id);
       if (myFixture) {
         const oppId = myFixture.homeId === playerClub.id ? myFixture.awayId : myFixture.homeId;
         const oppClub = getClubById(oppId);
-        const venue = myFixture.homeId === playerClub.id ? 'HOME' : 'AWAY';
+        const venue = myFixture.homeId === playerClub.id ? 'H' : 'A';
         if (oppClub) opponentText = `vs ${oppClub.name} (${venue})`;
       }
     }
     criticalDuty = {
       level: 'critical',
-      badge: '必須 / CRITICAL',
-      title: `第${nextWeek}節 キックオフ（${opponentText}）`,
-      desc: 'スタメン11名と戦術を確認し、今節の公式戦シミュレーションを実行してください。',
+      badge: '重要',
+      title: `第${nextWeek}節 ${opponentText}`,
+      desc: 'スタメンと戦術を確認し、今節の試合シミュレーションを実行します。',
       btnText: '第' + nextWeek + '節を実行',
       action: 'play-match'
     };
   }
   duties.push(criticalDuty);
 
-  // 2. 推奨タスク（RECOMMENDED / 黄）
+  // 2. 推奨タスク（RECOMMENDED）
   const starters = playerClub.players.filter(p => p.isStarter);
   const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
   const expiringPlayers = playerClub.players
@@ -6927,54 +6927,54 @@ function renderGmDuties() {
   if (injuredStarters.length > 0) {
     recommendedDuty = {
       level: 'recommended',
-      badge: '推奨 / RECOMMENDED',
-      title: `負傷者の代役選定（スタメン負傷 ${injuredStarters.length}名）`,
-      desc: `${injuredStarters[0].name} ほか計${injuredStarters.length}名が負傷中です。作戦ボードで控え選手との交代を推奨します。`,
-      btnText: '作戦ボードへ移動',
+      badge: '推奨',
+      title: `負傷者交代（${injuredStarters.length}名）`,
+      desc: `${injuredStarters[0].name} らが負傷中です。控え選手との交代を推奨します。`,
+      btnText: '作戦ボードへ',
       action: 'goto-pitch'
     };
   } else if (urgentExpiring.length > 0) {
     const topTarget = urgentExpiring[0];
     recommendedDuty = {
       level: 'recommended',
-      badge: '推奨 / RECOMMENDED',
-      title: `契約延長交渉（残り1年以下・昇給要求：${urgentExpiring.length}名）`,
-      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} ら${urgentExpiring.length}名が契約更新時期を迎えています。交渉画面または契約一覧から引き止め交渉を行ってください。`,
-      btnText: '契約一覧へ移動',
+      badge: '推奨',
+      title: `契約更新（${urgentExpiring.length}名）`,
+      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らが契約更新時期を迎えています。`,
+      btnText: '契約一覧へ',
       action: 'goto-roster-table'
     };
   } else if (outOfPosStarters.length > 0) {
     recommendedDuty = {
       level: 'recommended',
-      badge: '推奨 / RECOMMENDED',
-      title: `適性外配置の見直し（${outOfPosStarters.length}枠）`,
-      desc: `${outOfPosStarters[0].name} が適性外スロット（能力80%）に配置されています。フォーメーションまたは配置の調整を推奨します。`,
-      btnText: '作戦ボードへ移動',
+      badge: '推奨',
+      title: `適性外配置の調整（${outOfPosStarters.length}枠）`,
+      desc: `${outOfPosStarters[0].name} が適性外枠に配置されています。陣形調整を推奨します。`,
+      btnText: '作戦ボードへ',
       action: 'goto-pitch'
     };
   } else if (expiringPlayers.length > 0) {
     const topTarget = expiringPlayers[0];
     recommendedDuty = {
       level: 'recommended',
-      badge: '推奨 / RECOMMENDED',
-      title: `契約延長交渉（残り2年以内：${expiringPlayers.length}名）`,
-      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} ら${expiringPlayers.length}名と早期の契約延長交渉が可能です。`,
-      btnText: '契約一覧へ移動',
+      badge: '推奨',
+      title: `早期契約更新（${expiringPlayers.length}名）`,
+      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らと契約延長が可能です。`,
+      btnText: '契約一覧へ',
       action: 'goto-roster-table'
     };
   } else {
     recommendedDuty = {
       level: 'recommended',
-      badge: '推奨 / RECOMMENDED',
-      title: '戦術・コンディション点検',
-      desc: 'スタメン全員が適性枠かつ健康です。対戦相手に応じたフォーメーションや戦術方針の微調整を行えます。',
-      btnText: '作戦ボードを確認',
+      badge: '推奨',
+      title: '戦術・状態確認',
+      desc: 'スタメン全員が適性枠かつ健康です。対戦相手に応じた微調整を行えます。',
+      btnText: '作戦ボード確認',
       action: 'goto-pitch'
     };
   }
   duties.push(recommendedDuty);
 
-  // 3. 任意タスク（OPTIONAL / 緑）
+  // 3. 任意タスク（OPTIONAL）
   const youthSquad = playerClub.youthSquad || [];
   const topCount = playerClub.players.length;
   const canPromote = topCount < MAX_SQUAD_SIZE;
@@ -6989,29 +6989,29 @@ function renderGmDuties() {
   if (canPromote && youthSquad.length > 0) {
     optionalDuty = {
       level: 'optional',
-      badge: '任意 / OPTIONAL',
-      title: `U-21ユース視察・昇格検討（在籍 ${youthSquad.length}名 / トップ枠空きあり）`,
-      desc: `U-21アカデミーに16〜19歳の若手有望株${youthSquad.length}名が在籍しています。トップ登録枠（現在 ${topCount}/${MAX_SQUAD_SIZE}名）に昇格させプロ契約を締結することが可能です。`,
-      btnText: 'ユース一覧へ移動',
+      badge: '任意',
+      title: `ユース昇格検討（${youthSquad.length}名在籍）`,
+      desc: `アカデミーの若手有望株をトップ登録枠（空きあり）に昇格可能です。`,
+      btnText: 'ユース一覧へ',
       action: 'goto-youth'
     };
   } else if (playerClub.funds >= minUpgradeCost && minUpgradeCost !== Infinity) {
     optionalDuty = {
       level: 'optional',
-      badge: '任意 / OPTIONAL',
-      title: 'クラブ設備投資の検討',
-      desc: `現在の予算（${formatMoney(playerClub.funds)}）でスタジアム・練習施設・スカウト網のレベルアップが可能です。`,
-      btnText: '施設投資へ移動',
+      badge: '任意',
+      title: '施設投資の検討',
+      desc: `予算（${formatMoney(playerClub.funds)}）でスタジアム等の施設改修が可能です。`,
+      btnText: '施設投資へ',
       action: 'goto-facilities'
     };
   } else {
     const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
     optionalDuty = {
       level: 'optional',
-      badge: '任意 / OPTIONAL',
-      title: `移籍市場スカウティング（全20クラブ ${totalMarketPlayers}名）`,
-      desc: 'グローバル移籍市場から掘り出し物（契約残り1年の格安選手や若手有望株）の獲得交渉を行えます。',
-      btnText: '移籍市場へ移動',
+      badge: '任意',
+      title: '移籍市場スカウト',
+      desc: '移籍市場から契約残り1年の割安選手や若手有望株を獲得交渉できます。',
+      btnText: '移籍市場へ',
       action: 'goto-market'
     };
   }
@@ -7114,44 +7114,48 @@ function renderFacilitiesAndYouth() {
         pipsHtml += `<span class="facility-pip ${i <= lv ? 'active' : ''}"></span>`;
       }
 
-      let btnLabel = isMax ? 'MAX LEVEL 達成済' : `Lv.${lv + 1} へ投資する（${formatMoney(nextCost)}）`;
+      let btnLabel = isMax ? 'MAX達成' : `Lv.${lv + 1} 改修（${formatMoney(nextCost)}）`;
       if (!isMax && playerClub.funds < nextCost) {
-        btnLabel = `資金不足（必要: ${formatMoney(nextCost)}）`;
+        btnLabel = `資金不足（${formatMoney(nextCost)}）`;
       }
+
+      const curEffect = typeof def.getEffectText === 'function' ? def.getEffectText(lv) : '';
+      const nextEffect = typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大レベル' : '効果増大');
 
       return `
         <div class="facility-card">
           <div class="facility-card-header">
-            <div>
-              <span class="facility-code">${def.iconLabel || def.code || 'FACILITY'}</span>
+            <div class="facility-header-left">
               <h3 class="facility-name">${def.name}</h3>
+              <button type="button" class="btn-facility-info" data-facility-info="${key}" title="詳細を表示" aria-label="詳細解説">ⓘ</button>
             </div>
-            <span class="facility-level-badge">Lv.${lv} / ${def.maxLevel}</span>
+            <span class="facility-level-badge">Lv.${lv}/${def.maxLevel}</span>
           </div>
 
           <div class="facility-pips-row">
             ${pipsHtml}
           </div>
 
-          <p class="facility-desc">${def.desc}</p>
-
-          <div class="facility-effect-box">
-            <div class="facility-effect-row">
-              <span class="text-muted">現在の稼働効果</span>
-              <span class="facility-effect-current">${typeof def.getEffectText === 'function' ? def.getEffectText(lv) : ''}</span>
+          <!-- デフォルト表示：最小限の効果・数値・費用 -->
+          <div class="facility-metric-row">
+            <div class="facility-metric-item">
+              <span class="metric-caption">現在の効果</span>
+              <strong class="facility-effect-badge accent-green">${curEffect}</strong>
             </div>
-            <div class="facility-effect-row">
-              <span class="text-muted">次段階の強化効果</span>
-              <span class="facility-effect-next">${typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大拡張レベル達成済' : '効果増大')}</span>
+            <div class="facility-metric-item">
+              <span class="metric-caption">改修費</span>
+              <strong class="facility-cost-badge mono accent-gold">${isMax ? 'MAX' : formatMoney(nextCost)}</strong>
             </div>
           </div>
 
+          <!-- 詳細解説（インフォアイコンタップで展開） -->
+          <div class="facility-info-drawer hidden" id="facility-info-${key}">
+            <p class="facility-desc">${def.desc}</p>
+            <div class="facility-next-hint">次Lv: ${nextEffect}</div>
+          </div>
+
           <div class="facility-card-footer">
-            <div>
-              <span class="facility-cost-label">${isMax ? 'STATUS' : 'NEXT INVESTMENT'}</span>
-              <span class="facility-cost-val">${isMax ? '最大拡張済' : formatMoney(nextCost)}</span>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" data-upgrade-facility="${key}" ${canAfford ? '' : 'disabled'}>
+            <button type="button" class="btn btn-primary btn-sm btn-upgrade-facility" data-upgrade-facility="${key}" ${canAfford ? '' : 'disabled'}>
               ${btnLabel}
             </button>
           </div>
@@ -7824,41 +7828,41 @@ function openPlayerProfileModal(playerId) {
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
-      <!-- タブ1：能力（ABILITY） -->
+      <!-- タブ1：能力 -->
       <div class="profile-tab-panel" data-profile-panel="ability">
         <div class="profile-section-grid">
-          <!-- 左：6大能力六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ） -->
+          <!-- 左：6大能力六角形レーダーチャート -->
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
-              <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
+              <span class="profile-box-title">能力パラメータ</span>
               <span class="profile-ovr-badge">OVR ${baseOvr}</span>
             </div>
             ${hexagonChartHtml}
           </div>
 
-          <!-- 右：複数ポジション適性マトリクス ＆ 選手特徴 -->
+          <!-- 右：ポジション適性 ＆ 選手特徴 -->
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+              <span class="profile-box-title">ポジション適性</span>
             </div>
             <div class="profile-pos-fit-list">
               <div class="profile-fit-row">
-                <span class="text-muted">メイン適性 (100%発揮)</span>
+                <span class="text-muted">メイン (100%)</span>
                 <span class="pos-tag pos-${primaryPos}"><strong>${primaryPos}</strong> (OVR ${baseOvr})</span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">サブ適性 (92% / SUB-POS)</span>
-                <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）'}</strong></span>
+                <span class="text-muted">サブ (92%)</span>
+                <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし'}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">適性外配置時 (80%ペナルティ)</span>
+                <span class="text-muted">適性外 (80%)</span>
                 <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
               </div>
               ${currentSlotBanner}
             </div>
 
             <div class="profile-box-header" style="margin-top: 6px;">
-              <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
+              <span class="profile-box-title">選手特徴</span>
             </div>
             <div class="profile-traits-wrap">
               ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
@@ -7869,70 +7873,70 @@ function openPlayerProfileModal(playerId) {
         <!-- 能力タブ下部：契約・市場価値情報 -->
         <div class="profile-metrics-row profile-metrics-row-3col">
           <div class="profile-metric-card">
-            <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
+            <span class="profile-metric-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
             <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">CONTRACT（契約残年数）</span>
+            <span class="profile-metric-label">契約残年数</span>
             <span class="profile-metric-val">${p.contractYears}年</span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">${isMarket ? 'TRANSFER FEE（移籍金）' : 'MARKET VALUE（推定市場価値）'}</span>
+            <span class="profile-metric-label">${isMarket ? '移籍金' : '推定市場価値'}</span>
             <span class="profile-metric-val">${formatMoney(estMarketValue)}</span>
           </div>
         </div>
       </div>
 
-      <!-- タブ2：今季成績（CURRENT SEASON STATS） -->
+      <!-- タブ2：今季成績 -->
       <div class="profile-tab-panel hidden" data-profile-panel="season">
         <div class="profile-box">
           <div class="profile-box-header">
-            <span class="profile-box-title">SEASON ${curSeasonStr} PERFORMANCE（今季成績サマリー）</span>
+            <span class="profile-box-title">今季成績</span>
             <span class="mono text-muted" style="font-size: 11px;">${clubName}</span>
           </div>
 
           <div class="profile-season-stats-grid">
             <div class="profile-metric-card">
-              <span class="profile-metric-label">APPEARANCES（出場試合数）</span>
+              <span class="profile-metric-label">出場試合</span>
               <span class="profile-metric-val mono">${p.appearances} <small style="font-size: 12px; color: var(--text-muted);">試合</small></span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">GOALS（今季ゴール数）</span>
+              <span class="profile-metric-label">ゴール</span>
               <span class="profile-metric-val mono accent-green">${p.goals} <small style="font-size: 12px; color: var(--text-muted);">得点</small></span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">ASSISTS（今季アシスト数）</span>
+              <span class="profile-metric-label">アシスト</span>
               <span class="profile-metric-val mono text-cyan">${typeof p.assists === 'number' ? p.assists : 0} <small style="font-size: 12px; color: var(--text-muted);">アシスト</small></span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">AVG RATING（平均評価点）</span>
+              <span class="profile-metric-label">平均評価点</span>
               <span class="profile-metric-val mono accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">GOALS / MATCH（1試合平均得点）</span>
+              <span class="profile-metric-label">1試合平均得点</span>
               <span class="profile-metric-val mono">${goalsPerMatch}</span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">PARTICIPATION（リーグ出場率）</span>
+              <span class="profile-metric-label">出場率</span>
               <span class="profile-metric-val mono">${appRate}%</span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">EFFECTIVE OVR（実効総合力）</span>
+              <span class="profile-metric-label">実効OVR</span>
               <span class="profile-metric-val mono accent-green">OVR ${effOvr}</span>
             </div>
           </div>
 
           <div class="profile-season-detail-list">
             <div class="profile-fit-row">
-              <span class="text-muted">現在のチーム内起用区分</span>
+              <span class="text-muted">起用区分</span>
               <span class="mono"><strong>${roleStatusText}</strong></span>
             </div>
             <div class="profile-fit-row">
-              <span class="text-muted">フィジカル・コンディション</span>
+              <span class="text-muted">コンディション</span>
               <span class="mono ${conditionClass}"><strong>${conditionText}</strong></span>
             </div>
             <div class="profile-fit-row profile-scout-comment-row">
-              <span class="text-muted">今季スカウト評価コメント</span>
+              <span class="text-muted">スカウト評価</span>
               <span class="profile-scout-comment-text">
                 ${p.appearances === 0
                   ? '今季の公式戦出場はまだありません。今後の起用と連携向上が期待されます。'
@@ -7945,11 +7949,11 @@ function openPlayerProfileModal(playerId) {
         </div>
       </div>
 
-      <!-- タブ3：年別成績（YEARLY CAREER STATS） -->
+      <!-- タブ3：年別成績 -->
       <div class="profile-tab-panel hidden" data-profile-panel="yearly">
         <div class="profile-box">
           <div class="profile-box-header">
-            <span class="profile-box-title">YEARLY CAREER STATISTICS（年度別成績・通算記録）</span>
+            <span class="profile-box-title">年度別成績</span>
             <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}G / ${totalAssistsSum}A</span>
           </div>
           <div class="profile-yearly-table-wrap">
@@ -7971,7 +7975,7 @@ function openPlayerProfileModal(playerId) {
               </tbody>
               <tfoot>
                 <tr class="profile-yearly-total-row">
-                  <td class="mono" colspan="2">TOTAL（通算）</td>
+                  <td class="mono" colspan="2">通算</td>
                   <td class="mono col-num">-</td>
                   <td class="mono col-num"><strong>${totalAppsSum}</strong></td>
                   <td class="mono col-num accent-green"><strong>${totalGoalsSum}</strong></td>
@@ -7985,36 +7989,36 @@ function openPlayerProfileModal(playerId) {
         </div>
       </div>
 
-      <!-- タブ4：経歴（BIOGRAPHY & CAREER HISTORY） -->
+      <!-- タブ4：経歴 -->
       <div class="profile-tab-panel hidden" data-profile-panel="career">
         <div class="profile-section-grid">
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">PLAYER BIOGRAPHY（選手プロフィール詳細）</span>
+              <span class="profile-box-title">プロフィール</span>
             </div>
             <div class="profile-pos-fit-list">
               <div class="profile-fit-row">
-                <span class="text-muted">登録選手名 / フルネーム</span>
+                <span class="text-muted">選手名</span>
                 <span class="mono"><strong>${p.fullName || p.name}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">国籍 / 代表資格</span>
+                <span class="text-muted">国籍</span>
                 <span class="mono" style="display: inline-flex; align-items: center; gap: 6px;"><strong>${nationalityDisplay}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">生年 / 現在年齢</span>
+                <span class="text-muted">年齢</span>
                 <span class="mono"><strong>${birthYear}年生まれ (${p.age}歳)</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">身長 / 利き足</span>
+                <span class="text-muted">身長・利き足</span>
                 <span class="mono"><strong>${heightText} / ${footText}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">現所属クラブ / 背番号</span>
+                <span class="text-muted">所属・背番号</span>
                 <span class="mono"><strong>${clubName} (${squadNumText})</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">登録ポジション（メイン / サブ）</span>
+                <span class="text-muted">ポジション</span>
                 <span class="mono"><strong>${primaryPos}${subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : ''}</strong></span>
               </div>
             </div>
@@ -8022,7 +8026,7 @@ function openPlayerProfileModal(playerId) {
 
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">CAREER TIMELINE（選手経歴・移籍ヒストリー）</span>
+              <span class="profile-box-title">経歴</span>
             </div>
             <div class="profile-career-timeline">
               ${timelineHtml}
@@ -8866,6 +8870,18 @@ function initGame() {
     }
   });
 
+  const btnToggleTacticDetail = document.getElementById('btn-toggle-tactic-detail');
+  if (btnToggleTacticDetail) {
+    btnToggleTacticDetail.addEventListener('click', () => {
+      const guideContainer = document.getElementById('tactics-guide-container');
+      const toggleIcon = document.getElementById('tactic-detail-toggle-icon');
+      if (guideContainer) {
+        const isHidden = guideContainer.classList.toggle('hidden');
+        if (toggleIcon) toggleIcon.textContent = isHidden ? '▼' : '▲';
+      }
+    });
+  }
+
   document.getElementById('roster-tbody').addEventListener('click', (e) => {
     const profileBtn = e.target.closest('[data-profile-id]');
     if (profileBtn) {
@@ -9091,10 +9107,20 @@ function initGame() {
     });
   }
 
-  // クラブ施設投資（アップグレードボタン）のイベント
+  // クラブ施設投資（アップグレードボタン＆インフォ展開）のイベント
   const facilitiesGrid = document.getElementById('facilities-grid');
   if (facilitiesGrid) {
     facilitiesGrid.addEventListener('click', (e) => {
+      const infoBtn = e.target.closest('[data-facility-info]');
+      if (infoBtn && infoBtn.dataset.facilityInfo) {
+        const drawer = document.getElementById(`facility-info-${infoBtn.dataset.facilityInfo}`);
+        if (drawer) {
+          const isHidden = drawer.classList.toggle('hidden');
+          infoBtn.classList.toggle('active', !isHidden);
+        }
+        return;
+      }
+
       const upgradeBtn = e.target.closest('[data-upgrade-facility]');
       if (upgradeBtn && upgradeBtn.dataset.upgradeFacility) {
         upgradeFacility(upgradeBtn.dataset.upgradeFacility);
