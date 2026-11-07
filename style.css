@@ -10001,79 +10001,143 @@ body.main-menu-active {
     flex: 1;
     min-height: 0;
   }
-  /* 上段：対戦カードと戦術・戦力を左右2分割でコンパクトに横並び */
+  /* 上段：対戦カードと戦術・戦力を余白なくスリムにスタック配置 */
   .precheck-left-col {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
     flex: none !important;
     height: auto !important;
   }
   .precheck-hero-card {
-    padding: 5px 6px;
-    gap: 3px;
+    padding: 6px 12px;
+    gap: 0;
     flex: none;
+    height: auto;
+    min-height: 0;
+    justify-content: center;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #181d22 0%, #13171b 100%);
+    border: 1px solid #28303a;
+  }
+  .precheck-hero-card .precheck-card-subhead {
+    display: none;
+  }
+  .precheck-vs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+  .precheck-club-box {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
   }
-  .precheck-card-subhead {
-    font-size: 9px;
+  .precheck-club-box:last-child {
+    align-items: flex-end;
   }
   .precheck-club-name {
-    font-size: 11px;
-    max-width: 75px;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    line-height: 1.2;
+  }
+  .precheck-club-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+  }
+  .precheck-club-box:last-child .precheck-club-meta {
+    flex-direction: row-reverse;
   }
   .precheck-club-ovr {
-    font-size: 9px;
+    font-size: 9.5px;
+    color: #94a3b8;
   }
   .precheck-club-ovr strong {
-    font-size: 11px;
+    font-size: 11.5px;
+    color: #fff;
   }
   .precheck-venue-tag {
-    font-size: 8px;
-    padding: 0 3px;
+    font-size: 7.5px;
+    font-weight: 800;
+    padding: 1px 3.5px;
+    border-radius: 2px;
   }
   .precheck-vs-badge {
-    font-size: 11px;
-    padding: 0 1px;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 0 4px;
+    color: #64748b;
+    flex-shrink: 0;
   }
   .precheck-tactics-bar {
-    padding: 5px 6px;
-    gap: 3px;
+    padding: 5px 12px;
+    gap: 4px;
     flex: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    height: auto;
+    min-height: 0;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #181d22 0%, #13171b 100%);
+    border: 1px solid #28303a;
+  }
+  .precheck-tactics-bar .precheck-card-subhead {
+    display: none;
   }
   .precheck-tactics-info-grid {
-    gap: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .precheck-tactics-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
   .precheck-label {
     font-size: 9.5px;
   }
   .precheck-val-highlight {
-    font-size: 11px;
+    font-size: 11.5px;
   }
   .precheck-tag {
-    font-size: 8px;
-    padding: 1px 3px;
+    font-size: 8.5px;
+    padding: 1px 4px;
   }
   .precheck-tactics-aim {
     display: none !important;
   }
   .precheck-power-metrics {
-    gap: 2px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
   }
   .power-metric-box {
-    padding: 1px 2px;
+    padding: 1.5px 4px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    border-radius: 3px;
   }
   .power-lbl {
-    font-size: 7.5px;
+    font-size: 8px;
   }
   .power-val {
-    font-size: 10px;
+    font-size: 11px;
   }
+
 
   /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示） */
   .precheck-right-col {

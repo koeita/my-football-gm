@@ -4131,14 +4131,18 @@ function openMatchPrecheckModal() {
           <div class="precheck-vs-row">
             <div class="precheck-club-box is-player">
               <span class="precheck-club-name">${playerClub.name}</span>
-              <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
-              <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
+              <div class="precheck-club-meta">
+                <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
+                <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
+              </div>
             </div>
             <div class="precheck-vs-badge">VS</div>
             <div class="precheck-club-box">
               <span class="precheck-club-name">${oppName}</span>
-              <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
-              <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
+              <div class="precheck-club-meta">
+                <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
+                <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
+              </div>
             </div>
           </div>
         </div>
