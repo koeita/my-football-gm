@@ -4429,6 +4429,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     align-items: center !important;
     gap: 4px !important;
     order: 2 !important;
+    padding-right: 76px !important;
   }
 
   .game-label {
@@ -4540,7 +4541,46 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .header-utility-actions {
-    display: none !important; /* はじめからはモーダルや設定で呼び出し */
+    display: flex !important;
+    align-items: center !important;
+    position: absolute !important;
+    top: max(env(safe-area-inset-top, 0px), 5px) !important;
+    right: 8px !important;
+    height: 22px !important;
+    z-index: 950 !important;
+    margin: 0 !important;
+  }
+
+  .header-utility-actions #btn-return-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    min-height: 22px !important;
+    height: 22px !important;
+    line-height: 1 !important;
+    background-color: #262b31 !important;
+    border: 1px solid #3a4048 !important;
+    border-left: 3px solid #2ecc71 !important;
+    color: #e6edf3 !important;
+    border-radius: 4px !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .header-utility-actions #btn-return-title .btn-text-pc {
+    display: none !important;
+  }
+
+  .header-utility-actions #btn-return-title .btn-text-mob {
+    display: inline !important;
+  }
+
+  .header-utility-actions #btn-open-intro {
+    display: none !important;
   }
 
 
@@ -7155,6 +7195,36 @@ body.main-menu-active {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.header-utility-actions #btn-return-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-left: 3px solid #2ecc71;
+  background-color: #262b31;
+  border: 1px solid #3a4048;
+  border-left: 3px solid #2ecc71;
+  color: #e6edf3;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.header-utility-actions #btn-return-title:hover {
+  background-color: #2f353c;
+  border-color: #2ecc71;
+}
+
+.header-utility-actions #btn-return-title .btn-text-mob {
+  display: none;
+}
+
+.header-utility-actions #btn-open-intro {
+  display: none !important;
 }
 
 /* 殿堂・実績モーダル & 環境設定モーダル */

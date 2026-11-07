@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261107_1752">
+  <link rel="stylesheet" href="style.css?v=20261107_1825">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -122,8 +122,7 @@
       </div>
 
       <div class="header-utility-actions">
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-open-intro" title="GM名・担当クラブを選び直して新規ゲームを開始">はじめから</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-return-title" title="進行状況を自動保存してタイトル画面へ戻る">タイトルへ戻る</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-return-title" title="進行状況を自動保存してタイトル画面へ戻る"><span class="btn-text-pc">タイトルへ戻る</span><span class="btn-text-mob">タイトルへ</span></button>
       </div>
     </header>
 
@@ -718,7 +717,7 @@
   </div>
 
   <!-- ゲーム開始時：GM就任・クラブ選択モーダル（スライド式1クラブカードUI） -->
-  <div id="intro-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
+  <div id="intro-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="intro-modal-title">
     <div class="modal-card intro-modal-card">
       <div class="modal-header">
         <div class="intro-header-row">
@@ -974,7 +973,7 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261107_1805"></script>
-  <script src="main.js?v=20261107_1805"></script>
+  <script src="avatar.js?v=20261107_1825"></script>
+  <script src="main.js?v=20261107_1825"></script>
 </body>
 </html>

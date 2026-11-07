@@ -7550,8 +7550,16 @@ function initGame() {
   }
   document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
   document.getElementById('btn-next-season').addEventListener('click', startNextSeason);
-  document.getElementById('btn-restart-game').addEventListener('click', () => openIntroModal(false));
-  document.getElementById('btn-open-intro').addEventListener('click', () => openIntroModal(true));
+  const btnRestart = document.getElementById('btn-restart-game');
+  if (btnRestart) {
+    btnRestart.addEventListener('click', () => {
+      showMainMenuScreen();
+    });
+  }
+  const btnOpenIntro = document.getElementById('btn-open-intro');
+  if (btnOpenIntro) {
+    btnOpenIntro.addEventListener('click', () => openIntroModal(true));
+  }
 
   // GM就任モーダル内のイベント（フィルタータグ・クラブ選択・詳細同期）
   document.getElementById('club-filter-tags').addEventListener('click', (e) => {
@@ -8242,6 +8250,10 @@ function updateContinueButtonUI() {
 
 function showMainMenuScreen() {
   stopAdvancingCalendar();
+  // 表示中のモーダルがあれば全て閉じる（就任モーダル等のリロード時・遷移時残存を完全防止）
+  document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
+  setBodyModalLock(false);
+
   const menuEl = document.getElementById('main-menu-screen');
   const appEl = document.getElementById('app-container');
   if (menuEl) menuEl.classList.remove('hidden');
