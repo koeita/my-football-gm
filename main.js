@@ -3875,15 +3875,15 @@ function transitionToMatchSummary() {
   const homeOtPct = Math.round((homeOnTarget / totalOnTarget) * 100);
   const awayOtPct = 100 - homeOtPct;
 
-  // ハイライト一覧（最大4件）
-  const highlights = matchLiveState.allHighlights.slice(0, 4);
+  // ハイライト一覧（最大3件に絞りスクロールなしで収容）
+  const highlights = matchLiveState.allHighlights.slice(0, 3);
   const highlightsHtml = highlights.length > 0
-    ? highlights.map(h => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:28px;">[${h.minute}']</span><span>${h.text}</span></div>`).join('')
+    ? highlights.map(h => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:26px;">[${h.minute}']</span><span>${h.text}</span></div>`).join('')
     : `<div class="summary-highlight-item" style="color:var(--text-muted);">両チーム堅い守備で決定機を許さずタイムアップ。</div>`;
 
   // GM収支＆サポーター増減
   const revenueAmount = isPlayerHome ? matchIncome : (awayBroadcastingFee || 1600);
-  const revenueTypeLabel = isPlayerHome ? 'ホーム入場料・グッズ収入' : 'アウェイ放映権分配金';
+  const revenueTypeLabel = isPlayerHome ? '入場料・グッズ' : '放映権分配金';
   const supDelta = typeof playerSupportersDelta === 'number' ? playerSupportersDelta : 0;
   const supSign = supDelta >= 0 ? '+' : '';
   const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';
@@ -3899,99 +3899,107 @@ function transitionToMatchSummary() {
   const momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
 
   summaryBody.innerHTML = `
-    <!-- スコア＆得点者ボード -->
-    <div class="summary-hero-box">
-      <div class="summary-score-row">
-        <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
-          <span class="summary-club-name">${homeClub.name}</span>
-          <span class="mono" style="font-size:10px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
-        </div>
-        <div class="summary-score-center">
-          <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
-          <span class="summary-result-pill res-${resType}">${resLabel}</span>
-        </div>
-        <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
-          <span class="summary-club-name">${awayClub.name}</span>
-          <span class="mono" style="font-size:10px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
-        </div>
-      </div>
-      <div class="summary-scorers-grid">
-        <div class="summary-scorers-col home">${homeScorersHtml}</div>
-        <div class="summary-scorers-col away">${awayScorersHtml}</div>
-      </div>
-    </div>
-
-    <!-- チームスタッツ比較 -->
-    <div class="summary-section-card">
-      <div class="summary-section-title">▼ チームスタッツ比較</div>
-      <div class="stat-compare-row">
-        <div class="stat-compare-labels mono">
-          <span style="color:#2ecc71;">${homePossession}%</span>
-          <span style="color:var(--text-muted);font-size:10px;">ボール支配率</span>
-          <span style="color:#60a5fa;">${awayPossession}%</span>
-        </div>
-        <div class="stat-compare-bar-track">
-          <div class="stat-bar-home" style="width:${homePossession}%;"></div>
-          <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
-        </div>
-      </div>
-      <div class="stat-compare-row">
-        <div class="stat-compare-labels mono">
-          <span style="color:#2ecc71;">${homeShots}本</span>
-          <span style="color:var(--text-muted);font-size:10px;">シュート数</span>
-          <span style="color:#60a5fa;">${awayShots}本</span>
-        </div>
-        <div class="stat-compare-bar-track">
-          <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
-          <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
-        </div>
-      </div>
-      <div class="stat-compare-row">
-        <div class="stat-compare-labels mono">
-          <span style="color:#2ecc71;">${homeOnTarget}本</span>
-          <span style="color:var(--text-muted);font-size:10px;">枠内シュート</span>
-          <span style="color:#60a5fa;">${awayOnTarget}本</span>
-        </div>
-        <div class="stat-compare-bar-track">
-          <div class="stat-bar-home" style="width:${homeOtPct}%;"></div>
-          <div class="stat-bar-away" style="width:${awayOtPct}%;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- マッチハイライト -->
-    <div class="summary-section-card">
-      <div class="summary-section-title">▼ マッチハイライト・重要イベント</div>
-      <div class="summary-highlights-list">
-        ${highlightsHtml}
-      </div>
-    </div>
-
-    <!-- GMマッチデイ収支＆MOM -->
-    <div class="summary-section-card">
-      <div class="summary-section-title">▼ GMマッチデイ収支＆影響</div>
-      <div class="summary-gm-grid">
-        <div class="summary-gm-metric">
-          <span class="gm-metric-label">${revenueTypeLabel}</span>
-          <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
-        </div>
-        <div class="summary-gm-metric">
-          <span class="gm-metric-label">サポーター増減 (計 ${playerClub.supporters.toLocaleString()}人)</span>
-          <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
-        </div>
-      </div>
-      ${momPlayer ? `
-        <div class="summary-mom-box">
-          <div class="mom-left">
-            ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-md', 38) : ''}
-            <div class="mom-info">
-              <span class="mom-tag">★ MAN OF THE MATCH (最優秀選手)</span>
-              <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos} / ${momClub.name})</span>
+    <div class="summary-grid-layout">
+      <!-- 左列：スコアボード ＆ スタッツ比較 -->
+      <div class="summary-col-left">
+        <!-- スコア＆得点者ボード -->
+        <div class="summary-hero-box">
+          <div class="summary-score-row">
+            <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+              <span class="summary-club-name">${homeClub.name}</span>
+              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+            </div>
+            <div class="summary-score-center">
+              <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
+              <span class="summary-result-pill res-${resType}">${resLabel}</span>
+            </div>
+            <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+              <span class="summary-club-name">${awayClub.name}</span>
+              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
           </div>
-          <span class="mom-rating-badge">Rating ${momRating}</span>
+          <div class="summary-scorers-grid">
+            <div class="summary-scorers-col home">${homeScorersHtml}</div>
+            <div class="summary-scorers-col away">${awayScorersHtml}</div>
+          </div>
         </div>
-      ` : ''}
+
+        <!-- チームスタッツ比較 -->
+        <div class="summary-section-card summary-stats-card">
+          <div class="summary-section-title">▼ チームスタッツ比較</div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homePossession}%</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">ボール支配率</span>
+              <span style="color:#60a5fa;">${awayPossession}%</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homePossession}%;"></div>
+              <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
+            </div>
+          </div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homeShots}本</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">シュート数</span>
+              <span style="color:#60a5fa;">${awayShots}本</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
+            </div>
+          </div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homeOnTarget}本</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">枠内シュート</span>
+              <span style="color:#60a5fa;">${awayOnTarget}本</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homeOtPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayOtPct}%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右列：ハイライト ＆ GM収支・MOM -->
+      <div class="summary-col-right">
+        <!-- マッチハイライト -->
+        <div class="summary-section-card summary-highlights-card">
+          <div class="summary-section-title">▼ マッチハイライト</div>
+          <div class="summary-highlights-list">
+            ${highlightsHtml}
+          </div>
+        </div>
+
+        <!-- GMマッチデイ収支＆MOM -->
+        <div class="summary-section-card summary-gm-card">
+          <div class="summary-section-title">▼ GM収支＆MOM</div>
+          <div class="summary-gm-grid">
+            <div class="summary-gm-metric">
+              <span class="gm-metric-label">${revenueTypeLabel}</span>
+              <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
+            </div>
+            <div class="summary-gm-metric">
+              <span class="gm-metric-label">サポーター (${playerClub.supporters.toLocaleString()}人)</span>
+              <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+            </div>
+          </div>
+          ${momPlayer ? `
+            <div class="summary-mom-box">
+              <div class="mom-left">
+                ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-sm', 32) : ''}
+                <div class="mom-info">
+                  <span class="mom-tag">★ MAN OF THE MATCH</span>
+                  <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
+                </div>
+              </div>
+              <span class="mom-rating-badge">Rating ${momRating}</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
     </div>
   `;
 
@@ -4109,42 +4117,49 @@ function openMatchPrecheckModal() {
   });
 
   body.innerHTML = `
-    <!-- 対戦カード概要 -->
-    <div class="precheck-hero-card">
-      <div class="precheck-vs-row">
-        <div class="precheck-club-box is-player">
-          <span class="precheck-club-name">${playerClub.name}</span>
-          <span class="precheck-club-ovr mono">OVR ${homeAvgOvr} (${isHome ? 'HOME' : 'AWAY'})</span>
+    <div class="precheck-body-grid">
+      <!-- 左列：対戦カード＆作戦概要 -->
+      <div class="precheck-left-col">
+        <!-- 対戦カード概要 -->
+        <div class="precheck-hero-card">
+          <div class="precheck-vs-row">
+            <div class="precheck-club-box is-player">
+              <span class="precheck-club-name">${playerClub.name}</span>
+              <span class="precheck-club-ovr mono">OVR ${homeAvgOvr} (${isHome ? 'HOME' : 'AWAY'})</span>
+            </div>
+            <div class="precheck-vs-badge">VS</div>
+            <div class="precheck-club-box">
+              <span class="precheck-club-name">${oppName}</span>
+              <span class="precheck-club-ovr mono">OVR ${oppOvr} (${isHome ? 'AWAY' : 'HOME'})</span>
+            </div>
+          </div>
         </div>
-        <div class="precheck-vs-badge">VS</div>
-        <div class="precheck-club-box">
-          <span class="precheck-club-name">${oppName}</span>
-          <span class="precheck-club-ovr mono">OVR ${oppOvr} (${isHome ? 'AWAY' : 'HOME'})</span>
+
+        <!-- 自チーム作戦設定 -->
+        <div class="precheck-tactics-bar">
+          <div class="precheck-tactics-item">
+            <span style="color:var(--text-muted);">陣形:</span>
+            <strong style="color:#fff;" class="mono">${formationKey}</strong>
+          </div>
+          <div class="precheck-tactics-item">
+            <span style="color:var(--text-muted);">戦術:</span>
+            <span class="precheck-tag">${tacticDef.name}</span>
+            <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 自チーム作戦設定 -->
-    <div class="precheck-tactics-bar">
-      <div class="precheck-tactics-item">
-        <span style="color:var(--text-muted);">陣形:</span>
-        <strong style="color:#fff;" class="mono">${formationKey}</strong>
-      </div>
-      <div class="precheck-tactics-item">
-        <span style="color:var(--text-muted);">戦術:</span>
-        <span class="precheck-tag">${tacticDef.name}</span>
-        <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
-      </div>
-    </div>
-
-    <!-- スタメン11名確認 -->
-    <div class="precheck-starters-card">
-      <div class="precheck-starters-head">
-        <span>先発メンバー（11名）</span>
-        <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
-      </div>
-      <div class="precheck-starters-list">
-        ${startersRowsHtml}
+      <!-- 右列：スタメン11名確認 -->
+      <div class="precheck-right-col">
+        <div class="precheck-starters-card">
+          <div class="precheck-starters-head">
+            <span>先発メンバー（11名）</span>
+            <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
+          </div>
+          <div class="precheck-starters-list">
+            ${startersRowsHtml}
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -9601,17 +9616,19 @@ function initTacticalDragAndDrop() {
 
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
+      const isMobileTouch = isTouch && window.innerWidth <= 768;
 
-      // 控え選手カードの場合：水平方向へのスワイプ（カルーセル横スクロール）ならドラッグ処理を即座に破棄
-      if (dragSource.type === 'bench' && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
+      // モバイルタッチ環境の控え選手カードのみ：水平方向へのスワイプ（カルーセル横スクロール）ならドラッグ処理を即座に破棄
+      if (isMobileTouch && dragSource.type === 'bench' && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
         cleanupDrag();
         return;
       }
 
-      // 指が動いたらドラッグ開始！
-      if (dist > 5) {
-        // 控え選手カードの場合：指が上(ピッチ方向 deltaY < -4)へ動いた時にドラッグ開始
-        if (dragSource.type === 'bench' && deltaY >= -4) {
+      // ポインタ/指が動いたらドラッグ開始！PCマウスは閾値3pxで即座に開始
+      const dragThreshold = isTouch ? 5 : 3;
+      if (dist > dragThreshold) {
+        // モバイルタッチ環境の控え選手カードのみ：指が上(ピッチ方向 deltaY < -4)へ動いた時にドラッグ開始
+        if (isMobileTouch && dragSource.type === 'bench' && deltaY >= -4) {
           if (dist > 12) {
             cleanupDrag();
             return;
