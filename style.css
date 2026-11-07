@@ -2400,7 +2400,7 @@ body {
 .profile-bio-chip {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
   padding: 2px 7px;
   background-color: #22272c;
   border: 1px solid #333a42;
@@ -2410,6 +2410,28 @@ body {
   color: #dbe2e9;
   white-space: nowrap;
   line-height: 1.25;
+}
+
+.profile-flag-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.profile-flag-icon {
+  display: inline-block;
+  width: 17px;
+  height: 11px;
+  border-radius: 1.5px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.7);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.profile-flag-fallback {
+  font-size: 12px;
+  line-height: 1;
 }
 
 .profile-bio-item strong {

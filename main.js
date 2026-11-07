@@ -660,6 +660,32 @@ const NATIONALITY_FLAG_MAP = {
   Japan: '🇯🇵'
 };
 
+/**
+ * Windows等のPC環境でも確実に美しい国旗を描画するためのインラインSVG国旗マップ（比率3:2）
+ */
+const NATIONALITY_FLAG_SVG = {
+  England: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect x="7" width="4" height="12" fill="#cf142b"/><rect y="4" width="18" height="4" fill="#cf142b"/></svg>',
+  France: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#002395"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#ed2939"/></svg>',
+  Spain: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="3" fill="#aa151b"/><rect y="3" width="18" height="6" fill="#f1bf00"/><rect y="9" width="18" height="3" fill="#aa151b"/><rect x="3.5" y="4.5" width="2" height="3" fill="#aa151b" rx="0.5"/></svg>',
+  Germany: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#000000"/><rect y="4" width="18" height="4" fill="#dd0000"/><rect y="8" width="18" height="4" fill="#ffce00"/></svg>',
+  Italy: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#009246"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#ce2b37"/></svg>',
+  Netherlands: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ae1c28"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#21468b"/></svg>',
+  Portugal: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="7" height="12" fill="#006600"/><rect x="7" width="11" height="12" fill="#ff0000"/><circle cx="7" cy="6" r="2.2" fill="#ffcc00"/><circle cx="7" cy="6" r="1.3" fill="#ffffff"/><rect x="6.5" y="5.2" width="1" height="1.6" fill="#002277"/></svg>',
+  Brazil: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#009b3a"/><polygon points="9,1.5 16,6 9,10.5 2,6" fill="#fedf00"/><circle cx="9" cy="6" r="2.2" fill="#002776"/><path d="M 7.2 6.5 Q 9 5.2 10.8 5.6" stroke="#ffffff" stroke-width="0.5" fill="none"/></svg>',
+  Argentina: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#74acdf"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#74acdf"/><circle cx="9" cy="6" r="1.3" fill="#f6b40e"/><circle cx="9" cy="6" r="0.6" fill="#85340a"/></svg>',
+  Belgium: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#000000"/><rect x="6" width="6" height="12" fill="#ffd90c"/><rect x="12" width="6" height="12" fill="#ed2939"/></svg>',
+  Croatia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ff0000"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#171796"/><rect x="7.5" y="4.2" width="3" height="3.6" fill="#ff0000" stroke="#ffffff" stroke-width="0.3"/><rect x="8.3" y="4.2" width="0.7" height="1.8" fill="#ffffff"/><rect x="9.8" y="4.2" width="0.7" height="1.8" fill="#ffffff"/><rect x="7.5" y="6" width="0.8" height="1.8" fill="#ffffff"/><rect x="9" y="6" width="0.8" height="1.8" fill="#ffffff"/></svg>',
+  Japan: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><circle cx="9" cy="6" r="3.2" fill="#bc002d"/></svg>'
+};
+
+function getNationalityFlagHtml(nat) {
+  if (NATIONALITY_FLAG_SVG[nat]) {
+    return NATIONALITY_FLAG_SVG[nat];
+  }
+  const flagEmoji = NATIONALITY_FLAG_MAP[nat] || '🌍';
+  return `<span class="profile-flag-fallback">${flagEmoji}</span>`;
+}
+
 // メイン適性に応じたサブ適性（secondaryPositions）候補プール
 const SECONDARY_POSITION_POOLS = {
   GK: [[]],
@@ -7177,8 +7203,8 @@ function openPlayerProfileModal(playerId) {
   const footShortText = footShortMap[p.preferredFoot] || '右利き';
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
   const rawNat = p.nationality || 'England';
-  const flagEmoji = NATIONALITY_FLAG_MAP[rawNat] || '🌍';
-  const nationalityDisplay = `${flagEmoji} ${rawNat}`;
+  const flagHtml = getNationalityFlagHtml(rawNat);
+  const nationalityDisplay = `<span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span>`;
   const squadNumText = `#${p.squadNumber || 10}`;
   const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
   const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
@@ -7503,7 +7529,7 @@ function openPlayerProfileModal(playerId) {
               </div>
               <div class="profile-fit-row">
                 <span class="text-muted">国籍 / 代表資格</span>
-                <span class="mono"><strong>${nationalityDisplay}</strong></span>
+                <span class="mono" style="display: inline-flex; align-items: center; gap: 6px;"><strong>${nationalityDisplay}</strong></span>
               </div>
               <div class="profile-fit-row">
                 <span class="text-muted">生年 / 現在年齢</span>
