@@ -6763,7 +6763,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   filter: grayscale(35%);
 }
 
-/* 元のカード形状のまま追従するドラッグクローン */
+/* ドラッグ追従ゴースト（スタメンカード形状） */
 .tactical-drag-ghost-card,
 .pitch-node.tactical-drag-ghost-card,
 .bench-sub-item.tactical-drag-ghost-card {
@@ -6777,6 +6777,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   border-color: #2ecc71 !important;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(46, 204, 113, 0.55) !important;
   transition: none !important;
+  bottom: auto !important;
+  right: auto !important;
 }
 
 /* ドロップターゲットのハイライト発光 */
