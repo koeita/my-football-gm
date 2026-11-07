@@ -411,10 +411,14 @@
             <div class="formation-selector-wrap">
               <span class="formation-selector-label mono">FORMATION:</span>
               <div class="formation-btn-group" id="formation-btn-group" role="group" aria-label="フォーメーション選択">
-                <button type="button" class="btn btn-formation active mono" data-formation="4-3-3">4-3-3</button>
-                <button type="button" class="btn btn-formation mono" data-formation="4-2-3-1">4-2-3-1</button>
-                <button type="button" class="btn btn-formation mono" data-formation="4-4-2">4-4-2</button>
-                <button type="button" class="btn btn-formation mono" data-formation="3-5-2">3-5-2</button>
+                <button type="button" class="btn btn-formation active mono" data-formation="4-3-3" title="4-3-3：LB, CB, CB, RB / CM, DM, CM / LW, CF, RW">4-3-3</button>
+                <button type="button" class="btn btn-formation mono" data-formation="4-2-3-1" title="4-2-3-1：LB, CB, CB, RB / DM, DM / LM, AM, RM / CF">4-2-3-1</button>
+                <button type="button" class="btn btn-formation mono" data-formation="4-4-2" title="4-4-2：LB, CB, CB, RB / LM, CM, CM, RM / CF, CF">4-4-2</button>
+                <button type="button" class="btn btn-formation mono" data-formation="3-5-2" title="3-5-2：CB, CB, CB / LM, CM, DM, CM, RM / CF, CF">3-5-2</button>
+                <button type="button" class="btn btn-formation mono" data-formation="3-4-3" title="3-4-3：CB, CB, CB / LM, CM, CM, RM / LW, CF, RW（超攻撃的ワイド）">3-4-3</button>
+                <button type="button" class="btn btn-formation mono" data-formation="5-3-2" title="5-3-2：LWB, CB, CB, CB, RWB / CM, CM, CM / CF, CF（堅守ブロック）">5-3-2</button>
+                <button type="button" class="btn btn-formation mono" data-formation="4-1-2-3" title="4-1-2-3：LB, CB, CB, RB / DM / CM, CM / LW, CF, RW（攻撃的ポゼッション）">4-1-2-3</button>
+                <button type="button" class="btn btn-formation mono" data-formation="4-3-1-2" title="4-3-1-2：LB, CB, CB, RB / CM, CM, CM / AM / CF, CF（中央突破・中盤密集）">4-3-1-2</button>
               </div>
             </div>
           </div>
@@ -517,48 +521,191 @@
 
       <!-- サブタブ3：戦術（クラブ戦術方針設定） -->
       <div class="roster-subview roster-subview-tactics hidden" id="roster-subview-tactics" role="tabpanel" aria-labelledby="subtab-btn-tactics">
-        <div class="panel">
+        <div class="panel tactics-panel">
           <div class="panel-header">
             <div>
               <h2 class="panel-title">クラブ戦術方針設定</h2>
-              <p class="panel-note">対戦相手や所属選手の能力バランスに応じて戦術方針を切り替えてください。</p>
+              <p class="panel-note">戦術ボタンを押すと詳細（狙い・効果）が確認でき、自クラブの基本戦術に適用されます。</p>
             </div>
             <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
           </div>
           <div class="panel-body">
             <div class="tactics-overview-card">
-              <p class="panel-note" id="current-tactic-desc">【ポゼッション（支配）】：中盤（DM/CM/LM/RM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。</p>
-              <div class="tactics-btn-group" id="tactics-btn-group">
-                <button type="button" class="btn btn-tactic active" data-tactic="possession" title="【ポゼッション（支配）】：中盤(DM/CM/LM/RM/AM)重視 / ロースコア傾向">
-                  <span class="tactic-name">ポゼッション</span>
-                  <span class="tactic-desc">中盤重視・ボール支配</span>
+              <span id="current-tactic-desc" class="hidden"></span>
+              <div class="tactics-btn-group tactics-btn-group-5" id="tactics-btn-group" role="tablist" aria-label="チーム戦術スタイル選択">
+                <button type="button" class="btn btn-tactic active" data-tactic="possession" title="【ポゼッション（Possession / ショートパス主導）】タップで詳細表示＆適用">
+                  <div class="tactic-btn-head">
+                    <span class="tactic-num mono">1</span>
+                    <span class="tactic-name">ポゼッション</span>
+                    <span class="tactic-status-pill mono">適用中</span>
+                  </div>
+                  <span class="tactic-sub mono">Possession</span>
                 </button>
-                <button type="button" class="btn btn-tactic" data-tactic="counter" title="【カウンター（速攻）】：前線(LW/RW/CF)・守備(CB/LB/RB)重視 / 波乱多">
-                  <span class="tactic-name">カウンター</span>
-                  <span class="tactic-desc">速攻・堅守速攻</span>
+                <button type="button" class="btn btn-tactic" data-tactic="gegenpress" title="【ゲーゲンプレス（Gegenpress / 前線奪取速攻）】タップで詳細表示＆適用">
+                  <div class="tactic-btn-head">
+                    <span class="tactic-num mono">2</span>
+                    <span class="tactic-name">ゲーゲンプレス</span>
+                    <span class="tactic-status-pill mono">適用中</span>
+                  </div>
+                  <span class="tactic-sub mono">Gegenpress</span>
                 </button>
-                <button type="button" class="btn btn-tactic" data-tactic="highpress" title="【ハイプレス（前線守備）】：全能力+8% / スタミナ消耗大">
-                  <span class="tactic-name">ハイプレス</span>
-                  <span class="tactic-desc">全能力+8% / 積極プレス</span>
+                <button type="button" class="btn btn-tactic" data-tactic="counter" title="【ダイレクトカウンター（Direct Counter / 堅守ロング速攻）】タップで詳細表示＆適用">
+                  <div class="tactic-btn-head">
+                    <span class="tactic-num mono">3</span>
+                    <span class="tactic-name">カウンター</span>
+                    <span class="tactic-status-pill mono">適用中</span>
+                  </div>
+                  <span class="tactic-sub mono">Direct Counter</span>
+                </button>
+                <button type="button" class="btn btn-tactic" data-tactic="wingplay" title="【ワイドアタック（Wing Play / サイドアタック）】タップで詳細表示＆適用">
+                  <div class="tactic-btn-head">
+                    <span class="tactic-num mono">4</span>
+                    <span class="tactic-name">ワイドアタック</span>
+                    <span class="tactic-status-pill mono">適用中</span>
+                  </div>
+                  <span class="tactic-sub mono">Wing Play</span>
+                </button>
+                <button type="button" class="btn btn-tactic" data-tactic="parkthebus" title="【ウルトラディフェンス（Park the Bus / 徹底堅守）】タップで詳細表示＆適用">
+                  <div class="tactic-btn-head">
+                    <span class="tactic-num mono">5</span>
+                    <span class="tactic-name">ウルトラ守備</span>
+                    <span class="tactic-status-pill mono">適用中</span>
+                  </div>
+                  <span class="tactic-sub mono">Park the Bus</span>
                 </button>
               </div>
-            </div>
 
-            <div class="tactics-guide-grid">
-              <div class="tactics-guide-item">
-                <h4 class="tactics-guide-title accent-green">ポゼッション（中盤重視）</h4>
-                <p>中盤選手（DM, CM, AM, LM, RM）の能力値が試合結果に大きく反映されます。試合展開を落ち着かせ、堅実な試合運びを狙う際に最適です。</p>
-              </div>
-              <div class="tactics-guide-item">
-                <h4 class="tactics-guide-title accent-gold">カウンター（堅守速攻）</h4>
-                <p>前線の決定力（CF, LW, RW）と最終ライン（CB, LB, RB, GK）の守備力が重視されます。強豪クラブ相手の一発逆転や波乱を狙う戦術です。</p>
-              </div>
-              <div class="tactics-guide-item">
-                <h4 class="tactics-guide-title accent-cyan">ハイプレス（前線積極守備）</h4>
-                <p>全選手の能力値が一時的に+8%ブーストされますが、毎試合のスタミナ消耗が激しくなります。選手層が厚いクラブや大一番に有効です。</p>
+              <!-- ボタンを押した戦術の詳細カード（選択戦術のみ表示） -->
+              <div class="tactics-guide-grid tactics-guide-grid-5" id="tactics-guide-container">
+                <div class="tactics-guide-item active-guide" data-tactic-card="possession">
+                  <div class="tactics-detail-head">
+                    <div class="tactics-detail-titles">
+                      <span class="tactics-detail-badge mono accent-green">STYLE 01</span>
+                      <h3 class="tactics-detail-title">ポゼッション（Possession / ショートパス主導）</h3>
+                    </div>
+                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                  </div>
+                  <div class="tactics-detail-body">
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">🎯</span> 狙い</span>
+                      <p class="tactics-field-val">ボール支配率を高めてじっくり相手守備陣を崩す。</p>
+                    </div>
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
+                      <p class="tactics-field-val">中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。</p>
+                    </div>
+                  </div>
+                  <div class="tactics-tags-row">
+                    <span class="tactic-tag tag-pos">中盤・パス重視</span>
+                    <span class="tactic-tag tag-pos">失点リスク低減</span>
+                    <span class="tactic-tag tag-pos">対格下勝率安定</span>
+                  </div>
+                </div>
+
+                <div class="tactics-guide-item" data-tactic-card="gegenpress">
+                  <div class="tactics-detail-head">
+                    <div class="tactics-detail-titles">
+                      <span class="tactics-detail-badge mono text-danger">STYLE 02</span>
+                      <h3 class="tactics-detail-title">ゲーゲンプレス（Gegenpress / 前線奪取速攻）</h3>
+                    </div>
+                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                  </div>
+                  <div class="tactics-detail-body">
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">🎯</span> 狙い</span>
+                      <p class="tactics-field-val">敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。</p>
+                    </div>
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
+                      <p class="tactics-field-val">シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。</p>
+                    </div>
+                  </div>
+                  <div class="tactics-tags-row">
+                    <span class="tactic-tag tag-red">前線即時奪取</span>
+                    <span class="tactic-tag tag-red">決定機・シュート大幅UP</span>
+                    <span class="tactic-tag tag-warn">スタミナ消費1.3倍（終盤注意）</span>
+                  </div>
+                </div>
+
+                <div class="tactics-guide-item" data-tactic-card="counter">
+                  <div class="tactics-detail-head">
+                    <div class="tactics-detail-titles">
+                      <span class="tactics-detail-badge mono accent-gold">STYLE 03</span>
+                      <h3 class="tactics-detail-title">ダイレクトカウンター（Direct Counter / 堅守ロング速攻）</h3>
+                    </div>
+                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                  </div>
+                  <div class="tactics-detail-body">
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">🎯</span> 狙い</span>
+                      <p class="tactics-field-val">自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。</p>
+                    </div>
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
+                      <p class="tactics-field-val">スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。</p>
+                    </div>
+                  </div>
+                  <div class="tactics-tags-row">
+                    <span class="tactic-tag tag-gold">快足FW活用</span>
+                    <span class="tactic-tag tag-gold">対強豪ジャイアントキリング</span>
+                    <span class="tactic-tag tag-pos">省エネ（スタミナ温存）</span>
+                  </div>
+                </div>
+
+                <div class="tactics-guide-item" data-tactic-card="wingplay">
+                  <div class="tactics-detail-head">
+                    <div class="tactics-detail-titles">
+                      <span class="tactics-detail-badge mono accent-cyan">STYLE 04</span>
+                      <h3 class="tactics-detail-title">ワイドアタック（Wing Play / サイドアタック）</h3>
+                    </div>
+                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                  </div>
+                  <div class="tactics-detail-body">
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">🎯</span> 狙い</span>
+                      <p class="tactics-field-val">両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。</p>
+                    </div>
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
+                      <p class="tactics-field-val">サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。</p>
+                    </div>
+                  </div>
+                  <div class="tactics-tags-row">
+                    <span class="tactic-tag tag-cyan">両翼ドリブル突破＆クロス</span>
+                    <span class="tactic-tag tag-cyan">相手5バック攻略</span>
+                    <span class="tactic-tag tag-pos">WG・SB能力依存</span>
+                  </div>
+                </div>
+
+                <div class="tactics-guide-item" data-tactic-card="parkthebus">
+                  <div class="tactics-detail-head">
+                    <div class="tactics-detail-titles">
+                      <span class="tactics-detail-badge mono" style="color: #a78bfa;">STYLE 05</span>
+                      <h3 class="tactics-detail-title">ウルトラディフェンス（Park the Bus / 徹底堅守）</h3>
+                    </div>
+                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                  </div>
+                  <div class="tactics-detail-body">
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">🎯</span> 狙い</span>
+                      <p class="tactics-field-val">11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。</p>
+                    </div>
+                    <div class="tactics-detail-row">
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
+                      <p class="tactics-field-val">失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。</p>
+                    </div>
+                  </div>
+                  <div class="tactics-tags-row">
+                    <span class="tactic-tag tag-purple">ゴール前要塞化</span>
+                    <span class="tactic-tag tag-purple">失点激減（リード死守）</span>
+                    <span class="tactic-tag tag-warn">得点期待値低（勝点1狙い）</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
         </div>
       </div>
 
