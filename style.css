@@ -6991,40 +6991,6 @@ body.main-menu-active {
   display: none !important;
 }
 
-/* 控えめなピッチ芝生ラインの幾何学パターン（グラデーション不使用） */
-.main-menu-pitch-lines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pitch-geom-border {
-  position: absolute;
-  width: min(88vw, 860px);
-  height: min(82vh, 640px);
-  border: 1px solid rgba(46, 204, 113, 0.09);
-  border-radius: 4px;
-}
-
-.pitch-geom-halfline {
-  position: absolute;
-  width: min(88vw, 860px);
-  height: 1px;
-  background-color: rgba(46, 204, 113, 0.09);
-}
-
-.pitch-geom-circle {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border: 1px solid rgba(46, 204, 113, 0.09);
-  border-radius: 50%;
-}
-
 .main-menu-inner {
   position: relative;
   z-index: 2;
