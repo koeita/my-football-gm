@@ -1285,10 +1285,14 @@ function ensureClubSquadNumbers(club) {
 }
 
 /**
- * 選手の5大パラメータ（決定力・パス・スピード・守備・スタミナ）を一貫して算出・保持する
+ * 選手の6大パラメータ（決定力・ドリブル・パス・守備・スピード・スタミナ）を一貫して算出・保持する
  */
 function getPlayerFiveAttributes(p) {
-  if (p.attributes && typeof p.attributes.finishing === 'number') {
+  if (
+    p.attributes &&
+    typeof p.attributes.finishing === 'number' &&
+    typeof p.attributes.dribbling === 'number'
+  ) {
     return p.attributes;
   }
   const pos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
@@ -1297,12 +1301,13 @@ function getPlayerFiveAttributes(p) {
   const sta = p.sta || 50;
   const traits = Array.isArray(p.traits) ? p.traits : [];
 
-  let finishing, passing, pace, defending, stamina;
+  let finishing, dribbling, passing, pace, defending, stamina;
   stamina = sta;
 
   switch (pos) {
     case 'CF':
       finishing = clamp(Math.round(atk * 0.98 + (traits.includes('決定力の鬼') ? 4 : 0)), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.84 + sta * 0.10 + (traits.includes('スピードスター') ? 4 : 0)), 1, 99);
       passing = clamp(Math.round(atk * 0.70 + def * 0.12), 1, 99);
       pace = clamp(Math.round(sta * 0.40 + atk * 0.55 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
       defending = clamp(Math.round(def * 0.80), 1, 99);
@@ -1311,6 +1316,7 @@ function getPlayerFiveAttributes(p) {
     case 'RW':
     case 'WG':
       finishing = clamp(Math.round(atk * 0.86), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.95 + sta * 0.05 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
       passing = clamp(Math.round(atk * 0.82 + (traits.includes('チャンスメイカー') ? 4 : 0)), 1, 99);
       pace = clamp(Math.round(sta * 0.45 + atk * 0.52 + (traits.includes('スピードスター') ? 6 : 0)), 1, 99);
       defending = clamp(Math.round(def * 0.85), 1, 99);
@@ -1319,24 +1325,28 @@ function getPlayerFiveAttributes(p) {
     case 'RM':
     case 'SM':
       finishing = clamp(Math.round(atk * 0.76), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.88 + sta * 0.08 + (traits.includes('チャンスメイカー') ? 4 : 0)), 1, 99);
       passing = clamp(Math.round(atk * 0.85 + def * 0.12 + (traits.includes('高精度キッカー') ? 4 : 0)), 1, 99);
       pace = clamp(Math.round(sta * 0.50 + atk * 0.46 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
       defending = clamp(Math.round(def * 0.90), 1, 99);
       break;
     case 'AM':
       finishing = clamp(Math.round(atk * 0.82), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.90 + (traits.includes('チャンスメイカー') ? 4 : 0)), 1, 99);
       passing = clamp(Math.round(atk * 0.94 + (traits.includes('高精度キッカー') ? 5 : 0)), 1, 99);
       pace = clamp(Math.round(sta * 0.42 + atk * 0.50), 1, 99);
       defending = clamp(Math.round(def * 0.75), 1, 99);
       break;
     case 'CM':
       finishing = clamp(Math.round(atk * 0.72), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.80 + def * 0.12), 1, 99);
       passing = clamp(Math.round(atk * 0.86 + def * 0.10 + (traits.includes('高精度キッカー') ? 4 : 0)), 1, 99);
       pace = clamp(Math.round(sta * 0.55 + atk * 0.35), 1, 99);
       defending = clamp(Math.round(def * 0.95), 1, 99);
       break;
     case 'DM':
       finishing = clamp(Math.round(atk * 0.58), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.68 + def * 0.20), 1, 99);
       passing = clamp(Math.round(atk * 0.80 + def * 0.15), 1, 99);
       pace = clamp(Math.round(sta * 0.50 + def * 0.35), 1, 99);
       defending = clamp(Math.round(def * 1.0 + (traits.includes('鉄壁の対人守備') ? 4 : 0)), 1, 99);
@@ -1345,12 +1355,14 @@ function getPlayerFiveAttributes(p) {
     case 'RB':
     case 'SB':
       finishing = clamp(Math.round(atk * 0.52), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.65 + sta * 0.25), 1, 99);
       passing = clamp(Math.round(def * 0.45 + atk * 0.45), 1, 99);
       pace = clamp(Math.round(sta * 0.55 + atk * 0.38 + (traits.includes('スピードスター') ? 5 : 0)), 1, 99);
       defending = clamp(Math.round(def * 0.98), 1, 99);
       break;
     case 'CB':
       finishing = clamp(Math.round(atk * 0.36), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.42 + def * 0.28), 1, 99);
       passing = clamp(Math.round(def * 0.40 + atk * 0.35), 1, 99);
       pace = clamp(Math.round(def * 0.45 + sta * 0.40), 1, 99);
       defending = clamp(Math.round(def * 1.02 + (traits.includes('鉄壁の対人守備') ? 4 : 0)), 1, 99);
@@ -1358,13 +1370,14 @@ function getPlayerFiveAttributes(p) {
     case 'GK':
     default:
       finishing = clamp(Math.round(atk * 0.20), 1, 99);
+      dribbling = clamp(Math.round(atk * 0.28 + def * 0.18), 1, 99);
       passing = clamp(Math.round(atk * 0.40 + def * 0.25), 1, 99);
       pace = clamp(Math.round(sta * 0.45 + def * 0.30), 1, 99);
       defending = clamp(Math.round(def * 1.05 + (traits.includes('守護神の反射神経') ? 5 : 0)), 1, 99);
       break;
   }
 
-  p.attributes = { finishing, passing, pace, defending, stamina };
+  p.attributes = { finishing, dribbling, passing, pace, defending, stamina };
   return p.attributes;
 }
 
@@ -6699,6 +6712,132 @@ function findPlayerWithContextById(playerId) {
 }
 
 /**
+ * 選手カード用の六角形レーダーチャートSVGを生成する
+ * 頂点順（時計回り・上から）：決定力、ドリブル、パス、守備、スピード、スタミナ
+ */
+function buildPlayerHexagonChartSvg(attrs) {
+  const axes = [
+    { key: 'finishing', label: '決定力', val: attrs.finishing || 50, angleDeg: -90 },
+    { key: 'dribbling', label: 'ドリブル', val: attrs.dribbling || 50, angleDeg: -30 },
+    { key: 'passing',   label: 'パス',     val: attrs.passing   || 50, angleDeg: 30 },
+    { key: 'defending', label: '守備',     val: attrs.defending || 50, angleDeg: 90 },
+    { key: 'pace',      label: 'スピード', val: attrs.pace      || 50, angleDeg: 150 },
+    { key: 'stamina',   label: 'スタミナ', val: attrs.stamina   || 50, angleDeg: -150 }
+  ];
+
+  const cx = 160;
+  const cy = 116;
+  const maxR = 64;
+  const levels = [0.25, 0.5, 0.75, 1.0];
+
+  const getPoint = (angleDeg, r) => {
+    const rad = (angleDeg * Math.PI) / 180;
+    return {
+      x: +(cx + r * Math.cos(rad)).toFixed(1),
+      y: +(cy + r * Math.sin(rad)).toFixed(1)
+    };
+  };
+
+  // 同心正六角形グリッド
+  const gridPolygons = levels.map(lv => {
+    const pts = axes.map(a => {
+      const pt = getPoint(a.angleDeg, maxR * lv);
+      return `${pt.x},${pt.y}`;
+    }).join(' ');
+    const isOuter = lv === 1.0;
+    return `<polygon points="${pts}" class="${isOuter ? 'hex-grid-outer' : 'hex-grid-inner'}" />`;
+  }).join('');
+
+  // 中心から各頂点への軸線
+  const axisLines = axes.map(a => {
+    const pt = getPoint(a.angleDeg, maxR);
+    return `<line x1="${cx}" y1="${cy}" x2="${pt.x}" y2="${pt.y}" class="hex-axis-line" />`;
+  }).join('');
+
+  // 選手の能力値ポリゴンと頂点ドット
+  const valPoints = axes.map(a => {
+    const ratio = clamp(a.val / 100, 0.12, 1.0);
+    return { ...a, pt: getPoint(a.angleDeg, maxR * ratio) };
+  });
+
+  const dataPolyPts = valPoints.map(v => `${v.pt.x},${v.pt.y}`).join(' ');
+  const dataDots = valPoints.map(v => {
+    const tier = getStatTierClass(v.val);
+    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.5" class="hex-data-dot ${tier.valClass}" />`;
+  }).join('');
+
+  // ラベルと数値の配置
+  const labelsSvg = axes.map(a => {
+    const tier = getStatTierClass(a.val);
+    let lx = cx;
+    let lyLabel = cy;
+    let lyVal = cy;
+    let anchor = 'middle';
+
+    if (a.angleDeg === -90) {
+      // 上：決定力
+      lx = cx;
+      lyLabel = cy - maxR - 23;
+      lyVal = cy - maxR - 8;
+      anchor = 'middle';
+    } else if (a.angleDeg === 90) {
+      // 下：守備
+      lx = cx;
+      lyLabel = cy + maxR + 15;
+      lyVal = cy + maxR + 31;
+      anchor = 'middle';
+    } else if (a.angleDeg === -30) {
+      // 右上：ドリブル
+      const outer = getPoint(a.angleDeg, maxR);
+      lx = outer.x + 10;
+      lyLabel = outer.y - 5;
+      lyVal = outer.y + 11;
+      anchor = 'start';
+    } else if (a.angleDeg === 30) {
+      // 右下：パス
+      const outer = getPoint(a.angleDeg, maxR);
+      lx = outer.x + 10;
+      lyLabel = outer.y - 3;
+      lyVal = outer.y + 13;
+      anchor = 'start';
+    } else if (a.angleDeg === 150) {
+      // 左下：スピード
+      const outer = getPoint(a.angleDeg, maxR);
+      lx = outer.x - 10;
+      lyLabel = outer.y - 3;
+      lyVal = outer.y + 13;
+      anchor = 'end';
+    } else if (a.angleDeg === -150) {
+      // 左上：スタミナ
+      const outer = getPoint(a.angleDeg, maxR);
+      lx = outer.x - 10;
+      lyLabel = outer.y - 5;
+      lyVal = outer.y + 11;
+      anchor = 'end';
+    }
+
+    return `
+      <g class="hex-label-group">
+        <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
+        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tier.valClass}">${a.val}</text>
+      </g>
+    `;
+  }).join('');
+
+  return `
+    <div class="profile-hexagon-wrap">
+      <svg viewBox="0 0 320 232" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
+        ${gridPolygons}
+        ${axisLines}
+        <polygon points="${dataPolyPts}" class="hex-data-polygon" />
+        ${dataDots}
+        ${labelsSvg}
+      </svg>
+    </div>
+  `;
+}
+
+/**
  * 選手詳細プロフィールモーダル（スカウティングシート風UI）を開いて描画する
  */
 function openPlayerProfileModal(playerId) {
@@ -6796,53 +6935,24 @@ function openPlayerProfileModal(playerId) {
     `;
   }
 
-  // 5大能力パラメータ定義（決定力・パス・スピード・守備・スタミナ）
-  const paramItems = [
-    { label: '決定力（Finishing）', val: attrs.finishing },
-    { label: 'パス（Passing）', val: attrs.passing },
-    { label: 'スピード（Pace）', val: attrs.pace },
-    { label: '守備（Defending）', val: attrs.defending },
-    { label: 'スタミナ（Stamina）', val: attrs.stamina }
-  ];
-
-  const statRowsHtml = paramItems.map(item => {
-    const tier = getStatTierClass(item.val);
-    const clampedVal = clamp(item.val, 5, 100);
-    return `
-      <div class="profile-stat-row">
-        <span class="profile-stat-label">${item.label}</span>
-        <span class="profile-stat-val ${tier.valClass}">${item.val}</span>
-        <div class="profile-stat-bar-bg">
-          <div class="profile-stat-bar-fill ${tier.barClass}" style="width: ${clampedVal}%;"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
+  const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs);
 
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
       <div class="profile-section-grid">
-        <!-- 左：5大パラメータバー（80以上:緑 / 70台:黄 / 60台:灰）＆ 成長タイプ・特徴タグ -->
-        <div class="profile-box">
+        <!-- 左：6大能力六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ） -->
+        <div class="profile-box profile-box-hexagon">
           <div class="profile-box-header">
             <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
             <span class="profile-ovr-badge">OVR ${baseOvr}</span>
           </div>
 
-          <div class="profile-stat-rows">
-            ${statRowsHtml}
-          </div>
-
-          <div class="profile-box-header" style="margin-top: 6px;">
-            <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
-          </div>
-          <div class="profile-traits-wrap">
-            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
-          </div>
+          ${hexagonChartHtml}
         </div>
 
-        <!-- 右：複数ポジション適性マトリクス -->
+        <!-- 右：複数ポジション適性マトリクス ＆ 選手特徴 -->
         <div class="profile-box">
           <div class="profile-box-header">
             <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
@@ -6861,6 +6971,13 @@ function openPlayerProfileModal(playerId) {
               <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
             </div>
             ${currentSlotBanner}
+          </div>
+
+          <div class="profile-box-header" style="margin-top: 6px;">
+            <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
+          </div>
+          <div class="profile-traits-wrap">
+            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
           </div>
         </div>
       </div>

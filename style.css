@@ -2514,6 +2514,92 @@ body {
   background-color: #95a5a6;
 }
 
+/* 六角形能力レーダーチャート（SVG） */
+.profile-box-hexagon {
+  justify-content: space-between;
+}
+
+.profile-hexagon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.profile-hexagon-svg {
+  width: 100%;
+  max-width: 310px;
+  height: auto;
+  overflow: visible;
+  display: block;
+}
+
+.hex-grid-outer {
+  fill: rgba(20, 23, 27, 0.75);
+  stroke: #3d444d;
+  stroke-width: 1.2;
+}
+
+.hex-grid-inner {
+  fill: none;
+  stroke: #2a3038;
+  stroke-width: 1;
+  stroke-dasharray: 2, 2;
+}
+
+.hex-axis-line {
+  stroke: #2d333b;
+  stroke-width: 1;
+}
+
+.hex-data-polygon {
+  fill: rgba(46, 204, 113, 0.28);
+  stroke: var(--accent-green);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.hex-data-dot {
+  fill: var(--accent-green);
+  stroke: #16191d;
+  stroke-width: 1.5;
+}
+
+.hex-data-dot.stat-mid {
+  fill: var(--accent-gold);
+}
+
+.hex-data-dot.stat-low {
+  fill: #95a5a6;
+}
+
+.hex-label-name {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+.hex-label-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  fill: #c9d1d9;
+}
+
+.hex-label-val.stat-high {
+  fill: var(--accent-green);
+}
+
+.hex-label-val.stat-mid {
+  fill: var(--accent-gold);
+}
+
+.hex-label-val.stat-low {
+  fill: #95a5a6;
+}
+
 .profile-pos-fit-list {
   display: flex;
   flex-direction: column;
