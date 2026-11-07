@@ -4148,12 +4148,13 @@ function openMatchPrecheckModal() {
           <div class="precheck-card-subhead mono">TACTICS & STRENGTH</div>
           <div class="precheck-tactics-info-grid">
             <div class="precheck-tactics-item">
-              <span class="precheck-label">基本陣形:</span>
+              <span class="precheck-label">陣形:</span>
               <strong class="mono precheck-val-highlight">${formationKey}</strong>
             </div>
             <div class="precheck-tactics-item">
               <span class="precheck-label">戦術:</span>
-              <span class="precheck-tag">${tacticDef.name}</span>
+              <span class="precheck-tag precheck-tag-full">${tacticDef.name}</span>
+              <span class="precheck-tag precheck-tag-short">${tacticDef.name.split('（')[0].split('(')[0]}</span>
               <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
             </div>
           </div>

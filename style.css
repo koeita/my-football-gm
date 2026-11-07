@@ -9964,93 +9964,171 @@ body.main-menu-active {
   font-weight: 800;
 }
 
+.precheck-tag-short {
+  display: none;
+}
+
 @media (max-width: 680px) {
+  .precheck-tag-full {
+    display: none !important;
+  }
+  .precheck-tag-short {
+    display: inline-block !important;
+  }
   .match-precheck-card {
     width: 96vw;
     max-width: 440px;
-    height: 86dvh;
-    max-height: 92dvh;
+    height: 92dvh;
+    max-height: 94dvh;
   }
   .precheck-modal-header {
-    padding: 8px 12px;
+    padding: 7px 12px;
   }
   .precheck-modal-body {
-    padding: 8px 10px;
+    padding: 6px 10px;
     gap: 6px;
     overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
     justify-content: space-between;
+    flex: 1;
   }
   .precheck-body-grid {
     display: flex;
     flex-direction: column;
     gap: 6px;
     justify-content: space-between;
+    flex: 1;
+    min-height: 0;
+  }
+  /* 上段：対戦カードと戦術・戦力を左右2分割でコンパクトに横並び */
+  .precheck-left-col {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    flex: none !important;
+    height: auto !important;
   }
   .precheck-hero-card {
-    padding: 6px 10px;
-    gap: 4px;
+    padding: 5px 6px;
+    gap: 3px;
     flex: none;
-  }
-  .precheck-club-name {
-    font-size: 13px;
-    max-width: 105px;
-  }
-  .precheck-club-ovr {
-    font-size: 10px;
-  }
-  .precheck-vs-badge {
-    font-size: 13px;
-  }
-  .precheck-tactics-bar {
-    padding: 6px 10px;
-    gap: 4px;
-    flex: none;
-  }
-  .precheck-power-metrics {
-    gap: 4px;
-  }
-  .power-metric-box {
-    padding: 2px 4px;
-  }
-  .precheck-starters-card {
-    padding: 6px 8px;
-    gap: 4px;
-    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
   }
-  .precheck-starters-head {
+  .precheck-card-subhead {
+    font-size: 9px;
+  }
+  .precheck-club-name {
+    font-size: 11px;
+    max-width: 75px;
+  }
+  .precheck-club-ovr {
+    font-size: 9px;
+  }
+  .precheck-club-ovr strong {
+    font-size: 11px;
+  }
+  .precheck-venue-tag {
+    font-size: 8px;
+    padding: 0 3px;
+  }
+  .precheck-vs-badge {
+    font-size: 11px;
+    padding: 0 1px;
+  }
+  .precheck-tactics-bar {
+    padding: 5px 6px;
+    gap: 3px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .precheck-tactics-info-grid {
+    gap: 2px;
+  }
+  .precheck-label {
+    font-size: 9.5px;
+  }
+  .precheck-val-highlight {
+    font-size: 11px;
+  }
+  .precheck-tag {
+    font-size: 8px;
+    padding: 1px 3px;
+  }
+  .precheck-tactics-aim {
+    display: none !important;
+  }
+  .precheck-power-metrics {
+    gap: 2px;
+  }
+  .power-metric-box {
+    padding: 1px 2px;
+  }
+  .power-lbl {
+    font-size: 7.5px;
+  }
+  .power-val {
     font-size: 10px;
+  }
+
+  /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示） */
+  .precheck-right-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .precheck-starters-card {
+    padding: 6px 8px;
+    gap: 3px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 0;
+  }
+  .precheck-starters-head {
+    font-size: 9.5px;
+    padding-bottom: 2px;
   }
   .precheck-starters-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3px 6px;
-    align-content: space-between;
-    flex: 1;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+    gap: 1px !important;
+    min-height: 0 !important;
   }
   .precheck-player-row {
-    grid-template-columns: 28px 18px 1fr 28px 34px;
-    padding: 2.5px 4px;
-    font-size: 10px;
-    gap: 2px;
+    grid-template-columns: 30px 20px 1fr 34px 44px;
+    padding: 2px 5px;
+    font-size: 11px;
+    gap: 4px;
+    line-height: 1.25;
   }
   .precheck-pos-badge {
     font-size: 9px;
-    padding: 0 1px;
+    padding: 1px 2px;
   }
   .precheck-num {
-    font-size: 9.5px;
+    font-size: 10px;
   }
   .precheck-name {
-    font-size: 10px;
+    font-size: 11px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .precheck-ovr {
-    font-size: 10px;
+    font-size: 11px;
   }
   .precheck-sta {
-    font-size: 9px;
+    font-size: 9.5px;
   }
   .precheck-modal-footer {
     padding: 8px 12px;
