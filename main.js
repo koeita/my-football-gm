@@ -5181,8 +5181,14 @@ function setTeamTactic(tacticKey) {
     btn.classList.toggle('active', btn.dataset.tactic === normalizedKey);
   });
 
-  document.getElementById('current-tactic-badge').textContent = TACTICS_DEFINITIONS[normalizedKey].badge;
-  document.getElementById('current-tactic-desc').textContent = TACTICS_DEFINITIONS[normalizedKey].desc;
+  document.querySelectorAll('.tactics-guide-item[data-tactic-card]').forEach(card => {
+    card.classList.toggle('active-guide', card.dataset.tacticCard === normalizedKey);
+  });
+
+  const badgeEl = document.getElementById('current-tactic-badge');
+  if (badgeEl) badgeEl.textContent = TACTICS_DEFINITIONS[normalizedKey].badge;
+  const descEl = document.getElementById('current-tactic-desc');
+  if (descEl) descEl.textContent = TACTICS_DEFINITIONS[normalizedKey].desc;
 
   renderRoster();
 }
