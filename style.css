@@ -6648,3 +6648,100 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     border-bottom: 2px solid #33383e !important;
   }
 }
+
+/* ==========================================================================
+   モバイル：固定列のコンパクト化（横スクロール可能範囲を拡大）
+   選手一覧：適性 64px→42px / 選手名 152px→112px（背番号を名前上に小さく積む）
+   順位表　：順位 42px→32px / クラブ名 130px→116px
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* --- 選手一覧 --- */
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    padding: 4px 1px !important;
+    font-size: 11px !important;
+  }
+
+  .roster-table td.col-pos .pos-sub-text {
+    font-size: 7.5px !important;
+    max-width: 40px !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    left: 42px !important;
+    width: 112px !important;
+    min-width: 112px !important;
+    max-width: 112px !important;
+    padding: 4px 4px 4px 4px !important;
+  }
+
+  .roster-table td.col-name .player-name-link {
+    display: grid !important;
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 4px !important;
+    row-gap: 0 !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .roster-table td.col-name .player-avatar.table-avatar {
+    grid-row: 1 / span 2 !important;
+    grid-column: 1 !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+  }
+
+  .roster-table td.col-name .roster-squad-num {
+    grid-row: 1 !important;
+    grid-column: 2 !important;
+    font-size: 8.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  .roster-table td.col-name .player-name-text {
+    grid-row: 2 !important;
+    grid-column: 2 !important;
+    display: block !important;
+    min-width: 0 !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* 名前セル内のバッジ類（SUB-POS・負傷等）は固定列幅を圧迫するため非表示（詳細はプロフィールで確認） */
+  .roster-table td.col-name .sub-badge {
+    display: none !important;
+  }
+
+  /* --- 順位表 --- */
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding: 6px 1px !important;
+  }
+
+  .standings-table th.col-team,
+  .standings-table td.col-team {
+    left: 32px !important;
+    width: 116px !important;
+    min-width: 116px !important;
+    max-width: 116px !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    letter-spacing: -0.02em !important;
+  }
+}

@@ -5977,7 +5977,7 @@ function renderRoster() {
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
-            ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
+            ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted roster-squad-num">#${p.squadNumber || '-'}</span> <span class="player-name-text">${p.name}</span>
           </button>
           ${fitBadge}${injuryBadge}${refusedBadge}${moraleBadge}
         </td>
