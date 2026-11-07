@@ -2263,12 +2263,16 @@ body {
 .profile-modal-card {
   max-width: 720px;
   width: 95vw;
+  height: 640px;
+  max-height: 88vh;
   border: 1px solid #3a3f45;
   border-top: 3px solid var(--accent-green);
   background-color: #24282c;
   border-radius: 4px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .profile-modal-header {
@@ -2411,6 +2415,9 @@ body {
   flex-direction: column;
   gap: 14px;
   background-color: #24282c;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .profile-section-grid {
@@ -5738,6 +5745,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .intro-modal-card {
     width: 92vw !important;
     max-width: 92vw !important;
+    height: 85vh !important;
     max-height: 85vh !important;
     margin: auto;
     display: flex;
