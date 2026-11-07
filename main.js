@@ -3792,13 +3792,11 @@ function startMatchLiveTimer() {
       }
 
       const btnSummaryFooter = document.getElementById('btn-match-to-summary-footer');
-      if (btnSummaryFooter) btnSummaryFooter.classList.remove('hidden');
-
-      matchLiveState.autoSummaryTimeoutId = setTimeout(() => {
-        if (matchLiveState.status === 'FULLTIME') {
-          transitionToMatchSummary();
-        }
-      }, 1100);
+      if (btnSummaryFooter) {
+        btnSummaryFooter.classList.remove('hidden');
+        btnSummaryFooter.classList.add('btn-match-to-summary-pulse');
+      }
+      // ユーザーの指示：ボタンを押すまで自動で遷移せず待機する
     }
   }, baseInterval);
 }
@@ -3844,7 +3842,7 @@ function transitionToMatchSummary() {
   if (phasePitch) phasePitch.classList.add('hidden');
   if (phaseSummary) phaseSummary.classList.remove('hidden');
   if (btnSkip) btnSkip.classList.add('hidden');
-  if (btnClose) btnClose.classList.remove('hidden');
+  if (btnClose) btnClose.classList.add('hidden'); // ユーザー指示：マッチサマリー右上の✕ボタンをなくす
   if (!summaryBody || !matchLiveState.matchData) return;
 
   const md = matchLiveState.matchData;
@@ -4013,6 +4011,9 @@ function closeMatchEventModal() {
   const modal = document.getElementById('match-event-modal');
   if (modal) modal.classList.add('hidden');
 
+  document.documentElement.classList.remove('modal-locked');
+  document.body.classList.remove('modal-locked');
+
   const cb = matchLiveState.onComplete;
   matchLiveState.onComplete = null;
   if (typeof cb === 'function') {
@@ -4023,11 +4024,165 @@ function closeMatchEventModal() {
 }
 
 /**
+ * 試合前 作戦最終確認モーダルの開閉
+ */
+function closeMatchPrecheckModal() {
+  const modal = document.getElementById('match-precheck-modal');
+  if (modal) modal.classList.add('hidden');
+  document.documentElement.classList.remove('modal-locked');
+  document.body.classList.remove('modal-locked');
+}
+
+function openMatchPrecheckModal() {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
+  const currentDay = getCurrentCalendarDay();
+  if (!currentDay || !currentDay.isMatchDay || currentDay.played) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  ensureValidSquadAndStarters(playerClub);
+
+  const modal = document.getElementById('match-precheck-modal');
+  const body = document.getElementById('precheck-modal-body');
+  const weekBadge = document.getElementById('precheck-week-badge');
+  if (!modal || !body) {
+    playCurrentMatchday(false);
+    return;
+  }
+
+  if (weekBadge) weekBadge.textContent = `第${currentDay.matchWeek}節 公式戦`;
+
+  // 対戦相手情報
+  let opponentClub = null;
+  let isHome = true;
+  if (currentDay.matchFixture) {
+    const myMatch = currentDay.matchFixture.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+    if (myMatch) {
+      isHome = myMatch.homeId === playerClub.id;
+      const oppId = isHome ? myMatch.awayId : myMatch.homeId;
+      opponentClub = getClubById(oppId);
+    }
+  }
+
+  const oppName = opponentClub ? opponentClub.name : '対戦相手';
+  const oppOvr = opponentClub
+    ? Math.round(opponentClub.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / 11)
+    : 70;
+
+  const formationKey = playerClub.formation || '4-3-3';
+  const formationDef = getClubFormationDef(playerClub);
+  const tacticKey = normalizeTacticKey(playerClub.tactic);
+  const tacticDef = TACTICS_DEFINITIONS[tacticKey] || TACTICS_DEFINITIONS.possession;
+
+  // 自チームスタメン情報
+  const starters = playerClub.players.filter(p => p.isStarter);
+  const homeAvgOvr = starters.length > 0
+    ? Math.round(starters.reduce((s, p) => s + getPlayerOverallRating(p), 0) / starters.length)
+    : 70;
+
+  // 各スロットの選手行
+  let startersRowsHtml = '';
+  formationDef.slots.forEach(slot => {
+    const p = playerClub.players.find(x => x.isStarter && x.slotIndex === slot.slotIndex);
+    if (!p) return;
+    const fitInfo = getPositionFitInfo(p, slot.pos);
+    const effOvr = Math.round(getPlayerOverallRating(p) * fitInfo.factor);
+    const roleGroup = POS_ROLE_GROUP[slot.pos] || 'MF';
+    const isOutOfPos = fitInfo.type !== 'main';
+
+    let fitBadge = '';
+    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(52,152,219,0.2);color:#3498db;font-size:9px;">SUB</span>';
+    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">-20%</span>';
+
+    const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
+
+    startersRowsHtml += `
+      <div class="precheck-player-row ${isOutOfPos ? 'is-warn' : ''}">
+        <span class="precheck-pos-badge pos-${roleGroup}">${slot.pos}</span>
+        <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
+        <span class="precheck-name">${p.name} ${fitBadge}</span>
+        <span class="precheck-ovr mono">${effOvr}</span>
+        <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
+      </div>
+    `;
+  });
+
+  body.innerHTML = `
+    <!-- 対戦カード概要 -->
+    <div class="precheck-hero-card">
+      <div class="precheck-vs-row">
+        <div class="precheck-club-box is-player">
+          <span class="precheck-club-name">${playerClub.name}</span>
+          <span class="precheck-club-ovr mono">OVR ${homeAvgOvr} (${isHome ? 'HOME' : 'AWAY'})</span>
+        </div>
+        <div class="precheck-vs-badge">VS</div>
+        <div class="precheck-club-box">
+          <span class="precheck-club-name">${oppName}</span>
+          <span class="precheck-club-ovr mono">OVR ${oppOvr} (${isHome ? 'AWAY' : 'HOME'})</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 自チーム作戦設定 -->
+    <div class="precheck-tactics-bar">
+      <div class="precheck-tactics-item">
+        <span style="color:var(--text-muted);">陣形:</span>
+        <strong style="color:#fff;" class="mono">${formationKey}</strong>
+      </div>
+      <div class="precheck-tactics-item">
+        <span style="color:var(--text-muted);">戦術:</span>
+        <span class="precheck-tag">${tacticDef.name}</span>
+        <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+      </div>
+    </div>
+
+    <!-- スタメン11名確認 -->
+    <div class="precheck-starters-card">
+      <div class="precheck-starters-head">
+        <span>先発メンバー（11名）</span>
+        <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
+      </div>
+      <div class="precheck-starters-list">
+        ${startersRowsHtml}
+      </div>
+    </div>
+  `;
+
+  // イベントバインド
+  const btnClose = document.getElementById('btn-close-precheck-modal');
+  if (btnClose) {
+    btnClose.onclick = closeMatchPrecheckModal;
+  }
+  const btnGotoRoster = document.getElementById('btn-precheck-goto-roster');
+  if (btnGotoRoster) {
+    btnGotoRoster.onclick = () => {
+      closeMatchPrecheckModal();
+      switchTab('roster');
+    };
+  }
+  const btnStartMatch = document.getElementById('btn-precheck-start-match');
+  if (btnStartMatch) {
+    btnStartMatch.onclick = () => {
+      closeMatchPrecheckModal();
+      playCurrentMatchday(false);
+    };
+  }
+
+  document.documentElement.classList.add('modal-locked');
+  document.body.classList.add('modal-locked');
+  modal.classList.remove('hidden');
+}
+
+/**
  * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
  */
 function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
   clearMatchLiveTimers();
   gameState.isSimulating = true;
+
+  document.documentElement.classList.add('modal-locked');
+  document.body.classList.add('modal-locked');
 
   matchLiveState.minute = 0;
   matchLiveState.status = 'FIRST_HALF';
@@ -7040,10 +7195,10 @@ function renderMatchLog() {
       container.innerHTML = myMatchHtml + otherMatchesHtml;
     }
 
-    // MATCHDAY内のキックオフボタンのイベントバインド
+    // MATCHDAY内のキックオフボタンのイベントバインド（試合前に作戦最終確認を開く）
     const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
     if (panelKickoffBtn) {
-      panelKickoffBtn.addEventListener('click', () => playCurrentMatchday(false));
+      panelKickoffBtn.addEventListener('click', () => openMatchPrecheckModal());
     }
     return;
   }
@@ -9654,7 +9809,7 @@ function initGame() {
   }
   const btnPlayMatch = document.getElementById('btn-play-match');
   if (btnPlayMatch) {
-    btnPlayMatch.addEventListener('click', () => playCurrentMatchday(false));
+    btnPlayMatch.addEventListener('click', () => openMatchPrecheckModal());
   }
   const btnPauseAdvance = document.getElementById('btn-pause-advance');
   if (btnPauseAdvance) {
@@ -9662,7 +9817,7 @@ function initGame() {
   }
   const btnPlayNext = document.getElementById('btn-play-next');
   if (btnPlayNext) {
-    btnPlayNext.addEventListener('click', () => playCurrentMatchday(false));
+    btnPlayNext.addEventListener('click', () => openMatchPrecheckModal());
   }
   document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
   document.getElementById('btn-next-season').addEventListener('click', startNextSeason);

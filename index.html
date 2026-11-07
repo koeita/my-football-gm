@@ -1126,6 +1126,30 @@
     </div>
   </div>
 
+  <!-- 試合前 作戦最終確認モーダル -->
+  <div id="match-precheck-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="precheck-modal-title">
+    <div class="modal-card match-precheck-card">
+      <div class="precheck-modal-header">
+        <div class="precheck-header-left">
+          <span class="matchday-badge-big mono" id="precheck-week-badge">第1節 公式戦</span>
+          <h2 class="precheck-modal-title" id="precheck-modal-title">作戦最終確認</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-precheck-modal" aria-label="閉じる">✕</button>
+      </div>
+      <div class="precheck-modal-body" id="precheck-modal-body">
+        <!-- JSで対戦カード、陣形、戦術、スタメン一覧を動的描画 -->
+      </div>
+      <div class="precheck-modal-footer">
+        <button type="button" class="btn btn-secondary btn-precheck-edit" id="btn-precheck-goto-roster">
+          作戦・編成を変更
+        </button>
+        <button type="button" class="btn btn-primary btn-kickoff-pulse btn-precheck-start" id="btn-precheck-start-match">
+          この作戦で試合開始 ▶
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 試合経過＆マッチサマリー（2段階）モーダル -->
   <div id="match-event-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="match-modal-week-badge">
     <div class="modal-card match-event-modal-card">
@@ -1138,7 +1162,6 @@
         </div>
         <div class="match-modal-header-right">
           <button type="button" class="btn btn-secondary btn-sm mono" id="btn-match-skip-to-summary" title="試合経過をスキップして結果サマリーを表示">⏩ 結果へスキップ</button>
-          <button type="button" class="btn-modal-close mono hidden" id="btn-close-match-modal" aria-label="閉じる">✕</button>
         </div>
       </div>
 
@@ -1236,7 +1259,7 @@
         <div class="match-summary-body" id="match-summary-body"></div>
         <div class="match-summary-footer">
           <button type="button" class="btn btn-primary btn-match-finish" id="btn-match-summary-ok">
-            次の日程へ進む (OK)
+            次の日程へ進む
           </button>
         </div>
       </div>
