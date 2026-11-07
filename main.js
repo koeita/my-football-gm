@@ -1472,6 +1472,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     primaryPosition: pos,
     secondaryPositions,
     nationality,
+    avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
     preferredFoot,
     height,
     squadNumber: defaultSquadNum,
@@ -1547,6 +1548,7 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     primaryPosition: pos,
     secondaryPositions,
     nationality,
+    avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
     preferredFoot,
     height,
     squadNumber: null,
@@ -5460,7 +5462,7 @@ function renderTopScorers() {
         <td class="col-pos">${formatPlayerPositionsHtml(item.player)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${item.player.id}" title="クリックで選手詳細プロフィールを表示">
-            ${item.player.name}
+            ${getPlayerAvatarHtml(item.player, null, 'avatar-sm table-avatar')}${item.player.name}
           </button>
         </td>
         <td class="col-team">${item.clubName}</td>
@@ -5470,6 +5472,7 @@ function renderTopScorers() {
       </tr>
     `;
   }).join('');
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 
 /**
@@ -5693,21 +5696,27 @@ function renderTacticalBoard() {
 
       return `
         <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
-          <div class="pitch-node-top">
-            <span class="pitch-node-pos">${sl.pos}</span>
-            <span class="pitch-node-ovr">OVR ${effOvr}</span>
+          <div class="pitch-node-avatar-wrap">
+            ${getPlayerAvatarHtml(starter, playerClub, 'pitch-node-avatar', 48)}
           </div>
-          <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
-            #${starter.squadNumber || '-'} ${starter.name}
-          </div>
-          <div class="pitch-node-meta">
-            <span class="pitch-node-pref">${posDisplay}</span>
-            ${fitBadgeHtml}
-            ${injuryBadgeHtml}
+          <div class="pitch-node-body">
+            <div class="pitch-node-top">
+              <span class="pitch-node-pos">${sl.pos}</span>
+              <span class="pitch-node-ovr">OVR ${effOvr}</span>
+            </div>
+            <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
+              <span class="pitch-node-name-text">#${starter.squadNumber || '-'} ${starter.name}</span>
+            </div>
+            <div class="pitch-node-meta">
+              <span class="pitch-node-pref">${posDisplay}</span>
+              ${fitBadgeHtml}
+              ${injuryBadgeHtml}
+            </div>
           </div>
         </div>
       `;
     }).join('');
+    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(pitchLayer);
   }
 
   // 右側：控え（ベンチ）選手ワンクリック交代リスト描画
@@ -5757,15 +5766,20 @@ function renderTacticalBoard() {
 
         return `
           <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-top-row">
-              <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-              <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
+            <div class="bench-sub-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
             </div>
-            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-              #${bp.squadNumber || '-'} ${bp.name}
-            </div>
-            <div class="bench-sub-bottom-row">
-              ${fitTag}
+            <div class="bench-sub-info">
+              <div class="bench-sub-top-row">
+                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
+                <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
+              </div>
+              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              </div>
+              <div class="bench-sub-bottom-row">
+                ${fitTag}
+              </div>
             </div>
           </div>
         `;
@@ -5802,21 +5816,27 @@ function renderTacticalBoard() {
 
         return `
           <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-top-row">
-              <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-              <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+            <div class="bench-sub-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
             </div>
-            <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-              #${bp.squadNumber || '-'} ${bp.name}
-            </div>
-            <div class="bench-sub-bottom-row">
-              ${fitTag}
+            <div class="bench-sub-info">
+              <div class="bench-sub-top-row">
+                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
+                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+              </div>
+              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
+                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              </div>
+              <div class="bench-sub-bottom-row">
+                ${fitTag}
+              </div>
             </div>
           </div>
         `;
       }).join('');
     }
   }
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(benchListEl);
 }
 
 /**
@@ -5957,7 +5977,7 @@ function renderRoster() {
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
-            <span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
+            ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted">#${p.squadNumber || '-'}</span> ${p.name}
           </button>
           ${fitBadge}${injuryBadge}${refusedBadge}${moraleBadge}
         </td>
@@ -5986,6 +6006,7 @@ function renderRoster() {
       </tr>
     `;
   }).join('');
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 
 /**
@@ -6150,7 +6171,7 @@ function renderMarket() {
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
-            ${p.name}
+            ${getPlayerAvatarHtml(p, c, 'avatar-sm table-avatar')}${p.name}
           </button>
           ${bargainBadge}${myClubBadge}${failedBadge}
         </td>
@@ -6166,6 +6187,7 @@ function renderMarket() {
       </tr>
     `;
   }).join('');
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 
 /**
@@ -6209,7 +6231,7 @@ function renderYouthSquad() {
         <td class="col-pos"><span class="pos-tag pos-${y.pos}">${y.pos}</span></td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="詳細プロフィールを表示">
-            ${y.name}
+            ${getPlayerAvatarHtml(y, playerClub, 'avatar-sm table-avatar')}${y.name}
           </button>
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>
@@ -6223,6 +6245,7 @@ function renderYouthSquad() {
       </tr>
     `;
   }).join('');
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 /**
  * GM業務タスク一覧（必須 CRITICAL / 推奨 RECOMMENDED / 任意 OPTIONAL）を描画する
@@ -6585,6 +6608,7 @@ function renderFacilitiesAndYouth() {
           <div class="youth-card-top">
             <div class="youth-name-wrap">
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                ${getPlayerAvatarHtml(y, playerClub, 'avatar-md')}
                 ${formatPlayerPositionsHtml(y)}
                 <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="クリックで選手詳細プロフィールを表示">
                   ${y.name}
@@ -6643,6 +6667,7 @@ function renderFacilitiesAndYouth() {
         </div>
       `;
     }).join('');
+    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(youthGrid);
   }
 }
 
@@ -6712,6 +6737,14 @@ function openPlayerProfileModal(playerId) {
 
   const squadNumEl = document.getElementById('profile-squad-num');
   if (squadNumEl) squadNumEl.textContent = squadNumText;
+
+  // スカウティングレポート用 大型ドット絵アバター（64x64 / 2倍スケール描画）
+  const avatarCanvasEl = document.getElementById('profile-avatar-canvas');
+  if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
+    const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
+    const avatarClub = findAvatarClubForPlayer(p) || (isCandidate ? playerClub : null);
+    generatePlayerAvatar(p, avatarCanvasEl, avatarClub);
+  }
 
   const clubLabelEl = document.getElementById('profile-club-label');
   if (clubLabelEl) clubLabelEl.textContent = `SCOUTING REPORT — ${clubName}`;

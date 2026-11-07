@@ -9,13 +9,34 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
 
     def setUp(self):
         self.main_js_path = os.path.join(ROOT_DIR, 'main.js')
+        self.avatar_js_path = os.path.join(ROOT_DIR, 'avatar.js')
         self.style_css_path = os.path.join(ROOT_DIR, 'style.css')
         self.index_html_path = os.path.join(ROOT_DIR, 'index.html')
 
     def test_files_exist(self):
         self.assertTrue(os.path.exists(self.main_js_path), "main.js exists")
+        self.assertTrue(os.path.exists(self.avatar_js_path), "avatar.js exists")
         self.assertTrue(os.path.exists(self.style_css_path), "style.css exists")
         self.assertTrue(os.path.exists(self.index_html_path), "index.html exists")
+
+    def test_pixel_avatar_generator_structure(self):
+        """ドット絵顔ジェネレーターの仕様（遺伝子要素・描画関数・拡大サイズ・鮮明化CSS・プロフィールCanvas）が満たされていること"""
+        with open(self.avatar_js_path, 'r', encoding='utf-8') as f:
+            avatar_js = f.read()
+        with open(self.index_html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        with open(self.style_css_path, 'r', encoding='utf-8') as f:
+            css = f.read()
+
+        self.assertEqual(css.count('{'), css.count('}'), "style.css braces must be balanced")
+        self.assertEqual(avatar_js.count('{'), avatar_js.count('}'), "avatar.js braces must be balanced")
+        self.assertIn('function generateAvatarData', avatar_js)
+        self.assertIn('function generatePlayerAvatar', avatar_js)
+        self.assertIn('canvasSize = 48', avatar_js)
+        self.assertIn('image-rendering: pixelated;', css)
+        self.assertIn('image-rendering: crisp-edges;', css)
+        self.assertIn('#3a3f45', css)
+        self.assertIn('id="profile-avatar-canvas"', html)
 
     def test_no_forbidden_draggable_attribute(self):
         """モバイルスクロールを破壊する draggable='true' が作戦ボード関連要素に含まれていないこと"""

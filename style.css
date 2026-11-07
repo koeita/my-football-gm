@@ -5801,14 +5801,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     left: 64px !important;
     z-index: 10 !important;
     background: #161a1f !important;
-    min-width: 110px !important;
-    max-width: 110px !important;
-    width: 110px !important;
+    min-width: 152px !important;
+    max-width: 152px !important;
+    width: 152px !important;
     box-sizing: border-box !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    padding: 6px 8px !important;
+    padding: 5px 8px !important;
     border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 4px 0 8px rgba(0, 0, 0, 0.45) !important;
     -webkit-backface-visibility: hidden !important;
@@ -6218,5 +6218,332 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 100% !important;
     height: 30px !important;
     font-size: 11px !important;
+  }
+}
+
+/* ==========================================================================
+   選手ドット絵アバター（Pixel Avatar）— 拡大・鮮明表示 & カードレイアウト最適化
+   ========================================================================== */
+.player-avatar {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: #1a1d20;
+  border: 1.5px solid #3a3f45;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  vertical-align: middle;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  box-sizing: border-box;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+}
+
+.player-avatar.avatar-xs { width: 24px; height: 24px; }
+.player-avatar.avatar-sm { width: 32px; height: 32px; }
+.player-avatar.avatar-md { width: 38px; height: 38px; }
+
+/* 1. 作戦ボード（ピッチ上ノード）：アバター直径36px〜40px ＋ 横に潰れない整列レイアウト */
+.pitch-node {
+  min-width: 134px;
+  max-width: 152px;
+  padding: 5px 8px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.pitch-node-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.player-avatar.pitch-node-avatar {
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid #3a3f45;
+  border-radius: 50%;
+}
+
+.pitch-node-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.pitch-node-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.pitch-node-name-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  max-width: 100%;
+  padding: 0;
+}
+
+.pitch-node-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pitch-node-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  width: 100%;
+}
+
+/* 2. 控え（ベンチ）選手カード：アバター直径32px〜36px ＋ 横並び情報カード */
+.bench-sub-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 6px 10px;
+}
+
+.bench-sub-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.player-avatar.bench-sub-avatar {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #3a3f45;
+  border-radius: 50%;
+}
+
+.bench-sub-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.bench-sub-info .bench-sub-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.bench-sub-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-left: 0;
+}
+
+.bench-sub-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.bench-sub-info .bench-sub-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+/* 3. 所属選手一覧・各種テーブル：アバター直径30px〜34px ＋ 行高の自然な整列 */
+.player-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  max-width: 100%;
+}
+
+.player-avatar.table-avatar {
+  width: 32px;
+  height: 32px;
+  margin-right: 2px;
+  border: 1.5px solid #3a3f45;
+  border-radius: 50%;
+  position: static;
+}
+
+/* 4. スカウティングレポート：大型アバター＋背番号 */
+.profile-avatar-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-canvas {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #15181b;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 1.5px solid rgba(46, 204, 113, 0.55);
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.08), inset 0 0 10px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  /* モバイル作戦ボード：中央上部に直径36pxのアバター ＋ 下部にポジション・OVR・選手名を美しく整列 */
+  .pitch-node {
+    overflow: visible !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    min-width: 60px !important;
+    max-width: 70px !important;
+    padding: 2px 3px 3px !important;
+    gap: 1px !important;
+  }
+
+  .pitch-node-avatar-wrap {
+    margin-top: -12px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .player-avatar.pitch-node-avatar {
+    position: static !important;
+    transform: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    border: 1.5px solid #3a3f45 !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65) !important;
+  }
+
+  .pitch-node-body {
+    width: 100% !important;
+    align-items: center !important;
+    gap: 1px !important;
+  }
+
+  .pitch-node-top {
+    width: 100% !important;
+    justify-content: space-between !important;
+    padding: 0 1px !important;
+  }
+
+  .pitch-node-name-btn {
+    display: block !important;
+    width: 100% !important;
+    max-width: 64px !important;
+    text-align: center !important;
+  }
+
+  .pitch-node-name-text {
+    display: block !important;
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+  }
+
+  .pitch-node-meta {
+    display: none !important;
+  }
+
+  /* モバイル控え（ベンチ）選手カード：左に32pxアバター ＋ 右にPOS/OVR/名前/適性タグ */
+  .bench-sub-item {
+    width: 128px !important;
+    min-width: 128px !important;
+    max-width: 128px !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+    padding: 4px 6px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+  }
+
+  .player-avatar.bench-sub-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border: 1.5px solid #3a3f45 !important;
+  }
+
+  .bench-sub-info {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    gap: 2px !important;
+    height: 100% !important;
+  }
+
+  .bench-sub-name {
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  .bench-sub-name-text {
+    display: block !important;
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  /* モバイル所属選手一覧テーブル：左に30pxアバター */
+  .player-name-link {
+    gap: 4px !important;
+  }
+
+  .player-avatar.table-avatar {
+    width: 30px !important;
+    height: 30px !important;
+    margin-right: 1px !important;
+    border: 1.5px solid #3a3f45 !important;
+  }
+
+  #youth-squad-tbody .player-avatar.table-avatar {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .profile-avatar-col {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .profile-avatar-canvas {
+    width: 56px;
+    height: 56px;
+  }
+
+  .profile-avatar-col .profile-squad-num {
+    width: 56px !important;
+    height: 24px !important;
+    font-size: 14px !important;
   }
 }
