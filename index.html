@@ -529,8 +529,8 @@
           <div class="panel-header">
             <div class="tactics-header-title-wrap">
               <h2 class="panel-title">戦術設定</h2>
-              <button type="button" class="btn-toggle-tactic-detail mono" id="btn-toggle-tactic-detail" title="解説の表示/非表示">
-                <span>詳細解説</span> <span id="tactic-detail-toggle-icon">▼</span>
+              <button type="button" class="btn-toggle-tactic-detail mono" id="btn-toggle-tactic-detail" title="戦術詳細を表示">
+                <span>戦術詳細 ⓘ</span>
               </button>
             </div>
             <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
@@ -544,6 +544,7 @@
                     <span class="tactic-num mono">1</span>
                     <span class="tactic-name">ポゼッション</span>
                     <span class="tactic-status-pill mono">適用中</span>
+                    <span class="btn-tactic-info" data-tactic-info="possession" title="詳細を表示" aria-label="詳細解説">ⓘ</span>
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-pos">支配率重視</span>
@@ -555,6 +556,7 @@
                     <span class="tactic-num mono">2</span>
                     <span class="tactic-name">ゲーゲンプレス</span>
                     <span class="tactic-status-pill mono">適用中</span>
+                    <span class="btn-tactic-info" data-tactic-info="gegenpress" title="詳細を表示" aria-label="詳細解説">ⓘ</span>
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-red">決定機UP</span>
@@ -566,6 +568,7 @@
                     <span class="tactic-num mono">3</span>
                     <span class="tactic-name">カウンター</span>
                     <span class="tactic-status-pill mono">適用中</span>
+                    <span class="btn-tactic-info" data-tactic-info="counter" title="詳細を表示" aria-label="詳細解説">ⓘ</span>
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-gold">快足速攻</span>
@@ -577,6 +580,7 @@
                     <span class="tactic-num mono">4</span>
                     <span class="tactic-name">ワイドアタック</span>
                     <span class="tactic-status-pill mono">適用中</span>
+                    <span class="btn-tactic-info" data-tactic-info="wingplay" title="詳細を表示" aria-label="詳細解説">ⓘ</span>
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-cyan">両翼クロス</span>
@@ -588,6 +592,7 @@
                     <span class="tactic-num mono">5</span>
                     <span class="tactic-name">ウルトラ守備</span>
                     <span class="tactic-status-pill mono">適用中</span>
+                    <span class="btn-tactic-info" data-tactic-info="parkthebus" title="詳細を表示" aria-label="詳細解説">ⓘ</span>
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-purple">徹底堅守</span>
@@ -596,8 +601,8 @@
                 </button>
               </div>
 
-              <!-- ボタンを押した戦術の詳細カード（選択戦術のみ表示） -->
-              <div class="tactics-guide-grid tactics-guide-grid-5" id="tactics-guide-container">
+              <!-- ボタンを押した戦術の詳細カード（選択戦術のみ表示・初期非表示） -->
+              <div class="tactics-guide-grid tactics-guide-grid-5 hidden" id="tactics-guide-container">
                 <div class="tactics-guide-item active-guide" data-tactic-card="possession">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
@@ -1121,6 +1126,25 @@
             <button type="button" class="btn btn-danger btn-sm" id="btn-reset-all-data">全データ初期化</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 施設・戦術 共通インフォポップアップ モーダル -->
+  <div id="info-popup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="info-popup-title">
+    <div class="modal-card info-popup-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono" id="info-popup-tag">INFO</span>
+          <h2 class="info-popup-title" id="info-popup-title">詳細情報</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-info-popup" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="info-popup-body" id="info-popup-body">
+        <!-- JSで動的生成 -->
+      </div>
+      <div class="info-popup-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-info-popup">閉じる</button>
       </div>
     </div>
   </div>

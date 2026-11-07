@@ -3677,6 +3677,115 @@ function showGmModal({ category, title, description, detailHtml, actions }) {
 }
 
 /**
+ * 共通インフォポップアップ（施設・戦術などの詳細情報）の表示
+ */
+function showInfoPopup({ title, tag, bodyHtml }) {
+  const overlay = document.getElementById('info-popup-modal');
+  if (!overlay) return;
+
+  const tagEl = document.getElementById('info-popup-tag');
+  if (tagEl) tagEl.textContent = tag || 'INFO';
+
+  const titleEl = document.getElementById('info-popup-title');
+  if (titleEl) titleEl.textContent = title || '詳細情報';
+
+  const bodyEl = document.getElementById('info-popup-body');
+  if (bodyEl) bodyEl.innerHTML = bodyHtml || '';
+
+  overlay.classList.remove('hidden');
+}
+
+/**
+ * 共通インフォポップアップの非表示
+ */
+function closeInfoPopup() {
+  const overlay = document.getElementById('info-popup-modal');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+/**
+ * 施設投資の詳細ポップアップ表示
+ */
+function showFacilityInfoPopup(facilityKey) {
+  const def = FACILITY_DEFINITIONS[facilityKey];
+  if (!def) return;
+  const playerClub = getPlayerClub();
+  const lv = (playerClub && playerClub.facilities && playerClub.facilities[facilityKey]) || 1;
+  const isMax = lv >= def.maxLevel;
+  const nextCost = isMax ? 0 : def.costs[lv];
+  const curEffect = typeof def.getEffectText === 'function' ? def.getEffectText(lv) : '';
+  const nextEffect = typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大レベル達成済' : '効果増大');
+
+  const bodyHtml = `
+    <div class="info-popup-section">
+      <div class="info-popup-meta-row">
+        <span class="info-popup-label">現在の効果 (Lv.${lv})</span>
+        <strong class="info-popup-value accent-green">${curEffect}</strong>
+      </div>
+      ${isMax ? '' : `
+      <div class="info-popup-meta-row" style="margin-top: 8px;">
+        <span class="info-popup-label">次回改修時 (Lv.${lv + 1})</span>
+        <strong class="info-popup-value text-cyan">${nextEffect}</strong>
+      </div>
+      <div class="info-popup-meta-row" style="margin-top: 8px;">
+        <span class="info-popup-label">次回改修費用</span>
+        <strong class="info-popup-value mono accent-gold">${formatMoney(nextCost)}</strong>
+      </div>
+      `}
+    </div>
+    <div class="info-popup-desc-box">
+      <h4 class="info-popup-desc-heading">施設概要</h4>
+      <p class="info-popup-desc-text">${def.desc}</p>
+    </div>
+  `;
+
+  showInfoPopup({
+    title: def.name,
+    tag: `Lv.${lv} / ${def.maxLevel}`,
+    bodyHtml
+  });
+}
+
+/**
+ * 戦術スタイルの詳細ポップアップ表示
+ */
+function showTacticInfoPopup(tacticKey) {
+  const normKey = normalizeTacticKey(tacticKey);
+  const def = TACTICS_DEFINITIONS[normKey];
+  if (!def) return;
+
+  const tacticTags = {
+    possession: ['支配率重視', '失点減', 'パス主体'],
+    gegenpress: ['前線奪取', '決定機UP', 'スタミナ1.3倍'],
+    counter: ['快足速攻', '強豪キラー', '省エネ'],
+    wingplay: ['両翼クロス', '中央崩し', 'クロス重視'],
+    parkthebus: ['徹底堅守', '失点激減', '引き分け狙い']
+  }[normKey] || [];
+
+  const bodyHtml = `
+    <div class="info-popup-section">
+      <div class="info-popup-meta-row">
+        <span class="info-popup-label">🎯 狙い</span>
+        <p class="info-popup-desc-text" style="margin: 4px 0 0; color: var(--text-main); font-weight: 500;">${def.aim}</p>
+      </div>
+      <div class="info-popup-meta-row" style="margin-top: 12px;">
+        <span class="info-popup-label">⚡ 効果</span>
+        <p class="info-popup-desc-text" style="margin: 4px 0 0; color: var(--accent-green); font-weight: 500;">${def.effect}</p>
+      </div>
+    </div>
+    <div class="info-popup-tags-row">
+      ${tacticTags.map(tag => `<span class="tactic-mini-tag tag-${normKey === 'possession' ? 'pos' : (normKey === 'gegenpress' ? 'red' : (normKey === 'counter' ? 'gold' : (normKey === 'wingplay' ? 'cyan' : 'purple')))}">${tag}</span>`).join('')}
+    </div>
+  `;
+
+  showInfoPopup({
+    title: def.name.replace(/（.*）/, ''),
+    tag: '戦術スタイル',
+    bodyHtml
+  });
+}
+
+/**
  * 成長曲線（growthCurve）・年齢・トレーニング施設Lvに応じた能力変動値を算出
  */
 function computeStatGrowth(player, isPlayerClub = false) {
@@ -7148,12 +7257,6 @@ function renderFacilitiesAndYouth() {
             </div>
           </div>
 
-          <!-- 詳細解説（インフォアイコンタップで展開） -->
-          <div class="facility-info-drawer hidden" id="facility-info-${key}">
-            <p class="facility-desc">${def.desc}</p>
-            <div class="facility-next-hint">次Lv: ${nextEffect}</div>
-          </div>
-
           <div class="facility-card-footer">
             <button type="button" class="btn btn-primary btn-sm btn-upgrade-facility" data-upgrade-facility="${key}" ${canAfford ? '' : 'disabled'}>
               ${btnLabel}
@@ -8864,6 +8967,14 @@ function initGame() {
   }
 
   document.getElementById('tactics-btn-group').addEventListener('click', (e) => {
+    const infoBtn = e.target.closest('[data-tactic-info]');
+    if (infoBtn && infoBtn.dataset.tacticInfo) {
+      e.stopPropagation();
+      e.preventDefault();
+      showTacticInfoPopup(infoBtn.dataset.tacticInfo);
+      return;
+    }
+
     const tacticBtn = e.target.closest('.btn-tactic');
     if (tacticBtn && tacticBtn.dataset.tactic) {
       setTeamTactic(tacticBtn.dataset.tactic);
@@ -8873,12 +8984,9 @@ function initGame() {
   const btnToggleTacticDetail = document.getElementById('btn-toggle-tactic-detail');
   if (btnToggleTacticDetail) {
     btnToggleTacticDetail.addEventListener('click', () => {
-      const guideContainer = document.getElementById('tactics-guide-container');
-      const toggleIcon = document.getElementById('tactic-detail-toggle-icon');
-      if (guideContainer) {
-        const isHidden = guideContainer.classList.toggle('hidden');
-        if (toggleIcon) toggleIcon.textContent = isHidden ? '▼' : '▲';
-      }
+      const playerClub = getPlayerClub();
+      const currentTactic = (playerClub && playerClub.tactic) || 'possession';
+      showTacticInfoPopup(currentTactic);
     });
   }
 
@@ -9107,17 +9215,15 @@ function initGame() {
     });
   }
 
-  // クラブ施設投資（アップグレードボタン＆インフォ展開）のイベント
+  // クラブ施設投資（アップグレードボタン＆インフォポップアップ表示）のイベント
   const facilitiesGrid = document.getElementById('facilities-grid');
   if (facilitiesGrid) {
     facilitiesGrid.addEventListener('click', (e) => {
       const infoBtn = e.target.closest('[data-facility-info]');
       if (infoBtn && infoBtn.dataset.facilityInfo) {
-        const drawer = document.getElementById(`facility-info-${infoBtn.dataset.facilityInfo}`);
-        if (drawer) {
-          const isHidden = drawer.classList.toggle('hidden');
-          infoBtn.classList.toggle('active', !isHidden);
-        }
+        e.stopPropagation();
+        e.preventDefault();
+        showFacilityInfoPopup(infoBtn.dataset.facilityInfo);
         return;
       }
 
@@ -9260,8 +9366,25 @@ function initGame() {
     });
   }
 
+  // 共通インフォポップアップ（施設・戦術）の閉じるイベント
+  const btnCloseInfoPopup = document.getElementById('btn-close-info-popup');
+  if (btnCloseInfoPopup) btnCloseInfoPopup.addEventListener('click', closeInfoPopup);
+  const btnDismissInfoPopup = document.getElementById('btn-dismiss-info-popup');
+  if (btnDismissInfoPopup) btnDismissInfoPopup.addEventListener('click', closeInfoPopup);
+  const infoPopupModal = document.getElementById('info-popup-modal');
+  if (infoPopupModal) {
+    infoPopupModal.addEventListener('click', (e) => {
+      if (e.target === infoPopupModal) closeInfoPopup();
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const infoPopup = document.getElementById('info-popup-modal');
+      if (infoPopup && !infoPopup.classList.contains('hidden')) {
+        closeInfoPopup();
+        return;
+      }
       const recordsOverlay = document.getElementById('records-modal-overlay');
       const settingsOverlay = document.getElementById('settings-modal-overlay');
       if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
