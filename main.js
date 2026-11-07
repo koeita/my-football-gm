@@ -8981,15 +8981,6 @@ function initGame() {
     }
   });
 
-  const btnToggleTacticDetail = document.getElementById('btn-toggle-tactic-detail');
-  if (btnToggleTacticDetail) {
-    btnToggleTacticDetail.addEventListener('click', () => {
-      const playerClub = getPlayerClub();
-      const currentTactic = (playerClub && playerClub.tactic) || 'possession';
-      showTacticInfoPopup(currentTactic);
-    });
-  }
-
   document.getElementById('roster-tbody').addEventListener('click', (e) => {
     const profileBtn = e.target.closest('[data-profile-id]');
     if (profileBtn) {
@@ -9369,8 +9360,6 @@ function initGame() {
   // 共通インフォポップアップ（施設・戦術）の閉じるイベント
   const btnCloseInfoPopup = document.getElementById('btn-close-info-popup');
   if (btnCloseInfoPopup) btnCloseInfoPopup.addEventListener('click', closeInfoPopup);
-  const btnDismissInfoPopup = document.getElementById('btn-dismiss-info-popup');
-  if (btnDismissInfoPopup) btnDismissInfoPopup.addEventListener('click', closeInfoPopup);
   const infoPopupModal = document.getElementById('info-popup-modal');
   if (infoPopupModal) {
     infoPopupModal.addEventListener('click', (e) => {
