@@ -2898,16 +2898,63 @@ body {
     gap: 4px;
   }
 
+  .profile-yearly-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
   .profile-yearly-table th,
   .profile-yearly-table td {
-    padding: 5px 3px;
-    font-size: 10px;
+    padding: 5px 1px;
+    font-size: 9.5px;
+  }
+
+  .profile-yearly-table th:nth-child(1),
+  .profile-yearly-table td:nth-child(1) {
+    width: 48px;
+  }
+
+  .profile-yearly-table th:nth-child(2),
+  .profile-yearly-table td:nth-child(2) {
+    width: 68px;
+  }
+
+  .profile-yearly-table th:nth-child(3),
+  .profile-yearly-table td:nth-child(3) {
+    width: 22px;
+  }
+
+  .profile-yearly-table th:nth-child(4),
+  .profile-yearly-table td:nth-child(4) {
+    width: 26px;
+  }
+
+  .profile-yearly-table th:nth-child(5),
+  .profile-yearly-table td:nth-child(5) {
+    width: 22px;
+  }
+
+  .profile-yearly-table th:nth-child(6),
+  .profile-yearly-table td:nth-child(6) {
+    width: 24px;
+  }
+
+  .profile-yearly-table th:nth-child(7),
+  .profile-yearly-table td:nth-child(7) {
+    width: 32px;
+  }
+
+  .profile-yearly-table th:nth-child(8),
+  .profile-yearly-table td:nth-child(8) {
+    width: 24px;
   }
 
   .profile-yearly-table .col-yearly-club {
-    max-width: 78px;
+    max-width: 68px;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .profile-metrics-row.profile-metrics-row-3col .profile-metric-card {

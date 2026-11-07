@@ -1239,9 +1239,25 @@ function generateInitialCareerStats(pos, age) {
     ? 0
     : Math.max(0, Math.round(totalApps * goalRate * (0.75 + Math.random() * 0.5)));
 
+  let assistRate = 0.02;
+  if (pos === 'GK') assistRate = 0;
+  else if (pos === 'CB') assistRate = 0.02;
+  else if (pos === 'LB' || pos === 'RB' || pos === 'SB') assistRate = 0.08;
+  else if (pos === 'DM') assistRate = 0.06;
+  else if (pos === 'CM') assistRate = 0.12;
+  else if (pos === 'LM' || pos === 'RM' || pos === 'SM') assistRate = 0.16;
+  else if (pos === 'AM') assistRate = 0.20;
+  else if (pos === 'LW' || pos === 'RW' || pos === 'WG') assistRate = 0.18;
+  else if (pos === 'CF') assistRate = 0.10;
+
+  const totalAssists = pos === 'GK'
+    ? 0
+    : Math.max(0, Math.round(totalApps * assistRate * (0.75 + Math.random() * 0.5)));
+
   return {
     appearances: totalApps,
-    goals: totalGoals
+    goals: totalGoals,
+    assists: totalAssists
   };
 }
 
@@ -1509,6 +1525,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     isYouth: false,
     appearances: 0,
     goals: 0,
+    assists: 0,
     totalRating: 0,
     lastDiff: null
   };
@@ -1586,6 +1603,7 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     isYouth: true,
     appearances: 0,
     goals: 0,
+    assists: 0,
     totalRating: 0,
     lastDiff: null
   };
@@ -2497,12 +2515,16 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
   homeStarters.forEach(p => {
     p.appearances += 1;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0 };
+    if (typeof p.assists !== 'number') p.assists = 0;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
     p.careerStats.appearances += 1;
   });
   awayStarters.forEach(p => {
     p.appearances += 1;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0 };
+    if (typeof p.assists !== 'number') p.assists = 0;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
     p.careerStats.appearances += 1;
   });
 
@@ -2524,13 +2546,39 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     return fws[0] || mfs[0] || starters[0];
   };
 
+  const getAssister = (starters, scorer) => {
+    // 約75%の確率でアシストが発生（残り25%は単独突破やPK/相手ミスなど）
+    if (Math.random() < 0.25) return null;
+    const candidates = starters.filter(p => p.id !== scorer.id && POS_ROLE_GROUP[p.assignedPos || p.pos] !== 'GK');
+    if (candidates.length === 0) return null;
+
+    const mfs = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'MF');
+    const fws = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
+    const dfs = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'DF');
+
+    const r = Math.random();
+    if (r < 0.60 && mfs.length > 0) {
+      return mfs[randInt(0, mfs.length - 1)];
+    } else if (r < 0.85 && fws.length > 0) {
+      return fws[randInt(0, fws.length - 1)];
+    } else if (dfs.length > 0) {
+      return dfs[randInt(0, dfs.length - 1)];
+    }
+    return candidates[randInt(0, candidates.length - 1)];
+  };
+
   const homeScorers = [];
   for (let i = 0; i < homeScore; i++) {
     const scorer = getScorer(homeStarters, homeClub.tactic);
     if (scorer) {
       scorer.goals += 1;
       if (scorer.careerStats) scorer.careerStats.goals += 1;
-      homeScorers.push({ scorer, minute: randInt(5, 89) });
+      const assister = getAssister(homeStarters, scorer);
+      if (assister) {
+        assister.assists = (assister.assists || 0) + 1;
+        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+      }
+      homeScorers.push({ scorer, assister, minute: randInt(5, 89) });
     }
   }
 
@@ -2540,7 +2588,12 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     if (scorer) {
       scorer.goals += 1;
       if (scorer.careerStats) scorer.careerStats.goals += 1;
-      awayScorers.push({ scorer, minute: randInt(5, 89) });
+      const assister = getAssister(awayStarters, scorer);
+      if (assister) {
+        assister.assists = (assister.assists || 0) + 1;
+        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+      }
+      awayScorers.push({ scorer, assister, minute: randInt(5, 89) });
     }
   }
 
@@ -2560,6 +2613,9 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
       const goalsInMatch = allMatchGoals.filter(s => s.scorer.id === p.id).length;
       r += goalsInMatch * 0.8;
+
+      const assistsInMatch = allMatchGoals.filter(s => s.assister && s.assister.id === p.id).length;
+      r += assistsInMatch * 0.5;
 
       if (p.assignedPos) {
         const fitInfo = getPositionFitInfo(p, p.assignedPos);
@@ -4979,11 +5035,13 @@ function startNextSeason() {
         age: p.age,
         appearances: p.appearances || 0,
         goals: p.goals || 0,
+        assists: p.assists || 0,
         avgRating: prevAvg,
         ovr: getPlayerOverallRating(p)
       });
       p.appearances = 0;
       p.goals = 0;
+      p.assists = 0;
       p.totalRating = 0;
       p.injuryWeeks = 0;
       p.injuryDays = 0;
@@ -6910,8 +6968,27 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     const history = [];
     const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
     const careerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
+
+    // キャリア通算アシスト数の取得・決定論的補完（未設定の場合はポジションと出場数から決定）
+    if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: careerGoals, assists: 0 };
+    if (typeof p.careerStats.assists !== 'number') {
+      let aRate = 0.02;
+      if (primaryPos === 'GK') aRate = 0;
+      else if (primaryPos === 'CB') aRate = 0.02;
+      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') aRate = 0.08;
+      else if (primaryPos === 'DM') aRate = 0.06;
+      else if (primaryPos === 'CM') aRate = 0.12;
+      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') aRate = 0.16;
+      else if (primaryPos === 'AM') aRate = 0.20;
+      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') aRate = 0.18;
+      else if (primaryPos === 'CF') aRate = 0.10;
+      const jitterA = 0.8 + ((absHash % 17) / 40);
+      p.careerStats.assists = primaryPos === 'GK' ? 0 : Math.max(0, Math.round(careerApps * aRate * jitterA));
+    }
+    const careerAssists = Math.max(p.assists || 0, p.careerStats.assists || 0);
     const totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
     const totalPastGoals = Math.max(0, careerGoals - (p.goals || 0));
+    const totalPastAssists = Math.max(0, careerAssists - (p.assists || 0));
 
     // 過去所属クラブの決定（23歳以上かつ一定確率で前所属クラブを経由）
     const foreignClubsByNat = {
@@ -6932,11 +7009,13 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     const transferSeasonIdx = hasTransferred ? Math.max(1, Math.floor(pastSeasonsCount * 0.55)) : pastSeasonsCount + 1;
 
     if (pastSeasonsCount > 0) {
-      // 各年度の重みを計算して出場数・ゴール数を整数配分
+      // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分
       const appWeights = [];
       const goalWeights = [];
+      const assistWeights = [];
       let sumAppW = 0;
       let sumGoalW = 0;
+      let sumAssistW = 0;
 
       for (let i = 0; i < pastSeasonsCount; i++) {
         const ageAtSeason = 18 + i;
@@ -6944,14 +7023,18 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
         const aw = maturity * jitter;
         const gw = maturity * (0.8 + (((absHash >> ((i + 3) % 8)) & 7) / 20));
+        const astw = maturity * (0.8 + (((absHash >> ((i + 5) % 8)) & 7) / 20));
         appWeights.push(aw);
         goalWeights.push(gw);
+        assistWeights.push(astw);
         sumAppW += aw;
         sumGoalW += gw;
+        sumAssistW += astw;
       }
 
       let remApps = totalPastApps;
       let remGoals = totalPastGoals;
+      let remAssists = totalPastAssists;
 
       for (let i = 0; i < pastSeasonsCount; i++) {
         const seasonStartYr = curBaseYear - (pastSeasonsCount - i);
@@ -6968,9 +7051,14 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         if (apps === 0) goals = 0;
         remGoals = Math.max(0, remGoals - goals);
 
+        let assists = isLast ? remAssists : Math.round((totalPastAssists * assistWeights[i]) / Math.max(0.01, sumAssistW));
+        assists = clamp(assists, 0, remAssists);
+        if (apps === 0) assists = 0;
+        remAssists = Math.max(0, remAssists - assists);
+
         const yearsAgo = pastSeasonsCount - i;
         const estOvr = clamp(baseOvr - Math.min(8, Math.round(yearsAgo * 1.1)), 52, 95);
-        const baseR = 6.35 + ((estOvr - 65) * 0.025) + (goals / Math.max(10, apps || 1)) * 0.65;
+        const baseR = 6.35 + ((estOvr - 65) * 0.025) + (goals / Math.max(10, apps || 1)) * 0.65 + (assists / Math.max(10, apps || 1)) * 0.35;
         const avgR = apps > 0 ? clamp(baseR, 6.10, 8.45).toFixed(2) : '-';
         const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : (currentClubName || '現所属クラブ');
 
@@ -6980,6 +7068,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
           age: ageAtSeason,
           appearances: apps,
           goals: goals,
+          assists: assists,
           avgRating: avgR,
           ovr: estOvr
         });
@@ -6991,6 +7080,9 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       }
       if (remGoals > 0 && history.length > 0) {
         history[history.length - 1].goals += remGoals;
+      }
+      if (remAssists > 0 && history.length > 0) {
+        history[history.length - 1].assists += remAssists;
       }
     }
 
@@ -7039,11 +7131,12 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
   // 現在のステータス
   const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
+  const curAssists = typeof p.assists === 'number' ? p.assists : 0;
   careerEvents.push({
     year: `${curSeasonStr} (現在)`,
     badge: 'CURRENT',
     title: `${currentClubName} 在籍（契約残り${p.contractYears}年 / OVR ${baseOvr}）`,
-    desc: `今季ここまで ${p.appearances || 0}試合出場・${p.goals || 0}得点。${p.isStarter ? `スタメン（${p.assignedPos || primaryPos}）として稼働中。` : 'スカッドの一員としてシーズンを戦う。'}`
+    desc: `今季ここまで ${p.appearances || 0}試合出場・${p.goals || 0}得点・${curAssists}アシスト。${p.isStarter ? `スタメン（${p.assignedPos || primaryPos}）として稼働中。` : 'スカッドの一員としてシーズンを戦う。'}`
   });
 
   return {
@@ -7181,6 +7274,7 @@ function openPlayerProfileModal(playerId) {
       age: p.age,
       appearances: p.appearances || 0,
       goals: p.goals || 0,
+      assists: typeof p.assists === 'number' ? p.assists : 0,
       avgRating: avgRating,
       ovr: baseOvr,
       isCurrent: true
@@ -7189,6 +7283,7 @@ function openPlayerProfileModal(playerId) {
 
   const totalAppsSum = allRowsData.reduce((acc, r) => acc + (r.appearances || 0), 0);
   const totalGoalsSum = allRowsData.reduce((acc, r) => acc + (r.goals || 0), 0);
+  const totalAssistsSum = allRowsData.reduce((acc, r) => acc + (r.assists || 0), 0);
   let weightedRatingSum = 0;
   let ratedAppsSum = 0;
   for (const r of allRowsData) {
@@ -7207,6 +7302,7 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num">${r.age}</td>
       <td class="mono col-num">${r.appearances}</td>
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
+      <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
       <td class="mono col-num ${r.avgRating !== '-' ? 'accent-gold' : 'text-muted'}">${r.avgRating}</td>
       <td class="mono col-num">${r.ovr}</td>
     </tr>
@@ -7306,6 +7402,10 @@ function openPlayerProfileModal(playerId) {
               <span class="profile-metric-val mono accent-green">${p.goals} <small style="font-size: 12px; color: var(--text-muted);">得点</small></span>
             </div>
             <div class="profile-metric-card">
+              <span class="profile-metric-label">ASSISTS（今季アシスト数）</span>
+              <span class="profile-metric-val mono text-cyan">${typeof p.assists === 'number' ? p.assists : 0} <small style="font-size: 12px; color: var(--text-muted);">アシスト</small></span>
+            </div>
+            <div class="profile-metric-card">
               <span class="profile-metric-label">AVG RATING（平均評価点）</span>
               <span class="profile-metric-val mono accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
             </div>
@@ -7351,7 +7451,7 @@ function openPlayerProfileModal(playerId) {
         <div class="profile-box">
           <div class="profile-box-header">
             <span class="profile-box-title">YEARLY CAREER STATISTICS（年度別成績・通算記録）</span>
-            <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}得点</span>
+            <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}G / ${totalAssistsSum}A</span>
           </div>
           <div class="profile-yearly-table-wrap">
             <table class="data-table profile-yearly-table">
@@ -7362,6 +7462,7 @@ function openPlayerProfileModal(playerId) {
                   <th class="col-num">年齢</th>
                   <th class="col-num">出場</th>
                   <th class="col-num">得点</th>
+                  <th class="col-num">アシ</th>
                   <th class="col-num">評価点</th>
                   <th class="col-num">OVR</th>
                 </tr>
@@ -7375,6 +7476,7 @@ function openPlayerProfileModal(playerId) {
                   <td class="mono col-num">-</td>
                   <td class="mono col-num"><strong>${totalAppsSum}</strong></td>
                   <td class="mono col-num accent-green"><strong>${totalGoalsSum}</strong></td>
+                  <td class="mono col-num text-cyan"><strong>${totalAssistsSum}</strong></td>
                   <td class="mono col-num accent-gold"><strong>${careerAvgRating}</strong></td>
                   <td class="mono col-num"><strong>${baseOvr}</strong></td>
                 </tr>
