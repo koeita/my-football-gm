@@ -7007,26 +7007,6 @@ function openPlayerProfileModal(playerId) {
     `;
   }
 
-  const footerEl = document.getElementById('profile-modal-footer');
-  const footerActionsEl = document.getElementById('profile-footer-actions');
-  if (footerActionsEl) {
-    const isYouth = (gameState.youthCandidates || []).some(y => y.id === p.id);
-    let extraActionBtnHtml = '';
-    if (ctx.isPlayerClub && !isYouth && p.contractYears <= 2) {
-      extraActionBtnHtml = `<button type="button" class="btn btn-accent btn-sm" data-profile-negotiate-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''}>${p.contractRefused ? '交渉決裂（流出確定）' : '契約延長交渉を開く'}</button>`;
-    } else if (isMarket) {
-      extraActionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-profile-negotiate-transfer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>${p.negotiationFailed ? '移籍交渉決裂済' : '移籍獲得交渉を開く'}</button>`;
-    }
-    footerActionsEl.innerHTML = extraActionBtnHtml;
-    if (footerEl) {
-      if (extraActionBtnHtml) {
-        footerEl.classList.remove('hidden');
-      } else {
-        footerEl.classList.add('hidden');
-      }
-    }
-  }
-
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   const cardEl = document.getElementById('player-profile-modal-card');
   const bodyScrollEl = document.getElementById('profile-modal-body');

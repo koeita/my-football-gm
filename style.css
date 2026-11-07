@@ -2406,7 +2406,7 @@ body {
 }
 
 .profile-modal-body {
-  padding: 16px 20px;
+  padding: 16px 20px 22px;
   display: flex;
   flex-direction: column;
   gap: 14px;
