@@ -7028,8 +7028,20 @@ function openPlayerProfileModal(playerId) {
   }
 
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  const cardEl = document.getElementById('player-profile-modal-card');
+  const bodyScrollEl = document.getElementById('profile-modal-body');
+
+  // スクロール位置を最上部に確実にリセット（モバイルで前回のスクロール状態が残るのを防止）
+  const resetProfileScroll = () => {
+    if (modalEl) modalEl.scrollTop = 0;
+    if (cardEl) cardEl.scrollTop = 0;
+    if (bodyScrollEl) bodyScrollEl.scrollTop = 0;
+  };
+  resetProfileScroll();
+
   if (modalEl) {
     modalEl.classList.remove('hidden');
+    requestAnimationFrame(resetProfileScroll);
   }
 }
 
@@ -7038,9 +7050,16 @@ function openPlayerProfileModal(playerId) {
  */
 function closePlayerProfileModal() {
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  const cardEl = document.getElementById('player-profile-modal-card');
+  const bodyScrollEl = document.getElementById('profile-modal-body');
+
   if (modalEl) {
     modalEl.classList.add('hidden');
+    modalEl.scrollTop = 0;
   }
+  if (cardEl) cardEl.scrollTop = 0;
+  if (bodyScrollEl) bodyScrollEl.scrollTop = 0;
+
   gameState.profileModalPlayerId = null;
 }
 

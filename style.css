@@ -2681,7 +2681,8 @@ body {
 }
 
 .profile-modal-footer {
-  justify-content: space-between;
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
   padding: 10px 20px;
   background-color: #1a1d20;
