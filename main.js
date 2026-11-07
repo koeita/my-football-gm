@@ -5146,6 +5146,9 @@ function renderAll() {
   renderYouthSquad();
   renderMarket();
   renderFacilitiesAndYouth();
+  if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') {
+    saveGameToStorage(false);
+  }
 }
 
 /**
@@ -7102,7 +7105,13 @@ function confirmIntroAndStartGame() {
   setBodyModalLock(false);
   gameState.hasStartedOnce = true;
 
+  if (typeof hideMainMenuScreen === 'function') {
+    hideMainMenuScreen();
+  }
   setupNewGame(gameState.selectedClubId);
+  if (typeof saveGameToStorage === 'function') {
+    saveGameToStorage(true);
+  }
 }
 
 /**
@@ -7541,8 +7550,16 @@ function initGame() {
   }
   document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
   document.getElementById('btn-next-season').addEventListener('click', startNextSeason);
-  document.getElementById('btn-restart-game').addEventListener('click', () => openIntroModal(false));
-  document.getElementById('btn-open-intro').addEventListener('click', () => openIntroModal(true));
+  const btnRestart = document.getElementById('btn-restart-game');
+  if (btnRestart) {
+    btnRestart.addEventListener('click', () => {
+      showMainMenuScreen();
+    });
+  }
+  const btnOpenIntro = document.getElementById('btn-open-intro');
+  if (btnOpenIntro) {
+    btnOpenIntro.addEventListener('click', () => openIntroModal(true));
+  }
 
   // GM就任モーダル内のイベント（フィルタータグ・クラブ選択・詳細同期）
   document.getElementById('club-filter-tags').addEventListener('click', (e) => {
@@ -8099,9 +8116,400 @@ function initGame() {
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
   initReloadPrevention();
 
-  // 背景のダッシュボードを初期描画した上で、初回起動時のGM就任モーダルを表示
+  // 背景の初期ゲーム状態を準備した上で、メインメニュー（タイトル画面）を表示
   setupNewGame(gameState.selectedClubId);
-  openIntroModal(false);
+  initMainMenuAndModals();
+  showMainMenuScreen();
+}
+
+const SAVE_STORAGE_KEY = 'my_football_gm_save_v1';
+const RECORDS_STORAGE_KEY = 'my_football_gm_records_v1';
+const SETTINGS_STORAGE_KEY = 'my_football_gm_settings_v1';
+
+const appSettings = {
+  soundVolume: 70,
+  autoSaveEnabled: true
+};
+
+function loadSettingsFromStorage() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.soundVolume === 'number') appSettings.soundVolume = parsed.soundVolume;
+      if (typeof parsed.autoSaveEnabled === 'boolean') appSettings.autoSaveEnabled = parsed.autoSaveEnabled;
+    }
+  } catch (e) {}
+}
+
+function saveSettingsToStorage() {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
+  } catch (e) {}
+}
+
+function saveGameToStorage(force = false) {
+  if (!force && !appSettings.autoSaveEnabled) return false;
+  if (!gameState.clubs || gameState.clubs.length === 0) return false;
+  try {
+    const payload = {
+      version: '1.0.0',
+      savedAt: Date.now(),
+      playerIdCounter,
+      state: {
+        gmName: gameState.gmName,
+        selectedClubId: gameState.selectedClubId,
+        hasStartedOnce: true,
+        season: gameState.season,
+        currentWeek: gameState.currentWeek,
+        totalWeeks: gameState.totalWeeks,
+        isSeasonOver: gameState.isSeasonOver,
+        isGameOver: gameState.isGameOver,
+        consecutiveDeficitSeasons: gameState.consecutiveDeficitSeasons,
+        activeTab: gameState.activeTab || 'office',
+        rosterSubtab: gameState.rosterSubtab || 'board',
+        clubs: gameState.clubs,
+        schedule: gameState.schedule,
+        calendar: gameState.calendar,
+        currentDayIndex: gameState.currentDayIndex,
+        dailyLogs: gameState.dailyLogs,
+        lastWeekResults: gameState.lastWeekResults,
+        lastMatchTicker: gameState.lastMatchTicker,
+        transferMarket: gameState.transferMarket,
+        youthCandidates: gameState.youthCandidates,
+        facilities: gameState.facilities,
+        lastSettlement: gameState.lastSettlement
+      }
+    };
+    localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    updateCareerRecordsFromCurrentState();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getSavedGameSummary() {
+  try {
+    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.state || !Array.isArray(parsed.state.clubs)) return null;
+    const st = parsed.state;
+    const playerClub = st.clubs.find(c => c.isPlayer) || st.clubs[0];
+    const clubName = playerClub ? playerClub.name : 'ロンドン・FC';
+    const season = st.season || 1;
+    const week = Math.min(st.totalWeeks || 38, (st.currentWeek || 0) + (st.isSeasonOver ? 0 : 1));
+    const weekLabel = st.isSeasonOver ? 'シーズン終了' : `第${week}節`;
+    return {
+      clubName,
+      season,
+      weekLabel,
+      summaryText: `${clubName} ・ ${season}年目 ・ ${weekLabel}`,
+      parsed
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function loadGameFromStorage() {
+  const info = getSavedGameSummary();
+  if (!info || !info.parsed) return false;
+  try {
+    const { state, playerIdCounter: savedCounter } = info.parsed;
+    if (typeof savedCounter === 'number') {
+      playerIdCounter = savedCounter;
+    }
+    Object.assign(gameState, state);
+    gameState.isSimulating = false;
+    gameState.isAdvancingCalendar = false;
+    gameState.hasStartedOnce = true;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateContinueButtonUI() {
+  const btnContinue = document.getElementById('btn-menu-continue');
+  const metaEl = document.getElementById('menu-continue-meta');
+  if (!btnContinue || !metaEl) return;
+
+  const summary = getSavedGameSummary();
+  if (summary) {
+    btnContinue.disabled = false;
+    btnContinue.classList.remove('is-disabled');
+    metaEl.textContent = summary.summaryText;
+  } else {
+    btnContinue.disabled = true;
+    btnContinue.classList.add('is-disabled');
+    metaEl.textContent = 'セーブデータなし';
+  }
+}
+
+function showMainMenuScreen() {
+  stopAdvancingCalendar();
+  // 表示中のモーダルがあれば全て閉じる（就任モーダル等のリロード時・遷移時残存を完全防止）
+  document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
+  setBodyModalLock(false);
+
+  const menuEl = document.getElementById('main-menu-screen');
+  const appEl = document.getElementById('app-container');
+  if (menuEl) menuEl.classList.remove('hidden');
+  if (appEl) appEl.classList.add('app-hidden');
+  document.body.classList.add('main-menu-active');
+  updateContinueButtonUI();
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+}
+
+function hideMainMenuScreen() {
+  const menuEl = document.getElementById('main-menu-screen');
+  const appEl = document.getElementById('app-container');
+  if (menuEl) menuEl.classList.add('hidden');
+  if (appEl) appEl.classList.remove('app-hidden');
+  document.body.classList.remove('main-menu-active');
+}
+
+function updateCareerRecordsFromCurrentState() {
+  try {
+    const raw = localStorage.getItem(RECORDS_STORAGE_KEY);
+    const rec = raw ? JSON.parse(raw) : {
+      titlesWon: 0,
+      seasonsCompleted: 0,
+      bestRank: null,
+      maxFunds: 0,
+      topScorersHistory: []
+    };
+    const playerClub = getPlayerClub();
+    if (playerClub) {
+      if (playerClub.funds > (rec.maxFunds || 0)) {
+        rec.maxFunds = playerClub.funds;
+      }
+      if (gameState.isSeasonOver) {
+        const sorted = getSortedStandings();
+        const rank = sorted.findIndex(c => c.id === playerClub.id) + 1;
+        if (rank > 0 && (!rec.bestRank || rank < rec.bestRank)) {
+          rec.bestRank = rank;
+        }
+        const seasonKey = `${gameState.gmName}_S${gameState.season}_${playerClub.id}`;
+        if (rec.lastRecordedSeasonKey !== seasonKey) {
+          rec.lastRecordedSeasonKey = seasonKey;
+          rec.seasonsCompleted = (rec.seasonsCompleted || 0) + 1;
+          if (rank === 1) {
+            rec.titlesWon = (rec.titlesWon || 0) + 1;
+          }
+          // シーズン得点王を記録
+          let bestPlayer = null;
+          let bestClubName = '';
+          for (const c of gameState.clubs) {
+            for (const p of c.players) {
+              if (!bestPlayer || p.goals > bestPlayer.goals) {
+                bestPlayer = p;
+                bestClubName = c.name;
+              }
+            }
+          }
+          if (bestPlayer && bestPlayer.goals > 0) {
+            rec.topScorersHistory = rec.topScorersHistory || [];
+            rec.topScorersHistory.unshift({
+              season: gameState.season,
+              name: bestPlayer.name,
+              clubName: bestClubName,
+              goals: bestPlayer.goals
+            });
+            rec.topScorersHistory = rec.topScorersHistory.slice(0, 5);
+          }
+        }
+      }
+    }
+    localStorage.setItem(RECORDS_STORAGE_KEY, JSON.stringify(rec));
+  } catch (e) {}
+}
+
+function openRecordsModal() {
+  const overlay = document.getElementById('records-modal-overlay');
+  const bodyEl = document.getElementById('records-modal-body');
+  if (!overlay || !bodyEl) return;
+
+  let rec = { titlesWon: 0, seasonsCompleted: 0, bestRank: null, maxFunds: 0, topScorersHistory: [] };
+  try {
+    const raw = localStorage.getItem(RECORDS_STORAGE_KEY);
+    if (raw) rec = { ...rec, ...JSON.parse(raw) };
+  } catch (e) {}
+
+  const summary = getSavedGameSummary();
+  const activeClub = summary && summary.parsed && summary.parsed.state
+    ? (summary.parsed.state.clubs.find(c => c.isPlayer) || getPlayerClub())
+    : getPlayerClub();
+
+  const currentStats = activeClub
+    ? `${activeClub.played}試合 ${activeClub.won}勝 ${activeClub.drawn}分 ${activeClub.lost}敗（勝点 ${activeClub.pts}）`
+    : '記録なし';
+
+  // 現在進行中または保存データの得点ランキング上位3名
+  const clubsSource = (summary && summary.parsed && summary.parsed.state && summary.parsed.state.clubs) || gameState.clubs || [];
+  const allPlayers = [];
+  for (const c of clubsSource) {
+    for (const p of (c.players || [])) {
+      if (p.goals > 0) {
+        allPlayers.push({ name: p.name, clubName: c.name, goals: p.goals });
+      }
+    }
+  }
+  allPlayers.sort((a, b) => b.goals - a.goals);
+
+  const scorersList = (rec.topScorersHistory && rec.topScorersHistory.length > 0)
+    ? rec.topScorersHistory.map(s => `<div class="records-scorer-item mono"><span>Season ${s.season}: ${s.name} (${s.clubName})</span><strong class="accent-gold">${s.goals} GOAL</strong></div>`).join('')
+    : (allPlayers.length > 0
+      ? allPlayers.slice(0, 3).map((s, i) => `<div class="records-scorer-item mono"><span>#${i + 1} ${s.name} (${s.clubName})</span><strong class="accent-gold">${s.goals} GOAL</strong></div>`).join('')
+      : '<div class="records-empty mono">シーズン進行後に得点王記録が刻まれます</div>');
+
+  bodyEl.innerHTML = `
+    <div class="records-grid">
+      <div class="records-stat-box">
+        <span class="records-stat-label">通算リーグ優勝回数</span>
+        <strong class="records-stat-val mono accent-gold">${rec.titlesWon || 0} 回</strong>
+      </div>
+      <div class="records-stat-box">
+        <span class="records-stat-label">最高到達順位</span>
+        <strong class="records-stat-val mono accent-green">${rec.bestRank ? `${rec.bestRank} 位` : '-'}</strong>
+      </div>
+      <div class="records-stat-box">
+        <span class="records-stat-label">通算完走シーズン</span>
+        <strong class="records-stat-val mono">${rec.seasonsCompleted || 0} シーズン</strong>
+      </div>
+      <div class="records-stat-box">
+        <span class="records-stat-label">最高クラブ資金記録</span>
+        <strong class="records-stat-val mono accent-gold">${formatMoney(rec.maxFunds || (activeClub ? activeClub.funds : 98000))}</strong>
+      </div>
+    </div>
+    <div class="records-section">
+      <h4 class="records-section-title">現在の担当クラブ成績（${activeClub ? activeClub.name : 'ロンドン・FC'}）</h4>
+      <div class="records-current-line mono">${currentStats}</div>
+    </div>
+    <div class="records-section">
+      <h4 class="records-section-title">歴代・シーズン得点王記録</h4>
+      <div class="records-scorers-list">${scorersList}</div>
+    </div>
+  `;
+
+  overlay.classList.remove('hidden');
+  setBodyModalLock(true);
+}
+
+function closeRecordsModal() {
+  const overlay = document.getElementById('records-modal-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  setBodyModalLock(false);
+}
+
+function openSettingsModal() {
+  loadSettingsFromStorage();
+  const overlay = document.getElementById('settings-modal-overlay');
+  const volInput = document.getElementById('setting-sound-volume');
+  const volVal = document.getElementById('setting-sound-volume-val');
+  const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  if (volInput) volInput.value = appSettings.soundVolume;
+  if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
+  if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    setBodyModalLock(true);
+  }
+}
+
+function closeSettingsModal() {
+  const overlay = document.getElementById('settings-modal-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  setBodyModalLock(false);
+}
+
+function initMainMenuAndModals() {
+  loadSettingsFromStorage();
+
+  const btnContinue = document.getElementById('btn-menu-continue');
+  if (btnContinue) {
+    btnContinue.addEventListener('click', () => {
+      if (btnContinue.disabled) return;
+      if (loadGameFromStorage()) {
+        hideMainMenuScreen();
+        switchTab(gameState.activeTab || 'office');
+        renderAll();
+      }
+    });
+  }
+
+  const btnNewCareer = document.getElementById('btn-menu-new-career');
+  if (btnNewCareer) {
+    btnNewCareer.addEventListener('click', () => {
+      openIntroModal(true);
+    });
+  }
+
+  const btnRecords = document.getElementById('btn-menu-records');
+  if (btnRecords) {
+    btnRecords.addEventListener('click', openRecordsModal);
+  }
+
+  const btnSettings = document.getElementById('btn-menu-settings');
+  if (btnSettings) {
+    btnSettings.addEventListener('click', openSettingsModal);
+  }
+
+  const btnReturnTitle = document.getElementById('btn-return-title');
+  if (btnReturnTitle) {
+    btnReturnTitle.addEventListener('click', () => {
+      const ok = window.confirm('現在の進行状況を自動保存してタイトル画面へ戻りますか？');
+      if (!ok) return;
+      saveGameToStorage(true);
+      showMainMenuScreen();
+    });
+  }
+
+  // Records modal close
+  const btnCloseRec = document.getElementById('btn-close-records-modal');
+  const btnCloseRecFooter = document.getElementById('btn-close-records-footer');
+  if (btnCloseRec) btnCloseRec.addEventListener('click', closeRecordsModal);
+  if (btnCloseRecFooter) btnCloseRecFooter.addEventListener('click', closeRecordsModal);
+
+  // Settings modal controls
+  const volInput = document.getElementById('setting-sound-volume');
+  const volVal = document.getElementById('setting-sound-volume-val');
+  if (volInput) {
+    volInput.addEventListener('input', (e) => {
+      appSettings.soundVolume = parseInt(e.target.value, 10) || 0;
+      if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
+      saveSettingsToStorage();
+    });
+  }
+
+  const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  if (autoSaveCheck) {
+    autoSaveCheck.addEventListener('change', (e) => {
+      appSettings.autoSaveEnabled = !!e.target.checked;
+      saveSettingsToStorage();
+    });
+  }
+
+  const btnResetAll = document.getElementById('btn-reset-all-data');
+  if (btnResetAll) {
+    btnResetAll.addEventListener('click', () => {
+      const ok = window.confirm('保存されているセーブデータおよび殿堂記録をすべて消去します。よろしいですか？');
+      if (!ok) return;
+      try {
+        localStorage.removeItem(SAVE_STORAGE_KEY);
+        localStorage.removeItem(RECORDS_STORAGE_KEY);
+      } catch (e) {}
+      updateContinueButtonUI();
+      closeSettingsModal();
+    });
+  }
+
+  const btnCloseSet = document.getElementById('btn-close-settings-modal');
+  const btnCloseSetFooter = document.getElementById('btn-close-settings-footer');
+  if (btnCloseSet) btnCloseSet.addEventListener('click', () => { saveSettingsToStorage(); closeSettingsModal(); });
+  if (btnCloseSetFooter) btnCloseSetFooter.addEventListener('click', () => { saveSettingsToStorage(); closeSettingsModal(); });
 }
 
 /**
