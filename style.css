@@ -2648,9 +2648,271 @@ body {
   gap: 8px;
 }
 
+.profile-metrics-row.profile-metrics-row-3col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 @media (max-width: 680px) {
   .profile-metrics-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .profile-metrics-row.profile-metrics-row-3col {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 選手詳細モーダル：4タブナビゲーションバー（能力 / 今季成績 / 年別成績 / 経歴） */
+.profile-subnav-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 20px;
+  background-color: #16191d;
+  border-bottom: 1px solid #32383e;
+  flex-shrink: 0;
+}
+
+.profile-tab-btn {
+  appearance: none;
+  background-color: #202429;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  user-select: none;
+}
+
+.profile-tab-btn:hover {
+  background-color: #282d33;
+  color: var(--text-main);
+  border-color: #48515b;
+}
+
+.profile-tab-btn.active {
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  box-shadow: inset 0 -2px 0 var(--accent-green);
+}
+
+.profile-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-tab-panel.hidden {
+  display: none !important;
+}
+
+/* タブ2：今季成績スタイル */
+.profile-season-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.profile-season-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* タブ3：年別成績テーブルスタイル */
+.profile-yearly-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #2d333b;
+  border-radius: 4px;
+  background-color: #16191d;
+}
+
+.profile-yearly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.profile-yearly-table th,
+.profile-yearly-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #262b31;
+  white-space: nowrap;
+}
+
+.profile-yearly-table th {
+  background-color: #1f2429;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profile-yearly-current-row td {
+  background-color: rgba(46, 204, 113, 0.08);
+  font-weight: 700;
+}
+
+.profile-yearly-total-row td {
+  background-color: #20252b;
+  border-top: 2px solid #3a424b;
+  border-bottom: none;
+  padding: 8px 10px;
+}
+
+/* タブ4：経歴タイムラインスタイル */
+.profile-career-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  padding-left: 14px;
+  margin-top: 2px;
+}
+
+.profile-career-timeline::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background-color: #32383e;
+}
+
+.profile-timeline-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-timeline-dot {
+  position: absolute;
+  left: -14px;
+  top: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #3d444d;
+  border: 2px solid #1a1d20;
+}
+
+.profile-timeline-item.is-current .profile-timeline-dot {
+  background-color: var(--accent-green);
+}
+
+.profile-timeline-content {
+  background-color: #202428;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-timeline-item.is-current .profile-timeline-content {
+  border-color: rgba(46, 204, 113, 0.45);
+  background-color: rgba(46, 204, 113, 0.06);
+}
+
+.profile-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profile-timeline-year {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.profile-timeline-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background-color: #2b3137;
+  color: var(--text-muted);
+  border: 1px solid #3d444d;
+}
+
+.profile-timeline-badge.badge-current {
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.profile-timeline-badge.badge-transfer {
+  background-color: rgba(52, 152, 219, 0.16);
+  color: #5dade2;
+  border-color: #3498db;
+}
+
+.profile-timeline-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.profile-timeline-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .profile-subnav-bar {
+    padding: 6px 12px;
+    gap: 4px;
+  }
+
+  .profile-tab-btn {
+    font-size: 11.5px;
+    padding: 7px 4px;
+  }
+
+  .profile-season-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-scout-comment-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .profile-yearly-table th,
+  .profile-yearly-table td {
+    padding: 5px 3px;
+    font-size: 10px;
+  }
+
+  .profile-yearly-table .col-yearly-club {
+    max-width: 78px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-card {
+    padding: 6px 7px;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-label {
+    font-size: 9px;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-val {
+    font-size: 11.5px;
   }
 }
 

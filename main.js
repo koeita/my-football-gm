@@ -4966,6 +4966,22 @@ function startNextSeason() {
     club.gd = 0;
     club.pts = 0;
     for (const p of club.players) {
+      if (!Array.isArray(p.seasonHistory)) {
+        ensurePlayerHistoryAndCareer(p, club.name);
+      }
+      const prevSeasonNum = Math.max(1, (gameState.season || 2) - 1);
+      const prevBaseYear = 2025 + prevSeasonNum;
+      const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
+      const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+      p.seasonHistory.push({
+        seasonYear: prevYearStr,
+        clubName: club.name,
+        age: p.age,
+        appearances: p.appearances || 0,
+        goals: p.goals || 0,
+        avgRating: prevAvg,
+        ovr: getPlayerOverallRating(p)
+      });
       p.appearances = 0;
       p.goals = 0;
       p.totalRating = 0;
@@ -6837,8 +6853,206 @@ function buildPlayerHexagonChartSvg(attrs) {
 }
 
 /**
- * 選手詳細プロフィールモーダル（スカウティングシート風UI）を開いて描画する
+ * 選手プロフィールモーダル内のタブ切り替え（能力 / 今季成績 / 年別成績 / 経歴）
  */
+function switchProfileModalTab(tabKey) {
+  const validTabs = ['ability', 'season', 'yearly', 'career'];
+  const activeKey = validTabs.includes(tabKey) ? tabKey : 'ability';
+  gameState.profileActiveTab = activeKey;
+
+  const subnavEl = document.getElementById('profile-subnav-bar');
+  if (subnavEl) {
+    subnavEl.querySelectorAll('.profile-tab-btn').forEach(btn => {
+      const isMatch = btn.dataset.profileTab === activeKey;
+      btn.classList.toggle('active', isMatch);
+      btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+    });
+  }
+
+  const bodyEl = document.getElementById('profile-modal-body');
+  if (bodyEl) {
+    bodyEl.querySelectorAll('.profile-tab-panel').forEach(panel => {
+      const isMatch = panel.dataset.profilePanel === activeKey;
+      panel.classList.toggle('hidden', !isMatch);
+    });
+    bodyEl.scrollTop = 0;
+  }
+
+  const cardEl = document.getElementById('player-profile-modal-card');
+  if (cardEl) cardEl.scrollTop = 0;
+}
+
+/**
+ * 選手の年別成績（seasonHistory）および経歴タイムライン（careerEvents）を一貫生成・補完する
+ */
+function ensurePlayerHistoryAndCareer(p, currentClubName) {
+  if (!p) return { seasonHistory: [], careerEvents: [], birthYear: 2002 };
+
+  // 選手IDおよび名前から決定論的ハッシュ値を算出
+  const seedStr = `${p.id || 'p'}_${p.name || 'player'}`;
+  let hash = 2166136261;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash ^= seedStr.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const absHash = Math.abs(hash);
+
+  const curSeasonNum = gameState.season || 1;
+  const curBaseYear = 2025 + curSeasonNum; // Season 1 => 2026-27
+  const birthYear = curBaseYear - (p.age || 22);
+  const baseOvr = getPlayerOverallRating(p);
+  const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
+
+  // 過去シーズン数の算出（18歳プロデビュー〜前シーズンまで）
+  const pastSeasonsCount = Math.max(0, (p.age || 18) - 18);
+
+  if (!Array.isArray(p.seasonHistory)) {
+    const history = [];
+    const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
+    const careerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
+    const totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
+    const totalPastGoals = Math.max(0, careerGoals - (p.goals || 0));
+
+    // 過去所属クラブの決定（23歳以上かつ一定確率で前所属クラブを経由）
+    const foreignClubsByNat = {
+      England: ['ウェスト・ロンドンFC', 'サウス・ユナイテッド', 'ミッドランド・シティ'],
+      Spain: ['マドリード・アスレティック', 'バレンシア・ソシエダ', 'セビージャ・レアル'],
+      Germany: ['ミュンヘン・シュポルト', 'ライン・ドルトムント', 'フランクフルトSV'],
+      France: ['パリ・メトロポリタン', 'リヨン・オリンピック', 'マルセイユ・コート'],
+      Italy: ['ミラノ・カルチョ', 'トリノ・ユヴェントス', 'ローマ・クラブ'],
+      Brazil: ['サンパウロFC', 'フラメンゴ・リオ', 'サントス・クルーベ'],
+      Argentina: ['ブエノスアイレスCA', 'リバー・プレートSC', 'ボカ・アトレティコ'],
+      Netherlands: ['アムステルダム・アヤックス', 'アイントホーフェンPSV', 'ロッテルダムSC'],
+      Portugal: ['リスボン・スポルティング', 'ポルト・ドラゴンズ', 'ベンフィカSL'],
+      Japan: ['東京メトロポリタンFC', '横浜マリナーズSC', '川崎フロンティア']
+    };
+    const natPool = foreignClubsByNat[p.nationality] || ['コンチネンタルFC', 'メトロポリタンSC', 'ユナイテッド・アカデミー'];
+    const formerClubName = natPool[absHash % natPool.length];
+    const hasTransferred = pastSeasonsCount >= 3 && (absHash % 3 !== 0);
+    const transferSeasonIdx = hasTransferred ? Math.max(1, Math.floor(pastSeasonsCount * 0.55)) : pastSeasonsCount + 1;
+
+    if (pastSeasonsCount > 0) {
+      // 各年度の重みを計算して出場数・ゴール数を整数配分
+      const appWeights = [];
+      const goalWeights = [];
+      let sumAppW = 0;
+      let sumGoalW = 0;
+
+      for (let i = 0; i < pastSeasonsCount; i++) {
+        const ageAtSeason = 18 + i;
+        const maturity = ageAtSeason <= 19 ? 0.55 : (ageAtSeason <= 21 ? 0.82 : 1.0);
+        const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
+        const aw = maturity * jitter;
+        const gw = maturity * (0.8 + (((absHash >> ((i + 3) % 8)) & 7) / 20));
+        appWeights.push(aw);
+        goalWeights.push(gw);
+        sumAppW += aw;
+        sumGoalW += gw;
+      }
+
+      let remApps = totalPastApps;
+      let remGoals = totalPastGoals;
+
+      for (let i = 0; i < pastSeasonsCount; i++) {
+        const seasonStartYr = curBaseYear - (pastSeasonsCount - i);
+        const seasonYearStr = `${seasonStartYr}-${String((seasonStartYr + 1) % 100).padStart(2, '0')}`;
+        const ageAtSeason = 18 + i;
+        const isLast = (i === pastSeasonsCount - 1);
+
+        let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
+        apps = clamp(apps, 0, Math.min(38, remApps));
+        remApps = Math.max(0, remApps - apps);
+
+        let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
+        goals = clamp(goals, 0, remGoals);
+        if (apps === 0) goals = 0;
+        remGoals = Math.max(0, remGoals - goals);
+
+        const yearsAgo = pastSeasonsCount - i;
+        const estOvr = clamp(baseOvr - Math.min(8, Math.round(yearsAgo * 1.1)), 52, 95);
+        const baseR = 6.35 + ((estOvr - 65) * 0.025) + (goals / Math.max(10, apps || 1)) * 0.65;
+        const avgR = apps > 0 ? clamp(baseR, 6.10, 8.45).toFixed(2) : '-';
+        const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : (currentClubName || '現所属クラブ');
+
+        history.push({
+          seasonYear: seasonYearStr,
+          clubName: clubAtSeason,
+          age: ageAtSeason,
+          appearances: apps,
+          goals: goals,
+          avgRating: avgR,
+          ovr: estOvr
+        });
+      }
+
+      // 端数が残った場合は最終過去シーズンに加算してキャリア通算と完全一致させる
+      if (remApps > 0 && history.length > 0) {
+        history[history.length - 1].appearances += remApps;
+      }
+      if (remGoals > 0 && history.length > 0) {
+        history[history.length - 1].goals += remGoals;
+      }
+    }
+
+    p.seasonHistory = history;
+    p._formerClubName = hasTransferred ? formerClubName : null;
+    p._transferYear = hasTransferred ? (curBaseYear - (pastSeasonsCount - transferSeasonIdx)) : null;
+  }
+
+  // 経歴タイムラインイベントの生成
+  const youthYear = birthYear + 15;
+  const debutYear = birthYear + 18;
+  const originClub = p._formerClubName || currentClubName || 'クラブ';
+  const careerEvents = [
+    {
+      year: `${youthYear}年`,
+      badge: 'YOUTH',
+      title: `${originClub} ユースアカデミー入団`,
+      desc: `15歳で${originClub}の下部組織に入団。${primaryPos}を主戦場に頭角を現す。`
+    }
+  ];
+
+  if ((p.age || 18) >= 18) {
+    careerEvents.push({
+      year: `${debutYear}年`,
+      badge: 'DEBUT',
+      title: `${originClub} トップチーム昇格・プロデビュー`,
+      desc: `18歳でプロ契約を締結し公式戦デビュー。持ち前の${(Array.isArray(p.traits) && p.traits[0]) || 'プレイスタイル'}で評価を高める。`
+    });
+  }
+
+  if (p._formerClubName && p._transferYear) {
+    careerEvents.push({
+      year: `${p._transferYear}年`,
+      badge: 'TRANSFER',
+      title: `${currentClubName} へ完全移籍`,
+      desc: `${p._formerClubName}での活躍が認められ、戦力補強の目玉として${currentClubName}へ加入。`
+    });
+  } else if ((p.age || 18) >= 21) {
+    careerEvents.push({
+      year: `${debutYear + 2}年`,
+      badge: 'SQUAD',
+      title: `${currentClubName} 主力メンバー定着`,
+      desc: `コンスタントな出場機会を確保し、背番号${p.squadNumber || 10}を背負う中核選手へと成長。`
+    });
+  }
+
+  // 現在のステータス
+  const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
+  careerEvents.push({
+    year: `${curSeasonStr} (現在)`,
+    badge: 'CURRENT',
+    title: `${currentClubName} 在籍（契約残り${p.contractYears}年 / OVR ${baseOvr}）`,
+    desc: `今季ここまで ${p.appearances || 0}試合出場・${p.goals || 0}得点。${p.isStarter ? `スタメン（${p.assignedPos || primaryPos}）として稼働中。` : 'スカッドの一員としてシーズンを戦う。'}`
+  });
+
+  return {
+    seasonHistory: p.seasonHistory,
+    careerEvents,
+    birthYear,
+    curSeasonStr
+  };
+}
 function openPlayerProfileModal(playerId) {
   const ctx = findPlayerWithContextById(playerId);
   if (!ctx) return;
@@ -6937,75 +7151,289 @@ function openPlayerProfileModal(playerId) {
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
   const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs);
 
+  // 年別成績・経歴データの取得と補完
+  const historyData = ensurePlayerHistoryAndCareer(p, clubName);
+  const { seasonHistory, careerEvents, birthYear, curSeasonStr } = historyData;
+
+  // 今季成績の補助指標
+  const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
+  const appRate = (p.appearances || 0) > 0
+    ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
+    : 0;
+  const goalsPerMatch = (p.appearances || 0) > 0
+    ? ((p.goals || 0) / p.appearances).toFixed(2)
+    : '0.00';
+  const roleStatusText = isMarket
+    ? '移籍リスト登録中'
+    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
+  const conditionText = (p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)
+    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
+    : '良好 (出場可能)';
+  const conditionClass = ((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)) ? 'text-danger' : 'accent-green';
+  const estMarketValue = p.transferFee || Math.max(500, Math.round(p.salary * 2.8));
+
+  // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
+  const allRowsData = [
+    ...seasonHistory.map(row => ({ ...row, isCurrent: false })),
+    {
+      seasonYear: `${curSeasonStr}`,
+      clubName: clubName,
+      age: p.age,
+      appearances: p.appearances || 0,
+      goals: p.goals || 0,
+      avgRating: avgRating,
+      ovr: baseOvr,
+      isCurrent: true
+    }
+  ];
+
+  const totalAppsSum = allRowsData.reduce((acc, r) => acc + (r.appearances || 0), 0);
+  const totalGoalsSum = allRowsData.reduce((acc, r) => acc + (r.goals || 0), 0);
+  let weightedRatingSum = 0;
+  let ratedAppsSum = 0;
+  for (const r of allRowsData) {
+    const numR = parseFloat(r.avgRating);
+    if (!Number.isNaN(numR) && r.appearances > 0) {
+      weightedRatingSum += numR * r.appearances;
+      ratedAppsSum += r.appearances;
+    }
+  }
+  const careerAvgRating = ratedAppsSum > 0 ? (weightedRatingSum / ratedAppsSum).toFixed(2) : '-';
+
+  const yearlyRowsHtml = allRowsData.map(r => `
+    <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
+      <td class="mono">${r.seasonYear}</td>
+      <td class="col-yearly-club">${r.clubName}</td>
+      <td class="mono col-num">${r.age}</td>
+      <td class="mono col-num">${r.appearances}</td>
+      <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
+      <td class="mono col-num ${r.avgRating !== '-' ? 'accent-gold' : 'text-muted'}">${r.avgRating}</td>
+      <td class="mono col-num">${r.ovr}</td>
+    </tr>
+  `).join('');
+
+  const timelineHtml = careerEvents.map(ev => `
+    <div class="profile-timeline-item ${ev.badge === 'CURRENT' ? 'is-current' : ''}">
+      <div class="profile-timeline-dot"></div>
+      <div class="profile-timeline-content">
+        <div class="profile-timeline-head">
+          <span class="profile-timeline-year mono">${ev.year}</span>
+          <span class="profile-timeline-badge mono badge-${ev.badge.toLowerCase()}">${ev.badge}</span>
+        </div>
+        <div class="profile-timeline-title">${ev.title}</div>
+        <div class="profile-timeline-desc">${ev.desc}</div>
+      </div>
+    </div>
+  `).join('');
+
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
-      <div class="profile-section-grid">
-        <!-- 左：6大能力六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ） -->
-        <div class="profile-box profile-box-hexagon">
-          <div class="profile-box-header">
-            <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
-            <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+      <!-- タブ1：能力（ABILITY） -->
+      <div class="profile-tab-panel" data-profile-panel="ability">
+        <div class="profile-section-grid">
+          <!-- 左：6大能力六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ） -->
+          <div class="profile-box profile-box-hexagon">
+            <div class="profile-box-header">
+              <span class="profile-box-title">ABILITY PARAMETERS（能力値）</span>
+              <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+            </div>
+            ${hexagonChartHtml}
           </div>
 
-          ${hexagonChartHtml}
+          <!-- 右：複数ポジション適性マトリクス ＆ 選手特徴 -->
+          <div class="profile-box">
+            <div class="profile-box-header">
+              <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+            </div>
+            <div class="profile-pos-fit-list">
+              <div class="profile-fit-row">
+                <span class="text-muted">メイン適性 (100%発揮)</span>
+                <span class="pos-tag pos-${primaryPos}"><strong>${primaryPos}</strong> (OVR ${baseOvr})</span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">サブ適性 (92% / SUB-POS)</span>
+                <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）'}</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">適性外配置時 (80%ペナルティ)</span>
+                <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
+              </div>
+              ${currentSlotBanner}
+            </div>
+
+            <div class="profile-box-header" style="margin-top: 6px;">
+              <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
+            </div>
+            <div class="profile-traits-wrap">
+              ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+            </div>
+          </div>
         </div>
 
-        <!-- 右：複数ポジション適性マトリクス ＆ 選手特徴 -->
-        <div class="profile-box">
-          <div class="profile-box-header">
-            <span class="profile-box-title">POSITION SUITABILITY（適性・補正）</span>
+        <!-- 能力タブ下部：契約・市場価値情報 -->
+        <div class="profile-metrics-row profile-metrics-row-3col">
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
+            <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
           </div>
-          <div class="profile-pos-fit-list">
-            <div class="profile-fit-row">
-              <span class="text-muted">メイン適性 (100%発揮)</span>
-              <span class="pos-tag pos-${primaryPos}"><strong>${primaryPos}</strong> (OVR ${baseOvr})</span>
-            </div>
-            <div class="profile-fit-row">
-              <span class="text-muted">サブ適性 (92% / SUB-POS)</span>
-              <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし（専任）'}</strong></span>
-            </div>
-            <div class="profile-fit-row">
-              <span class="text-muted">適性外配置時 (80%ペナルティ)</span>
-              <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
-            </div>
-            ${currentSlotBanner}
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">CONTRACT（契約残年数）</span>
+            <span class="profile-metric-val">${p.contractYears}年</span>
           </div>
-
-          <div class="profile-box-header" style="margin-top: 6px;">
-            <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
-          </div>
-          <div class="profile-traits-wrap">
-            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">${isMarket ? 'TRANSFER FEE（移籍金）' : 'MARKET VALUE（推定市場価値）'}</span>
+            <span class="profile-metric-val">${formatMoney(estMarketValue)}</span>
           </div>
         </div>
       </div>
 
-      <!-- 下部：契約条件＆今季スタッツ・平均評価点・通算成績 -->
-      <div class="profile-metrics-row">
-        <div class="profile-metric-card">
-          <span class="profile-metric-label">${isMarket ? 'DEMAND SALARY（要求年俸）' : 'CURRENT SALARY（現在年俸）'}</span>
-          <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
+      <!-- タブ2：今季成績（CURRENT SEASON STATS） -->
+      <div class="profile-tab-panel hidden" data-profile-panel="season">
+        <div class="profile-box">
+          <div class="profile-box-header">
+            <span class="profile-box-title">SEASON ${curSeasonStr} PERFORMANCE（今季成績サマリー）</span>
+            <span class="mono text-muted" style="font-size: 11px;">${clubName}</span>
+          </div>
+
+          <div class="profile-season-stats-grid">
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">APPEARANCES（出場試合数）</span>
+              <span class="profile-metric-val mono">${p.appearances} <small style="font-size: 12px; color: var(--text-muted);">試合</small></span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">GOALS（今季ゴール数）</span>
+              <span class="profile-metric-val mono accent-green">${p.goals} <small style="font-size: 12px; color: var(--text-muted);">得点</small></span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">AVG RATING（平均評価点）</span>
+              <span class="profile-metric-val mono accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">GOALS / MATCH（1試合平均得点）</span>
+              <span class="profile-metric-val mono">${goalsPerMatch}</span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">PARTICIPATION（リーグ出場率）</span>
+              <span class="profile-metric-val mono">${appRate}%</span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">EFFECTIVE OVR（実効総合力）</span>
+              <span class="profile-metric-val mono accent-green">OVR ${effOvr}</span>
+            </div>
+          </div>
+
+          <div class="profile-season-detail-list">
+            <div class="profile-fit-row">
+              <span class="text-muted">現在のチーム内起用区分</span>
+              <span class="mono"><strong>${roleStatusText}</strong></span>
+            </div>
+            <div class="profile-fit-row">
+              <span class="text-muted">フィジカル・コンディション</span>
+              <span class="mono ${conditionClass}"><strong>${conditionText}</strong></span>
+            </div>
+            <div class="profile-fit-row profile-scout-comment-row">
+              <span class="text-muted">今季スカウト評価コメント</span>
+              <span class="profile-scout-comment-text">
+                ${p.appearances === 0
+                  ? '今季の公式戦出場はまだありません。今後の起用と連携向上が期待されます。'
+                  : (parseFloat(avgRating) >= 7.0
+                    ? '極めて高水準なパフォーマンスを維持しており、チームの勝利に大きく貢献しています。'
+                    : 'コンスタントに試合へ絡み、戦術システムの中で安定した役割を果たしています。')}
+              </span>
+            </div>
+          </div>
         </div>
-        <div class="profile-metric-card">
-          <span class="profile-metric-label">CONTRACT（契約残年数）</span>
-          <span class="profile-metric-val">${p.contractYears}年${isMarket && p.transferFee ? ` (移籍金 ${formatMoney(p.transferFee)})` : ''}</span>
+      </div>
+
+      <!-- タブ3：年別成績（YEARLY CAREER STATS） -->
+      <div class="profile-tab-panel hidden" data-profile-panel="yearly">
+        <div class="profile-box">
+          <div class="profile-box-header">
+            <span class="profile-box-title">YEARLY CAREER STATISTICS（年度別成績・通算記録）</span>
+            <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}得点</span>
+          </div>
+          <div class="profile-yearly-table-wrap">
+            <table class="data-table profile-yearly-table">
+              <thead>
+                <tr>
+                  <th>年度</th>
+                  <th>所属クラブ</th>
+                  <th class="col-num">年齢</th>
+                  <th class="col-num">出場</th>
+                  <th class="col-num">得点</th>
+                  <th class="col-num">評価点</th>
+                  <th class="col-num">OVR</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${yearlyRowsHtml}
+              </tbody>
+              <tfoot>
+                <tr class="profile-yearly-total-row">
+                  <td class="mono" colspan="2">TOTAL（通算）</td>
+                  <td class="mono col-num">-</td>
+                  <td class="mono col-num"><strong>${totalAppsSum}</strong></td>
+                  <td class="mono col-num accent-green"><strong>${totalGoalsSum}</strong></td>
+                  <td class="mono col-num accent-gold"><strong>${careerAvgRating}</strong></td>
+                  <td class="mono col-num"><strong>${baseOvr}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-        <div class="profile-metric-card">
-          <span class="profile-metric-label">APPEARANCES（今季出場数）</span>
-          <span class="profile-metric-val">${p.appearances} 試合</span>
-        </div>
-        <div class="profile-metric-card">
-          <span class="profile-metric-label">GOALS（今季ゴール数）</span>
-          <span class="profile-metric-val accent-green">${p.goals} 得点</span>
-        </div>
-        <div class="profile-metric-card">
-          <span class="profile-metric-label">AVG RATING（平均評価点）</span>
-          <span class="profile-metric-val accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
+      </div>
+
+      <!-- タブ4：経歴（BIOGRAPHY & CAREER HISTORY） -->
+      <div class="profile-tab-panel hidden" data-profile-panel="career">
+        <div class="profile-section-grid">
+          <div class="profile-box">
+            <div class="profile-box-header">
+              <span class="profile-box-title">PLAYER BIOGRAPHY（選手プロフィール詳細）</span>
+            </div>
+            <div class="profile-pos-fit-list">
+              <div class="profile-fit-row">
+                <span class="text-muted">登録選手名 / フルネーム</span>
+                <span class="mono"><strong>${p.fullName || p.name}</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">国籍 / 代表資格</span>
+                <span class="mono"><strong>${nationalityDisplay}</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">生年 / 現在年齢</span>
+                <span class="mono"><strong>${birthYear}年生まれ (${p.age}歳)</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">身長 / 利き足</span>
+                <span class="mono"><strong>${heightText} / ${footText}</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">現所属クラブ / 背番号</span>
+                <span class="mono"><strong>${clubName} (${squadNumText})</strong></span>
+              </div>
+              <div class="profile-fit-row">
+                <span class="text-muted">登録ポジション（メイン / サブ）</span>
+                <span class="mono"><strong>${primaryPos}${subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : ''}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-box">
+            <div class="profile-box-header">
+              <span class="profile-box-title">CAREER TIMELINE（選手経歴・移籍ヒストリー）</span>
+            </div>
+            <div class="profile-career-timeline">
+              ${timelineHtml}
+            </div>
+          </div>
         </div>
       </div>
     `;
   }
+
+  // デフォルトで「能力」タブを選択状態にする
+  switchProfileModalTab('ability');
 
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   const cardEl = document.getElementById('player-profile-modal-card');
@@ -8085,10 +8513,19 @@ function initGame() {
     });
   }
 
-  // 選手プロフィール詳細モーダルを閉じるイベント＆交渉起動イベント
+  // 選手プロフィール詳細モーダルを閉じるイベント＆タブ切り替えイベント
   const closeProfileBtn = document.getElementById('btn-close-profile-modal');
   if (closeProfileBtn) {
     closeProfileBtn.addEventListener('click', closePlayerProfileModal);
+  }
+  const profileSubnavBar = document.getElementById('profile-subnav-bar');
+  if (profileSubnavBar) {
+    const onSelectProfileTab = (e) => {
+      const btn = e.target.closest('.profile-tab-btn');
+      if (!btn || !btn.dataset.profileTab) return;
+      switchProfileModalTab(btn.dataset.profileTab);
+    };
+    profileSubnavBar.addEventListener('click', onSelectProfileTab);
   }
   const profileFooterActions = document.getElementById('profile-footer-actions');
   if (profileFooterActions) {
