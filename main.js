@@ -5388,7 +5388,8 @@ function renderStandings() {
 
   tbody.innerHTML = sorted.map((club, idx) => {
     const rank = idx + 1;
-    const rowClass = club.isPlayer ? 'row-player-club' : '';
+    const zoneClass = rank <= 4 ? 'zone-ucl' : (rank === 5 ? 'zone-uel' : (rank >= 18 ? 'zone-rel' : ''));
+    const rowClass = [club.isPlayer ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
     const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
     const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd}`;
 
@@ -5396,13 +5397,13 @@ function renderStandings() {
       <tr class="${rowClass}">
         <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
         <td class="col-team">${club.name}</td>
-        <td class="col-num">${club.played}</td>
-        <td class="col-num">${club.won}</td>
-        <td class="col-num">${club.drawn}</td>
-        <td class="col-num">${club.lost}</td>
-        <td class="col-num">${club.gf}</td>
-        <td class="col-num">${club.ga}</td>
-        <td class="col-num">${gdSign}</td>
+        <td class="col-num col-played">${club.played}</td>
+        <td class="col-num col-won">${club.won}</td>
+        <td class="col-num col-drawn">${club.drawn}</td>
+        <td class="col-num col-lost">${club.lost}</td>
+        <td class="col-num col-gf"><span class="td-pc">${club.gf}</span><span class="td-mob">${club.gf}-${club.ga}</span></td>
+        <td class="col-num col-ga">${club.ga}</td>
+        <td class="col-num col-gd">${gdSign}</td>
         <td class="col-pts">${club.pts}</td>
       </tr>
     `;
