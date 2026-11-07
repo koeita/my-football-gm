@@ -267,6 +267,13 @@
       </div>
     </section>
 
+      <!-- 本日の試合（MATCHDAY）プレビューパネル（試合日のみ業務タスク直下に表示） -->
+      <section class="office-matchday-section hidden" id="office-matchday-section" aria-label="本日の試合（MATCHDAY）">
+        <div id="matchday-hero-container">
+          <!-- JSで matchday-card-preview を描画 -->
+        </div>
+      </section>
+
       <!-- 日程進行メインアクション -->
       <section class="office-action-section">
         <div class="office-action-controls action-controls" id="office-action-controls">
@@ -274,7 +281,7 @@
             <span class="btn-large-sub mono">NEXT FIXTURE</span>
             <span class="btn-large-title">次の試合まで進める</span>
           </button>
-          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match">
+          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">
             <span class="btn-large-sub mono">MATCHDAY</span>
             <span class="btn-large-title">キックオフ</span>
           </button>
