@@ -787,13 +787,16 @@ body {
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 768px) {
   .tactics-btn-group {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
   }
   .tactics-btn-group .btn-tactic:last-child {
-    grid-column: 1 / -1;
+    grid-column: auto !important;
+  }
+  .btn-tactic {
+    padding: 9px 12px !important;
   }
 }
 
