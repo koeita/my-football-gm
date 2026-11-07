@@ -64,7 +64,8 @@ const CLUB_DEFINITIONS = [
     supporters: 21500,
     targetRank: 1,
     targetLabel: '1位（優勝）',
-    defaultTactic: 'possession'
+    defaultTactic: 'possession',
+    defaultFormation: '4-1-2-3'
   },
   {
     id: 'manchester_r',
@@ -76,19 +77,21 @@ const CLUB_DEFINITIONS = [
     supporters: 22000,
     targetRank: 3,
     targetLabel: '3位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '4-2-3-1'
   },
   {
     id: 'liverpool_b',
     name: 'リバプール・B',
     tier: 'CONTENDER',
-    desc: '熱狂的なサポーターと激しいハイプレスを武器とする強豪',
+    desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
     basePower: 71,
     initialFunds: 115000, // £115.0M
     supporters: 21000,
     targetRank: 2,
     targetLabel: '2位以内',
-    defaultTactic: 'highpress'
+    defaultTactic: 'gegenpress',
+    defaultFormation: '4-3-3'
   },
   {
     id: 'northlondon_a',
@@ -100,7 +103,8 @@ const CLUB_DEFINITIONS = [
     supporters: 20000,
     targetRank: 3,
     targetLabel: '3位以内',
-    defaultTactic: 'possession'
+    defaultTactic: 'possession',
+    defaultFormation: '4-3-3'
   },
   {
     id: 'london_fc',
@@ -112,19 +116,21 @@ const CLUB_DEFINITIONS = [
     supporters: 19000,
     targetRank: 4,
     targetLabel: '4位以内',
-    defaultTactic: 'possession'
+    defaultTactic: 'possession',
+    defaultFormation: '4-2-3-1'
   },
   {
     id: 'northlondon_w',
     name: 'ノースロンドン・W',
     tier: 'BIG CLUB',
-    desc: '最新鋭スタジアムと鋭い速攻を備える北ロンドンの白百合',
+    desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
     basePower: 68,
     initialFunds: 88000, // £88.0M
     supporters: 18500,
     targetRank: 5,
     targetLabel: '5位以内',
-    defaultTactic: 'highpress'
+    defaultTactic: 'gegenpress',
+    defaultFormation: '4-2-3-1'
   },
   {
     id: 'newcastle_u',
@@ -136,7 +142,8 @@ const CLUB_DEFINITIONS = [
     supporters: 18000,
     targetRank: 6,
     targetLabel: '6位以内',
-    defaultTactic: 'highpress'
+    defaultTactic: 'wingplay',
+    defaultFormation: '4-3-3'
   },
   {
     id: 'aston_v',
@@ -148,7 +155,8 @@ const CLUB_DEFINITIONS = [
     supporters: 16800,
     targetRank: 6,
     targetLabel: '6位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '4-4-2'
   },
   {
     id: 'brighton_g',
@@ -160,7 +168,8 @@ const CLUB_DEFINITIONS = [
     supporters: 15000,
     targetRank: 8,
     targetLabel: '8位以内',
-    defaultTactic: 'possession'
+    defaultTactic: 'possession',
+    defaultFormation: '3-4-3'
   },
   {
     id: 'eastlondon_h',
@@ -172,7 +181,8 @@ const CLUB_DEFINITIONS = [
     supporters: 16500,
     targetRank: 9,
     targetLabel: '9位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '4-2-3-1'
   },
   {
     id: 'southlondon_p',
@@ -184,7 +194,8 @@ const CLUB_DEFINITIONS = [
     supporters: 14500,
     targetRank: 10,
     targetLabel: '10位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'wingplay',
+    defaultFormation: '3-4-3'
   },
   {
     id: 'westlondon_c',
@@ -196,7 +207,8 @@ const CLUB_DEFINITIONS = [
     supporters: 14000,
     targetRank: 12,
     targetLabel: '12位以内',
-    defaultTactic: 'possession'
+    defaultTactic: 'wingplay',
+    defaultFormation: '4-2-3-1'
   },
   {
     id: 'westlondon_b',
@@ -208,7 +220,8 @@ const CLUB_DEFINITIONS = [
     supporters: 13200,
     targetRank: 13,
     targetLabel: '13位以内',
-    defaultTactic: 'highpress'
+    defaultTactic: 'gegenpress',
+    defaultFormation: '3-5-2'
   },
   {
     id: 'midlands_w',
@@ -220,7 +233,8 @@ const CLUB_DEFINITIONS = [
     supporters: 13800,
     targetRank: 13,
     targetLabel: '13位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '5-3-2'
   },
   {
     id: 'merseyside_b',
@@ -232,7 +246,8 @@ const CLUB_DEFINITIONS = [
     supporters: 15200,
     targetRank: 14,
     targetLabel: '14位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'parkthebus',
+    defaultFormation: '4-4-2'
   },
   {
     id: 'southcoast_c',
@@ -244,7 +259,8 @@ const CLUB_DEFINITIONS = [
     supporters: 12500,
     targetRank: 15,
     targetLabel: '15位以内',
-    defaultTactic: 'highpress'
+    defaultTactic: 'gegenpress',
+    defaultFormation: '4-3-1-2'
   },
   {
     id: 'nottingham_r',
@@ -256,7 +272,8 @@ const CLUB_DEFINITIONS = [
     supporters: 13500,
     targetRank: 16,
     targetLabel: '16位以内',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '5-3-2'
   },
   {
     id: 'leicester_f',
@@ -268,7 +285,8 @@ const CLUB_DEFINITIONS = [
     supporters: 13200,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
-    defaultTactic: 'counter'
+    defaultTactic: 'counter',
+    defaultFormation: '4-3-1-2'
   },
   {
     id: 'southampton_s',
@@ -280,7 +298,8 @@ const CLUB_DEFINITIONS = [
     supporters: 12200,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
-    defaultTactic: 'possession'
+    defaultTactic: 'possession',
+    defaultFormation: '4-1-2-3'
   },
   {
     id: 'ipswich_t',
@@ -292,7 +311,8 @@ const CLUB_DEFINITIONS = [
     supporters: 11500,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
-    defaultTactic: 'highpress'
+    defaultTactic: 'parkthebus',
+    defaultFormation: '5-3-2'
   }
 ];
 
@@ -313,7 +333,9 @@ const POS_DISPLAY_ORDER = {
   GK: 1,
   CB: 2,
   LB: 3,
+  LWB: 3,
   RB: 4,
+  RWB: 4,
   DM: 5,
   CM: 6,
   LM: 7,
@@ -329,6 +351,8 @@ const POS_ROLE_GROUP = {
   CB: 'DF',
   LB: 'DF',
   RB: 'DF',
+  LWB: 'DF',
+  RWB: 'DF',
   DM: 'MF',
   CM: 'MF',
   LM: 'MF',
@@ -339,7 +363,7 @@ const POS_ROLE_GROUP = {
   CF: 'FW'
 };
 
-// 4種類のフォーメーション定義（ピッチ座標 x: 0〜100%, y: 0〜100% ※上が相手ゴール方向）
+// 全8種類のフォーメーション定義（ピッチ座標 x: 0〜100%, y: 0〜100% ※上が相手ゴール方向）
 const FORMATIONS = {
   '4-3-3': {
     name: '4-3-3',
@@ -399,10 +423,74 @@ const FORMATIONS = {
       { slotIndex: 4, pos: 'DM', label: 'DM', x: 50, y: 57 },
       { slotIndex: 5, pos: 'LM', label: 'LM', x: 13, y: 43 },
       { slotIndex: 6, pos: 'CM', label: 'LCM', x: 34, y: 41 },
-      { slotIndex: 7, pos: 'AM', label: 'AM', x: 66, y: 41 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 66, y: 41 },
       { slotIndex: 8, pos: 'RM', label: 'RM', x: 87, y: 43 },
       { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
       { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
+    ]
+  },
+  '3-4-3': {
+    name: '3-4-3',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'CB', label: 'LCB', x: 22, y: 73 },
+      { slotIndex: 2, pos: 'CB', label: 'CB', x: 50, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 78, y: 73 },
+      { slotIndex: 4, pos: 'LM', label: 'LM', x: 14, y: 47 },
+      { slotIndex: 5, pos: 'CM', label: 'LCM', x: 37, y: 50 },
+      { slotIndex: 6, pos: 'CM', label: 'RCM', x: 63, y: 50 },
+      { slotIndex: 7, pos: 'RM', label: 'RM', x: 86, y: 47 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 18, y: 21 },
+      { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 15 },
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 82, y: 21 }
+    ]
+  },
+  '5-3-2': {
+    name: '5-3-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LWB', label: 'LWB', x: 12, y: 62 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 29, y: 74 },
+      { slotIndex: 3, pos: 'CB', label: 'CB', x: 50, y: 77 },
+      { slotIndex: 4, pos: 'CB', label: 'RCB', x: 71, y: 74 },
+      { slotIndex: 5, pos: 'RWB', label: 'RWB', x: 88, y: 62 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 24, y: 44 },
+      { slotIndex: 7, pos: 'CM', label: 'CM', x: 50, y: 48 },
+      { slotIndex: 8, pos: 'CM', label: 'RCM', x: 76, y: 44 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 18 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 18 }
+    ]
+  },
+  '4-1-2-3': {
+    name: '4-1-2-3',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
+      { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 58 },
+      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 31, y: 40 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 69, y: 40 },
+      { slotIndex: 8, pos: 'LW', label: 'LW', x: 17, y: 20 },
+      { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 14 },
+      { slotIndex: 10, pos: 'RW', label: 'RW', x: 83, y: 20 }
+    ]
+  },
+  '4-3-1-2': {
+    name: '4-3-1-2',
+    slots: [
+      { slotIndex: 0, pos: 'GK', label: 'GK', x: 50, y: 88 },
+      { slotIndex: 1, pos: 'LB', label: 'LB', x: 14, y: 70 },
+      { slotIndex: 2, pos: 'CB', label: 'LCB', x: 37, y: 76 },
+      { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
+      { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
+      { slotIndex: 5, pos: 'CM', label: 'LCM', x: 24, y: 50 },
+      { slotIndex: 6, pos: 'CM', label: 'CM', x: 50, y: 54 },
+      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 76, y: 50 },
+      { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 34 },
+      { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 16 },
+      { slotIndex: 10, pos: 'CF', label: 'RCF', x: 66, y: 16 }
     ]
   }
 };
@@ -459,24 +547,53 @@ const GROWTH_CURVES = [
   { id: 'fragile', label: '天才' }
 ];
 
-// 戦術定義
+// 5大チーム戦術スタイル定義
 const TACTICS_DEFINITIONS = {
   possession: {
-    name: 'ポゼッション（支配）',
+    name: 'ポゼッション（ショートパス主導）',
     badge: 'POSSESSION',
-    desc: '【ポゼッション（支配）】：中盤（DM/CM/LM/RM/AM）の能力が攻守に強く反映される。得点・失点ともにロースコア傾向。'
+    aim: 'ボール支配率を高めてじっくり相手を崩す。',
+    effect: '中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。',
+    desc: '【ポゼッション（Possession / ショートパス主導）】狙い：ボール支配率を高めてじっくり相手を崩す。 ／ 効果：中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。'
+  },
+  gegenpress: {
+    name: 'ゲーゲンプレス（前線奪取速攻）',
+    badge: 'GEGENPRESS',
+    aim: '敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。',
+    effect: 'シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。',
+    desc: '【ゲーゲンプレス（Gegenpress / 前線奪取速攻）】狙い：敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。 ／ 効果：シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。'
   },
   counter: {
-    name: 'カウンター（速攻）',
-    badge: 'COUNTER ATTACK',
-    desc: '【カウンター（速攻）】：前線（LW/RW/CF）の攻撃力と最終ライン（CB/LB/RB）の守備力が重視される。引き分けが減り波乱が起きやすい。'
+    name: 'ダイレクトカウンター（堅守ロング速攻）',
+    badge: 'DIRECT COUNTER',
+    aim: '自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。',
+    effect: 'スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。',
+    desc: '【ダイレクトカウンター（Direct Counter / 堅守ロング速攻）】狙い：自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。 ／ 効果：スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。'
   },
-  highpress: {
-    name: 'ハイプレス（前線守備）',
-    badge: 'HIGH PRESS',
-    desc: '【ハイプレス（前線守備）】：全体能力に+8%ボーナスがつくが、試合後の疲労（スタミナ減少）が大きくなる。'
+  wingplay: {
+    name: 'ワイドアタック（サイドアタック）',
+    badge: 'WING PLAY',
+    aim: '両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。',
+    effect: 'サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。',
+    desc: '【ワイドアタック（Wing Play / サイドアタック）】狙い：両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。 ／ 効果：サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。'
+  },
+  parkthebus: {
+    name: 'ウルトラディフェンス（徹底堅守）',
+    badge: 'PARK THE BUS',
+    aim: '11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。',
+    effect: '失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。',
+    desc: '【ウルトラディフェンス（Park the Bus / 徹底堅守）】狙い：11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。 ／ 効果：失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。'
   }
 };
+
+/**
+ * 旧セーブデータ等の戦術キー（highpress 等）を5大戦術キーへ正規化するヘルパー
+ */
+function normalizeTacticKey(tacticKey) {
+  if (tacticKey === 'highpress') return 'gegenpress';
+  if (tacticKey && TACTICS_DEFINITIONS[tacticKey]) return tacticKey;
+  return 'possession';
+}
 
 // 国籍別・架空欧州選手名データ辞書（各First Name 25種以上、Last Name 35種以上）
 const NATIONALITY_NAME_DATABASE = {
@@ -919,6 +1036,23 @@ function getPositionFitInfo(p, slotPos) {
 
   if (!slotPos || slotPos === primary) {
     return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
+  }
+  // 5-3-2等のウイングバック（LWB / RWB）枠の適性判定：LB/RBはメイン適性100%、LM/RMはサブ適性92%として扱う
+  if (slotPos === 'LWB') {
+    if (primary === 'LB' || primary === 'LWB') {
+      return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
+    }
+    if (subs.includes('LWB') || subs.includes('LB') || primary === 'LM' || subs.includes('LM')) {
+      return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
+    }
+  }
+  if (slotPos === 'RWB') {
+    if (primary === 'RB' || primary === 'RWB') {
+      return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
+    }
+    if (subs.includes('RWB') || subs.includes('RB') || primary === 'RM' || subs.includes('RM')) {
+      return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
+    }
   }
   if (subs.includes(slotPos)) {
     return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
@@ -1804,10 +1938,10 @@ function assignStartersToFormationSlots(club, forceReassign = false) {
 
   const unassignedPlayers = [...remainingStarters];
 
-  // 第1パス：メイン適性（primaryPosition）と完全一致するスロットへ優先配置
+  // 第1パス：メイン適性（MAIN 100%）と一致するスロットへ優先配置
   for (const sl of slots) {
     if (claimedSlotIndices.has(sl.slotIndex)) continue;
-    const matchIdx = unassignedPlayers.findIndex(p => (p.primaryPosition || p.preferredPosition || p.pos) === sl.pos);
+    const matchIdx = unassignedPlayers.findIndex(p => getPositionFitInfo(p, sl.pos).type === 'main');
     if (matchIdx !== -1) {
       const p = unassignedPlayers.splice(matchIdx, 1)[0];
       p.slotIndex = sl.slotIndex;
@@ -1816,10 +1950,10 @@ function assignStartersToFormationSlots(club, forceReassign = false) {
     }
   }
 
-  // 第2パス：サブ適性（secondaryPositions）に含まれるスロットへ優先配置（92%発揮）
+  // 第2パス：サブ適性（SUB-POS 92%）に含まれるスロットへ優先配置
   for (const sl of slots) {
     if (claimedSlotIndices.has(sl.slotIndex)) continue;
-    const subIdx = unassignedPlayers.findIndex(p => Array.isArray(p.secondaryPositions) && p.secondaryPositions.includes(sl.pos));
+    const subIdx = unassignedPlayers.findIndex(p => getPositionFitInfo(p, sl.pos).type === 'sub');
     if (subIdx !== -1) {
       const p = unassignedPlayers.splice(subIdx, 1)[0];
       p.slotIndex = sl.slotIndex;
@@ -2444,15 +2578,28 @@ function renderWeeklySchedule() {
 }
 
 /**
- * チームのスタメン11名の戦術・複数ポジション適性(100%/92%/80%)・怪我状態を考慮した実効能力を計算
+ * チームのスタメン11名の戦術・フォーメーション・複数ポジション適性(100%/92%/80%)・6大能力・怪我状態を考慮した実効能力を計算
  */
 function getTeamStarterStats(club) {
   const starters = club.players.filter(p => p.isStarter && !p.isRetired);
-  const tactic = club.tactic || 'possession';
+  const tactic = normalizeTacticKey(club.tactic);
+  const formationKey = (club.formation && FORMATIONS[club.formation]) ? club.formation : '4-3-3';
 
   let totalAtk = 0;
   let totalDef = 0;
   let totalSta = 0;
+  let totalEffOvr = 0;
+
+  let cmDmPassSum = 0;
+  let cmDmCount = 0;
+  let fwPaceSum = 0;
+  let fwCount = 0;
+  let wideOvrSum = 0;
+  let wideCount = 0;
+
+  const CENTRAL_MIDS = ['CM', 'DM', 'AM'];
+  const WIDE_POSITIONS = ['LW', 'RW', 'LM', 'RM', 'LB', 'RB', 'LWB', 'RWB'];
+  const FW_POSITIONS = ['CF', 'LW', 'RW'];
 
   for (const p of starters) {
     const slot = p.assignedPos || p.pos;
@@ -2463,21 +2610,67 @@ function getTeamStarterStats(club) {
     const posPenaltyFactor = fitInfo.factor;
     // 怪我人を強行出場させている場合は25%低下
     const injuryFactor = p.injuryWeeks > 0 ? 0.75 : 1.0;
+    const effFactor = posPenaltyFactor * injuryFactor;
 
-    let pAtk = p.atk * posPenaltyFactor * injuryFactor;
-    let pDef = p.def * posPenaltyFactor * injuryFactor;
+    const attrs = getPlayerFiveAttributes(p);
+    const effOvr = getEffectivePlayerRatingForSlot(p, slot);
+    totalEffOvr += effOvr;
 
+    let pAtk = p.atk * effFactor;
+    let pDef = p.def * effFactor;
+
+    // ポジション別・6能力指標の集計（戦術スタイル連動用）
+    if (CENTRAL_MIDS.includes(slot)) {
+      cmDmPassSum += ((attrs.passing * 0.6 + effOvr * 0.4) * effFactor);
+      cmDmCount += 1;
+    }
+    if (FW_POSITIONS.includes(slot) || roleGroup === 'FW') {
+      fwPaceSum += ((attrs.pace * 0.65 + attrs.finishing * 0.35) * effFactor);
+      fwCount += 1;
+    }
+    if (WIDE_POSITIONS.includes(slot)) {
+      wideOvrSum += ((effOvr * 0.5 + attrs.dribbling * 0.25 + attrs.passing * 0.25) * effFactor);
+      wideCount += 1;
+    }
+
+    // 5大戦術スタイル別の選手能力反映補正
     if (tactic === 'possession') {
-      if (roleGroup === 'MF') {
-        pAtk *= 1.30;
-        pDef *= 1.30;
+      // ① ポゼッション：中盤（CM/DM/AM）のパス・OVRが高いほど攻守に強く反映
+      if (CENTRAL_MIDS.includes(slot) || roleGroup === 'MF') {
+        const passBonus = 1.18 + Math.max(0, (attrs.passing - 60) * 0.005);
+        pAtk *= passBonus;
+        pDef *= (passBonus + 0.06);
+      }
+    } else if (tactic === 'gegenpress') {
+      // ② ゲーゲンプレス：前線から激しく奪い決定機大幅UP（攻撃+22%、前線・中盤の守備貢献UP）
+      pAtk *= 1.22;
+      if (roleGroup === 'FW' || roleGroup === 'MF') {
+        pDef *= 1.16;
+      } else {
+        pDef *= 0.96; // ハイライン裏のスペースリスク
       }
     } else if (tactic === 'counter') {
-      if (roleGroup === 'FW') pAtk *= 1.35;
-      if (roleGroup === 'DF') pDef *= 1.35;
-    } else if (tactic === 'highpress') {
-      pAtk *= 1.08;
-      pDef *= 1.08;
+      // ③ ダイレクトカウンター：自陣ブロック守備強化＋快足FW（Pace）の得点力UP
+      if (roleGroup === 'DF' || slot === 'DM') {
+        pDef *= 1.26;
+      }
+      if (roleGroup === 'FW' || FW_POSITIONS.includes(slot)) {
+        const paceBoost = 1.18 + Math.max(0, (attrs.pace - 60) * 0.008);
+        pAtk *= paceBoost;
+      }
+    } else if (tactic === 'wingplay') {
+      // ④ ワイドアタック：両翼（WG/SB/WB/LM/RM）の総合値が攻撃力に強く反映
+      if (WIDE_POSITIONS.includes(slot)) {
+        const wideBoost = 1.28 + Math.max(0, (effOvr - 62) * 0.005);
+        pAtk *= wideBoost;
+        pDef *= 1.08;
+      } else if (slot === 'CF') {
+        pAtk *= 1.14; // クロスに合わせるCFの得点力ボーナス
+      }
+    } else if (tactic === 'parkthebus') {
+      // ⑤ ウルトラディフェンス：11人全員でバイタルを埋め守備力大幅UP、攻撃力は大幅抑制
+      pDef *= 1.48;
+      pAtk *= 0.52;
     }
 
     totalAtk += pAtk;
@@ -2485,27 +2678,100 @@ function getTeamStarterStats(club) {
     totalSta += p.sta;
   }
 
-  const count = starters.length || 1;
-  let avgSta = Math.round(totalSta / count);
-
-  if (tactic === 'highpress') {
-    avgSta = Math.max(30, avgSta - 9);
+  // フォーメーション構造特性によるボーナス
+  if (formationKey === '3-4-3') {
+    totalAtk *= 1.07; // 超攻撃的ワイド
+    totalDef *= 0.96;
+  } else if (formationKey === '5-3-2') {
+    totalDef *= 1.10; // 堅守ブロック
+    totalAtk *= 0.95;
+  } else if (formationKey === '4-1-2-3') {
+    totalAtk *= 1.04; // 攻撃的ポゼッション
+    totalDef *= 1.02;
+  } else if (formationKey === '4-3-1-2') {
+    totalAtk *= 1.04; // 中央突破・中盤密集
+    totalDef *= 1.02;
   }
+
+  const count = starters.length || 1;
+  const rawAvgSta = Math.round(totalSta / count);
+  let avgSta = rawAvgSta;
+
+  // 戦術スタイルに応じた実効スタミナ負荷表示（ゲーゲンプレスは1.3倍消費相当、カウンターは省エネ）
+  const staminaConsumptionRate = tactic === 'gegenpress' ? 1.30 : (tactic === 'counter' ? 0.78 : (tactic === 'parkthebus' ? 0.90 : 1.00));
+  if (tactic === 'gegenpress') {
+    avgSta = Math.max(30, Math.round(rawAvgSta - 10));
+  } else if (tactic === 'counter') {
+    avgSta = Math.min(99, Math.round(rawAvgSta + 3));
+  }
+
+  const avgEffOvr = Math.round(totalEffOvr / count);
+  const cmDmPassScore = cmDmCount > 0 ? (cmDmPassSum / cmDmCount) : avgEffOvr;
+  const fwPaceScore = fwCount > 0 ? (fwPaceSum / fwCount) : avgEffOvr;
+  const wideOvrScore = wideCount > 0 ? (wideOvrSum / wideCount) : avgEffOvr;
 
   return {
     totalAtk,
     totalDef,
-    avgSta
+    avgSta,
+    rawAvgSta,
+    avgEffOvr,
+    cmDmPassScore,
+    fwPaceScore,
+    wideOvrScore,
+    wideCount,
+    formationKey,
+    tactic,
+    staminaConsumptionRate
   };
 }
 
 /**
- * 2チームのスタメン能力値と戦術からスコアを算出する数理モデル
+ * 2チームの「チーム戦術スタイル」×「フォーメーション実効OVR・適性値」から
+ * ポゼッション率・シュート数・得失点を算出する数理モデル
  */
 function simulateMatch(homeClub, awayClub) {
   const homeStats = getTeamStarterStats(homeClub);
   const awayStats = getTeamStarterStats(awayClub);
 
+  const hTactic = homeStats.tactic;
+  const aTactic = awayStats.tactic;
+  const hForm = homeStats.formationKey;
+  const aForm = awayStats.formationKey;
+
+  // 1. ポゼッション率（支配率）の算出
+  let homePossWeight = 50 + (homeStats.avgEffOvr - awayStats.avgEffOvr) * 0.9 + 1.5; // ホーム微優位
+  if (hTactic === 'possession') {
+    homePossWeight += 8 + Math.max(0, (homeStats.cmDmPassScore - 62) * 0.35);
+  } else if (hTactic === 'gegenpress') {
+    homePossWeight += 4;
+  } else if (hTactic === 'wingplay') {
+    homePossWeight += 2;
+  } else if (hTactic === 'counter') {
+    homePossWeight -= 8;
+  } else if (hTactic === 'parkthebus') {
+    homePossWeight -= 15;
+  }
+
+  if (aTactic === 'possession') {
+    homePossWeight -= (8 + Math.max(0, (awayStats.cmDmPassScore - 62) * 0.35));
+  } else if (aTactic === 'gegenpress') {
+    homePossWeight -= 4;
+  } else if (aTactic === 'wingplay') {
+    homePossWeight -= 2;
+  } else if (aTactic === 'counter') {
+    homePossWeight += 8;
+  } else if (aTactic === 'parkthebus') {
+    homePossWeight += 15;
+  }
+
+  if (hForm === '4-1-2-3' || hForm === '3-5-2' || hForm === '4-3-1-2') homePossWeight += 2;
+  if (aForm === '4-1-2-3' || aForm === '3-5-2' || aForm === '4-3-1-2') homePossWeight -= 2;
+
+  const homePossession = clamp(Math.round(homePossWeight + randInt(-2, 2)), 22, 78);
+  const awayPossession = 100 - homePossession;
+
+  // 2. 実効攻守と戦術・フォーメーション相性による得点期待値（Lambda）の算出
   const homeStaFactor = 0.85 + (homeStats.avgSta / 100) * 0.3;
   const awayStaFactor = 0.85 + (awayStats.avgSta / 100) * 0.3;
 
@@ -2514,22 +2780,105 @@ function simulateMatch(homeClub, awayClub) {
   const awayEffAtk = awayStats.totalAtk * awayStaFactor;
   const awayEffDef = awayStats.totalDef * awayStaFactor;
 
-  let rawHomeLambda = 1.38 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
-  let rawAwayLambda = 1.22 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
+  let rawHomeLambda = 1.35 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
+  let rawAwayLambda = 1.20 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
 
-  if (homeClub.tactic === 'possession') rawHomeLambda *= 0.86;
-  if (awayClub.tactic === 'possession') rawAwayLambda *= 0.86;
+  const CENTRAL_DEF_FORMATIONS = ['5-3-2', '4-3-1-2', '3-5-2'];
 
-  if (homeClub.tactic === 'counter') rawHomeLambda *= 1.12;
-  if (awayClub.tactic === 'counter') rawAwayLambda *= 1.12;
+  // --- ホーム側の5大戦術効果反映 ---
+  if (hTactic === 'possession') {
+    // ① ポゼッション：CM/DMのパス・OVRが高いほど失点リスクDOWN、格下相手に取りこぼしにくい
+    const midQuality = clamp((homeStats.cmDmPassScore - 58) / 30, 0, 1);
+    rawAwayLambda *= (0.86 - midQuality * 0.12);
+    if (homeStats.avgEffOvr >= awayStats.avgEffOvr + 2) {
+      rawHomeLambda *= 1.16; // 格下を確実に崩す
+      rawAwayLambda *= 0.82;
+    }
+  } else if (hTactic === 'gegenpress') {
+    // ② ゲーゲンプレス：決定機が大幅UPするが、スタミナ消費1.3倍により終盤の失点リスクが微増
+    rawHomeLambda *= 1.26;
+    rawAwayLambda *= 1.13;
+  } else if (hTactic === 'counter') {
+    // ③ ダイレクトカウンター：FWのスピードが高いほど得点力UP、格上（強豪）に対して金星を挙げやすい
+    const paceBonus = 1.05 + clamp((homeStats.fwPaceScore - 60) / 35, 0, 0.25);
+    rawHomeLambda *= paceBonus;
+    rawAwayLambda *= 0.90;
+    if (awayStats.avgEffOvr >= homeStats.avgEffOvr + 2) {
+      rawHomeLambda *= 1.22; // ジャイアントキリング補正
+      rawAwayLambda *= 0.88;
+    }
+  } else if (hTactic === 'wingplay') {
+    // ④ ワイドアタック：サイド総合値が攻撃力に強く反映、相手の5バック（5-3-2）や中央守備を攻略しやすい
+    const wideBonus = 1.06 + clamp((homeStats.wideOvrScore - 60) / 35, 0, 0.22);
+    rawHomeLambda *= wideBonus;
+    if (CENTRAL_DEF_FORMATIONS.includes(aForm) || aTactic === 'parkthebus' || aTactic === 'counter') {
+      rawHomeLambda *= 1.22; // 5バック・中央固めを外から崩す
+    }
+  } else if (hTactic === 'parkthebus') {
+    // ⑤ ウルトラディフェンス：失点率を大幅カットするが、自チームの得点期待値もほぼゼロに（勝点1狙い）
+    rawAwayLambda *= 0.38;
+    rawHomeLambda *= 0.26;
+  }
 
-  const homeLambda = clamp(rawHomeLambda, 0.25, 4.2);
-  const awayLambda = clamp(rawAwayLambda, 0.25, 4.0);
+  // --- アウェイ側の5大戦術効果反映 ---
+  if (aTactic === 'possession') {
+    const midQuality = clamp((awayStats.cmDmPassScore - 58) / 30, 0, 1);
+    rawHomeLambda *= (0.86 - midQuality * 0.12);
+    if (awayStats.avgEffOvr >= homeStats.avgEffOvr + 2) {
+      rawAwayLambda *= 1.16;
+      rawHomeLambda *= 0.82;
+    }
+  } else if (aTactic === 'gegenpress') {
+    rawAwayLambda *= 1.26;
+    rawHomeLambda *= 1.13;
+  } else if (aTactic === 'counter') {
+    const paceBonus = 1.05 + clamp((awayStats.fwPaceScore - 60) / 35, 0, 0.25);
+    rawAwayLambda *= paceBonus;
+    rawHomeLambda *= 0.90;
+    if (homeStats.avgEffOvr >= awayStats.avgEffOvr + 2) {
+      rawAwayLambda *= 1.22;
+      rawHomeLambda *= 0.88;
+    }
+  } else if (aTactic === 'wingplay') {
+    const wideBonus = 1.06 + clamp((awayStats.wideOvrScore - 60) / 35, 0, 0.22);
+    rawAwayLambda *= wideBonus;
+    if (CENTRAL_DEF_FORMATIONS.includes(hForm) || hTactic === 'parkthebus' || hTactic === 'counter') {
+      rawAwayLambda *= 1.22;
+    }
+  } else if (aTactic === 'parkthebus') {
+    rawHomeLambda *= 0.38;
+    rawAwayLambda *= 0.26;
+  }
+
+  const homeLambda = clamp(rawHomeLambda, 0.08, 4.4);
+  const awayLambda = clamp(rawAwayLambda, 0.08, 4.2);
 
   const homeScore = samplePoisson(homeLambda);
   const awayScore = samplePoisson(awayLambda);
 
-  return { homeScore, awayScore };
+  // 3. シュート数の算出（ゲーゲンプレスで大幅UP、ウルトラディフェンスで極小、スコア以上のシュート数を保証）
+  let baseHomeShots = Math.round(homeLambda * 5.2 + (homePossession - 50) * 0.12 + randInt(1, 4));
+  let baseAwayShots = Math.round(awayLambda * 5.2 + (awayPossession - 50) * 0.12 + randInt(1, 4));
+  if (hTactic === 'gegenpress') baseHomeShots = Math.round(baseHomeShots * 1.35 + 2);
+  if (aTactic === 'gegenpress') baseAwayShots = Math.round(baseAwayShots * 1.35 + 2);
+  if (hTactic === 'parkthebus') baseHomeShots = Math.min(baseHomeShots, Math.max(homeScore + 1, randInt(1, 3)));
+  if (aTactic === 'parkthebus') baseAwayShots = Math.min(baseAwayShots, Math.max(awayScore + 1, randInt(1, 3)));
+
+  const homeShots = Math.max(homeScore, clamp(baseHomeShots, 1, 28));
+  const awayShots = Math.max(awayScore, clamp(baseAwayShots, 1, 26));
+
+  return {
+    homeScore,
+    awayScore,
+    homePossession,
+    awayPossession,
+    homeShots,
+    awayShots,
+    homeTactic: hTactic,
+    awayTactic: aTactic,
+    homeFormation: hForm,
+    awayFormation: aForm
+  };
 }
 
 /**
@@ -2554,12 +2903,13 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     p.careerStats.appearances += 1;
   });
 
-  const getScorer = (starters, tactic) => {
+  const getScorer = (starters, rawTactic) => {
+    const tactic = normalizeTacticKey(rawTactic);
     const fws = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
     const mfs = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'MF');
     const dfs = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'DF');
 
-    const fwWeight = tactic === 'counter' ? 0.72 : 0.56;
+    const fwWeight = tactic === 'counter' ? 0.74 : (tactic === 'wingplay' ? 0.64 : (tactic === 'gegenpress' ? 0.62 : 0.55));
     const r = Math.random();
 
     if (r < fwWeight && fws.length > 0) {
@@ -2572,11 +2922,20 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     return fws[0] || mfs[0] || starters[0];
   };
 
-  const getAssister = (starters, scorer) => {
+  const getAssister = (starters, scorer, rawTactic) => {
+    const tactic = normalizeTacticKey(rawTactic);
     // 約75%の確率でアシストが発生（残り25%は単独突破やPK/相手ミスなど）
     if (Math.random() < 0.25) return null;
     const candidates = starters.filter(p => p.id !== scorer.id && POS_ROLE_GROUP[p.assignedPos || p.pos] !== 'GK');
     if (candidates.length === 0) return null;
+
+    // ワイドアタック時は両翼（LW/RW/LM/RM/LB/RB/LWB/RWB）からのクロスアシスト確率が大幅UP
+    if (tactic === 'wingplay') {
+      const wideCandidates = candidates.filter(p => ['LW', 'RW', 'LM', 'RM', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
+      if (wideCandidates.length > 0 && Math.random() < 0.72) {
+        return wideCandidates[randInt(0, wideCandidates.length - 1)];
+      }
+    }
 
     const mfs = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'MF');
     const fws = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
@@ -2593,33 +2952,39 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     return candidates[randInt(0, candidates.length - 1)];
   };
 
+  const hTacticNorm = normalizeTacticKey(homeClub.tactic);
+  const aTacticNorm = normalizeTacticKey(awayClub.tactic);
+
   const homeScorers = [];
   for (let i = 0; i < homeScore; i++) {
-    const scorer = getScorer(homeStarters, homeClub.tactic);
+    const scorer = getScorer(homeStarters, hTacticNorm);
     if (scorer) {
       scorer.goals += 1;
       if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(homeStarters, scorer);
+      const assister = getAssister(homeStarters, scorer, hTacticNorm);
       if (assister) {
         assister.assists = (assister.assists || 0) + 1;
         if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
       }
-      homeScorers.push({ scorer, assister, minute: randInt(5, 89) });
+      // 相手がゲーゲンプレスの場合、終盤（70〜89分）のスタミナ切れ失点が発生しやすい演出
+      const minute = (aTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
+      homeScorers.push({ scorer, assister, minute });
     }
   }
 
   const awayScorers = [];
   for (let i = 0; i < awayScore; i++) {
-    const scorer = getScorer(awayStarters, awayClub.tactic);
+    const scorer = getScorer(awayStarters, aTacticNorm);
     if (scorer) {
       scorer.goals += 1;
       if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(awayStarters, scorer);
+      const assister = getAssister(awayStarters, scorer, aTacticNorm);
       if (assister) {
         assister.assists = (assister.assists || 0) + 1;
         if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
       }
-      awayScorers.push({ scorer, assister, minute: randInt(5, 89) });
+      const minute = (hTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
+      awayScorers.push({ scorer, assister, minute });
     }
   }
 
@@ -2662,17 +3027,26 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   assignRatings(homeStarters, homeScore, awayScore, isHomeWin, isDraw);
   assignRatings(awayStarters, awayScore, homeScore, isAwayWin, isDraw);
 
-  // ハイプレス選択時はスタメンのスタミナが微減（トレーニング＆メディカル施設Lvで軽減）
+  // 戦術スタイル別の試合後スタミナ消耗（ゲーゲンプレスは1.3倍消耗、ダイレクトカウンターは省エネ）
   const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
-  const homeFatigueProb = homeClub.isPlayer ? Math.max(0.05, 0.20 * (1 - (trainingLv - 1) * 0.18)) : 0.20;
-  const awayFatigueProb = awayClub.isPlayer ? Math.max(0.05, 0.20 * (1 - (trainingLv - 1) * 0.18)) : 0.20;
+  const baseFatigueProb = 0.20 * (1 - (trainingLv - 1) * 0.18);
 
-  if (homeClub.tactic === 'highpress' && Math.random() < homeFatigueProb) {
-    homeStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
-  }
-  if (awayClub.tactic === 'highpress' && Math.random() < awayFatigueProb) {
-    awayStarters.forEach(p => { p.sta = Math.max(30, p.sta - 1); });
-  }
+  const applyPostMatchStaminaDrain = (club, startersList) => {
+    const tKey = normalizeTacticKey(club.tactic);
+    const mult = tKey === 'gegenpress' ? 1.30 : (tKey === 'counter' ? 0.65 : (tKey === 'parkthebus' ? 0.85 : 1.00));
+    const prob = (club.isPlayer ? Math.max(0.05, baseFatigueProb) : 0.20) * mult;
+    if (tKey === 'gegenpress' && Math.random() < prob) {
+      startersList.forEach(p => {
+        p.sta = Math.max(30, p.sta - 1);
+        if (p.attributes && typeof p.attributes.stamina === 'number') {
+          p.attributes.stamina = Math.max(30, p.attributes.stamina - 1);
+        }
+      });
+    }
+  };
+
+  applyPostMatchStaminaDrain(homeClub, homeStarters);
+  applyPostMatchStaminaDrain(awayClub, awayStarters);
 
   return { homeScorers, awayScorers };
 }
@@ -2681,13 +3055,22 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
  * 自チームの試合におけるテキスト速報用イベントログを生成
  */
 function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
-  const { homeClub, awayClub, homeScore, awayScore, isPlayerHome, matchIncome, awayBroadcastingFee } = playerMatch;
+  const {
+    homeClub, awayClub, homeScore, awayScore, isPlayerHome,
+    matchIncome, awayBroadcastingFee,
+    homePossession, awayPossession, homeShots, awayShots
+  } = playerMatch;
   const events = [];
+
+  const hForm = homeClub.formation || '4-3-3';
+  const aForm = awayClub.formation || '4-3-3';
+  const hTacBadge = (TACTICS_DEFINITIONS[normalizeTacticKey(homeClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
+  const aTacBadge = (TACTICS_DEFINITIONS[normalizeTacticKey(awayClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
 
   events.push({
     time: "0'",
     type: 'normal',
-    text: `試合開始！ ${homeClub.name} vs ${awayClub.name}`
+    text: `試合開始！ ${homeClub.name} [${hForm}/${hTacBadge}] vs ${awayClub.name} [${aForm}/${aTacBadge}]`
   });
 
   const goalEvents = [];
@@ -2716,10 +3099,14 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
     });
   }
 
+  const statsSummary = (typeof homePossession === 'number' && typeof homeShots === 'number')
+    ? ` （支配率 ${homePossession}%:${awayPossession}% / シュート ${homeShots}:${awayShots}本）`
+    : '';
+
   events.push({
     time: "90'",
     type: 'final',
-    text: `試合終了！ 最終結果：${homeClub.name} ${homeScore} - ${awayScore} ${awayClub.name}`
+    text: `試合終了！ 最終結果：${homeClub.name} ${homeScore} - ${awayScore} ${awayClub.name}${statsSummary}`
   });
 
   if (isPlayerHome && matchIncome > 0) {
@@ -2781,9 +3168,14 @@ function playNextMatchweek(skipAnimation = false) {
     const homeClub = getClubById(match.homeId);
     const awayClub = getClubById(match.awayId);
 
-    const { homeScore, awayScore } = simulateMatch(homeClub, awayClub);
+    const simResult = simulateMatch(homeClub, awayClub);
+    const { homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots } = simResult;
     match.homeScore = homeScore;
     match.awayScore = awayScore;
+    match.homePossession = homePossession;
+    match.awayPossession = awayPossession;
+    match.homeShots = homeShots;
+    match.awayShots = awayShots;
     match.played = true;
 
     // ホーム開催時（全19試合）：サポーター規模＋スタジアム拡張Lv補正（Lvごとに+15%）に応じたマッチデイ収入（£1.2M〜£2.5M）
@@ -2837,6 +3229,10 @@ function playNextMatchweek(skipAnimation = false) {
       awayClub,
       homeScore,
       awayScore,
+      homePossession,
+      awayPossession,
+      homeShots,
+      awayShots,
       isPlayerHome: homeClub.isPlayer,
       isPlayerMatch: homeClub.isPlayer || awayClub.isPlayer,
       matchIncome,
@@ -2954,10 +3350,14 @@ function checkPostMatchEvents() {
     return;
   }
 
-  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lvで負傷率軽減）
-  if (Math.random() < 0.18) {
+  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lvで負傷率軽減、ゲーゲンプレス時は負傷率微増）
+  const playerClub = getPlayerClub();
+  const isGegenpress = playerClub && normalizeTacticKey(playerClub.tactic) === 'gegenpress';
+  const eventTriggerProb = isGegenpress ? 0.21 : 0.18;
+  if (Math.random() < eventTriggerProb) {
     const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
-    const injuryThreshold = Math.max(0.10, 0.36 * (1 - (trainingLv - 1) * 0.18));
+    const baseInjuryThreshold = Math.max(0.10, 0.36 * (1 - (trainingLv - 1) * 0.18));
+    const injuryThreshold = isGegenpress ? Math.min(0.52, baseInjuryThreshold * 1.22) : baseInjuryThreshold;
     const roll = Math.random();
     if (roll < injuryThreshold) {
       triggerInjuryEvent();
@@ -4771,23 +5171,24 @@ function handleGmDutyAction(actionKey) {
 function setTeamTactic(tacticKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
+  const normalizedKey = normalizeTacticKey(tacticKey);
   const playerClub = getPlayerClub();
-  if (!playerClub || !TACTICS_DEFINITIONS[tacticKey]) return;
+  if (!playerClub || !TACTICS_DEFINITIONS[normalizedKey]) return;
 
-  playerClub.tactic = tacticKey;
+  playerClub.tactic = normalizedKey;
 
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tactic === tacticKey);
+    btn.classList.toggle('active', btn.dataset.tactic === normalizedKey);
   });
 
-  document.getElementById('current-tactic-badge').textContent = TACTICS_DEFINITIONS[tacticKey].badge;
-  document.getElementById('current-tactic-desc').textContent = TACTICS_DEFINITIONS[tacticKey].desc;
+  document.getElementById('current-tactic-badge').textContent = TACTICS_DEFINITIONS[normalizedKey].badge;
+  document.getElementById('current-tactic-desc').textContent = TACTICS_DEFINITIONS[normalizedKey].desc;
 
   renderRoster();
 }
 
 /**
- * クラブのフォーメーション（4-3-3 / 4-2-3-1 / 4-4-2 / 3-5-2）を切り替える
+ * クラブのフォーメーション（全8種）を切り替える
  */
 function setClubFormation(formationKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
@@ -4921,7 +5322,7 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
 
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === playerId && p.isStarter);
-  if (!target || !ALL_POSITIONS.includes(newSlotPos)) return;
+  if (!target || !POS_ROLE_GROUP[newSlotPos]) return;
 
   const oldSlot = target.assignedPos || target.pos;
   if (oldSlot === newSlotPos) return;
@@ -5781,37 +6182,45 @@ function renderTacticalBoard() {
 
   const pitchLayer = document.getElementById('pitch-nodes-layer');
   if (pitchLayer) {
-    pitchLayer.innerHTML = formationDef.slots.map(sl => {
-      const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === sl.slotIndex);
-      if (!starter) return '';
+    const existingNodes = pitchLayer.querySelectorAll('.pitch-node[data-slot-index]');
+    const canUpdateInPlace = existingNodes.length === formationDef.slots.length;
 
-      const fitInfo = getPositionFitInfo(starter, sl.pos);
-      const posDisplay = formatPlayerPositionsText(starter, 'slash');
-      const isSelected = gameState.selectedSlotIndex === sl.slotIndex;
-      const effOvr = getEffectivePlayerRating(starter);
-      const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
+    if (canUpdateInPlace) {
+      formationDef.slots.forEach(sl => {
+        const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === sl.slotIndex);
+        const nodeEl = pitchLayer.querySelector(`.pitch-node[data-slot-index="${sl.slotIndex}"]`);
+        if (!starter || !nodeEl) return;
 
-      const nodeClasses = [
-        'pitch-node',
-        `pos-group-${roleGroup}`,
-        fitInfo.type === 'sub' ? 'sub-pos' : '',
-        fitInfo.type === 'out' ? 'out-of-pos' : '',
-        isSelected ? 'selected' : ''
-      ].filter(Boolean).join(' ');
+        const fitInfo = getPositionFitInfo(starter, sl.pos);
+        const posDisplay = formatPlayerPositionsText(starter, 'slash');
+        const isSelected = gameState.selectedSlotIndex === sl.slotIndex;
+        const effOvr = getEffectivePlayerRating(starter);
+        const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
 
-      let fitBadgeHtml = '';
-      if (fitInfo.type === 'sub') {
-        fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
-      } else if (fitInfo.type === 'out') {
-        fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
-      }
+        const nodeClasses = [
+          'pitch-node',
+          `pos-group-${roleGroup}`,
+          fitInfo.type === 'sub' ? 'sub-pos' : '',
+          fitInfo.type === 'out' ? 'out-of-pos' : '',
+          isSelected ? 'selected' : ''
+        ].filter(Boolean).join(' ');
 
-      const injuryBadgeHtml = starter.injuryWeeks > 0
-        ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
-        : '';
+        let fitBadgeHtml = '';
+        if (fitInfo.type === 'sub') {
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+        } else if (fitInfo.type === 'out') {
+          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+        }
 
-      return `
-        <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
+        const injuryBadgeHtml = starter.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+          : '';
+
+        nodeEl.className = nodeClasses;
+        nodeEl.dataset.playerId = starter.id;
+        nodeEl.style.left = `${sl.x}%`;
+        nodeEl.style.top = `${sl.y}%`;
+        nodeEl.innerHTML = `
           <div class="pitch-node-avatar-wrap">
             ${getPlayerAvatarHtml(starter, playerClub, 'pitch-node-avatar', 48)}
           </div>
@@ -5829,9 +6238,61 @@ function renderTacticalBoard() {
               ${injuryBadgeHtml}
             </div>
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      });
+    } else {
+      pitchLayer.innerHTML = formationDef.slots.map(sl => {
+        const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === sl.slotIndex);
+        if (!starter) return '';
+
+        const fitInfo = getPositionFitInfo(starter, sl.pos);
+        const posDisplay = formatPlayerPositionsText(starter, 'slash');
+        const isSelected = gameState.selectedSlotIndex === sl.slotIndex;
+        const effOvr = getEffectivePlayerRating(starter);
+        const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
+
+        const nodeClasses = [
+          'pitch-node',
+          `pos-group-${roleGroup}`,
+          fitInfo.type === 'sub' ? 'sub-pos' : '',
+          fitInfo.type === 'out' ? 'out-of-pos' : '',
+          isSelected ? 'selected' : ''
+        ].filter(Boolean).join(' ');
+
+        let fitBadgeHtml = '';
+        if (fitInfo.type === 'sub') {
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+        } else if (fitInfo.type === 'out') {
+          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+        }
+
+        const injuryBadgeHtml = starter.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+          : '';
+
+        return `
+          <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(starter, playerClub, 'pitch-node-avatar', 48)}
+            </div>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${sl.pos}</span>
+                <span class="pitch-node-ovr">OVR ${effOvr}</span>
+              </div>
+              <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
+                <span class="pitch-node-name-text">#${starter.squadNumber || '-'} ${starter.name}</span>
+              </div>
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${fitBadgeHtml}
+                ${injuryBadgeHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
     if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(pitchLayer);
   }
 
@@ -5917,11 +6378,9 @@ function renderTacticalBoard() {
       benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
-        const prefPos = bp.primaryPosition || bp.preferredPosition || bp.pos;
-        const subs = Array.isArray(bp.secondaryPositions) ? bp.secondaryPositions : [];
         const baseOvr = getPlayerOverallRating(bp);
-        const hasMainSlot = formationDef.slots.some(sl => sl.pos === prefPos);
-        const hasSubSlot = formationDef.slots.some(sl => subs.includes(sl.pos));
+        const hasMainSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'main');
+        const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub');
 
         let fitTag = `<span class="bench-fit-tag fit-warn">枠外</span>`;
         if (hasMainSlot) {
@@ -5961,9 +6420,13 @@ function renderTacticalBoard() {
 function renderTacticsOverview() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
-  const currentTactic = playerClub.tactic || 'possession';
+  const currentTactic = normalizeTacticKey(playerClub.tactic);
+  playerClub.tactic = currentTactic;
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tactic === currentTactic);
+  });
+  document.querySelectorAll('.tactics-guide-item[data-tactic-card]').forEach(card => {
+    card.classList.toggle('active-guide', card.dataset.tacticCard === currentTactic);
   });
   const tacticDef = TACTICS_DEFINITIONS[currentTactic];
   if (tacticDef) {
@@ -5990,7 +6453,8 @@ function renderRoster() {
   document.getElementById('team-avg-sta').textContent = stats.avgSta;
   document.getElementById('roster-total-payroll').textContent = formatMoney(payroll);
 
-  const currentTactic = playerClub.tactic || 'possession';
+  const currentTactic = normalizeTacticKey(playerClub.tactic);
+  playerClub.tactic = currentTactic;
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tactic === currentTactic);
   });
@@ -7827,8 +8291,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
       supporters: def.supporters,
       targetRank: def.targetRank,
       targetLabel: def.targetLabel,
-      tactic: def.defaultTactic,
-      formation: '4-3-3',
+      tactic: normalizeTacticKey(def.defaultTactic),
+      formation: isPlayer ? '4-3-3' : (def.defaultFormation && FORMATIONS[def.defaultFormation] ? def.defaultFormation : '4-3-3'),
       played: 0,
       won: 0,
       drawn: 0,

@@ -132,9 +132,16 @@ class TestGameLogicUnits(unittest.TestCase):
             self.js_code = f.read()
 
     def test_formation_definitions(self):
-        """全4フォーメーションが定義され、それぞれ11スロット（GK含む）持つこと"""
-        for formation in ['4-3-3', '4-2-3-1', '4-4-2', '3-5-2']:
+        """全8フォーメーションが定義され、それぞれ11スロット（GK含む）持つこと"""
+        for formation in ['4-3-3', '4-2-3-1', '4-4-2', '3-5-2', '3-4-3', '5-3-2', '4-1-2-3', '4-3-1-2']:
             self.assertIn(f"'{formation}':", self.js_code, f"Formation {formation} must be defined")
+
+    def test_tactical_styles_definitions(self):
+        """重複のない5大戦術スタイルが定義され、試合シミュレーションロジックと連動していること"""
+        for tactic in ['possession', 'gegenpress', 'counter', 'wingplay', 'parkthebus']:
+            self.assertIn(f"{tactic}:", self.js_code, f"Tactic {tactic} must be defined in TACTICS_DEFINITIONS")
+        self.assertIn('normalizeTacticKey', self.js_code)
+        self.assertIn('TACTICS_DEFINITIONS', self.js_code)
 
     def test_position_fit_factors(self):
         """メイン適性100%、サブ適性92%、適性外80%の係数が保持されていること"""
