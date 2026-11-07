@@ -7140,19 +7140,18 @@ function renderTopScorers() {
 }
 
 /**
- * 試合結果ログおよびテキスト速報の描画
+ * 試合結果ログおよびMATCHDAY対戦カードの描画
  */
 function renderMatchLog() {
   if (gameState.isSimulating) {
     return;
   }
 
+  const matchdaySection = document.getElementById('office-matchday-section');
+  const matchdayHero = document.getElementById('matchday-hero-container');
   const container = document.getElementById('match-results-container');
   const panelTitle = document.getElementById('log-panel-title');
   const subtitle = document.getElementById('log-panel-subtitle');
-  const matchdaySection = document.getElementById('office-matchday-section');
-  const matchdayHero = document.getElementById('matchday-hero-container');
-  if (!container) return;
 
   const playerClub = getPlayerClub();
   const currentDay = getCurrentCalendarDay();
@@ -7199,6 +7198,14 @@ function renderMatchLog() {
       matchdaySection.classList.remove('hidden');
       matchdayHero.innerHTML = myMatchHtml;
 
+      // MATCHDAY内のキックオフボタンのイベントバインド（試合前に作戦最終確認を開く）
+      const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
+      if (panelKickoffBtn) {
+        panelKickoffBtn.addEventListener('click', () => openMatchPrecheckModal());
+      }
+    }
+
+    if (container) {
       if (panelTitle) panelTitle.textContent = '本日の同日開催カード';
       if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 他9試合`;
 
@@ -7217,32 +7224,6 @@ function renderMatchLog() {
         }).join('')}
       `;
       container.innerHTML = otherMatchesHtml;
-    } else {
-      // フォールバック
-      if (panelTitle) panelTitle.textContent = 'MATCHDAY - 本日の試合';
-      if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 KICKOFF READY`;
-      const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
-      const otherMatchesHtml = `
-        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">同日開催カード（他9試合）</div>
-        ${otherMatches.map(m => {
-          const h = getClubById(m.homeId);
-          const a = getClubById(m.awayId);
-          return `
-            <div class="match-card">
-              <div class="match-team home">${h.name}</div>
-              <div class="match-score-box">VS</div>
-              <div class="match-team away">${a.name}</div>
-            </div>
-          `;
-        }).join('')}
-      `;
-      container.innerHTML = myMatchHtml + otherMatchesHtml;
-    }
-
-    // MATCHDAY内のキックオフボタンのイベントバインド（試合前に作戦最終確認を開く）
-    const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
-    if (panelKickoffBtn) {
-      panelKickoffBtn.addEventListener('click', () => openMatchPrecheckModal());
     }
     return;
   }
@@ -7253,7 +7234,10 @@ function renderMatchLog() {
     if (matchdayHero) matchdayHero.innerHTML = '';
   }
 
-  // パターン2：試合直後または試合消化済み
+  // 画面下に試合ログコンテナが存在しない場合はここで終了
+  if (!container) return;
+
+  // パターン2：試合直後または試合消化済み（コンテナが存在する場合の後方互換）
   if (panelTitle) panelTitle.textContent = '試合結果・進行ログ';
 
   if (gameState.lastWeekResults.length === 0) {
