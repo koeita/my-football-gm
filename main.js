@@ -3032,7 +3032,7 @@ function triggerInjuryEvent() {
   showGmModal({
     category: 'MEDICAL REPORT / INJURY',
     title: `選手の負傷アクシデント（全治${weeks}試合）`,
-    description: `トレーニング中に ${victim.pos} ${victim.name}（${victim.age}歳 / ${getGrowthCurveLabel(victim.growthCurve)}）が筋肉系のトラブルを訴え、全治${weeks}試合の診断を受けました。治療方針を選択してください。`,
+    description: `トレーニング中に ${victim.pos} ${victim.name}（${victim.age}歳）が筋肉系のトラブルを訴え、全治${weeks}試合の診断を受けました。治療方針を選択してください。`,
     detailHtml: `負傷選手：[${victim.pos}] ${victim.name}（総合力 ${getPlayerOverallRating(victim)}）<br>特別治療費：${formatMoney(medicalCost)}（全治期間を1試合に短縮し能力低下を防止）`,
     actions: [
       {
@@ -3094,7 +3094,7 @@ function triggerYouthPromotionEvent() {
     category: 'ACADEMY SCOUT REPORT',
     title: '若手ユース選手の台頭（トップチーム無料昇格オファー）',
     description: `クラブの下部組織（アカデミー）にて、10代の有望株 ${prospect.pos} ${prospect.name}（${prospect.age}歳）が眩い才能を発揮しています。移籍金£0・最低年俸${formatMoney(prospect.salary)}でトップチームへ昇格させることができます。`,
-    detailHtml: `候補選手：[${prospect.pos}] ${prospect.name}（${prospect.age}歳 / 成長曲線：${getGrowthCurveLabel(prospect.growthCurve)}）<br>能力値：総合 ${ovr}（攻撃 ${prospect.atk} / 守備 ${prospect.def} / スタミナ ${prospect.sta}） / 4年契約・年俸 ${formatMoney(prospect.salary)}`,
+    detailHtml: `候補選手：[${prospect.pos}] ${prospect.name}（${prospect.age}歳）<br>能力値：総合 ${ovr}（攻撃 ${prospect.atk} / 守備 ${prospect.def} / スタミナ ${prospect.sta}） / 4年契約・年俸 ${formatMoney(prospect.salary)}`,
     actions: [
       {
         label: isFull ? '所属枠上限（20名）のため昇格不可' : 'トップチームへ無料昇格させる（移籍金 £0）',
@@ -3333,7 +3333,7 @@ function processSeasonEnd(isSkipped = false) {
         p.isStarter = false;
         if (club.isPlayer) {
           playerRetirementLogs.push(
-            `[現役引退] ${p.pos} ${p.name} (${p.age}歳 / ${getGrowthCurveLabel(p.growthCurve)}) が現役を引退しました`
+            `[現役引退] ${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
           );
         }
         continue;
@@ -6645,10 +6645,6 @@ function renderFacilitiesAndYouth() {
               <span class="youth-stat-cell-label">STA（体力）</span>
               <span class="youth-stat-cell-val">${y.sta}</span>
             </div>
-            <div class="youth-stat-cell">
-              <span class="youth-stat-cell-label">成長曲線</span>
-              <span class="growth-pill growth-${y.growthCurve}">${growthLabel}</span>
-            </div>
           </div>
 
           <div class="profile-traits-wrap">
@@ -6839,8 +6835,7 @@ function openPlayerProfileModal(playerId) {
           </div>
 
           <div class="profile-box-header" style="margin-top: 6px;">
-            <span class="profile-box-title">TRAITS & GROWTH（特徴・成長曲線）</span>
-            <span class="growth-pill ${growthClass}">成長：${growthLabel}</span>
+            <span class="profile-box-title">TRAITS（選手特徴・プレイスタイル）</span>
           </div>
           <div class="profile-traits-wrap">
             ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
