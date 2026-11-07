@@ -1,5 +1,13 @@
 # 開発ログ：僕のサッカークラブ（仮）
 
+## 最新アップデート：モバイル試合中における下半分表示バグ（サマリー重なり・突き抜け）の修正
+- **Phase排他制御のCSSセレクタ詳細度バグを解消**:
+  - モバイルのメディアクエリにおいて、IDセレクタ `#match-phase-summary.match-phase-container` に `display: flex !important;` を指定したことで、`.hidden` クラス（`display: none !important;`）が上書きされ、試合中（Phase 1: ピッチ経過）の背後・下半分にPhase 2（サマリー画面のボタン等）が突き抜けて重なってしまっていた問題を特定。
+  - `#match-phase-pitch.hidden, #match-phase-summary.hidden, .match-phase-container.hidden { display: none !important; }` を明示し、メディアクエリ側も `:not(.hidden)` を付与することで、Phase 1（試合経過）と Phase 2（サマリー）の表示排他を100%厳格に保証。
+  - モバイルの試合画面において、スコアボード、2Dサッカーコート、実況ティッカー、下部再生速度ボタン（1x, 2x, 4x）が1画面内にスクロールなしで綺麗に収まる正常な表示を復旧しました。
+
+---
+
 ## 最新アップデート：本部最下部の「試合結果・進行ログ」パネルを完全撤去
 - **本部画面のクリーン化**:
   - キックオフ時にモーダルで試合経過（2Dピッチ）およびマッチサマリー・GMレポートが全画面ポップアップ表示されるようになったため、これまで本部画面最下部に存在していたレガシーな「試合結果・進行ログ（`office-match-section` / `match-results-container`）」パネルを完全に撤去。
