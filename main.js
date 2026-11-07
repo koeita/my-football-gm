@@ -9670,87 +9670,33 @@ function initTacticalDragAndDrop() {
           try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
         }
 
-        // ゴースト要素の生成
-        const samplePitchNode = document.querySelector('.pitch-node');
-        const nodeW = samplePitchNode ? samplePitchNode.getBoundingClientRect().width : 120;
-        const nodeH = samplePitchNode ? samplePitchNode.getBoundingClientRect().height : 50;
+        // スタメンおよび控え選手カード（双方が.pitch-node同一形状）をそのままクローンして持ち上げる
+        ghostEl = dragSource.element.cloneNode(true);
+        ghostEl.removeAttribute('id');
+        ghostEl.classList.remove('dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+        ghostEl.classList.add('tactical-drag-ghost-card');
+        ghostEl.style.width = `${dragSource.cardWidth}px`;
+        ghostEl.style.minWidth = `${dragSource.cardWidth}px`;
+        ghostEl.style.maxWidth = `${dragSource.cardWidth}px`;
+        ghostEl.style.height = `${dragSource.cardHeight}px`;
+        ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
+        ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
 
-        if (dragSource.type === 'bench') {
-          // 控え選手をつかんだ場合：スタメンと同じカードの形（.pitch-node）に変身！
-          dragSource.cardWidth = nodeW;
-          dragSource.cardHeight = nodeH;
-          dragSource.grabOffsetX = nodeW / 2;
-          dragSource.grabOffsetY = nodeH / 2;
-
-          const player = playerClub.players.find(p => p.id === dragSource.playerId);
-          const roleGroup = POS_ROLE_GROUP[dragSource.pos] || 'MF';
-
-          ghostEl = document.createElement('div');
-          ghostEl.className = `pitch-node pos-group-${roleGroup} tactical-drag-ghost-card`;
-          ghostEl.style.width = `${nodeW}px`;
-          ghostEl.style.minWidth = `${nodeW}px`;
-          ghostEl.style.maxWidth = `${nodeW}px`;
-          ghostEl.style.height = `${nodeH}px`;
-          ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
-          ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
-
-          const posDisplay = player ? formatPlayerPositionsText(player, 'slash') : dragSource.pos;
-
-          ghostEl.innerHTML = `
-            <div class="pitch-node-avatar-wrap">
-              ${player ? getPlayerAvatarHtml(player, playerClub, 'pitch-node-avatar', 48) : ''}
-            </div>
-            <div class="pitch-node-body">
-              <div class="pitch-node-top">
-                <span class="pitch-node-pos">${dragSource.pos}</span>
-                <span class="pitch-node-ovr">OVR ${dragSource.ovr}</span>
-              </div>
-              <div class="pitch-node-name-btn">
-                <span class="pitch-node-name-text">#${dragSource.squadNumber} ${dragSource.name}</span>
-              </div>
-              <div class="pitch-node-meta">
-                <span class="pitch-node-pref">${posDisplay}</span>
-              </div>
-            </div>
-          `;
-
-          if (player) {
-            setTimeout(() => {
-              const canvas = ghostEl ? ghostEl.querySelector('canvas.pitch-node-avatar') : null;
-              if (canvas && typeof drawPixelAvatar === 'function') {
-                drawPixelAvatar(canvas, player.avatarOptions || generateRandomAvatarOptions(player.id), 48, { kitPrimaryColor: playerClub.primaryColor });
-              }
-            }, 0);
-          }
-        } else {
-          // スタメン選手をつかんだ場合：元のカードそのまま持ち上げる
-          ghostEl = dragSource.element.cloneNode(true);
-          ghostEl.removeAttribute('id');
-          ghostEl.classList.remove('dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
-          ghostEl.classList.add('tactical-drag-ghost-card');
-          ghostEl.style.width = `${dragSource.cardWidth}px`;
-          ghostEl.style.minWidth = `${dragSource.cardWidth}px`;
-          ghostEl.style.maxWidth = `${dragSource.cardWidth}px`;
-          ghostEl.style.height = `${dragSource.cardHeight}px`;
-          ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
-          ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
-
-          // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
-          const srcCanvases = dragSource.element.querySelectorAll('canvas');
-          const dstCanvases = ghostEl.querySelectorAll('canvas');
-          srcCanvases.forEach((srcC, idx) => {
-            const dstC = dstCanvases[idx];
-            if (dstC && srcC.width && srcC.height) {
-              dstC.width = srcC.width;
-              dstC.height = srcC.height;
-              const ctx = dstC.getContext('2d');
-              if (ctx) {
-                ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(srcC, 0, 0);
-              }
+        // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
+        const srcCanvases = dragSource.element.querySelectorAll('canvas');
+        const dstCanvases = ghostEl.querySelectorAll('canvas');
+        srcCanvases.forEach((srcC, idx) => {
+          const dstC = dstCanvases[idx];
+          if (dstC && srcC.width && srcC.height) {
+            dstC.width = srcC.width;
+            dstC.height = srcC.height;
+            const ctx = dstC.getContext('2d');
+            if (ctx) {
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(srcC, 0, 0);
             }
-          });
-        }
+          }
+        });
 
         document.body.appendChild(ghostEl);
       }

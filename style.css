@@ -2374,76 +2374,6 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
-.bench-sub-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 6px 10px;
-  cursor: grab;
-  transition: border-color 0.12s ease, background-color 0.12s ease;
-}
-
-.bench-sub-item:hover {
-  background-color: var(--bg-row-hover);
-}
-
-.bench-sub-item.fit-match {
-  border-left: 3px solid var(--accent-green);
-}
-
-.bench-sub-item.fit-sub {
-  border-left: 3px solid #38bdf8;
-}
-
-.bench-sub-item.fit-mismatch {
-  border-left: 3px solid var(--accent-gold);
-}
-
-.bench-sub-top-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.bench-sub-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-  margin-left: 4px;
-}
-
-.bench-sub-ovr {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent-gold);
-}
-
-.bench-sub-bottom-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.bench-fit-tag {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 2px;
-}
-
 .bench-fit-tag.fit-ok {
   background-color: rgba(46, 204, 113, 0.16);
   color: var(--accent-green);
@@ -7301,85 +7231,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     padding: 4px 6px !important;
     box-sizing: border-box !important;
   }
-
-  .bench-sub-item {
-    flex-shrink: 0 !important;
-    width: 104px !important;
-    min-width: 104px !important;
-    max-width: 104px !important;
-    height: 70px !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
-    padding: 3px 5px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    align-items: stretch !important;
-    box-sizing: border-box !important;
-    border-radius: 4px !important;
-    touch-action: none !important;
-    cursor: grab !important;
-    background-color: #12181f !important;
-    border: 1px solid var(--border-color, #30363d) !important;
-  }
-
   .bench-sub-item * {
     touch-action: none !important;
     user-select: none !important;
     -webkit-user-select: none !important;
   }
-
-  .bench-sub-top-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    width: 100% !important;
-    gap: 2px !important;
-  }
-
-  .bench-sub-top-row .player-positions {
-    font-size: 8px !important;
-    line-height: 1.1 !important;
-    gap: 1px !important;
-  }
-
-  .bench-sub-name {
-    font-size: 9.5px !important;
-    font-weight: 700 !important;
-    color: var(--text-main, #f1f2f6) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    text-align: left !important;
-    line-height: 1.15 !important;
-    margin: 1px 0 !important;
-  }
-
-  .bench-sub-ovr {
-    font-family: var(--font-mono, monospace) !important;
-    font-size: 9.5px !important;
-    font-weight: 700 !important;
-    color: var(--accent-gold, #f39c12) !important;
-    flex-shrink: 0 !important;
-  }
-
-  .bench-sub-bottom-row {
-    display: flex !important;
-    align-items: center !important;
-    width: 100% !important;
-  }
-
-  .bench-fit-tag {
-    font-size: 8px !important;
-    padding: 1px 3px !important;
-    border-radius: 2px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 100% !important;
-    line-height: 1.1 !important;
-  }
-
   /* タップ交代なし：交代ボタンは不要・非表示 */
   .btn-sub-bench {
     display: none !important;
@@ -7529,70 +7385,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   width: 100%;
 }
 
-/* 2. 控え（ベンチ）選手カード：アバター直径32px〜36px ＋ 横並び情報カード */
-.bench-sub-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 6px 10px;
-}
-
-.bench-sub-avatar-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 0;
-}
-
-.player-avatar.bench-sub-avatar {
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid #3a3f45;
-  border-radius: 50%;
-}
-
-.bench-sub-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-}
-
-.bench-sub-info .bench-sub-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 100%;
-}
-
-.bench-sub-name {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  margin-left: 0;
-}
-
-.bench-sub-name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.bench-sub-info .bench-sub-bottom-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-}
-
 /* 3. 所属選手一覧・各種テーブル：アバター直径30px〜34px ＋ 行高の自然な整列 */
 .player-name-link {
   display: inline-flex;
@@ -7684,49 +7476,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .pitch-node-meta {
     display: none !important;
-  }
-
-  /* モバイル控え（ベンチ）選手カード：左に32pxアバター ＋ 右にPOS/OVR/名前/適性タグ */
-  .bench-sub-item {
-    width: 128px !important;
-    min-width: 128px !important;
-    max-width: 128px !important;
-    height: 68px !important;
-    min-height: 68px !important;
-    max-height: 68px !important;
-    padding: 4px 6px !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-  }
-
-  .player-avatar.bench-sub-avatar {
-    width: 32px !important;
-    height: 32px !important;
-    border: 1.5px solid #3a3f45 !important;
-  }
-
-  .bench-sub-info {
-    flex: 1 !important;
-    min-width: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    gap: 2px !important;
-    height: 100% !important;
-  }
-
-  .bench-sub-name {
-    display: block !important;
-    margin: 0 !important;
-  }
-
-  .bench-sub-name-text {
-    display: block !important;
-    font-size: 9.5px !important;
-    line-height: 1.15 !important;
   }
 
   /* モバイル所属選手一覧テーブル：左に30pxアバター */
