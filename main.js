@@ -4088,6 +4088,11 @@ function openMatchPrecheckModal() {
   const homeAvgOvr = starters.length > 0
     ? Math.round(starters.reduce((s, p) => s + getPlayerOverallRating(p), 0) / starters.length)
     : 70;
+  const homeTotalAtk = starters.reduce((s, p) => s + (p.atk || 0), 0);
+  const homeTotalDef = starters.reduce((s, p) => s + (p.def || 0), 0);
+  const homeAvgSta = starters.length > 0
+    ? Math.round(starters.reduce((s, p) => s + (p.sta || 100), 0) / starters.length)
+    : 100;
 
   // 各スロットの選手行
   let startersRowsHtml = '';
@@ -4118,33 +4123,57 @@ function openMatchPrecheckModal() {
 
   body.innerHTML = `
     <div class="precheck-body-grid">
-      <!-- 左列：対戦カード＆作戦概要 -->
+      <!-- 左列：対戦カード＆作戦概要（余白なくリッチに展開） -->
       <div class="precheck-left-col">
         <!-- 対戦カード概要 -->
         <div class="precheck-hero-card">
+          <div class="precheck-card-subhead mono">MATCHDAY FIXTURE</div>
           <div class="precheck-vs-row">
             <div class="precheck-club-box is-player">
               <span class="precheck-club-name">${playerClub.name}</span>
-              <span class="precheck-club-ovr mono">OVR ${homeAvgOvr} (${isHome ? 'HOME' : 'AWAY'})</span>
+              <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
+              <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
             </div>
             <div class="precheck-vs-badge">VS</div>
             <div class="precheck-club-box">
               <span class="precheck-club-name">${oppName}</span>
-              <span class="precheck-club-ovr mono">OVR ${oppOvr} (${isHome ? 'AWAY' : 'HOME'})</span>
+              <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
+              <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
             </div>
           </div>
         </div>
 
-        <!-- 自チーム作戦設定 -->
+        <!-- 自チーム作戦・戦力設定 -->
         <div class="precheck-tactics-bar">
-          <div class="precheck-tactics-item">
-            <span style="color:var(--text-muted);">陣形:</span>
-            <strong style="color:#fff;" class="mono">${formationKey}</strong>
+          <div class="precheck-card-subhead mono">TACTICS & STRENGTH</div>
+          <div class="precheck-tactics-info-grid">
+            <div class="precheck-tactics-item">
+              <span class="precheck-label">基本陣形:</span>
+              <strong class="mono precheck-val-highlight">${formationKey}</strong>
+            </div>
+            <div class="precheck-tactics-item">
+              <span class="precheck-label">戦術:</span>
+              <span class="precheck-tag">${tacticDef.name}</span>
+              <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+            </div>
           </div>
-          <div class="precheck-tactics-item">
-            <span style="color:var(--text-muted);">戦術:</span>
-            <span class="precheck-tag">${tacticDef.name}</span>
-            <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+          <div class="precheck-tactics-aim">
+            <span class="mono" style="color:var(--text-muted);font-size:10px;">方針:</span>
+            <span>${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}</span>
+          </div>
+          <div class="precheck-power-metrics">
+            <div class="power-metric-box">
+              <span class="mono power-lbl">攻撃力</span>
+              <span class="mono power-val text-accent">${homeTotalAtk}</span>
+            </div>
+            <div class="power-metric-box">
+              <span class="mono power-lbl">守備力</span>
+              <span class="mono power-val text-blue">${homeTotalDef}</span>
+            </div>
+            <div class="power-metric-box">
+              <span class="mono power-lbl">平均ST</span>
+              <span class="mono power-val text-gold">${homeAvgSta}%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -4153,7 +4182,7 @@ function openMatchPrecheckModal() {
       <div class="precheck-right-col">
         <div class="precheck-starters-card">
           <div class="precheck-starters-head">
-            <span>先発メンバー（11名）</span>
+            <span class="precheck-card-subhead mono">STARTING XI (11名)</span>
             <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
           </div>
           <div class="precheck-starters-list">
