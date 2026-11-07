@@ -102,6 +102,28 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         self.assertIn('overflow-x: auto', css)
         self.assertIn('touch-action: pan-x', css)
 
+    def test_main_menu_title_screen_structure(self):
+        """メインメニュー（タイトル画面）およびセーブデータ連動画面遷移のDOM・関数・CSSが定義されていること"""
+        with open(self.index_html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        with open(self.main_js_path, 'r', encoding='utf-8') as f:
+            js = f.read()
+        with open(self.style_css_path, 'r', encoding='utf-8') as f:
+            css = f.read()
+
+        self.assertEqual(js.count('{'), js.count('}'), "main.js braces must be balanced")
+        self.assertEqual(css.count('{'), css.count('}'), "style.css braces must be balanced")
+        for dom_id in [
+            'main-menu-screen', 'btn-menu-continue', 'btn-menu-new-career',
+            'btn-menu-records', 'btn-menu-settings', 'btn-return-title',
+            'records-modal-overlay', 'settings-modal-overlay'
+        ]:
+            self.assertIn(f'id="{dom_id}"', html, f"#{dom_id} must exist in index.html")
+        for fn in ['showMainMenuScreen', 'hideMainMenuScreen', 'saveGameToStorage', 'loadGameFromStorage']:
+            self.assertIn(f'function {fn}', js, f"{fn} must be defined in main.js")
+        self.assertIn('.main-menu-screen', css)
+        self.assertIn('#1a1d20', css)
+
 class TestGameLogicUnits(unittest.TestCase):
     """ゲームコアロジックの単体テスト（実行時間: 約0.05秒）"""
 

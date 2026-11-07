@@ -18,8 +18,63 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20261107_1752">
 </head>
-<body data-active-tab="office">
-  <div class="app-container">
+<body data-active-tab="office" class="main-menu-active">
+  <!-- メインメニュー（タイトル画面） -->
+  <section id="main-menu-screen" class="main-menu-screen" aria-label="タイトル画面">
+    <div class="main-menu-pitch-lines" aria-hidden="true">
+      <div class="pitch-geom-border"></div>
+      <div class="pitch-geom-halfline"></div>
+      <div class="pitch-geom-circle"></div>
+    </div>
+    <div class="main-menu-inner">
+      <header class="main-menu-header">
+        <span class="main-menu-eyebrow mono">ENGLAND PREMIER DIVISION / 20 CLUBS</span>
+        <h1 class="main-menu-title mono">FOOTBALL GM SIMULATOR</h1>
+        <p class="main-menu-subtitle">欧州クラブ経営シミュレーション</p>
+      </header>
+
+      <nav class="main-menu-nav" aria-label="スタートメニュー">
+        <button type="button" class="menu-dashboard-btn menu-btn-primary" id="btn-menu-continue" disabled>
+          <span class="menu-btn-top">
+            <span class="menu-btn-jp">続きから始める</span>
+            <span class="menu-btn-en mono">CONTINUE</span>
+          </span>
+          <span class="menu-btn-sub mono" id="menu-continue-meta">セーブデータなし</span>
+        </button>
+
+        <button type="button" class="menu-dashboard-btn" id="btn-menu-new-career">
+          <span class="menu-btn-top">
+            <span class="menu-btn-jp">新規キャリア</span>
+            <span class="menu-btn-en mono">NEW CAREER</span>
+          </span>
+          <span class="menu-btn-sub mono">GM就任・担当クラブ選択へ進む</span>
+        </button>
+
+        <button type="button" class="menu-dashboard-btn" id="btn-menu-records">
+          <span class="menu-btn-top">
+            <span class="menu-btn-jp">クラブ殿堂・実績</span>
+            <span class="menu-btn-en mono">RECORDS</span>
+          </span>
+          <span class="menu-btn-sub mono">通算優勝回数・歴代得点王・キャリア記録</span>
+        </button>
+
+        <button type="button" class="menu-dashboard-btn" id="btn-menu-settings">
+          <span class="menu-btn-top">
+            <span class="menu-btn-jp">環境設定</span>
+            <span class="menu-btn-en mono">SETTINGS</span>
+          </span>
+          <span class="menu-btn-sub mono">音量調整・オートセーブ・データ管理</span>
+        </button>
+      </nav>
+
+      <footer class="main-menu-footer">
+        <p class="main-menu-version mono">Version 1.0.0</p>
+        <p class="main-menu-disclaimer">※登場するクラブ・人物は架空のものです。</p>
+      </footer>
+    </div>
+  </section>
+
+  <div class="app-container app-hidden" id="app-container">
     <!-- 上部ステータスバー -->
         <div class="header-nav-sticky-wrapper">
   <header class="status-header">
@@ -66,8 +121,9 @@
         </div>
       </div>
 
-            <div class="header-utility-actions">
+      <div class="header-utility-actions">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-open-intro" title="GM名・担当クラブを選び直して新規ゲームを開始">はじめから</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-return-title" title="進行状況を自動保存してタイトル画面へ戻る">タイトルへ戻る</button>
       </div>
     </header>
 
@@ -846,7 +902,79 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261107_1752"></script>
-  <script src="main.js?v=20261107_1752"></script>
+  <!-- クラブ殿堂・実績（RECORDS）モーダル -->
+  <div id="records-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="records-modal-title">
+    <div class="modal-card records-modal-card">
+      <div class="profile-modal-header">
+        <div class="profile-header-left">
+          <div class="profile-identity">
+            <span class="modal-category mono">HALL OF FAME &amp; CAREER RECORDS</span>
+            <h2 class="profile-player-name" id="records-modal-title">クラブ殿堂・実績</h2>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-records-modal" aria-label="閉じる">✕</button>
+      </div>
+      <div class="modal-body" id="records-modal-body">
+        <!-- JSで通算記録・歴代得点王を描画 -->
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-close-records-footer">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 環境設定（SETTINGS）モーダル -->
+  <div id="settings-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+    <div class="modal-card settings-modal-card">
+      <div class="profile-modal-header">
+        <div class="profile-header-left">
+          <div class="profile-identity">
+            <span class="modal-category mono">SYSTEM PREFERENCES</span>
+            <h2 class="profile-player-name" id="settings-modal-title">環境設定</h2>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-settings-modal" aria-label="閉じる">✕</button>
+      </div>
+      <div class="modal-body settings-modal-body">
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">マスター音量（SE / 演出音）</span>
+            <span class="settings-desc">試合・ボタン操作時の効果音ボリューム</span>
+          </div>
+          <div class="settings-control-col mono">
+            <input type="range" id="setting-sound-volume" min="0" max="100" value="70" class="settings-range">
+            <span id="setting-sound-volume-val" class="mono">70%</span>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">オートセーブ（自動保存）</span>
+            <span class="settings-desc">日程進行・編成変更時に進行データを自動保存します</span>
+          </div>
+          <div class="settings-control-col">
+            <label class="settings-toggle-label mono">
+              <input type="checkbox" id="setting-autosave-enabled" checked>
+              <span>ENABLED</span>
+            </label>
+          </div>
+        </div>
+        <div class="settings-row settings-danger-zone">
+          <div class="settings-label-col">
+            <span class="settings-label">セーブデータ・殿堂記録の初期化</span>
+            <span class="settings-desc">保存されている進行データと通算実績を完全に消去します</span>
+          </div>
+          <div class="settings-control-col">
+            <button type="button" class="btn btn-danger btn-sm" id="btn-reset-all-data">全データ初期化</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="btn-close-settings-footer">設定を保存して閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="avatar.js?v=20261107_1805"></script>
+  <script src="main.js?v=20261107_1805"></script>
 </body>
 </html>
