@@ -2276,6 +2276,7 @@ body {
 }
 
 .profile-modal-header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2283,6 +2284,7 @@ body {
   padding: 16px 20px;
   background-color: #1a1d20;
   border-bottom: 1px solid #32383e;
+  flex-shrink: 0;
 }
 
 .profile-header-left {
@@ -2290,6 +2292,7 @@ body {
   align-items: center;
   gap: 16px;
   min-width: 0;
+  flex: 1;
 }
 
 .profile-squad-num {
@@ -2311,8 +2314,9 @@ body {
 .profile-identity {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
+  flex: 1;
 }
 
 .profile-top-tags {
@@ -2325,51 +2329,87 @@ body {
 .profile-top-tags .modal-category {
   margin-bottom: 0;
   color: var(--accent-green);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .profile-pos-badges-wrap {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 
 .profile-pos-badge-main {
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   padding: 2px 7px;
-  border-radius: 2px;
-  background-color: rgba(46, 204, 113, 0.18);
+  border-radius: 3px;
+  background-color: rgba(46, 204, 113, 0.22);
   border: 1px solid var(--accent-green);
   color: var(--accent-green);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .profile-pos-badge-sub {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 2px;
-  background-color: rgba(56, 189, 248, 0.18);
-  border: 1px solid #38bdf8;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.65);
   color: #38bdf8;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .profile-player-name {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--text-main);
-  line-height: 1.25;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.profile-fullname-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .profile-bio-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--text-muted);
+  gap: 5px;
+  flex-wrap: nowrap;
+  font-size: 11.5px;
+  color: var(--text-main);
   margin-top: 2px;
+  overflow: hidden;
+}
+
+.profile-bio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  background-color: #22272c;
+  border: 1px solid #333a42;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #dbe2e9;
+  white-space: nowrap;
+  line-height: 1.25;
 }
 
 .profile-bio-item strong {
@@ -2878,6 +2918,84 @@ body {
 }
 
 @media (max-width: 768px) {
+  .profile-modal-header {
+    padding: 12px 12px;
+    gap: 8px;
+  }
+
+  .profile-modal-header .btn-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 15px;
+    z-index: 2;
+  }
+
+  .profile-header-left {
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .profile-top-tags {
+    gap: 6px;
+    flex-wrap: nowrap;
+    padding-right: 38px;
+  }
+
+  .profile-top-tags .modal-category {
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-pos-badges-wrap {
+    gap: 3px;
+  }
+
+  .profile-pos-badge-main {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  .profile-pos-badge-sub {
+    font-size: 9.5px;
+    padding: 1px 4px;
+  }
+
+  .profile-player-name {
+    font-size: 18px;
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    padding-right: 38px;
+  }
+
+  .profile-name-main {
+    white-space: nowrap;
+  }
+
+  .profile-fullname-sub {
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-bio-row {
+    gap: 4px;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .profile-bio-chip {
+    padding: 2px 6px;
+    font-size: 10.5px;
+  }
+
   .profile-subnav-bar {
     padding: 6px 12px;
     gap: 4px;

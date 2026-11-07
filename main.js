@@ -7168,7 +7168,13 @@ function openPlayerProfileModal(playerId) {
     Left: 'Left（左利き）',
     Both: 'Both（両足）'
   };
+  const footShortMap = {
+    Right: '右利き',
+    Left: '左利き',
+    Both: '両利き'
+  };
   const footText = footLabelMap[p.preferredFoot] || p.preferredFoot || 'Right（右利き）';
+  const footShortText = footShortMap[p.preferredFoot] || '右利き';
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
   const rawNat = p.nationality || 'England';
   const flagEmoji = NATIONALITY_FLAG_MAP[rawNat] || '🌍';
@@ -7192,16 +7198,16 @@ function openPlayerProfileModal(playerId) {
   }
 
   const clubLabelEl = document.getElementById('profile-club-label');
-  if (clubLabelEl) clubLabelEl.textContent = `SCOUTING REPORT — ${clubName}`;
+  if (clubLabelEl) clubLabelEl.textContent = clubName;
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
     const subBadgesHtml = subPosList.length > 0
-      ? subPosList.map(sp => `<span class="profile-pos-badge-sub">SUB: ${sp}</span>`).join(' ')
-      : '<span class="profile-pos-badge-sub" style="opacity: 0.7;">SUB: なし</span>';
+      ? subPosList.map(sp => `<span class="profile-pos-badge-sub" title="サブ適性ポジション">${sp}</span>`).join('')
+      : '';
     posPillEl.innerHTML = `
       <div class="profile-pos-badges-wrap">
-        <span class="profile-pos-badge-main">MAIN: ${primaryPos}</span>
+        <span class="profile-pos-badge-main" title="メイン適性ポジション">${primaryPos}</span>
         ${subBadgesHtml}
       </div>
     `;
@@ -7210,7 +7216,7 @@ function openPlayerProfileModal(playerId) {
   const nameEl = document.getElementById('profile-player-name');
   if (nameEl) {
     if (p.fullName && p.fullName !== p.name) {
-      nameEl.innerHTML = `${p.name} <span class="profile-fullname-sub" style="font-size: 0.6em; font-weight: 500; color: var(--text-muted); margin-left: 8px;">(${p.fullName})</span>`;
+      nameEl.innerHTML = `<span class="profile-name-main">${p.name}</span><span class="profile-fullname-sub">(${p.fullName})</span>`;
     } else {
       nameEl.textContent = p.name;
     }
@@ -7219,13 +7225,10 @@ function openPlayerProfileModal(playerId) {
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
     bioRowEl.innerHTML = `
-      <span class="profile-bio-item">国籍:<strong>${nationalityDisplay}</strong></span>
-      <span>|</span>
-      <span class="profile-bio-item">年齢:<strong>${p.age}歳</strong></span>
-      <span>|</span>
-      <span class="profile-bio-item">利き足:<strong>${footText}</strong></span>
-      <span>|</span>
-      <span class="profile-bio-item">身長:<strong>${heightText}</strong></span>
+      <span class="profile-bio-chip">${nationalityDisplay}</span>
+      <span class="profile-bio-chip">${p.age}歳</span>
+      <span class="profile-bio-chip">${heightText}</span>
+      <span class="profile-bio-chip">${footShortText}</span>
     `;
   }
 
