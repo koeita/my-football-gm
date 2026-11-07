@@ -2345,12 +2345,33 @@ body {
 }
 
 .pitch-bench-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  max-height: 250px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  max-height: 480px;
   overflow-y: auto;
-  padding-right: 2px;
+  padding: 4px 2px;
+}
+
+/* 控え選手カード：スタメン選手と全く同じカード形状 */
+.bench-sub-item.pitch-node {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  min-width: 124px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  cursor: grab !important;
+  margin: 0 !important;
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
+}
+
+.bench-sub-item.pitch-node:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  border-color: var(--accent-green) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
 .bench-sub-item {
@@ -7265,6 +7286,23 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   /* 控え選手カード：横並び用の均一幅・高さコンパクトカード（文字重なりを完全排除） */
+  .bench-sub-item.pitch-node {
+    flex-shrink: 0 !important;
+    width: auto !important;
+    min-width: 110px !important;
+    max-width: 130px !important;
+    height: auto !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 4px 6px !important;
+    box-sizing: border-box !important;
+  }
+
   .bench-sub-item {
     flex-shrink: 0 !important;
     width: 104px !important;

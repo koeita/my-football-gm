@@ -7497,33 +7497,41 @@ function renderTacticalBoard() {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const fitInfo = getPositionFitInfo(bp, selectedSlot.pos);
         const simOvr = getEffectivePlayerRatingForSlot(bp, selectedSlot.pos);
-        const baseOvr = getPlayerOverallRating(bp);
+        const posDisplay = formatPlayerPositionsText(bp, 'slash');
+        const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
-        let itemClass = 'fit-mismatch';
-        let fitTag = `<span class="bench-fit-tag fit-warn">適性外 80%</span>`;
+        let itemClass = '';
+        let fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
         if (fitInfo.type === 'main') {
-          itemClass = 'fit-match';
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN 100%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="メイン適性（実効能力100%）">MAIN</span>`;
         } else if (fitInfo.type === 'sub') {
-          itemClass = 'fit-sub';
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB 92%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+          itemClass = 'sub-pos';
+        } else {
+          itemClass = 'out-of-pos';
         }
 
+        const injuryBadgeHtml = bp.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+          : '';
+
         return `
-          <div class="bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-avatar-wrap">
-              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
+          <div class="pitch-node pos-group-${roleGroup} bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
             </div>
-            <div class="bench-sub-info">
-              <div class="bench-sub-top-row">
-                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-                <span class="bench-sub-ovr mono">OVR ${simOvr}</span>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${bp.pos}</span>
+                <span class="pitch-node-ovr">OVR ${simOvr}</span>
               </div>
-              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              <div class="pitch-node-name-btn">
+                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
               </div>
-              <div class="bench-sub-bottom-row">
-                ${fitTag}
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${fitBadgeHtml}
+                ${injuryBadgeHtml}
               </div>
             </div>
           </div>
@@ -7547,31 +7555,40 @@ function renderTacticalBoard() {
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const baseOvr = getPlayerOverallRating(bp);
+        const posDisplay = formatPlayerPositionsText(bp, 'slash');
+        const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
+
         const hasMainSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'main');
         const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub');
 
-        let fitTag = `<span class="bench-fit-tag fit-warn">枠外</span>`;
+        let fitBadgeHtml = `<span class="pitch-node-warn" title="フォーメーション外">枠外</span>`;
         if (hasMainSlot) {
-          fitTag = `<span class="bench-fit-tag fit-ok">MAIN適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="MAIN適性スロットあり">MAIN</span>`;
         } else if (hasSubSlot) {
-          fitTag = `<span class="bench-fit-tag fit-sub">SUB適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" title="SUB適性スロットあり">SUB</span>`;
         }
 
+        const injuryBadgeHtml = bp.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+          : '';
+
         return `
-          <div class="bench-sub-item" data-player-id="${bp.id}" title="ドラッグでピッチへ投入 / タップで詳細プロフィール表示">
-            <div class="bench-sub-avatar-wrap">
-              ${getPlayerAvatarHtml(bp, playerClub, 'bench-sub-avatar', 48)}
+          <div class="pitch-node pos-group-${roleGroup} bench-sub-item" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
             </div>
-            <div class="bench-sub-info">
-              <div class="bench-sub-top-row">
-                <span class="pos-badge pos-${bp.pos.toLowerCase()}">${bp.pos}</span>
-                <span class="bench-sub-ovr mono">OVR ${baseOvr}</span>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${bp.pos}</span>
+                <span class="pitch-node-ovr">OVR ${baseOvr}</span>
               </div>
-              <div class="bench-sub-name clickable-player-name" data-profile-id="${bp.id}" title="${bp.name}">
-                <span class="bench-sub-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+              <div class="pitch-node-name-btn">
+                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
               </div>
-              <div class="bench-sub-bottom-row">
-                ${fitTag}
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${fitBadgeHtml}
+                ${injuryBadgeHtml}
               </div>
             </div>
           </div>
@@ -9810,13 +9827,9 @@ function initTacticalDragAndDrop() {
     }
 
     if (!isDragging) {
-      // 単なるタップ/クリック、または長押ししただけで動かさずに離した場合:
-      // 詳細スカウティングレポートを開く！
+      // 単なるタップ/クリックの場合は通常のclickイベント（選手交代/選択）へ委ねる
       cleanupDrag();
       lastHoverDropTarget = null;
-      if (source.playerId) {
-        openPlayerProfileModal(source.playerId);
-      }
       return;
     }
 
@@ -10028,6 +10041,7 @@ function initGame() {
   window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
   window.__getJustFinishedDragging = function() { return justFinishedDragging; };
 
+  // 作戦ボード（ピッチ）のスタメン枠クリック：スロット選択 / スワップ交代
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
@@ -10036,9 +10050,10 @@ function initGame() {
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (nodeEl && nodeEl.dataset.playerId) {
+      if (nodeEl && nodeEl.dataset.slotIndex !== undefined) {
         e.stopPropagation();
-        openPlayerProfileModal(nodeEl.dataset.playerId);
+        const slotIdx = parseInt(nodeEl.dataset.slotIndex, 10);
+        handlePitchNodeClick(slotIdx);
       }
     });
   }
@@ -10053,7 +10068,7 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手リスト：交代投入ボタン＆カード全体タップでプロフィール表示
+  // 作戦ボード横の控え選手リスト：クリックで選択中のスタメン枠と交代！
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
@@ -10061,16 +10076,11 @@ function initGame() {
         e.stopPropagation();
         return;
       }
-      const subBtn = e.target.closest('.btn-sub-bench');
-      if (subBtn && subBtn.dataset.subBenchId) {
-        e.stopPropagation();
-        substituteBenchPlayerToSlot(subBtn.dataset.subBenchId, gameState.selectedSlotIndex);
-        return;
-      }
       const itemEl = e.target.closest('.bench-sub-item');
       if (itemEl && itemEl.dataset.playerId) {
         e.stopPropagation();
-        openPlayerProfileModal(itemEl.dataset.playerId);
+        // スタメン枠が選択中ならその枠と交代！未選択なら最適枠と自動交代
+        substituteBenchPlayerToSlot(itemEl.dataset.playerId, gameState.selectedSlotIndex);
       }
     });
   }
