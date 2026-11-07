@@ -2263,15 +2263,20 @@ body {
 .profile-modal-card {
   max-width: 720px;
   width: 95vw;
+  height: 640px;
+  max-height: 88vh;
   border: 1px solid #3a3f45;
   border-top: 3px solid var(--accent-green);
   background-color: #24282c;
   border-radius: 4px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .profile-modal-header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2279,6 +2284,7 @@ body {
   padding: 16px 20px;
   background-color: #1a1d20;
   border-bottom: 1px solid #32383e;
+  flex-shrink: 0;
 }
 
 .profile-header-left {
@@ -2286,6 +2292,7 @@ body {
   align-items: center;
   gap: 16px;
   min-width: 0;
+  flex: 1;
 }
 
 .profile-squad-num {
@@ -2307,8 +2314,9 @@ body {
 .profile-identity {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
+  flex: 1;
 }
 
 .profile-top-tags {
@@ -2321,51 +2329,109 @@ body {
 .profile-top-tags .modal-category {
   margin-bottom: 0;
   color: var(--accent-green);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .profile-pos-badges-wrap {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 
 .profile-pos-badge-main {
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   padding: 2px 7px;
-  border-radius: 2px;
-  background-color: rgba(46, 204, 113, 0.18);
+  border-radius: 3px;
+  background-color: rgba(46, 204, 113, 0.22);
   border: 1px solid var(--accent-green);
   color: var(--accent-green);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .profile-pos-badge-sub {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 2px;
-  background-color: rgba(56, 189, 248, 0.18);
-  border: 1px solid #38bdf8;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.65);
   color: #38bdf8;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .profile-player-name {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--text-main);
-  line-height: 1.25;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.profile-fullname-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .profile-bio-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--text-muted);
+  gap: 5px;
+  flex-wrap: nowrap;
+  font-size: 11.5px;
+  color: var(--text-main);
   margin-top: 2px;
+  overflow: hidden;
+}
+
+.profile-bio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  background-color: #22272c;
+  border: 1px solid #333a42;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #dbe2e9;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.profile-flag-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.profile-flag-icon {
+  display: inline-block;
+  width: 17px;
+  height: 11px;
+  border-radius: 1.5px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.7);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.profile-flag-fallback {
+  font-size: 12px;
+  line-height: 1;
 }
 
 .profile-bio-item strong {
@@ -2411,6 +2477,9 @@ body {
   flex-direction: column;
   gap: 14px;
   background-color: #24282c;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .profile-section-grid {
@@ -2648,9 +2717,396 @@ body {
   gap: 8px;
 }
 
+.profile-metrics-row.profile-metrics-row-3col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 @media (max-width: 680px) {
   .profile-metrics-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .profile-metrics-row.profile-metrics-row-3col {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 選手詳細モーダル：4タブナビゲーションバー（能力 / 今季成績 / 年別成績 / 経歴） */
+.profile-subnav-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 20px;
+  background-color: #16191d;
+  border-bottom: 1px solid #32383e;
+  flex-shrink: 0;
+}
+
+.profile-tab-btn {
+  appearance: none;
+  background-color: #202429;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  user-select: none;
+}
+
+.profile-tab-btn:hover {
+  background-color: #282d33;
+  color: var(--text-main);
+  border-color: #48515b;
+}
+
+.profile-tab-btn.active {
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  box-shadow: inset 0 -2px 0 var(--accent-green);
+}
+
+.profile-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-tab-panel.hidden {
+  display: none !important;
+}
+
+/* タブ2：今季成績スタイル */
+.profile-season-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.profile-season-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* タブ3：年別成績テーブルスタイル */
+.profile-yearly-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #2d333b;
+  border-radius: 4px;
+  background-color: #16191d;
+}
+
+.profile-yearly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.profile-yearly-table th,
+.profile-yearly-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #262b31;
+  white-space: nowrap;
+}
+
+.profile-yearly-table th {
+  background-color: #1f2429;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profile-yearly-current-row td {
+  background-color: rgba(46, 204, 113, 0.08);
+  font-weight: 700;
+}
+
+.profile-yearly-total-row td {
+  background-color: #20252b;
+  border-top: 2px solid #3a424b;
+  border-bottom: none;
+  padding: 8px 10px;
+}
+
+/* タブ4：経歴タイムラインスタイル */
+.profile-career-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  padding-left: 14px;
+  margin-top: 2px;
+}
+
+.profile-career-timeline::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background-color: #32383e;
+}
+
+.profile-timeline-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-timeline-dot {
+  position: absolute;
+  left: -14px;
+  top: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #3d444d;
+  border: 2px solid #1a1d20;
+}
+
+.profile-timeline-item.is-current .profile-timeline-dot {
+  background-color: var(--accent-green);
+}
+
+.profile-timeline-content {
+  background-color: #202428;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-timeline-item.is-current .profile-timeline-content {
+  border-color: rgba(46, 204, 113, 0.45);
+  background-color: rgba(46, 204, 113, 0.06);
+}
+
+.profile-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profile-timeline-year {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.profile-timeline-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background-color: #2b3137;
+  color: var(--text-muted);
+  border: 1px solid #3d444d;
+}
+
+.profile-timeline-badge.badge-current {
+  background-color: rgba(46, 204, 113, 0.16);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.profile-timeline-badge.badge-transfer {
+  background-color: rgba(52, 152, 219, 0.16);
+  color: #5dade2;
+  border-color: #3498db;
+}
+
+.profile-timeline-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.profile-timeline-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .profile-modal-header {
+    padding: 12px 12px;
+    gap: 8px;
+  }
+
+  .profile-modal-header .btn-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 15px;
+    z-index: 2;
+  }
+
+  .profile-header-left {
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .profile-top-tags {
+    gap: 6px;
+    flex-wrap: nowrap;
+    padding-right: 38px;
+  }
+
+  .profile-top-tags .modal-category {
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-pos-badges-wrap {
+    gap: 3px;
+  }
+
+  .profile-pos-badge-main {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  .profile-pos-badge-sub {
+    font-size: 9.5px;
+    padding: 1px 4px;
+  }
+
+  .profile-player-name {
+    font-size: 18px;
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    padding-right: 38px;
+  }
+
+  .profile-name-main {
+    white-space: nowrap;
+  }
+
+  .profile-fullname-sub {
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-bio-row {
+    gap: 4px;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .profile-bio-chip {
+    padding: 2px 6px;
+    font-size: 10.5px;
+  }
+
+  .profile-subnav-bar {
+    padding: 6px 12px;
+    gap: 4px;
+  }
+
+  .profile-tab-btn {
+    font-size: 11.5px;
+    padding: 7px 4px;
+  }
+
+  .profile-season-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-scout-comment-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .profile-yearly-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .profile-yearly-table th,
+  .profile-yearly-table td {
+    padding: 5px 1px;
+    font-size: 9.5px;
+  }
+
+  .profile-yearly-table th:nth-child(1),
+  .profile-yearly-table td:nth-child(1) {
+    width: 48px;
+  }
+
+  .profile-yearly-table th:nth-child(2),
+  .profile-yearly-table td:nth-child(2) {
+    width: 68px;
+  }
+
+  .profile-yearly-table th:nth-child(3),
+  .profile-yearly-table td:nth-child(3) {
+    width: 22px;
+  }
+
+  .profile-yearly-table th:nth-child(4),
+  .profile-yearly-table td:nth-child(4) {
+    width: 26px;
+  }
+
+  .profile-yearly-table th:nth-child(5),
+  .profile-yearly-table td:nth-child(5) {
+    width: 22px;
+  }
+
+  .profile-yearly-table th:nth-child(6),
+  .profile-yearly-table td:nth-child(6) {
+    width: 24px;
+  }
+
+  .profile-yearly-table th:nth-child(7),
+  .profile-yearly-table td:nth-child(7) {
+    width: 32px;
+  }
+
+  .profile-yearly-table th:nth-child(8),
+  .profile-yearly-table td:nth-child(8) {
+    width: 24px;
+  }
+
+  .profile-yearly-table .col-yearly-club {
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-card {
+    padding: 6px 7px;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-label {
+    font-size: 9px;
+  }
+
+  .profile-metrics-row.profile-metrics-row-3col .profile-metric-val {
+    font-size: 11.5px;
   }
 }
 
@@ -5476,6 +5932,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .intro-modal-card {
     width: 92vw !important;
     max-width: 92vw !important;
+    height: 85vh !important;
     max-height: 85vh !important;
     margin: auto;
     display: flex;
