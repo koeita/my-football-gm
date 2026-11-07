@@ -5641,9 +5641,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   cursor: grabbing;
 }
 
-.pitch-node.touch-drag-ready,
+.pitch-node.touch-drag-ready {
+  transform: translate(-50%, -50%) scale(1.06) !important;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
+  border-color: #2ecc71 !important;
+  z-index: 100 !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+
 .bench-sub-item.touch-drag-ready {
-  transform: scale(1.08) !important;
+  transform: scale(1.04) !important;
   box-shadow: 0 0 14px rgba(46, 204, 113, 0.95), 0 0 4px #ffffff !important;
   border-color: #2ecc71 !important;
   z-index: 100 !important;
@@ -5652,8 +5659,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .pitch-node.dragging,
 .bench-sub-item.dragging {
-  opacity: 0.45;
-  filter: grayscale(30%);
+  opacity: 0.35;
+  filter: grayscale(35%);
+}
+
+/* 元のカード形状のまま追従するドラッグクローン */
+.tactical-drag-ghost-card,
+.pitch-node.tactical-drag-ghost-card,
+.bench-sub-item.tactical-drag-ghost-card {
+  position: fixed !important;
+  z-index: 999999 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  transform: scale(1.05) !important;
+  opacity: 0.96 !important;
+  filter: none !important;
+  border-color: #2ecc71 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75), 0 0 12px rgba(46, 204, 113, 0.55) !important;
+  transition: none !important;
 }
 
 /* ドロップターゲットのハイライト発光 */
@@ -6646,5 +6669,251 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .standings-table thead th,
   .roster-table thead th {
     border-bottom: 2px solid #33383e !important;
+  }
+}
+
+/* ==========================================================================
+   モバイル：固定列のコンパクト化（横スクロール可能範囲を拡大）
+   選手一覧：適性 64px→42px / 選手名 152px→112px（背番号を名前上に小さく積む）
+   順位表　：順位 42px→32px / クラブ名 130px→116px
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* --- 選手一覧 --- */
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    padding: 4px 1px !important;
+    font-size: 11px !important;
+  }
+
+  .roster-table td.col-pos .pos-sub-text {
+    font-size: 7.5px !important;
+    max-width: 40px !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    left: 42px !important;
+    width: 112px !important;
+    min-width: 112px !important;
+    max-width: 112px !important;
+    padding: 4px 4px 4px 4px !important;
+  }
+
+  .roster-table td.col-name .player-name-link {
+    display: grid !important;
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 4px !important;
+    row-gap: 0 !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .roster-table td.col-name .player-avatar.table-avatar {
+    grid-row: 1 / span 2 !important;
+    grid-column: 1 !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 !important;
+  }
+
+  .roster-table td.col-name .roster-squad-num {
+    grid-row: 1 !important;
+    grid-column: 2 !important;
+    font-size: 8.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  .roster-table td.col-name .player-name-text {
+    grid-row: 2 !important;
+    grid-column: 2 !important;
+    display: block !important;
+    min-width: 0 !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* 名前セル内のバッジ類（SUB-POS・負傷等）は固定列幅を圧迫するため非表示（詳細はプロフィールで確認） */
+  .roster-table td.col-name .sub-badge {
+    display: none !important;
+  }
+
+  /* --- 順位表 --- */
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding: 6px 1px !important;
+  }
+
+  .standings-table th.col-team,
+  .standings-table td.col-team {
+    left: 32px !important;
+    width: 116px !important;
+    min-width: 116px !important;
+    max-width: 116px !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    letter-spacing: -0.02em !important;
+  }
+}
+
+/* ==========================================================================
+   順位表：PCは従来どおり10列・モバイルはFotMob風の1画面完結コンパクト表示（横スクロールなし）
+   ========================================================================== */
+.standings-table .th-mob,
+.standings-table .td-mob {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .standings-table .th-pc,
+  .standings-table .td-pc,
+  .standings-table th.col-ga,
+  .standings-table td.col-ga {
+    display: none !important;
+  }
+
+  .standings-table .th-mob,
+  .standings-table .td-mob {
+    display: inline !important;
+  }
+
+  #view-team .table-wrapper:has(.standings-table) {
+    overflow-x: hidden !important;
+  }
+
+  .standings-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .standings-table th,
+  .standings-table td {
+    padding: 7px 1px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  .standings-table thead th,
+  .standings-table thead th.col-rank,
+  .standings-table thead th.col-team {
+    font-size: 10px !important;
+    color: #9aa4af !important;
+    background-color: #181c21 !important;
+    border-bottom: 1px solid #2a2e33 !important;
+  }
+  .standings-table th.col-rank,
+  .standings-table td.col-rank,
+  .standings-table th.col-team,
+  .standings-table td.col-team {
+    position: static !important;
+    left: auto !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+  }
+
+  .standings-table thead th.col-rank,
+  .standings-table thead th.col-team {
+    background-color: #181c21 !important;
+  }
+
+  .standings-table tr.row-player-club td,
+  .standings-table tr.row-player-club td.col-rank,
+  .standings-table tr.row-player-club td.col-team {
+    background-color: #1a2e22 !important;
+  }
+
+  /* 各列幅（合計固定幅 200px ＋ 残り全幅をクラブ名に配分） */
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    text-align: center !important;
+    padding-left: 3px !important;
+    padding-right: 1px !important;
+  }
+
+  /* 左端の順位ゾーンカラーバー（1-4位:緑、5位:青、18-20位:赤） */
+  .standings-table tbody tr.zone-ucl td.col-rank {
+    box-shadow: inset 3px 0 0 #2ecc71 !important;
+  }
+  .standings-table tbody tr.zone-uel td.col-rank {
+    box-shadow: inset 3px 0 0 #3498db !important;
+  }
+  .standings-table tbody tr.zone-rel td.col-rank {
+    box-shadow: inset 3px 0 0 #e74c3c !important;
+  }
+
+  .standings-table td.col-rank .rank-badge {
+    background: transparent !important;
+    border: none !important;
+    color: #e6edf3 !important;
+    width: auto !important;
+    height: auto !important;
+    line-height: 1 !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 0 !important;
+  }
+
+  .standings-table th.col-team,
+  .standings-table td.col-team {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    text-align: left !important;
+    padding-left: 5px !important;
+    padding-right: 4px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .standings-table .col-played {
+    width: 26px !important;
+    text-align: center !important;
+  }
+
+  .standings-table .col-won,
+  .standings-table .col-drawn,
+  .standings-table .col-lost {
+    width: 20px !important;
+    text-align: center !important;
+  }
+
+  .standings-table .col-gf {
+    width: 38px !important;
+    text-align: center !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .standings-table .col-gd {
+    width: 26px !important;
+    text-align: center !important;
+  }
+
+  .standings-table .col-pts {
+    width: 26px !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+    padding-right: 3px !important;
   }
 }
