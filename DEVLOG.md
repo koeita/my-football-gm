@@ -1,5 +1,16 @@
 # 開発ログ：僕のサッカークラブ（仮）
 
+## 最新アップデート：ドラッグゴーストのCSS競合（left:auto/width:100%による画面外吹き飛び）の完全根絶
+- **控え選手をつかんでも動かない真の根本原因を特定・完全修正**:
+  - `style.css` の `.bench-sub-item.pitch-node` に定義されていた `position: relative !important; left: auto !important; top: auto !important; width: 100% !important;` が、ドラッグゴースト（`.tactical-drag-ghost-card`）にまで適用されていた問題を特定。
+  - そのため、インラインスタイルで指やカーソル位置（`left`, `top`, `width`）を指定してもスタイルシートの `!important` に上書きされ、ゴーストカードが画面外の最下部（width: 1333px）に固定されてカーソルについて来ない状態となっていました。
+  - **解決策**:
+    1. `style.css`: 控えカード用のスタイルセレクタを `#pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card)` に限定し、ドラッグゴーストカードに誤適用されるのを完全に遮断。
+    2. `main.js`: ドラッグ要素（`ghostEl`）生成時に `ghostEl.classList.remove('bench-sub-item')` を徹底し、インラインスタイルの `setProperty(..., 'important')` によってカーソル追従座標を100%確実にブラウザへ反映。
+    3. Playwright実機検証にて、ドラッグ中のゴーストカードがカーソルの真下（x: 594px, y: 319px, width: 179px）にミリ単位でピッタリ吸着追従することを確認済み。
+
+---
+
 ## 最新アップデート：控え選手カードのスタメン完全同一カード形状化＆ドラッグ開始クラッシュ（ReferenceError）の完全解消
 - **控え選手カードのスタメン完全同一カード形状化（CSS競合・旧スタイルの完全一掃）**:
   - `style.css` 内に残留していた旧バージョンの横長リスト用スタイル（`bench-sub-top-row`, `bench-sub-name`, `bench-sub-ovr`, `bench-sub-bottom-row`）が `.pitch-node` のグリッド表示を上書き・破壊していた問題を特定し、完全に除去・統一。

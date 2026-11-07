@@ -2354,7 +2354,7 @@ body {
 }
 
 /* 控え選手カード：スタメン選手と全く同じカード形状 */
-.bench-sub-item.pitch-node {
+#pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
   position: relative !important;
   left: auto !important;
   top: auto !important;
@@ -2365,6 +2365,7 @@ body {
   box-sizing: border-box !important;
   cursor: grab !important;
   margin: 0 !important;
+  touch-action: none !important;
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
@@ -6729,6 +6730,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   transition: none !important;
   bottom: auto !important;
   right: auto !important;
+  box-sizing: border-box !important;
+  touch-action: none !important;
 }
 
 /* ドロップターゲットのハイライト発光 */
@@ -7215,7 +7218,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   /* 控え選手カード：横並び用の均一幅・高さコンパクトカード（文字重なりを完全排除） */
-  .bench-sub-item.pitch-node {
+  #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
     flex-shrink: 0 !important;
     width: auto !important;
     min-width: 110px !important;

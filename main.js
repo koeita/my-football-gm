@@ -9550,6 +9550,95 @@ function initTacticalDragAndDrop() {
     }
   });
 
+  // ドロップ先の最適ターゲット検出（ポインタ直下 ＋ ゴースト矩形重なり・近접判定）
+  function findBestDropTarget(clientX, clientY, ghostRect, source) {
+    const elAtPoint = document.elementFromPoint(clientX, clientY);
+    if (elAtPoint) {
+      const starterNode = elAtPoint.closest('.pitch-node[data-slot-index]');
+      if (starterNode && starterNode !== source.element) {
+        return { type: 'starter', element: starterNode };
+      }
+      const benchNode = elAtPoint.closest('.bench-sub-item[data-player-id]');
+      if (benchNode && benchNode !== source.element) {
+        return { type: 'bench-item', element: benchNode };
+      }
+    }
+
+    const gCenterX = ghostRect ? (ghostRect.left + ghostRect.width / 2) : clientX;
+    const gCenterY = ghostRect ? (ghostRect.top + ghostRect.height / 2) : clientY;
+
+    // ピッチ上のスタメン枠との重なり・近接判定
+    const starterNodes = document.querySelectorAll('#pitch-nodes-layer .pitch-node[data-slot-index]');
+    let bestStarter = null;
+    let bestDist = Infinity;
+
+    starterNodes.forEach(node => {
+      if (node === source.element) return;
+      const r = node.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+
+      const nCenterX = r.left + r.width / 2;
+      const nCenterY = r.top + r.height / 2;
+      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+
+      const isOverlapping = ghostRect && !(
+        ghostRect.right < r.left ||
+        ghostRect.left > r.right ||
+        ghostRect.bottom < r.top ||
+        ghostRect.top > r.bottom
+      );
+
+      if ((isOverlapping || dist < 80) && dist < bestDist) {
+        bestDist = dist;
+        bestStarter = node;
+      }
+    });
+
+    if (bestStarter) {
+      return { type: 'starter', element: bestStarter };
+    }
+
+    // 控え選手カードとの重なり・近接判定
+    const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id]');
+    let bestBench = null;
+    let bestBenchDist = Infinity;
+
+    benchNodes.forEach(node => {
+      if (node === source.element) return;
+      const r = node.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+
+      const nCenterX = r.left + r.width / 2;
+      const nCenterY = r.top + r.height / 2;
+      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+
+      const isOverlapping = ghostRect && !(
+        ghostRect.right < r.left ||
+        ghostRect.left > r.right ||
+        ghostRect.bottom < r.top ||
+        ghostRect.top > r.bottom
+      );
+
+      if ((isOverlapping || dist < 70) && dist < bestBenchDist) {
+        bestBenchDist = dist;
+        bestBench = node;
+      }
+    });
+
+    if (bestBench) {
+      return { type: 'bench-item', element: bestBench };
+    }
+
+    if (source.type === 'starter' && elAtPoint) {
+      const benchList = elAtPoint.closest('#pitch-bench-list, .pitch-sub-box');
+      if (benchList) {
+        return { type: 'bench-list', element: document.getElementById('pitch-bench-list') || benchList };
+      }
+    }
+
+    return null;
+  }
+
   // Pointer Down
   document.addEventListener('pointerdown', (e) => {
     const rosterView = document.getElementById('view-roster');
@@ -9558,9 +9647,9 @@ function initTacticalDragAndDrop() {
     // ボタンや入力要素は通常のクリック操作を優先
     if (e.target.closest('button, select, input, a')) return;
 
-    const pitchNode = e.target.closest('.pitch-node');
-    const benchItem = e.target.closest('.bench-sub-item');
-    if (!pitchNode && !benchItem) return;
+    const starterNode = e.target.closest('.pitch-node[data-slot-index]');
+    const benchItem = e.target.closest('.bench-sub-item[data-player-id]');
+    if (!starterNode && !benchItem) return;
 
     const playerClub = getPlayerClub();
     if (!playerClub) return;
@@ -9576,11 +9665,11 @@ function initTacticalDragAndDrop() {
     isTouchReady = false;
     lastHoverDropTarget = null;
 
-    if (pitchNode && pitchNode.dataset.slotIndex !== undefined) {
-      const slotIndex = parseInt(pitchNode.dataset.slotIndex, 10);
+    if (starterNode && starterNode.dataset.slotIndex !== undefined) {
+      const slotIndex = parseInt(starterNode.dataset.slotIndex, 10);
       const starter = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndex);
       if (starter) {
-        const rect = pitchNode.getBoundingClientRect();
+        const rect = starterNode.getBoundingClientRect();
         dragSource = {
           type: 'starter',
           playerId: starter.id,
@@ -9589,7 +9678,7 @@ function initTacticalDragAndDrop() {
           name: starter.name,
           pos: starter.assignedPos || starter.pos,
           ovr: getEffectivePlayerRating(starter),
-          element: pitchNode,
+          element: starterNode,
           cardWidth: rect.width,
           cardHeight: rect.height,
           grabOffsetX: e.clientX - rect.left,
@@ -9619,9 +9708,6 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
-    // タッチ端末での誤取得防止と快適な操作性の両立：
-    // 作戦ボードタブは画面全体のスクロールがないため、長押しタイマーは短縮(60ms)し、
-    // 指を置いて軽く動かすだけですぐにドラッグ開始できるようにする。
     const isTouch = e.pointerType === 'touch';
     if (isTouch) {
       const targetEl = dragSource.element;
@@ -9634,9 +9720,8 @@ function initTacticalDragAndDrop() {
             try { navigator.vibrate(15); } catch(err) {}
           }
         }
-      }, 60);
+      }, 50);
     } else {
-      // PCマウス操作は即座にドラッグ可能
       isTouchReady = true;
     }
   });
@@ -9651,9 +9736,7 @@ function initTacticalDragAndDrop() {
 
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
-
-      // ポインタ/指が動いたら即座にドラッグ開始（PC/モバイル共通で快適に追従）
-      const dragThreshold = isTouch ? 4 : 3;
+      const dragThreshold = isTouch ? 3 : 2;
       if (dist > dragThreshold) {
         isDragging = true;
         if (longPressTimer) {
@@ -9665,22 +9748,25 @@ function initTacticalDragAndDrop() {
           dragSource.element.classList.add('dragging');
         }
 
-        // ドラッグ確定時にポインタキャプチャ
-        if (e.target && e.target.setPointerCapture) {
-          try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
-        }
-
-        // スタメンおよび控え選手カード（双方が.pitch-node同一形状）をそのままクローンして持ち上げる
+        // スタメンおよび控え選手カードをクローンして持ち上げる
+        // ※ bench-sub-item クラスが残ると CSS の left: auto !important 等が競合するため確実に除去する
         ghostEl = dragSource.element.cloneNode(true);
         ghostEl.removeAttribute('id');
-        ghostEl.classList.remove('dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+        ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
         ghostEl.classList.add('tactical-drag-ghost-card');
-        ghostEl.style.width = `${dragSource.cardWidth}px`;
-        ghostEl.style.minWidth = `${dragSource.cardWidth}px`;
-        ghostEl.style.maxWidth = `${dragSource.cardWidth}px`;
-        ghostEl.style.height = `${dragSource.cardHeight}px`;
-        ghostEl.style.left = `${e.clientX - dragSource.grabOffsetX}px`;
-        ghostEl.style.top = `${e.clientY - dragSource.grabOffsetY}px`;
+
+        const initLeft = e.clientX - dragSource.grabOffsetX;
+        const initTop = e.clientY - dragSource.grabOffsetY;
+        ghostEl.style.setProperty('position', 'fixed', 'important');
+        ghostEl.style.setProperty('width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('min-width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('max-width', `${dragSource.cardWidth}px`, 'important');
+        ghostEl.style.setProperty('height', `${dragSource.cardHeight}px`, 'important');
+        ghostEl.style.setProperty('left', `${initLeft}px`, 'important');
+        ghostEl.style.setProperty('top', `${initTop}px`, 'important');
+        ghostEl.style.setProperty('transform', 'scale(1.06)', 'important');
+        ghostEl.style.setProperty('pointer-events', 'none', 'important');
+        ghostEl.style.setProperty('z-index', '999999', 'important');
 
         // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
         const srcCanvases = dragSource.element.querySelectorAll('canvas');
@@ -9705,37 +9791,28 @@ function initTacticalDragAndDrop() {
     if (isDragging && ghostEl) {
       if (e.cancelable) e.preventDefault();
 
-      // 指で掴んだ位置のまま追従（上方向へのジャンプなし）
       const cardLeft = e.clientX - dragSource.grabOffsetX;
       const cardTop = e.clientY - dragSource.grabOffsetY;
-      ghostEl.style.left = `${cardLeft}px`;
-      ghostEl.style.top = `${cardTop}px`;
+      ghostEl.style.setProperty('left', `${cardLeft}px`, 'important');
+      ghostEl.style.setProperty('top', `${cardTop}px`, 'important');
 
-      // 判定座標：カーソル直下（e.clientX, e.clientY）を最優先、次にカード中心
-      const checkX = cardLeft + (dragSource.cardWidth / 2);
-      const checkY = cardTop + (dragSource.cardHeight / 2);
+      const ghostRect = {
+        left: cardLeft,
+        top: cardTop,
+        right: cardLeft + dragSource.cardWidth,
+        bottom: cardTop + dragSource.cardHeight,
+        width: dragSource.cardWidth,
+        height: dragSource.cardHeight
+      };
 
-      const targetUnderPointer = document.elementFromPoint(e.clientX, e.clientY)
-        || document.elementFromPoint(checkX, checkY);
       document.querySelectorAll('.drag-drop-target-active').forEach(el => el.classList.remove('drag-drop-target-active'));
 
-      if (targetUnderPointer) {
-        const hoverPitchNode = targetUnderPointer.closest('.pitch-node');
-        const hoverBenchItem = targetUnderPointer.closest('.bench-sub-item');
-        const hoverBenchList = targetUnderPointer.closest('#pitch-bench-list');
-
-        if (hoverPitchNode && hoverPitchNode !== dragSource.element) {
-          hoverPitchNode.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverPitchNode;
-        } else if (hoverBenchItem && hoverBenchItem !== dragSource.element) {
-          hoverBenchItem.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverBenchItem;
-        } else if (hoverBenchList && dragSource.type === 'starter') {
-          hoverBenchList.classList.add('drag-drop-target-active');
-          lastHoverDropTarget = hoverBenchList;
-        } else {
-          lastHoverDropTarget = null;
-        }
+      const match = findBestDropTarget(e.clientX, e.clientY, ghostRect, dragSource);
+      if (match && match.element) {
+        match.element.classList.add('drag-drop-target-active');
+        lastHoverDropTarget = match;
+      } else {
+        lastHoverDropTarget = null;
       }
     }
   }, { passive: false });
@@ -9751,41 +9828,37 @@ function initTacticalDragAndDrop() {
 
     const source = dragSource;
 
-    // キャプチャ解除
-    if (e.target.releasePointerCapture) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
-    }
-
     if (!isDragging) {
-      // 単なるタップ/クリックの場合は通常のclickイベント（選手交代/選択）へ委ねる
       cleanupDrag();
       lastHoverDropTarget = null;
       return;
     }
 
-    // ドラッグ完了フラグ
     if (window.__setJustFinishedDragging) {
       window.__setJustFinishedDragging(true);
       setTimeout(() => window.__setJustFinishedDragging(false), 200);
     }
 
-    // ゴースト要素を消去
+    const cardLeft = e.clientX - (source.grabOffsetX || 0);
+    const cardTop = e.clientY - (source.grabOffsetY || 0);
+    const ghostRect = {
+      left: cardLeft,
+      top: cardTop,
+      right: cardLeft + (source.cardWidth || 120),
+      bottom: cardTop + (source.cardHeight || 50),
+      width: source.cardWidth || 120,
+      height: source.cardHeight || 50
+    };
+
     cleanupDrag();
 
-    const checkX = e.clientX - (source.grabOffsetX || 0) + ((source.cardWidth || 0) / 2);
-    const checkY = e.clientY - (source.grabOffsetY || 0) + ((source.cardHeight || 0) / 2);
-
-    const targetUnderPointer = document.elementFromPoint(e.clientX, e.clientY)
-      || (checkX !== undefined && checkY !== undefined ? document.elementFromPoint(checkX, checkY) : null);
-
-    const resolvedTarget = targetUnderPointer || lastHoverDropTarget;
-    const dropPitchNode = resolvedTarget ? resolvedTarget.closest('.pitch-node') : null;
-    const dropBenchItem = resolvedTarget ? resolvedTarget.closest('.bench-sub-item') : null;
-    const dropBenchList = resolvedTarget ? resolvedTarget.closest('#pitch-bench-list') : null;
+    const finalMatch = findBestDropTarget(e.clientX, e.clientY, ghostRect, source) || lastHoverDropTarget;
     lastHoverDropTarget = null;
 
-    if (dropPitchNode && dropPitchNode.dataset.slotIndex !== undefined) {
-      const targetSlotIndex = parseInt(dropPitchNode.dataset.slotIndex, 10);
+    if (!finalMatch || !finalMatch.element) return;
+
+    if (finalMatch.type === 'starter' && finalMatch.element.dataset.slotIndex !== undefined) {
+      const targetSlotIndex = parseInt(finalMatch.element.dataset.slotIndex, 10);
       if (source.type === 'starter') {
         if (source.slotIndex !== targetSlotIndex) {
           swapStarterSlots(source.slotIndex, targetSlotIndex);
@@ -9793,12 +9866,12 @@ function initTacticalDragAndDrop() {
       } else if (source.type === 'bench') {
         substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
       }
-    } else if (dropBenchItem && dropBenchItem.dataset.playerId) {
-      const benchPlayerId = dropBenchItem.dataset.playerId;
+    } else if (finalMatch.type === 'bench-item' && finalMatch.element.dataset.playerId) {
+      const benchPlayerId = finalMatch.element.dataset.playerId;
       if (source.type === 'starter') {
         substituteBenchPlayerToSlot(benchPlayerId, source.slotIndex);
       }
-    } else if (dropBenchList && source.type === 'starter') {
+    } else if (finalMatch.type === 'bench-list' && source.type === 'starter') {
       const playerClub = getPlayerClub();
       const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
       if (benchPlayers.length > 0) {
@@ -9820,9 +9893,6 @@ function initTacticalDragAndDrop() {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
-    }
-    if (e.target.releasePointerCapture) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
     }
     cleanupDrag();
     lastHoverDropTarget = null;
