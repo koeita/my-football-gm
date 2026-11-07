@@ -706,9 +706,8 @@ body {
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
-  overscroll-behavior-x: contain;
+  overscroll-behavior-x: none;
   scrollbar-width: thin;
   scrollbar-color: #3a3f45 transparent;
   scroll-behavior: auto;
@@ -4744,9 +4743,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 100% !important;
     overflow-x: auto !important;
     overflow-y: visible !important;
-    -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y !important;
-    overscroll-behavior-x: contain !important;
+    overscroll-behavior-x: none !important;
     overscroll-behavior-y: auto !important;
     scrollbar-width: thin !important;
     box-sizing: border-box !important;
@@ -6586,5 +6584,67 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     width: 56px !important;
     height: 24px !important;
     font-size: 14px !important;
+  }
+}
+
+/* ==========================================================================
+   固定列（sticky）の罫線透け防止：罫線・背景をすべて不透明色で塗りつぶす
+   （半透明の罫線やpadding-box背景だと、横スクロール時に下を通過するセルの線や文字が透ける）
+   ========================================================================== */
+@media (max-width: 768px) {
+  .standings-table th.col-rank,
+  .standings-table td.col-rank,
+  .standings-table th.col-team,
+  .standings-table td.col-team,
+  .roster-table th.col-pos,
+  .roster-table td.col-pos,
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    background-clip: border-box !important;
+    border-bottom: 1px solid #2a2e33 !important;
+    border-left: none !important;
+    border-top: none !important;
+    transition: none !important;
+  }
+
+  .standings-table th.col-rank,
+  .standings-table td.col-rank,
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    border-right: none !important;
+    box-shadow: none !important;
+  }
+
+  .standings-table th.col-team,
+  .standings-table td.col-team,
+  .roster-table th.col-name,
+  .roster-table td.col-name {
+    border-right: 2px solid #3a3f45 !important;
+    box-shadow: 4px 0 6px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .standings-table thead th.col-rank,
+  .standings-table thead th.col-team,
+  .roster-table thead th.col-pos,
+  .roster-table thead th.col-name {
+    border-bottom: 2px solid #33383e !important;
+  }
+
+  .standings-table tbody tr:last-child td.col-rank,
+  .standings-table tbody tr:last-child td.col-team,
+  .roster-table tbody tr:last-child td.col-pos,
+  .roster-table tbody tr:last-child td.col-name {
+    border-bottom: none !important;
+  }
+
+  /* 非固定セルの罫線も同じ不透明色に揃えて、固定列との境目で線の濃さが変わらないようにする */
+  .standings-table tbody td,
+  .roster-table tbody td {
+    border-bottom-color: #2a2e33 !important;
+  }
+
+  .standings-table thead th,
+  .roster-table thead th {
+    border-bottom: 2px solid #33383e !important;
   }
 }

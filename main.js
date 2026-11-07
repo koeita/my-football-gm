@@ -8097,8 +8097,19 @@ function initReloadPrevention() {
     const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
 
-    // 横方向へのスワイプ（テーブルやカルーセルの横スクロール等）は一切ブロックしない
+    // 横方向へのスワイプ（テーブルやカルーセルの横スクロール等）は基本ブロックしない
     if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+      // ただしテーブルが左端/右端に達した状態でさらに外側へ引っ張る操作は、
+      // iOSのラバーバンド（バウンス）で固定列ごと表が横にずれるため遮断する
+      const wrapper = e.target && e.target.closest ? e.target.closest('.table-wrapper') : null;
+      if (wrapper && e.cancelable) {
+        const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+        const atLeft = wrapper.scrollLeft <= 0;
+        const atRight = wrapper.scrollLeft >= maxScroll - 1;
+        if ((atLeft && deltaX > 0) || (atRight && deltaX < 0)) {
+          e.preventDefault();
+        }
+      }
       return;
     }
 
@@ -8140,6 +8151,18 @@ function initReloadPrevention() {
       }
     }
   }, { passive: false });
+
+  // テーブルの横スクロール位置が範囲外（iOSバウンスによる負値等）になった場合は即座に端へ戻す
+  document.addEventListener('scroll', (e) => {
+    const el = e.target;
+    if (!el || !el.classList || !el.classList.contains('table-wrapper')) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (el.scrollLeft < 0) {
+      el.scrollLeft = 0;
+    } else if (el.scrollLeft > maxScroll) {
+      el.scrollLeft = maxScroll;
+    }
+  }, { passive: true, capture: true });
 
   // 誤リロード・誤離脱時の確認ダイアログ
   window.addEventListener('beforeunload', (e) => {

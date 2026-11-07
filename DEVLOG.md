@@ -1,5 +1,14 @@
 # 開発ログ：僕のサッカークラブ（仮）
 
+## 最新アップデート：テーブル横スクロール時のiOSバウンスによる固定列ズレ防止 & 順位表の罫線透け解消
+- **固定列（適性・選手名／順位・クラブ名）が右にずれる問題の解消**:
+  - 原因はiOS Safariの横方向ラバーバンド（端でさらに引っ張ると表全体が右へずれる挙動）。`.table-wrapper` を `overscroll-behavior-x: none` に変更し、旧来のバウンスを誘発する `-webkit-overflow-scrolling: touch` を撤廃。
+  - `initReloadPrevention` で、テーブルが左端/右端にある状態で外側へ引っ張る横スワイプのみ `preventDefault()` するガードを追加。さらに `scrollLeft` が範囲外になった場合に即座に端へ戻すフォールバックを追加。
+- **順位表・選手一覧の罫線透け防止**:
+  - 固定列セルの背景を `background-clip: border-box` とし、罫線・境界線を半透明から不透明色（`#2a2e33` / `#3a3f45`）へ変更。横スクロール時に下を通過するセルの線や文字が透けないようにし、非固定セルの罫線色も統一。
+
+---
+
 ## 最新アップデート：選手一覧および順位表テーブルの固定列（適性・選手名）WebKit座標ズレ・右移動バグの解消
 - **WebKitにおける `position: sticky` 座標計算の破壊要因を完全排除**:
   - `th.col-pos`, `td.col-pos`, `th.col-name`, `td.col-name`（および順位表の `col-rank`, `col-team`）に付与されていた `transform: translateZ(0) !important;` および `-webkit-backface-visibility: hidden !important;` を完全に削除。
