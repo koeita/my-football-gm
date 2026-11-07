@@ -5079,16 +5079,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 /* 本日のMATCHDAYプレビューパネル */
+.office-matchday-section {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.office-matchday-section.hidden {
+  display: none !important;
+}
+
 .matchday-card-preview {
   background-color: var(--bg-main);
   border: 1px solid var(--accent-green);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 0 14px rgba(46, 204, 113, 0.12);
+  margin-bottom: 0;
+  box-shadow: 0 0 16px rgba(46, 204, 113, 0.16);
 }
 
 .matchday-preview-header {
@@ -5154,6 +5162,33 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+#btn-panel-kickoff {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+#btn-panel-kickoff:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.45);
+}
+#btn-panel-kickoff:active {
+  transform: translateY(1px);
 }
 
 /* ==========================================

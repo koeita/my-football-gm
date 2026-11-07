@@ -5911,12 +5911,8 @@ function renderHeader() {
     if (btnSkipSeason) btnSkipSeason.classList.remove('hidden');
 
     if (isMatchPending) {
-      // 本日未消化の試合日：キックオフボタンのみをメイン表示（「次の試合まで進める」は非表示）
-      if (btnPlayMatch) {
-        btnPlayMatch.classList.remove('hidden');
-        const matchWeekNum = currentDay ? currentDay.matchWeek : gameState.currentWeek + 1;
-        btnPlayMatch.innerHTML = `<span class="btn-large-sub mono">MATCHDAY READY</span><span class="btn-large-title">キックオフ（第${matchWeekNum}節）</span>`;
-      }
+      // 本日未消化の試合日：業務タスク下の旧キックオフボタンはなくし（非表示）、MATCHDAYパネル側でキックオフを提供
+      if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
     } else {
@@ -6118,6 +6114,8 @@ function renderMatchLog() {
   const container = document.getElementById('match-results-container');
   const panelTitle = document.getElementById('log-panel-title');
   const subtitle = document.getElementById('log-panel-subtitle');
+  const matchdaySection = document.getElementById('office-matchday-section');
+  const matchdayHero = document.getElementById('matchday-hero-container');
   if (!container) return;
 
   const playerClub = getPlayerClub();
@@ -6126,9 +6124,6 @@ function renderMatchLog() {
 
   // パターン1：本日が未消化の試合日（MATCHDAY）
   if (isMatchPending && currentDay && currentDay.matchFixture) {
-    if (panelTitle) panelTitle.textContent = 'MATCHDAY - 本日の試合';
-    if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 KICKOFF READY`;
-
     const myMatch = currentDay.matchFixture.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
     let myMatchHtml = '';
     if (myMatch) {
@@ -6163,30 +6158,63 @@ function renderMatchLog() {
       `;
     }
 
-    const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
-    const otherMatchesHtml = `
-      <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">同日開催カード（他9試合）</div>
-      ${otherMatches.map(m => {
-        const h = getClubById(m.homeId);
-        const a = getClubById(m.awayId);
-        return `
-          <div class="match-card">
-            <div class="match-team home">${h.name}</div>
-            <div class="match-score-box">VS</div>
-            <div class="match-team away">${a.name}</div>
-          </div>
-        `;
-      }).join('')}
-    `;
+    // 業務タスク直下のMATCHDAYヒーローコンテナに本日の自チーム対戦カードを描画
+    if (matchdaySection && matchdayHero) {
+      matchdaySection.classList.remove('hidden');
+      matchdayHero.innerHTML = myMatchHtml;
 
-    container.innerHTML = myMatchHtml + otherMatchesHtml;
+      if (panelTitle) panelTitle.textContent = '本日の同日開催カード';
+      if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 他9試合`;
 
-    // パネル内のキックオフボタンのイベントバインド
+      const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
+      const otherMatchesHtml = `
+        ${otherMatches.map(m => {
+          const h = getClubById(m.homeId);
+          const a = getClubById(m.awayId);
+          return `
+            <div class="match-card">
+              <div class="match-team home">${h.name}</div>
+              <div class="match-score-box">VS</div>
+              <div class="match-team away">${a.name}</div>
+            </div>
+          `;
+        }).join('')}
+      `;
+      container.innerHTML = otherMatchesHtml;
+    } else {
+      // フォールバック
+      if (panelTitle) panelTitle.textContent = 'MATCHDAY - 本日の試合';
+      if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 KICKOFF READY`;
+      const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
+      const otherMatchesHtml = `
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">同日開催カード（他9試合）</div>
+        ${otherMatches.map(m => {
+          const h = getClubById(m.homeId);
+          const a = getClubById(m.awayId);
+          return `
+            <div class="match-card">
+              <div class="match-team home">${h.name}</div>
+              <div class="match-score-box">VS</div>
+              <div class="match-team away">${a.name}</div>
+            </div>
+          `;
+        }).join('')}
+      `;
+      container.innerHTML = myMatchHtml + otherMatchesHtml;
+    }
+
+    // MATCHDAY内のキックオフボタンのイベントバインド
     const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
     if (panelKickoffBtn) {
       panelKickoffBtn.addEventListener('click', () => playCurrentMatchday(false));
     }
     return;
+  }
+
+  // 試合日以外（平日・試合消化済み）：業務タスク下のMATCHDAYは非表示
+  if (matchdaySection) {
+    matchdaySection.classList.add('hidden');
+    if (matchdayHero) matchdayHero.innerHTML = '';
   }
 
   // パターン2：試合直後または試合消化済み
