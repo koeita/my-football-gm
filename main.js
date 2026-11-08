@@ -2387,92 +2387,78 @@ function calculateSlotPlayerScore(player, slotPos) {
  * チーム全体の合計スコア（実効OVR・適性・健康度）が最大となる一意の配置を求める
  */
 function findOptimalAssignment(players, slots) {
-  const N = players.length;
-  const M = slots.length;
+  const N = players.length; // 候補選手数 (通常20〜25人)
+  const M = slots.length;   // スロット数 (11枠)
   if (N < M) return null;
 
-  const source = 0;
-  const playerOffset = 1;
-  const slotOffset = 1 + N;
-  const sink = 1 + N + M;
-  const totalNodes = sink + 1;
-
-  const adj = Array.from({ length: totalNodes }, () => []);
-  const edges = [];
-
-  const addEdge = (u, v, cap, c) => {
-    edges.push({ u, v, cap, flow: 0, cost: c, rev: edges.length + 1 });
-    edges.push({ u: v, v: u, cap: 0, flow: 0, cost: -c, rev: edges.length - 1 });
-    adj[u].push(edges.length - 2);
-    adj[v].push(edges.length - 1);
-  };
-
-  for (let i = 0; i < N; i++) {
-    addEdge(source, playerOffset + i, 1, 0);
-  }
-
+  // コスト行列 W[j][i]: スロット j と 選手 i のスコア
+  // M <= N なのでスロットを行(0..M-1)、選手を列(0..N-1)とする
+  const W = Array.from({ length: M }, () => new Float64Array(N));
   for (let j = 0; j < M; j++) {
-    addEdge(slotOffset + j, sink, 1, 0);
-  }
-
-  for (let i = 0; i < N; i++) {
-    const p = players[i];
-    for (let j = 0; j < M; j++) {
-      const sl = slots[j];
-      const score = calculateSlotPlayerScore(p, sl.pos);
-      // スコア最大化のためコストは -score
-      addEdge(playerOffset + i, slotOffset + j, 1, -score);
+    for (let i = 0; i < N; i++) {
+      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos);
     }
   }
 
-  let flow = 0;
-  while (flow < M) {
-    const dist = new Array(totalNodes).fill(Infinity);
-    const parentEdge = new Array(totalNodes).fill(-1);
-    const inQueue = new Array(totalNodes).fill(false);
-    const queue = [source];
-    dist[source] = 0;
-    inQueue[source] = true;
+  // ハンガリアン法（Kuhn-Munkres法 / O(M^2 * N)）
+  // 負閉路による無限ループのリスクが原理的にゼロで、有限回ステップで必ず数学的大域最適解を導出する
+  const u = new Float64Array(M + 1);
+  const v = new Float64Array(N + 1);
+  const p = new Int32Array(N + 1);
+  const way = new Int32Array(N + 1);
 
-    while (queue.length > 0) {
-      const u = queue.shift();
-      inQueue[u] = false;
+  for (let i = 1; i <= M; i++) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = new Float64Array(N + 1).fill(Infinity);
+    const used = new Uint8Array(N + 1);
 
-      for (const eIdx of adj[u]) {
-        const e = edges[eIdx];
-        if (e.cap - e.flow > 0 && dist[u] + e.cost < dist[e.v]) {
-          dist[e.v] = dist[u] + e.cost;
-          parentEdge[e.v] = eIdx;
-          if (!inQueue[e.v]) {
-            queue.push(e.v);
-            inQueue[e.v] = true;
+    do {
+      used[j0] = 1;
+      const i0 = p[j0];
+      let delta = Infinity;
+      let j1 = 0;
+
+      for (let j = 1; j <= N; j++) {
+        if (!used[j]) {
+          // スコア最大化のため、コストは -W[i0-1][j-1]
+          const cur = -W[i0 - 1][j - 1] - u[i0] - v[j];
+          if (cur < minv[j]) {
+            minv[j] = cur;
+            way[j] = j0;
+          }
+          if (minv[j] < delta) {
+            delta = minv[j];
+            j1 = j;
           }
         }
       }
-    }
 
-    if (dist[sink] === Infinity) break;
+      for (let j = 0; j <= N; j++) {
+        if (used[j]) {
+          u[p[j]] += delta;
+          v[j] -= delta;
+        } else {
+          minv[j] -= delta;
+        }
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
 
-    let curr = sink;
-    while (curr !== source) {
-      const eIdx = parentEdge[curr];
-      edges[eIdx].flow += 1;
-      edges[edges[eIdx].rev].flow -= 1;
-      curr = edges[eIdx].u;
-    }
-    flow++;
+    do {
+      const j1 = way[j0];
+      p[j0] = p[j1];
+      j0 = j1;
+    } while (j0 !== 0);
   }
 
+  // マッチング結果の抽出: slot (p[j] - 1) -> player (j - 1)
   const assignment = {};
-  for (let j = 0; j < M; j++) {
-    const slotNode = slotOffset + j;
-    for (const eIdx of adj[slotNode]) {
-      const e = edges[eIdx];
-      if (e.v >= playerOffset && e.v < slotOffset && e.flow < 0) {
-        const playerIndex = e.v - playerOffset;
-        assignment[j] = players[playerIndex];
-        break;
-      }
+  for (let j = 1; j <= N; j++) {
+    if (p[j] > 0 && p[j] <= M) {
+      const slotIdx = p[j] - 1;
+      const playerIdx = j - 1;
+      assignment[slotIdx] = players[playerIdx];
     }
   }
 
