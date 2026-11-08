@@ -832,6 +832,22 @@
         </div>
       </div>
 
+      <!-- 指導陣パネル（COACHING STAFF / 全6枠） -->
+      <div class="panel coaching-staff-panel" id="coaching-staff-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">指導陣</h2>
+          </div>
+          <div class="team-power-badges" id="coach-header-badges">
+            <span class="power-badge">体制 <strong class="mono accent-green" id="coach-panel-count">4 / 6枠</strong></span>
+            <span class="power-badge">指導陣週給 <strong class="mono accent-gold" id="coach-panel-wage">£120k</strong></span>
+          </div>
+        </div>
+        <div class="panel-body" id="coach-panel-body">
+          <!-- JSで全6スロット（オフェンス2、ディフェンス2、GK1、フィジカル1）を描画 -->
+        </div>
+      </div>
+
       <!-- ユースチームパネル -->
       <div class="panel youth-squad-panel" id="youth-squad-panel">
         <div class="panel-header">
@@ -1122,6 +1138,22 @@
             <button type="button" class="btn btn-danger btn-sm" id="btn-reset-all-data">全データ初期化</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- コーチ招聘・交代モーダル -->
+  <div id="coach-hire-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="coach-modal-title">
+    <div class="modal-card coach-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono" id="coach-modal-tag">[COACH SCOUT]</span>
+          <h2 class="info-popup-title" id="coach-modal-title">コーチ招聘</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-coach-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="coach-modal-body" id="coach-modal-body">
+        <!-- JSで候補リストを描画 -->
       </div>
     </div>
   </div>

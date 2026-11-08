@@ -82,6 +82,135 @@ function getManagerBuyoutFee(manager) {
 }
 
 /**
+ * 指導陣（COACHING STAFF）データベース（全4専門カテゴリ / 全6枠体制）
+ */
+const COACHES_DATABASE = {
+  attacking: [
+    { name: 'T. ベルク', nationality: 'Netherlands', age: 54, rank: 'A', weeklyWage: 35, bio: 'ファーストタッチとフィニッシュの極意を叩き込む名ストライカー。' },
+    { name: 'R. ファンニ', nationality: 'Netherlands', age: 48, rank: 'A', weeklyWage: 32, bio: 'ボックス内での駆け引きとゴール嗅覚を伝授する点取り屋。' },
+    { name: 'B. ツォラ', nationality: 'Italy', age: 58, rank: 'B', weeklyWage: 24, bio: '狭いスペースでのテクニックとラストパスの精度を高める職人。' },
+    { name: 'O. グナー', nationality: 'Norway', age: 51, rank: 'B', weeklyWage: 22, bio: '冷静な決定力とスーパーサブとしての勝負強さを教え込む。' },
+    { name: 'K. フィリップス', nationality: 'England', age: 51, rank: 'C', weeklyWage: 14, bio: '実戦的なポジショニングと献身的なプレスを指導する。' },
+    { name: 'M. デンベレ', nationality: 'Belgium', age: 43, rank: 'C', weeklyWage: 12, bio: 'ドリブルでの局面打開と前線への展開を支援する若手育成型。' }
+  ],
+  defending: [
+    { name: 'J. スタム', nationality: 'Netherlands', age: 52, rank: 'A', weeklyWage: 34, bio: '圧倒的な対人強度と威圧感で最終ラインに鉄壁の統率力を注入。' },
+    { name: 'F. カンナバ', nationality: 'Italy', age: 51, rank: 'A', weeklyWage: 35, bio: '緻密なポジショニングとインターセプトの先読みを徹底指導。' },
+    { name: 'S. キャンベル', nationality: 'England', age: 50, rank: 'B', weeklyWage: 23, bio: '屈強な空中戦とフィジカルコンタクトで相手FWを封殺する。' },
+    { name: 'M. デサイー', nationality: 'France', age: 56, rank: 'B', weeklyWage: 25, bio: 'CBとDMの両対応、強固なブロック構築のスペシャリスト。' },
+    { name: 'G. キエッリーニ風', nationality: 'Italy', age: 40, rank: 'B', weeklyWage: 22, bio: '勝者のメンタリティと狡猾なラインコントロールを叩き込む。' },
+    { name: 'P. フェレイラ', nationality: 'Portugal', age: 45, rank: 'C', weeklyWage: 13, bio: 'サイドバックのポジショニングとカバーリングを基本から指導。' }
+  ],
+  goalkeeping: [
+    { name: 'P. シュマイケル', nationality: 'Denmark', age: 61, rank: 'A', weeklyWage: 30, bio: '強烈なキャプテンシーと至近距離セーブでゴールマウスを死守。' },
+    { name: 'J. レーマン', nationality: 'Germany', age: 55, rank: 'B', weeklyWage: 20, bio: '広大な守備範囲と飛び出し、正確なフィードを磨き上げる。' },
+    { name: 'C. クディチーニ', nationality: 'Italy', age: 51, rank: 'C', weeklyWage: 12, bio: '確実なキャッチングと安定したセービング技術を実直に指導。' }
+  ],
+  fitness: [
+    { name: 'A. ピンコリーニ', nationality: 'Italy', age: 62, rank: 'A', weeklyWage: 28, bio: '欧州最先端の運動生理学に基づき、怪我ゼロと90分の運動量を実現。' },
+    { name: 'J. ヴェンチュローネ', nationality: 'France', age: 54, rank: 'B', weeklyWage: 18, bio: '強度の高い持久走と筋力アップで強靭な肉体を作り上げる。' },
+    { name: 'D. ローラン', nationality: 'England', age: 47, rank: 'C', weeklyWage: 11, bio: '試合後の迅速な疲労回復と柔軟性維持を専門とするフィジカル派。' }
+  ]
+};
+
+function createCoach(def, category) {
+  const roleLabels = {
+    attacking: 'オフェンス',
+    defending: 'ディフェンス',
+    goalkeeping: 'GK',
+    fitness: 'フィジカル'
+  };
+  const roleLabel = roleLabels[category] || category;
+  return {
+    id: `coach_${category}_${Math.random().toString(36).substr(2, 9)}`,
+    name: def.name,
+    category,
+    roleLabel,
+    rank: def.rank || 'B',
+    tag: roleLabel,
+    nationality: def.nationality || 'England',
+    age: def.age || 48,
+    weeklyWage: def.weeklyWage || 20,
+    bio: def.bio || '',
+    avatarData: null
+  };
+}
+
+function createInitialCoaches(isPlayer = false) {
+  return {
+    attacking: [ createCoach(COACHES_DATABASE.attacking[0], 'attacking') ],
+    defending: [ createCoach(COACHES_DATABASE.defending[0], 'defending') ],
+    goalkeeping: createCoach(COACHES_DATABASE.goalkeeping[0], 'goalkeeping'),
+    fitness: createCoach(COACHES_DATABASE.fitness[0], 'fitness')
+  };
+}
+
+function ensureClubCoaches(club) {
+  if (!club) return;
+  if (!club.coaches || typeof club.coaches !== 'object') {
+    club.coaches = createInitialCoaches(club.isPlayer);
+    return;
+  }
+  if (!Array.isArray(club.coaches.attacking)) club.coaches.attacking = [];
+  if (!Array.isArray(club.coaches.defending)) club.coaches.defending = [];
+  if (club.coaches.goalkeeping === undefined) club.coaches.goalkeeping = null;
+  if (club.coaches.fitness === undefined) club.coaches.fitness = null;
+}
+
+function getClubCoachingStaffWeeklyWage(club) {
+  if (!club || !club.coaches) return 0;
+  let total = 0;
+  if (Array.isArray(club.coaches.attacking)) {
+    club.coaches.attacking.forEach(c => { if (c) total += (c.weeklyWage || 0); });
+  }
+  if (Array.isArray(club.coaches.defending)) {
+    club.coaches.defending.forEach(c => { if (c) total += (c.weeklyWage || 0); });
+  }
+  if (club.coaches.goalkeeping) {
+    total += (club.coaches.goalkeeping.weeklyWage || 0);
+  }
+  if (club.coaches.fitness) {
+    total += (club.coaches.fitness.weeklyWage || 0);
+  }
+  return total;
+}
+
+function getClubCoachingEffects(club) {
+  if (!club || !club.coaches) {
+    return { attMult: 1.0, defSuppression: 1.0, gkSaveBonus: 1.0, staDrainMult: 1.0, injuryProbMult: 1.0 };
+  }
+  let attScore = 0;
+  (club.coaches.attacking || []).forEach(c => {
+    if (c) attScore += (c.rank === 'A' ? 1.0 : (c.rank === 'B' ? 0.7 : 0.4));
+  });
+
+  let defScore = 0;
+  (club.coaches.defending || []).forEach(c => {
+    if (c) defScore += (c.rank === 'A' ? 1.0 : (c.rank === 'B' ? 0.7 : 0.4));
+  });
+
+  let gkScore = 0;
+  if (club.coaches.goalkeeping) {
+    const r = club.coaches.goalkeeping.rank;
+    gkScore = (r === 'A' ? 1.0 : (r === 'B' ? 0.7 : 0.4));
+  }
+
+  let fitScore = 0;
+  if (club.coaches.fitness) {
+    const r = club.coaches.fitness.rank;
+    fitScore = (r === 'A' ? 1.0 : (r === 'B' ? 0.7 : 0.4));
+  }
+
+  return {
+    attMult: 1.0 + attScore * 0.05,
+    defSuppression: Math.max(0.75, 1.0 - defScore * 0.05),
+    gkSaveBonus: Math.max(0.80, 1.0 - gkScore * 0.07),
+    staDrainMult: Math.max(0.60, 1.0 - fitScore * 0.20),
+    injuryProbMult: Math.max(0.40, 1.0 - fitScore * 0.35)
+  };
+}
+
+/**
  * 試合終了時の監督信頼度（Trust）更新および現場介入ペナルティ
  */
 function updateManagerTrustAfterMatch(club, won, drawn) {
@@ -2637,9 +2766,15 @@ function applyAutoOptimalLineup() {
  * クラブの年間総年俸（単位：£1K）を計算
  */
 function getClubTotalPayroll(club) {
-  return club.players
+  const playerPayroll = club.players
     .filter(p => !p.isRetired)
     .reduce((sum, p) => sum + p.salary, 0);
+
+  const managerAnnual = (club.manager && club.manager.weeklyWage) ? club.manager.weeklyWage * 52 : 0;
+  const coachWeekly = getClubCoachingStaffWeeklyWage(club);
+  const coachAnnual = coachWeekly * 52;
+
+  return playerPayroll + managerAnnual + coachAnnual;
 }
 
 /**
@@ -3356,6 +3491,22 @@ function simulateMatch(homeClub, awayClub) {
   let rawHomeLambda = 1.35 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
   let rawAwayLambda = 1.20 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
 
+  // --- 指導陣（COACHING STAFF）の効果反映 ---
+  const hCoaching = getClubCoachingEffects(homeClub);
+  const aCoaching = getClubCoachingEffects(awayClub);
+
+  // オフェンスコーチ：攻撃決定機を微増
+  rawHomeLambda *= hCoaching.attMult;
+  rawAwayLambda *= aCoaching.attMult;
+
+  // ディフェンスコーチ：被決定機を抑制
+  rawAwayLambda *= hCoaching.defSuppression;
+  rawHomeLambda *= aCoaching.defSuppression;
+
+  // GKコーチ：枠内シュートのセーブ率を底上げ
+  rawAwayLambda *= hCoaching.gkSaveBonus;
+  rawHomeLambda *= aCoaching.gkSaveBonus;
+
   const CENTRAL_DEF_FORMATIONS = ['5-3-2', '4-3-1-2', '3-5-2'];
 
   // --- ホーム側の5大戦術効果反映 ---
@@ -3660,7 +3811,8 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const applyPostMatchStaminaDrain = (club, startersList) => {
     const tKey = normalizeTacticKey(club.tactic);
     const mult = tKey === 'gegenpress' ? 1.30 : (tKey === 'counter' ? 0.65 : (tKey === 'parkthebus' ? 0.85 : 1.00));
-    const prob = (club.isPlayer ? Math.max(0.05, baseFatigueProb) : 0.20) * mult;
+    const coaching = getClubCoachingEffects(club);
+    const prob = (club.isPlayer ? Math.max(0.05, baseFatigueProb) : 0.20) * mult * coaching.staDrainMult;
     if (tKey === 'gegenpress' && Math.random() < prob) {
       startersList.forEach(p => {
         p.sta = Math.max(30, p.sta - 1);
@@ -5536,6 +5688,49 @@ function computeStatGrowth(player, isPlayerClub = false) {
       if (Math.random() < bonusChance) dAtk += 1 + extraBonus;
       if (Math.random() < bonusChance) dDef += 1 + extraBonus;
       if (Math.random() < bonusChance) dSta += 1;
+    }
+
+    // 指導陣（COACHING STAFF）専門育成補正
+    const playerClub = getPlayerClub();
+    if (playerClub && playerClub.coaches) {
+      const coaches = playerClub.coaches;
+      const pos = player.pos;
+
+      // 1. オフェンスコーチ（最大2名）：FW/WG/AMの成長率にボーナス（合算補正）
+      if (['CF', 'LW', 'RW', 'AM'].includes(pos) && Array.isArray(coaches.attacking)) {
+        coaches.attacking.forEach(c => {
+          if (!c) return;
+          const bonusAmt = c.rank === 'A' ? 2 : 1;
+          const chance = c.rank === 'A' ? 0.70 : (c.rank === 'B' ? 0.50 : 0.35);
+          if (Math.random() < chance) dAtk += bonusAmt;
+        });
+      }
+
+      // 2. ディフェンスコーチ（最大2名）：DF/DMの守備系能力の成長率にボーナス（合算補正）
+      if (['CB', 'LB', 'RB', 'DM'].includes(pos) && Array.isArray(coaches.defending)) {
+        coaches.defending.forEach(c => {
+          if (!c) return;
+          const bonusAmt = c.rank === 'A' ? 2 : 1;
+          const chance = c.rank === 'A' ? 0.70 : (c.rank === 'B' ? 0.50 : 0.35);
+          if (Math.random() < chance) dDef += bonusAmt;
+        });
+      }
+
+      // 3. GKコーチ（1名）：GKの能力成長速度を大幅に引き上げ
+      if (pos === 'GK' && coaches.goalkeeping) {
+        const c = coaches.goalkeeping;
+        const bonusAmt = c.rank === 'A' ? 3 : (c.rank === 'B' ? 2 : 1);
+        dDef += bonusAmt;
+        if (Math.random() < 0.6) dSta += 1;
+      }
+
+      // 4. フィジカルコーチ（1名）：全選手のフィジカル成長および疲労回復を促進
+      if (coaches.fitness) {
+        const c = coaches.fitness;
+        const bonusAmt = c.rank === 'A' ? 2 : 1;
+        const chance = c.rank === 'A' ? 0.65 : (c.rank === 'B' ? 0.45 : 0.30);
+        if (Math.random() < chance) dSta += bonusAmt;
+      }
     }
   }
 
@@ -8906,6 +9101,7 @@ function renderGmDuties() {
  */
 function renderFacilitiesAndYouth() {
   renderManagerManagementPanel();
+  renderCoachingStaffPanel();
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
@@ -10248,6 +10444,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
       tactic: isPlayer ? managerObj.preferredTactic : normTactic,
       formation: isPlayer ? managerObj.preferredFormation : formKey,
       manager: managerObj,
+      coaches: createInitialCoaches(isPlayer),
       played: 0,
       won: 0,
       drawn: 0,
@@ -10265,6 +10462,14 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     }
     return club;
   });
+
+  // 未契約のコーチをフリーコーチ候補プールとして初期化
+  gameState.freeCoaches = {
+    attacking: (COACHES_DATABASE.attacking || []).slice(1).map(d => createCoach(d, 'attacking')),
+    defending: (COACHES_DATABASE.defending || []).slice(1).map(d => createCoach(d, 'defending')),
+    goalkeeping: (COACHES_DATABASE.goalkeeping || []).slice(1).map(d => createCoach(d, 'goalkeeping')),
+    fitness: (COACHES_DATABASE.fitness || []).slice(1).map(d => createCoach(d, 'fitness'))
+  };
 
   // 未就任の監督をフリー監督候補プールとして初期化
   gameState.freeManagers = MANAGERS_DATABASE.filter(m => !usedManagerNames.has(m.name)).map(m => createManager(m));
@@ -11410,8 +11615,23 @@ function initGame() {
     });
   }
 
+  // コーチ招聘モーダル 閉じるイベント
+  const btnCloseCoachModal = document.getElementById('btn-close-coach-modal');
+  if (btnCloseCoachModal) btnCloseCoachModal.addEventListener('click', closeCoachHireModal);
+  const coachHireModal = document.getElementById('coach-hire-modal');
+  if (coachHireModal) {
+    coachHireModal.addEventListener('click', (e) => {
+      if (e.target === coachHireModal) closeCoachHireModal();
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const coachModal = document.getElementById('coach-hire-modal');
+      if (coachModal && !coachModal.classList.contains('hidden')) {
+        closeCoachHireModal();
+        return;
+      }
       const infoPopup = document.getElementById('info-popup-modal');
       if (infoPopup && !infoPopup.classList.contains('hidden')) {
         closeInfoPopup();
@@ -12242,4 +12462,243 @@ function hireNewManager(managerId) {
   addDailyLog(`[監督人事] ${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
   renderAll();
   return true;
+}
+
+
+/**
+ * 経営タブの「指導陣（COACHING STAFF / 全6枠）」パネルを描画
+ */
+function renderCoachingStaffPanel() {
+  const container = document.getElementById('coach-panel-body');
+  if (!container) return;
+  const club = getPlayerClub();
+  if (!club) return;
+  ensureClubCoaches(club);
+
+  const coaches = club.coaches;
+  const countEl = document.getElementById('coach-panel-count');
+  const wageEl = document.getElementById('coach-panel-wage');
+
+  // 体制数カウント（最大6）
+  let totalHired = 0;
+  if (Array.isArray(coaches.attacking)) totalHired += coaches.attacking.length;
+  if (Array.isArray(coaches.defending)) totalHired += coaches.defending.length;
+  if (coaches.goalkeeping) totalHired += 1;
+  if (coaches.fitness) totalHired += 1;
+
+  const totalWage = getClubCoachingStaffWeeklyWage(club);
+
+  if (countEl) countEl.textContent = `${totalHired} / 6枠`;
+  if (wageEl) wageEl.textContent = `£${totalWage}k/週`;
+
+  // 全6スロットの定義（オフェンス2、ディフェンス2、GK1、フィジカル1）
+  const slotsConfig = [
+    { category: 'attacking', roleLabel: 'オフェンス', index: 0, coach: (coaches.attacking || [])[0] || null, effectDesc: 'FW/WG/AM決定機創出・攻撃成長UP' },
+    { category: 'attacking', roleLabel: 'オフェンス', index: 1, coach: (coaches.attacking || [])[1] || null, effectDesc: 'FW/WG/AM決定機創出・攻撃成長UP' },
+    { category: 'defending', roleLabel: 'ディフェンス', index: 0, coach: (coaches.defending || [])[0] || null, effectDesc: 'DF/DM被決定機抑制・守備成長UP' },
+    { category: 'defending', roleLabel: 'ディフェンス', index: 1, coach: (coaches.defending || [])[1] || null, effectDesc: 'DF/DM被決定機抑制・守備成長UP' },
+    { category: 'goalkeeping', roleLabel: 'GK', index: 0, coach: coaches.goalkeeping || null, effectDesc: 'GKセービング率向上・守備成長UP' },
+    { category: 'fitness', roleLabel: 'フィジカル', index: 0, coach: coaches.fitness || null, effectDesc: '全選手スタミナ消耗＆負傷カット・回復促進' }
+  ];
+
+  let slotsHtml = slotsConfig.map((slot) => {
+    const c = slot.coach;
+    const catClass = `tag-${slot.category}`;
+    if (c) {
+      const rankClass = `rank-${(c.rank || 'B').toLowerCase()}`;
+      const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+      return `
+        <div class="coach-slot-card occupied">
+          <div class="coach-slot-head">
+            <span class="coach-role-tag ${catClass} mono">[${slot.roleLabel}]</span>
+            <span class="coach-rank-badge ${rankClass} mono">RANK ${c.rank}</span>
+          </div>
+          <div class="coach-slot-main">
+            <div class="coach-avatar-wrap">
+              ${avatarHtml}
+            </div>
+            <div class="coach-info">
+              <div class="coach-name font-bold">${c.name}</div>
+              <div class="coach-wage-meta mono">
+                <span class="accent-gold font-bold">£${c.weeklyWage}k/週</span>
+                <span class="text-muted">(${c.nationality}/${c.age}歳)</span>
+              </div>
+              <div class="coach-effect-note mono">${slot.effectDesc}</div>
+            </div>
+          </div>
+          <div class="coach-slot-actions">
+            <button type="button" class="btn btn-secondary btn-sm mono btn-replace-coach" data-category="${slot.category}" data-index="${slot.index}">交代</button>
+            <button type="button" class="btn btn-danger-outline btn-sm mono btn-sack-coach" data-category="${slot.category}" data-index="${slot.index}">解任</button>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="coach-slot-card vacant">
+          <div class="coach-slot-head" style="width: 100%;">
+            <span class="coach-role-tag ${catClass} mono text-muted">[${slot.roleLabel} (空席)]</span>
+          </div>
+          <div style="margin: 8px 0; font-size: 11px;" class="text-muted mono">${slot.effectDesc}</div>
+          <button type="button" class="btn btn-hire-coach-slot mono" data-category="${slot.category}" data-index="${slot.index}">
+            ＋ コーチを招聘
+          </button>
+        </div>
+      `;
+    }
+  }).join('');
+
+  container.innerHTML = `<div class="coaching-slots-grid">${slotsHtml}</div>`;
+
+  // イベント登録
+  container.querySelectorAll('.btn-hire-coach-slot, .btn-replace-coach').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const cat = e.currentTarget.dataset.category;
+      const idx = parseInt(e.currentTarget.dataset.index, 10);
+      openCoachHireModal(cat, idx);
+    });
+  });
+
+  container.querySelectorAll('.btn-sack-coach').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const cat = e.currentTarget.dataset.category;
+      const idx = parseInt(e.currentTarget.dataset.index, 10);
+      sackCoach(cat, idx);
+    });
+  });
+}
+
+function openCoachHireModal(category, slotIndex) {
+  const modal = document.getElementById('coach-hire-modal');
+  const body = document.getElementById('coach-modal-body');
+  const title = document.getElementById('coach-modal-title');
+  const tag = document.getElementById('coach-modal-tag');
+  if (!modal || !body) return;
+
+  const roleLabels = { attacking: 'オフェンス', defending: 'ディフェンス', goalkeeping: 'GK', fitness: 'フィジカル' };
+  const label = roleLabels[category] || category;
+
+  if (title) title.textContent = `[${label}コーチ] 招聘・交代`;
+  if (tag) tag.textContent = `[${label.toUpperCase()} COACH]`;
+
+  if (!gameState.freeCoaches) gameState.freeCoaches = {};
+  if (!Array.isArray(gameState.freeCoaches[category])) {
+    gameState.freeCoaches[category] = (COACHES_DATABASE[category] || []).slice(1).map(d => createCoach(d, category));
+  }
+
+  const list = gameState.freeCoaches[category];
+  if (list.length === 0) {
+    body.innerHTML = `
+      <div class="mono text-muted text-center" style="padding: 24px;">
+        現在、招聘可能なフリーの${label}コーチ候補がいません。
+      </div>
+    `;
+  } else {
+    body.innerHTML = list.map(c => {
+      const rankClass = `rank-${(c.rank || 'B').toLowerCase()}`;
+      const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+      return `
+        <div class="coach-candidate-card">
+          <div class="coach-cand-left">
+            <div class="coach-avatar-wrap">
+              ${avatarHtml}
+            </div>
+            <div class="coach-cand-info">
+              <div class="coach-cand-name-row">
+                <strong class="coach-name">${c.name}</strong>
+                <span class="coach-rank-badge ${rankClass} mono">RANK ${c.rank}</span>
+                <span class="accent-gold mono" style="font-size: 11px;">£${c.weeklyWage}k/週</span>
+              </div>
+              <div class="coach-cand-meta mono text-muted" style="font-size: 10px;">
+                ${c.nationality} / ${c.age}歳
+              </div>
+              <div class="coach-cand-bio">${c.bio}</div>
+            </div>
+          </div>
+          <div>
+            <button type="button" class="btn btn-sign-coach mono" data-coach-id="${c.id}" data-category="${category}" data-index="${slotIndex}">
+              契約する
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.classList.remove('hidden');
+
+  // 契約ボタンイベント
+  body.querySelectorAll('.btn-sign-coach').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const cid = e.currentTarget.dataset.coachId;
+      const cat = e.currentTarget.dataset.category;
+      const sIdx = parseInt(e.currentTarget.dataset.index, 10);
+      hireCoach(cat, sIdx, cid);
+      closeCoachHireModal();
+    });
+  });
+}
+
+function closeCoachHireModal() {
+  const modal = document.getElementById('coach-hire-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function hireCoach(category, slotIndex, coachId) {
+  const club = getPlayerClub();
+  if (!club) return;
+  ensureClubCoaches(club);
+
+  if (!gameState.freeCoaches || !Array.isArray(gameState.freeCoaches[category])) return;
+  const cIdx = gameState.freeCoaches[category].findIndex(c => c.id === coachId);
+  if (cIdx === -1) return;
+
+  const newCoach = gameState.freeCoaches[category].splice(cIdx, 1)[0];
+
+  let oldCoach = null;
+  if (category === 'attacking' || category === 'defending') {
+    if (club.coaches[category][slotIndex]) {
+      oldCoach = club.coaches[category][slotIndex];
+      club.coaches[category][slotIndex] = newCoach;
+    } else {
+      club.coaches[category].push(newCoach);
+    }
+  } else {
+    oldCoach = club.coaches[category];
+    club.coaches[category] = newCoach;
+  }
+
+  if (oldCoach) {
+    gameState.freeCoaches[category].push(oldCoach);
+    addDailyLog(`[指導陣交代] ${oldCoach.name}コーチとの契約を終了し、${newCoach.name}コーチ（RANK ${newCoach.rank}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+  } else {
+    addDailyLog(`[指導陣招聘] ${newCoach.name}コーチ（${newCoach.roleLabel} / RANK ${newCoach.rank}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+  }
+
+  renderAll();
+}
+
+function sackCoach(category, slotIndex) {
+  const club = getPlayerClub();
+  if (!club) return;
+  ensureClubCoaches(club);
+
+  let targetCoach = null;
+  if (category === 'attacking' || category === 'defending') {
+    targetCoach = club.coaches[category][slotIndex];
+    if (!targetCoach) return;
+    if (!confirm(`${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しますか？`)) return;
+    club.coaches[category].splice(slotIndex, 1);
+  } else {
+    targetCoach = club.coaches[category];
+    if (!targetCoach) return;
+    if (!confirm(`${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しますか？`)) return;
+    club.coaches[category] = null;
+  }
+
+  if (!gameState.freeCoaches) gameState.freeCoaches = {};
+  if (!Array.isArray(gameState.freeCoaches[category])) gameState.freeCoaches[category] = [];
+  gameState.freeCoaches[category].push(targetCoach);
+
+  addDailyLog(`[指導陣解任] ${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しました。`);
+  renderAll();
 }

@@ -10726,3 +10726,279 @@ button.hidden,
   background: var(--accent-green);
   color: #111;
 }
+
+
+/* ==========================================================================
+   指導陣（COACHING STAFF / 全6枠体制）
+   ========================================================================== */
+.coaching-staff-panel {
+  margin-bottom: 20px;
+}
+
+.coaching-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.coach-slot-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.coach-slot-card.occupied:hover {
+  border-color: rgba(46, 204, 113, 0.4);
+}
+
+.coach-slot-card.vacant {
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(20, 24, 28, 0.4);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 12px;
+}
+
+.coach-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.coach-role-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.coach-role-tag.tag-attacking {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+}
+
+.coach-role-tag.tag-defending {
+  color: #4dabf7;
+  background: rgba(77, 171, 247, 0.12);
+  border: 1px solid rgba(77, 171, 247, 0.35);
+}
+
+.coach-role-tag.tag-goalkeeping {
+  color: #51cf66;
+  background: rgba(81, 207, 102, 0.12);
+  border: 1px solid rgba(81, 207, 102, 0.35);
+}
+
+.coach-role-tag.tag-fitness {
+  color: #ffa94d;
+  background: rgba(255, 169, 77, 0.12);
+  border: 1px solid rgba(255, 169, 77, 0.35);
+}
+
+.coach-rank-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+
+.coach-rank-badge.rank-a {
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.15);
+  border: 1px solid rgba(241, 196, 15, 0.5);
+}
+
+.coach-rank-badge.rank-b {
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.15);
+  border: 1px solid rgba(52, 152, 219, 0.5);
+}
+
+.coach-rank-badge.rank-c {
+  color: #bdc3c7;
+  background: rgba(189, 195, 199, 0.15);
+  border: 1px solid rgba(189, 195, 199, 0.4);
+}
+
+.coach-slot-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.coach-avatar-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: #1a1d20;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coach-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.coach-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coach-wage-meta {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+}
+
+.coach-effect-note {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.25;
+}
+
+.coach-slot-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.btn-hire-coach-slot {
+  background: transparent;
+  border: 1px solid rgba(46, 204, 113, 0.6);
+  color: var(--accent-green);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-hire-coach-slot:hover {
+  background: var(--accent-green);
+  color: #111;
+}
+
+/* コーチ招聘モーダル */
+.coach-modal-card {
+  max-width: 560px;
+  width: 90%;
+  background: #1e2227;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.coach-modal-body {
+  max-height: 65vh;
+  overflow-y: auto;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coach-candidate-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.coach-candidate-card:hover {
+  border-color: rgba(46, 204, 113, 0.4);
+}
+
+.coach-cand-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.coach-cand-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.coach-cand-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coach-cand-bio {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.btn-sign-coach {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-sign-coach:hover {
+  background: var(--accent-green);
+  color: #111;
+}
+
+.btn-danger-outline {
+  background: transparent;
+  border: 1px solid rgba(231, 76, 60, 0.5);
+  color: #e74c3c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-danger-outline:hover {
+  background: #e74c3c;
+  color: #fff;
+}
