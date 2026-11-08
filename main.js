@@ -1016,69 +1016,172 @@ function formatPlayerPositionsText(p, style = 'slash') {
  * テーブル・ボード用のポジションHTMLを生成
  */
 function formatPlayerPositionsHtml(p) {
+  ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
+  const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primary];
+  if (!majors.includes(primary)) majors.push(primary);
   const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+
+  const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join(' ');
   if (subs.length === 0) {
-    return `<span class="pos-tag pos-${primary}">${primary}</span>`;
+    return majorsHtml;
   }
-  return `<span class="pos-tag pos-${primary}">${primary}</span><span class="pos-sub-text">/ ${subs.join('・')}</span>`;
+  return `${majorsHtml}<span class="pos-sub-text">/ ${subs.join('・')}</span>`;
+}
+
+/**
+ * 選手のポジション適性を多彩に生成（イーフト仕様）
+ * - スペシャリスト型: 本適性1つ、薄適性0〜1個
+ * - 標準型: 本適性1つ、薄適性2〜3個
+ * - ポリバレント型: 本適性1つ、薄適性3〜5個
+ * - マルチ本適性型: 本適性2個、薄適性2〜4個
+ */
+function generatePlayerProficiencies(primaryPos) {
+  if (primaryPos === 'GK') {
+    return {
+      majorPositions: ['GK'],
+      secondaryPositions: []
+    };
+  }
+
+  // ポジション関連候補プール（LB/RBはLWB/RWBと同一）
+  const candidatePoolMap = {
+    CB: ['LB', 'RB', 'DM', 'CM'],
+    LB: ['LM', 'LW', 'CB', 'RB', 'DM'],
+    RB: ['RM', 'RW', 'CB', 'LB', 'DM'],
+    SB: ['LM', 'RM', 'CB', 'LB', 'RB', 'DM'],
+    DM: ['CM', 'CB', 'AM', 'LB', 'RB'],
+    CM: ['DM', 'AM', 'LM', 'RM', 'CF'],
+    LM: ['LW', 'LB', 'RM', 'AM', 'CM', 'RW'],
+    RM: ['RW', 'RB', 'LM', 'AM', 'CM', 'LW'],
+    SM: ['LM', 'RM', 'LW', 'RW', 'AM', 'CM'],
+    AM: ['CM', 'LW', 'RW', 'CF', 'LM', 'RM', 'DM'],
+    LW: ['LM', 'CF', 'RW', 'AM', 'LB'],
+    RW: ['RM', 'CF', 'LW', 'AM', 'RB'],
+    WG: ['LW', 'RW', 'CF', 'LM', 'RM'],
+    CF: ['LW', 'RW', 'AM', 'LM', 'RM']
+  };
+
+  const pool = candidatePoolMap[primaryPos] || ['CM', 'AM'];
+  const roll = Math.random();
+
+  let majorPositions = [primaryPos];
+  let secondaryPositions = [];
+
+  if (roll < 0.12) {
+    // 1. マルチ本適性型 (12%): 本適性が2つ！薄適性も2〜4個
+    const secondMajor = pool[randInt(0, pool.length - 1)];
+    if (!majorPositions.includes(secondMajor)) majorPositions.push(secondMajor);
+    const subCandidates = pool.filter(p => !majorPositions.includes(p));
+    const subCount = randInt(2, Math.min(4, subCandidates.length));
+    const shuffled = [...subCandidates].sort(() => Math.random() - 0.5);
+    secondaryPositions = shuffled.slice(0, subCount);
+  } else if (roll < 0.35) {
+    // 2. スペシャリスト型 (23%): 本適性1つ、薄適性0〜1個のみ
+    if (Math.random() < 0.5 && pool.length > 0) {
+      secondaryPositions = [pool[randInt(0, pool.length - 1)]];
+    }
+  } else if (roll < 0.70) {
+    // 3. 標準型 (35%): 本適性1つ、薄適性2〜3個
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const subCount = randInt(2, Math.min(3, shuffled.length));
+    secondaryPositions = shuffled.slice(0, subCount);
+  } else {
+    // 4. ポリバレント型 (30%): 本適性1つ、薄適性3〜5個
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const subCount = randInt(3, Math.min(5, shuffled.length));
+    secondaryPositions = shuffled.slice(0, subCount);
+  }
+
+  return { majorPositions, secondaryPositions };
+}
+
+/**
+ * 選手の適性データを確実に初期化・補完する（既存選手・ロード時対応）
+ */
+function ensurePlayerProficiencies(p) {
+  const primary = p.primaryPosition || p.preferredPosition || p.pos;
+  if (!Array.isArray(p.majorPositions) || p.majorPositions.length === 0) {
+    p.majorPositions = [primary];
+  }
+  if (!p.majorPositions.includes(primary)) {
+    p.majorPositions.unshift(primary);
+  }
+  if (!Array.isArray(p.secondaryPositions)) {
+    p.secondaryPositions = [];
+  }
+  // 選手がGK以外で適性が1つもない、または極端に少ない場合に多様な適性を付与
+  if (primary !== 'GK' && p.majorPositions.length === 1 && p.secondaryPositions.length <= 1 && !p._profInitialized) {
+    const profs = generatePlayerProficiencies(primary);
+    p.majorPositions = profs.majorPositions;
+    p.secondaryPositions = profs.secondaryPositions;
+    p._profInitialized = true;
+  }
+  return p;
 }
 
 /**
  * イーフト風 ポジション適性ピッチ図（Mini Pitch Board）のHTML生成
+ * サイドバックとウイングバックを同一化（LB/LWB, RB/RWB）し、%表記を排除
  */
 function buildPlayerPitchProficiencyHtml(p) {
+  ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
   const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primary];
   if (!majors.includes(primary)) majors.push(primary);
   const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
 
   const getPosClass = (pos) => {
-    if (majors.includes(pos)) return 'ef-pos-major';
-    if (subs.includes(pos)) return 'ef-pos-sub';
+    // LB/LWB, RB/RWBの同一化
+    const normPos = (pos === 'LWB') ? 'LB' : ((pos === 'RWB') ? 'RB' : pos);
+    const isMajor = majors.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normPos);
+    if (isMajor) return 'ef-pos-major';
+    const isSub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normPos);
+    if (isSub) return 'ef-pos-sub';
     return 'ef-pos-none';
   };
 
-  const getPosTitle = (pos) => {
-    if (majors.includes(pos)) return `${pos}: 本適性 (実効能力100%)`;
-    if (subs.includes(pos)) return `${pos}: 薄適性 (実効能力92% - 能力値低下)`;
-    return `${pos}: 適性なし (実効能力80% - 大幅低下)`;
+  const getPosTitle = (pos, label) => {
+    const normPos = (pos === 'LWB') ? 'LB' : ((pos === 'RWB') ? 'RB' : pos);
+    const isMajor = majors.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normPos);
+    if (isMajor) return `${label}: 本適性`;
+    const isSub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normPos);
+    if (isSub) return `${label}: 薄適性 (能力低下)`;
+    return `${label}: 適性外`;
   };
 
   return `
     <div class="ef-pitch-container">
       <div class="ef-pitch-field">
         <div class="ef-pitch-row ef-row-fw">
-          <div class="ef-pos-slot ${getPosClass('LW')}" title="${getPosTitle('LW')}">LW</div>
-          <div class="ef-pos-slot ${getPosClass('CF')}" title="${getPosTitle('CF')}">CF</div>
-          <div class="ef-pos-slot ${getPosClass('RW')}" title="${getPosTitle('RW')}">RW</div>
+          <div class="ef-pos-slot ${getPosClass('LW')}" title="${getPosTitle('LW', 'LW')}">LW</div>
+          <div class="ef-pos-slot ${getPosClass('CF')}" title="${getPosTitle('CF', 'CF')}">CF</div>
+          <div class="ef-pos-slot ${getPosClass('RW')}" title="${getPosTitle('RW', 'RW')}">RW</div>
         </div>
         <div class="ef-pitch-row ef-row-am">
-          <div class="ef-pos-slot ${getPosClass('LM')}" title="${getPosTitle('LM')}">LM</div>
-          <div class="ef-pos-slot ${getPosClass('AM')}" title="${getPosTitle('AM')}">AM</div>
-          <div class="ef-pos-slot ${getPosClass('RM')}" title="${getPosTitle('RM')}">RM</div>
+          <div class="ef-pos-slot ${getPosClass('LM')}" title="${getPosTitle('LM', 'LM')}">LM</div>
+          <div class="ef-pos-slot ${getPosClass('AM')}" title="${getPosTitle('AM', 'AM')}">AM</div>
+          <div class="ef-pos-slot ${getPosClass('RM')}" title="${getPosTitle('RM', 'RM')}">RM</div>
         </div>
         <div class="ef-pitch-row ef-row-cm">
-          <div class="ef-pos-slot ${getPosClass('LWB')}" title="${getPosTitle('LWB')}">LWB</div>
-          <div class="ef-pos-slot ${getPosClass('CM')}" title="${getPosTitle('CM')}">CM</div>
-          <div class="ef-pos-slot ${getPosClass('RWB')}" title="${getPosTitle('RWB')}">RWB</div>
+          <div class="ef-pos-slot ${getPosClass('CM')}" title="${getPosTitle('CM', 'CM')}">CM</div>
         </div>
         <div class="ef-pitch-row ef-row-dm">
-          <div class="ef-pos-slot ${getPosClass('DM')}" title="${getPosTitle('DM')}">DM</div>
+          <div class="ef-pos-slot ${getPosClass('DM')}" title="${getPosTitle('DM', 'DM')}">DM</div>
         </div>
         <div class="ef-pitch-row ef-row-df">
-          <div class="ef-pos-slot ${getPosClass('LB')}" title="${getPosTitle('LB')}">LB</div>
-          <div class="ef-pos-slot ${getPosClass('CB')}" title="${getPosTitle('CB')}">CB</div>
-          <div class="ef-pos-slot ${getPosClass('RB')}" title="${getPosTitle('RB')}">RB</div>
+          <div class="ef-pos-slot ${getPosClass('LB')}" title="${getPosTitle('LB', 'LB / LWB')}" style="font-size: 8.5px;">LB/LWB</div>
+          <div class="ef-pos-slot ${getPosClass('CB')}" title="${getPosTitle('CB', 'CB')}">CB</div>
+          <div class="ef-pos-slot ${getPosClass('RB')}" title="${getPosTitle('RB', 'RB / RWB')}" style="font-size: 8.5px;">RB/RWB</div>
         </div>
         <div class="ef-pitch-row ef-row-gk">
-          <div class="ef-pos-slot ${getPosClass('GK')}" title="${getPosTitle('GK')}">GK</div>
+          <div class="ef-pos-slot ${getPosClass('GK')}" title="${getPosTitle('GK', 'GK')}">GK</div>
         </div>
       </div>
       <div class="ef-pitch-legend">
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性 (100%)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性 (92%低下)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>適性外 (80%)</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性 (低下)</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>適性外</div>
       </div>
     </div>
   `;
@@ -1093,26 +1196,30 @@ function startPlayerPositionTraining(playerId, targetPos) {
   const player = playerClub.players.find(p => p.id === playerId);
   if (!player) return false;
 
+  ensurePlayerProficiencies(player);
   const primary = player.primaryPosition || player.preferredPosition || player.pos;
   const majors = Array.isArray(player.majorPositions) ? [...player.majorPositions] : [primary];
-  if (!majors.includes(primary)) majors.push(primary);
   const subs = Array.isArray(player.secondaryPositions) ? player.secondaryPositions : [];
 
-  if (majors.includes(targetPos)) {
+  const normTarget = (targetPos === 'LWB') ? 'LB' : ((targetPos === 'RWB') ? 'RB' : targetPos);
+  const isAlreadyMajor = majors.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normTarget);
+
+  if (isAlreadyMajor) {
     return false; // 既に本適性の場合はトレーニング不可
   }
 
-  const mode = subs.includes(targetPos) ? 'major' : 'sub';
+  const isAlreadySub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normTarget);
+  const mode = isAlreadySub ? 'major' : 'sub';
 
   player.positionTraining = {
-    targetPos: targetPos,
+    targetPos: normTarget,
     mode: mode,
     progress: 0,
     active: true
   };
 
   const modeLabel = mode === 'major' ? '本適性への昇格' : '薄適性の新規習得';
-  addDailyLog(`【特訓開始】#${player.squadNumber || '-'} ${player.name} が [${targetPos}] の${modeLabel}トレーニングを開始しました！`);
+  addDailyLog(`【特訓開始】#${player.squadNumber || '-'} ${player.name} が [${normTarget}] の${modeLabel}トレーニングを開始しました！`);
   renderRoster();
   openPlayerProfileModal(playerId);
   return true;
@@ -1139,33 +1246,38 @@ function cancelPlayerPositionTraining(playerId) {
 
 /**
  * 指定スロット（slotPos）に対する選手のポジション適性判定と補正係数を返す
- * 【イーフト（eFootball）仕様：本適性 100% / 薄適性 92%（能力低下） / 適性外 80%】
- * - 本適性 (primaryPosition / majorPositions): 1.00 (100%・低下なし) -> type: 'main', factor: 1.0
- * - 薄適性 (secondaryPositions): 0.92 (92%・能力値低下) -> type: 'sub', factor: 0.92
- * - 適性外 (上記以外): 0.80 (80%・大幅低下) -> type: 'out', factor: 0.8
+ * 【イーフト（eFootball）仕様：本適性 1.0 / 薄適性 0.92（能力低下） / 適性外 0.8】
+ * - サイドバックとウイングバックは完全に同一適性として扱う（LB ⇔ LWB, RB ⇔ RWB）
+ * - %表記は排除し「本適性」「薄適性」「適性外」として返却
  */
 function getPositionFitInfo(p, slotPos) {
+  ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
   const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primary];
   if (!majors.includes(primary)) majors.push(primary);
   const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
 
   if (!slotPos) {
-    return { type: 'main', factor: 1.0, label: '本適性 100%' };
+    return { type: 'main', factor: 1.0, label: '本適性' };
   }
 
-  // 1. 本適性（100%・ペナルティなし）
-  if (majors.includes(slotPos) || (slotPos === 'LWB' && majors.includes('LB')) || (slotPos === 'RWB' && majors.includes('RB'))) {
-    return { type: 'main', factor: 1.0, label: '本適性 100%' };
+  // サイドバックとウイングバックの完全同一化
+  const normSlot = (slotPos === 'LWB') ? 'LB' : ((slotPos === 'RWB') ? 'RB' : slotPos);
+
+  // 1. 本適性（能力低下なし）
+  const isMajor = majors.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normSlot);
+  if (isMajor) {
+    return { type: 'main', factor: 1.0, label: '本適性' };
   }
 
-  // 2. 薄適性（イーフト同様に能力値が低下: 92%発揮）
-  if (subs.includes(slotPos) || (slotPos === 'LWB' && subs.includes('LB')) || (slotPos === 'RWB' && subs.includes('RB'))) {
-    return { type: 'sub', factor: 0.92, label: '薄適性 92%' };
+  // 2. 薄適性（イーフト仕様：能力値低下）
+  const isSub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normSlot);
+  if (isSub) {
+    return { type: 'sub', factor: 0.92, label: '薄適性' };
   }
 
-  // 3. 適性外（80%発揮）
-  return { type: 'out', factor: 0.8, label: '適性外 80%' };
+  // 3. 適性外
+  return { type: 'out', factor: 0.8, label: '適性外' };
 }
 
 /**
@@ -1748,8 +1860,9 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
   const salary = wage * 52;
   const contractYears = randInt(1, 5);
 
-  const subPool = SECONDARY_POSITION_POOLS[pos] || [[]];
-  const secondaryPositions = [...subPool[randInt(0, subPool.length - 1)]];
+  const profs = generatePlayerProficiencies(pos);
+  const majorPositions = profs.majorPositions;
+  const secondaryPositions = profs.secondaryPositions;
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const traits = generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot);
@@ -1767,6 +1880,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     position: pos,
     preferredPosition: pos,
     primaryPosition: pos,
+    majorPositions,
     secondaryPositions,
     nationality,
     avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
@@ -1824,8 +1938,9 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
   else if (potentialRoll < 0.76) potential = 'B';
   else potential = 'C';
 
-  const subPool = SECONDARY_POSITION_POOLS[pos] || [[]];
-  const secondaryPositions = [...subPool[randInt(0, subPool.length - 1)]];
+  const profs = generatePlayerProficiencies(pos);
+  const majorPositions = profs.majorPositions;
+  const secondaryPositions = profs.secondaryPositions;
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const growthCurve = pickRandomGrowthCurve();
@@ -1844,6 +1959,7 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     position: pos,
     preferredPosition: pos,
     primaryPosition: pos,
+    majorPositions,
     secondaryPositions,
     nationality,
     avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
@@ -4285,7 +4401,7 @@ function openMatchPrecheckModal() {
 
     let fitBadge = '';
     if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(168,224,99,0.18);color:#a8e063;font-size:9px;">薄適性</span>';
-    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">-20%</span>';
+    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">適性外</span>';
 
     const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
 
@@ -7554,9 +7670,9 @@ function renderTacticalBoard() {
 
         let fitBadgeHtml = '';
         if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性配置（実効能力92% - 能力値低下）">薄適性 92%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性配置（能力低下）">薄適性</span>`;
         } else if (fitInfo.type === 'out') {
-          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置">適性外</span>`;
         }
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
@@ -7608,9 +7724,9 @@ function renderTacticalBoard() {
 
         let fitBadgeHtml = '';
         if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性配置（実効能力92% - 能力値低下）">薄適性 92%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性配置（能力低下）">薄適性</span>`;
         } else if (fitInfo.type === 'out') {
-          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+          fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置">適性外</span>`;
         }
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
@@ -7680,11 +7796,11 @@ function renderTacticalBoard() {
         const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
         let itemClass = '';
-        let fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
+        let fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置">適性外</span>`;
         if (fitInfo.type === 'main') {
           fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="本適性（実効能力100%）">本適性</span>`;
         } else if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性（実効能力92% - 能力値低下）">薄適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性（能力低下）">薄適性</span>`;
           itemClass = 'sub-pos';
         } else {
           itemClass = 'out-of-pos';
@@ -7744,7 +7860,7 @@ function renderTacticalBoard() {
         if (hasMainSlot) {
           fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="本適性スロットあり">本適性</span>`;
         } else if (hasSubSlot) {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性スロットあり（92%）">薄適性</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);" title="薄適性スロットあり">薄適性</span>`;
         }
 
         const injuryBadgeHtml = bp.injuryWeeks > 0
@@ -7885,9 +8001,9 @@ function renderRoster() {
     let fitBadge = '';
     if (p.isStarter) {
       if (fitInfo.type === 'sub') {
-        fitBadge = '<span class="sub-badge badge-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);">薄適性 92%</span>';
+        fitBadge = '<span class="sub-badge badge-subpos" style="color:#a8e063;border-color:rgba(168,224,99,0.4);">薄適性</span>';
       } else if (fitInfo.type === 'out') {
-        fitBadge = '<span class="sub-badge badge-penalty">適性外-20%</span>';
+        fitBadge = '<span class="sub-badge badge-penalty">適性外</span>';
       }
     }
     const trainingBadge = p.positionTraining
@@ -9113,11 +9229,15 @@ function openPlayerProfileModal(playerId) {
     if (!majors.includes(primaryPos)) majors.push(primaryPos);
     const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
 
+    // LB/LWB, RB/RWBを同一化して選択肢を整理
     const allPositions = ['CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF'];
+    const normMajors = majors.map(m => (m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m));
+    const normSubs = subs.map(s => (s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s));
+
     // 1. 薄適性から本適性への昇格対象
-    const upgradeCandidates = subs.filter(pos => !majors.includes(pos));
+    const upgradeCandidates = [...new Set(normSubs.filter(pos => !normMajors.includes(pos)))];
     // 2. 新規薄適性の習得対象
-    const newSubCandidates = allPositions.filter(pos => !majors.includes(pos) && !subs.includes(pos));
+    const newSubCandidates = allPositions.filter(pos => !normMajors.includes(pos) && !normSubs.includes(pos));
 
     if (p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
       const tPos = p.positionTraining.targetPos;
@@ -9131,8 +9251,8 @@ function openPlayerProfileModal(playerId) {
         </div>
         <div class="profile-training-box">
           <div class="training-info-row">
-            <span>目標: <span class="pos-tag pos-${tPos}"><strong>${tPos}</strong></span> <span class="mono text-cyan" style="font-size:10px;">(${modeText})</span></span>
-            <span class="text-muted" style="font-size: 10px;">(平日+2%/日, 試合+15%)</span>
+            <span>目標: <span class="pos-tag pos-${tPos}"><strong>${tPos === 'LB' ? 'LB/LWB' : (tPos === 'RB' ? 'RB/RWB' : tPos)}</strong></span> <span class="mono text-cyan" style="font-size:10px;">(${modeText})</span></span>
+            <span class="text-muted" style="font-size: 10px;">(平日練習・試合出場で進行)</span>
           </div>
           <div class="training-prog-track">
             <div class="training-prog-fill" style="width: ${prog}%;"></div>
@@ -9142,14 +9262,15 @@ function openPlayerProfileModal(playerId) {
       `;
     } else if (upgradeCandidates.length > 0 || newSubCandidates.length > 0) {
       let optionsHtml = '';
+      const getPosDisplay = (pos) => (pos === 'LB' ? 'LB / LWB' : (pos === 'RB' ? 'RB / RWB' : pos));
       if (upgradeCandidates.length > 0) {
-        optionsHtml += `<optgroup label="本適性へ昇格（100%発揮へ）">` +
-          upgradeCandidates.map(pos => `<option value="${pos}">[本適性昇格] ${pos}</option>`).join('') +
+        optionsHtml += `<optgroup label="本適性へ昇格（能力低下なし）">` +
+          upgradeCandidates.map(pos => `<option value="${pos}">[本適性昇格] ${getPosDisplay(pos)}</option>`).join('') +
           `</optgroup>`;
       }
       if (newSubCandidates.length > 0) {
-        optionsHtml += `<optgroup label="薄適性を新規習得（92%発揮）">` +
-          newSubCandidates.map(pos => `<option value="${pos}">[薄適性習得] ${pos}</option>`).join('') +
+        optionsHtml += `<optgroup label="薄適性を新規習得">` +
+          newSubCandidates.map(pos => `<option value="${pos}">[薄適性習得] ${getPosDisplay(pos)}</option>`).join('') +
           `</optgroup>`;
       }
 
@@ -9165,7 +9286,7 @@ function openPlayerProfileModal(playerId) {
             <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" style="padding: 4px 12px; font-size: 11px; white-space: nowrap;">特訓開始</button>
           </div>
           <div class="text-muted" style="font-size: 9.5px; margin-top: 4px; line-height: 1.35;">
-            ※ 平日練習(+2%/日)や試合出場(+15%)で、未習得枠の「薄適性」習得や「本適性」への昇格が可能です。
+            ※ 日々の練習や公式戦出場を通じて、未習得ポジションの「薄適性」習得や「本適性」への昇格が可能です。
           </div>
         </div>
       `;
