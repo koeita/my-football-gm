@@ -11109,6 +11109,27 @@ button.hidden,
   padding: 4px 2px;
 }
 
+.empty-reserve-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.empty-reserve-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted, #8b949e);
+  letter-spacing: 0.02em;
+}
+
 #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
 #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
   position: relative !important;
@@ -11263,6 +11284,16 @@ button.hidden,
     font-size: 10px !important;
     font-weight: 700 !important;
     color: var(--text-muted, #8b949e) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .empty-reserve-slot {
+    min-height: 28px !important;
+    padding: 3px 8px !important;
+    border-radius: 3px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .empty-reserve-text {
+    font-size: 9.5px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,

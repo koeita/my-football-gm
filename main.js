@@ -8508,16 +8508,20 @@ function renderTacticalBoard() {
   }
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(benchListEl);
 
-  // ベンチ外（リザーブ）リストの描画（21人目以降の選手：PCおよびモバイル両方で下に配置）
+  // ベンチ外（リザーブ）リストの描画（21人目以降の選手：PCおよびモバイル両方で常時表示）
   if (reservesBoxEl && reservesListEl) {
+    reservesBoxEl.classList.remove('hidden');
+    if (reservesTitleEl) {
+      reservesTitleEl.textContent = `ベンチ外 (${reservePlayers.length}名)`;
+    }
+
     if (reservePlayers.length === 0) {
-      reservesBoxEl.classList.add('hidden');
-      reservesListEl.innerHTML = '';
+      reservesListEl.innerHTML = `
+        <div class="empty-reserve-slot">
+          <span class="empty-reserve-text">ベンチ外選手なし</span>
+        </div>
+      `;
     } else {
-      reservesBoxEl.classList.remove('hidden');
-      if (reservesTitleEl) {
-        reservesTitleEl.textContent = `ベンチ外 (${reservePlayers.length}名)`;
-      }
 
       const sortedReserves = [...reservePlayers].sort((a, b) => {
         if (selectedSlot) {
