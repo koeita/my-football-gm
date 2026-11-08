@@ -563,3 +563,38 @@ function getManagerAvatarHtml(manager, extraClass = 'avatar-sm', canvasSize = 48
   const suitKit = ['#222a35', '#ffffff'];
   return getPlayerAvatarHtml({ ...manager, id: `mgr_${manager.name || 'x'}` }, { kitColors: suitKit }, extraClass, canvasSize);
 }
+
+/**
+ * コーチ陣アバターの生成（専門カテゴリ別トラックスーツのドット絵）
+ */
+function getCoachKitColors(category) {
+  switch (category) {
+    case 'attacking': return ['#8b2626', '#ffffff'];
+    case 'defending': return ['#1b3b6f', '#ffffff'];
+    case 'goalkeeping': return ['#1e5f38', '#ffffff'];
+    case 'fitness': return ['#5a4220', '#f5a623'];
+    default: return ['#2c3e50', '#ffffff'];
+  }
+}
+
+function generateCoachAvatar(coach, targetCanvas = null, canvasSize = 48) {
+  if (!coach) return null;
+  const age = coach.age || 48;
+  const nat = coach.nationality || 'England';
+  if (!coach.avatarData && typeof generateAvatarData === 'function') {
+    coach.avatarData = generateAvatarData(nat, age);
+    if (coach.avatarData) {
+      if (Math.random() < 0.5) coach.avatarData.facialHair = 'beard';
+      if (Math.random() < 0.3) coach.avatarData.accessories = 'glasses';
+    }
+  }
+  const kit = getCoachKitColors(coach.category);
+  return generatePlayerAvatar({ ...coach, isCoach: true }, targetCanvas, { kitColors: kit }, canvasSize);
+}
+
+function getCoachAvatarHtml(coach, extraClass = 'avatar-sm', canvasSize = 48) {
+  if (!coach) return '';
+  const kit = getCoachKitColors(coach.category);
+  return getPlayerAvatarHtml({ ...coach, id: coach.id || `coach_${coach.name || 'x'}` }, { kitColors: kit }, extraClass, canvasSize);
+}
+
