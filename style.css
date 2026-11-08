@@ -11085,22 +11085,8 @@ button.hidden,
   box-shadow: 0 0 10px rgba(46, 204, 113, 0.25);
 }
 
-/* 控え選手9名トレイの快適な横スクロール＆タッチ最適化 */
-.pitch-bench-list {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 600px) {
-  .staff-setup-card {
-    max-height: 94vh !important;
-    width: 95% !important;
-    margin: 10px auto !important;
-  }
-}
-
 /* ----------------------------------------------------
-   Reserves (ベンチ外選手エリア) スタイリング
+   Reserves (ベンチ外選手エリア) デスクトップ＆モバイル最適化
    ---------------------------------------------------- */
 .pitch-reserves-box {
   background-color: rgba(22, 27, 34, 0.75);
@@ -11119,14 +11105,25 @@ button.hidden,
   padding: 4px 2px;
 }
 
-.pitch-reserves-box .pitch-sub-title {
-  color: var(--text-muted) !important;
-  font-size: 11px !important;
+#pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
+#pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  min-width: 124px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  cursor: grab !important;
+  margin: 0 !important;
+  touch-action: none !important;
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
 .bench-sub-item.reserve-node {
   border: 1px dashed rgba(255, 255, 255, 0.22) !important;
-  opacity: 0.88;
+  opacity: 0.9;
   background-color: rgba(18, 22, 26, 0.85) !important;
 }
 
@@ -11136,85 +11133,141 @@ button.hidden,
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5) !important;
 }
 
-@media (max-width: 600px) {
-  .pitch-reserves-box {
-    margin-top: 6px !important;
-    padding: 4px 6px !important;
-  }
-}
-
 /* ----------------------------------------------------
-   モバイル作戦ボードでのベンチ外表示最適化
+   モバイル作戦ボード：ピッチと控え・ベンチ外の適切な余白と配置
    ---------------------------------------------------- */
 @media (max-width: 600px) {
-  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
-    overflow-y: auto !important;
-    padding-bottom: 70px !important;
+  .staff-setup-card {
+    max-height: 94vh !important;
+    width: 95% !important;
+    margin: 10px auto !important;
   }
-  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
+    height: auto !important;
+    min-height: calc(100dvh - 54px - 58px) !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: visible !important;
   }
-  .pitch-reserves-box {
-    margin-top: 6px !important;
-    padding: 3px 4px !important;
-    background: rgba(18, 22, 26, 0.9) !important;
-    border-radius: 4px !important;
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
   }
-  .pitch-reserves-list {
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+    margin-bottom: 6px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 2px 4px 8px 4px !important;
+    overflow: visible !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
+    width: 100% !important;
+    height: 380px !important;
+    min-height: 360px !important;
+    max-height: 420px !important;
+    position: relative !important;
+    overflow: visible !important;
+    margin-bottom: 6px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 4px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    border-radius: 4px !important;
+    background: var(--bg-panel, #161b22) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-header {
+    margin: 0 0 3px 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-title {
+    display: block !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    color: var(--accent-green, #2ecc71) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box {
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    border-radius: 4px !important;
+    background: rgba(18, 22, 26, 0.95) !important;
+    border: 1px dashed rgba(255, 255, 255, 0.22) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box .pitch-sub-title {
+    display: block !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: var(--text-muted, #8b949e) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-list {
     display: flex !important;
     flex-direction: row !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    gap: 5px !important;
+    gap: 6px !important;
     padding: 2px 2px 4px 2px !important;
-    touch-action: pan-x !important;
+    max-height: none !important;
     -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    touch-action: pan-x !important;
   }
-}
 
-/* ----------------------------------------------------
-   モバイル用控え・ベンチ外トグルピル
-   ---------------------------------------------------- */
-.sub-view-switch-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sub-tab-pills {
-  display: none;
-  gap: 4px;
-}
-
-.btn-sub-pill {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-sub-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-main);
-}
-
-.btn-sub-pill.active {
-  background: rgba(46, 204, 113, 0.2);
-  color: var(--accent-green);
-  border-color: var(--accent-green);
-}
-
-@media (max-width: 600px) {
-  .sub-tab-pills {
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
+    flex-shrink: 0 !important;
+    width: auto !important;
+    min-width: 110px !important;
+    max-width: 126px !important;
+    height: auto !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
     display: flex !important;
-  }
-  #pitch-sub-title {
-    display: none !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 3px 6px !important;
+    box-sizing: border-box !important;
   }
 }
