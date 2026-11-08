@@ -470,8 +470,8 @@ const FORMATIONS = {
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
       { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
       { slotIndex: 5, pos: 'DM', label: 'DM', x: 50, y: 58 },
-      { slotIndex: 6, pos: 'CM', label: 'LCM', x: 31, y: 40 },
-      { slotIndex: 7, pos: 'CM', label: 'RCM', x: 69, y: 40 },
+      { slotIndex: 6, pos: 'AM', label: 'LAM', x: 31, y: 40 },
+      { slotIndex: 7, pos: 'AM', label: 'RAM', x: 69, y: 40 },
       { slotIndex: 8, pos: 'LW', label: 'LW', x: 17, y: 20 },
       { slotIndex: 9, pos: 'CF', label: 'CF', x: 50, y: 14 },
       { slotIndex: 10, pos: 'RW', label: 'RW', x: 83, y: 20 }
@@ -486,7 +486,7 @@ const FORMATIONS = {
       { slotIndex: 3, pos: 'CB', label: 'RCB', x: 63, y: 76 },
       { slotIndex: 4, pos: 'RB', label: 'RB', x: 86, y: 70 },
       { slotIndex: 5, pos: 'CM', label: 'LCM', x: 24, y: 50 },
-      { slotIndex: 6, pos: 'CM', label: 'CM', x: 50, y: 54 },
+      { slotIndex: 6, pos: 'DM', label: 'DM', x: 50, y: 56 },
       { slotIndex: 7, pos: 'CM', label: 'RCM', x: 76, y: 50 },
       { slotIndex: 8, pos: 'AM', label: 'AM', x: 50, y: 34 },
       { slotIndex: 9, pos: 'CF', label: 'LCF', x: 34, y: 16 },
@@ -2330,13 +2330,168 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 }
 
 /**
- * CPUクラブのスタメン11名を最適配置で自動編成
+ * スロットと選手の最適マッチング用スコア計算
  */
-function autoSelectStarters(club) {
+function calculateSlotPlayerScore(player, slotPos) {
+  ensurePlayerProficiencies(player);
+  let score = 0;
+
+  // 1. 負傷ペナルティ（負傷者は極力スタメンから除外）
+  const isInjured = (player.injuryWeeks > 0) || (player.injuryDays > 0);
+  if (isInjured) {
+    score -= 2000;
+  }
+
+  // 2. GKとフィールドプレイヤーの明確な分離
+  const isGkPlayer = player.pos === 'GK' || (Array.isArray(player.mainPositions) && player.mainPositions.includes('GK'));
+  const isGkSlot = slotPos === 'GK';
+
+  if (isGkSlot) {
+    if (isGkPlayer) {
+      score += 1000;
+    } else {
+      score -= 5000; // GK適性のない選手をGKに置かない
+    }
+  } else {
+    if (isGkPlayer) {
+      score -= 5000; // GKをフィールドに置かない
+    }
+  }
+
+  // 3. 適性タイプ（main / sub / adjacent / none）と実効OVR
+  const fitInfo = getPositionFitInfo(player, slotPos);
+  const effOvr = getEffectivePlayerRatingForSlot(player, slotPos);
+  score += effOvr;
+
+  if (fitInfo.type === 'main') {
+    score += 25; // 本適性を強力に優遇（100%発揮）
+  } else if (fitInfo.type === 'sub') {
+    score += 8;  // 薄適性（96%発揮）
+  } else if (fitInfo.type === 'adjacent') {
+    score -= 25; // 同系列未習得（ペナルティ）
+  } else {
+    score -= 60; // 完全不適性（大幅ペナルティ）
+  }
+
+  // 4. スタミナによる微調整
+  if (player.sta) {
+    score += (player.sta - 70) * 0.05;
+  }
+
+  return score;
+}
+
+/**
+ * 最小費用流（最長路）による大域的最適二部マッチング
+ * 所属全選手 (N人) から フォーメーション枠 (M=11枠) へ、
+ * チーム全体の合計スコア（実効OVR・適性・健康度）が最大となる一意の配置を求める
+ */
+function findOptimalAssignment(players, slots) {
+  const N = players.length;
+  const M = slots.length;
+  if (N < M) return null;
+
+  const source = 0;
+  const playerOffset = 1;
+  const slotOffset = 1 + N;
+  const sink = 1 + N + M;
+  const totalNodes = sink + 1;
+
+  const adj = Array.from({ length: totalNodes }, () => []);
+  const edges = [];
+
+  const addEdge = (u, v, cap, c) => {
+    edges.push({ u, v, cap, flow: 0, cost: c, rev: edges.length + 1 });
+    edges.push({ u: v, v: u, cap: 0, flow: 0, cost: -c, rev: edges.length - 1 });
+    adj[u].push(edges.length - 2);
+    adj[v].push(edges.length - 1);
+  };
+
+  for (let i = 0; i < N; i++) {
+    addEdge(source, playerOffset + i, 1, 0);
+  }
+
+  for (let j = 0; j < M; j++) {
+    addEdge(slotOffset + j, sink, 1, 0);
+  }
+
+  for (let i = 0; i < N; i++) {
+    const p = players[i];
+    for (let j = 0; j < M; j++) {
+      const sl = slots[j];
+      const score = calculateSlotPlayerScore(p, sl.pos);
+      // スコア最大化のためコストは -score
+      addEdge(playerOffset + i, slotOffset + j, 1, -score);
+    }
+  }
+
+  let flow = 0;
+  while (flow < M) {
+    const dist = new Array(totalNodes).fill(Infinity);
+    const parentEdge = new Array(totalNodes).fill(-1);
+    const inQueue = new Array(totalNodes).fill(false);
+    const queue = [source];
+    dist[source] = 0;
+    inQueue[source] = true;
+
+    while (queue.length > 0) {
+      const u = queue.shift();
+      inQueue[u] = false;
+
+      for (const eIdx of adj[u]) {
+        const e = edges[eIdx];
+        if (e.cap - e.flow > 0 && dist[u] + e.cost < dist[e.v]) {
+          dist[e.v] = dist[u] + e.cost;
+          parentEdge[e.v] = eIdx;
+          if (!inQueue[e.v]) {
+            queue.push(e.v);
+            inQueue[e.v] = true;
+          }
+        }
+      }
+    }
+
+    if (dist[sink] === Infinity) break;
+
+    let curr = sink;
+    while (curr !== source) {
+      const eIdx = parentEdge[curr];
+      edges[eIdx].flow += 1;
+      edges[edges[eIdx].rev].flow -= 1;
+      curr = edges[eIdx].u;
+    }
+    flow++;
+  }
+
+  const assignment = {};
+  for (let j = 0; j < M; j++) {
+    const slotNode = slotOffset + j;
+    for (const eIdx of adj[slotNode]) {
+      const e = edges[eIdx];
+      if (e.v >= playerOffset && e.v < slotOffset && e.flow < 0) {
+        const playerIndex = e.v - playerOffset;
+        assignment[j] = players[playerIndex];
+        break;
+      }
+    }
+  }
+
+  return assignment;
+}
+
+/**
+ * 選択されているフォーメーションで組める一番バランスのいい組み方を自動選定する
+ */
+function optimizeClubStarters(club) {
   if (!club.formation || !FORMATIONS[club.formation]) {
     club.formation = '4-3-3';
   }
   const formationDef = getClubFormationDef(club);
+  const slots = formationDef.slots;
+  const availablePlayers = club.players.filter(p => !p.isRetired);
+
+  // 最適マッチングの実行
+  const assignment = findOptimalAssignment(availablePlayers, slots);
 
   club.players.forEach(p => {
     p.isStarter = false;
@@ -2344,32 +2499,46 @@ function autoSelectStarters(club) {
     p.slotIndex = null;
   });
 
-  const available = [...club.players].filter(p => !p.isRetired);
+  let totalEffOvr = 0;
+  let starterCount = 0;
 
-  for (const sl of formationDef.slots) {
-    const candidates = available.filter(p => !p.isStarter);
-    if (candidates.length === 0) break;
-
-    candidates.sort((a, b) => {
-      const aHealthy = (a.injuryWeeks || 0) === 0 ? 1 : 0;
-      const bHealthy = (b.injuryWeeks || 0) === 0 ? 1 : 0;
-      if (aHealthy !== bHealthy) return bHealthy - aHealthy;
-
-      const aFit = getPositionFitInfo(a, sl.pos).factor;
-      const bFit = getPositionFitInfo(b, sl.pos).factor;
-      if (aFit !== bFit) return bFit - aFit;
-
-      return getEffectivePlayerRatingForSlot(b, sl.pos) - getEffectivePlayerRatingForSlot(a, sl.pos);
-    });
-
-    const chosen = candidates[0];
-    chosen.isStarter = true;
-    chosen.slotIndex = sl.slotIndex;
-    chosen.assignedPos = sl.pos;
+  for (let j = 0; j < slots.length; j++) {
+    const p = assignment && assignment[j];
+    if (p) {
+      p.isStarter = true;
+      p.slotIndex = slots[j].slotIndex;
+      p.assignedPos = slots[j].pos;
+      totalEffOvr += getEffectivePlayerRatingForSlot(p, slots[j].pos);
+      starterCount++;
+    }
   }
 
   ensureValidSquadAndStarters(club);
+
+  const avgEffOvr = starterCount > 0 ? Math.round(totalEffOvr / starterCount) : 0;
+  return { avgEffOvr, starterCount };
 }
+
+/**
+ * CPUクラブおよび共通の自動スタメン編成
+ */
+function autoSelectStarters(club) {
+  return optimizeClubStarters(club);
+}
+
+/**
+ * ユーザーが作戦ボードの「おまかせ最適編成」を押した際の処理
+ */
+function applyAutoOptimalLineup() {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const result = optimizeClubStarters(playerClub);
+  renderRoster();
+  showToast(`⚡ フォーメーション [${playerClub.formation}] の最適スタメンを自動編成しました (平均実効OVR: ${result.avgEffOvr})`, 'success');
+}
+
 
 /**
  * クラブの年間総年俸（単位：£1K）を計算
@@ -10613,6 +10782,14 @@ function initGame() {
       if (fBtn && fBtn.dataset.formation) {
         setClubFormation(fBtn.dataset.formation);
       }
+    });
+  }
+
+  // おまかせ最適編成ボタン
+  const btnAutoOptimal = document.getElementById('btn-auto-optimal-lineup');
+  if (btnAutoOptimal) {
+    btnAutoOptimal.addEventListener('click', () => {
+      applyAutoOptimalLineup();
     });
   }
 

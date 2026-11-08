@@ -135,6 +135,19 @@ class TestGameLogicUnits(unittest.TestCase):
         """全8フォーメーションが定義され、それぞれ11スロット（GK含む）持つこと"""
         for formation in ['4-3-3', '4-2-3-1', '4-4-2', '3-5-2', '3-4-3', '5-3-2', '4-1-2-3', '4-3-1-2']:
             self.assertIn(f"'{formation}':", self.js_code, f"Formation {formation} must be defined")
+        # 4-1-2-3: 中盤2枚がAMであること
+        self.assertIn("{ slotIndex: 6, pos: 'AM', label: 'LAM', x: 31, y: 40 }", self.js_code)
+        self.assertIn("{ slotIndex: 7, pos: 'AM', label: 'RAM', x: 69, y: 40 }", self.js_code)
+        # 4-3-1-2: 中盤3枚の真ん中がDMであること
+        self.assertIn("{ slotIndex: 6, pos: 'DM', label: 'DM', x: 50, y: 56 }", self.js_code)
+
+    def test_auto_optimal_lineup_functions(self):
+        """おまかせ最適編成のアルゴリズム・ボタン・イベントが定義されていること"""
+        self.assertIn('function calculateSlotPlayerScore', self.js_code)
+        self.assertIn('function findOptimalAssignment', self.js_code)
+        self.assertIn('function optimizeClubStarters', self.js_code)
+        self.assertIn('function applyAutoOptimalLineup', self.js_code)
+        self.assertIn('btn-auto-optimal-lineup', self.js_code)
 
     def test_tactical_styles_definitions(self):
         """重複のない5大戦術スタイルが定義され、試合シミュレーションロジックと連動していること"""
