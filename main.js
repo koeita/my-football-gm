@@ -2520,9 +2520,8 @@ function applyAutoOptimalLineup() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  const result = optimizeClubStarters(playerClub);
+  optimizeClubStarters(playerClub);
   renderRoster();
-  showToast(`⚡ フォーメーション [${playerClub.formation}] の最適スタメンを自動編成しました (平均実効OVR: ${result.avgEffOvr})`, 'success');
 }
 
 
