@@ -6954,19 +6954,17 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
      ピッチと控えカルーセルが1画面に100%収まり、ドラッグ＆ドロップ時に画面が一切動かない
      ========================================================================== */
   body[data-active-tab="roster"][data-roster-subtab="board"] {
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    height: auto !important;
-    min-height: 100% !important;
+    overflow: hidden !important;
+    height: 100% !important;
+    touch-action: pan-x !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .app-container {
-    height: auto !important;
-    min-height: 100dvh !important;
-    max-height: none !important;
-    overflow-y: visible !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
     padding-top: calc(54px + env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
     padding-left: 6px !important;
     padding-right: 6px !important;
     box-sizing: border-box !important;
@@ -7018,13 +7016,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
-    height: auto !important;
-    min-height: calc(100dvh - 54px - 76px) !important;
-    max-height: none !important;
+    height: calc(100dvh - 54px - 76px) !important;
+    max-height: calc(100dvh - 54px - 76px) !important;
     display: flex !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    padding-top: 40px !important;
+    padding-bottom: 0 !important;
   }
   /* 選手一覧テーブル：適性列・選手名列の完全sticky固定 & 重なり・文字溢れ防止 & 完全不透明化（WebKit座標ズレ防止） */
   .roster-table th.col-pos,
@@ -11109,6 +11108,27 @@ button.hidden,
   padding: 4px 2px;
 }
 
+.empty-reserve-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.empty-reserve-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted, #8b949e);
+  letter-spacing: 0.02em;
+}
+
 #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
 #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
   position: relative !important;
@@ -11138,7 +11158,7 @@ button.hidden,
 }
 
 /* ----------------------------------------------------
-   モバイル作戦ボード：ピッチと控え・ベンチ外の適切な余白と配置
+   モバイル作戦ボード：ピッチと控え・ベンチ外の適切な余白と配置（スクロール完全禁止・1画面収束）
    ---------------------------------------------------- */
 @media (max-width: 600px) {
   .staff-setup-card {
@@ -11147,45 +11167,65 @@ button.hidden,
     margin: 10px auto !important;
   }
 
+  body[data-active-tab="roster"][data-roster-subtab="board"] {
+    overflow: hidden !important;
+    height: 100% !important;
+    touch-action: pan-x !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .app-container {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding-top: calc(54px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    box-sizing: border-box !important;
+  }
+
   body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
-    height: auto !important;
-    min-height: calc(100dvh - 54px) !important;
-    max-height: none !important;
+    height: calc(100dvh - 54px - 76px) !important;
+    max-height: calc(100dvh - 54px - 76px) !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow: hidden !important;
+    padding-top: 40px !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board {
     flex: 1 !important;
+    min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: visible !important;
-    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel {
     flex: 1 !important;
+    min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: visible !important;
-    margin-bottom: 6px !important;
+    overflow: hidden !important;
+    margin-bottom: 0 !important;
+    border: 1px solid var(--border-color, #30363d) !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
     flex: 1 !important;
+    min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 2px 4px 6px 4px !important;
-    overflow: visible !important;
-    min-height: 0 !important;
+    padding: 2px 4px !important;
+    overflow: hidden !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-manager-banner {
     padding: 3px 6px !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 3px !important;
+    flex-shrink: 0 !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .manager-banner-style {
@@ -11200,28 +11240,29 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
     flex: 1 !important;
+    min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 5px !important;
-    overflow: visible !important;
-    min-height: 0 !important;
+    gap: 3px !important;
+    overflow: hidden !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
     width: 100% !important;
-    height: 250px !important;
-    min-height: 240px !important;
-    max-height: 265px !important;
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 190px !important;
+    max-height: 235px !important;
     position: relative !important;
-    overflow: visible !important;
-    margin-bottom: 4px !important;
-    flex-shrink: 0 !important;
+    overflow: hidden !important;
+    margin-bottom: 2px !important;
+    touch-action: none !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column {
     display: flex !important;
     flex-direction: column !important;
-    gap: 4px !important;
+    gap: 3px !important;
     width: 100% !important;
     margin: 0 !important;
     flex-shrink: 0 !important;
@@ -11229,13 +11270,13 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {
     margin: 0 !important;
-    padding: 3px 5px !important;
+    padding: 2px 5px !important;
     border-radius: 4px !important;
     background: var(--bg-panel, #161b22) !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-header {
-    margin: 0 0 2px 0 !important;
+    margin: 0 0 1px 0 !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
@@ -11244,7 +11285,7 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-title {
     display: block !important;
-    font-size: 10.5px !important;
+    font-size: 10px !important;
     font-weight: 700 !important;
     line-height: 1.2 !important;
     color: var(--accent-green, #2ecc71) !important;
@@ -11252,7 +11293,7 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box {
     margin: 0 !important;
-    padding: 3px 5px !important;
+    padding: 2px 5px !important;
     border-radius: 4px !important;
     background: rgba(18, 22, 26, 0.95) !important;
     border: 1px dashed rgba(255, 255, 255, 0.22) !important;
@@ -11260,9 +11301,19 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box .pitch-sub-title {
     display: block !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     color: var(--text-muted, #8b949e) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .empty-reserve-slot {
+    min-height: 24px !important;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .empty-reserve-text {
+    font-size: 9px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,
@@ -11271,8 +11322,8 @@ button.hidden,
     flex-direction: row !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    gap: 5px !important;
-    padding: 1px 2px 3px 2px !important;
+    gap: 4px !important;
+    padding: 1px 2px 2px 2px !important;
     max-height: none !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-x: contain !important;
@@ -11283,8 +11334,8 @@ button.hidden,
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
     flex-shrink: 0 !important;
     width: auto !important;
-    min-width: 108px !important;
-    max-width: 122px !important;
+    min-width: 104px !important;
+    max-width: 118px !important;
     height: auto !important;
     position: relative !important;
     left: auto !important;
@@ -11293,7 +11344,7 @@ button.hidden,
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    padding: 3px 5px !important;
+    padding: 2px 4px !important;
     box-sizing: border-box !important;
   }
 }
