@@ -44,5 +44,14 @@ class TestCoachingStaffSlots(unittest.TestCase):
         self.assertIn("hireCoach(", self.js)
         self.assertIn("sackCoach(", self.js)
 
+    def test_fictional_staff_names(self):
+        # 監督・コーチ名に実在もじり名（ガルディス、クロップ、ファーガソン等）が残っていないこと
+        parody_names = ['ガルディス', 'クロップ', 'ファーガソン', 'アンチェス', 'シメオーニ', 'モウリーニ', 'フリック風', 'ベルク', 'シュマイケル', 'カンナバ']
+        for p in parody_names:
+            self.assertNotIn(f"'{p}'", self.js)
+            self.assertNotIn(f'"{p}"', self.js)
+        # 動的生成関数の存在確認
+        self.assertIn("function generateRandomStaffName(", self.js)
+
 if __name__ == '__main__':
     unittest.main()

@@ -18,47 +18,52 @@ function getManagerTacticLabel(key) {
 // ==========================================================================
 
 const MANAGERS_DATABASE = [
-  { name: 'P. ガルディス', nationality: 'Spain', age: 53, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 110, bio: '精密なポジショナルプレーと圧倒的ポゼッションを信奉する名将。' },
-  { name: 'J. クロック', nationality: 'Germany', age: 57, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 105, bio: '電光石火のハイプレスと情熱的なメンタリティで圧倒する闘将。' },
-  { name: 'M. アルテガス', nationality: 'Spain', age: 42, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密なビルドアップと可変戦術で若手を統率する若き理論派。' },
-  { name: 'R. アモレス', nationality: 'Portugal', age: 39, preferredFormation: '3-4-3', preferredTactic: 'counter', weeklyWage: 85, bio: '3バックからのダイナミックな攻守転換で旋風を巻き起こす気鋭。' },
-  { name: 'C. アンチェス', nationality: 'Italy', age: 65, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 115, bio: '選手の個性を引き出す柔軟性と数々の栄冠を誇る歴戦の長老。' },
-  { name: 'D. シメオーニ', nationality: 'Argentina', age: 54, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 100, bio: '堅固な4-4ブロックと不屈の闘志で相手を封殺する守備の達人。' },
-  { name: 'A. コンテス', nationality: 'Italy', age: 55, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 95, bio: '徹底した戦術規律と強烈なインテンシティで勝点をもぎ取る仕事人。' },
-  { name: 'U. エメレス', nationality: 'Spain', age: 52, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 85, bio: '対戦相手の弱点を徹底分析し勝負所で強さを発揮するカップ戦マイスター。' },
-  { name: 'E. ハウズ', nationality: 'England', age: 47, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 75, bio: '運動量とアグレッシブなプレッシングでチームの一体感を高める。' },
-  { name: 'A. ポステク', nationality: 'Australia', age: 59, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 80, bio: '超ハイラインと超攻撃的スタイルを貫く攻撃サッカーの信念者。' },
-  { name: 'E. マレス', nationality: 'Italy', age: 44, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 80, bio: '後方からのパス回しとサイドのアイソレーションを重んじる新世代。' },
-  { name: 'M. シウバス', nationality: 'Portugal', age: 47, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 65, bio: 'サイドアタックと中盤のバランスに優れた堅実な手腕。' },
-  { name: 'O. グラスナ', nationality: 'Austria', age: 50, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 70, bio: '統率された3バックと鋭利なショートカウンターを得意とする実力者。' },
-  { name: 'T. トゥヘレス', nationality: 'Germany', age: 51, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密な構造論と的確な戦術采配で勝利を導く理論派。' },
-  { name: 'J. モウリーニ', nationality: 'Portugal', age: 61, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 95, bio: '冷徹な守備組織とリアリズムで数々のタイトルを獲得したカリスマ。' },
-  { name: 'R. デゼルビ', nationality: 'Italy', age: 45, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 75, bio: '自陣深くで誘い出し一気にスペースを攻略するパスサッカーの信奉者。' },
-  { name: 'G. ガスペル', nationality: 'Italy', age: 66, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 80, bio: 'ピッチ全域のマンツーマンと怒涛の波状攻撃を繰り出す超攻撃派。' },
-  { name: 'B. ロジャース', nationality: 'Northern Ireland', age: 52, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 60, bio: 'ボール保持と洗練されたパスワークで主導権を握る正統派。' },
-  { name: 'S. ダイチ風', nationality: 'England', age: 53, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 55, bio: '肉弾戦と魂のディフェンス、直接的なロングボールで耐え抜く武闘派。' },
-  { name: 'N. サント風', nationality: 'Portugal', age: 50, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 60, bio: '強固な守備ブロックと一撃必殺のカウンターに特化した守備の職人。' },
+  { nationality: 'Spain', age: 53, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 110, bio: '精密なポジショナルプレーと圧倒的ポゼッションを信奉する名将。' },
+  { nationality: 'Germany', age: 57, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 105, bio: '電光石火のハイプレスと情熱的なメンタリティで圧倒する闘将。' },
+  { nationality: 'Spain', age: 42, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密なビルドアップと可変戦術で若手を統率する若き理論派。' },
+  { nationality: 'Portugal', age: 39, preferredFormation: '3-4-3', preferredTactic: 'counter', weeklyWage: 85, bio: '3バックからのダイナミックな攻守転換で旋風を巻き起こす気鋭。' },
+  { nationality: 'Italy', age: 65, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 115, bio: '選手の個性を引き出す柔軟性と数々の栄冠を誇る歴戦の長老。' },
+  { nationality: 'Argentina', age: 54, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 100, bio: '堅固な4-4ブロックと不屈の闘志で相手を封殺する守備の達人。' },
+  { nationality: 'Italy', age: 55, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 95, bio: '徹底した戦術規律と強烈なインテンシティで勝点をもぎ取る仕事人。' },
+  { nationality: 'Spain', age: 52, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 85, bio: '対戦相手の弱点を徹底分析し勝負所で強さを発揮するカップ戦マイスター。' },
+  { nationality: 'England', age: 47, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 75, bio: '運動量とアグレッシブなプレッシングでチームの一体感を高める。' },
+  { nationality: 'England', age: 59, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 80, bio: '超ハイラインと超攻撃的スタイルを貫く攻撃サッカーの信念者。' },
+  { nationality: 'Italy', age: 44, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 80, bio: '後方からのパス回しとサイドのアイソレーションを重んじる新世代。' },
+  { nationality: 'Portugal', age: 47, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 65, bio: 'サイドアタックと中盤のバランスに優れた堅実な手腕。' },
+  { nationality: 'Germany', age: 50, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 70, bio: '統率された3バックと鋭利なショートカウンターを得意とする実力者。' },
+  { nationality: 'Germany', age: 51, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密な構造論と的確な戦術采配で勝利を導く理論派。' },
+  { nationality: 'Portugal', age: 61, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 95, bio: '冷徹な守備組織とリアリズムで数々のタイトルを獲得したカリスマ。' },
+  { nationality: 'Italy', age: 45, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 75, bio: '自陣深くで誘い出し一気にスペースを攻略するパスサッカーの信奉者。' },
+  { nationality: 'Italy', age: 66, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 80, bio: 'ピッチ全域のマンツーマンと怒涛の波状攻撃を繰り出す超攻撃派。' },
+  { nationality: 'England', age: 52, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 60, bio: 'ボール保持と洗練されたパスワークで主導権を握る正統派。' },
+  { nationality: 'England', age: 53, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 55, bio: '肉弾戦と魂のディフェンス、直接的なロングボールで耐え抜く武闘派。' },
+  { nationality: 'Portugal', age: 50, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 60, bio: '強固な守備ブロックと一撃必殺のカウンターに特化した守備の職人。' },
   // フリー監督プール用候補
-  { name: 'H. フリック風', nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
-  { name: 'L. エンリケ風', nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
-  { name: 'M. アッレグリ風', nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' },
-  { name: 'Z. ジダン風', nationality: 'France', age: 52, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 120, bio: '王者の風格と卓越した人心掌握術でビッグマッチを制する歴戦の勝者。' }
+  { nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
+  { nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
+  { nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' },
+  { nationality: 'France', age: 52, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 120, bio: '王者の風格と卓越した人心掌握術でビッグマッチを制する歴戦の勝者。' }
 ];
 
 /**
- * 監督オブジェクトの生成
+ * 監督オブジェクトの生成（完全架空名ジェネレーターによる動的命名）
  */
-function createManager(def, clubId = null) {
-  const age = def.age || 50;
+function createManager(def, clubId = null, usedNames = null) {
+  const age = def.age || randInt(44, 62);
   const nat = def.nationality || 'England';
+  const nameData = typeof generateRandomStaffName === 'function'
+    ? generateRandomStaffName(nat, usedNames)
+    : { displayName: `M. Staff`, fullName: `Manager Staff` };
+
   const genes = typeof generateAvatarData === 'function' ? generateAvatarData(nat, age) : null;
   if (genes) {
     if (Math.random() < 0.6) genes.facialHair = 'beard';
     if (Math.random() < 0.4) genes.accessories = 'glasses';
   }
   return {
-    id: 'mgr_' + (def.name.replace(/[^a-zA-Z0-9]/g, '_') || Math.random().toString(36).substr(2, 6)),
-    name: def.name,
+    id: 'mgr_' + Math.random().toString(36).substr(2, 8),
+    name: nameData.displayName,
+    fullName: nameData.fullName,
     nationality: nat,
     age: age,
     preferredFormation: def.preferredFormation || '4-3-3',
@@ -66,7 +71,7 @@ function createManager(def, clubId = null) {
     trust: typeof def.trust === 'number' ? def.trust : 80,
     weeklyWage: def.weeklyWage || 80,
     contractYears: typeof def.contractYears === 'number' ? def.contractYears : 3,
-    bio: def.bio || '',
+    bio: def.bio || '現代的な戦術眼と指導力でチームを牽引する指揮官。',
     avatarData: genes
   };
 }
@@ -82,38 +87,38 @@ function getManagerBuyoutFee(manager) {
 }
 
 /**
- * 指導陣（COACHING STAFF）データベース（全4専門カテゴリ / 全6枠体制）
+ * 指導陣（COACHING STAFF）データベース（全4専門カテゴリ / 全6枠体制・完全架空名ベース）
  */
 const COACHES_DATABASE = {
   attacking: [
-    { name: 'T. ベルク', nationality: 'Netherlands', age: 54, rank: 'A', weeklyWage: 35, bio: 'ファーストタッチとフィニッシュの極意を叩き込む名ストライカー。' },
-    { name: 'R. ファンニ', nationality: 'Netherlands', age: 48, rank: 'A', weeklyWage: 32, bio: 'ボックス内での駆け引きとゴール嗅覚を伝授する点取り屋。' },
-    { name: 'B. ツォラ', nationality: 'Italy', age: 58, rank: 'B', weeklyWage: 24, bio: '狭いスペースでのテクニックとラストパスの精度を高める職人。' },
-    { name: 'O. グナー', nationality: 'Norway', age: 51, rank: 'B', weeklyWage: 22, bio: '冷静な決定力とスーパーサブとしての勝負強さを教え込む。' },
-    { name: 'K. フィリップス', nationality: 'England', age: 51, rank: 'C', weeklyWage: 14, bio: '実戦的なポジショニングと献身的なプレスを指導する。' },
-    { name: 'M. デンベレ', nationality: 'Belgium', age: 43, rank: 'C', weeklyWage: 12, bio: 'ドリブルでの局面打開と前線への展開を支援する若手育成型。' }
+    { nationality: 'Netherlands', age: 54, rank: 'A', weeklyWage: 35, bio: 'ファーストタッチとフィニッシュの極意を叩き込むストライカー指導の専門家。' },
+    { nationality: 'France', age: 48, rank: 'A', weeklyWage: 32, bio: 'ボックス内での駆け引きとゴール嗅覚を伝授する点取り屋コーチ。' },
+    { nationality: 'Italy', age: 58, rank: 'B', weeklyWage: 24, bio: '狭いスペースでのテクニックとラストパスの精度を高める理論派。' },
+    { nationality: 'England', age: 51, rank: 'B', weeklyWage: 22, bio: '冷静な決定力と勝負所での強さを教え込むシュートコーチ。' },
+    { nationality: 'Germany', age: 51, rank: 'C', weeklyWage: 14, bio: '実戦的なポジショニングと献身的なプレスを指導する。' },
+    { nationality: 'Belgium', age: 43, rank: 'C', weeklyWage: 12, bio: 'ドリブルでの局面打開と前線への展開を支援する若手育成型。' }
   ],
   defending: [
-    { name: 'J. スタム', nationality: 'Netherlands', age: 52, rank: 'A', weeklyWage: 34, bio: '圧倒的な対人強度と威圧感で最終ラインに鉄壁の統率力を注入。' },
-    { name: 'F. カンナバ', nationality: 'Italy', age: 51, rank: 'A', weeklyWage: 35, bio: '緻密なポジショニングとインターセプトの先読みを徹底指導。' },
-    { name: 'S. キャンベル', nationality: 'England', age: 50, rank: 'B', weeklyWage: 23, bio: '屈強な空中戦とフィジカルコンタクトで相手FWを封殺する。' },
-    { name: 'M. デサイー', nationality: 'France', age: 56, rank: 'B', weeklyWage: 25, bio: 'CBとDMの両対応、強固なブロック構築のスペシャリスト。' },
-    { name: 'G. キエッリーニ風', nationality: 'Italy', age: 40, rank: 'B', weeklyWage: 22, bio: '勝者のメンタリティと狡猾なラインコントロールを叩き込む。' },
-    { name: 'P. フェレイラ', nationality: 'Portugal', age: 45, rank: 'C', weeklyWage: 13, bio: 'サイドバックのポジショニングとカバーリングを基本から指導。' }
+    { nationality: 'Netherlands', age: 52, rank: 'A', weeklyWage: 34, bio: '圧倒的な対人強度と威圧感で最終ラインに鉄壁の統率力を注入。' },
+    { nationality: 'Italy', age: 51, rank: 'A', weeklyWage: 35, bio: '緻密なポジショニングとインターセプトの先読みを徹底指導。' },
+    { nationality: 'England', age: 50, rank: 'B', weeklyWage: 23, bio: '屈強な空中戦とフィジカルコンタクトで相手FWを封殺する。' },
+    { nationality: 'France', age: 56, rank: 'B', weeklyWage: 25, bio: 'CBとDMの両対応、強固なブロック構築のスペシャリスト。' },
+    { nationality: 'Spain', age: 44, rank: 'B', weeklyWage: 22, bio: '粘り強いマンマークと狡猾なラインコントロールを叩き込む。' },
+    { nationality: 'Portugal', age: 45, rank: 'C', weeklyWage: 13, bio: 'サイドバックのポジショニングとカバーリングを基本から指導。' }
   ],
   goalkeeping: [
-    { name: 'P. シュマイケル', nationality: 'Denmark', age: 61, rank: 'A', weeklyWage: 30, bio: '強烈なキャプテンシーと至近距離セーブでゴールマウスを死守。' },
-    { name: 'J. レーマン', nationality: 'Germany', age: 55, rank: 'B', weeklyWage: 20, bio: '広大な守備範囲と飛び出し、正確なフィードを磨き上げる。' },
-    { name: 'C. クディチーニ', nationality: 'Italy', age: 51, rank: 'C', weeklyWage: 12, bio: '確実なキャッチングと安定したセービング技術を実直に指導。' }
+    { nationality: 'Denmark', age: 58, rank: 'A', weeklyWage: 30, bio: '強烈なキャプテンシーと至近距離セーブでゴールマウスを死守。' },
+    { nationality: 'Germany', age: 55, rank: 'B', weeklyWage: 20, bio: '広大な守備範囲と飛び出し、正確なフィードを磨き上げる。' },
+    { nationality: 'Italy', age: 51, rank: 'C', weeklyWage: 12, bio: '確実なキャッチングと安定したセービング技術を実直に指導。' }
   ],
   fitness: [
-    { name: 'A. ピンコリーニ', nationality: 'Italy', age: 62, rank: 'A', weeklyWage: 28, bio: '欧州最先端の運動生理学に基づき、怪我ゼロと90分の運動量を実現。' },
-    { name: 'J. ヴェンチュローネ', nationality: 'France', age: 54, rank: 'B', weeklyWage: 18, bio: '強度の高い持久走と筋力アップで強靭な肉体を作り上げる。' },
-    { name: 'D. ローラン', nationality: 'England', age: 47, rank: 'C', weeklyWage: 11, bio: '試合後の迅速な疲労回復と柔軟性維持を専門とするフィジカル派。' }
+    { nationality: 'Italy', age: 58, rank: 'A', weeklyWage: 28, bio: '欧州最先端の運動生理学に基づき、怪我予防と90分の運動量を実現。' },
+    { nationality: 'France', age: 54, rank: 'B', weeklyWage: 18, bio: '強度の高い持久走と筋力アップで強靭な肉体を作り上げる。' },
+    { nationality: 'England', age: 47, rank: 'C', weeklyWage: 11, bio: '試合後の迅速な疲労回復と柔軟性維持を専門とするフィジカル派。' }
   ]
 };
 
-function createCoach(def, category) {
+function createCoach(def, category, usedNames = null) {
   const roleLabels = {
     attacking: 'オフェンス',
     defending: 'ディフェンス',
@@ -121,27 +126,34 @@ function createCoach(def, category) {
     fitness: 'フィジカル'
   };
   const roleLabel = roleLabels[category] || category;
+  const nat = def.nationality || 'England';
+  const age = def.age || randInt(40, 58);
+  const nameData = typeof generateRandomStaffName === 'function'
+    ? generateRandomStaffName(nat, usedNames)
+    : { displayName: `C. Coach`, fullName: `Coach Staff` };
+
   return {
     id: `coach_${category}_${Math.random().toString(36).substr(2, 9)}`,
-    name: def.name,
+    name: nameData.displayName,
+    fullName: nameData.fullName,
     category,
     roleLabel,
     rank: def.rank || 'B',
     tag: roleLabel,
-    nationality: def.nationality || 'England',
-    age: def.age || 48,
+    nationality: nat,
+    age,
     weeklyWage: def.weeklyWage || 20,
-    bio: def.bio || '',
+    bio: def.bio || '熱心な指導で選手の能力を最大化する専門コーチ。',
     avatarData: null
   };
 }
 
-function createInitialCoaches(isPlayer = false) {
+function createInitialCoaches(isPlayer = false, usedNames = null) {
   return {
-    attacking: [ createCoach(COACHES_DATABASE.attacking[0], 'attacking') ],
-    defending: [ createCoach(COACHES_DATABASE.defending[0], 'defending') ],
-    goalkeeping: createCoach(COACHES_DATABASE.goalkeeping[0], 'goalkeeping'),
-    fitness: createCoach(COACHES_DATABASE.fitness[0], 'fitness')
+    attacking: [ createCoach(COACHES_DATABASE.attacking[0], 'attacking', usedNames) ],
+    defending: [ createCoach(COACHES_DATABASE.defending[0], 'defending', usedNames) ],
+    goalkeeping: createCoach(COACHES_DATABASE.goalkeeping[0], 'goalkeeping', usedNames),
+    fitness: createCoach(COACHES_DATABASE.fitness[0], 'fitness', usedNames)
   };
 }
 
@@ -1120,7 +1132,7 @@ const FACILITY_DEFINITIONS = {
 
 // ゲーム全体の状態管理
 const gameState = {
-  gmName: 'A. ファーガソン',
+  gmName: 'L. Vance',
   selectedClubId: 'london_fc',
   hasStartedOnce: false,
   season: 1,
@@ -1755,6 +1767,22 @@ function generateUniqueName(usedNames, nationality = null) {
   const nat = nationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
   const res = generatePlayerName(nat, usedNames);
   return res.displayName;
+}
+
+/**
+ * 監督・コーチ・GM等のスタッフ用架空欧州人名ジェネレーター
+ * 例: { displayName: "L. Vance", fullName: "Lucas Vance", nationality: "England" }
+ */
+function generateRandomStaffName(nationality = null, usedNames = null) {
+  const natKeys = (typeof NATIONALITIES !== 'undefined' && Array.isArray(NATIONALITIES) && NATIONALITIES.length > 0)
+    ? NATIONALITIES
+    : (typeof NATIONALITY_NAME_DATABASE !== 'undefined' ? Object.keys(NATIONALITY_NAME_DATABASE) : ['England', 'France', 'Spain', 'Germany', 'Italy', 'Netherlands', 'Portugal']);
+
+  const nat = (nationality && typeof NATIONALITY_NAME_DATABASE !== 'undefined' && NATIONALITY_NAME_DATABASE[nationality])
+    ? nationality
+    : natKeys[randInt(0, natKeys.length - 1)];
+
+  return generatePlayerName(nat, usedNames);
 }
 
 /**
@@ -10344,7 +10372,7 @@ function openIntroModal(allowCancel = false) {
   const inputGm = document.getElementById('input-gm-name');
 
   if (inputGm) {
-    inputGm.value = gameState.gmName || 'A. ファーガソン';
+    inputGm.value = gameState.gmName || 'L. Vance';
   }
   if (cancelBtn) {
     cancelBtn.classList.toggle('hidden', !allowCancel);
@@ -10367,7 +10395,7 @@ function openIntroModal(allowCancel = false) {
 function confirmIntroAndStartGame() {
   const inputGm = document.getElementById('input-gm-name');
   const rawName = inputGm ? inputGm.value.trim() : '';
-  gameState.gmName = rawName.length > 0 ? rawName : 'A. ファーガソン';
+  gameState.gmName = rawName.length > 0 ? rawName : 'L. Vance';
 
   const overlay = document.getElementById('intro-modal-overlay');
   overlay.classList.add('hidden');
@@ -10414,7 +10442,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
   const assignedManagers = [];
-  const usedManagerNames = new Set();
+  const usedManagerIndexes = new Set();
 
   gameState.clubs = CLUB_DEFINITIONS.map((def, cIdx) => {
     const isPlayer = def.id === gameState.selectedClubId;
@@ -10422,16 +10450,18 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     const formKey = def.defaultFormation && FORMATIONS[def.defaultFormation] ? def.defaultFormation : '4-3-3';
 
     // クラブの得意陣形・戦術に最も合致する監督をカタログから選抜
-    let mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name) && m.preferredFormation === formKey && m.preferredTactic === normTactic);
-    if (!mgrDef) {
-      mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name) && (m.preferredFormation === formKey || m.preferredTactic === normTactic));
+    let mgrIdx = MANAGERS_DATABASE.findIndex((m, idx) => !usedManagerIndexes.has(idx) && m.preferredFormation === formKey && m.preferredTactic === normTactic);
+    if (mgrIdx === -1) {
+      mgrIdx = MANAGERS_DATABASE.findIndex((m, idx) => !usedManagerIndexes.has(idx) && (m.preferredFormation === formKey || m.preferredTactic === normTactic));
     }
-    if (!mgrDef) {
-      mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name)) || MANAGERS_DATABASE[cIdx % MANAGERS_DATABASE.length];
+    if (mgrIdx === -1) {
+      mgrIdx = MANAGERS_DATABASE.findIndex((m, idx) => !usedManagerIndexes.has(idx));
     }
-    usedManagerNames.add(mgrDef.name);
+    if (mgrIdx === -1) mgrIdx = cIdx % MANAGERS_DATABASE.length;
+    usedManagerIndexes.add(mgrIdx);
 
-    const managerObj = createManager(mgrDef, def.id);
+    const mgrDef = MANAGERS_DATABASE[mgrIdx];
+    const managerObj = createManager(mgrDef, def.id, usedNames);
 
     const club = {
       id: def.id,
@@ -10463,26 +10493,24 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     return club;
   });
 
-  // 未契約のコーチをフリーコーチ候補プールとして初期化
+  // 未契約のコーチをフリーコーチ候補プールとして初期化（架空名動的付与）
   gameState.freeCoaches = {
-    attacking: (COACHES_DATABASE.attacking || []).slice(1).map(d => createCoach(d, 'attacking')),
-    defending: (COACHES_DATABASE.defending || []).slice(1).map(d => createCoach(d, 'defending')),
-    goalkeeping: (COACHES_DATABASE.goalkeeping || []).slice(1).map(d => createCoach(d, 'goalkeeping')),
-    fitness: (COACHES_DATABASE.fitness || []).slice(1).map(d => createCoach(d, 'fitness'))
+    attacking: (COACHES_DATABASE.attacking || []).slice(1).map(d => createCoach(d, 'attacking', usedNames)),
+    defending: (COACHES_DATABASE.defending || []).slice(1).map(d => createCoach(d, 'defending', usedNames)),
+    goalkeeping: (COACHES_DATABASE.goalkeeping || []).slice(1).map(d => createCoach(d, 'goalkeeping', usedNames)),
+    fitness: (COACHES_DATABASE.fitness || []).slice(1).map(d => createCoach(d, 'fitness', usedNames))
   };
 
-  // 未就任の監督をフリー監督候補プールとして初期化
-  gameState.freeManagers = MANAGERS_DATABASE.filter(m => !usedManagerNames.has(m.name)).map(m => createManager(m));
+  // 未就任の監督をフリー監督候補プールとして初期化（架空名動的付与）
+  gameState.freeManagers = MANAGERS_DATABASE.filter((m, idx) => !usedManagerIndexes.has(idx)).map(m => createManager(m, null, usedNames));
   if (gameState.freeManagers.length < 3) {
     const backupDefs = [
-      { name: 'H. フリック風', nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
-      { name: 'L. エンリケ風', nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
-      { name: 'M. アッレグリ風', nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' }
+      { nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
+      { nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
+      { nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' }
     ];
     backupDefs.forEach(b => {
-      if (!gameState.freeManagers.some(f => f.name === b.name)) {
-        gameState.freeManagers.push(createManager(b));
-      }
+      gameState.freeManagers.push(createManager(b, null, usedNames));
     });
   }
 
