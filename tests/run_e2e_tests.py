@@ -40,10 +40,14 @@ async def run_e2e():
 
         # 1. GM就任
         await page.evaluate("""() => {
-            const btn = document.getElementById('btn-confirm-intro');
+            const btn = document.getElementById('btn-intro-confirm') || document.getElementById('btn-confirm-intro');
             if (btn) btn.click();
             const ov = document.getElementById('intro-modal-overlay');
             if (ov) ov.classList.add('hidden');
+            const btnStaff = document.getElementById('btn-confirm-initial-staff');
+            if (btnStaff) btnStaff.click();
+            const staffOv = document.getElementById('initial-staff-modal-overlay');
+            if (staffOv) staffOv.classList.add('hidden');
         }""")
         await page.wait_for_timeout(500)
 
