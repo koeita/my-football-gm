@@ -1153,19 +1153,23 @@ function buildPlayerPitchProficiencyHtml(p) {
   return `
     <div class="ef-pitch-container">
       <div class="ef-pitch-field">
-        <div class="ef-pitch-row ef-row-fw">
-          <div class="ef-pos-slot ${getPosClass('LW')}" title="${getPosTitle('LW', 'LW')}">LW</div>
+        <!-- 1列目：最前線 CF -->
+        <div class="ef-pitch-row ef-row-cf">
           <div class="ef-pos-slot ${getPosClass('CF')}" title="${getPosTitle('CF', 'CF')}">CF</div>
+        </div>
+        <!-- 2列目：前線両翼 LW/RW ＆ トップ下 AM（一列下に配置） -->
+        <div class="ef-pitch-row ef-row-wings-am">
+          <div class="ef-pos-slot ${getPosClass('LW')}" title="${getPosTitle('LW', 'LW')}">LW</div>
+          <div class="ef-pos-slot ${getPosClass('AM')}" title="${getPosTitle('AM', 'AM')}">AM</div>
           <div class="ef-pos-slot ${getPosClass('RW')}" title="${getPosTitle('RW', 'RW')}">RW</div>
         </div>
-        <div class="ef-pitch-row ef-row-am">
+        <!-- 3列目：中盤両翼 LM/RM ＆ セントラル CM（一列下に配置） -->
+        <div class="ef-pitch-row ef-row-mids-cm">
           <div class="ef-pos-slot ${getPosClass('LM')}" title="${getPosTitle('LM', 'LM')}">LM</div>
-          <div class="ef-pos-slot ${getPosClass('AM')}" title="${getPosTitle('AM', 'AM')}">AM</div>
+          <div class="ef-pos-slot ${getPosClass('CM')}" title="${getPosTitle('CM', 'CM')}">CM</div>
           <div class="ef-pos-slot ${getPosClass('RM')}" title="${getPosTitle('RM', 'RM')}">RM</div>
         </div>
-        <div class="ef-pitch-row ef-row-cm">
-          <div class="ef-pos-slot ${getPosClass('CM')}" title="${getPosTitle('CM', 'CM')}">CM</div>
-        </div>
+        <!-- 4列目：アンカー DM -->
         <div class="ef-pitch-row ef-row-dm">
           <div class="ef-pos-slot ${getPosClass('DM')}" title="${getPosTitle('DM', 'DM')}">DM</div>
         </div>
@@ -9377,13 +9381,21 @@ function openPlayerProfileModal(playerId) {
       <!-- タブ1：能力 -->
       <div class="profile-tab-panel" data-profile-panel="ability">
         <div class="profile-section-grid">
-          <!-- 左：6大能力六角形レーダーチャート -->
+          <!-- 左：6大能力六角形レーダーチャート ＆ 詳細能力パラメータ -->
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
               <span class="profile-box-title">能力パラメータ</span>
               <span class="profile-ovr-badge">OVR ${baseOvr}</span>
             </div>
             ${hexagonChartHtml}
+            <div class="profile-compact-attrs-grid">
+              <div class="profile-attr-chip"><span class="attr-chip-name">決定力</span><strong class="mono ${getStatTierClass(attrs.finishing).valClass}">${attrs.finishing}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">ドリブル</span><strong class="mono ${getStatTierClass(attrs.dribbling).valClass}">${attrs.dribbling}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">パス</span><strong class="mono ${getStatTierClass(attrs.passing).valClass}">${attrs.passing}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">守備</span><strong class="mono ${getStatTierClass(attrs.defending).valClass}">${attrs.defending}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">スピード</span><strong class="mono ${getStatTierClass(attrs.pace).valClass}">${attrs.pace}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">スタミナ</span><strong class="mono ${getStatTierClass(attrs.stamina).valClass}">${attrs.stamina}</strong></div>
+            </div>
           </div>
 
           <!-- 右：適性ポジション図（イーフト風ピッチボード） ＆ トレーニング -->

@@ -2905,7 +2905,32 @@ body {
 
 /* 六角形能力レーダーチャート（SVG） */
 .profile-box-hexagon {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.profile-compact-attrs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.profile-attr-chip {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 4px 10px;
+  background-color: #202428;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.profile-attr-chip .attr-chip-name {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .profile-hexagon-wrap {
