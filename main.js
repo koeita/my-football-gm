@@ -1166,36 +1166,29 @@ function buildPlayerPitchProficiencyHtml(p) {
   return `
     <div class="ef-pitch-container">
       <div class="ef-pitch-field">
-        <!-- 1列目：最前線 CF -->
-        <div class="ef-pitch-row ef-row-cf">
-          <div class="ef-pos-slot ${getPosClass('CF')}" title="${getPosTitle('CF', 'CF')}">CF</div>
-        </div>
-        <!-- 2列目：前線両翼 LW/RW ＆ トップ下 AM（一列下に配置） -->
-        <div class="ef-pitch-row ef-row-wings-am">
-          <div class="ef-pos-slot ${getPosClass('LW')}" title="${getPosTitle('LW', 'LW')}">LW</div>
-          <div class="ef-pos-slot ${getPosClass('AM')}" title="${getPosTitle('AM', 'AM')}">AM</div>
-          <div class="ef-pos-slot ${getPosClass('RW')}" title="${getPosTitle('RW', 'RW')}">RW</div>
-        </div>
-        <!-- 3列目：中盤両翼 LM/RM ＆ セントラル CM（一列下に配置） -->
-        <div class="ef-pitch-row ef-row-mids-cm">
-          <div class="ef-pos-slot ${getPosClass('LM')}" title="${getPosTitle('LM', 'LM')}">LM</div>
-          <div class="ef-pos-slot ${getPosClass('CM')}" title="${getPosTitle('CM', 'CM')}">CM</div>
-          <div class="ef-pos-slot ${getPosClass('RM')}" title="${getPosTitle('RM', 'RM')}">RM</div>
-        </div>
-        <!-- 4列目：アンカー DM -->
-        <div class="ef-pitch-row ef-row-dm">
-          <div class="ef-pos-slot ${getPosClass('DM')}" title="${getPosTitle('DM', 'DM')}">DM</div>
-        </div>
-        <!-- 5列目：最終ライン LB/LWB, CB, RB/RWB -->
-        <div class="ef-pitch-row ef-row-df">
-          <div class="ef-pos-slot ${getPosClass('LB')}" title="${getPosTitle('LB', 'LB / LWB')}" style="font-size: 8.5px;">LB/LWB</div>
-          <div class="ef-pos-slot ${getPosClass('CB')}" title="${getPosTitle('CB', 'CB')}">CB</div>
-          <div class="ef-pos-slot ${getPosClass('RB')}" title="${getPosTitle('RB', 'RB / RWB')}" style="font-size: 8.5px;">RB/RWB</div>
-        </div>
-        <!-- 6列目：ゴール前 GK -->
-        <div class="ef-pitch-row ef-row-gk">
-          <div class="ef-pos-slot ${getPosClass('GK')}" title="${getPosTitle('GK', 'GK')}">GK</div>
-        </div>
+        <!-- LW / RW: CF〜AMの横に一列上へ伸長（縦2行スパン） -->
+        <div class="ef-pos-slot ef-pos-lw ${getPosClass('LW')}" title="${getPosTitle('LW', 'LW')}">LW</div>
+        <div class="ef-pos-slot ef-pos-cf ${getPosClass('CF')}" title="${getPosTitle('CF', 'CF')}">CF</div>
+        <div class="ef-pos-slot ef-pos-rw ${getPosClass('RW')}" title="${getPosTitle('RW', 'RW')}">RW</div>
+
+        <!-- AM: CFの下、CMの上 -->
+        <div class="ef-pos-slot ef-pos-am ${getPosClass('AM')}" title="${getPosTitle('AM', 'AM')}">AM</div>
+
+        <!-- LM / RM: CM〜DMの横に一列下へ伸長（縦2行スパン） -->
+        <div class="ef-pos-slot ef-pos-lm ${getPosClass('LM')}" title="${getPosTitle('LM', 'LM')}">LM</div>
+        <div class="ef-pos-slot ef-pos-cm ${getPosClass('CM')}" title="${getPosTitle('CM', 'CM')}">CM</div>
+        <div class="ef-pos-slot ef-pos-rm ${getPosClass('RM')}" title="${getPosTitle('RM', 'RM')}">RM</div>
+
+        <!-- DM: CMの下、CBの上 -->
+        <div class="ef-pos-slot ef-pos-dm ${getPosClass('DM')}" title="${getPosTitle('DM', 'DM')}">DM</div>
+
+        <!-- DFライン: LB/LWB, CB, RB/RWB -->
+        <div class="ef-pos-slot ef-pos-lb ${getPosClass('LB')}" title="${getPosTitle('LB', 'LB / LWB')}" style="font-size: 8.5px;">LB/LWB</div>
+        <div class="ef-pos-slot ef-pos-cb ${getPosClass('CB')}" title="${getPosTitle('CB', 'CB')}">CB</div>
+        <div class="ef-pos-slot ef-pos-rb ${getPosClass('RB')}" title="${getPosTitle('RB', 'RB / RWB')}" style="font-size: 8.5px;">RB/RWB</div>
+
+        <!-- GK: 最下段中央 -->
+        <div class="ef-pos-slot ef-pos-gk ${getPosClass('GK')}" title="${getPosTitle('GK', 'GK')}">GK</div>
       </div>
       <div class="ef-pitch-legend">
         <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性 (◎)</div>

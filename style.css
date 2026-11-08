@@ -10134,9 +10134,10 @@ button.hidden,
 
 /* サッカーコートの薄いライン */
 .ef-pitch-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(6, 25px);
+  gap: 5px;
   position: relative;
   background-image: 
     radial-gradient(circle at 50% 50%, rgba(46, 204, 113, 0.08) 0%, transparent 60%),
@@ -10144,20 +10145,14 @@ button.hidden,
   background-size: 100% 100%, 100% 33%;
   border: 1px dashed rgba(46, 204, 113, 0.2);
   border-radius: 4px;
-  padding: 6px 4px;
-}
-
-.ef-pitch-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
+  padding: 6px 6px;
+  max-width: 250px;
+  margin: 0 auto;
 }
 
 .ef-pos-slot {
-  flex: 1;
-  max-width: 58px;
-  height: 22px;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10167,6 +10162,71 @@ button.hidden,
   border-radius: 3px;
   transition: all 0.2s ease;
   user-select: none;
+  box-sizing: border-box;
+}
+
+/* 各スロットのグリッド配置（イーフト仕様） */
+.ef-pos-cf {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ef-pos-am {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.ef-pos-cm {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.ef-pos-dm {
+  grid-column: 2;
+  grid-row: 4;
+}
+
+.ef-pos-cb {
+  grid-column: 2;
+  grid-row: 5;
+}
+
+.ef-pos-gk {
+  grid-column: 2;
+  grid-row: 6;
+}
+
+/* LW/RW: CF〜AMの横にかけて一列上に伸長（縦2行スパン） */
+.ef-pos-lw {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.ef-pos-rw {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+/* LM/RM: CM〜DMの横にかけて一列下に伸長（縦2行スパン） */
+.ef-pos-lm {
+  grid-column: 1;
+  grid-row: 3 / span 2;
+}
+
+.ef-pos-rm {
+  grid-column: 3;
+  grid-row: 3 / span 2;
+}
+
+/* LB/LWB, RB/RWB: CBの横 */
+.ef-pos-lb {
+  grid-column: 1;
+  grid-row: 5;
+}
+
+.ef-pos-rb {
+  grid-column: 3;
+  grid-row: 5;
 }
 
 /* 本適性（濃い緑・100%発揮） */
