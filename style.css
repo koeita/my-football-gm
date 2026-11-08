@@ -2474,10 +2474,30 @@ body {
   border: 1px solid #38bdf8;
 }
 
+.pitch-node-subpos.fit-pos,
+.pitch-node-subpos.badge-fit {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.pitch-node-subpos.semi-pos,
+.pitch-node-subpos.badge-semi {
+  background-color: rgba(168, 224, 99, 0.18);
+  color: #a8e063;
+  border-color: #a8e063;
+}
+
 .badge-subpos {
   background-color: rgba(56, 189, 248, 0.18);
   color: #38bdf8;
   border: 1px solid #38bdf8;
+}
+
+.badge-training {
+  background-color: rgba(255, 211, 42, 0.18);
+  color: #ffd32a;
+  border: 1px solid #ffd32a;
 }
 
 .slot-select.slot-sub {
@@ -2885,7 +2905,32 @@ body {
 
 /* 六角形能力レーダーチャート（SVG） */
 .profile-box-hexagon {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.profile-compact-attrs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.profile-attr-chip {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 4px 10px;
+  background-color: #202428;
+  border: 1px solid #32383e;
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.profile-attr-chip .attr-chip-name {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .profile-hexagon-wrap {
@@ -2984,6 +3029,45 @@ body {
   background-color: #202428;
   border: 1px solid #32383e;
   border-radius: 3px;
+}
+
+/* ポジション特訓・コンバートUI */
+.profile-training-box {
+  background-color: #1a1e23;
+  border: 1px solid #2e353d;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+
+.training-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.training-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
+
+.training-prog-track {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.training-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd32a, #ff9f1a);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .profile-traits-wrap {
@@ -10035,4 +10119,203 @@ button.hidden,
 .btn-advance-large.hidden,
 .btn-advance-sub.hidden {
   display: none !important;
+}
+
+/* ===== イーフト風 ポジション適性ピッチ図（Mini Pitch Board） ===== */
+.ef-pitch-container {
+  background: linear-gradient(180deg, #16241b 0%, #101c15 100%);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+  border-radius: 6px;
+  padding: 8px 6px 6px 6px;
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* サッカーコートの薄いライン */
+.ef-pitch-field {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(6, 25px);
+  gap: 5px;
+  position: relative;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(46, 204, 113, 0.08) 0%, transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 33%;
+  border: 1px dashed rgba(46, 204, 113, 0.2);
+  border-radius: 4px;
+  padding: 6px 6px;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.ef-pos-slot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+/* 各スロットのグリッド配置（イーフト仕様） */
+.ef-pos-cf {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ef-pos-am {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.ef-pos-cm {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.ef-pos-dm {
+  grid-column: 2;
+  grid-row: 4;
+}
+
+.ef-pos-cb {
+  grid-column: 2;
+  grid-row: 5;
+}
+
+.ef-pos-gk {
+  grid-column: 2;
+  grid-row: 6;
+}
+
+/* LW/RW: CF〜AMの横にかけて一列上に伸長（縦2行スパン） */
+.ef-pos-lw {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.ef-pos-rw {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+/* LM/RM: CM〜DMの横にかけて一列下に伸長（縦2行スパン） */
+.ef-pos-lm {
+  grid-column: 1;
+  grid-row: 3 / span 2;
+}
+
+.ef-pos-rm {
+  grid-column: 3;
+  grid-row: 3 / span 2;
+}
+
+/* LB/LWB, RB/RWB: CBの横 */
+.ef-pos-lb {
+  grid-column: 1;
+  grid-row: 5;
+}
+
+.ef-pos-rb {
+  grid-column: 3;
+  grid-row: 5;
+}
+
+/* 本適性（濃い緑・100%発揮） */
+.ef-pos-slot.ef-pos-major,
+.ef-legend-color.ef-pos-major {
+  background-color: #2ecc71;
+  color: #0b2b18;
+  border: 1px solid #27ae60;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.4);
+}
+
+/* 薄適性（薄い緑・92%発揮） */
+.ef-pos-slot.ef-pos-sub,
+.ef-legend-color.ef-pos-sub {
+  background-color: rgba(46, 204, 113, 0.22);
+  color: #a8e063;
+  border: 1px dashed #2ecc71;
+}
+
+/* 適性なし（暗いグレー・80%発揮） */
+.ef-pos-slot.ef-pos-none,
+.ef-legend-color.ef-pos-none {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #4b5563;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* 凡例 */
+.ef-pitch-legend {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.ef-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ef-legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* おまかせ最適編成ボタン */
+.tactical-header-titles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-auto-optimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  color: #2ecc71;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn-auto-optimal:hover {
+  background: #2ecc71;
+  color: #111;
+  border-color: #2ecc71;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-auto-optimal:active {
+  transform: translateY(0);
+}
+
+.btn-optimal-icon {
+  font-size: 12px;
 }
