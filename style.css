@@ -2422,7 +2422,8 @@ body {
 }
 
 /* 控え選手カード：スタメン選手と全く同じカード形状 */
-#pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
+#pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
+#pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
   position: relative !important;
   left: auto !important;
   top: auto !important;
@@ -7450,21 +7451,23 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   /* 案1：控え選手を横スクロールカルーセル（横並びドック）化 */
-  .pitch-bench-list {
+  .pitch-bench-list,
+  .pitch-reserves-list {
     display: flex !important;
     flex-direction: row !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    gap: 6px !important;
-    padding: 2px 2px 6px 2px !important;
+    gap: 5px !important;
+    padding: 2px 2px 4px 2px !important;
     max-height: none !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-x: contain !important;
     touch-action: pan-x !important;
   }
 
-  /* 控え選手カード：横並び用の均一幅・高さコンパクトカード（文字重なりを完全排除） */
-  #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
+  /* 控え＆ベンチ外選手カード：横並び用の均一幅・高さコンパクトカード */
+  #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
+  #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
     flex-shrink: 0 !important;
     width: auto !important;
     min-width: 110px !important;
@@ -11101,10 +11104,19 @@ button.hidden,
    ---------------------------------------------------- */
 .pitch-reserves-box {
   background-color: rgba(22, 27, 34, 0.75);
-  border: 1px dashed rgba(255, 255, 255, 0.16) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.2) !important;
   border-radius: 4px;
   padding: 8px 10px;
   margin-top: 10px !important;
+}
+
+.pitch-reserves-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 2px;
 }
 
 .pitch-reserves-box .pitch-sub-title {

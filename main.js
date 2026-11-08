@@ -8388,34 +8388,13 @@ function renderTacticalBoard() {
   const reservesBoxEl = document.getElementById('pitch-reserves-box');
   const reservesTitleEl = document.getElementById('pitch-reserves-title');
   const reservesListEl = document.getElementById('pitch-reserves-list');
-  const pillBenchBtn = document.getElementById('pill-show-bench');
-  const pillReservesBtn = document.getElementById('pill-show-reserves');
 
   if (!benchListEl) return;
-
-  if (!gameState.tacticalBottomSubView) {
-    gameState.tacticalBottomSubView = 'bench';
-  }
 
   const allNonStarters = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
   const benchPlayers = allNonStarters.filter(p => p.isBench !== false).slice(0, 9);
   const reservePlayers = allNonStarters.filter(p => !benchPlayers.some(bp => bp.id === p.id));
 
-  // モバイル用切り替えピルボタンの更新
-  if (pillBenchBtn) {
-    pillBenchBtn.textContent = `控え (${benchPlayers.length})`;
-    pillBenchBtn.classList.toggle('active', gameState.tacticalBottomSubView === 'bench');
-  }
-  if (pillReservesBtn) {
-    pillReservesBtn.textContent = `ベンチ外 (${reservePlayers.length})`;
-    pillReservesBtn.classList.toggle('active', gameState.tacticalBottomSubView === 'reserves');
-    pillReservesBtn.classList.toggle('hidden', reservePlayers.length === 0);
-  }
-
-  // 画面幅がモバイルかつベンチ外表示モードの場合はトレイ対象を切り替え
-  const isMobile = window.innerWidth <= 600;
-  const isShowingReservesOnMobile = isMobile && gameState.tacticalBottomSubView === 'reserves' && reservePlayers.length > 0;
-  const targetTrayPlayers = isShowingReservesOnMobile ? reservePlayers : benchPlayers;
   const selectedSlot = gameState.selectedSlotIndex !== null ? formationDef.slots[gameState.selectedSlotIndex] : null;
   const selectedStarter = selectedSlot
     ? playerClub.players.find(p => p.isStarter && p.slotIndex === selectedSlot.slotIndex)
@@ -8427,7 +8406,7 @@ function renderTacticalBoard() {
     if (clearBtnEl) clearBtnEl.classList.remove('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
-    const sortedBench = [...targetTrayPlayers].sort((a, b) => {
+    const sortedBench = [...benchPlayers].sort((a, b) => {
       const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
       const bFit = getPositionFitInfo(b, selectedSlot.pos).factor;
       if (aFit !== bFit) return bFit - aFit;
@@ -8435,7 +8414,7 @@ function renderTacticalBoard() {
     });
 
     if (sortedBench.length === 0) {
-      benchListEl.innerHTML = `<div class="empty-log-message">${isShowingReservesOnMobile ? 'ベンチ外選手はいません。' : '控え選手がいません。'}</div>`;
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const fitInfo = getPositionFitInfo(bp, selectedSlot.pos);
@@ -8478,12 +8457,11 @@ function renderTacticalBoard() {
       }).join('');
     }
   } else {
-    const trayTitle = isShowingReservesOnMobile ? `ベンチ外（${reservePlayers.length}名）` : `控え選手（${benchPlayers.length}名）`;
-    if (subTitleEl) subTitleEl.textContent = trayTitle;
+    if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名)`;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
-    const sortedBench = [...targetTrayPlayers].sort((a, b) => {
+    const sortedBench = [...benchPlayers].sort((a, b) => {
       const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
       const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
       if (orderA !== orderB) return orderA - orderB;
@@ -8491,7 +8469,7 @@ function renderTacticalBoard() {
     });
 
     if (sortedBench.length === 0) {
-      benchListEl.innerHTML = `<div class="empty-log-message">${isShowingReservesOnMobile ? 'ベンチ外選手はいません。' : '控え選手がいません。'}</div>`;
+      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const baseOvr = getPlayerOverallRating(bp);
@@ -8530,9 +8508,9 @@ function renderTacticalBoard() {
   }
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(benchListEl);
 
-  // ベンチ外（リザーブ）リストの描画（21人目以降の選手、デスクトップ専用常時表示）
+  // ベンチ外（リザーブ）リストの描画（21人目以降の選手：PCおよびモバイル両方で下に配置）
   if (reservesBoxEl && reservesListEl) {
-    if (reservePlayers.length === 0 || isMobile) {
+    if (reservePlayers.length === 0) {
       reservesBoxEl.classList.add('hidden');
       reservesListEl.innerHTML = '';
     } else {
