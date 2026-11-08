@@ -2051,6 +2051,10 @@ body {
   min-width: 0;
 }
 
+.formation-select-wrap-mobile {
+  display: none;
+}
+
 .formation-selector-label {
   font-size: 10px;
   font-weight: 700;
@@ -5959,24 +5963,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .tactical-board-panel .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .formation-selector-wrap {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    justify-content: flex-end;
   }
 
-  .formation-btn-group {
-    flex-wrap: wrap;
-    gap: 4px;
+  .formation-btn-group-pc {
+    display: none !important;
   }
 
-  .btn-formation {
-    min-height: 38px;
-    padding: 4px 10px;
+  .formation-select-wrap-mobile {
+    display: block !important;
   }
 
   .pitch-container {
@@ -7122,12 +7126,20 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     align-items: center !important;
     justify-content: space-between !important;
     padding: 6px 8px !important;
-    gap: 4px !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .tactical-header-titles {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
   .tactical-board-panel .panel-title {
     font-size: 13px !important;
     margin: 0 !important;
+    white-space: nowrap !important;
   }
 
   .tactical-board-panel .panel-note {
@@ -7135,61 +7147,154 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .formation-selector-wrap {
-    width: 100% !important;
+    width: auto !important;
     gap: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    margin: 0 !important;
   }
 
   .formation-selector-label {
     display: none !important;
   }
 
-  .formation-btn-group {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    width: 100% !important;
-    gap: 4px 3px !important;
-    overflow: visible !important;
-    padding: 2px 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .formation-btn-group::-webkit-scrollbar {
+  .formation-btn-group-pc {
     display: none !important;
   }
 
-  .btn-formation {
-    flex: none !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 26px !important;
-    height: 26px !important;
-    padding: 2px 1px !important;
+  .formation-select-wrap-mobile {
+    display: block !important;
+  }
+
+  .formation-select-mobile {
+    height: 28px !important;
+    min-width: 105px !important;
+    padding: 0 22px 0 8px !important;
     font-size: 11px !important;
     font-weight: 700 !important;
-    line-height: 20px !important;
-    text-align: center !important;
-    white-space: nowrap !important;
+    color: #2ecc71 !important;
+    background-color: #1a1d20 !important;
+    border: 1px solid var(--accent-green, #2ecc71) !important;
+    border-radius: 4px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232ecc71' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 6px center !important;
+    cursor: pointer !important;
     box-sizing: border-box !important;
-    letter-spacing: -0.02em !important;
+  }
+
+  .formation-select-mobile:focus {
+    border-color: #2ecc71 !important;
+    outline: none !important;
+  }
+
+  .btn-auto-optimal {
+    height: 28px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    line-height: 26px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 監督ステータスバナーの超コンパクト化 */
+  .tactical-manager-banner {
+    padding: 4px 8px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .manager-banner-inner {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4px 8px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .manager-banner-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .manager-avatar-wrap {
+    width: 24px !important;
+    height: 24px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .manager-avatar-wrap svg,
+  .manager-avatar-wrap canvas {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .manager-banner-info {
+    min-width: 0 !important;
+    gap: 1px !important;
+  }
+
+  .manager-banner-title {
+    font-size: 11px !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .manager-name {
+    font-size: 11px !important;
+  }
+
+  .manager-trust-label {
+    font-size: 10px !important;
+  }
+
+  .manager-banner-style {
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.15 !important;
+  }
+
+  .manager-banner-tags {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mgr-tag {
+    padding: 1px 4px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
   }
 
   .tactical-board-body {
-    padding: 4px 6px !important;
+    padding: 3px 4px !important;
   }
 
   .tactical-board-grid {
     display: flex !important;
     flex-direction: column !important;
-    gap: 6px !important;
+    gap: 4px !important;
   }
 
-  /* ピッチコンテナ：高さ295pxでGKからFWまで1画面上部に完全収容 */
+  /* ピッチコンテナ：余白縮小により画面高さを活かして広く展開 */
   .pitch-container {
     width: 100% !important;
-    min-height: 295px !important;
-    height: 295px !important;
-    max-height: 295px !important;
+    min-height: 350px !important;
+    height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
+    flex: 1 !important;
   }
 
   /* ピッチ上の選手カード：4バック・中盤が重ならないコンパクトサイズ */
@@ -10318,4 +10423,306 @@ button.hidden,
 
 .btn-optimal-icon {
   font-size: 12px;
+}
+
+/* ==========================================================================
+   監督（ヘッドコーチ）哲学＆人事システム スタイル
+   ========================================================================== */
+
+/* 作戦ボード上部：監督ステータスバナー */
+.tactical-manager-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.manager-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.manager-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manager-avatar-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  background: #1a1d20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.manager-banner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.manager-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.manager-name {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.manager-trust-label {
+  color: var(--accent-green);
+  font-size: 11px;
+}
+
+.manager-banner-style {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.manager-banner-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+
+.mgr-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mgr-tag.match {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  color: #2ecc71;
+}
+
+.mgr-tag.unmatch {
+  background: rgba(231, 76, 60, 0.12);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  color: #e74c3c;
+}
+
+.mgr-tag.bonus {
+  background: rgba(52, 152, 219, 0.18);
+  border: 1px solid rgba(52, 152, 219, 0.5);
+  color: #3498db;
+}
+
+.mgr-tag.none {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+}
+
+/* 経営タブ：監督人事パネル */
+.manager-management-panel {
+  margin-bottom: 20px;
+}
+
+.manager-current-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.manager-current-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.manager-current-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--accent-green);
+  background: #1a1d20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.manager-current-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manager-current-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manager-current-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.manager-current-bio {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.manager-current-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-sack-manager {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.5);
+  color: #e74c3c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sack-manager:hover {
+  background: #e74c3c;
+  color: #fff;
+}
+
+/* 後任監督リストグリッド */
+.manager-candidates-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.manager-candidates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.manager-candidate-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.manager-candidate-card:hover {
+  border-color: rgba(46, 204, 113, 0.5);
+  transform: translateY(-2px);
+}
+
+.candidate-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.candidate-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: #1a1d20;
+  flex-shrink: 0;
+}
+
+.candidate-info-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.candidate-info-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.candidate-body {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.candidate-style-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.candidate-bio {
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.candidate-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.btn-hire-manager {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-hire-manager:hover {
+  background: var(--accent-green);
+  color: #111;
 }

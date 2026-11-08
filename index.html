@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261109_0155">
+  <link rel="stylesheet" href="style.css?v=20261109_0215">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -397,7 +397,7 @@
             </div>
             <div class="formation-selector-wrap">
               <span class="formation-selector-label mono">陣形:</span>
-              <div class="formation-btn-group" id="formation-btn-group" role="group" aria-label="フォーメーション選択">
+              <div class="formation-btn-group formation-btn-group-pc" id="formation-btn-group" role="group" aria-label="フォーメーション選択">
                 <button type="button" class="btn btn-formation active mono" data-formation="4-3-3">4-3-3</button>
                 <button type="button" class="btn btn-formation mono" data-formation="4-2-3-1">4-2-3-1</button>
                 <button type="button" class="btn btn-formation mono" data-formation="4-4-2">4-4-2</button>
@@ -407,10 +407,26 @@
                 <button type="button" class="btn btn-formation mono" data-formation="4-1-2-3">4-1-2-3</button>
                 <button type="button" class="btn btn-formation mono" data-formation="4-3-1-2">4-3-1-2</button>
               </div>
+              <div class="formation-select-wrap-mobile" id="formation-select-wrap-mobile">
+                <select class="formation-select-mobile mono" id="formation-select-mobile" aria-label="フォーメーション変更">
+                  <option value="4-3-3">陣形 4-3-3</option>
+                  <option value="4-2-3-1">陣形 4-2-3-1</option>
+                  <option value="4-4-2">陣形 4-4-2</option>
+                  <option value="3-5-2">陣形 3-5-2</option>
+                  <option value="3-4-3">陣形 3-4-3</option>
+                  <option value="5-3-2">陣形 5-3-2</option>
+                  <option value="4-1-2-3">陣形 4-1-2-3</option>
+                  <option value="4-3-1-2">陣形 4-3-1-2</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div class="panel-body tactical-board-body">
+            <!-- 監督哲学・就任ステータスバナー -->
+            <div class="tactical-manager-banner" id="tactical-manager-banner">
+              <!-- JSで描画 -->
+            </div>
             <div class="tactical-board-grid">
               <!-- サッカーグラウンド（ピッチ）描画エリア -->
               <div class="pitch-container" id="pitch-container">
@@ -797,6 +813,22 @@
           <div class="facilities-grid" id="facilities-grid">
             <!-- JSで3つの施設カードを描画 -->
           </div>
+        </div>
+      </div>
+
+      <!-- 監督人事パネル（TECHNICAL STAFF） -->
+      <div class="panel manager-management-panel" id="manager-management-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">監督人事</h2>
+          </div>
+          <div class="team-power-badges" id="manager-header-badges">
+            <span class="power-badge">現場信頼度 <strong class="mono accent-green" id="manager-panel-trust">80%</strong></span>
+            <span class="power-badge">監督週給 <strong class="mono accent-gold" id="manager-panel-wage">£80k</strong></span>
+          </div>
+        </div>
+        <div class="panel-body" id="manager-panel-body">
+          <!-- JSで現在の監督情報カード ＆ 後任監督候補リストを描画 -->
         </div>
       </div>
 
@@ -1251,6 +1283,6 @@
   </div>
 
   <script src="avatar.js?v=20261108_0925"></script>
-  <script src="main.js?v=20261109_0155"></script>
+  <script src="main.js?v=20261109_0215"></script>
 </body>
 </html>

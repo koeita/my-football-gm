@@ -149,6 +149,32 @@ class TestGameLogicUnits(unittest.TestCase):
         self.assertIn('function applyAutoOptimalLineup', self.js_code)
         self.assertIn('btn-auto-optimal-lineup', self.js_code)
 
+    def test_manager_philosophy_and_management_system(self):
+        """監督哲学・人事システムのデータ構造・ボーナスロジック・UI定義が正しく統合されていること"""
+        # main.js 内のコア関数
+        self.assertIn('const MANAGERS_DATABASE =', self.js_code)
+        self.assertIn('function createManager', self.js_code)
+        self.assertIn('function getManagerBuyoutFee', self.js_code)
+        self.assertIn('function updateManagerTrustAfterMatch', self.js_code)
+        self.assertIn('function renderTacticalManagerBanner', self.js_code)
+        self.assertIn('function renderManagerManagementPanel', self.js_code)
+        self.assertIn('function sackCurrentManager', self.js_code)
+        self.assertIn('function hireNewManager', self.js_code)
+        self.assertIn('managerBonusOvr', self.js_code)
+
+        # avatar.js 内の監督アバター関数
+        with open(os.path.join(ROOT_DIR, 'avatar.js'), 'r', encoding='utf-8') as f:
+            avatar_code = f.read()
+        self.assertIn('function generateManagerAvatar', avatar_code)
+        self.assertIn('function getManagerAvatarHtml', avatar_code)
+
+        # index.html 内のUIコンテナ
+        with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
+            html_code = f.read()
+        self.assertIn('id="tactical-manager-banner"', html_code)
+        self.assertIn('id="manager-management-panel"', html_code)
+        self.assertIn('id="manager-panel-body"', html_code)
+
     def test_tactical_styles_definitions(self):
         """重複のない5大戦術スタイルが定義され、試合シミュレーションロジックと連動していること"""
         for tactic in ['possession', 'gegenpress', 'counter', 'wingplay', 'parkthebus']:
