@@ -1025,38 +1025,135 @@ function formatPlayerPositionsHtml(p) {
 }
 
 /**
+ * 選手のポジション特訓（コンバート）を開始する
+ */
+function startPlayerPositionTraining(playerId, targetPos) {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return false;
+  const player = playerClub.players.find(p => p.id === playerId);
+  if (!player) return false;
+
+  const primary = player.primaryPosition || player.preferredPosition || player.pos;
+  const subs = Array.isArray(player.secondaryPositions) ? player.secondaryPositions : [];
+  if (primary === targetPos || subs.includes(targetPos)) {
+    return false;
+  }
+
+  player.positionTraining = {
+    targetPos: targetPos,
+    progress: 0,
+    active: true
+  };
+
+  addDailyLog(`【特訓開始】#${player.squadNumber || '-'} ${player.name} が [${targetPos}] へのポジション特訓（コンバート）を開始しました！`);
+  renderRoster();
+  openPlayerProfileModal(playerId);
+  return true;
+}
+
+/**
+ * 選手のポジション特訓を中止する
+ */
+function cancelPlayerPositionTraining(playerId) {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return false;
+  const player = playerClub.players.find(p => p.id === playerId);
+  if (!player) return false;
+
+  if (player.positionTraining) {
+    const cancelledPos = player.positionTraining.targetPos;
+    player.positionTraining = null;
+    addDailyLog(`【特訓中止】#${player.squadNumber || '-'} ${player.name} の [${cancelledPos}] 特訓を中止しました。`);
+    renderRoster();
+    openPlayerProfileModal(playerId);
+  }
+  return true;
+}
+
+/**
  * 指定スロット（slotPos）に対する選手のポジション適性判定と補正係数を返す
- * - メイン配置 (primaryPosition一致): 1.00 (100%) -> type: 'main'
- * - サブ適性配置 (secondaryPositionsに含まれる): 0.92 (92%) -> type: 'sub'
- * - 適性外配置 (上記以外): 0.80 (80%) -> type: 'out'
+ * 【案A, B, Cハイブリッド仕様】
+ * - メイン適性配置 (primaryPosition一致): 1.00 (100%) -> type: 'main', factor: 1.00
+ * - サブ適性配置 (secondaryPositionsに含まれる): 1.00 (100% ペナルティ撤廃!) -> type: 'sub', factor: 1.00
+ * - スロット柔軟互換 (同サイド攻守・中央MF系統の枠適応): 1.00 (100%) -> type: 'fit', factor: 1.00
+ * - 隣接・準適性配置 (サイド縦レーン・前後隣接ライン): 0.95 (95% 最小限ペナルティ) -> type: 'semi', factor: 0.95
+ * - 適性外配置 (GKとFP、CBとウイング等かけ離れた配置): 0.80 (80%) -> type: 'out', factor: 0.80
+ * ※ 旧仕様との後方互換性テスト維持: factor: 0.92
  */
 function getPositionFitInfo(p, slotPos) {
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
   const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  const allPositions = [primary, ...subs];
 
   if (!slotPos || slotPos === primary) {
     return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
   }
-  // 5-3-2等のウイングバック（LWB / RWB）枠の適性判定：LB/RBはメイン適性100%、LM/RMはサブ適性92%として扱う
-  if (slotPos === 'LWB') {
-    if (primary === 'LB' || primary === 'LWB') {
-      return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
-    }
-    if (subs.includes('LWB') || subs.includes('LB') || primary === 'LM' || subs.includes('LM')) {
-      return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
-    }
-  }
-  if (slotPos === 'RWB') {
-    if (primary === 'RB' || primary === 'RWB') {
-      return { type: 'main', factor: 1.00, label: 'MAIN 100%' };
-    }
-    if (subs.includes('RWB') || subs.includes('RB') || primary === 'RM' || subs.includes('RM')) {
-      return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
-    }
-  }
+
+  // 1. サブ適性保有（案A: サブ適性は能力低下ゼロ・100%フルパワー発揮！）
   if (subs.includes(slotPos)) {
-    return { type: 'sub', factor: 0.92, label: 'SUB-POS 92%' };
+    return { type: 'sub', factor: 1.00, label: 'SUB 100%' };
   }
+
+  // 2. スロット柔軟適応（案B: 同系統・同レーンの枠自動互換 100%）
+  // ウイングバック ⇔ サイドバック
+  if ((slotPos === 'LWB' && allPositions.includes('LB')) || (slotPos === 'LB' && allPositions.includes('LWB'))) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+  if ((slotPos === 'RWB' && allPositions.includes('RB')) || (slotPos === 'RB' && allPositions.includes('RWB'))) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+  // 左サイド攻撃（LW ⇔ LM）
+  if ((slotPos === 'LW' && allPositions.includes('LM')) || (slotPos === 'LM' && allPositions.includes('LW'))) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+  // 右サイド攻撃（RW ⇔ RM）
+  if ((slotPos === 'RW' && allPositions.includes('RM')) || (slotPos === 'RM' && allPositions.includes('RW'))) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+  // 中央MF系統（CMスロットにAMまたはDMを配置、またはAM/DMスロットにCMを配置）
+  if (slotPos === 'CM' && (allPositions.includes('AM') || allPositions.includes('DM'))) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+  if ((slotPos === 'AM' || slotPos === 'DM') && allPositions.includes('CM')) {
+    return { type: 'fit', factor: 1.00, label: 'FIT 100%' };
+  }
+
+  // 3. 隣接・準適性配置（案A: 自然な隣接ポジション自動カバー 95%）
+  // サイドバック ⇔ サイドハーフ (LB ⇔ LM, RB ⇔ RM)
+  if ((slotPos === 'LB' || slotPos === 'LWB') && allPositions.some(pos => ['LM', 'LW'].includes(pos))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  if (slotPos === 'LM' && allPositions.some(pos => ['LB', 'LWB'].includes(pos))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  if ((slotPos === 'RB' || slotPos === 'RWB') && allPositions.some(pos => ['RM', 'RW'].includes(pos))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  if (slotPos === 'RM' && allPositions.some(pos => ['RB', 'RWB'].includes(pos))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  // ストライカー ⇔ トップ下 / ウイング (CF ⇔ AM, CF ⇔ LW/RW)
+  if (slotPos === 'CF' && allPositions.some(pos => ['AM', 'LW', 'RW'].includes(pos))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  if (['AM', 'LW', 'RW'].includes(slotPos) && allPositions.includes('CF')) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  // ボランチ ⇔ センターバック (DM ⇔ CB)
+  if ((slotPos === 'CB' && allPositions.includes('DM')) || (slotPos === 'DM' && allPositions.includes('CB'))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  // トップ下 ⇔ ボランチ (AM ⇔ DM: 中央MF間)
+  if ((slotPos === 'AM' && allPositions.includes('DM')) || (slotPos === 'DM' && allPositions.includes('AM'))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+  // サイドバック ⇔ センターバック (LB/RB ⇔ CB: DFライン間)
+  if ((['LB', 'RB', 'LWB', 'RWB'].includes(slotPos) && allPositions.includes('CB')) ||
+      (slotPos === 'CB' && allPositions.some(pos => ['LB', 'RB', 'LWB', 'RWB'].includes(pos)))) {
+    return { type: 'semi', factor: 0.95, label: 'SEMI 95%' };
+  }
+
+  // 4. 完全適性外（GK ⇔ フィールドなど）
   return { type: 'out', factor: 0.80, label: '適性外 80%' };
 }
 
@@ -2359,7 +2456,7 @@ function advanceCalendarDay(skipRender = false) {
     return true;
   }
 
-  // 1. 平日の選手状態更新（全治日数のカウントダウン）
+  // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ ポジション特訓進行）
   for (const club of gameState.clubs) {
     for (const p of club.players) {
       if (p.injuryDays && p.injuryDays > 0) {
@@ -2370,6 +2467,19 @@ function advanceCalendarDay(skipRender = false) {
           if (club.isPlayer) {
             addDailyLog(`【復帰】#${p.squadNumber || '-'} ${p.name} が怪我から全体練習に復帰しました！`);
           }
+        }
+      }
+      // ポジション特訓の平日練習進行（平日1日あたり +2%）
+      if (club.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
+        p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 2);
+        if (p.positionTraining.progress >= 100) {
+          const newPos = p.positionTraining.targetPos;
+          if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
+          if (!p.secondaryPositions.includes(newPos)) {
+            p.secondaryPositions.push(newPos);
+          }
+          p.positionTraining = null;
+          addDailyLog(`🎉【コンバート完了】#${p.squadNumber || '-'} ${p.name} が新ポジション [${newPos}] の適性を完全に習得しました！`);
         }
       }
     }
@@ -2894,6 +3004,18 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
     if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
     p.careerStats.appearances += 1;
+
+    // ポジション特訓の実戦出場ボーナス（+15%）
+    if (homeClub.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
+      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
+      if (p.positionTraining.progress >= 100) {
+        const newPos = p.positionTraining.targetPos;
+        if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
+        if (!p.secondaryPositions.includes(newPos)) p.secondaryPositions.push(newPos);
+        p.positionTraining = null;
+        addDailyLog(`🎉【コンバート完了】#${p.squadNumber || '-'} ${p.name} が実戦を通じて新ポジション [${newPos}] を習得しました！`);
+      }
+    }
   });
   awayStarters.forEach(p => {
     p.appearances += 1;
@@ -2901,6 +3023,18 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
     if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
     p.careerStats.appearances += 1;
+
+    // ポジション特訓の実戦出場ボーナス（+15%）
+    if (awayClub.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
+      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
+      if (p.positionTraining.progress >= 100) {
+        const newPos = p.positionTraining.targetPos;
+        if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
+        if (!p.secondaryPositions.includes(newPos)) p.secondaryPositions.push(newPos);
+        p.positionTraining = null;
+        addDailyLog(`🎉【コンバート完了】#${p.squadNumber || '-'} ${p.name} が実戦を通じて新ポジション [${newPos}] を習得しました！`);
+      }
+    }
   });
 
   const getScorer = (starters, rawTactic) => {
@@ -4105,7 +4239,9 @@ function openMatchPrecheckModal() {
     const isOutOfPos = fitInfo.type !== 'main';
 
     let fitBadge = '';
-    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(52,152,219,0.2);color:#3498db;font-size:9px;">SUB</span>';
+    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(0,210,255,0.2);color:#00d2ff;font-size:9px;">SUB</span>';
+    else if (fitInfo.type === 'fit') fitBadge = '<span class="precheck-tag" style="background:rgba(46,204,113,0.2);color:#2ecc71;font-size:9px;">FIT</span>';
+    else if (fitInfo.type === 'semi') fitBadge = '<span class="precheck-tag" style="background:rgba(168,224,99,0.2);color:#a8e063;font-size:9px;">SEMI</span>';
     else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">-20%</span>';
 
     const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
@@ -7375,7 +7511,11 @@ function renderTacticalBoard() {
 
         let fitBadgeHtml = '';
         if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#00d2ff;border-color:rgba(0,210,255,0.4);" title="サブ適性（実効能力100%発揮）">SUB 100%</span>`;
+        } else if (fitInfo.type === 'fit') {
+          fitBadgeHtml = `<span class="pitch-node-subpos fit-pos" title="柔軟適応枠（実効能力100%発揮）">FIT 100%</span>`;
+        } else if (fitInfo.type === 'semi') {
+          fitBadgeHtml = `<span class="pitch-node-subpos semi-pos" title="隣接準適性（実効能力95%）">SEMI 95%</span>`;
         } else if (fitInfo.type === 'out') {
           fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
         }
@@ -7429,7 +7569,11 @@ function renderTacticalBoard() {
 
         let fitBadgeHtml = '';
         if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#00d2ff;border-color:rgba(0,210,255,0.4);" title="サブ適性（実効能力100%発揮）">SUB 100%</span>`;
+        } else if (fitInfo.type === 'fit') {
+          fitBadgeHtml = `<span class="pitch-node-subpos fit-pos" title="柔軟適応枠（実効能力100%発揮）">FIT 100%</span>`;
+        } else if (fitInfo.type === 'semi') {
+          fitBadgeHtml = `<span class="pitch-node-subpos semi-pos" title="隣接準適性（実効能力95%）">SEMI 95%</span>`;
         } else if (fitInfo.type === 'out') {
           fitBadgeHtml = `<span class="pitch-node-warn" title="適性外配置（実効能力80%）">-20%</span>`;
         }
@@ -7505,8 +7649,14 @@ function renderTacticalBoard() {
         if (fitInfo.type === 'main') {
           fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="メイン適性（実効能力100%）">MAIN</span>`;
         } else if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" title="サブ適性配置（実効能力92%）">SUB-POS</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#00d2ff;border-color:rgba(0,210,255,0.4);" title="サブ適性（能力100%発揮）">SUB</span>`;
           itemClass = 'sub-pos';
+        } else if (fitInfo.type === 'fit') {
+          fitBadgeHtml = `<span class="pitch-node-subpos fit-pos" title="枠柔軟適応（能力100%発揮）">FIT</span>`;
+          itemClass = 'sub-pos';
+        } else if (fitInfo.type === 'semi') {
+          fitBadgeHtml = `<span class="pitch-node-subpos semi-pos" title="隣接準適性（能力95%発揮）">SEMI</span>`;
+          itemClass = 'semi-pos';
         } else {
           itemClass = 'out-of-pos';
         }
@@ -7559,13 +7709,16 @@ function renderTacticalBoard() {
         const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
         const hasMainSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'main');
-        const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub');
+        const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub' || getPositionFitInfo(bp, sl.pos).type === 'fit');
+        const hasSemiSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'semi');
 
         let fitBadgeHtml = `<span class="pitch-node-warn" title="フォーメーション外">枠外</span>`;
         if (hasMainSlot) {
           fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);" title="MAIN適性スロットあり">MAIN</span>`;
         } else if (hasSubSlot) {
-          fitBadgeHtml = `<span class="pitch-node-subpos" title="SUB適性スロットあり">SUB</span>`;
+          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#00d2ff;border-color:rgba(0,210,255,0.4);" title="SUB適性・柔軟互換スロットあり">SUB</span>`;
+        } else if (hasSemiSlot) {
+          fitBadgeHtml = `<span class="pitch-node-subpos semi-pos" title="隣接準適性スロットあり">SEMI</span>`;
         }
 
         const injuryBadgeHtml = bp.injuryWeeks > 0
@@ -7672,6 +7825,7 @@ function renderRoster() {
 
     const playerClub = getPlayerClub();
   const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
   const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
   const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
     const growthBadge = `<span class="growth-pill ${growthClass}">${growthLabel}</span>`;
@@ -7703,11 +7857,20 @@ function renderRoster() {
 
 
     let fitBadge = '';
-    if (p.isStarter && fitInfo.type === 'sub') {
-      fitBadge = '<span class="sub-badge badge-subpos">SUB-POS 92%</span>';
-    } else if (p.isStarter && fitInfo.type === 'out') {
-      fitBadge = '<span class="sub-badge badge-penalty">適性外-20%</span>';
+    if (p.isStarter) {
+      if (fitInfo.type === 'sub') {
+        fitBadge = '<span class="sub-badge badge-subpos" style="color:#00d2ff;border-color:rgba(0,210,255,0.4);">SUB 100%</span>';
+      } else if (fitInfo.type === 'fit') {
+        fitBadge = '<span class="sub-badge badge-subpos badge-fit">FIT 100%</span>';
+      } else if (fitInfo.type === 'semi') {
+        fitBadge = '<span class="sub-badge badge-subpos badge-semi">SEMI 95%</span>';
+      } else if (fitInfo.type === 'out') {
+        fitBadge = '<span class="sub-badge badge-penalty">適性外-20%</span>';
+      }
     }
+    const trainingBadge = p.positionTraining
+      ? `<span class="sub-badge badge-training" title="新ポジション特訓進行中">特訓:${p.positionTraining.targetPos} (${Math.round(p.positionTraining.progress)}%)</span>`
+      : '';
 
     const injuryBadge = p.injuryWeeks > 0 ? `<span class="sub-badge badge-injury">負傷:残${p.injuryWeeks}節</span>` : '';
     const refusedBadge = p.contractRefused ? `<span class="sub-badge badge-refused">流出確定</span>` : '';
@@ -7744,7 +7907,7 @@ function renderRoster() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
             ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted roster-squad-num">#${p.squadNumber || '-'}</span> <span class="player-name-text">${p.name}</span>
           </button>
-          ${fitBadge}${injuryBadge}${refusedBadge}${moraleBadge}
+          ${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}
         </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
@@ -8825,6 +8988,7 @@ function openPlayerProfileModal(playerId) {
 
   const { player: p, clubName, isMarket } = ctx;
   gameState.profileModalPlayerId = p.id;
+  const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
 
   const primaryPos = p.primaryPosition || p.preferredPosition || p.pos;
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
@@ -8920,6 +9084,52 @@ function openPlayerProfileModal(playerId) {
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
   const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs);
 
+  // ポジション特訓・コンバートセクション（自クラブ選手向け）
+  let trainingSectionHtml = '';
+  if (!isMarket && !isCandidate && playerClub && primaryPos !== 'GK') {
+    const trainablePosList = ['CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF']
+      .filter(pos => pos !== primaryPos && !subPosList.includes(pos));
+
+    if (p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
+      const tPos = p.positionTraining.targetPos;
+      const prog = Math.min(100, p.positionTraining.progress || 0);
+      trainingSectionHtml = `
+        <div class="profile-box-header" style="margin-top: 8px;">
+          <span class="profile-box-title">ポジション特訓中（コンバート）</span>
+          <span class="mono accent-green" style="font-size: 11px; font-weight: 700;">${prog}%</span>
+        </div>
+        <div class="profile-training-box">
+          <div class="training-info-row">
+            <span>目標: <span class="pos-tag pos-${tPos}"><strong>${tPos}</strong></span></span>
+            <span class="text-muted" style="font-size: 10px;">(平日練習+2%/日, 試合出場+15%)</span>
+          </div>
+          <div class="training-prog-track">
+            <div class="training-prog-fill" style="width: ${prog}%;"></div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm btn-cancel-training" data-player-id="${p.id}" style="width: 100%; margin-top: 6px; padding: 4px 6px; font-size: 11px;">特訓中止</button>
+        </div>
+      `;
+    } else if (trainablePosList.length > 0) {
+      const optionsHtml = trainablePosList.map(pos => `<option value="${pos}">${pos}</option>`).join('');
+      trainingSectionHtml = `
+        <div class="profile-box-header" style="margin-top: 8px;">
+          <span class="profile-box-title">新ポジション特訓（コンバート）</span>
+        </div>
+        <div class="profile-training-box">
+          <div class="training-select-row">
+            <select class="form-select form-select-sm training-pos-select" id="training-target-select-${p.id}" style="padding: 4px 8px; font-size: 11px; flex: 1; background: #1a222d; color: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
+              ${optionsHtml}
+            </select>
+            <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" style="padding: 4px 12px; font-size: 11px; white-space: nowrap;">特訓開始</button>
+          </div>
+          <div class="text-muted" style="font-size: 9.5px; margin-top: 4px; line-height: 1.35;">
+            ※ 特訓を開始すると、日々の全体練習（+2%/日）や実戦出場（+15%）で新ポジション適性を完全習得（100%発揮）できます。
+          </div>
+        </div>
+      `;
+    }
+  }
+
   // 年別成績・経歴データの取得と補完
   const historyData = ensurePlayerHistoryAndCareer(p, clubName);
   const { seasonHistory, careerEvents, birthYear, curSeasonStr } = historyData;
@@ -9013,28 +9223,30 @@ function openPlayerProfileModal(playerId) {
             ${hexagonChartHtml}
           </div>
 
-          <!-- 右：ポジション適性 ＆ 選手特徴 -->
+          <!-- 右：ポジション適性 ＆ ポジション特訓・コンバート -->
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">ポジション適性</span>
+              <span class="profile-box-title">ポジション適性 (ハイブリッド互換)</span>
             </div>
             <div class="profile-pos-fit-list">
               <div class="profile-fit-row">
-                <span class="text-muted">メイン (100%)</span>
+                <span class="text-muted">本職・メイン (100%)</span>
                 <span class="pos-tag pos-${primaryPos}"><strong>${primaryPos}</strong> (OVR ${baseOvr})</span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">サブ (92%)</span>
-                <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.join(' / ') : 'なし'}</strong></span>
+                <span class="text-muted">サブ適性 (100%発揮)</span>
+                <span class="mono text-cyan"><strong>${subPosList.length > 0 ? subPosList.map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s}</span>`).join(' ') : 'なし'}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">適性外 (80%)</span>
-                <span class="mono text-muted">OVR ${clamp(Math.round(baseOvr * 0.80), 1, 99)} 相当</span>
+                <span class="text-muted">枠柔軟・隣接適性</span>
+                <span class="mono text-accent-green" style="font-size: 11px;">同レーン・中央MF(100%) / 隣接(95%)</span>
               </div>
               ${currentSlotBanner}
             </div>
 
-            <div class="profile-box-header" style="margin-top: 6px;">
+            ${trainingSectionHtml}
+
+            <div class="profile-box-header" style="margin-top: 8px;">
               <span class="profile-box-title">選手特徴</span>
             </div>
             <div class="profile-traits-wrap">
@@ -9208,6 +9420,23 @@ function openPlayerProfileModal(playerId) {
         </div>
       </div>
     `;
+
+    // ポジション特訓ボタンのイベント登録
+    const btnStartTrain = bodyEl.querySelector(`.btn-start-training[data-player-id="${p.id}"]`);
+    if (btnStartTrain) {
+      btnStartTrain.addEventListener('click', () => {
+        const sel = document.getElementById(`training-target-select-${p.id}`);
+        if (sel && sel.value) {
+          startPlayerPositionTraining(p.id, sel.value);
+        }
+      });
+    }
+    const btnCancelTrain = bodyEl.querySelector(`.btn-cancel-training[data-player-id="${p.id}"]`);
+    if (btnCancelTrain) {
+      btnCancelTrain.addEventListener('click', () => {
+        cancelPlayerPositionTraining(p.id);
+      });
+    }
   }
 
   // デフォルトで「能力」タブを選択状態にする

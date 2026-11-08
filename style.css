@@ -2474,10 +2474,30 @@ body {
   border: 1px solid #38bdf8;
 }
 
+.pitch-node-subpos.fit-pos,
+.pitch-node-subpos.badge-fit {
+  background-color: rgba(46, 204, 113, 0.18);
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.pitch-node-subpos.semi-pos,
+.pitch-node-subpos.badge-semi {
+  background-color: rgba(168, 224, 99, 0.18);
+  color: #a8e063;
+  border-color: #a8e063;
+}
+
 .badge-subpos {
   background-color: rgba(56, 189, 248, 0.18);
   color: #38bdf8;
   border: 1px solid #38bdf8;
+}
+
+.badge-training {
+  background-color: rgba(255, 211, 42, 0.18);
+  color: #ffd32a;
+  border: 1px solid #ffd32a;
 }
 
 .slot-select.slot-sub {
@@ -2984,6 +3004,45 @@ body {
   background-color: #202428;
   border: 1px solid #32383e;
   border-radius: 3px;
+}
+
+/* ポジション特訓・コンバートUI */
+.profile-training-box {
+  background-color: #1a1e23;
+  border: 1px solid #2e353d;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+
+.training-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.training-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
+
+.training-prog-track {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.training-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd32a, #ff9f1a);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .profile-traits-wrap {
