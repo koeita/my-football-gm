@@ -2202,15 +2202,79 @@ body {
 }
 
 .pitch-node.selected {
-  border: 2px solid var(--accent-gold);
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 1px;
   background-color: #28261f;
   transform: translate(-50%, -50%) scale(1.06);
   z-index: 6;
 }
 
+/* ポジション適性別ボーダー（本適性:緑 / 薄適性:青 / 近接不適性:黄 / 不適正:赤） */
+.pitch-node.fit-main {
+  border: 1.5px solid #2ecc71 !important;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.35);
+}
+.pitch-node.fit-main .pitch-node-pos {
+  border-color: rgba(46, 204, 113, 0.45);
+  color: #2ecc71;
+}
+
+.pitch-node.fit-sub,
+.pitch-node.sub-pos {
+  border: 1.5px solid #38bdf8 !important;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
+}
+.pitch-node.fit-sub .pitch-node-pos,
+.pitch-node.sub-pos .pitch-node-pos {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+}
+.pitch-node.fit-sub .pitch-node-ovr,
+.pitch-node.sub-pos .pitch-node-ovr {
+  color: #38bdf8;
+}
+
+.pitch-node.fit-semi,
+.pitch-node.semi-pos {
+  border: 1.5px solid #f1c40f !important;
+  box-shadow: 0 0 6px rgba(241, 196, 15, 0.35);
+}
+.pitch-node.fit-semi .pitch-node-pos,
+.pitch-node.semi-pos .pitch-node-pos {
+  border-color: rgba(241, 196, 15, 0.45);
+  color: #f1c40f;
+}
+.pitch-node.fit-semi .pitch-node-ovr,
+.pitch-node.semi-pos .pitch-node-ovr {
+  color: #f1c40f;
+}
+
+.pitch-node.fit-out,
 .pitch-node.out-of-pos {
-  border-top-color: var(--accent-gold);
-  border-color: rgba(243, 156, 18, 0.75);
+  border: 1.5px solid #e74c3c !important;
+  box-shadow: 0 0 7px rgba(231, 76, 60, 0.45);
+}
+.pitch-node.fit-out .pitch-node-pos,
+.pitch-node.out-of-pos .pitch-node-pos {
+  border-color: rgba(231, 76, 60, 0.45);
+  color: #e74c3c;
+}
+.pitch-node.fit-out .pitch-node-ovr,
+.pitch-node.out-of-pos .pitch-node-ovr {
+  color: #e74c3c;
+}
+
+.bench-sub-item.fit-main {
+  border-left: 3px solid #2ecc71 !important;
+}
+.bench-sub-item.fit-sub {
+  border-left: 3px solid #38bdf8 !important;
+}
+.bench-sub-item.fit-semi {
+  border-left: 3px solid #f1c40f !important;
+}
+.bench-sub-item.fit-out {
+  border-left: 3px solid #e74c3c !important;
 }
 
 .pitch-node-top {
@@ -2458,14 +2522,7 @@ body {
   margin-left: 2px;
 }
 
-.pitch-node.sub-pos {
-  border-top-color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.72);
-}
-
-.pitch-node.sub-pos .pitch-node-ovr {
-  color: #38bdf8;
-}
+/* merged above */
 
 .pitch-node-subpos {
   font-family: var(--font-mono);
