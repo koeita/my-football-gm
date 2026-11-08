@@ -8218,23 +8218,19 @@ function renderTacticalBoard() {
         const effOvr = getEffectivePlayerRating(starter);
         const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
 
+        const fitClass = fitInfo.type === 'main' ? 'fit-main'
+          : fitInfo.type === 'sub' ? 'fit-sub'
+          : fitInfo.type === 'semi' ? 'fit-semi'
+          : 'fit-out';
+
         const nodeClasses = [
           'pitch-node',
           `pos-group-${roleGroup}`,
-          fitInfo.type === 'sub' ? 'sub-pos' : '',
-          fitInfo.type === 'semi' ? 'semi-pos' : '',
-          fitInfo.type === 'out' ? 'out-of-pos' : '',
+          fitClass,
           isSelected ? 'selected' : ''
         ].filter(Boolean).join(' ');
 
-        let fitBadgeHtml = '';
-        if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.5);background:rgba(56,189,248,0.15);font-size:10px;padding:0 3px;" title="薄適性（96%発揮）">◯</span>`;
-        } else if (fitInfo.type === 'semi') {
-          fitBadgeHtml = `<span class="pitch-node-warn" style="color:#f1c40f;border-color:rgba(241,196,15,0.5);background:rgba(241,196,15,0.15);font-size:10px;padding:0 3px;" title="近接不適性（85%発揮）">△</span>`;
-        } else if (fitInfo.type === 'out') {
-          fitBadgeHtml = `<span class="pitch-node-warn" style="color:#e74c3c;border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.15);font-size:10px;padding:0 3px;" title="完全不適性（70%発揮）">✕</span>`;
-        }
+        const fitBadgeHtml = '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -8275,23 +8271,19 @@ function renderTacticalBoard() {
         const effOvr = getEffectivePlayerRating(starter);
         const roleGroup = POS_ROLE_GROUP[sl.pos] || 'MF';
 
+        const fitClass = fitInfo.type === 'main' ? 'fit-main'
+          : fitInfo.type === 'sub' ? 'fit-sub'
+          : fitInfo.type === 'semi' ? 'fit-semi'
+          : 'fit-out';
+
         const nodeClasses = [
           'pitch-node',
           `pos-group-${roleGroup}`,
-          fitInfo.type === 'sub' ? 'sub-pos' : '',
-          fitInfo.type === 'semi' ? 'semi-pos' : '',
-          fitInfo.type === 'out' ? 'out-of-pos' : '',
+          fitClass,
           isSelected ? 'selected' : ''
         ].filter(Boolean).join(' ');
 
-        let fitBadgeHtml = '';
-        if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.5);background:rgba(56,189,248,0.15);font-size:10px;padding:0 3px;" title="薄適性（96%発揮）">◯</span>`;
-        } else if (fitInfo.type === 'semi') {
-          fitBadgeHtml = `<span class="pitch-node-warn" style="color:#f1c40f;border-color:rgba(241,196,15,0.5);background:rgba(241,196,15,0.15);font-size:10px;padding:0 3px;" title="近接不適性（85%発揮）">△</span>`;
-        } else if (fitInfo.type === 'out') {
-          fitBadgeHtml = `<span class="pitch-node-warn" style="color:#e74c3c;border-color:rgba(231,76,60,0.5);background:rgba(231,76,60,0.15);font-size:10px;padding:0 3px;" title="完全不適性（70%発揮）">✕</span>`;
-        }
+        const fitBadgeHtml = '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -8359,19 +8351,12 @@ function renderTacticalBoard() {
         const posDisplay = formatPlayerPositionsText(bp, 'slash');
         const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
-        let itemClass = '';
-        let fitBadgeHtml = `<span class="pitch-node-warn" style="color:#e74c3c;border-color:rgba(231,76,60,0.4);background:rgba(231,76,60,0.15);">不適 ✕</span>`;
-        if (fitInfo.type === 'main') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);">◎ 本適性</span>`;
-        } else if (fitInfo.type === 'sub') {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.4);">◯ 薄適性</span>`;
-          itemClass = 'sub-pos';
-        } else if (fitInfo.type === 'semi') {
-          fitBadgeHtml = `<span class="pitch-node-warn" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.15);">△ 近接</span>`;
-          itemClass = 'semi-pos';
-        } else {
-          itemClass = 'out-of-pos';
-        }
+        const fitClass = fitInfo.type === 'main' ? 'fit-main'
+          : fitInfo.type === 'sub' ? 'fit-sub'
+          : fitInfo.type === 'semi' ? 'fit-semi'
+          : 'fit-out';
+        const itemClass = fitClass;
+        const fitBadgeHtml = '';
 
         const injuryBadgeHtml = bp.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
@@ -8420,15 +8405,7 @@ function renderTacticalBoard() {
         const posDisplay = formatPlayerPositionsText(bp, 'slash');
         const roleGroup = POS_ROLE_GROUP[bp.pos] || 'MF';
 
-        const hasMainSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'main');
-        const hasSubSlot = formationDef.slots.some(sl => getPositionFitInfo(bp, sl.pos).type === 'sub');
-
-        let fitBadgeHtml = `<span class="pitch-node-warn" title="フォーメーション外">枠外</span>`;
-        if (hasMainSlot) {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#2ecc71;border-color:rgba(46,204,113,0.4);">◎ 本適性</span>`;
-        } else if (hasSubSlot) {
-          fitBadgeHtml = `<span class="pitch-node-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.4);">◯ 薄適性</span>`;
-        }
+        const fitBadgeHtml = '';
 
         const injuryBadgeHtml = bp.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
