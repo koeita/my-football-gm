@@ -760,24 +760,24 @@ const REQUIRED_STARTERS = {
   CF: 1
 };
 
-// 1チームの初期16名構成（4-3-3のスタメン11名＋各フォーメーション対応ベンチ5名）
+// 1チームの初期20名構成（スタメン11名＋現代プレミアリーグ公式基準ベンチ9名）
 const SQUAD_COMPOSITION = [
-  { pos: 'GK', total: 2, starters: 1 },
-  { pos: 'CB', total: 3, starters: 2 },
-  { pos: 'LB', total: 1, starters: 1 },
-  { pos: 'RB', total: 1, starters: 1 },
-  { pos: 'DM', total: 1, starters: 1 },
-  { pos: 'CM', total: 2, starters: 2 },
-  { pos: 'LM', total: 1, starters: 0 },
-  { pos: 'RM', total: 1, starters: 0 },
-  { pos: 'AM', total: 1, starters: 0 },
-  { pos: 'LW', total: 1, starters: 1 },
-  { pos: 'RW', total: 1, starters: 1 },
-  { pos: 'CF', total: 1, starters: 1 }
+  { pos: 'GK', total: 2, starters: 1 },  // GK 2名 (スタメン1, 控え1)
+  { pos: 'CB', total: 4, starters: 2 },  // CB 4名 (スタメン2, 控え2)
+  { pos: 'LB', total: 1, starters: 1 },  // LB 1名 (スタメン1)
+  { pos: 'RB', total: 1, starters: 1 },  // RB 1名 (スタメン1)
+  { pos: 'DM', total: 2, starters: 1 },  // DM 2名 (スタメン1, 控え1)
+  { pos: 'CM', total: 3, starters: 2 },  // CM 3名 (スタメン2, 控え1)
+  { pos: 'LM', total: 1, starters: 0 },  // LM 1名 (控え1)
+  { pos: 'RM', total: 1, starters: 0 },  // RM 1名 (控え1)
+  { pos: 'AM', total: 1, starters: 0 },  // AM 1名 (控え1)
+  { pos: 'LW', total: 1, starters: 1 },  // LW 1名 (スタメン1)
+  { pos: 'RW', total: 1, starters: 1 },  // RW 1名 (スタメン1)
+  { pos: 'CF', total: 2, starters: 1 }   // CF 2名 (スタメン1, 控え1)
 ];
 
-// 所属選手の上限枠（トップチーム最大25名、常設ユースチーム最大10名）
-const MAX_SQUAD_SIZE = 25;
+// 所属選手の上限枠（実質無制限の最大50名、常設ユースチーム最大10名）
+const MAX_SQUAD_SIZE = 50;
 const MAX_YOUTH_SQUAD_SIZE = 10;
 
 // プレミア順位賞金テーブル（全20位、単位：£1K -> 1位 £42.0M 〜 20位 £5.0M）
@@ -2853,17 +2853,24 @@ function generateSeasonCalendar(seasonYear, seasonSchedule) {
   const days = [];
   const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
 
-  // 全38節のマッチデー（dayOffset: 0〜290日程度）の算出
-  // 8月1日(土) = day 0 (第1節)
+  // 全38節のマッチデーの算出
+  // 7月1日(水) = day 0（プレシーズン開始・夏の移籍市場解禁）
+  // 8月中旬（8月15日(土) = day 45）に開幕戦（第1節）
   // 土曜日（dayOfWeek === 6）を基本軸とし、過密期（12月、1月、2月、4月）に水曜日（ミッドウィーク）を挟む
   const matchdayOffsets = [];
   let roundCount = 0;
 
-  for (let offset = 0; offset < 310 && roundCount < 38; offset++) {
-    const curD = new Date(seasonYear, 7, 1 + offset);
+  for (let offset = 0; offset < 340 && roundCount < 38; offset++) {
+    const curD = new Date(seasonYear, 6, 1 + offset); // 7月1日ベース
     const dayOfWeek = curD.getDay(); // 0:日, 1:月, ..., 6:土
     const month = curD.getMonth() + 1; // 1-12
     const dateNum = curD.getDate();
+
+    // プレシーズン期間（7月中および8月14日まで）は公式戦なし
+    const isPreSeason = (month === 7) || (month === 8 && dateNum < 15);
+    if (isPreSeason) {
+      continue;
+    }
 
     // 代表ウィーク等の休止期間
     const isIntlBreak = (
@@ -2894,18 +2901,18 @@ function generateSeasonCalendar(seasonYear, seasonSchedule) {
   }
 
   // もし38節に満たない場合のフォールバック（以降の土曜日を順次追加）
-  let fallbackOffset = matchdayOffsets.length > 0 ? matchdayOffsets[matchdayOffsets.length - 1] + 1 : 0;
-  while (matchdayOffsets.length < 38 && fallbackOffset < 360) {
-    const d = new Date(seasonYear, 7, 1 + fallbackOffset);
+  let fallbackOffset = matchdayOffsets.length > 0 ? matchdayOffsets[matchdayOffsets.length - 1] + 1 : 45;
+  while (matchdayOffsets.length < 38 && fallbackOffset < 365) {
+    const d = new Date(seasonYear, 6, 1 + fallbackOffset);
     if (d.getDay() === 6) {
       matchdayOffsets.push(fallbackOffset);
     }
     fallbackOffset++;
   }
 
-  // 365日分のカレンダー配列を構築
+  // 365日分のカレンダー配列を構築（7月1日スタート）
   for (let offset = 0; offset < 365; offset++) {
-    const curDate = new Date(seasonYear, 7, 1 + offset);
+    const curDate = new Date(seasonYear, 6, 1 + offset);
     const y = curDate.getFullYear();
     const m = curDate.getMonth() + 1;
     const d = curDate.getDate();
@@ -2914,8 +2921,8 @@ function generateSeasonCalendar(seasonYear, seasonSchedule) {
     const displayDate = `${y}年 ${m}月${d}日 (${dayOfWeekName})`;
     const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-    // 移籍ウィンドウ判定（夏: 8/1〜8/31, 冬: 1/1〜1/31）
-    const windowOpen = (m === 8) || (m === 1);
+    // 移籍ウィンドウ判定（夏: 7/1〜8/31, 冬: 1/1〜1/31）
+    const windowOpen = (m === 7) || (m === 8) || (m === 1);
     const isTransferDeadline = (m === 8 && d === 31) || (m === 1 && d === 31);
 
     const matchIdx = matchdayOffsets.indexOf(offset);
@@ -3208,7 +3215,7 @@ function renderWeeklySchedule() {
   // 移籍市場バッジの更新
   if (marketBadgeEl && currentDay) {
     if (currentDay.windowOpen) {
-      const windowName = currentDay.month === 8 ? '夏期' : '冬期';
+      const windowName = (currentDay.month === 7 || currentDay.month === 8) ? '夏期' : '冬期';
       marketBadgeEl.textContent = `${windowName} 移籍市場 OPEN`;
       marketBadgeEl.className = 'market-status-pill badge-market-open';
     } else {
@@ -7692,9 +7699,11 @@ function renderHeader() {
   }
 
   if (gameState.isGameOver) {
-    document.getElementById('header-matchweek').textContent = 'GM解任（GAME OVER）';
+    document.getElementById('header-matchweek').textContent = 'GM解任 (GAME OVER)';
   } else if (gameState.isSeasonOver) {
-    document.getElementById('header-matchweek').textContent = 'オフシーズン（移籍・契約）';
+    document.getElementById('header-matchweek').textContent = 'オフシーズン (移籍・契約)';
+  } else if (gameState.currentWeek === 0 && (!currentDay || !currentDay.isMatchDay)) {
+    document.getElementById('header-matchweek').textContent = 'PRE-SEASON';
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
     document.getElementById('header-matchweek').textContent = `第${nextWeek}節 / 全${gameState.totalWeeks}節`;
@@ -7711,10 +7720,10 @@ function renderHeader() {
   }
 
   document.getElementById('header-payroll').textContent = formatMoney(payroll);
-  document.getElementById('header-squad-size').textContent = `${squadCount} / ${MAX_SQUAD_SIZE}名`;
+  document.getElementById('header-squad-size').textContent = `SQUAD: ${squadCount}名`;
   document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
 
-  document.getElementById('tab-badge-roster').textContent = `${squadCount}/${MAX_SQUAD_SIZE}`;
+  document.getElementById('tab-badge-roster').textContent = `${squadCount}名`;
 
   // 移籍市場バッジ：グローバル移籍市場（全20クラブの登録選手総数）を表示
   const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
@@ -10383,7 +10392,10 @@ function confirmIntroAndStartGame() {
     hideMainMenuScreen();
   }
   setupNewGame(gameState.selectedClubId);
-  if (typeof saveGameToStorage === 'function') {
+  const playerClub = getPlayerClub();
+  if (typeof openInitialStaffSetupModal === 'function' && playerClub) {
+    openInitialStaffSetupModal(playerClub);
+  } else if (typeof saveGameToStorage === 'function') {
     saveGameToStorage(true);
   }
 }
@@ -12706,4 +12718,166 @@ function sackCoach(category, slotIndex) {
 
   addDailyLog(`[指導陣解任] ${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しました。`);
   renderAll();
+}
+
+/**
+ * プレシーズン開幕前：指導陣編成モーダル（監督・初期コーチ選定）を開く
+ */
+function openInitialStaffSetupModal(club) {
+  const modal = document.getElementById('initial-staff-setup-modal');
+  const body = document.getElementById('staff-setup-body');
+  const confirmBtn = document.getElementById('btn-confirm-initial-staff');
+  if (!modal || !body) return;
+
+  const usedNames = new Set();
+  (club.players || []).forEach(p => { usedNames.add(p.name); });
+
+  // 異なる戦術・得意陣形を持つ監督候補3名を動的生成
+  const candidateTactics = [
+    { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
+    { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
+    { formation: '3-5-2', tactic: 'counter', label: 'カウンター' }
+  ];
+
+  const managerCandidates = candidateTactics.map((cfg, i) => {
+    const nat = ['England', 'Germany', 'Spain', 'Italy', 'Netherlands'][i % 5];
+    const nameData = typeof generateRandomStaffName === 'function'
+      ? generateRandomStaffName(nat, usedNames)
+      : { displayName: 'M. Keller', fullName: 'Markus Keller' };
+    const name = nameData.displayName || nameData.name || 'M. Keller';
+    const fullName = nameData.fullName || name;
+    const wage = 60 + i * 15;
+    return {
+      id: `mgr_init_${i}`,
+      name: name,
+      fullName: fullName,
+      nationality: nat,
+      age: 44 + i * 4,
+      preferredFormation: cfg.formation,
+      preferredTactic: cfg.tactic,
+      tacticLabel: cfg.label,
+      weeklyWage: wage,
+      trust: 85,
+      contractYears: 3
+    };
+  });
+
+  // 初期コーチ陣（4枠：オフェンス1、ディフェンス1、GK1、フィジカル1）
+  const initialCoaches = createInitialCoaches(true);
+
+  // モーダル内ステート
+  window._preseasonStaffSetup = {
+    selectedManagerIdx: 0,
+    candidates: managerCandidates,
+    coaches: initialCoaches,
+    club: club
+  };
+
+  const renderModalContent = () => {
+    const state = window._preseasonStaffSetup;
+    const managersHtml = state.candidates.map((m, idx) => {
+      const isSelected = idx === state.selectedManagerIdx;
+      const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 48) : '';
+      return `
+        <div class="staff-candidate-card ${isSelected ? 'selected' : ''}" data-mgr-index="${idx}" style="cursor: pointer; padding: 12px; border-radius: 6px; border: 1.5px solid ${isSelected ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background: ${isSelected ? 'rgba(46,204,113,0.08)' : 'rgba(255,255,255,0.02)'}; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s, background 0.15s;">
+          <input type="radio" name="manager-candidate-radio" ${isSelected ? 'checked' : ''} style="margin: 0; pointer-events: none;">
+          <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span class="font-bold" style="font-size: 14px; color: ${isSelected ? 'var(--accent-green)' : 'var(--text-main)'};">${m.name} 監督</span>
+              <span class="mono accent-gold font-bold" style="font-size: 12px;">£${m.weeklyWage}k/週</span>
+            </div>
+            <div class="mono text-muted" style="font-size: 11px; margin-top: 3px;">${m.nationality} / ${m.age}歳 / 契約3年</div>
+            <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+              <span class="badge mono" style="font-size: 10px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">得意: ${m.preferredFormation}</span>
+              <span class="badge mono" style="font-size: 10px; background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4);">哲学: ${m.tacticLabel}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const coachSlots = [
+      { cat: 'attacking', role: 'オフェンス', c: (state.coaches.attacking || [])[0] },
+      { cat: 'defending', role: 'ディフェンス', c: (state.coaches.defending || [])[0] },
+      { cat: 'goalkeeping', role: 'GK', c: state.coaches.goalkeeping },
+      { cat: 'fitness', role: 'フィジカル', c: state.coaches.fitness }
+    ];
+
+    const coachesHtml = coachSlots.map(slot => {
+      const c = slot.c;
+      const avatarHtml = c && typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+      return `
+        <div style="padding: 8px 10px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+          <div style="flex-shrink: 0;">${avatarHtml}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span class="mono text-muted" style="font-size: 10px;">[${slot.role}]</span>
+              <span class="mono font-bold" style="font-size: 10px; color: var(--accent-green);">RANK ${c ? c.rank : 'B'}</span>
+            </div>
+            <div class="font-bold" style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c ? c.name : '未定'}</div>
+            <div class="mono accent-gold" style="font-size: 10px;">£${c ? c.weeklyWage : 25}k/週</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    body.innerHTML = `
+      <div style="margin-bottom: 16px;">
+        <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 1] HEAD COACH SELECTION / 監督選任</div>
+        <p style="font-size: 12px; line-height: 1.5; margin: 0 0 10px 0; color: var(--text-main);">
+          新シーズンの開幕に向け、チームの戦術方針を担う監督を以下の候補者から選任してください。選任した監督の得意陣形・戦術スタイルがチームの初期哲学となります。
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${managersHtml}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 2] TECHNICAL COACHING STAFF / 初期コーチ体制の確認</div>
+        <p style="font-size: 11px; line-height: 1.4; margin: 0 0 8px 0; color: var(--text-muted);">
+          指導陣各部門（攻撃、守備、GK、フィジカル）の初期スタッフです。開幕後の「経営」タブより最大6枠まで追加招聘や交代が可能です。
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
+          ${coachesHtml}
+        </div>
+      </div>
+    `;
+
+    body.querySelectorAll('.staff-candidate-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
+        window._preseasonStaffSetup.selectedManagerIdx = idx;
+        renderModalContent();
+      });
+    });
+  };
+
+  renderModalContent();
+
+  modal.classList.remove('hidden');
+  setBodyModalLock(true);
+
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      const state = window._preseasonStaffSetup;
+      const selectedMgr = state.candidates[state.selectedManagerIdx];
+      const playerClub = club || getPlayerClub();
+      if (playerClub && selectedMgr) {
+        playerClub.manager = selectedMgr;
+        playerClub.formation = selectedMgr.preferredFormation;
+        playerClub.tactic = selectedMgr.preferredTactic;
+        playerClub.coaches = state.coaches;
+        optimizeClubStarters(playerClub);
+        addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
+        addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
+      }
+      modal.classList.add('hidden');
+      setBodyModalLock(false);
+      renderAll();
+      if (typeof saveGameToStorage === 'function') {
+        saveGameToStorage(true);
+      }
+    };
+  }
 }
