@@ -11095,3 +11095,114 @@ button.hidden,
     margin: 10px auto !important;
   }
 }
+
+/* ----------------------------------------------------
+   Reserves (ベンチ外選手エリア) スタイリング
+   ---------------------------------------------------- */
+.pitch-reserves-box {
+  background-color: rgba(22, 27, 34, 0.75);
+  border: 1px dashed rgba(255, 255, 255, 0.16) !important;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 10px !important;
+}
+
+.pitch-reserves-box .pitch-sub-title {
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+.bench-sub-item.reserve-node {
+  border: 1px dashed rgba(255, 255, 255, 0.22) !important;
+  opacity: 0.88;
+  background-color: rgba(18, 22, 26, 0.85) !important;
+}
+
+.bench-sub-item.reserve-node:hover {
+  opacity: 1 !important;
+  border: 1px solid var(--accent-green) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+@media (max-width: 600px) {
+  .pitch-reserves-box {
+    margin-top: 6px !important;
+    padding: 4px 6px !important;
+  }
+}
+
+/* ----------------------------------------------------
+   モバイル作戦ボードでのベンチ外表示最適化
+   ---------------------------------------------------- */
+@media (max-width: 600px) {
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
+    overflow-y: auto !important;
+    padding-bottom: 70px !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
+    overflow: visible !important;
+  }
+  .pitch-reserves-box {
+    margin-top: 6px !important;
+    padding: 3px 4px !important;
+    background: rgba(18, 22, 26, 0.9) !important;
+    border-radius: 4px !important;
+  }
+  .pitch-reserves-list {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 5px !important;
+    padding: 2px 2px 4px 2px !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* ----------------------------------------------------
+   モバイル用控え・ベンチ外トグルピル
+   ---------------------------------------------------- */
+.sub-view-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sub-tab-pills {
+  display: none;
+  gap: 4px;
+}
+
+.btn-sub-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sub-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+.btn-sub-pill.active {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+@media (max-width: 600px) {
+  .sub-tab-pills {
+    display: flex !important;
+  }
+  #pitch-sub-title {
+    display: none !important;
+  }
+}

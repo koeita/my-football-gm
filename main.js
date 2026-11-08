@@ -2591,6 +2591,37 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     starters = starters.slice(0, 11);
   }
 
+  // 控え（ベンチ最大9名）とベンチ外（リザーブ）の厳格な選抜・振り分け
+  const nonStarters = club.players.filter(p => !p.isStarter && !p.isRetired);
+  let currentBench = nonStarters.filter(p => p.isBench === true);
+  let currentReserves = nonStarters.filter(p => p.isBench !== true);
+
+  // 初回や控えが9名未満の場合はリザーブ上位から補充
+  if (currentBench.length < 9 && currentReserves.length > 0) {
+    currentReserves.sort((a, b) => {
+      const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
+      const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+    });
+    while (currentBench.length < 9 && currentReserves.length > 0) {
+      currentBench.push(currentReserves.shift());
+    }
+  } else if (currentBench.length > 9) {
+    // 9名を超えている場合は上位9名のみベンチとし、溢れた選手はリザーブへ
+    currentBench.sort((a, b) => {
+      const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
+      const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+    });
+    const overflow = currentBench.splice(9);
+    currentReserves.push(...overflow);
+  }
+
+  currentBench.forEach(p => { p.isBench = true; });
+  currentReserves.forEach(p => { p.isBench = false; });
+
   assignStartersToFormationSlots(club, false);
 }
 
@@ -7291,6 +7322,29 @@ function handlePitchNodeClick(slotIndex) {
 /**
  * ベンチ選手を指定スロット（または最適枠）のスタメンとワンクリックで交代する
  */
+/**
+ * 控え選手とベンチ外選手、または控え同士の枠を入れ替える
+ */
+function swapBenchOrReservePlayers(playerAId, playerBId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const pA = playerClub.players.find(p => p.id === playerAId && !p.isStarter);
+  const pB = playerClub.players.find(p => p.id === playerBId && !p.isStarter);
+  if (!pA || !pB) return;
+
+  const tempBench = pA.isBench;
+  pA.isBench = pB.isBench;
+  pB.isBench = tempBench;
+
+  ensureValidSquadAndStarters(playerClub);
+  renderRoster();
+}
+
+/**
+ * ベンチ選手を指定スロット（または最適枠）のスタメンとワンクリックで交代する
+ */
 function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
@@ -7307,11 +7361,13 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
 
     if (currentStarter) {
       currentStarter.isStarter = false;
+      currentStarter.isBench = true;
       currentStarter.slotIndex = null;
       currentStarter.assignedPos = null;
     }
 
     benchPlayer.isStarter = true;
+    benchPlayer.isBench = false;
     benchPlayer.slotIndex = resolvedSlotIdx;
     benchPlayer.assignedPos = slotDef.pos;
 
@@ -8324,15 +8380,42 @@ function renderTacticalBoard() {
     if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(pitchLayer);
   }
 
-  // 右側：控え（ベンチ）選手ワンクリック交代リスト描画
+  // 右側：控え（ベンチ最大9名）およびベンチ外（リザーブ）リスト描画
   const subTitleEl = document.getElementById('pitch-sub-title');
   const clearBtnEl = document.getElementById('btn-clear-slot-select');
   const subGuideEl = document.getElementById('pitch-sub-guide');
   const benchListEl = document.getElementById('pitch-bench-list');
+  const reservesBoxEl = document.getElementById('pitch-reserves-box');
+  const reservesTitleEl = document.getElementById('pitch-reserves-title');
+  const reservesListEl = document.getElementById('pitch-reserves-list');
+  const pillBenchBtn = document.getElementById('pill-show-bench');
+  const pillReservesBtn = document.getElementById('pill-show-reserves');
 
   if (!benchListEl) return;
 
-  const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+  if (!gameState.tacticalBottomSubView) {
+    gameState.tacticalBottomSubView = 'bench';
+  }
+
+  const allNonStarters = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+  const benchPlayers = allNonStarters.filter(p => p.isBench !== false).slice(0, 9);
+  const reservePlayers = allNonStarters.filter(p => !benchPlayers.some(bp => bp.id === p.id));
+
+  // モバイル用切り替えピルボタンの更新
+  if (pillBenchBtn) {
+    pillBenchBtn.textContent = `控え (${benchPlayers.length})`;
+    pillBenchBtn.classList.toggle('active', gameState.tacticalBottomSubView === 'bench');
+  }
+  if (pillReservesBtn) {
+    pillReservesBtn.textContent = `ベンチ外 (${reservePlayers.length})`;
+    pillReservesBtn.classList.toggle('active', gameState.tacticalBottomSubView === 'reserves');
+    pillReservesBtn.classList.toggle('hidden', reservePlayers.length === 0);
+  }
+
+  // 画面幅がモバイルかつベンチ外表示モードの場合はトレイ対象を切り替え
+  const isMobile = window.innerWidth <= 600;
+  const isShowingReservesOnMobile = isMobile && gameState.tacticalBottomSubView === 'reserves' && reservePlayers.length > 0;
+  const targetTrayPlayers = isShowingReservesOnMobile ? reservePlayers : benchPlayers;
   const selectedSlot = gameState.selectedSlotIndex !== null ? formationDef.slots[gameState.selectedSlotIndex] : null;
   const selectedStarter = selectedSlot
     ? playerClub.players.find(p => p.isStarter && p.slotIndex === selectedSlot.slotIndex)
@@ -8344,7 +8427,7 @@ function renderTacticalBoard() {
     if (clearBtnEl) clearBtnEl.classList.remove('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
-    const sortedBench = [...benchPlayers].sort((a, b) => {
+    const sortedBench = [...targetTrayPlayers].sort((a, b) => {
       const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
       const bFit = getPositionFitInfo(b, selectedSlot.pos).factor;
       if (aFit !== bFit) return bFit - aFit;
@@ -8352,7 +8435,7 @@ function renderTacticalBoard() {
     });
 
     if (sortedBench.length === 0) {
-      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+      benchListEl.innerHTML = `<div class="empty-log-message">${isShowingReservesOnMobile ? 'ベンチ外選手はいません。' : '控え選手がいません。'}</div>`;
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const fitInfo = getPositionFitInfo(bp, selectedSlot.pos);
@@ -8395,19 +8478,20 @@ function renderTacticalBoard() {
       }).join('');
     }
   } else {
-    if (subTitleEl) subTitleEl.textContent = `控え選手（${benchPlayers.length}名）`;
+    const trayTitle = isShowingReservesOnMobile ? `ベンチ外（${reservePlayers.length}名）` : `控え選手（${benchPlayers.length}名）`;
+    if (subTitleEl) subTitleEl.textContent = trayTitle;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
-    const sortedBench = [...benchPlayers].sort((a, b) => {
-      const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
-      const orderB = POS_DISPLAY_ORDER[b.pos] || 99;
+    const sortedBench = [...targetTrayPlayers].sort((a, b) => {
+      const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
+      const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
       if (orderA !== orderB) return orderA - orderB;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
 
     if (sortedBench.length === 0) {
-      benchListEl.innerHTML = `<div class="empty-log-message">控え選手がいません。</div>`;
+      benchListEl.innerHTML = `<div class="empty-log-message">${isShowingReservesOnMobile ? 'ベンチ外選手はいません。' : '控え選手がいません。'}</div>`;
     } else {
       benchListEl.innerHTML = sortedBench.map(bp => {
         const baseOvr = getPlayerOverallRating(bp);
@@ -8445,6 +8529,74 @@ function renderTacticalBoard() {
     }
   }
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(benchListEl);
+
+  // ベンチ外（リザーブ）リストの描画（21人目以降の選手、デスクトップ専用常時表示）
+  if (reservesBoxEl && reservesListEl) {
+    if (reservePlayers.length === 0 || isMobile) {
+      reservesBoxEl.classList.add('hidden');
+      reservesListEl.innerHTML = '';
+    } else {
+      reservesBoxEl.classList.remove('hidden');
+      if (reservesTitleEl) {
+        reservesTitleEl.textContent = `ベンチ外 (${reservePlayers.length}名)`;
+      }
+
+      const sortedReserves = [...reservePlayers].sort((a, b) => {
+        if (selectedSlot) {
+          const aFit = getPositionFitInfo(a, selectedSlot.pos).factor;
+          const bFit = getPositionFitInfo(b, selectedSlot.pos).factor;
+          if (aFit !== bFit) return bFit - aFit;
+          return getEffectivePlayerRatingForSlot(b, selectedSlot.pos) - getEffectivePlayerRatingForSlot(a, selectedSlot.pos);
+        } else {
+          const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
+          const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return getPlayerOverallRating(b) - getPlayerOverallRating(a);
+        }
+      });
+
+      reservesListEl.innerHTML = sortedReserves.map(rp => {
+        const fitInfo = selectedSlot ? getPositionFitInfo(rp, selectedSlot.pos) : null;
+        const ovrVal = selectedSlot ? getEffectivePlayerRatingForSlot(rp, selectedSlot.pos) : getPlayerOverallRating(rp);
+        const posDisplay = formatPlayerPositionsText(rp, 'slash');
+        const roleGroup = POS_ROLE_GROUP[rp.pos] || 'MF';
+
+        const fitClass = fitInfo ? (
+          fitInfo.type === 'main' ? 'fit-main'
+          : fitInfo.type === 'sub' ? 'fit-sub'
+          : fitInfo.type === 'semi' ? 'fit-semi'
+          : 'fit-out'
+        ) : '';
+
+        const injuryBadgeHtml = rp.injuryWeeks > 0
+          ? `<span class="pitch-node-injury" title="負傷中（残り${rp.injuryWeeks}節）">傷</span>`
+          : '';
+
+        return `
+          <div class="pitch-node pos-group-${roleGroup} bench-sub-item reserve-node ${fitClass}" data-player-id="${rp.id}" title="ドラッグまたはクリックで選手交代">
+            <div class="pitch-node-avatar-wrap">
+              ${getPlayerAvatarHtml(rp, playerClub, 'pitch-node-avatar', 48)}
+            </div>
+            <div class="pitch-node-body">
+              <div class="pitch-node-top">
+                <span class="pitch-node-pos">${rp.pos}</span>
+                <span class="pitch-node-ovr">OVR ${ovrVal}</span>
+              </div>
+              <div class="pitch-node-name-btn">
+                <span class="pitch-node-name-text">#${rp.squadNumber || '-'} ${rp.name}</span>
+              </div>
+              <div class="pitch-node-meta">
+                <span class="pitch-node-pref">${posDisplay}</span>
+                ${injuryBadgeHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(reservesListEl);
+    }
+  }
 }
 
 /**
@@ -10997,9 +11149,11 @@ function initTacticalDragAndDrop() {
         substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
       }
     } else if (finalMatch.type === 'bench-item' && finalMatch.element.dataset.playerId) {
-      const benchPlayerId = finalMatch.element.dataset.playerId;
+      const targetPlayerId = finalMatch.element.dataset.playerId;
       if (source.type === 'starter') {
-        substituteBenchPlayerToSlot(benchPlayerId, source.slotIndex);
+        substituteBenchPlayerToSlot(targetPlayerId, source.slotIndex);
+      } else if (source.type === 'bench' && source.playerId !== targetPlayerId) {
+        swapBenchOrReservePlayers(source.playerId, targetPlayerId);
       }
     } else if (finalMatch.type === 'bench-list' && source.type === 'starter') {
       const playerClub = getPlayerClub();
@@ -11212,6 +11366,22 @@ function initGame() {
       gameState.selectedSlotIndex = null;
       gameState.selectedPlayerId = null;
       renderRoster();
+    });
+  }
+
+  // 控え / ベンチ外のモバイルトグルピル
+  const pillBenchBtn = document.getElementById('pill-show-bench');
+  if (pillBenchBtn) {
+    pillBenchBtn.addEventListener('click', () => {
+      gameState.tacticalBottomSubView = 'bench';
+      renderTacticalBoard();
+    });
+  }
+  const pillReservesBtn = document.getElementById('pill-show-reserves');
+  if (pillReservesBtn) {
+    pillReservesBtn.addEventListener('click', () => {
+      gameState.tacticalBottomSubView = 'reserves';
+      renderTacticalBoard();
     });
   }
 

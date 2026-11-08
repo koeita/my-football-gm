@@ -452,15 +452,30 @@
                 </div>
               </div>
 
-              <!-- 控え（ベンチ）リスト -->
+              <!-- 控え（ベンチ最大9名）＆ ベンチ外（リザーブ）リスト -->
               <div class="tactical-side-column">
                 <div class="pitch-sub-box" id="pitch-sub-box">
                   <div class="pitch-sub-header">
-                    <span class="pitch-sub-title" id="pitch-sub-title">控え選手</span>
+                    <div class="sub-view-switch-wrap">
+                      <span class="pitch-sub-title" id="pitch-sub-title">控え選手 (9名)</span>
+                      <div class="sub-tab-pills" id="sub-tab-pills">
+                        <button type="button" class="btn-sub-pill active" id="pill-show-bench" data-subview="bench">控え (9)</button>
+                        <button type="button" class="btn-sub-pill hidden" id="pill-show-reserves" data-subview="reserves">ベンチ外 (0)</button>
+                      </div>
+                    </div>
                     <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-clear-slot-select">解除</button>
                   </div>
                   <div class="pitch-bench-list" id="pitch-bench-list">
-                    <!-- JSで控え選手を描画 -->
+                    <!-- JSで控え選手（最大9名）を描画 -->
+                  </div>
+                </div>
+
+                <div class="pitch-sub-box pitch-reserves-box hidden" id="pitch-reserves-box" style="margin-top: 10px;">
+                  <div class="pitch-sub-header">
+                    <span class="pitch-sub-title mono text-muted" id="pitch-reserves-title" style="color: var(--text-muted);">ベンチ外 (0名)</span>
+                  </div>
+                  <div class="pitch-bench-list pitch-reserves-list" id="pitch-reserves-list">
+                    <!-- JSで21名以上のベンチ外選手を描画 -->
                   </div>
                 </div>
               </div>
