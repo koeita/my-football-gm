@@ -7968,6 +7968,10 @@ function renderTacticalBoard() {
   document.querySelectorAll('#formation-btn-group .btn-formation').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.formation === formationKey);
   });
+  const formationSelectMobile = document.getElementById('formation-select-mobile');
+  if (formationSelectMobile) {
+    formationSelectMobile.value = formationKey;
+  }
 
   const formationLabelEl = document.getElementById('roster-formation-label');
   if (formationLabelEl) {
@@ -10936,6 +10940,16 @@ function initGame() {
       const fBtn = e.target.closest('.btn-formation');
       if (fBtn && fBtn.dataset.formation) {
         setClubFormation(fBtn.dataset.formation);
+      }
+    });
+  }
+
+  // モバイル用フォーメーション変更セレクト
+  const formationSelectMobile = document.getElementById('formation-select-mobile');
+  if (formationSelectMobile) {
+    formationSelectMobile.addEventListener('change', (e) => {
+      if (e.target.value) {
+        setClubFormation(e.target.value);
       }
     });
   }
