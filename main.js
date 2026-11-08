@@ -1,4 +1,112 @@
 
+const TACTIC_JP_NAMES = {
+  possession: 'ポゼッション',
+  gegenpress: 'ゲーゲンプレス',
+  counter: 'カウンター',
+  wingplay: 'サイド攻撃',
+  parkthebus: 'ウルトラディフェンス'
+};
+
+function getManagerTacticLabel(key) {
+  const norm = normalizeTacticKey(key);
+  return TACTIC_JP_NAMES[norm] || (TACTICS_DEFINITIONS[norm] && TACTICS_DEFINITIONS[norm].name) || key;
+}
+
+
+// ==========================================================================
+// 監督（ヘッドコーチ）哲学＆人事システム
+// ==========================================================================
+
+const MANAGERS_DATABASE = [
+  { name: 'P. ガルディス', nationality: 'Spain', age: 53, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 110, bio: '精密なポジショナルプレーと圧倒的ポゼッションを信奉する名将。' },
+  { name: 'J. クロック', nationality: 'Germany', age: 57, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 105, bio: '電光石火のハイプレスと情熱的なメンタリティで圧倒する闘将。' },
+  { name: 'M. アルテガス', nationality: 'Spain', age: 42, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密なビルドアップと可変戦術で若手を統率する若き理論派。' },
+  { name: 'R. アモレス', nationality: 'Portugal', age: 39, preferredFormation: '3-4-3', preferredTactic: 'counter', weeklyWage: 85, bio: '3バックからのダイナミックな攻守転換で旋風を巻き起こす気鋭。' },
+  { name: 'C. アンチェス', nationality: 'Italy', age: 65, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 115, bio: '選手の個性を引き出す柔軟性と数々の栄冠を誇る歴戦の長老。' },
+  { name: 'D. シメオーニ', nationality: 'Argentina', age: 54, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 100, bio: '堅固な4-4ブロックと不屈の闘志で相手を封殺する守備の達人。' },
+  { name: 'A. コンテス', nationality: 'Italy', age: 55, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 95, bio: '徹底した戦術規律と強烈なインテンシティで勝点をもぎ取る仕事人。' },
+  { name: 'U. エメレス', nationality: 'Spain', age: 52, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 85, bio: '対戦相手の弱点を徹底分析し勝負所で強さを発揮するカップ戦マイスター。' },
+  { name: 'E. ハウズ', nationality: 'England', age: 47, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 75, bio: '運動量とアグレッシブなプレッシングでチームの一体感を高める。' },
+  { name: 'A. ポステク', nationality: 'Australia', age: 59, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 80, bio: '超ハイラインと超攻撃的スタイルを貫く攻撃サッカーの信念者。' },
+  { name: 'E. マレス', nationality: 'Italy', age: 44, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 80, bio: '後方からのパス回しとサイドのアイソレーションを重んじる新世代。' },
+  { name: 'M. シウバス', nationality: 'Portugal', age: 47, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 65, bio: 'サイドアタックと中盤のバランスに優れた堅実な手腕。' },
+  { name: 'O. グラスナ', nationality: 'Austria', age: 50, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 70, bio: '統率された3バックと鋭利なショートカウンターを得意とする実力者。' },
+  { name: 'T. トゥヘレス', nationality: 'Germany', age: 51, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密な構造論と的確な戦術采配で勝利を導く理論派。' },
+  { name: 'J. モウリーニ', nationality: 'Portugal', age: 61, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 95, bio: '冷徹な守備組織とリアリズムで数々のタイトルを獲得したカリスマ。' },
+  { name: 'R. デゼルビ', nationality: 'Italy', age: 45, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 75, bio: '自陣深くで誘い出し一気にスペースを攻略するパスサッカーの信奉者。' },
+  { name: 'G. ガスペル', nationality: 'Italy', age: 66, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 80, bio: 'ピッチ全域のマンツーマンと怒涛の波状攻撃を繰り出す超攻撃派。' },
+  { name: 'B. ロジャース', nationality: 'Northern Ireland', age: 52, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 60, bio: 'ボール保持と洗練されたパスワークで主導権を握る正統派。' },
+  { name: 'S. ダイチ風', nationality: 'England', age: 53, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 55, bio: '肉弾戦と魂のディフェンス、直接的なロングボールで耐え抜く武闘派。' },
+  { name: 'N. サント風', nationality: 'Portugal', age: 50, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 60, bio: '強固な守備ブロックと一撃必殺のカウンターに特化した守備の職人。' },
+  // フリー監督プール用候補
+  { name: 'H. フリック風', nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
+  { name: 'L. エンリケ風', nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
+  { name: 'M. アッレグリ風', nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' },
+  { name: 'Z. ジダン風', nationality: 'France', age: 52, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 120, bio: '王者の風格と卓越した人心掌握術でビッグマッチを制する歴戦の勝者。' }
+];
+
+/**
+ * 監督オブジェクトの生成
+ */
+function createManager(def, clubId = null) {
+  const age = def.age || 50;
+  const nat = def.nationality || 'England';
+  const genes = typeof generateAvatarData === 'function' ? generateAvatarData(nat, age) : null;
+  if (genes) {
+    if (Math.random() < 0.6) genes.facialHair = 'beard';
+    if (Math.random() < 0.4) genes.accessories = 'glasses';
+  }
+  return {
+    id: 'mgr_' + (def.name.replace(/[^a-zA-Z0-9]/g, '_') || Math.random().toString(36).substr(2, 6)),
+    name: def.name,
+    nationality: nat,
+    age: age,
+    preferredFormation: def.preferredFormation || '4-3-3',
+    preferredTactic: def.preferredTactic || 'possession',
+    trust: typeof def.trust === 'number' ? def.trust : 80,
+    weeklyWage: def.weeklyWage || 80,
+    contractYears: typeof def.contractYears === 'number' ? def.contractYears : 3,
+    bio: def.bio || '',
+    avatarData: genes
+  };
+}
+
+/**
+ * 監督の解任違約金を計算（契約残り年数 × 年俸の40%）
+ */
+function getManagerBuyoutFee(manager) {
+  if (!manager) return 0;
+  const annual = (manager.weeklyWage || 80) * 52;
+  const years = Math.max(1, manager.contractYears || 1);
+  return Math.max(1000, Math.round(annual * 0.40 * years));
+}
+
+/**
+ * 試合終了時の監督信頼度（Trust）更新および現場介入ペナルティ
+ */
+function updateManagerTrustAfterMatch(club, won, drawn) {
+  if (!club || !club.manager) return;
+  const mgr = club.manager;
+  const isFormMatch = club.formation === mgr.preferredFormation;
+  const isTacticMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
+  const isIntervention = !isFormMatch || !isTacticMatch;
+
+  let delta = 0;
+  if (won) {
+    // 勝利時: 介入して勝った場合は現場も納得(+1)、得意スタイルなら信頼UP(+3)
+    delta = isIntervention ? 1 : 3;
+  } else if (drawn) {
+    // 引き分け: 介入時は不満微増(-1)、得意スタイル時は+1
+    delta = isIntervention ? -1 : 1;
+  } else {
+    // 敗北時: GMの介入で負けた場合は現場から強い不満(-3)、得意スタイル敗北は-1
+    delta = isIntervention ? -3 : -1;
+  }
+
+  mgr.trust = Math.max(0, Math.min(100, (mgr.trust ?? 80) + delta));
+}
+
+
 'use strict';
 
 /**
@@ -3149,7 +3257,28 @@ function getTeamStarterStats(club) {
     avgSta = Math.min(99, Math.round(rawAvgSta + 3));
   }
 
-  const avgEffOvr = Math.round(totalEffOvr / count);
+  // 監督（ヘッドコーチ）哲学一致ボーナス
+  let managerBonusOvr = 0;
+  if (club.manager) {
+    if (club.formation === club.manager.preferredFormation) {
+      managerBonusOvr += 1;
+    }
+    if (normalizeTacticKey(club.tactic) === normalizeTacticKey(club.manager.preferredTactic)) {
+      managerBonusOvr += 1;
+    }
+    // 現場信頼度40%未満で組織力効果半減
+    if ((club.manager.trust ?? 80) < 40) {
+      managerBonusOvr = Math.floor(managerBonusOvr * 0.5);
+    }
+    if (managerBonusOvr > 0) {
+      const buff = 1.0 + (managerBonusOvr * 0.02); // 1.02 (+2%) or 1.04 (+4%)
+      totalAtk *= buff;
+      totalDef *= buff;
+    }
+  }
+
+  const baseAvgEffOvr = Math.round(totalEffOvr / count);
+  const avgEffOvr = baseAvgEffOvr + managerBonusOvr;
   const cmDmPassScore = cmDmCount > 0 ? (cmDmPassSum / cmDmCount) : avgEffOvr;
   const fwPaceScore = fwCount > 0 ? (fwPaceSum / fwCount) : avgEffOvr;
   const wideOvrScore = wideCount > 0 ? (wideOvrSum / wideCount) : avgEffOvr;
@@ -3519,6 +3648,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
   assignRatings(homeStarters, homeScore, awayScore, isHomeWin, isDraw);
   assignRatings(awayStarters, awayScore, homeScore, isAwayWin, isDraw);
+
+  // 監督現場信頼度の更新（GM現場介入ペナルティ＆勝敗連動）
+  updateManagerTrustAfterMatch(homeClub, isHomeWin, isDraw);
+  updateManagerTrustAfterMatch(awayClub, isAwayWin, isDraw);
 
   // 戦術スタイル別の試合後スタミナ消耗（ゲーゲンプレスは1.3倍消耗、ダイレクトカウンターは省エネ）
   const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
@@ -8129,6 +8262,7 @@ function renderTacticsOverview() {
  */
 function renderRoster() {
   const playerClub = getPlayerClub();
+  renderTacticalManagerBanner();
   renderTacticalBoard();
   renderTacticsOverview();
 
@@ -8767,6 +8901,7 @@ function renderGmDuties() {
  * クラブ経営・施設投資（スタジアム / 練習施設 / スカウト網）およびユースアカデミー画面を描画する
  */
 function renderFacilitiesAndYouth() {
+  renderManagerManagementPanel();
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
@@ -10077,8 +10212,27 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.negotiationSession = null;
   gameState.pendingMegaOffer = null;
 
-  gameState.clubs = CLUB_DEFINITIONS.map(def => {
+  // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
+  const assignedManagers = [];
+  const usedManagerNames = new Set();
+
+  gameState.clubs = CLUB_DEFINITIONS.map((def, cIdx) => {
     const isPlayer = def.id === gameState.selectedClubId;
+    const normTactic = normalizeTacticKey(def.defaultTactic);
+    const formKey = def.defaultFormation && FORMATIONS[def.defaultFormation] ? def.defaultFormation : '4-3-3';
+
+    // クラブの得意陣形・戦術に最も合致する監督をカタログから選抜
+    let mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name) && m.preferredFormation === formKey && m.preferredTactic === normTactic);
+    if (!mgrDef) {
+      mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name) && (m.preferredFormation === formKey || m.preferredTactic === normTactic));
+    }
+    if (!mgrDef) {
+      mgrDef = MANAGERS_DATABASE.find(m => !usedManagerNames.has(m.name)) || MANAGERS_DATABASE[cIdx % MANAGERS_DATABASE.length];
+    }
+    usedManagerNames.add(mgrDef.name);
+
+    const managerObj = createManager(mgrDef, def.id);
+
     const club = {
       id: def.id,
       name: def.name,
@@ -10087,8 +10241,9 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
       supporters: def.supporters,
       targetRank: def.targetRank,
       targetLabel: def.targetLabel,
-      tactic: normalizeTacticKey(def.defaultTactic),
-      formation: isPlayer ? '4-3-3' : (def.defaultFormation && FORMATIONS[def.defaultFormation] ? def.defaultFormation : '4-3-3'),
+      tactic: isPlayer ? managerObj.preferredTactic : normTactic,
+      formation: isPlayer ? managerObj.preferredFormation : formKey,
+      manager: managerObj,
       played: 0,
       won: 0,
       drawn: 0,
@@ -10106,6 +10261,21 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     }
     return club;
   });
+
+  // 未就任の監督をフリー監督候補プールとして初期化
+  gameState.freeManagers = MANAGERS_DATABASE.filter(m => !usedManagerNames.has(m.name)).map(m => createManager(m));
+  if (gameState.freeManagers.length < 3) {
+    const backupDefs = [
+      { name: 'H. フリック風', nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
+      { name: 'L. エンリケ風', nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
+      { name: 'M. アッレグリ風', nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' }
+    ];
+    backupDefs.forEach(b => {
+      if (!gameState.freeManagers.some(f => f.name === b.name)) {
+        gameState.freeManagers.push(createManager(b));
+      }
+    });
+  }
 
   gameState.schedule = generateSeasonSchedule(gameState.clubs);
   gameState.calendar = generateSeasonCalendar(2025 + gameState.season, gameState.schedule);
@@ -11790,3 +11960,272 @@ function initReloadPrevention() {
 }
 
 document.addEventListener('DOMContentLoaded', initGame);
+
+/**
+ * 作戦ボード（ピッチ）上部の監督哲学・ステータスバナーを描画
+ */
+function renderTacticalManagerBanner() {
+  const container = document.getElementById('tactical-manager-banner');
+  if (!container) return;
+  const club = getPlayerClub();
+  if (!club) return;
+
+  if (!club.manager) {
+    container.innerHTML = `
+      <div class="manager-banner-inner" style="justify-content: center;">
+        <span class="text-danger mono font-bold">[監督空席] 経営タブの「監督人事」から後任監督を招聘してください</span>
+      </div>
+    `;
+    return;
+  }
+
+  const mgr = club.manager;
+  const isFormMatch = club.formation === mgr.preferredFormation;
+  const isTacticMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
+  const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
+
+  const formTag = isFormMatch
+    ? `<span class="mgr-tag match">[陣形一致 +1]</span>`
+    : `<span class="mgr-tag unmatch">[陣形不一致]</span>`;
+  const tacticTag = isTacticMatch
+    ? `<span class="mgr-tag match">[戦術一致 +1]</span>`
+    : `<span class="mgr-tag unmatch">[戦術不一致]</span>`;
+
+  let totalBonus = 0;
+  if (isFormMatch) totalBonus += 1;
+  if (isTacticMatch) totalBonus += 1;
+  const bonusTag = totalBonus > 0
+    ? `<span class="mgr-tag bonus">[組織力ボーナス: 実効OVR +${totalBonus}]</span>`
+    : `<span class="mgr-tag none">[組織力ボーナス: なし]</span>`;
+
+  const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-xs', 32) : '';
+
+  container.innerHTML = `
+    <div class="manager-banner-inner">
+      <div class="manager-banner-left">
+        <div class="manager-avatar-wrap">
+          ${avatarHtml}
+        </div>
+        <div class="manager-banner-info">
+          <div class="manager-banner-title">
+            <span class="text-muted">就任中監督:</span>
+            <strong class="manager-name">${mgr.name}</strong>
+            <span class="manager-trust-label mono">[信頼度 ${mgr.trust}%]</span>
+          </div>
+          <div class="manager-banner-style mono">
+            得意: ${mgr.preferredFormation} / ${tacticLabel}
+          </div>
+        </div>
+      </div>
+      <div class="manager-banner-tags mono">
+        ${formTag}
+        ${tacticTag}
+        ${bonusTag}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * 経営タブの「監督人事」パネルを描画
+ */
+function renderManagerManagementPanel() {
+  const container = document.getElementById('manager-panel-body');
+  if (!container) return;
+  const club = getPlayerClub();
+  if (!club) return;
+
+  const trustEl = document.getElementById('manager-panel-trust');
+  const wageEl = document.getElementById('manager-panel-wage');
+
+  const mgr = club.manager;
+  if (trustEl) trustEl.textContent = mgr ? `${mgr.trust}%` : '---';
+  if (wageEl) wageEl.textContent = mgr ? `£${mgr.weeklyWage}k/週` : '£0';
+
+  let currentCardHtml = '';
+  if (mgr) {
+    const buyoutFee = getManagerBuyoutFee(mgr);
+    const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
+    const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 48) : '';
+
+    currentCardHtml = `
+      <div class="manager-current-card">
+        <div class="manager-current-main">
+          <div class="manager-current-avatar">
+            ${avatarHtml}
+          </div>
+          <div class="manager-current-info">
+            <div class="manager-current-name">
+              ${mgr.name}
+              <span class="badge badge-accent mono">[就任中]</span>
+              <span class="mono text-muted" style="font-size: 11px;">(${mgr.nationality} / ${mgr.age}歳)</span>
+            </div>
+            <div class="manager-current-meta mono">
+              <span>得意陣形: <strong class="accent-green">${mgr.preferredFormation}</strong></span>
+              <span>得意戦術: <strong class="accent-green">${tacticLabel}</strong></span>
+              <span>契約残り: <strong>${mgr.contractYears}年</strong></span>
+              <span>週給: <strong class="accent-gold">£${mgr.weeklyWage}k</strong> (年俸 £${Math.round(mgr.weeklyWage * 5.2) / 10}M)</span>
+            </div>
+            <div class="manager-current-bio">
+              ${mgr.bio}
+            </div>
+          </div>
+        </div>
+        <div class="manager-current-actions">
+          <button type="button" class="btn btn-sack-manager mono" id="btn-sack-manager" data-buyout="${buyoutFee}">
+            監督を解任する [違約金 £${buyoutFee.toLocaleString()}k]
+          </button>
+        </div>
+      </div>
+    `;
+  } else {
+    currentCardHtml = `
+      <div class="manager-current-card" style="border-color: rgba(231, 76, 60, 0.4); justify-content: center; padding: 20px;">
+        <div class="mono text-danger font-bold" style="font-size: 14px;">
+          現在、監督が不在（空席）です。以下の後任監督リストから即座に招聘してください。
+        </div>
+      </div>
+    `;
+  }
+
+  // 後任候補リスト（3名程度表示）
+  const freeList = (gameState.freeManagers || []).slice(0, 3);
+  let candidatesHtml = '';
+  if (freeList.length > 0) {
+    candidatesHtml = `
+      <div class="manager-candidates-title mono">
+        <span>後任監督候補スカウト [即時招聘可能]</span>
+        <span class="text-muted" style="font-size: 11px;">※契約締結で新監督として就任します</span>
+      </div>
+      <div class="manager-candidates-grid">
+        ${freeList.map(cand => {
+          const tacticLabel = getManagerTacticLabel(cand.preferredTactic);
+          const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 40) : '';
+          return `
+            <div class="manager-candidate-card">
+              <div>
+                <div class="candidate-head">
+                  <div class="candidate-avatar">
+                    ${cAvatar}
+                  </div>
+                  <div>
+                    <div class="candidate-info-name">${cand.name}</div>
+                    <div class="candidate-info-meta mono">${cand.nationality} / ${cand.age}歳</div>
+                  </div>
+                </div>
+                <div class="candidate-body mono" style="margin-top: 8px;">
+                  <div class="candidate-style-row">
+                    <span class="text-muted">得意陣形</span>
+                    <strong class="accent-green">${cand.preferredFormation}</strong>
+                  </div>
+                  <div class="candidate-style-row">
+                    <span class="text-muted">得意戦術</span>
+                    <strong class="accent-green">${tacticLabel}</strong>
+                  </div>
+                  <div class="candidate-style-row">
+                    <span class="text-muted">要求週給</span>
+                    <strong class="accent-gold">£${cand.weeklyWage}k/週</strong>
+                  </div>
+                  <div class="candidate-bio">
+                    ${cand.bio}
+                  </div>
+                </div>
+              </div>
+              <div class="candidate-actions">
+                <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}">
+                  新監督として招聘する
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  container.innerHTML = currentCardHtml + candidatesHtml;
+
+  // イベント登録
+  const sackBtn = document.getElementById('btn-sack-manager');
+  if (sackBtn) {
+    sackBtn.addEventListener('click', () => {
+      sackCurrentManager();
+    });
+  }
+
+  container.querySelectorAll('.btn-hire-manager').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mid = e.currentTarget.dataset.managerId;
+      if (mid) {
+        hireNewManager(mid);
+      }
+    });
+  });
+}
+
+/**
+ * 監督を解任する
+ */
+function sackCurrentManager() {
+  const club = getPlayerClub();
+  if (!club || !club.manager) return false;
+  const fee = getManagerBuyoutFee(club.manager);
+  if (club.funds < fee) {
+    alert(`資金不足です。解任違約金 £${fee.toLocaleString()}k を支払えません。`);
+    return false;
+  }
+  if (!confirm(`${club.manager.name}監督を解任しますか？\n解任違約金 £${fee.toLocaleString()}k がクラブ資金から引き落とされます。`)) {
+    return false;
+  }
+  club.funds -= fee;
+  const sacked = club.manager;
+  club.manager = null;
+  sacked.trust = 70;
+  if (!gameState.freeManagers) gameState.freeManagers = [];
+  gameState.freeManagers.push(sacked);
+
+  addDailyLog(`[監督人事] ${sacked.name}監督を解任しました（違約金: £${fee.toLocaleString()}k）`);
+  renderAll();
+  return true;
+}
+
+/**
+ * 後任監督を招聘する
+ */
+function hireNewManager(managerId) {
+  const club = getPlayerClub();
+  if (!club) return false;
+  const idx = (gameState.freeManagers || []).findIndex(m => m.id === managerId);
+  if (idx === -1) return false;
+
+  const newMgr = gameState.freeManagers.splice(idx, 1)[0];
+  const oldMgr = club.manager;
+  let buyoutMsg = '';
+  if (oldMgr) {
+    const fee = getManagerBuyoutFee(oldMgr);
+    if (club.funds < fee) {
+      alert(`資金不足です。現任監督の解任違約金 £${fee.toLocaleString()}k を支払えません。`);
+      return false;
+    }
+    club.funds -= fee;
+    oldMgr.trust = 70;
+    gameState.freeManagers.push(oldMgr);
+    buyoutMsg = `（前任違約金 £${fee.toLocaleString()}k 支払）`;
+  }
+
+  newMgr.trust = 80;
+  newMgr.contractYears = 3;
+  club.manager = newMgr;
+
+  // 新監督の得意陣形・戦術に初期同期
+  club.formation = newMgr.preferredFormation;
+  club.tactic = normalizeTacticKey(newMgr.preferredTactic);
+  if (typeof assignStartersToFormationSlots === 'function') {
+    assignStartersToFormationSlots(club, true);
+  }
+
+  const tDef = TACTICS_DEFINITIONS[normalizeTacticKey(newMgr.preferredTactic)] || { label: newMgr.preferredTactic };
+  addDailyLog(`[監督人事] ${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
+  renderAll();
+  return true;
+}

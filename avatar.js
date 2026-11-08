@@ -538,3 +538,28 @@ function renderAvatarCanvases(root = document) {
     }
   });
 }
+
+/**
+ * 監督アバターの生成（シックなスーツ姿のドット絵）
+ */
+function generateManagerAvatar(manager, targetCanvas = null, canvasSize = 48) {
+  if (!manager) return null;
+  const age = manager.age || 50;
+  const nat = manager.nationality || 'England';
+  if (!manager.avatarData && typeof generateAvatarData === 'function') {
+    manager.avatarData = generateAvatarData(nat, age);
+    // 監督風アバター補正（ヒゲやメガネ率UP）
+    if (manager.avatarData) {
+      if (Math.random() < 0.6) manager.avatarData.facialHair = 'beard';
+      if (Math.random() < 0.4) manager.avatarData.accessories = 'glasses';
+    }
+  }
+  const suitKit = ['#222a35', '#ffffff']; // シックなダークスーツ＆ホワイトシャツ
+  return generatePlayerAvatar({ ...manager, isManager: true }, targetCanvas, { kitColors: suitKit }, canvasSize);
+}
+
+function getManagerAvatarHtml(manager, extraClass = 'avatar-sm', canvasSize = 48) {
+  if (!manager) return '';
+  const suitKit = ['#222a35', '#ffffff'];
+  return getPlayerAvatarHtml({ ...manager, id: `mgr_${manager.name || 'x'}` }, { kitColors: suitKit }, extraClass, canvasSize);
+}
