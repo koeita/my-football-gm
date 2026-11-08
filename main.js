@@ -9523,6 +9523,15 @@ function initTacticalDragAndDrop() {
   let ghostEl = null;
   let lastHoverDropTarget = null;
 
+  // 控えリストのタッチ横スクロール制御
+  let isBenchScrolling = false;
+  let benchScrollStartX = 0;
+  let benchScrollStartLeft = 0;
+  let benchListEl = null;
+  let lastMoveX = 0;
+  let lastMoveTime = 0;
+  let scrollVelocity = 0;
+
   function cleanupDrag() {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
@@ -9541,6 +9550,8 @@ function initTacticalDragAndDrop() {
     dragSource = null;
     isDragging = false;
     isTouchReady = false;
+    isBenchScrolling = false;
+    benchListEl = null;
   }
 
   // ネイティブ DnD ゴーストの干渉を抑止
@@ -9708,6 +9719,16 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
+    benchListEl = document.getElementById('pitch-bench-list');
+    if (dragSource.type === 'bench' && benchListEl) {
+      isBenchScrolling = false;
+      benchScrollStartX = e.clientX;
+      benchScrollStartLeft = benchListEl.scrollLeft;
+      lastMoveX = e.clientX;
+      lastMoveTime = performance.now();
+      scrollVelocity = 0;
+    }
+
     const isTouch = e.pointerType === 'touch';
     if (isTouch) {
       const targetEl = dragSource.element;
@@ -9720,7 +9741,7 @@ function initTacticalDragAndDrop() {
             try { navigator.vibrate(15); } catch(err) {}
           }
         }
-      }, 50);
+      }, 100);
     } else {
       isTouchReady = true;
     }
@@ -9734,57 +9755,139 @@ function initTacticalDragAndDrop() {
     const deltaY = e.clientY - startY;
     const dist = Math.hypot(deltaX, deltaY);
 
+    // 控えリストの横スクロール中
+    if (isBenchScrolling && benchListEl) {
+      if (e.cancelable) e.preventDefault();
+      benchListEl.scrollLeft = benchScrollStartLeft - (e.clientX - benchScrollStartX);
+      const now = performance.now();
+      const dt = now - lastMoveTime;
+      if (dt > 0) {
+        scrollVelocity = (e.clientX - lastMoveX) / dt;
+      }
+      lastMoveX = e.clientX;
+      lastMoveTime = now;
+      return;
+    }
+
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
-      const dragThreshold = isTouch ? 3 : 2;
-      if (dist > dragThreshold) {
-        isDragging = true;
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        if (dragSource.element) {
-          dragSource.element.classList.remove('touch-drag-ready');
-          dragSource.element.classList.add('dragging');
-        }
 
-        // スタメンおよび控え選手カードをクローンして持ち上げる
-        // ※ bench-sub-item クラスが残ると CSS の left: auto !important 等が競合するため確実に除去する
-        ghostEl = dragSource.element.cloneNode(true);
-        ghostEl.removeAttribute('id');
-        ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
-        ghostEl.classList.add('tactical-drag-ghost-card');
+      // モバイルで控え選手カードに対するタッチ操作の分岐：
+      if (isTouch && dragSource.type === 'bench') {
+        const isUpward = deltaY < -8 && Math.abs(deltaY) > Math.abs(deltaX) * 0.6;
+        const isHorizontalSwipe = Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY);
 
-        const initLeft = e.clientX - dragSource.grabOffsetX;
-        const initTop = e.clientY - dragSource.grabOffsetY;
-        ghostEl.style.setProperty('position', 'fixed', 'important');
-        ghostEl.style.setProperty('width', `${dragSource.cardWidth}px`, 'important');
-        ghostEl.style.setProperty('min-width', `${dragSource.cardWidth}px`, 'important');
-        ghostEl.style.setProperty('max-width', `${dragSource.cardWidth}px`, 'important');
-        ghostEl.style.setProperty('height', `${dragSource.cardHeight}px`, 'important');
-        ghostEl.style.setProperty('left', `${initLeft}px`, 'important');
-        ghostEl.style.setProperty('top', `${initTop}px`, 'important');
-        ghostEl.style.setProperty('transform', 'scale(1.06)', 'important');
-        ghostEl.style.setProperty('pointer-events', 'none', 'important');
-        ghostEl.style.setProperty('z-index', '999999', 'important');
-
-        // クローン内のドット絵アバターCanvasの描画内容をそのままコピー
-        const srcCanvases = dragSource.element.querySelectorAll('canvas');
-        const dstCanvases = ghostEl.querySelectorAll('canvas');
-        srcCanvases.forEach((srcC, idx) => {
-          const dstC = dstCanvases[idx];
-          if (dstC && srcC.width && srcC.height) {
-            dstC.width = srcC.width;
-            dstC.height = srcC.height;
-            const ctx = dstC.getContext('2d');
-            if (ctx) {
-              ctx.imageSmoothingEnabled = false;
-              ctx.drawImage(srcC, 0, 0);
-            }
+        if (isTouchReady || isUpward) {
+          // A. 長押し完了、または上方向（ピッチ方向）への引き上げ → ドラッグ開始！
+          isDragging = true;
+          isBenchScrolling = false;
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
           }
-        });
+          if (dragSource.element) {
+            dragSource.element.classList.remove('touch-drag-ready');
+            dragSource.element.classList.add('dragging');
+          }
 
-        document.body.appendChild(ghostEl);
+          ghostEl = dragSource.element.cloneNode(true);
+          ghostEl.removeAttribute('id');
+          ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+          ghostEl.classList.add('tactical-drag-ghost-card');
+
+          const initLeft = e.clientX - dragSource.grabOffsetX;
+          const initTop = e.clientY - dragSource.grabOffsetY;
+          ghostEl.style.setProperty('position', 'fixed', 'important');
+          ghostEl.style.setProperty('width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('min-width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('max-width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('height', `${dragSource.cardHeight}px`, 'important');
+          ghostEl.style.setProperty('left', `${initLeft}px`, 'important');
+          ghostEl.style.setProperty('top', `${initTop}px`, 'important');
+          ghostEl.style.setProperty('transform', 'scale(1.06)', 'important');
+          ghostEl.style.setProperty('pointer-events', 'none', 'important');
+          ghostEl.style.setProperty('z-index', '999999', 'important');
+
+          const srcCanvases = dragSource.element.querySelectorAll('canvas');
+          const dstCanvases = ghostEl.querySelectorAll('canvas');
+          srcCanvases.forEach((srcC, idx) => {
+            const dstC = dstCanvases[idx];
+            if (dstC && srcC.width && srcC.height) {
+              dstC.width = srcC.width;
+              dstC.height = srcC.height;
+              const ctx = dstC.getContext('2d');
+              if (ctx) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(srcC, 0, 0);
+              }
+            }
+          });
+
+          document.body.appendChild(ghostEl);
+        } else if (isHorizontalSwipe) {
+          // B. 水平方向へのスワイプ → 控えリストの横スクロール！
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+          isBenchScrolling = true;
+          if (benchListEl) {
+            benchListEl.scrollLeft = benchScrollStartLeft - (e.clientX - benchScrollStartX);
+          }
+          lastMoveX = e.clientX;
+          lastMoveTime = performance.now();
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
+      } else {
+        // PCマウス操作 または スタメン選手のドラッグ
+        const dragThreshold = isTouch ? 4 : 2;
+        if (dist > dragThreshold) {
+          isDragging = true;
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+          if (dragSource.element) {
+            dragSource.element.classList.remove('touch-drag-ready');
+            dragSource.element.classList.add('dragging');
+          }
+
+          ghostEl = dragSource.element.cloneNode(true);
+          ghostEl.removeAttribute('id');
+          ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
+          ghostEl.classList.add('tactical-drag-ghost-card');
+
+          const initLeft = e.clientX - dragSource.grabOffsetX;
+          const initTop = e.clientY - dragSource.grabOffsetY;
+          ghostEl.style.setProperty('position', 'fixed', 'important');
+          ghostEl.style.setProperty('width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('min-width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('max-width', `${dragSource.cardWidth}px`, 'important');
+          ghostEl.style.setProperty('height', `${dragSource.cardHeight}px`, 'important');
+          ghostEl.style.setProperty('left', `${initLeft}px`, 'important');
+          ghostEl.style.setProperty('top', `${initTop}px`, 'important');
+          ghostEl.style.setProperty('transform', 'scale(1.06)', 'important');
+          ghostEl.style.setProperty('pointer-events', 'none', 'important');
+          ghostEl.style.setProperty('z-index', '999999', 'important');
+
+          const srcCanvases = dragSource.element.querySelectorAll('canvas');
+          const dstCanvases = ghostEl.querySelectorAll('canvas');
+          srcCanvases.forEach((srcC, idx) => {
+            const dstC = dstCanvases[idx];
+            if (dstC && srcC.width && srcC.height) {
+              dstC.width = srcC.width;
+              dstC.height = srcC.height;
+              const ctx = dstC.getContext('2d');
+              if (ctx) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(srcC, 0, 0);
+              }
+            }
+          });
+
+          document.body.appendChild(ghostEl);
+        }
       }
     }
 
@@ -9822,6 +9925,24 @@ function initTacticalDragAndDrop() {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
+    }
+
+    if (isBenchScrolling) {
+      if (benchListEl && Math.abs(scrollVelocity) > 0.2) {
+        let v = scrollVelocity * 14;
+        const targetList = benchListEl;
+        const stepInertia = () => {
+          if (Math.abs(v) < 0.5 || !targetList) return;
+          targetList.scrollLeft -= v;
+          v *= 0.88;
+          requestAnimationFrame(stepInertia);
+        };
+        requestAnimationFrame(stepInertia);
+      }
+      isBenchScrolling = false;
+      cleanupDrag();
+      lastHoverDropTarget = null;
+      return;
     }
 
     if (!dragSource) return;
