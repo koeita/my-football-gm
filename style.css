@@ -11416,3 +11416,253 @@ button.hidden,
     box-sizing: border-box !important;
   }
 }
+
+/* ----------------------------------------------------
+   フェーズ2：移籍2段階リスト制＆利き足表示スタイル
+   ---------------------------------------------------- */
+.market-subnav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: var(--bg-panel, #1a1d20);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.market-subview.hidden {
+  display: none !important;
+}
+
+/* 受信オファーリスト グリッド */
+.incoming-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+  padding: 12px 0;
+}
+
+@media (max-width: 600px) {
+  .incoming-offers-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.incoming-offer-card-item {
+  background: #1a1d20;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease;
+}
+
+.incoming-offer-card-item:hover {
+  border-color: #2ecc71;
+}
+
+.incoming-offer-card-item.is-mega {
+  border-left: 4px solid #f1c40f;
+}
+
+.offer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.offer-club-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0f2f5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.offer-deadline-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+}
+
+.offer-card-player-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.offer-player-avatar-wrap {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.offer-player-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.offer-player-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.offer-player-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.offer-card-finances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #14171a;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.offer-finance-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.offer-finance-label {
+  font-size: 10px;
+  color: #8b949e;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+}
+
+.offer-finance-val {
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+}
+
+.offer-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-offer-accept {
+  background: #2ecc71 !important;
+  color: #0d1117 !important;
+  font-weight: 700 !important;
+  border: none !important;
+}
+
+.btn-offer-accept:hover {
+  background: #27ae60 !important;
+}
+
+.btn-offer-reject {
+  background: rgba(231, 76, 60, 0.15) !important;
+  color: #e74c3c !important;
+  border: 1px solid rgba(231, 76, 60, 0.4) !important;
+}
+
+.btn-offer-reject:hover {
+  background: rgba(231, 76, 60, 0.3) !important;
+}
+
+.btn-offer-counter {
+  background: #21262d !important;
+  color: #f1c40f !important;
+  border: 1px solid rgba(241, 196, 15, 0.4) !important;
+}
+
+.btn-offer-counter:hover {
+  background: rgba(241, 196, 15, 0.15) !important;
+}
+
+/* 利き足バッジ */
+.foot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  background: rgba(255, 255, 255, 0.08);
+  color: #c9d1d9;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.foot-badge-inverted {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+  border: 1px solid rgba(241, 196, 15, 0.4);
+  font-weight: 700;
+}
+
+.foot-badge-both {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  font-weight: 700;
+}
+
+/* ショートリストトグルボタン */
+.btn-shortlist-toggle {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  transition: all 0.2s ease;
+}
+
+.btn-shortlist-toggle.is-active {
+  background: rgba(46, 204, 113, 0.2) !important;
+  color: #2ecc71 !important;
+  border: 1px solid #2ecc71 !important;
+}
+
+/* ナビバッジピル */
+.nav-badge-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.nav-badge-pill.has-items {
+  background: #e74c3c;
+  color: #fff;
+}
