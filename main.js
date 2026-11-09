@@ -11906,6 +11906,23 @@ function initTacticalDragAndDrop() {
       ghostEl.style.setProperty('left', `${cardLeft}px`, 'important');
       ghostEl.style.setProperty('top', `${cardTop}px`, 'important');
 
+      // eFootball方式：ドラッグ中に指を右端の控えタブ付近へ持っていくとドロワーが自動再展開！
+      const winWidth = window.innerWidth;
+      const tacticalSideCol = document.getElementById('tactical-side-column');
+      const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
+
+      // 右端（画面右から60px以内）に指が来たらスッと開く
+      if (e.clientX > (winWidth - 60)) {
+        if (!isDrawerOpen && typeof toggleBenchSheet === 'function') {
+          toggleBenchSheet(true);
+        }
+      } else if (e.clientX < (winWidth - 140)) {
+        // ピッチ中央（左側）へ指を戻したらスッと右へ収納する
+        if (isDrawerOpen && typeof toggleBenchSheet === 'function') {
+          toggleBenchSheet(false);
+        }
+      }
+
       const ghostRect = {
         left: cardLeft,
         top: cardTop,

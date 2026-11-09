@@ -12829,12 +12829,20 @@ button.hidden,
   }
 }
 
-/* ドラッグ操作時：ドロワーと暗幕を強制的に完全収納・非表示にしてピッチ全体を100%全開表示 */
+/* ドラッグ操作時：左から右へスッと滑らかにスライド収納（消えるのではなくスムーズに引っ込む） */
 body.is-tactical-dragging .tactical-side-column {
+  opacity: 1 !important;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.is-tactical-dragging .tactical-side-column:not(.sheet-open) {
   transform: translateX(100%) !important;
-  opacity: 0 !important;
   pointer-events: none !important;
-  transition: transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+body.is-tactical-dragging .tactical-side-column.sheet-open {
+  transform: translateX(0) !important;
+  pointer-events: auto !important;
 }
 
 body.is-tactical-dragging .bench-sheet-backdrop {
