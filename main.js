@@ -9050,13 +9050,13 @@ function updateMarketBadges() {
 
   const bShortlist = document.getElementById('badge-shortlist-count');
   if (bShortlist) {
-    bShortlist.textContent = shortlistCount;
+    bShortlist.textContent = `(${shortlistCount})`;
     bShortlist.classList.toggle('has-items', shortlistCount > 0);
   }
 
   const bOffers = document.getElementById('badge-offers-count');
   if (bOffers) {
-    bOffers.textContent = offersCount;
+    bOffers.textContent = `(${offersCount})`;
     bOffers.classList.toggle('has-items', offersCount > 0);
   }
 
