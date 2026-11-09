@@ -7852,6 +7852,7 @@ function switchRosterSubtab(subtabKey) {
   gameState.rosterSubtab = subtabKey;
 
   // DOM 属性をセット（CSSでモバイル作戦ボードのスクロール禁止等を連動）
+  document.documentElement.setAttribute('data-roster-subtab', subtabKey);
   document.body.setAttribute('data-roster-subtab', subtabKey);
   const rosterView = document.getElementById('view-roster');
   if (rosterView) {
@@ -7879,7 +7880,9 @@ function switchRosterSubtab(subtabKey) {
 
   // 作戦ボードタブの場合はスクロールを最上部に固定（スクロールなし完全フィット）
   if (subtabKey === 'board') {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
     renderTacticalBoard();
   } else if (subtabKey === 'players') {
     renderRoster();
@@ -9475,18 +9478,7 @@ function renderGmDuties() {
 
   const duties = [];
 
-  // 受信オファーが届いている場合は最優先タスクとして表示
-  if (gameState.incomingOffers && gameState.incomingOffers.length > 0) {
-    const firstOffer = gameState.incomingOffers[0];
-    duties.push({
-      level: 'important',
-      badge: `オファー着信 (${gameState.incomingOffers.length}件)`,
-      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への買取打診`,
-      desc: `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「移籍」タブで承諾・拒否・上乗せを選択してください。`,
-      btnText: 'オファー確認',
-      action: 'goto-market-offers'
-    });
-  }
+
 
   // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
   if (gameState.pendingMegaOffer) {
@@ -9551,6 +9543,17 @@ function renderGmDuties() {
   duties.push(criticalDuty);
 
   // 2. 推奨タスク（RECOMMENDED）
+  if (gameState.incomingOffers && gameState.incomingOffers.length > 0) {
+    const firstOffer = gameState.incomingOffers[0];
+    duties.push({
+      level: 'recommended',
+      badge: '推奨',
+      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への買取打診 (${gameState.incomingOffers.length}件)`,
+      desc: `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「移籍」タブで承諾・拒否・上乗せを検討してください。`,
+      btnText: 'オファー確認',
+      action: 'goto-market-offers'
+    });
+  }
   const starters = playerClub.players.filter(p => p.isStarter);
   const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
   const expiringPlayers = playerClub.players
@@ -12819,6 +12822,20 @@ function initReloadPrevention() {
     const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
 
+    // 作戦ボード表示時の縦スクロール完全遮断（控えトレイ・ベンチ外トレイの左右スワイプのみ許可）
+    const isRosterBoard = gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board');
+    if (isRosterBoard) {
+      const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
+      const isSubOrReserveList = e.target && e.target.closest && (e.target.closest('.pitch-bench-list') || e.target.closest('.pitch-reserves-list'));
+      if (isHorizontal && isSubOrReserveList) {
+        return;
+      }
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      return;
+    }
+
     // 横方向へのスワイプ（テーブルやカルーセルの横スクロール等）は基本ブロックしない
     if (Math.abs(deltaX) >= Math.abs(deltaY)) {
       // ただしテーブルが左端/右端に達した状態でさらに外側へ引っ張る操作は、
@@ -12885,6 +12902,14 @@ function initReloadPrevention() {
       el.scrollLeft = maxScroll;
     }
   }, { passive: true, capture: true });
+
+  window.addEventListener('scroll', () => {
+    if (gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board')) {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    }
+  }, { passive: true });
 
   // 誤リロード・誤離脱時の確認ダイアログ
   window.addEventListener('beforeunload', (e) => {
