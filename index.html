@@ -512,8 +512,16 @@
                 </div>
               </div>
 
-              <!-- 控え（ベンチ最大9名）＆ ベンチ外（リザーブ）リスト -->
-              <div class="tactical-side-column">
+              <!-- 控え（ベンチ最大9名）＆ ベンチ外（リザーブ）ボトムスライドシート -->
+              <div class="bench-sheet-backdrop hidden" id="bench-sheet-backdrop"></div>
+              <div class="tactical-side-column" id="tactical-side-column">
+                <button type="button" class="bench-sheet-handle" id="bench-sheet-handle" aria-label="控え選手シートを開閉">
+                  <span class="bench-sheet-bar"></span>
+                  <div class="bench-sheet-label">
+                    <span class="sheet-title" id="bench-sheet-title">控え・ベンチ外</span>
+                    <span class="sheet-subhint mono" id="bench-sheet-hint">タップで展開 ▲</span>
+                  </div>
+                </button>
                 <div class="pitch-sub-box" id="pitch-sub-box">
                   <div class="pitch-sub-header">
                     <span class="pitch-sub-title" id="pitch-sub-title">控え選手 (9名)</span>

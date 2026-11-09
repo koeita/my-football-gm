@@ -12194,6 +12194,38 @@ function initGame() {
     });
   }
 
+  // 控え・ベンチ外ボトムスライドシートの開閉制御
+  const benchSheetHandle = document.getElementById('bench-sheet-handle');
+  const tacticalSideColumn = document.getElementById('tactical-side-column');
+  const benchSheetBackdrop = document.getElementById('bench-sheet-backdrop');
+  const benchSheetHint = document.getElementById('bench-sheet-hint');
+
+  function toggleBenchSheet(forceOpen) {
+    if (!tacticalSideColumn) return;
+    const isOpen = tacticalSideColumn.classList.contains('sheet-open');
+    const targetState = forceOpen !== undefined ? forceOpen : !isOpen;
+    tacticalSideColumn.classList.toggle('sheet-open', targetState);
+    if (benchSheetBackdrop) {
+      benchSheetBackdrop.classList.toggle('hidden', !targetState);
+    }
+    if (benchSheetHint) {
+      benchSheetHint.textContent = targetState ? 'タップで収納 ▼' : 'タップで展開 ▲';
+    }
+  }
+  window.toggleBenchSheet = toggleBenchSheet;
+
+  if (benchSheetHandle) {
+    benchSheetHandle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBenchSheet();
+    });
+  }
+  if (benchSheetBackdrop) {
+    benchSheetBackdrop.addEventListener('click', () => {
+      toggleBenchSheet(false);
+    });
+  }
+
   // 作戦ボード選択解除ボタン
   const clearSlotBtn = document.getElementById('btn-clear-slot-select');
   if (clearSlotBtn) {

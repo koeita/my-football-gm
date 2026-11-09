@@ -11261,7 +11261,20 @@ button.hidden,
     margin: 10px auto !important;
   }
 
-  /* 作戦ボード（案A：自然な縦スクロール許可・固定化解除） */
+  /* 作戦ボード（ボトムスライドシート方式）：ピッチを画面いっぱいに表示し、控えは下からスライド展開 */
+  .bench-sheet-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+    z-index: 1050 !important;
+    transition: opacity 0.28s ease !important;
+  }
+  .bench-sheet-backdrop.hidden {
+    display: none !important;
+  }
+
   body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
     width: 100% !important;
     height: auto !important;
@@ -11270,14 +11283,14 @@ button.hidden,
     flex-direction: column !important;
     overflow: visible !important;
     padding-top: 44px !important;
-    padding-bottom: 24px !important;
+    padding-bottom: 50px !important;
     box-sizing: border-box !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 4px !important;
     overflow: visible !important;
     height: auto !important;
   }
@@ -11294,15 +11307,15 @@ button.hidden,
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-panel-header {
     flex-shrink: 0 !important;
     padding: 4px 6px !important;
-    min-height: 36px !important;
+    min-height: 34px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body {
     display: flex !important;
     flex-direction: column !important;
-    padding: 6px !important;
+    padding: 4px 4px 6px 4px !important;
     overflow: visible !important;
-    gap: 8px !important;
+    gap: 4px !important;
     height: auto !important;
   }
 
@@ -11325,24 +11338,103 @@ button.hidden,
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 4px !important;
     overflow: visible !important;
     width: 100% !important;
     height: auto !important;
   }
 
-  /* ピッチ領域：堂々とした縦サイズを確保（見やすさ最優先） */
+  /* ピッチ領域：画面いっぱいに縦長大迫力（高さ約440px〜480px）で1画面収容！ */
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
     width: 100% !important;
-    height: 390px !important;
-    min-height: 390px !important;
-    max-height: 420px !important;
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 150px) !important;
+    min-height: 380px !important;
+    max-height: 540px !important;
     position: relative !important;
     overflow: hidden !important;
     margin: 0 !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     box-sizing: border-box !important;
-    touch-action: pan-y !important;
+  }
+
+  /* 控え・ベンチ外ボトムスライドシート */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: var(--tab-nav-total-h) !important;
+    z-index: 1100 !important;
+    background: #161b22 !important;
+    background-color: #161b22 !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-bottom: none !important;
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.8) !important;
+    padding: 0 0 10px 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-sizing: border-box !important;
+    max-height: 65vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    /* 初期状態：ハンドルバー（約38px）だけがタブバーの上に上品に露出 */
+    transform: translateY(calc(100% - 38px)) !important;
+  }
+
+  /* 開いた状態：下からスッとスライドアップ */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column.sheet-open {
+    transform: translateY(0) !important;
+  }
+
+  /* 引き出しハンドルバー */
+  .bench-sheet-handle {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    background: #1c222a !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px 14px 0 0 !important;
+    padding: 4px 14px 2px 14px !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+    gap: 3px !important;
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+  }
+
+  .bench-sheet-bar {
+    width: 38px !important;
+    height: 4px !important;
+    background: rgba(255, 255, 255, 0.35) !important;
+    border-radius: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .bench-sheet-label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .bench-sheet-label .sheet-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--accent-green, #2ecc71) !important;
+  }
+
+  .bench-sheet-label .sheet-subhint {
+    font-size: 9.5px !important;
+    color: var(--text-muted, #8b949e) !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node {
