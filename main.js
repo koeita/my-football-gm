@@ -13013,6 +13013,40 @@ function initReloadPrevention() {
       e.preventDefault();
     }
   });
+
+  // モバイルでのダブルタップズーム防止（touchend / dblclick）
+  let lastTouchEndTime = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEndTime <= 300) {
+      const tag = e.target ? e.target.tagName : '';
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (!isInput && e.cancelable) {
+        e.preventDefault();
+        // 通常のボタン・リンク・クリック可能要素の連打タップは遮断せず発火
+        const clickable = e.target.closest('button, a, .btn, [role="button"], input[type="button"], input[type="submit"]');
+        if (clickable) {
+          clickable.click();
+        }
+      }
+    }
+    lastTouchEndTime = now;
+  }, { passive: false });
+
+  // dblclick イベントのブラウザズーム抑止
+  document.addEventListener('dblclick', (e) => {
+    const tag = e.target ? e.target.tagName : '';
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  // iOS Safari のピンチズームジェスチャー抑止（gesturestart / gesturechange / gestureend）
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initGame);
@@ -13254,19 +13288,28 @@ function hireNewManager(managerId) {
   const idx = (gameState.freeManagers || []).findIndex(m => m.id === managerId);
   if (idx === -1) return false;
 
-  const newMgr = gameState.freeManagers.splice(idx, 1)[0];
+  const newMgr = gameState.freeManagers[idx];
   const oldMgr = club.manager;
   let buyoutMsg = '';
+
   if (oldMgr) {
     const fee = getManagerBuyoutFee(oldMgr);
     if (club.funds < fee) {
       alert(`資金不足です。現任監督の解任違約金 £${fee.toLocaleString()}k を支払えません。`);
       return false;
     }
+    const ok = window.confirm(`${oldMgr.name}監督を解任し、${newMgr.name}氏を新監督として招聘しますか？\n（前任違約金: £${fee.toLocaleString()}k / 新監督週給: £${newMgr.weeklyWage}k）`);
+    if (!ok) return false;
+
+    gameState.freeManagers.splice(idx, 1);
     club.funds -= fee;
     oldMgr.trust = 70;
     gameState.freeManagers.push(oldMgr);
     buyoutMsg = `（前任違約金 £${fee.toLocaleString()}k 支払）`;
+  } else {
+    const ok = window.confirm(`${newMgr.name}氏を新監督として招聘しますか？\n（契約期間: 3年 / 週給: £${newMgr.weeklyWage}k）`);
+    if (!ok) return false;
+    gameState.freeManagers.splice(idx, 1);
   }
 
   newMgr.trust = 80;
@@ -13280,7 +13323,7 @@ function hireNewManager(managerId) {
     assignStartersToFormationSlots(club, true);
   }
 
-  const tDef = TACTICS_DEFINITIONS[normalizeTacticKey(newMgr.preferredTactic)] || { label: newMgr.preferredTactic };
+  const tacticLabel = getManagerTacticLabel(newMgr.preferredTactic);
   addDailyLog(`[監督人事] ${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
   renderAll();
   return true;
