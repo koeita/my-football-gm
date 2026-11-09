@@ -8915,6 +8915,8 @@ function renderTacticalBoard() {
     }
   } else {
     if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名)`;
+    const sideBenchBadge = document.getElementById('side-bench-badge');
+    if (sideBenchBadge) sideBenchBadge.textContent = `${benchPlayers.length}名`;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -11529,6 +11531,7 @@ function initTacticalDragAndDrop() {
   let scrollVelocity = 0;
 
   function cleanupDrag() {
+    document.body.classList.remove('is-tactical-dragging');
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
@@ -11543,6 +11546,10 @@ function initTacticalDragAndDrop() {
     document.querySelectorAll('.drag-drop-target-active').forEach(el => {
       el.classList.remove('drag-drop-target-active');
     });
+    const tacticalSideCol = document.getElementById('tactical-side-column');
+    if (tacticalSideCol) {
+      tacticalSideCol.classList.remove('is-dragging-card');
+    }
     dragSource = null;
     isDragging = false;
     isTouchReady = false;
@@ -11559,11 +11566,19 @@ function initTacticalDragAndDrop() {
 
   // ドロップ先の最適ターゲット検出（ポインタ直下 ＋ ゴースト矩形重なり・近접判定）
   function findBestDropTarget(clientX, clientY, ghostRect, source) {
+    const tacticalSideCol = document.getElementById('tactical-side-column');
+    const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
+    const winWidth = window.innerWidth;
+    const isPointerInsideDrawer = isDrawerOpen && clientX > (winWidth - 295);
+
     const elAtPoint = document.elementFromPoint(clientX, clientY);
     if (elAtPoint) {
-      const starterNode = elAtPoint.closest('.pitch-node[data-slot-index]');
-      if (starterNode && starterNode !== source.element) {
-        return { type: 'starter', element: starterNode };
+      // ドロワーが開いていて指がドロワー内にある時は、背後のスタメン枠を絶対に拾わない（誤交代防止）
+      if (!isPointerInsideDrawer) {
+        const starterNode = elAtPoint.closest('.pitch-node[data-slot-index]');
+        if (starterNode && starterNode !== source.element) {
+          return { type: 'starter', element: starterNode };
+        }
       }
       const benchNode = elAtPoint.closest('.bench-sub-item[data-player-id]');
       if (benchNode && benchNode !== source.element) {
@@ -11601,7 +11616,8 @@ function initTacticalDragAndDrop() {
       }
     });
 
-    if (bestStarter) {
+    // ドロワー展開中かつ指がドロワーエリア内にある場合は、背後スタメンとの誤交代を完全遮断
+    if (bestStarter && !isPointerInsideDrawer) {
       return { type: 'starter', element: bestStarter };
     }
 
@@ -11771,10 +11787,10 @@ function initTacticalDragAndDrop() {
       // モバイルで控え選手カードに対するタッチ操作の分岐：
       if (isTouch && dragSource.type === 'bench') {
         const isUpward = deltaY < -8 && Math.abs(deltaY) > Math.abs(deltaX) * 0.6;
+        const isLeftward = deltaX < -8 && Math.abs(deltaX) > Math.abs(deltaY) * 0.5;
         const isHorizontalSwipe = Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY);
 
-        if (isTouchReady || isUpward) {
-          // A. 長押し完了、または上方向（ピッチ方向）への引き上げ → ドラッグ開始！
+        if (isTouchReady || isUpward || isLeftward) {
           isDragging = true;
           isBenchScrolling = false;
           if (longPressTimer) {
@@ -11786,6 +11802,8 @@ function initTacticalDragAndDrop() {
             dragSource.element.classList.add('dragging');
           }
 
+          if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
+          document.body.classList.add('is-tactical-dragging');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
           ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
@@ -11840,6 +11858,8 @@ function initTacticalDragAndDrop() {
         const dragThreshold = isTouch ? 4 : 2;
         if (dist > dragThreshold) {
           isDragging = true;
+          if (dragSource.type === 'bench' && typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
+          document.body.classList.add('is-tactical-dragging');
           if (longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;
@@ -11894,6 +11914,24 @@ function initTacticalDragAndDrop() {
       const cardTop = e.clientY - dragSource.grabOffsetY;
       ghostEl.style.setProperty('left', `${cardLeft}px`, 'important');
       ghostEl.style.setProperty('top', `${cardTop}px`, 'important');
+
+      // eFootball方式：明確なピッチ／ドロワー境界による自然な開閉感知
+      const winWidth = window.innerWidth;
+      const tacticalSideCol = document.getElementById('tactical-side-column');
+      const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
+
+      // ピッチ領域（ドロワー左端をしっかり越えた画面右から295pxより左）に指がある時にスッと収納！
+      if (isDrawerOpen && e.clientX < (winWidth - 295)) {
+        if (typeof toggleBenchSheet === 'function') {
+          toggleBenchSheet(false);
+        }
+      }
+      // 控えタブ・右端エリア（画面右から80px以内）に指を持ってきた時は、確実にドロワーをスッと開く！
+      else if (!isDrawerOpen && e.clientX > (winWidth - 80)) {
+        if (typeof toggleBenchSheet === 'function') {
+          toggleBenchSheet(true);
+        }
+      }
 
       const ghostRect = {
         left: cardLeft,
@@ -11982,6 +12020,7 @@ function initTacticalDragAndDrop() {
         }
       } else if (source.type === 'bench') {
         substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
+        if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
       }
     } else if (finalMatch.type === 'bench-item' && finalMatch.element.dataset.playerId) {
       const targetPlayerId = finalMatch.element.dataset.playerId;
@@ -12194,6 +12233,102 @@ function initGame() {
     });
   }
 
+  // 控え・ベンチ外右スライドサイドドロワーの開閉制御
+  const btnOpenBenchSheet = document.getElementById('btn-open-bench-sheet');
+  const benchSheetHandle = document.getElementById('bench-sheet-handle');
+  const tacticalSideColumn = document.getElementById('tactical-side-column');
+  const benchSheetBackdrop = document.getElementById('bench-sheet-backdrop');
+
+  function toggleBenchSheet(forceOpen) {
+    if (!tacticalSideColumn) return;
+    const isOpen = tacticalSideColumn.classList.contains('sheet-open');
+    const targetState = forceOpen !== undefined ? forceOpen : !isOpen;
+    tacticalSideColumn.classList.toggle('sheet-open', targetState);
+    if (benchSheetBackdrop) {
+      benchSheetBackdrop.classList.toggle('active', targetState);
+    }
+  }
+  window.toggleBenchSheet = toggleBenchSheet;
+
+  // 右スライドサイドドロワーのスワイプ開閉制御（右端から左スワイプで展開、右スワイプで収納）
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isEdgeSwipePotential = false;
+  let isDrawerSwipePotential = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (!tacticalSideColumn) return;
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    const winWidth = window.innerWidth;
+    const isOpen = tacticalSideColumn.classList.contains('sheet-open');
+
+    if (!isOpen) {
+      // 閉じてる時：画面右端付近（右から70px以内）またはタブ上でのタッチでエッジスワイプスタンバイ
+      if (touchStartX > winWidth - 70 || e.target.closest('#btn-open-bench-sheet')) {
+        isEdgeSwipePotential = true;
+      } else {
+        isEdgeSwipePotential = false;
+      }
+      isDrawerSwipePotential = false;
+    } else {
+      // 開いている時：ドロワー上または背景でのタッチで右スワイプ収納スタンバイ
+      if (e.target.closest('#tactical-side-column, #bench-sheet-backdrop')) {
+        isDrawerSwipePotential = true;
+      } else {
+        isDrawerSwipePotential = false;
+      }
+      isEdgeSwipePotential = false;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!tacticalSideColumn) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    // 縦スクロールが支配的な場合はキャンセル
+    if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) return;
+
+    // 1. 閉じている時：右から左へスワイプ（deltaX < -25px）でドロワー展開！
+    if (isEdgeSwipePotential && deltaX < -25) {
+      isEdgeSwipePotential = false;
+      toggleBenchSheet(true);
+    }
+
+    // 2. 開いている時：左から右へスワイプ（deltaX > 30px）でドロワー収納！
+    if (isDrawerSwipePotential && deltaX > 30) {
+      isDrawerSwipePotential = false;
+      toggleBenchSheet(false);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    isEdgeSwipePotential = false;
+    isDrawerSwipePotential = false;
+  }, { passive: true });
+
+
+  if (btnOpenBenchSheet) {
+    btnOpenBenchSheet.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBenchSheet(true);
+    });
+  }
+  if (benchSheetHandle) {
+    benchSheetHandle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBenchSheet(false);
+    });
+  }
+  if (benchSheetBackdrop) {
+    benchSheetBackdrop.addEventListener('click', () => {
+      toggleBenchSheet(false);
+    });
+  }
+
   // 作戦ボード選択解除ボタン
   const clearSlotBtn = document.getElementById('btn-clear-slot-select');
   if (clearSlotBtn) {
@@ -12220,7 +12355,7 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手リスト：クリック時は詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
+  // 控え選手リスト：クリック時は詳細プロフィール表示（交代はドラッグ＆ドロップのみ）
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
