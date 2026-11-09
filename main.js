@@ -11531,6 +11531,7 @@ function initTacticalDragAndDrop() {
   let scrollVelocity = 0;
 
   function cleanupDrag() {
+    document.body.classList.remove('is-tactical-dragging');
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
@@ -11792,8 +11793,8 @@ function initTacticalDragAndDrop() {
             dragSource.element.classList.add('dragging');
           }
 
-          const tacticalSideCol = document.getElementById('tactical-side-column');
-          if (tacticalSideCol) tacticalSideCol.classList.add('is-dragging-card');
+          if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
+          document.body.classList.add('is-tactical-dragging');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
           ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
@@ -11848,6 +11849,8 @@ function initTacticalDragAndDrop() {
         const dragThreshold = isTouch ? 4 : 2;
         if (dist > dragThreshold) {
           isDragging = true;
+          if (dragSource.type === 'bench' && typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
+          document.body.classList.add('is-tactical-dragging');
           if (longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;

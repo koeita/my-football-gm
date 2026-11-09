@@ -12828,3 +12828,17 @@ button.hidden,
     --tab-nav-total-h: calc(52px + var(--safe-bottom)) !important;
   }
 }
+
+/* ドラッグ操作時：ドロワーと暗幕を強制的に完全収納・非表示にしてピッチ全体を100%全開表示 */
+body.is-tactical-dragging .tactical-side-column {
+  transform: translateX(100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+body.is-tactical-dragging .bench-sheet-backdrop {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: none !important;
+}
