@@ -11987,7 +11987,7 @@ button.hidden,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 6px 14px;
   background: #14171a;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-wrap: wrap;
@@ -12084,7 +12084,7 @@ button.hidden,
   display: flex;
   flex-direction: column;
   background: #111417;
-  padding: 8px 12px 14px 12px;
+  padding: 4px 12px 12px 12px;
   box-sizing: border-box;
 }
 
@@ -12093,12 +12093,12 @@ button.hidden,
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
   text-align: center;
-  padding: 6px 0;
+  padding: 4px 0;
   font-size: 11px;
   font-weight: 700;
   color: #8a94a0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .calendar-weekdays-row .col-sun {
@@ -12314,7 +12314,7 @@ button.hidden,
 /* モバイル対応（幅768px以下） */
 @media (max-width: 768px) {
   .schedule-view-controls {
-    padding: 8px 10px;
+    padding: 5px 8px;
     gap: 8px;
   }
   .calendar-month-label {
@@ -12337,7 +12337,7 @@ button.hidden,
     font-size: 10.5px;
   }
   .season-calendar-view {
-    padding: 6px 4px 10px 4px;
+    padding: 3px 4px 8px 4px;
   }
   .calendar-days-grid {
     gap: 3px;
