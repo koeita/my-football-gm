@@ -7274,8 +7274,7 @@ function upgradeFacility(facilityKey) {
       const candidate = createPlayer(pos, baseTarget, false, usedNames, [age, age]);
       const ovr = getPlayerOverallRating(candidate);
       const isExpiring = candidate.contractYears === 1;
-      const baseFee = Math.max(800, (ovr - 44) * 350 + (29 - candidate.age) * 180);
-      candidate.transferFee = Math.max(500, Math.round((isExpiring ? baseFee * 0.55 : baseFee) / 100) * 100);
+      candidate.transferFee = calculateTransferFee(candidate);
       gameState.transferMarket.push(candidate);
     }
     gameState.transferMarket.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
@@ -10444,7 +10443,7 @@ function openPlayerProfileModal(playerId) {
     ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
     : '良好 (出場可能)';
   const conditionClass = ((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)) ? 'text-danger' : 'accent-green';
-  const estMarketValue = p.transferFee || Math.max(500, Math.round(p.salary * 2.8));
+  const estMarketValue = calculateTransferFee(p);
 
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
   const allRowsData = [
