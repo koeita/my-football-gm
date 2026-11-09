@@ -12195,10 +12195,10 @@ function initGame() {
   }
 
   // 控え・ベンチ外ボトムスライドシートの開閉制御
+  const btnOpenBenchSheet = document.getElementById('btn-open-bench-sheet');
   const benchSheetHandle = document.getElementById('bench-sheet-handle');
   const tacticalSideColumn = document.getElementById('tactical-side-column');
   const benchSheetBackdrop = document.getElementById('bench-sheet-backdrop');
-  const benchSheetHint = document.getElementById('bench-sheet-hint');
 
   function toggleBenchSheet(forceOpen) {
     if (!tacticalSideColumn) return;
@@ -12206,18 +12206,21 @@ function initGame() {
     const targetState = forceOpen !== undefined ? forceOpen : !isOpen;
     tacticalSideColumn.classList.toggle('sheet-open', targetState);
     if (benchSheetBackdrop) {
-      benchSheetBackdrop.classList.toggle('hidden', !targetState);
-    }
-    if (benchSheetHint) {
-      benchSheetHint.textContent = targetState ? 'タップで収納 ▼' : 'タップで展開 ▲';
+      benchSheetBackdrop.classList.toggle('active', targetState);
     }
   }
   window.toggleBenchSheet = toggleBenchSheet;
 
+  if (btnOpenBenchSheet) {
+    btnOpenBenchSheet.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBenchSheet(true);
+    });
+  }
   if (benchSheetHandle) {
     benchSheetHandle.addEventListener('click', (e) => {
       e.stopPropagation();
-      toggleBenchSheet();
+      toggleBenchSheet(false);
     });
   }
   if (benchSheetBackdrop) {
