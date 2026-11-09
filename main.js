@@ -1696,58 +1696,23 @@ function calculatePlayerSalary(pos, atk, def, sta, age) {
  */
 
 /**
- * 選手の利き足・逆足ウインガー判定バッジHTMLを生成
- * 【RW（右ウイング）】：左利きなら [左利き / 逆足]、右利きなら [右利き / 順足]、両足なら [両足]
- * 【LW（左ウイング）】：右利きなら [右利き / 逆足]、左利きなら [左利き / 順足]、両足なら [両足]
- * 【他ポジション】：[右足] / [左足] / [両足]
+ * 選手の利き足バッジHTMLを生成（全ポジション共通：右足 / 左足 / 両足）
  */
 function formatFootBadge(player) {
   if (!player) return '';
-  const pos = player.primaryPosition || player.preferredPosition || player.pos || '';
   const foot = player.preferredFoot || 'Right';
   
-  if (pos === 'RW') {
-    if (foot === 'Left') {
-      return '<span class="foot-badge foot-badge-inverted" title="右サイドから中央へ切り込む現代的カットイン型ウイング">左利き / 逆足</span>';
-    } else if (foot === 'Right') {
-      return '<span class="foot-badge" title="右サイドを縦に突破してクロスを供給する順足型ウイング">右利き / 順足</span>';
-    } else {
-      return '<span class="foot-badge foot-badge-both" title="内外両方向へ自在に仕掛けられる両利きウイング">両足</span>';
-    }
-  }
-  
-  if (pos === 'LW') {
-    if (foot === 'Right') {
-      return '<span class="foot-badge foot-badge-inverted" title="左サイドから中央へ切り込む現代的カットイン型ウイング">右利き / 逆足</span>';
-    } else if (foot === 'Left') {
-      return '<span class="foot-badge" title="左サイドを縦に突破してクロスを供給する順足型ウイング">左利き / 順足</span>';
-    } else {
-      return '<span class="foot-badge foot-badge-both" title="内外両方向へ自在に仕掛けられる両利きウイング">両足</span>';
-    }
-  }
-  
   if (foot === 'Left') {
-    return '<span class="foot-badge" title="貴重な左利き">左足</span>';
+    return '<span class="foot-badge" title="左利き">左足</span>';
   } else if (foot === 'Both') {
-    return '<span class="foot-badge foot-badge-both" title="左右両足の卓越したキック精度">両足</span>';
+    return '<span class="foot-badge foot-badge-both" title="両利き">両足</span>';
   }
   return '<span class="foot-badge">右足</span>';
 }
 
 function getFootShortText(player) {
   if (!player) return '右足';
-  const pos = player.primaryPosition || player.preferredPosition || player.pos || '';
   const foot = player.preferredFoot || 'Right';
-  if (pos === 'RW') {
-    if (foot === 'Left') return '左足 (逆足)';
-    if (foot === 'Right') return '右足 (順足)';
-    return '両足';
-  }
-  if (pos === 'LW') {
-    if (foot === 'Right') return '右足 (逆足)';
-    if (foot === 'Left') return '左足 (順足)';
-    return '両足';
-  }
   if (foot === 'Left') return '左足';
   if (foot === 'Both') return '両足';
   return '右足';
@@ -1891,20 +1856,20 @@ function generateRandomStaffName(nationality = null, usedNames = null) {
  */
 /**
  * ポジションおよび現代サッカーの戦術傾向に応じた利き足の生成
- * 【RW（右ウイング）】：左利き（逆足カットイン型） 55%、右利き（順足縦突破型） 35%、両足 10%
- * 【LW（左ウイング）】：右利き（逆足カットイン型） 55%、左利き（順足縦突破型） 35%、両足 10%
+ * 【RW（右ウイング）】：左利き 55%、右利き 35%、両足 10%
+ * 【LW（左ウイング）】：右利き 55%、左利き 35%、両足 10%
  * 【他ポジション（CF, CM, CB, SB等）】：右利き 70%、左利き 25%、両足 5%
  */
 function generatePreferredFoot(pos) {
   const r = Math.random();
   if (pos === 'RW') {
-    if (r < 0.55) return 'Left';   // 左利き（逆足カットイン型）55%
-    if (r < 0.90) return 'Right';  // 右利き（順足縦突破型）35%
+    if (r < 0.55) return 'Left';   // 左利き 55%
+    if (r < 0.90) return 'Right';  // 右利き 35%
     return 'Both';                 // 両足 10%
   }
   if (pos === 'LW') {
-    if (r < 0.55) return 'Right';  // 右利き（逆足カットイン型）55%
-    if (r < 0.90) return 'Left';   // 左利き（順足縦突破型）35%
+    if (r < 0.55) return 'Right';  // 右利き 55%
+    if (r < 0.90) return 'Left';   // 左利き 35%
     return 'Both';                 // 両足 10%
   }
   // 他ポジション（CF, CM, CB, SB, GK, DM, AM, LB, RB等）
