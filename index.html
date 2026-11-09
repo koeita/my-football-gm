@@ -802,7 +802,7 @@
       <div class="roster-subnav-bar market-subnav-bar" id="market-subnav-bar" role="tablist" aria-label="移籍メニュー">
         <button type="button" class="roster-subtab-btn active" data-market-subtab="market" id="market-subtab-btn-market" role="tab" aria-selected="true">選手市場</button>
         <button type="button" class="roster-subtab-btn" data-market-subtab="shortlist" id="market-subtab-btn-shortlist" role="tab" aria-selected="false">獲得ターゲット <span class="nav-badge-pill" id="badge-shortlist-count">(0)</span></button>
-        <button type="button" class="roster-subtab-btn" data-market-subtab="offers" id="market-subtab-btn-offers" role="tab" aria-selected="false">受信オファー <span class="nav-badge-pill" id="badge-offers-count">(0)</span></button>
+        <button type="button" class="roster-subtab-btn" data-market-subtab="offers" id="market-subtab-btn-offers" role="tab" aria-selected="false">オファー <span class="nav-badge-pill" id="badge-offers-count">(0)</span></button>
       </div>
 
       <!-- サブタブ1：全選手市場 -->
@@ -922,18 +922,23 @@
       </div>
 
       <!-- サブタブ3：受信オファーリスト（INCOMING OFFERS） -->
+           <!-- サブタブ3：オファー一覧（受信オファー / 送信オファー） -->
       <div class="market-subview hidden" id="market-subview-offers" role="tabpanel">
         <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2 class="panel-title">受信オファー</h2>
+          <div class="panel-header" style="flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 class="panel-title" style="margin: 0;">移籍オファー</h2>
+              <div class="roster-subnav-bar" id="offers-filter-tabs" style="margin: 0; padding: 2px; border: none; background: rgba(0,0,0,0.25);">
+                <button type="button" class="roster-subtab-btn active" data-offers-tab="incoming" id="offers-tab-btn-incoming" style="padding: 4px 10px; font-size: 11.5px;">受信オファー <span class="nav-badge-pill" id="badge-incoming-offers-count">(0)</span></button>
+                <button type="button" class="roster-subtab-btn" data-offers-tab="outgoing" id="offers-tab-btn-outgoing" style="padding: 4px 10px; font-size: 11.5px;">送信オファー <span class="nav-badge-pill" id="badge-outgoing-offers-count">(0)</span></button>
+              </div>
             </div>
             <div class="team-power-badges">
-              <span class="power-badge">未回答オファー <strong class="mono" id="offers-summary-count">0件</strong></span>
+              <span class="power-badge">アクティブ件数: <strong class="mono" id="offers-summary-count">0件</strong></span>
             </div>
           </div>
           <div class="incoming-offers-grid" id="incoming-offers-container">
-            <!-- JSでオファーカードを描画 -->
+            <!-- JSでオファーカード描画 -->
           </div>
         </div>
       </div>
