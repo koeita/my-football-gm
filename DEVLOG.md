@@ -1,5 +1,14 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## 「はじめから」選択時の移籍オファー・ターゲットリスト・ゲーム状態完全リセットの実装
+- **1. 移籍オファー残存バグの根本原因の特定と解消**:
+  - **発生原因**: 前回のキャリアデータが残っている状態でタイトル画面から「新規キャリア（はじめから）」を開始した際、`setupNewGame()` 内で `gameState.incomingOffers`（受信オファーリスト）および `gameState.targetShortlist`（獲得ターゲットリスト）が初期化配列にリセットされず、前セーブデータのオファーやボトムナビの「〇件打診」バッジがそのまま新キャリアに引き継がれてしまう不具合を特定。
+  - **新規ゲーム初期化の徹底**: `setupNewGame()` 実行時に `gameState.incomingOffers = []`、`gameState.targetShortlist = []`、`gameState.incomingTransferOffer = null`、`gameState.pendingMegaOffer = null`、`gameState.marketFilter` の初期値を明示的に設定。
+  - **カレンダー高速進行タイマーの確実破棄**: 新規ゲーム開始時に `stopAdvancingCalendar()` を即座に呼び出し、進行中のタイマーを破棄。
+- **2. セーブ・ロード機能における移籍オファー・ターゲットリストの整合性確保**:
+  - `saveGameToStorage()` の保存ペイロードに `incomingOffers`、`targetShortlist`、`incomingTransferOffer`、`pendingMegaOffer`、`marketSubtab` を追加。
+  - `loadGameFromStorage()` 読み込み時にも確実に配列保証を行い、新規ゲーム開始後の自動上書き保存時にもクリーンな状態がストレージへ記録されるよう改修。
+
 ## モバイル作戦ボードにおける縦スクロール・めり込みバグの完全防止＆GM業務オファー着信の推奨化
 - **1. モバイル作戦ボードにおける縦スクロール・めり込みバグの完全根絶**:
   - **発生原因の解明**: iOS Safari等のモバイル端末において、画面を縦にスワイプした際に `touchmove` イベントによるドキュメントスクロールが発生し、`position: fixed` のサブナビバーの裏に作戦ボードヘッダー（陣形変更やおまかせ編成ボタン）が潜り込んで隠れてしまう現象を特定。

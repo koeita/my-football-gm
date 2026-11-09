@@ -11006,6 +11006,9 @@ function confirmIntroAndStartGame() {
  * 指定されたクラブIDをプレイヤー担当クラブとして新規ゲームをセットアップ
  */
 function setupNewGame(playerClubId = gameState.selectedClubId) {
+  if (typeof stopAdvancingCalendar === 'function') {
+    stopAdvancingCalendar();
+  }
   resetTabScrollPositions();
   const usedNames = new Set();
   playerIdCounter = 1;
@@ -11021,15 +11024,29 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.consecutiveDeficitSeasons = 0;
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
+  gameState.rosterSubtab = 'board';
+  gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
   gameState.selectedSlotIndex = null;
+  gameState.profileModalPlayerId = null;
   gameState.facilities = { stadium: 1, training: 1, scouting: 1 };
   gameState.facilityFeedback = '';
   gameState.negotiationSession = null;
   gameState.pendingMegaOffer = null;
+  gameState.incomingTransferOffer = null;
+  gameState.incomingOffers = [];
+  gameState.targetShortlist = [];
+  gameState.transferMarket = [];
+  gameState.youthCandidates = [];
+  gameState.marketFilter = {
+    clubId: 'ALL',
+    position: 'ALL',
+    sortKey: 'ovr-desc',
+    searchQuery: ''
+  };
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
   const assignedManagers = [];
@@ -12450,7 +12467,12 @@ function saveGameToStorage(force = false) {
         transferMarket: gameState.transferMarket,
         youthCandidates: gameState.youthCandidates,
         facilities: gameState.facilities,
-        lastSettlement: gameState.lastSettlement
+        lastSettlement: gameState.lastSettlement,
+        incomingOffers: gameState.incomingOffers || [],
+        targetShortlist: gameState.targetShortlist || [],
+        incomingTransferOffer: gameState.incomingTransferOffer || null,
+        pendingMegaOffer: gameState.pendingMegaOffer || null,
+        marketSubtab: gameState.marketSubtab || 'market'
       }
     };
     localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
@@ -12494,6 +12516,8 @@ function loadGameFromStorage() {
       playerIdCounter = savedCounter;
     }
     Object.assign(gameState, state);
+    if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
+    if (!Array.isArray(gameState.targetShortlist)) gameState.targetShortlist = [];
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
