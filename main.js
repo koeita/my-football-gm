@@ -3727,6 +3727,26 @@ function simulateMatch(homeClub, awayClub) {
   const homeShots = Math.max(homeScore, clamp(baseHomeShots, 1, 28));
   const awayShots = Math.max(awayScore, clamp(baseAwayShots, 1, 26));
 
+  // 4. 枠内シュート数（スコア以上、シュート数以下の妥当な枠内率: 約35%〜55%）
+  const homeOnTarget = Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * (0.35 + (homeStats.avgEffOvr / 250)) + randInt(0, 1))));
+  const awayOnTarget = Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * (0.35 + (awayStats.avgEffOvr / 250)) + randInt(0, 1))));
+
+  // 5. ゴール期待値（xG: Expected Goals）：シュート数、決定機、攻撃側OVR、戦術補正から小数第2位まで算出
+  const rawHomeXg = (homeLambda * 0.65) + (homeOnTarget * 0.12) + (homeShots * 0.04) + (homeScore > 0 ? (homeScore * 0.08) : 0) + (randInt(-5, 5) * 0.01);
+  const rawAwayXg = (awayLambda * 0.65) + (awayOnTarget * 0.12) + (awayShots * 0.04) + (awayScore > 0 ? (awayScore * 0.08) : 0) + (randInt(-5, 5) * 0.01);
+  const homeXg = Math.round(clamp(rawHomeXg, 0.12, 4.80) * 100) / 100;
+  const awayXg = Math.round(clamp(rawAwayXg, 0.10, 4.60) * 100) / 100;
+
+  // 6. パス総数およびパス成功率：ボール支配率、中盤（CM/DM）の能力から算出
+  const baseMatchPasses = 860 + randInt(-30, 30);
+  const homePasses = Math.round(baseMatchPasses * (homePossession / 100));
+  const awayPasses = Math.max(120, baseMatchPasses - homePasses);
+
+  const homePassAccBase = 76 + (homeStats.cmDmPassScore - 60) * 0.45 + (hTactic === 'possession' ? 4 : 0) - (aTactic === 'gegenpress' ? 3 : 0);
+  const awayPassAccBase = 76 + (awayStats.cmDmPassScore - 60) * 0.45 + (aTactic === 'possession' ? 4 : 0) - (hTactic === 'gegenpress' ? 3 : 0);
+  const homePassAccuracy = clamp(Math.round(homePassAccBase + randInt(-2, 2)), 68, 93);
+  const awayPassAccuracy = clamp(Math.round(awayPassAccBase + randInt(-2, 2)), 68, 93);
+
   return {
     homeScore,
     awayScore,
@@ -3734,6 +3754,14 @@ function simulateMatch(homeClub, awayClub) {
     awayPossession,
     homeShots,
     awayShots,
+    homeOnTarget,
+    awayOnTarget,
+    homeXg,
+    awayXg,
+    homePasses,
+    awayPasses,
+    homePassAccuracy,
+    awayPassAccuracy,
     homeTactic: hTactic,
     awayTactic: aTactic,
     homeFormation: hForm,
@@ -3929,6 +3957,35 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     });
   };
 
+  // 守備陣・GKのクリーンシート（CS: 完封数）加算
+  const DEFENDER_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'];
+  const isDefenderOrGk = (p) => {
+    const pos = p.assignedPos || p.primaryPosition || p.preferredPosition || p.pos;
+    return DEFENDER_POSITIONS.includes(pos) || POS_ROLE_GROUP[pos] === 'GK' || POS_ROLE_GROUP[pos] === 'DF';
+  };
+
+  if (awayScore === 0) {
+    // ホーム側が無失点（完封）
+    homeStarters.forEach(p => {
+      if (isDefenderOrGk(p)) {
+        p.cleanSheets = (p.cleanSheets || 0) + 1;
+        if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: p.goals || 0, assists: p.assists || 0, cleanSheets: 0 };
+        p.careerStats.cleanSheets = (p.careerStats.cleanSheets || 0) + 1;
+      }
+    });
+  }
+
+  if (homeScore === 0) {
+    // アウェイ側が無失点（完封）
+    awayStarters.forEach(p => {
+      if (isDefenderOrGk(p)) {
+        p.cleanSheets = (p.cleanSheets || 0) + 1;
+        if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: p.goals || 0, assists: p.assists || 0, cleanSheets: 0 };
+        p.careerStats.cleanSheets = (p.careerStats.cleanSheets || 0) + 1;
+      }
+    });
+  }
+
   const isHomeWin = homeScore > awayScore;
   const isDraw = homeScore === awayScore;
   const isAwayWin = homeScore < awayScore;
@@ -4083,13 +4140,24 @@ function playNextMatchweek(skipAnimation = false) {
     const awayClub = getClubById(match.awayId);
 
     const simResult = simulateMatch(homeClub, awayClub);
-    const { homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots } = simResult;
+    const {
+      homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots,
+      homeOnTarget, awayOnTarget, homeXg, awayXg, homePasses, awayPasses, homePassAccuracy, awayPassAccuracy
+    } = simResult;
     match.homeScore = homeScore;
     match.awayScore = awayScore;
     match.homePossession = homePossession;
     match.awayPossession = awayPossession;
     match.homeShots = homeShots;
     match.awayShots = awayShots;
+    match.homeOnTarget = homeOnTarget;
+    match.awayOnTarget = awayOnTarget;
+    match.homeXg = homeXg;
+    match.awayXg = awayXg;
+    match.homePasses = homePasses;
+    match.awayPasses = awayPasses;
+    match.homePassAccuracy = homePassAccuracy;
+    match.awayPassAccuracy = awayPassAccuracy;
     match.played = true;
 
     // ホーム開催時（全19試合）：サポーター規模＋スタジアム拡張Lv補正（Lvごとに+15%）に応じたマッチデイ収入（£1.2M〜£2.5M）
@@ -4153,6 +4221,14 @@ function playNextMatchweek(skipAnimation = false) {
       awayPossession,
       homeShots,
       awayShots,
+      homeOnTarget,
+      awayOnTarget,
+      homeXg,
+      awayXg,
+      homePasses,
+      awayPasses,
+      homePassAccuracy,
+      awayPassAccuracy,
       isPlayerHome: homeClub.isPlayer,
       isPlayerMatch: homeClub.isPlayer || awayClub.isPlayer,
       matchIncome,
@@ -4776,17 +4852,27 @@ function transitionToMatchSummary() {
     ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
     : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
 
-  // 枠内シュート数算出
-  const homeOnTarget = Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
-  const awayOnTarget = Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
+  // 枠内シュート数・xG・パス数の取得または算出
+  const homeOnTarget = typeof md.homeOnTarget === 'number' ? md.homeOnTarget : Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
+  const awayOnTarget = typeof md.awayOnTarget === 'number' ? md.awayOnTarget : Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
+  const homeXg = typeof md.homeXg === 'number' ? md.homeXg : Number((homeScore * 0.72 + homeShots * 0.08).toFixed(2));
+  const awayXg = typeof md.awayXg === 'number' ? md.awayXg : Number((awayScore * 0.72 + awayShots * 0.08).toFixed(2));
+  const homePasses = typeof md.homePasses === 'number' ? md.homePasses : Math.round(840 * (homePossession / 100));
+  const awayPasses = typeof md.awayPasses === 'number' ? md.awayPasses : Math.round(840 * (awayPossession / 100));
+  const homePassAccuracy = typeof md.homePassAccuracy === 'number' ? md.homePassAccuracy : 82;
+  const awayPassAccuracy = typeof md.awayPassAccuracy === 'number' ? md.awayPassAccuracy : 78;
 
   const totalShots = Math.max(1, homeShots + awayShots);
   const homeShotsPct = Math.round((homeShots / totalShots) * 100);
   const awayShotsPct = 100 - homeShotsPct;
 
-  const totalOnTarget = Math.max(1, homeOnTarget + awayOnTarget);
-  const homeOtPct = Math.round((homeOnTarget / totalOnTarget) * 100);
-  const awayOtPct = 100 - homeOtPct;
+  const totalXg = Math.max(0.1, homeXg + awayXg);
+  const homeXgPct = Math.round((homeXg / totalXg) * 100);
+  const awayXgPct = 100 - homeXgPct;
+
+  const totalPasses = Math.max(1, homePasses + awayPasses);
+  const homePassesPct = Math.round((homePasses / totalPasses) * 100);
+  const awayPassesPct = 100 - homePassesPct;
 
   // ハイライト一覧（最大3件に絞りスクロールなしで収容）
   const highlights = matchLiveState.allHighlights.slice(0, 3);
@@ -4843,7 +4929,7 @@ function transitionToMatchSummary() {
           <div class="stat-compare-row">
             <div class="stat-compare-labels mono">
               <span style="color:#2ecc71;">${homePossession}%</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">ボール支配率</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率 (POSSESSION)</span>
               <span style="color:#60a5fa;">${awayPossession}%</span>
             </div>
             <div class="stat-compare-bar-track">
@@ -4853,9 +4939,9 @@ function transitionToMatchSummary() {
           </div>
           <div class="stat-compare-row">
             <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homeShots}本</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">シュート数</span>
-              <span style="color:#60a5fa;">${awayShots}本</span>
+              <span style="color:#2ecc71;">${homeShots}本 (${homeOnTarget})</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">シュート / 枠内 (SHOTS / ON TARGET)</span>
+              <span style="color:#60a5fa;">${awayShots}本 (${awayOnTarget})</span>
             </div>
             <div class="stat-compare-bar-track">
               <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
@@ -4864,13 +4950,24 @@ function transitionToMatchSummary() {
           </div>
           <div class="stat-compare-row">
             <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homeOnTarget}本</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">枠内シュート</span>
-              <span style="color:#60a5fa;">${awayOnTarget}本</span>
+              <span style="color:#2ecc71;">${homeXg.toFixed(2)}</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">ゴール期待値 (xG)</span>
+              <span style="color:#60a5fa;">${awayXg.toFixed(2)}</span>
             </div>
             <div class="stat-compare-bar-track">
-              <div class="stat-bar-home" style="width:${homeOtPct}%;"></div>
-              <div class="stat-bar-away" style="width:${awayOtPct}%;"></div>
+              <div class="stat-bar-home" style="width:${homeXgPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayXgPct}%;"></div>
+            </div>
+          </div>
+          <div class="stat-compare-row">
+            <div class="stat-compare-labels mono">
+              <span style="color:#2ecc71;">${homePasses}本 [${homePassAccuracy}%]</span>
+              <span style="color:var(--text-muted);font-size:9.5px;">パス数 / 成功率 (PASSES / ACCURACY)</span>
+              <span style="color:#60a5fa;">${awayPasses}本 [${awayPassAccuracy}%]</span>
+            </div>
+            <div class="stat-compare-bar-track">
+              <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>
+              <div class="stat-bar-away" style="width:${awayPassesPct}%;"></div>
             </div>
           </div>
         </div>
@@ -7067,11 +7164,18 @@ function closeIncomingOfferModal() {
  */
 function promoteYouthPlayer(youthId) {
   const playerClub = getPlayerClub();
-  if (!playerClub) return;
+  if (!playerClub) return false;
 
   if (playerClub.players.length >= MAX_SQUAD_SIZE) {
     showToast(`トップチーム枠（最大${MAX_SQUAD_SIZE}名）が満杯です。昇格させるには先に選手を放出またはU-21へ派遣してください。`, 'warning');
-    return;
+    alert(`トップチーム枠（最大${MAX_SQUAD_SIZE}名）が満杯です。`);
+    return false;
+  }
+
+  const SIGN_FEE = 40; // 初回契約金 £40k
+  if (playerClub.funds < SIGN_FEE) {
+    alert(`資金不足です。初回プロ契約金 £${SIGN_FEE}k を支払えません。`);
+    return false;
   }
 
   if (!playerClub.youthSquad) {
@@ -7079,8 +7183,9 @@ function promoteYouthPlayer(youthId) {
   }
 
   const idx = playerClub.youthSquad.findIndex(y => y.id === youthId);
-  if (idx === -1) return;
+  if (idx === -1) return false;
 
+  playerClub.funds -= SIGN_FEE;
   const youth = playerClub.youthSquad.splice(idx, 1)[0];
   youth.isYouth = false;
   youth.isStarter = false;
@@ -7104,9 +7209,10 @@ function promoteYouthPlayer(youthId) {
   ensureValidSquadAndStarters(playerClub);
 
   showToast(`[ユース昇格] ${youth.pos} #${youth.squadNumber} ${youth.name}（${youth.age}歳）とプロ契約（週給${formatWage(youth.wage)} / 3年）を締結し、トップチームへ昇格させました！`, 'success');
-  addDailyLog(`【U-21アカデミー昇格】${youth.pos} #${youth.squadNumber} ${youth.name} がプロ契約締結（週給 ${formatWage(youth.wage)} / 3年契約）`);
+  addDailyLog(`【U-21アカデミー昇格】${youth.pos} #${youth.squadNumber} ${youth.name} がプロ契約締結（初回契約金 £40k / 週給 ${formatWage(youth.wage)} / 3年契約）`);
 
   renderAll();
+  return true;
 }
 
 /**
@@ -9490,7 +9596,7 @@ function renderYouthSquad() {
     ` : `<button type="button" class="btn btn-secondary btn-sm" disabled>枠上限</button>`;
 
     return `
-      <tr>
+      <tr class="clickable-youth-row" data-profile-id="${y.id}" style="cursor: pointer;">
         <td class="col-pos"><span class="pos-tag pos-${y.pos}">${y.pos}</span></td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="詳細プロフィールを表示">
@@ -9950,7 +10056,19 @@ function findPlayerWithContextById(playerId) {
   for (const club of gameState.clubs) {
     const found = club.players.find(p => p.id === playerId);
     if (found) {
-      return { player: found, clubName: club.name, isMarket: false, isPlayerClub: club.isPlayer };
+      return { player: found, clubName: club.name, isMarket: false, isPlayerClub: club.isPlayer, isYouth: false };
+    }
+    if (club.youthSquad) {
+      const youthFound = club.youthSquad.find(p => p.id === playerId);
+      if (youthFound) {
+        return {
+          player: youthFound,
+          clubName: `${club.name} U-21ユース`,
+          isMarket: false,
+          isPlayerClub: club.isPlayer,
+          isYouth: true
+        };
+      }
     }
   }
   const marketFound = gameState.transferMarket.find(p => p.id === playerId);
@@ -10345,7 +10463,17 @@ function openPlayerProfileModal(playerId) {
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
   const playerClub = getPlayerClub();
-  const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+
+  // ユース選手の将来予測OVR（ポテンシャル）生成・維持
+  if (isYouth) {
+    if (!p.potentialMin || !p.potentialMax) {
+      const potBase = Math.max(baseOvr + (p.age <= 18 ? 10 : 7), p.potentialRating || 78);
+      p.potentialMin = clamp(potBase, 75, 90);
+      p.potentialMax = clamp(p.potentialMin + 5, p.potentialMin, 95);
+    }
+  }
+
   const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
   const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
@@ -10412,11 +10540,20 @@ function openPlayerProfileModal(playerId) {
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
     const footBadgeStr = formatFootBadge(p);
+    let youthBadgeHtml = '';
+    if (isYouth) {
+      const starStr = p.potentialMax >= 88 ? '★★★★★' : (p.potentialMax >= 84 ? '★★★★☆' : '★★★☆☆');
+      youthBadgeHtml = `
+        <span class="profile-bio-chip mono" style="background:rgba(46,204,113,0.2);color:var(--accent-green);border-color:var(--accent-green);font-weight:700;">POT: ${p.potentialMin}-${p.potentialMax}</span>
+        <span class="profile-bio-chip mono" style="background:rgba(241,196,15,0.18);color:var(--accent-gold);border-color:rgba(241,196,15,0.4);">将来性: ${starStr}</span>
+      `;
+    }
     bioRowEl.innerHTML = `
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
       <span class="profile-bio-chip">${footBadgeStr}</span>
+      ${youthBadgeHtml}
     `;
   }
 
@@ -10641,21 +10778,49 @@ function openPlayerProfileModal(playerId) {
           </div>
         </div>
 
-        <!-- 能力タブ下部：契約・市場価値情報 -->
-        <div class="profile-metrics-row profile-metrics-row-3col">
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
-            <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
+        <!-- 能力タブ下部：契約・市場価値情報 または ユースプロ契約条件 -->
+        ${isYouth ? `
+          <div class="profile-box" style="margin-top: 12px; border-color: rgba(46, 204, 113, 0.4); background: rgba(18, 24, 20, 0.7);">
+            <div class="profile-box-header" style="border-bottom: 1px solid rgba(46, 204, 113, 0.3);">
+              <span class="profile-box-title" style="color: var(--accent-green);">プロ契約条件 ＆ トップ昇格 [U-21 YOUTH]</span>
+              <span class="mono accent-gold" style="font-size: 11px;">POT: ${p.potentialMin}-${p.potentialMax}</span>
+            </div>
+            <div class="profile-metrics-row profile-metrics-row-3col" style="margin-top: 8px;">
+              <div class="profile-metric-card">
+                <span class="profile-metric-label">初回契約金</span>
+                <span class="profile-metric-val mono accent-gold">£40k</span>
+              </div>
+              <div class="profile-metric-card">
+                <span class="profile-metric-label">想定週給</span>
+                <span class="profile-metric-val mono accent-green">£${p.wage || 2.5}k/週</span>
+              </div>
+              <div class="profile-metric-card">
+                <span class="profile-metric-label">契約年数</span>
+                <span class="profile-metric-val mono">3年</span>
+              </div>
+            </div>
+            <div style="margin-top: 10px;">
+              <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="width: 100%; font-weight: 700; padding: 10px 14px;">
+                トップチームへプロ契約昇格する
+              </button>
+            </div>
           </div>
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">契約残年数</span>
-            <span class="profile-metric-val">${p.contractYears}年</span>
+        ` : `
+          <div class="profile-metrics-row profile-metrics-row-3col">
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
+              <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">契約残年数</span>
+              <span class="profile-metric-val">${p.contractYears}年</span>
+            </div>
+            <div class="profile-metric-card">
+              <span class="profile-metric-label">${isMarket ? '移籍金' : '推定市場価値'}</span>
+              <span class="profile-metric-val">${formatMoney(estMarketValue)}</span>
+            </div>
           </div>
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">${isMarket ? '移籍金' : '推定市場価値'}</span>
-            <span class="profile-metric-val">${formatMoney(estMarketValue)}</span>
-          </div>
-        </div>
+        `}
       </div>
 
       <!-- タブ2：今季成績 -->
@@ -10679,6 +10844,17 @@ function openPlayerProfileModal(playerId) {
               <span class="profile-metric-label">アシスト</span>
               <span class="profile-metric-val mono text-cyan">${typeof p.assists === 'number' ? p.assists : 0} <small style="font-size: 12px; color: var(--text-muted);">アシスト</small></span>
             </div>
+            ${['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(primaryPos) || POS_ROLE_GROUP[primaryPos] === 'GK' || POS_ROLE_GROUP[primaryPos] === 'DF' ? `
+              <div class="profile-metric-card">
+                <span class="profile-metric-label">クリーンシート (CS)</span>
+                <span class="profile-metric-val mono accent-gold">${p.cleanSheets || 0} <small style="font-size: 12px; color: var(--text-muted);">完封</small></span>
+              </div>
+            ` : `
+              <div class="profile-metric-card">
+                <span class="profile-metric-label">クリーンシート (CS)</span>
+                <span class="profile-metric-val mono text-muted">-</span>
+              </div>
+            `}
             <div class="profile-metric-card">
               <span class="profile-metric-label">平均評価点</span>
               <span class="profile-metric-val mono accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
@@ -10821,6 +10997,19 @@ function openPlayerProfileModal(playerId) {
     if (btnCancelTrain) {
       btnCancelTrain.addEventListener('click', () => {
         cancelPlayerPositionTraining(p.id);
+      });
+    }
+
+    // ユース選手のトップ昇格ボタンイベント
+    const btnPromoteModal = bodyEl.querySelector(`.btn-modal-promote-youth[data-youth-id="${p.id}"]`);
+    if (btnPromoteModal) {
+      btnPromoteModal.addEventListener('click', () => {
+        const ok = window.confirm(`${p.name}選手とプロ契約を締結し、トップチームへ昇格させますか？\n（初回契約金: £40k / 週給: £${p.wage || 2.5}k / 契約年数: 3年）`);
+        if (!ok) return;
+        const success = promoteYouthPlayer(p.id);
+        if (success) {
+          closePlayerProfileModal();
+        }
       });
     }
   }
@@ -12044,10 +12233,10 @@ function initGame() {
   const shortlistTbody = document.getElementById('shortlist-tbody');
   if (shortlistTbody) {
     shortlistTbody.addEventListener('click', (e) => {
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
+      const profileEl = e.target.closest('[data-profile-id]');
+      if (profileEl) {
         e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
+        openPlayerProfileModal(profileEl.dataset.profileId);
         return;
       }
       const formalBtn = e.target.closest('[data-formal-offer-id]');
@@ -12310,13 +12499,10 @@ function initGame() {
       }
     });
   }
+  // モーダルは右上の「×」ボタン（#btn-close-profile-modal）または Esc キーのみで閉じる仕様を徹底（オーバーレイ背景クリックでの誤クローズを抑止）
   const profileModalOverlay = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   if (profileModalOverlay) {
-    profileModalOverlay.addEventListener('click', (e) => {
-      if (e.target === profileModalOverlay) {
-        closePlayerProfileModal();
-      }
-    });
+    // 背景クリックによる自動クローズは行わない
   }
 
   // 契約更新・移籍獲得交渉モーダルのイベント
