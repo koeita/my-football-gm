@@ -11569,7 +11569,7 @@ function initTacticalDragAndDrop() {
     const tacticalSideCol = document.getElementById('tactical-side-column');
     const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
     const winWidth = window.innerWidth;
-    const isPointerInsideDrawer = isDrawerOpen && clientX > (winWidth - 280);
+    const isPointerInsideDrawer = isDrawerOpen && clientX > (winWidth - 295);
 
     const elAtPoint = document.elementFromPoint(clientX, clientY);
     if (elAtPoint) {
@@ -11920,8 +11920,8 @@ function initTacticalDragAndDrop() {
       const tacticalSideCol = document.getElementById('tactical-side-column');
       const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
 
-      // ピッチ領域（画面右から220pxより左）に指がある時は、確実にドロワーを閉じてピッチ全開！
-      if (isDrawerOpen && e.clientX < (winWidth - 220)) {
+      // ピッチ領域（ドロワー左端をしっかり越えた画面右から295pxより左）に指がある時にスッと収納！
+      if (isDrawerOpen && e.clientX < (winWidth - 295)) {
         if (typeof toggleBenchSheet === 'function') {
           toggleBenchSheet(false);
         }
