@@ -10842,6 +10842,7 @@ function openPlayerProfileModal(playerId) {
 
   if (modalEl) {
     modalEl.classList.remove('hidden');
+    if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
     requestAnimationFrame(resetProfileScroll);
   }
 }
@@ -10861,6 +10862,7 @@ function closePlayerProfileModal() {
   if (cardEl) cardEl.scrollTop = 0;
   if (bodyScrollEl) bodyScrollEl.scrollTop = 0;
 
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.profileModalPlayerId = null;
 }
 
@@ -12406,6 +12408,16 @@ function initGame() {
     });
   }
 
+  // 監督交代モーダル 閉じるイベント
+  const btnCloseManagerModal = document.getElementById('btn-close-manager-modal');
+  if (btnCloseManagerModal) btnCloseManagerModal.addEventListener('click', closeManagerHireModal);
+  const managerHireModal = document.getElementById('manager-hire-modal');
+  if (managerHireModal) {
+    managerHireModal.addEventListener('click', (e) => {
+      if (e.target === managerHireModal) closeManagerHireModal();
+    });
+  }
+
   // コーチ招聘モーダル 閉じるイベント
   const btnCloseCoachModal = document.getElementById('btn-close-coach-modal');
   if (btnCloseCoachModal) btnCloseCoachModal.addEventListener('click', closeCoachHireModal);
@@ -12418,6 +12430,11 @@ function initGame() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const managerModal = document.getElementById('manager-hire-modal');
+      if (managerModal && !managerModal.classList.contains('hidden')) {
+        closeManagerHireModal();
+        return;
+      }
       const coachModal = document.getElementById('coach-hire-modal');
       if (coachModal && !coachModal.classList.contains('hidden')) {
         closeCoachHireModal();
@@ -12911,9 +12928,18 @@ function initReloadPrevention() {
     const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
 
-    // 作戦ボード表示時の縦スクロール完全遮断（控えトレイ・ベンチ外トレイの左右スワイプのみ許可）
-    const isRosterBoard = gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board');
-    if (isRosterBoard) {
+    // 開いているモーダル内部でのスクロール操作は一切邪魔せずブラウザ標準に委ねる
+    const inOpenModal = e.target && e.target.closest && (
+      e.target.closest('.modal-card, .modal-body, .profile-modal-card, .profile-modal-body, .coach-modal-body, .manager-modal-body, .negotiation-modal-body') ||
+      e.target.closest('.modal-overlay:not(.hidden)')
+    );
+    if (inOpenModal) {
+      return;
+    }
+
+    // モバイル作戦ボード（画面幅768px以下）表示時の縦スクロール完全遮断（控えトレイ・ベンチ外トレイの左右スワイプのみ許可）
+    const isMobileRosterBoard = (window.innerWidth <= 768) && gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board');
+    if (isMobileRosterBoard) {
       const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
       const isSubOrReserveList = e.target && e.target.closest && (e.target.closest('.pitch-bench-list') || e.target.closest('.pitch-reserves-list'));
       if (isHorizontal && isSubOrReserveList) {
@@ -12993,7 +13019,8 @@ function initReloadPrevention() {
   }, { passive: true, capture: true });
 
   window.addEventListener('scroll', () => {
-    if (gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board')) {
+    // モバイル作戦ボード（画面幅768px以下）でのみ予期せぬスクロールズレを防止（PC環境では通常の縦スクロールを完全に許可）
+    if (window.innerWidth <= 768 && gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board')) {
       if (window.scrollY !== 0 || window.scrollX !== 0) {
         window.scrollTo(0, 0);
       }
@@ -13161,69 +13188,118 @@ function renderManagerManagementPanel() {
             </div>
           </div>
         </div>
-        <div class="manager-current-actions">
-          <button type="button" class="btn btn-sack-manager mono" id="btn-sack-manager" data-buyout="${buyoutFee}">
-            監督を解任する [違約金 £${buyoutFee.toLocaleString()}k]
+        <div class="manager-current-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary mono" id="btn-open-change-manager" style="font-weight: 700; padding: 10px 18px;">
+            監督を交代する [前任違約金 £${buyoutFee.toLocaleString()}k]
           </button>
         </div>
       </div>
     `;
   } else {
     currentCardHtml = `
-      <div class="manager-current-card" style="border-color: rgba(231, 76, 60, 0.4); justify-content: center; padding: 20px;">
-        <div class="mono text-danger font-bold" style="font-size: 14px;">
-          現在、監督が不在（空席）です。以下の後任監督リストから即座に招聘してください。
+      <div class="manager-current-card" style="border-color: rgba(231, 76, 60, 0.4); justify-content: center; padding: 24px; text-align: center;">
+        <div class="mono text-danger font-bold" style="font-size: 14px; margin-bottom: 12px;">
+          現在、監督が不在（空席）です。後任監督をスカウトして新監督を招聘してください。
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary mono" id="btn-open-change-manager" style="font-weight: 700; padding: 10px 24px; font-size: 14px;">
+            新監督を招聘する
+          </button>
         </div>
       </div>
     `;
   }
 
-  // 後任候補リスト（3名程度表示）
-  const freeList = (gameState.freeManagers || []).slice(0, 3);
-  let candidatesHtml = '';
-  if (freeList.length > 0) {
-    candidatesHtml = `
-      <div class="manager-candidates-title mono">
-        <span>後任監督候補スカウト [即時招聘可能]</span>
-        <span class="text-muted" style="font-size: 11px;">※契約締結で新監督として就任します</span>
+  container.innerHTML = currentCardHtml;
+
+  // イベント登録：「監督を交代する」ボタンで後任選択モーダルを開く
+  const changeBtn = document.getElementById('btn-open-change-manager');
+  if (changeBtn) {
+    changeBtn.addEventListener('click', () => {
+      openManagerHireModal();
+    });
+  }
+}
+
+/**
+ * 監督交代・後任スカウトモーダルを開く
+ */
+function openManagerHireModal() {
+  const modal = document.getElementById('manager-hire-modal');
+  const body = document.getElementById('manager-modal-body');
+  const titleEl = document.getElementById('manager-modal-title');
+  if (!modal || !body) return;
+
+  const club = getPlayerClub();
+  const currentMgr = club ? club.manager : null;
+  const buyoutFee = currentMgr ? getManagerBuyoutFee(currentMgr) : 0;
+
+  if (titleEl) {
+    titleEl.textContent = currentMgr ? '監督交代・後任スカウト' : '新監督招聘・スカウト';
+  }
+
+  const freeList = gameState.freeManagers || [];
+  if (freeList.length === 0) {
+    body.innerHTML = `
+      <div class="mono text-muted" style="padding: 30px 20px; text-align: center;">
+        現在スカウト可能なフリー監督候補がいません。
       </div>
-      <div class="manager-candidates-grid">
+    `;
+  } else {
+    let noteHtml = '';
+    if (currentMgr) {
+      noteHtml = `
+        <div class="mono" style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: #ff7675; line-height: 1.5;">
+          後任監督を選択すると、現監督（<strong>${currentMgr.name}</strong>）を解任して新監督として就任します。<br>
+          ※解任違約金 <strong>£${buyoutFee.toLocaleString()}k</strong> がクラブ資金から引き落とされます。
+        </div>
+      `;
+    } else {
+      noteHtml = `
+        <div class="mono" style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: var(--accent-green); line-height: 1.5;">
+          新監督を選択して契約締結（契約期間: 3年）を行います。
+        </div>
+      `;
+    }
+
+    const cardsHtml = `
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
         ${freeList.map(cand => {
           const tacticLabel = getManagerTacticLabel(cand.preferredTactic);
-          const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 40) : '';
+          const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 44) : '';
           return `
-            <div class="manager-candidate-card">
+            <div class="manager-candidate-card" style="margin: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px;">
               <div>
-                <div class="candidate-head">
+                <div class="candidate-head" style="display: flex; align-items: center; gap: 12px;">
                   <div class="candidate-avatar">
                     ${cAvatar}
                   </div>
                   <div>
-                    <div class="candidate-info-name">${cand.name}</div>
-                    <div class="candidate-info-meta mono">${cand.nationality} / ${cand.age}歳</div>
+                    <div class="candidate-info-name" style="font-weight: 700; font-size: 14px;">${cand.name}</div>
+                    <div class="candidate-info-meta mono text-muted" style="font-size: 11px;">${cand.nationality} / ${cand.age}歳</div>
                   </div>
                 </div>
-                <div class="candidate-body mono" style="margin-top: 8px;">
-                  <div class="candidate-style-row">
-                    <span class="text-muted">得意陣形</span>
+                <div class="candidate-body mono" style="margin-top: 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+                  <div class="candidate-style-row" style="display: flex; justify-content: space-between;">
+                    <span class="text-muted">得意陣形:</span>
                     <strong class="accent-green">${cand.preferredFormation}</strong>
                   </div>
-                  <div class="candidate-style-row">
-                    <span class="text-muted">得意戦術</span>
+                  <div class="candidate-style-row" style="display: flex; justify-content: space-between;">
+                    <span class="text-muted">得意戦術:</span>
                     <strong class="accent-green">${tacticLabel}</strong>
                   </div>
-                  <div class="candidate-style-row">
-                    <span class="text-muted">要求週給</span>
+                  <div class="candidate-style-row" style="display: flex; justify-content: space-between;">
+                    <span class="text-muted">要求週給:</span>
                     <strong class="accent-gold">£${cand.weeklyWage}k/週</strong>
                   </div>
-                  <div class="candidate-bio">
+                  <div class="candidate-bio text-muted" style="margin-top: 6px; font-size: 11px; line-height: 1.4;">
                     ${cand.bio}
                   </div>
                 </div>
               </div>
-              <div class="candidate-actions">
-                <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}">
-                  新監督として招聘する
+              <div class="candidate-actions" style="margin-top: 12px; text-align: right;">
+                <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" style="width: 100%; font-weight: 700; padding: 8px 12px;">
+                  ${currentMgr ? 'この監督を選んで交代する' : '新監督として招聘する'}
                 </button>
               </div>
             </div>
@@ -13231,26 +13307,36 @@ function renderManagerManagementPanel() {
         }).join('')}
       </div>
     `;
-  }
 
-  container.innerHTML = currentCardHtml + candidatesHtml;
+    body.innerHTML = noteHtml + cardsHtml;
 
-  // イベント登録
-  const sackBtn = document.getElementById('btn-sack-manager');
-  if (sackBtn) {
-    sackBtn.addEventListener('click', () => {
-      sackCurrentManager();
+    // 各監督の招聘ボタンにイベントを登録
+    body.querySelectorAll('.btn-hire-manager').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mid = e.currentTarget.dataset.managerId;
+        if (mid) {
+          const success = hireNewManager(mid);
+          if (success) {
+            closeManagerHireModal();
+          }
+        }
+      });
     });
   }
 
-  container.querySelectorAll('.btn-hire-manager').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const mid = e.currentTarget.dataset.managerId;
-      if (mid) {
-        hireNewManager(mid);
-      }
-    });
-  });
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+}
+
+/**
+ * 監督交代・後任スカウトモーダルを閉じる
+ */
+function closeManagerHireModal() {
+  const modal = document.getElementById('manager-hire-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**

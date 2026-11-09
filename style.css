@@ -4350,7 +4350,18 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   background-color: rgba(0, 0, 0, 0.85) !important;
   backdrop-filter: blur(6px) !important;
   overscroll-behavior: contain !important;
-  touch-action: none !important;
+  touch-action: pan-y !important;
+}
+
+.modal-card,
+.profile-modal-card,
+.modal-body,
+.profile-modal-body,
+.coach-modal-body,
+.manager-modal-body {
+  touch-action: pan-y !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 @media (max-width: 768px) {
@@ -10979,6 +10990,28 @@ button.hidden,
 .btn-hire-coach-slot:hover {
   background: var(--accent-green);
   color: #111;
+}
+
+/* 監督交代・招聘モーダル */
+.manager-modal-card {
+  max-width: 600px;
+  width: 90%;
+  background: #1e2227;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.manager-modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 /* コーチ招聘モーダル */
