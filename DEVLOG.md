@@ -1,5 +1,23 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## PWA対応（オリジナルアプリアイコン生成、Web App Manifest設定、ホーム画面起動時のiOSノッチ上ズレ防止CSSの導入）
+- **1. サッカーGM専用オリジナルアプリアイコンの生成と配置**:
+  - ゲームのダーク世界観（背景 `#1a1d20` × ピッチグリーン `#2ecc71`）に合わせた、ミニマルなクレスト外枠・タクティカルサッカーボール幾何学ベクター・「GM」ブランドバッジからなる高精細アイコンを作成。
+  - 各種仕様に合わせて配置：
+    - `apple-touch-icon.png` (180x180) - iOSホーム画面アイコン
+    - `icon-192.png` (192x192) - Android / PWA標準アイコン
+    - `icon-512.png` (512x512) - スプラッシュ画面・ストア用高解像度アイコン
+    - `icon.svg` - ベクターアイコン
+    - `favicon.ico` - マルチ解像度ファビコン (16x16, 32x32, 48x48)
+- **2. Web App Manifest および index.html の PWA 最適化**:
+  - `manifest.json`: アプリ名を「サッカーGMシミュレーター」（short_name: 「サッカーGM」）、`display: standalone`、`start_url: "./"`、テーマカラー・背景色 `#1a1d20` に設定。
+  - `index.html`: `viewport-fit=cover`、`apple-mobile-web-app-capable: yes`、`apple-mobile-web-app-status-bar-style: black-translucent`、`apple-mobile-web-app-title: サッカーGM`、および各アプリアイコン・マニフェストへのリンクタグを完全整備。
+- **3. iOSスタンドアロン起動時の「画面上ズレ（ノッチ・時計食い込み）」完全防止**:
+  - ホーム画面から起動した全画面モード（`@media all and (display-mode: standalone)`）において、iPhoneのノッチやDynamic Island、上部時計表示にヘッダーがめり込まないよう、フォールバック付き強制セーフエリア余白を実装：
+    `padding-top: max(env(safe-area-inset-top, 0px), 48px) !important;`
+    `padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;`
+  - 固定ヘッダー（`.status-header`）の高さや位置、固定サブナビバー（`.team-subnav-bar` 等）の配置、およびタイトル画面の余白もすべてセーフエリアに連動させ、全画面スタンドアロン表示時でも突き抜けや重なりが起きない完全な表示整合性を確保。
+
 ## 日程・結果画面の「消化・戦績」表記削除およびモバイル1画面収容（スクロール不要化）
 - **1. 「消化・戦績」バッジ・見出し行の完全撤去**:
   - 日程・結果パネル上部にあった「シーズン日程・試合結果」見出しおよび「消化 X / 38節」「戦績 X勝 X分 X敗」のバッジバー（`.panel-header`）を完全に削除。

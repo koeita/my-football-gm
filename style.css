@@ -5608,8 +5608,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
-    height: 52px !important;
-    max-height: 52px !important;
+    height: calc(46px + max(env(safe-area-inset-top, 0px), 5px)) !important;
+    max-height: calc(46px + max(env(safe-area-inset-top, 0px), 5px)) !important;
     box-sizing: border-box !important;
   }
 
@@ -12628,5 +12628,58 @@ button.hidden,
     box-sizing: border-box !important;
     width: 100% !important;
     gap: 8px !important;
+  }
+}
+
+/* ==========================================================================
+   PWA スタンドアロン起動時（ホーム画面追加）のiOSノッチ・セーフエリア完全対策
+   ========================================================================== */
+@media all and (display-mode: standalone) {
+  body, #app, .app-container {
+    padding-top: max(env(safe-area-inset-top, 0px), 48px) !important;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .status-header {
+    padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
+    height: calc(48px + max(env(safe-area-inset-top, 0px), 44px)) !important;
+    max-height: calc(48px + max(env(safe-area-inset-top, 0px), 44px)) !important;
+  }
+
+  .status-header-right {
+    top: calc(max(env(safe-area-inset-top, 0px), 44px) + 2px) !important;
+  }
+
+  .app-container {
+    padding-top: calc(52px + max(env(safe-area-inset-top, 0px), 44px)) !important;
+    padding-bottom: calc(76px + max(env(safe-area-inset-bottom, 0px), 20px)) !important;
+  }
+
+  .roster-subnav-bar,
+  .market-subnav-bar,
+  .facilities-subnav-bar,
+  .team-subnav-bar {
+    top: calc(50px + max(env(safe-area-inset-top, 0px), 44px)) !important;
+  }
+
+  #view-market,
+  #view-facilities,
+  #view-team {
+    padding-top: 50px !important;
+  }
+
+  #view-roster {
+    padding-top: 44px !important;
+  }
+
+  .tab-nav {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
+    height: calc(54px + max(env(safe-area-inset-bottom, 0px), 20px)) !important;
+  }
+
+  .main-menu-inner {
+    padding-top: max(env(safe-area-inset-top, 0px), 48px) !important;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px) !important;
   }
 }
