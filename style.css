@@ -3,7 +3,8 @@
    ========================================== */
 .roster-subnav-bar,
 .market-subnav-bar,
-.facilities-subnav-bar {
+.facilities-subnav-bar,
+.team-subnav-bar {
   display: flex !important;
   align-items: center !important;
   justify-content: stretch !important;
@@ -366,7 +367,8 @@
 
   .roster-subnav-bar,
   .market-subnav-bar,
-  .facilities-subnav-bar {
+  .facilities-subnav-bar,
+  .team-subnav-bar {
     position: static !important;
     max-width: 480px;
     margin: 0 auto 12px auto;
@@ -7057,7 +7059,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   /* 編成・移籍・経営サブタブバー（固定ヘッダー直下の統一セグメントコントロール） */
   .roster-subnav-bar,
   .market-subnav-bar,
-  .facilities-subnav-bar {
+  .facilities-subnav-bar,
+  .team-subnav-bar {
     position: fixed !important;
     top: calc(52px + env(safe-area-inset-top, 0px)) !important;
     left: 6px !important;
@@ -7086,7 +7089,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .roster-subnav-bar .roster-subtab-btn,
   .market-subnav-bar .roster-subtab-btn,
-  .facilities-subnav-bar .roster-subtab-btn {
+  .facilities-subnav-bar .roster-subtab-btn,
+  .team-subnav-bar .roster-subtab-btn {
     flex: 1 1 0 !important;
     height: 36px !important;
     min-height: 36px !important;
@@ -11736,4 +11740,241 @@ button.hidden,
     transform: scale(1.08);
     opacity: 0.88;
   }
+}
+
+/* ==========================================
+   シーズン日程・結果カレンダー ＆ サマリー振り返り
+   ========================================== */
+.btn-view-full-schedule {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.btn-view-full-schedule:hover {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: var(--accent-green);
+}
+
+.season-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  max-height: 68vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-month-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #14171a;
+  border-left: 3px solid var(--accent-green);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #dbe2e9;
+  margin-top: 6px;
+}
+
+.schedule-month-badge {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.schedule-fixture-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #1a1d20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.schedule-fixture-card.fixture-played {
+  cursor: pointer;
+}
+
+.schedule-fixture-card.fixture-played:hover {
+  background: #23272c;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.schedule-fixture-card.fixture-next {
+  border-color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.06);
+}
+
+.fixture-left-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fixture-round-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 42px;
+  flex-shrink: 0;
+}
+
+.fixture-date-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a94a0;
+  flex-shrink: 0;
+}
+
+.fixture-venue-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.fixture-venue-home {
+  background: rgba(46, 204, 113, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.fixture-venue-away {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.fixture-opponent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fixture-right-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fixture-unplayed-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.fixture-next-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-green);
+  color: #0e1114;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fixture-result-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.result-win {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.result-draw {
+  background: rgba(241, 196, 15, 0.18);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.4);
+}
+
+.result-lose {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.fixture-score-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 44px;
+  text-align: center;
+}
+
+.fixture-replay-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .schedule-fixture-card {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .fixture-left-col {
+    gap: 6px;
+  }
+  .fixture-round-badge {
+    width: 36px;
+    font-size: 10px;
+  }
+  .fixture-date-badge {
+    font-size: 10px;
+  }
+  .fixture-opponent-name {
+    font-size: 12px;
+  }
+  .fixture-score-text {
+    font-size: 12px;
+    min-width: 36px;
+  }
+  .fixture-replay-hint {
+    display: none;
+  }
+}
+
+.past-match-modal-card .info-popup-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
 }

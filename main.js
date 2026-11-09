@@ -1171,6 +1171,8 @@ const gameState = {
   incomingOffers: [],            // 受信オファーリスト（プール制）
   targetShortlist: [],           // 獲得ターゲットリスト（SHORTLIST）
   facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
+  teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
+  matchHistory: [],              // 自クラブのシーズン全公式戦サマリー履歴
   marketSubtab: 'market',        // 移籍タブ内サブタブ ('market' | 'shortlist' | 'offers')
   marketFilter: {                // グローバル移籍市場の絞り込み状態
     clubId: 'ALL',
@@ -4243,6 +4245,13 @@ function playNextMatchweek(skipAnimation = false) {
       playerMatchData = matchObj;
       playerHomeScorers = homeScorers;
       playerAwayScorers = awayScorers;
+      if (!gameState.matchHistory) gameState.matchHistory = [];
+      const existIdx = gameState.matchHistory.findIndex(m => m.week === matchObj.week);
+      if (existIdx !== -1) {
+        gameState.matchHistory[existIdx] = matchObj;
+      } else {
+        gameState.matchHistory.push(matchObj);
+      }
     }
   }
 
@@ -7821,6 +7830,7 @@ function startNextSeason() {
   gameState.currentWeek = 0;
   gameState.isSeasonOver = false;
   gameState.lastWeekResults = [];
+  gameState.matchHistory = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
@@ -7936,6 +7946,8 @@ function switchTab(tabName) {
     switchMarketSubtab(gameState.marketSubtab || 'market');
   } else if (tabName === 'facilities') {
     switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment');
+  } else if (tabName === 'team') {
+    switchTeamSubtab(gameState.teamSubtab || 'standings');
   }
 
   renderAll();
@@ -8047,8 +8059,13 @@ function renderAll() {
   renderFinancialAlert();
   renderGmDuties();
   renderSeasonSettlement();
-  renderStandings();
-  renderTopScorers();
+  if (gameState.teamSubtab === 'schedule') {
+    renderSeasonSchedule();
+  } else if (gameState.teamSubtab === 'stats') {
+    renderTopScorers();
+  } else {
+    renderStandings();
+  }
   renderMatchLog();
   renderRoster();
   renderYouthSquad();
@@ -11270,6 +11287,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.facilitiesSubtab = 'investment';
   gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
+  gameState.matchHistory = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
@@ -12669,6 +12687,50 @@ function initGame() {
   }
 
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
+
+  // チームサブタブ（順位表 / 日程・結果 / 個人スタッツ）の切り替えイベント
+  const teamSubnavBar = document.getElementById('team-subnav-bar');
+  if (teamSubnavBar) {
+    teamSubnavBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-team-subtab]');
+      if (!btn) return;
+      const subtabKey = btn.dataset.teamSubtab;
+      switchTeamSubtab(subtabKey);
+    });
+  }
+
+  // 週間スケジュールから「全日程 ➔」を押したときのイベント
+  const btnViewFullSchedule = document.getElementById('btn-view-full-schedule');
+  if (btnViewFullSchedule) {
+    btnViewFullSchedule.addEventListener('click', () => {
+      switchTab('team');
+      switchTeamSubtab('schedule');
+    });
+  }
+
+  // シーズン日程リスト内の消化済み試合タップでサマリーモーダルを開く
+  const seasonScheduleList = document.getElementById('season-schedule-list');
+  if (seasonScheduleList) {
+    seasonScheduleList.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-past-match-week]');
+      if (!card) return;
+      const weekNum = parseInt(card.dataset.pastMatchWeek, 10);
+      if (weekNum) {
+        openPastMatchSummaryModal(weekNum);
+      }
+    });
+  }
+
+  // 消化済みマッチサマリー振り返りモーダルの閉じるボタン
+  const btnClosePastMatch = document.getElementById('btn-close-past-match-modal');
+  if (btnClosePastMatch) {
+    btnClosePastMatch.addEventListener('click', closePastMatchSummaryModal);
+  }
+  const btnFooterClosePastMatch = document.getElementById('btn-footer-close-past-match');
+  if (btnFooterClosePastMatch) {
+    btnFooterClosePastMatch.addEventListener('click', closePastMatchSummaryModal);
+  }
+
   initReloadPrevention();
 
   // 背景の初期ゲーム状態を準備した上で、メインメニュー（タイトル画面）を表示
@@ -13999,5 +14061,366 @@ function openInitialStaffSetupModal(club) {
         saveGameToStorage(true);
       }
     };
+  }
+}
+
+/**
+ * チームタブ内のサブタブ切り替え（順位表 / 日程・結果 / 個人スタッツ）
+ * @param {string} subtabKey 'standings' | 'schedule' | 'stats'
+ */
+function switchTeamSubtab(subtabKey) {
+  if (!subtabKey) subtabKey = 'standings';
+  gameState.teamSubtab = subtabKey;
+  const viewTeam = document.getElementById('view-team');
+  if (viewTeam) {
+    viewTeam.setAttribute('data-team-subtab', subtabKey);
+  }
+
+  // サブタブボタンのアクティブ状態更新
+  const btns = document.querySelectorAll('#team-subnav-bar .roster-subtab-btn');
+  btns.forEach(btn => {
+    const isAct = btn.dataset.teamSubtab === subtabKey;
+    btn.classList.toggle('active', isAct);
+    btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+  });
+
+  // サブビューの表示切り替え
+  const subviews = {
+    standings: document.getElementById('team-subview-standings'),
+    schedule: document.getElementById('team-subview-schedule'),
+    stats: document.getElementById('team-subview-stats')
+  };
+
+  Object.keys(subviews).forEach(key => {
+    const el = subviews[key];
+    if (el) {
+      el.classList.toggle('hidden', key !== subtabKey);
+    }
+  });
+
+  if (subtabKey === 'standings') {
+    renderStandings();
+  } else if (subtabKey === 'schedule') {
+    renderSeasonSchedule();
+  } else if (subtabKey === 'stats') {
+    renderTopScorers();
+  }
+}
+
+/**
+ * シーズン全38節の日程・試合結果一覧の描画
+ */
+function renderSeasonSchedule() {
+  const container = document.getElementById('season-schedule-list');
+  if (!container) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.schedule || gameState.schedule.length === 0) {
+    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">日程データがありません。</div>';
+    return;
+  }
+
+  // カレンダーの日程マッピング（第1節〜第38節）
+  const matchDays = (gameState.calendar || []).filter(d => d.isMatchDay);
+
+  let playedCount = 0;
+  let wonCount = 0;
+  let drawnCount = 0;
+  let lostCount = 0;
+
+  let lastMonth = null;
+  const cardsHtml = [];
+
+  for (let weekIdx = 0; weekIdx < gameState.schedule.length; weekIdx++) {
+    const weekNum = weekIdx + 1;
+    const weekMatches = gameState.schedule[weekIdx];
+    const match = weekMatches.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+    if (!match) continue;
+
+    const isHome = match.homeId === playerClub.id;
+    const oppId = isHome ? match.awayId : match.homeId;
+    const oppClub = getClubById(oppId) || { name: oppId, shortName: oppId };
+
+    // 対応するカレンダー日付情報
+    const dayInfo = matchDays[weekIdx] || null;
+    let dateStr = `${weekNum}節`;
+    let monthNum = null;
+    if (dayInfo) {
+      dateStr = `${dayInfo.month}月${dayInfo.day}日 (${dayInfo.dayOfWeekName})`;
+      monthNum = dayInfo.month;
+    }
+
+    // 月の区切りヘッダーの挿入
+    if (monthNum && monthNum !== lastMonth) {
+      lastMonth = monthNum;
+      let monthComment = '';
+      if (monthNum === 8) monthComment = '開幕節 / 夏の移籍市場中';
+      else if (monthNum === 9) monthComment = '夏の移籍市場閉幕 (9/1)';
+      else if (monthNum === 1) monthComment = '冬の移籍市場OPEN (1/1〜1/31)';
+      else if (monthNum === 5) monthComment = 'シーズン最終節 (MATCHWEEK 38)';
+
+      cardsHtml.push(`
+        <div class="schedule-month-divider">
+          <span>${dayInfo ? `${dayInfo.year}年 ` : ''}${monthNum}月</span>
+          ${monthComment ? `<span class="schedule-month-badge mono">${monthComment}</span>` : ''}
+        </div>
+      `);
+    }
+
+    const isPlayed = match.played || (weekNum <= gameState.currentWeek && match.homeScore !== null);
+    const isNext = !isPlayed && (weekNum === gameState.currentWeek + 1);
+
+    let statusColHtml = '';
+    let cardClass = 'schedule-fixture-card';
+
+    if (isPlayed) {
+      playedCount++;
+      cardClass += ' fixture-played';
+      const myScore = isHome ? match.homeScore : match.awayScore;
+      const oppScore = isHome ? match.awayScore : match.homeScore;
+
+      let resClass = 'result-draw';
+      let resLabel = 'DRAW';
+      if (myScore > oppScore) {
+        resClass = 'result-win';
+        resLabel = 'WIN';
+        wonCount++;
+      } else if (myScore < oppScore) {
+        resClass = 'result-lose';
+        resLabel = 'LOSE';
+        lostCount++;
+      } else {
+        drawnCount++;
+      }
+
+      statusColHtml = `
+        <div class="fixture-right-col">
+          <span class="fixture-result-badge ${resClass}">${resLabel}</span>
+          <span class="fixture-score-text">${match.homeScore} - ${match.awayScore}</span>
+          <span class="fixture-replay-hint mono">サマリー ➔</span>
+        </div>
+      `;
+    } else if (isNext) {
+      cardClass += ' fixture-next';
+      statusColHtml = `
+        <div class="fixture-right-col">
+          <span class="fixture-next-badge">NEXT</span>
+        </div>
+      `;
+    } else {
+      statusColHtml = `
+        <div class="fixture-right-col">
+          <span class="fixture-unplayed-badge mono">未消化</span>
+        </div>
+      `;
+    }
+
+    cardsHtml.push(`
+      <div class="${cardClass}" ${isPlayed ? `data-past-match-week="${weekNum}"` : ''} role="${isPlayed ? 'button' : 'article'}" ${isPlayed ? `tabindex="0" title="第${weekNum}節のサマリー詳細を見る"` : ''}>
+        <div class="fixture-left-col">
+          <span class="fixture-round-badge">第${weekNum}節</span>
+          <span class="fixture-date-badge">${dateStr}</span>
+          <span class="fixture-venue-badge ${isHome ? 'fixture-venue-home' : 'fixture-venue-away'}">${isHome ? 'HOME' : 'AWAY'}</span>
+          <span class="fixture-opponent-name">vs ${oppClub.name}</span>
+        </div>
+        ${statusColHtml}
+      </div>
+    `);
+  }
+
+  container.innerHTML = cardsHtml.join('');
+
+  // 上部バッジ更新
+  const playedCountEl = document.getElementById('schedule-played-count');
+  if (playedCountEl) playedCountEl.textContent = `${playedCount} / 38節`;
+  const recordEl = document.getElementById('schedule-record-badge');
+  if (recordEl) recordEl.textContent = `${wonCount}勝 ${drawnCount}分 ${lostCount}敗`;
+}
+
+/**
+ * 消化済み試合のマッチサマリー振り返りモーダルを開く
+ * @param {number} weekNum 第何節か（1〜38）
+ */
+function openPastMatchSummaryModal(weekNum) {
+  const modal = document.getElementById('past-match-modal');
+  const body = document.getElementById('past-match-modal-body');
+  const title = document.getElementById('past-match-modal-title');
+  if (!modal || !body) return;
+
+  const playerClub = getPlayerClub();
+  let matchData = null;
+  if (gameState.matchHistory) {
+    matchData = gameState.matchHistory.find(m => m.week === weekNum);
+  }
+  if (!matchData && gameState.schedule && gameState.schedule[weekNum - 1]) {
+    const rawMatch = gameState.schedule[weekNum - 1].find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+    if (rawMatch && rawMatch.played) {
+      const homeClub = getClubById(rawMatch.homeId);
+      const awayClub = getClubById(rawMatch.awayId);
+      matchData = {
+        week: weekNum,
+        homeClub,
+        awayClub,
+        homeScore: rawMatch.homeScore,
+        awayScore: rawMatch.awayScore,
+        homePossession: rawMatch.homePossession || 50,
+        awayPossession: rawMatch.awayPossession || 50,
+        homeShots: rawMatch.homeShots || 10,
+        awayShots: rawMatch.awayShots || 10,
+        homeOnTarget: rawMatch.homeOnTarget || Math.round((rawMatch.homeShots || 10) * 0.45),
+        awayOnTarget: rawMatch.awayOnTarget || Math.round((rawMatch.awayShots || 10) * 0.45),
+        homeXg: rawMatch.homeXg || Number((rawMatch.homeScore * 0.72 + 0.4).toFixed(2)),
+        awayXg: rawMatch.awayXg || Number((rawMatch.awayScore * 0.72 + 0.4).toFixed(2)),
+        homePasses: rawMatch.homePasses || 480,
+        awayPasses: rawMatch.awayPasses || 420,
+        homePassAccuracy: rawMatch.homePassAccuracy || 80,
+        awayPassAccuracy: rawMatch.awayPassAccuracy || 78,
+        isPlayerHome: rawMatch.homeId === playerClub.id,
+        homeScorers: rawMatch.homeScorers || [],
+        awayScorers: rawMatch.awayScorers || []
+      };
+    }
+  }
+
+  if (!matchData) {
+    alert(`第${weekNum}節の試合詳細データが見つかりません。`);
+    return;
+  }
+
+  if (title) title.textContent = `第${weekNum}節 公式戦サマリー`;
+
+  const { homeClub, awayClub, homeScore, awayScore, isPlayerHome } = matchData;
+  const myScore = isPlayerHome ? homeScore : awayScore;
+  const oppScore = isPlayerHome ? awayScore : homeScore;
+  const resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  const resColor = myScore > oppScore ? 'var(--accent-green)' : (myScore < oppScore ? '#e74c3c' : 'var(--accent-gold)');
+
+  const homeScorers = matchData.homeScorers || [];
+  const awayScorers = matchData.awayScorers || [];
+
+  const homeScorersHtml = homeScorers.length > 0
+    ? homeScorers.map(s => `<div>⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
+    : '<div style="color:var(--text-muted); font-size:12px;">-</div>';
+
+  const awayScorersHtml = awayScorers.length > 0
+    ? awayScorers.map(s => `<div>⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
+    : '<div style="color:var(--text-muted); font-size:12px;">-</div>';
+
+  // スタッツ比率
+  const posHome = matchData.homePossession;
+  const posAway = matchData.awayPossession;
+  const sHome = matchData.homeShots;
+  const sAway = matchData.awayShots;
+  const otHome = matchData.homeOnTarget || Math.round(sHome * 0.45);
+  const otAway = matchData.awayOnTarget || Math.round(sAway * 0.45);
+  const xgHome = typeof matchData.homeXg === 'number' ? matchData.homeXg : 1.20;
+  const xgAway = typeof matchData.awayXg === 'number' ? matchData.awayXg : 0.80;
+  const passHome = matchData.homePasses || 480;
+  const passAway = matchData.awayPasses || 420;
+  const accHome = matchData.homePassAccuracy || 80;
+  const accAway = matchData.awayPassAccuracy || 78;
+
+  const totalShots = Math.max(1, sHome + sAway);
+  const sHomePct = Math.round((sHome / totalShots) * 100);
+  const sAwayPct = 100 - sHomePct;
+
+  const totalXg = Math.max(0.1, xgHome + xgAway);
+  const xgHomePct = Math.round((xgHome / totalXg) * 100);
+  const xgAwayPct = 100 - xgHomePct;
+
+  const totalPass = Math.max(1, passHome + passAway);
+  const passHomePct = Math.round((passHome / totalPass) * 100);
+  const passAwayPct = 100 - passHomePct;
+
+  body.innerHTML = `
+    <!-- スコアヘッダー -->
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div class="mono" style="font-size: 13px; font-weight: 700; color: ${resColor}; margin-bottom: 6px;">${resLabel}</div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <div style="flex: 1; text-align: right;">
+          <div style="font-size: 16px; font-weight: 700; color: ${homeClub.isPlayer ? 'var(--accent-green)' : '#ffffff'};">${homeClub.name}</div>
+          <div class="mono" style="font-size: 11px; color: var(--text-muted);">${isPlayerHome ? '[HOME / 自クラブ]' : '[HOME]'}</div>
+        </div>
+        <div class="mono" style="font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: 2px; padding: 0 10px;">
+          ${homeScore} - ${awayScore}
+        </div>
+        <div style="flex: 1; text-align: left;">
+          <div style="font-size: 16px; font-weight: 700; color: ${awayClub.isPlayer ? 'var(--accent-green)' : '#ffffff'};">${awayClub.name}</div>
+          <div class="mono" style="font-size: 11px; color: var(--text-muted);">${!isPlayerHome ? '[AWAY / 自クラブ]' : '[AWAY]'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 得点者リスト -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 14px; background: rgba(0,0,0,0.25); border-radius: 6px; margin-bottom: 16px; font-size: 12px;">
+      <div style="text-align: left;">${homeScorersHtml}</div>
+      <div style="text-align: right;">${awayScorersHtml}</div>
+    </div>
+
+    <!-- スタッツ比較バー（ポゼッション、シュート/枠内、xG、パス/成功率） -->
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+      <!-- ポゼッション率 -->
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); margin-bottom: 3px;">
+          <span style="font-weight:700;">${posHome}%</span>
+          <span style="color:var(--text-muted);">POSSESSION</span>
+          <span style="font-weight:700;">${posAway}%</span>
+        </div>
+        <div style="height: 6px; border-radius: 3px; display: flex; overflow: hidden; background: #222;">
+          <div style="width: ${posHome}%; background: var(--accent-green);"></div>
+          <div style="width: ${posAway}%; background: #3498db;"></div>
+        </div>
+      </div>
+
+      <!-- シュート数 / 枠内 -->
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); margin-bottom: 3px;">
+          <span style="font-weight:700;">${sHome} (${otHome})</span>
+          <span style="color:var(--text-muted);">SHOTS (ON TARGET)</span>
+          <span style="font-weight:700;">${sAway} (${otAway})</span>
+        </div>
+        <div style="height: 6px; border-radius: 3px; display: flex; overflow: hidden; background: #222;">
+          <div style="width: ${sHomePct}%; background: var(--accent-green);"></div>
+          <div style="width: ${sAwayPct}%; background: #3498db;"></div>
+        </div>
+      </div>
+
+      <!-- ゴール期待値 (xG) -->
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); margin-bottom: 3px;">
+          <span style="font-weight:700; color:var(--accent-gold);">${xgHome.toFixed(2)}</span>
+          <span style="color:var(--text-muted);">xG (EXPECTED GOALS)</span>
+          <span style="font-weight:700; color:var(--accent-gold);">${xgAway.toFixed(2)}</span>
+        </div>
+        <div style="height: 6px; border-radius: 3px; display: flex; overflow: hidden; background: #222;">
+          <div style="width: ${xgHomePct}%; background: var(--accent-gold);"></div>
+          <div style="width: ${xgAwayPct}%; background: #e67e22;"></div>
+        </div>
+      </div>
+
+      <!-- パス数 / 成功率 -->
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); margin-bottom: 3px;">
+          <span style="font-weight:700;">${passHome} [${accHome}%]</span>
+          <span style="color:var(--text-muted);">PASSES (ACCURACY)</span>
+          <span style="font-weight:700;">${passAway} [${accAway}%]</span>
+        </div>
+        <div style="height: 6px; border-radius: 3px; display: flex; overflow: hidden; background: #222;">
+          <div style="width: ${passHomePct}%; background: var(--accent-green);"></div>
+          <div style="width: ${passAwayPct}%; background: #3498db;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  setBodyModalLock(true);
+}
+
+function closePastMatchSummaryModal() {
+  const modal = document.getElementById('past-match-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    setBodyModalLock(false);
   }
 }
