@@ -8915,6 +8915,10 @@ function renderTacticalBoard() {
     }
   } else {
     if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名)`;
+    const sideBenchBadge = document.getElementById('side-bench-badge');
+    if (sideBenchBadge) sideBenchBadge.textContent = `${benchPlayers.length}名`;
+    const headerBenchBadge = document.getElementById('header-bench-badge');
+    if (headerBenchBadge) headerBenchBadge.textContent = `${benchPlayers.length}名`;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -12185,18 +12189,7 @@ function initGame() {
   window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
   window.__getJustFinishedDragging = function() { return justFinishedDragging; };
 
-  // 控え選手タップ選択による交代管理
-  let pendingSubBenchPlayerId = null;
-
-  function clearPendingSub() {
-    pendingSubBenchPlayerId = null;
-    document.querySelectorAll('.pitch-node.can-sub-target').forEach(el => {
-      el.classList.remove('can-sub-target');
-    });
-  }
-  window.clearPendingSub = clearPendingSub;
-
-  // 作戦ボード（ピッチ）のスタメン枠クリック：タップ交代または詳細プロフィール表示
+  // 作戦ボード（ピッチ）のスタメン枠クリック：詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
@@ -12205,21 +12198,7 @@ function initGame() {
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (!nodeEl) return;
-
-      // タップ交代モード時：控え選手が選択されている場合は即時交代！
-      if (pendingSubBenchPlayerId && nodeEl.dataset.slotIndex !== undefined) {
-        e.stopPropagation();
-        const slotIdx = parseInt(nodeEl.dataset.slotIndex, 10);
-        substituteBenchPlayerToSlot(pendingSubBenchPlayerId, slotIdx);
-        clearPendingSub();
-        if (typeof showToast === 'function') {
-          showToast('選手交代を完了しました');
-        }
-        return;
-      }
-
-      if (nodeEl.dataset.playerId) {
+      if (nodeEl && nodeEl.dataset.playerId) {
         e.stopPropagation();
         openPlayerProfileModal(nodeEl.dataset.playerId);
       }
@@ -12249,6 +12228,13 @@ function initGame() {
       toggleBenchSheet(true);
     });
   }
+  const btnHeaderBenchDrawer = document.getElementById('btn-header-bench-drawer');
+  if (btnHeaderBenchDrawer) {
+    btnHeaderBenchDrawer.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBenchSheet(true);
+    });
+  }
   if (benchSheetHandle) {
     benchSheetHandle.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -12265,7 +12251,6 @@ function initGame() {
   const clearSlotBtn = document.getElementById('btn-clear-slot-select');
   if (clearSlotBtn) {
     clearSlotBtn.addEventListener('click', () => {
-      clearPendingSub();
       gameState.selectedSlotIndex = null;
       gameState.selectedPlayerId = null;
       renderRoster();
@@ -12288,7 +12273,7 @@ function initGame() {
     });
   }
 
-  // 控え選手リスト：タップで交代待機状態にし、ドロワーを閉じてピッチのスタメンを選択可能にする
+  // 控え選手リスト：クリック時は詳細プロフィール表示（交代はドラッグ＆ドロップのみ）
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
@@ -12297,29 +12282,9 @@ function initGame() {
         return;
       }
       const itemEl = e.target.closest('.bench-sub-item');
-      if (!itemEl || !itemEl.dataset.playerId) return;
-
-      // 選手名部分の直接タップはプロフィール詳細モーダル表示
-      if (e.target.closest('.pitch-node-name-btn, .clickable-player-name')) {
+      if (itemEl && itemEl.dataset.playerId) {
         e.stopPropagation();
         openPlayerProfileModal(itemEl.dataset.playerId);
-        return;
-      }
-
-      // カード本体タップ：タップ交代モード発動！
-      e.stopPropagation();
-      pendingSubBenchPlayerId = itemEl.dataset.playerId;
-
-      // ドロワーを閉じてピッチを全開にする
-      toggleBenchSheet(false);
-
-      // ピッチ上のスタメン枠を交代ターゲットとしてハイライト
-      document.querySelectorAll('#pitch-nodes-layer .pitch-node').forEach(node => {
-        node.classList.add('can-sub-target');
-      });
-
-      if (typeof showToast === 'function') {
-        showToast('交代するスタメン選手をピッチ上でタップしてください');
       }
     });
   }
