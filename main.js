@@ -1170,6 +1170,7 @@ const gameState = {
   incomingTransferOffer: null,   // 他クラブからの買取オファー
   incomingOffers: [],            // 受信オファーリスト（プール制）
   targetShortlist: [],           // 獲得ターゲットリスト（SHORTLIST）
+  facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
   marketSubtab: 'market',        // 移籍タブ内サブタブ ('market' | 'shortlist' | 'offers')
   marketFilter: {                // グローバル移籍市場の絞り込み状態
     clubId: 'ALL',
@@ -7398,15 +7399,20 @@ function handleGmDutyAction(actionKey) {
 
   if (actionKey === 'goto-facilities') {
     switchTab('facilities');
-    const grid = document.getElementById('facilities-grid');
-    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    switchFacilitiesSubtab('investment');
+    return;
+  }
+
+  if (actionKey === 'goto-staff') {
+    switchTab('facilities');
+    switchFacilitiesSubtab('staff');
     return;
   }
 
   if (actionKey === 'goto-youth') {
     switchTab('facilities');
-    const panel = document.getElementById('youth-squad-panel') || document.getElementById('youth-squad-tbody');
-    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    switchFacilitiesSubtab('youth');
+    return;
   }
 }
 
@@ -7822,6 +7828,8 @@ function switchTab(tabName) {
     switchRosterSubtab(gameState.rosterSubtab || 'board');
   } else if (tabName === 'market') {
     switchMarketSubtab(gameState.marketSubtab || 'market');
+  } else if (tabName === 'facilities') {
+    switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment');
   }
 
   renderAll();
@@ -9059,6 +9067,49 @@ function switchMarketSubtab(subtabKey) {
   if (subtabKey === 'market') renderMarket();
   else if (subtabKey === 'shortlist') renderShortlist();
   else if (subtabKey === 'offers') renderIncomingOffers();
+}
+
+/**
+ * 経営画面内のサブタブ切り替え（施設投資 / 監督・指導陣 / ユースチーム）
+ */
+function switchFacilitiesSubtab(subtabKey) {
+  if (!subtabKey) subtabKey = 'investment';
+  gameState.facilitiesSubtab = subtabKey;
+  const viewFacilities = document.getElementById('view-facilities');
+  if (viewFacilities) {
+    viewFacilities.setAttribute('data-facilities-subtab', subtabKey);
+  }
+
+  // ボタンのアクティブ状態更新
+  const btns = document.querySelectorAll('#facilities-subnav-bar .roster-subtab-btn');
+  btns.forEach(btn => {
+    const isAct = btn.dataset.facilitiesSubtab === subtabKey;
+    btn.classList.toggle('active', isAct);
+    btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+  });
+
+  // サブビューの表示切り替え
+  const subviews = {
+    investment: document.getElementById('facilities-subview-investment'),
+    staff: document.getElementById('facilities-subview-staff'),
+    youth: document.getElementById('facilities-subview-youth')
+  };
+
+  Object.keys(subviews).forEach(key => {
+    const el = subviews[key];
+    if (el) {
+      el.classList.toggle('hidden', key !== subtabKey);
+    }
+  });
+
+  if (subtabKey === 'investment') {
+    renderFacilitiesAndYouth();
+  } else if (subtabKey === 'staff') {
+    renderManagerManagementPanel();
+    renderCoachingStaffPanel();
+  } else if (subtabKey === 'youth') {
+    renderYouthSquad();
+  }
 }
 
 /**
@@ -11025,6 +11076,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
   gameState.rosterSubtab = 'board';
+  gameState.facilitiesSubtab = 'investment';
   gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
@@ -11948,6 +12000,17 @@ function initGame() {
     });
   }
 
+  // 経営サブタブバー切り替えイベント
+  const facilitiesSubnav = document.getElementById('facilities-subnav-bar');
+  if (facilitiesSubnav) {
+    facilitiesSubnav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.roster-subtab-btn');
+      if (btn && btn.dataset.facilitiesSubtab) {
+        switchFacilitiesSubtab(btn.dataset.facilitiesSubtab);
+      }
+    });
+  }
+
   // 移籍市場テーブル内 クリックイベント（詳細＆ショートリストトグル）
   document.getElementById('market-tbody').addEventListener('click', (e) => {
     const slBtn = e.target.closest('[data-shortlist-toggle]');
@@ -12472,6 +12535,7 @@ function saveGameToStorage(force = false) {
         targetShortlist: gameState.targetShortlist || [],
         incomingTransferOffer: gameState.incomingTransferOffer || null,
         pendingMegaOffer: gameState.pendingMegaOffer || null,
+        facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
         marketSubtab: gameState.marketSubtab || 'market'
       }
     };
@@ -12516,6 +12580,7 @@ function loadGameFromStorage() {
       playerIdCounter = savedCounter;
     }
     Object.assign(gameState, state);
+    if (!gameState.facilitiesSubtab) gameState.facilitiesSubtab = 'investment';
     if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
     if (!Array.isArray(gameState.targetShortlist)) gameState.targetShortlist = [];
     gameState.isSimulating = false;
