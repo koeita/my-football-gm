@@ -7411,15 +7411,15 @@ function renderIncomingOfferBody(offer, resultData = null) {
   const counterBtn = document.getElementById('btn-incoming-counter');
   const rejectBtn = document.getElementById('btn-incoming-reject');
 
-  if (acceptBtn) acceptBtn.addEventListener('click', acceptIncomingOffer);
+  if (acceptBtn) acceptBtn.addEventListener('click', acceptIncomingOfferModal);
   if (counterBtn) counterBtn.addEventListener('click', counterDemandIncomingOffer);
-  if (rejectBtn) rejectBtn.addEventListener('click', rejectIncomingOffer);
+  if (rejectBtn) rejectBtn.addEventListener('click', rejectIncomingOfferModal);
 }
 
 /**
  * 買取オファーを承諾
  */
-function acceptIncomingOffer() {
+function acceptIncomingOfferModal() {
   const offer = gameState.incomingTransferOffer;
   if (!offer) return;
 
@@ -7462,7 +7462,7 @@ function acceptIncomingOffer() {
 /**
  * 買取オファーを拒否（残留）
  */
-function rejectIncomingOffer() {
+function rejectIncomingOfferModal() {
   const offer = gameState.incomingTransferOffer;
   if (!offer) return;
 
@@ -9726,7 +9726,7 @@ function renderShortlist() {
         offerBtnHtml = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity: 0.6; padding: 2px 8px; font-size: 11px;">送信中</button>`;
       }
     } else {
-      offerBtnHtml = `${offerBtnHtml}`;
+      offerBtnHtml = `<button type="button" class="btn btn-primary btn-sm btn-formal-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>正式オファー</button>`;
     }    const footBadge = formatFootBadge(p);
 
     rows.push(`
