@@ -11526,6 +11526,29 @@ button.hidden,
     font-weight: 700 !important;
   }
 
+  
+  /* モバイルドラッグ操作時のみ：左から右へ滑らかにスライド収納（PCは対象外） */
+  body.is-tactical-dragging .tactical-side-column {
+    opacity: 1 !important;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  body.is-tactical-dragging .tactical-side-column:not(.sheet-open) {
+    transform: translateX(100%) !important;
+    pointer-events: none !important;
+  }
+
+  body.is-tactical-dragging .tactical-side-column.sheet-open {
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+  }
+
+  body.is-tactical-dragging .bench-sheet-backdrop {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    display: none !important;
+  }
+
   /* 控え選手リスト：ドロワー内で横に2人ずつ並ぶ2列グリッド配置 */
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list {
@@ -12827,26 +12850,32 @@ button.hidden,
     --header-content-h: 56px !important;
     --tab-nav-total-h: calc(52px + var(--safe-bottom)) !important;
   }
+
+  /* PWAホーム画面起動時専用：Safariの状態は維持し、ホーム画面側のみピッチ下の余白を完全解消 */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 38px) !important;
+    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 38px) !important;
+    min-height: 460px !important;
+    margin-bottom: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
+    padding-bottom: 0 !important;
+  }
 }
 
-/* ドラッグ操作時：左から右へスッと滑らかにスライド収納（消えるのではなくスムーズに引っ込む） */
-body.is-tactical-dragging .tactical-side-column {
-  opacity: 1 !important;
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
 
-body.is-tactical-dragging .tactical-side-column:not(.sheet-open) {
-  transform: translateX(100%) !important;
-  pointer-events: none !important;
-}
 
-body.is-tactical-dragging .tactical-side-column.sheet-open {
-  transform: translateX(0) !important;
-  pointer-events: auto !important;
-}
 
-body.is-tactical-dragging .bench-sheet-backdrop {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  display: none !important;
+/* PC環境：作戦ボードの控え選手・ベンチ外カラムは絶対にスライドせず常時固定表示 */
+@media (min-width: 901px) {
+  .tactical-side-column,
+  #tactical-side-column,
+  body.is-tactical-dragging .tactical-side-column {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: static !important;
+    display: flex !important;
+  }
 }
