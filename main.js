@@ -11803,7 +11803,7 @@ function initTacticalDragAndDrop() {
           }
 
           if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
-          document.body.classList.add('is-tactical-dragging');
+          if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
           ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
@@ -11859,7 +11859,7 @@ function initTacticalDragAndDrop() {
         if (dist > dragThreshold) {
           isDragging = true;
           if (dragSource.type === 'bench' && typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
-          document.body.classList.add('is-tactical-dragging');
+          if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           if (longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;
@@ -12241,6 +12241,8 @@ function initGame() {
 
   function toggleBenchSheet(forceOpen) {
     if (!tacticalSideColumn) return;
+    // PC環境（幅900px超）ではドロワー開閉を行わず常に通常2カラム表示を維持
+    if (window.innerWidth > 900) return;
     const isOpen = tacticalSideColumn.classList.contains('sheet-open');
     const targetState = forceOpen !== undefined ? forceOpen : !isOpen;
     tacticalSideColumn.classList.toggle('sheet-open', targetState);
