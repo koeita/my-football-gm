@@ -1172,6 +1172,9 @@ const gameState = {
   targetShortlist: [],           // 獲得ターゲットリスト（SHORTLIST）
   facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
   teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
+  scheduleViewMode: 'calendar',  // 日程・結果表示モード ('calendar' | 'list')
+  calendarViewYear: 2026,        // 月間カレンダー表示年
+  calendarViewMonth: 8,          // 月間カレンダー表示月
   matchHistory: [],              // 自クラブのシーズン全公式戦サマリー履歴
   marketSubtab: 'market',        // 移籍タブ内サブタブ ('market' | 'shortlist' | 'offers')
   marketFilter: {                // グローバル移籍市場の絞り込み状態
@@ -7831,6 +7834,15 @@ function startNextSeason() {
   gameState.isSeasonOver = false;
   gameState.lastWeekResults = [];
   gameState.matchHistory = [];
+  const initialDay = getCurrentCalendarDay();
+  if (initialDay) {
+    gameState.calendarViewYear = initialDay.year;
+    gameState.calendarViewMonth = initialDay.month;
+  } else {
+    gameState.calendarViewYear = 2025 + gameState.season;
+    gameState.calendarViewMonth = 8;
+  }
+  gameState.scheduleViewMode = 'calendar';
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
@@ -8060,7 +8072,7 @@ function renderAll() {
   renderGmDuties();
   renderSeasonSettlement();
   if (gameState.teamSubtab === 'schedule') {
-    renderSeasonSchedule();
+    renderScheduleView();
   } else if (gameState.teamSubtab === 'stats') {
     renderTopScorers();
   } else {
@@ -11288,6 +11300,15 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
   gameState.matchHistory = [];
+  const initialDay = getCurrentCalendarDay();
+  if (initialDay) {
+    gameState.calendarViewYear = initialDay.year;
+    gameState.calendarViewMonth = initialDay.month;
+  } else {
+    gameState.calendarViewYear = 2025 + gameState.season;
+    gameState.calendarViewMonth = 8;
+  }
+  gameState.scheduleViewMode = 'calendar';
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
@@ -12687,6 +12708,42 @@ function initGame() {
   }
 
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
+
+
+  // カレンダー月送りナビゲーション（前月・翌月・今月）
+  const btnCalPrev = document.getElementById('btn-cal-prev-month');
+  if (btnCalPrev) btnCalPrev.addEventListener('click', () => changeCalendarMonth(-1));
+
+  const btnCalNext = document.getElementById('btn-cal-next-month');
+  if (btnCalNext) btnCalNext.addEventListener('click', () => changeCalendarMonth(1));
+
+  const btnCalToday = document.getElementById('btn-cal-go-today');
+  if (btnCalToday) btnCalToday.addEventListener('click', resetCalendarToCurrentMonth);
+
+  // 表示形式トグル（カレンダー / リスト）
+  const btnToggleCal = document.getElementById('btn-view-toggle-calendar');
+  if (btnToggleCal) btnToggleCal.addEventListener('click', () => switchScheduleViewMode('calendar'));
+
+  const btnToggleList = document.getElementById('btn-view-toggle-list');
+  if (btnToggleList) btnToggleList.addEventListener('click', () => switchScheduleViewMode('list'));
+
+  // カレンダーグリッド内のマス目タップ（消化済み：サマリー / 未消化：プレビュー）
+  const calGridEl = document.getElementById('calendar-days-grid');
+  if (calGridEl) {
+    calGridEl.addEventListener('click', (e) => {
+      const playedCell = e.target.closest('[data-cal-match-week]');
+      if (playedCell) {
+        const weekNum = parseInt(playedCell.dataset.calMatchWeek, 10);
+        if (weekNum) openPastMatchSummaryModal(weekNum);
+        return;
+      }
+      const pendingCell = e.target.closest('[data-cal-pending-week]');
+      if (pendingCell) {
+        const weekNum = parseInt(pendingCell.dataset.calPendingWeek, 10);
+        if (weekNum) openPendingMatchPreview(weekNum);
+      }
+    });
+  }
 
   // チームサブタブ（順位表 / 日程・結果 / 個人スタッツ）の切り替えイベント
   const teamSubnavBar = document.getElementById('team-subnav-bar');
@@ -14101,7 +14158,7 @@ function switchTeamSubtab(subtabKey) {
   if (subtabKey === 'standings') {
     renderStandings();
   } else if (subtabKey === 'schedule') {
-    renderSeasonSchedule();
+    renderScheduleView();
   } else if (subtabKey === 'stats') {
     renderTopScorers();
   }
@@ -14424,3 +14481,317 @@ function closePastMatchSummaryModal() {
     setBodyModalLock(false);
   }
 }
+
+/**
+ * 日程・結果タブの総合描画（カレンダー形式 または リスト形式）
+ */
+function renderScheduleView() {
+  const mode = gameState.scheduleViewMode || 'calendar';
+  switchScheduleViewMode(mode, false);
+}
+
+/**
+ * 表示形式切り替え（'calendar' | 'list'）
+ * @param {string} mode 'calendar' または 'list'
+ * @param {boolean} updateState 状態を更新するかどうか
+ */
+function switchScheduleViewMode(mode, updateState = true) {
+  if (updateState) {
+    gameState.scheduleViewMode = mode;
+  }
+  const currentMode = gameState.scheduleViewMode || 'calendar';
+
+  const btnCal = document.getElementById('btn-view-toggle-calendar');
+  const btnList = document.getElementById('btn-view-toggle-list');
+  const calView = document.getElementById('season-calendar-view');
+  const listView = document.getElementById('season-schedule-list');
+  const monthNav = document.getElementById('calendar-month-nav');
+
+  if (btnCal) {
+    btnCal.classList.toggle('active', currentMode === 'calendar');
+    btnCal.setAttribute('aria-pressed', currentMode === 'calendar' ? 'true' : 'false');
+  }
+  if (btnList) {
+    btnList.classList.toggle('active', currentMode === 'list');
+    btnList.setAttribute('aria-pressed', currentMode === 'list' ? 'true' : 'false');
+  }
+  if (calView) calView.classList.toggle('hidden', currentMode !== 'calendar');
+  if (listView) listView.classList.toggle('hidden', currentMode !== 'list');
+  if (monthNav) monthNav.style.visibility = currentMode === 'calendar' ? 'visible' : 'hidden';
+
+  // 常に消化数・戦績バッジを更新
+  updateScheduleSummaryBadges();
+
+  if (currentMode === 'calendar') {
+    renderMonthCalendar();
+  } else {
+    renderSeasonSchedule();
+  }
+}
+
+/**
+ * 日程・結果パネル上部の消化数 ＆ 戦績バッジの更新
+ */
+function updateScheduleSummaryBadges() {
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.schedule) return;
+
+  let playedCount = 0;
+  let wonCount = 0;
+  let drawnCount = 0;
+  let lostCount = 0;
+
+  for (let weekIdx = 0; weekIdx < gameState.schedule.length; weekIdx++) {
+    const weekMatches = gameState.schedule[weekIdx];
+    const match = weekMatches.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+    if (!match) continue;
+
+    const isPlayed = match.played || (weekIdx + 1 <= gameState.currentWeek && match.homeScore !== null);
+    if (isPlayed) {
+      playedCount++;
+      const isHome = match.homeId === playerClub.id;
+      const myScore = isHome ? match.homeScore : match.awayScore;
+      const oppScore = isHome ? match.awayScore : match.homeScore;
+      if (myScore > oppScore) wonCount++;
+      else if (myScore < oppScore) lostCount++;
+      else drawnCount++;
+    }
+  }
+
+  const playedCountEl = document.getElementById('schedule-played-count');
+  if (playedCountEl) playedCountEl.textContent = `${playedCount} / 38節`;
+  const recordEl = document.getElementById('schedule-record-badge');
+  if (recordEl) recordEl.textContent = `${wonCount}勝 ${drawnCount}分 ${lostCount}敗`;
+}
+
+/**
+ * 月送りナビゲーション（delta: -1 前月, +1 翌月）
+ */
+function changeCalendarMonth(delta) {
+  if (!gameState.calendarViewYear) {
+    const curDay = getCurrentCalendarDay();
+    gameState.calendarViewYear = curDay ? curDay.year : 2026;
+    gameState.calendarViewMonth = curDay ? curDay.month : 8;
+  }
+
+  let y = gameState.calendarViewYear;
+  let m = gameState.calendarViewMonth + delta;
+  if (m < 1) {
+    m = 12;
+    y -= 1;
+  } else if (m > 12) {
+    m = 1;
+    y += 1;
+  }
+
+  // シーズン期間（7月〜翌年6月）のガード
+  const startDay = gameState.calendar && gameState.calendar[0];
+  const endDay = gameState.calendar && gameState.calendar[gameState.calendar.length - 1];
+  if (startDay && endDay) {
+    const minKey = startDay.year * 100 + startDay.month;
+    const maxKey = endDay.year * 100 + endDay.month;
+    const curKey = y * 100 + m;
+    if (curKey < minKey || curKey > maxKey) {
+      return;
+    }
+  }
+
+  gameState.calendarViewYear = y;
+  gameState.calendarViewMonth = m;
+  renderMonthCalendar();
+}
+
+/**
+ * ゲーム内現在日の月へジャンプ
+ */
+function resetCalendarToCurrentMonth() {
+  const curDay = getCurrentCalendarDay();
+  if (curDay) {
+    gameState.calendarViewYear = curDay.year;
+    gameState.calendarViewMonth = curDay.month;
+  } else {
+    gameState.calendarViewYear = 2025 + gameState.season;
+    gameState.calendarViewMonth = 8;
+  }
+  renderMonthCalendar();
+}
+
+/**
+ * 月間カレンダーグリッド（7列マス目）の描画
+ */
+function renderMonthCalendar() {
+  const gridEl = document.getElementById('calendar-days-grid');
+  const labelEl = document.getElementById('calendar-current-month-label');
+  if (!gridEl) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.calendar || gameState.calendar.length === 0) {
+    gridEl.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted);">カレンダーデータがありません。</div>';
+    return;
+  }
+
+  // 表示年月のフォールバック
+  if (!gameState.calendarViewYear) {
+    const curDay = getCurrentCalendarDay();
+    gameState.calendarViewYear = curDay ? curDay.year : (2025 + gameState.season);
+    gameState.calendarViewMonth = curDay ? curDay.month : 8;
+  }
+
+  const curYear = gameState.calendarViewYear;
+  const curMonth = gameState.calendarViewMonth;
+
+  if (labelEl) {
+    labelEl.textContent = `${curYear}年 ${curMonth}月`;
+  }
+
+  // 当月のカレンダー日配列を取得
+  const monthDays = gameState.calendar.filter(d => d.year === curYear && d.month === curMonth);
+  if (monthDays.length === 0) {
+    gridEl.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted);">該当月の日程データがありません。</div>';
+    return;
+  }
+
+  const cellsHtml = [];
+
+  // 初日の曜日に応じた空セルの挿入（0:日〜6:土）
+  const firstDayOfWeek = monthDays[0].dayOfWeek;
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    cellsHtml.push('<div class="cal-day-cell is-empty" aria-hidden="true"></div>');
+  }
+
+  // 当月の各日マス目の描画
+  monthDays.forEach(d => {
+    const isCurrentDay = (d.dayIndex === gameState.currentDayIndex);
+    const dayColClass = d.dayOfWeek === 0 ? 'col-sun' : (d.dayOfWeek === 6 ? 'col-sat' : '');
+
+    let matchInfoHtml = '';
+    let matchClass = '';
+    let cellAttr = '';
+
+    // 特別イベント期日の判定
+    let eventTagHtml = '';
+    if (d.isTransferDeadline) {
+      eventTagHtml = '<div class="cal-event-tag" title="移籍市場閉幕 (デッドラインデー)">移籍閉幕</div>';
+    } else if (d.month === 7 && d.day === 1) {
+      eventTagHtml = '<div class="cal-event-tag" title="夏の移籍市場解禁">市場解禁</div>';
+    } else if (d.month === 1 && d.day === 1) {
+      eventTagHtml = '<div class="cal-event-tag" title="冬の移籍市場解禁">冬市場解禁</div>';
+    }
+
+    if (d.isMatchDay && d.matchWeek) {
+      const weekIdx = d.matchWeek - 1;
+      const weekMatches = gameState.schedule[weekIdx] || [];
+      const match = weekMatches.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+
+      if (match) {
+        const isHome = match.homeId === playerClub.id;
+        const oppId = isHome ? match.awayId : match.homeId;
+        const oppClub = getClubById(oppId) || { name: oppId, shortName: oppId };
+        const oppName = oppClub.shortName || oppClub.name.replace(/・FC|・C|・U|・A|・W/g, '').trim();
+
+        const isPlayed = match.played || (d.matchWeek <= gameState.currentWeek && match.homeScore !== null);
+        const isNext = !isPlayed && (d.matchWeek === gameState.currentWeek + 1);
+
+        if (isPlayed) {
+          matchClass = 'has-match match-played';
+          cellAttr = `data-cal-match-week="${d.matchWeek}" role="button" tabindex="0" title="第${d.matchWeek}節 ${oppClub.name}戦のサマリーを見る"`;
+
+          const myScore = isHome ? match.homeScore : match.awayScore;
+          const oppScore = isHome ? match.awayScore : match.homeScore;
+          let badgeClass = 'badge-draw';
+          let resLabel = 'DRAW';
+          if (myScore > oppScore) {
+            badgeClass = 'badge-win';
+            resLabel = 'WIN';
+          } else if (myScore < oppScore) {
+            badgeClass = 'badge-lose';
+            resLabel = 'LOSE';
+          }
+
+          matchInfoHtml = `
+            <div class="cal-match-body">
+              <div class="cal-match-header-row">
+                <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
+                <span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>
+              </div>
+              <div class="cal-opponent-name" title="${oppClub.name}">${oppName}</div>
+              <div class="cal-score-badge ${badgeClass}">${resLabel} ${match.homeScore}-${match.awayScore}</div>
+            </div>
+          `;
+        } else {
+          matchClass = `has-match match-pending ${isNext ? 'match-next' : ''}`;
+          cellAttr = `data-cal-pending-week="${d.matchWeek}" role="button" tabindex="0" title="第${d.matchWeek}節 ${oppClub.name}戦の対戦プレビュー"`;
+
+          matchInfoHtml = `
+            <div class="cal-match-body">
+              <div class="cal-match-header-row">
+                <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
+                ${isNext ? '<span class="cal-next-tag">NEXT</span>' : `<span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>`}
+              </div>
+              <div class="cal-opponent-name" title="${oppClub.name}">${oppName}</div>
+              <div class="cal-score-badge mono" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 8.5px;">VS</div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    const currentDayClass = isCurrentDay ? 'is-current-day' : '';
+
+    cellsHtml.push(`
+      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${matchClass}" ${cellAttr}>
+        <div class="cal-cell-header">
+          <span class="cal-day-num">${d.day}</span>
+          ${isCurrentDay ? '<span class="cal-today-badge mono">TODAY</span>' : ''}
+        </div>
+        ${eventTagHtml}
+        ${matchInfoHtml}
+      </div>
+    `);
+  });
+
+  gridEl.innerHTML = cellsHtml.join('');
+}
+
+/**
+ * 未消化試合マス目をタップした際の対戦プレビュー・確認
+ * @param {number} weekNum 第何節か（1〜38）
+ */
+function openPendingMatchPreview(weekNum) {
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.schedule || !gameState.schedule[weekNum - 1]) return;
+
+  const match = gameState.schedule[weekNum - 1].find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
+  if (!match) return;
+
+  const isHome = match.homeId === playerClub.id;
+  const oppId = isHome ? match.awayId : match.homeId;
+  const oppClub = getClubById(oppId);
+  if (!oppClub) return;
+
+  // 相手クラブの順位を算出
+  const sortedClubs = [...gameState.clubs].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  const oppRank = sortedClubs.findIndex(c => c.id === oppClub.id) + 1;
+  const myRank = sortedClubs.findIndex(c => c.id === playerClub.id) + 1;
+
+  const matchDays = (gameState.calendar || []).filter(d => d.isMatchDay);
+  const dayInfo = matchDays[weekNum - 1];
+  const dateStr = dayInfo ? `${dayInfo.month}月${dayInfo.day}日 (${dayInfo.dayOfWeekName})` : `第${weekNum}節`;
+
+  const msg = [
+    `【第${weekNum}節 公式戦対戦予定】`,
+    `対戦相手: ${oppClub.name} (現在${oppRank}位)`,
+    `自クラブ: ${playerClub.name} (現在${myRank}位)`,
+    `日程: ${dateStr}`,
+    `会場: ${isHome ? 'ホーム開催 (HOME)' : 'アウェイ遠征 (AWAY)'}`,
+    `相手想定OVR: ${oppClub.avgOvr || 75} / 戦術: ${getManagerTacticLabel(oppClub.defaultTactic || 'possession')}`,
+    `\n作戦ボードへ移動してスカッド・戦術を確認しますか？`
+  ].join('\n');
+
+  const ok = window.confirm(msg);
+  if (ok) {
+    switchTab('roster');
+    switchRosterSubtab('board');
+  }
+}
+

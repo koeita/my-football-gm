@@ -359,7 +359,7 @@
         </div>
       </div>
 
-      <!-- サブタブ2：日程・結果（年間カレンダー） -->
+      <!-- サブタブ2：日程・結果（月間カレンダー ＆ リスト切り替え） -->
       <div class="team-subview hidden" id="team-subview-schedule" role="tabpanel">
         <div class="panel team-schedule-panel">
           <div class="panel-header">
@@ -371,10 +371,48 @@
               <span class="power-badge">戦績 <strong class="mono" id="schedule-record-badge">0勝 0分 0敗</strong></span>
             </div>
           </div>
-          <div class="schedule-guide-hint mono" style="font-size: 11px; color: var(--text-muted); padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.18);">
-            ※消化済みの試合をタップすると、その試合のマッチサマリー（スタッツ詳細）を振り返ることができます。
+
+          <!-- カレンダー / リスト 表示切り替え ＆ 月送りナビゲーションバー -->
+          <div class="schedule-view-controls">
+            <!-- 月送りナビゲーション -->
+            <div class="calendar-month-nav" id="calendar-month-nav">
+              <button type="button" class="btn-cal-nav mono" id="btn-cal-prev-month" aria-label="前月">◀</button>
+              <span class="calendar-month-label mono" id="calendar-current-month-label">2026年 8月</span>
+              <button type="button" class="btn-cal-nav mono" id="btn-cal-next-month" aria-label="翌月">▶</button>
+              <button type="button" class="btn-cal-today mono" id="btn-cal-go-today">今月</button>
+            </div>
+
+            <!-- 表示形式トグル（カレンダー / リスト） -->
+            <div class="schedule-view-toggle" id="schedule-view-toggle" role="group" aria-label="表示形式切り替え">
+              <button type="button" class="btn-view-toggle active mono" data-view-mode="calendar" id="btn-view-toggle-calendar">カレンダー</button>
+              <button type="button" class="btn-view-toggle mono" data-view-mode="list" id="btn-view-toggle-list">リスト</button>
+            </div>
           </div>
-          <div class="season-schedule-list" id="season-schedule-list">
+
+          <div class="schedule-guide-hint mono" id="schedule-guide-hint" style="font-size: 11px; color: var(--text-muted); padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.18);">
+            ※試合マスをタップすると、消化済み試合のマッチサマリーまたは次節対戦プレビューを表示します。
+          </div>
+
+          <!-- ビュー1：月間カレンダーグリッド表示（7列グリッド） -->
+          <div class="season-calendar-view" id="season-calendar-view">
+            <!-- 曜日ヘッダー（日〜土） -->
+            <div class="calendar-weekdays-row mono">
+              <span class="cal-weekday col-sun">日</span>
+              <span class="cal-weekday">月</span>
+              <span class="cal-weekday">火</span>
+              <span class="cal-weekday">水</span>
+              <span class="cal-weekday">木</span>
+              <span class="cal-weekday">金</span>
+              <span class="cal-weekday col-sat">土</span>
+            </div>
+            <!-- 7列日付グリッド -->
+            <div class="calendar-days-grid" id="calendar-days-grid">
+              <!-- JSでマス目を描画 -->
+            </div>
+          </div>
+
+          <!-- ビュー2：縦スクロールリスト表示（従来のリスト） -->
+          <div class="season-schedule-list hidden" id="season-schedule-list">
             <!-- JSで全38節カードを描画 -->
           </div>
         </div>
