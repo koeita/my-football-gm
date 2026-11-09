@@ -12374,3 +12374,181 @@ button.hidden,
     padding: 0 1px;
   }
 }
+
+/* ==========================================
+   対戦スカウティングレポート（相手スカッド・戦術プレビュー）
+   ========================================== */
+.scout-matchup-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #14171a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.scout-team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.scout-team-col.home {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.scout-team-col.away {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.scout-team-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.scout-team-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.scout-vs-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.scout-vs-badge {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  letter-spacing: 0.06em;
+}
+
+.scout-venue-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* 相手チーム戦術＆戦力サマリーグリッド */
+.scout-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.scout-metric-box {
+  background: #1a1d20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scout-metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.scout-metric-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* 相手スカッド（想定スタメン一覧） */
+.scout-squad-panel {
+  background: #14171a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.scout-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 6px;
+}
+
+.scout-panel-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #dbe2e9;
+  letter-spacing: 0.04em;
+}
+
+.scout-squad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.scout-squad-table th {
+  padding: 6px 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scout-squad-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.scout-key-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(241, 196, 15, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.45);
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-left: 6px;
+}
+
+@media (max-width: 768px) {
+  .scout-matchup-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .scout-team-name {
+    font-size: 14px;
+  }
+  .scout-vs-badge {
+    font-size: 15px;
+  }
+  .scout-overview-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .scout-squad-table th, .scout-squad-table td {
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+}

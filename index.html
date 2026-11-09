@@ -1498,9 +1498,9 @@
     </div>
   </div>
 
-  <!-- 消化済み試合 マッチサマリー振り返りモーダル -->
+  <!-- 消化済み試合 マッチサマリー振り返りモーダル（試合後サマリーと完全一致UI） -->
   <div id="past-match-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="past-match-modal-title">
-    <div class="modal-card past-match-modal-card" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-card past-match-modal-card" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
       <div class="info-popup-header">
         <div class="info-popup-title-wrap">
           <span class="info-popup-tag mono" id="past-match-modal-category">MATCH REPLAY / SUMMARY</span>
@@ -1508,11 +1508,31 @@
         </div>
         <button type="button" class="btn-modal-close mono" id="btn-close-past-match-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
-      <div class="modal-body" id="past-match-modal-body" style="padding: 16px 20px;">
-        <!-- JSでスコア・得点者・スタッツ比較バー（ポゼッション、シュート/枠内、xG、パス/成功率）を描画 -->
+      <div class="modal-body match-summary-body" id="past-match-modal-body" style="padding: 16px 20px;">
+        <!-- 試合後サマリーと完全同一のHTMLを描画 -->
       </div>
       <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end;">
-        <button type="button" class="btn btn-secondary btn-sm mono" id="btn-footer-close-past-match" style="font-weight: 700;">閉じる</button>
+        <button type="button" class="btn btn-secondary btn-sm mono" id="btn-footer-close-past-match" style="font-weight: 700; padding: 8px 18px;">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 未消化試合 対戦プレビュー（スカウティング＆相手スカッド・戦術）モーダル -->
+  <div id="fixture-preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fixture-preview-title">
+    <div class="modal-card fixture-preview-modal-card" style="max-width: 720px; max-height: 92vh; overflow-y: auto;">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono" id="fixture-preview-tag">[NEXT FIXTURE SCOUTING]</span>
+          <h2 class="info-popup-title" id="fixture-preview-title">第1節 対戦スカウティングレポート</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-fixture-preview-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body" id="fixture-preview-modal-body" style="padding: 16px 20px;">
+        <!-- JSで相手クラブの順位・戦術・想定スタメン11人スカッドを描画 -->
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-sm mono" id="btn-footer-close-fixture-preview">閉じる</button>
+        <button type="button" class="btn btn-primary btn-sm mono" id="btn-go-to-tactics-board" style="font-weight: 700; padding: 8px 16px;">作戦ボードへ移動して準備 ➔</button>
       </div>
     </div>
   </div>
