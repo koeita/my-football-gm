@@ -6686,8 +6686,11 @@ function triggerIncomingTransferOffer(force = false) {
   };
 
   gameState.incomingOffers.push(newOffer);
+  stopAdvancingCalendar();
+  showToast(`【買取オファー着信】${buyerClubName} から ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診が届きました！`, 'info');
   addDailyLog(`【オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診（回答期限: 5日）`);
   updateMarketBadges();
+  renderAll();
   return true;
 }
 
@@ -7339,6 +7342,12 @@ function dismissYouthCandidate(candidateId) {
 function handleGmDutyAction(actionKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
+  if (actionKey === 'goto-market-offers') {
+    switchTab('market');
+    switchMarketSubtab('offers');
+    return;
+  }
+
   if (actionKey === 'open-mega-offer') {
     openMegaOfferModal();
     return;
@@ -7843,6 +7852,7 @@ function switchRosterSubtab(subtabKey) {
   gameState.rosterSubtab = subtabKey;
 
   // DOM 属性をセット（CSSでモバイル作戦ボードのスクロール禁止等を連動）
+  document.documentElement.setAttribute('data-roster-subtab', subtabKey);
   document.body.setAttribute('data-roster-subtab', subtabKey);
   const rosterView = document.getElementById('view-roster');
   if (rosterView) {
@@ -7870,7 +7880,9 @@ function switchRosterSubtab(subtabKey) {
 
   // 作戦ボードタブの場合はスクロールを最上部に固定（スクロールなし完全フィット）
   if (subtabKey === 'board') {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
     renderTacticalBoard();
   } else if (subtabKey === 'players') {
     renderRoster();
@@ -7989,15 +8001,23 @@ function renderHeader() {
 
   document.getElementById('tab-badge-roster').textContent = `${squadCount}名`;
 
-  // 移籍市場バッジ：グローバル移籍市場（全20クラブの登録選手総数）を表示
-  const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+  // 移籍市場バッジ：受信オファーがある場合は赤色強調「〇件打診」、通常時は全登録選手数
   const marketBadge = document.getElementById('tab-badge-market');
   if (marketBadge) {
-    marketBadge.textContent = `${totalMarketPlayers}名`;
-    if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
-      marketBadge.classList.add('badge-highlight');
-    } else {
+    const offersCount = (gameState.incomingOffers || []).length;
+    if (offersCount > 0) {
+      marketBadge.textContent = `${offersCount}件打診`;
+      marketBadge.classList.add('badge-offer-incoming');
       marketBadge.classList.remove('badge-highlight');
+    } else {
+      const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+      marketBadge.textContent = `${totalMarketPlayers}名`;
+      marketBadge.classList.remove('badge-offer-incoming');
+      if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
+        marketBadge.classList.add('badge-highlight');
+      } else {
+        marketBadge.classList.remove('badge-highlight');
+      }
     }
   }
 
@@ -9050,13 +9070,13 @@ function updateMarketBadges() {
 
   const bShortlist = document.getElementById('badge-shortlist-count');
   if (bShortlist) {
-    bShortlist.textContent = shortlistCount;
+    bShortlist.textContent = `(${shortlistCount})`;
     bShortlist.classList.toggle('has-items', shortlistCount > 0);
   }
 
   const bOffers = document.getElementById('badge-offers-count');
   if (bOffers) {
-    bOffers.textContent = offersCount;
+    bOffers.textContent = `(${offersCount})`;
     bOffers.classList.toggle('has-items', offersCount > 0);
   }
 
@@ -9169,12 +9189,15 @@ function renderIncomingOffers() {
         </div>
 
         <div class="offer-card-player-row">
-          <div class="offer-player-avatar-wrap">
+          <button type="button" class="offer-player-avatar-wrap clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィールを表示" style="background: none; border: none; padding: 0; cursor: pointer;">
             ${avatarHtml}
-          </div>
+          </button>
           <div class="offer-player-meta">
             <div class="offer-player-name">
-              <span class="accent-green mono">[${offer.playerPos}]</span> #${offer.squadNumber} ${offer.playerName}
+              <span class="accent-green mono">[${offer.playerPos}]</span>
+              <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィールを表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
+                #${offer.squadNumber} ${offer.playerName}
+              </button>
             </div>
             <div class="offer-player-tags">
               <span>${offer.playerAge}歳</span>
@@ -9455,6 +9478,8 @@ function renderGmDuties() {
 
   const duties = [];
 
+
+
   // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
   if (gameState.pendingMegaOffer) {
     const offer = gameState.pendingMegaOffer;
@@ -9518,6 +9543,17 @@ function renderGmDuties() {
   duties.push(criticalDuty);
 
   // 2. 推奨タスク（RECOMMENDED）
+  if (gameState.incomingOffers && gameState.incomingOffers.length > 0) {
+    const firstOffer = gameState.incomingOffers[0];
+    duties.push({
+      level: 'recommended',
+      badge: '推奨',
+      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への買取打診 (${gameState.incomingOffers.length}件)`,
+      desc: `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「移籍」タブで承諾・拒否・上乗せを検討してください。`,
+      btnText: 'オファー確認',
+      action: 'goto-market-offers'
+    });
+  }
   const starters = playerClub.players.filter(p => p.isStarter);
   const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
   const expiringPlayers = playerClub.players
@@ -10970,6 +11006,9 @@ function confirmIntroAndStartGame() {
  * 指定されたクラブIDをプレイヤー担当クラブとして新規ゲームをセットアップ
  */
 function setupNewGame(playerClubId = gameState.selectedClubId) {
+  if (typeof stopAdvancingCalendar === 'function') {
+    stopAdvancingCalendar();
+  }
   resetTabScrollPositions();
   const usedNames = new Set();
   playerIdCounter = 1;
@@ -10985,15 +11024,29 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.consecutiveDeficitSeasons = 0;
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
+  gameState.rosterSubtab = 'board';
+  gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
   gameState.lastMatchTicker = null;
   gameState.lastSettlement = null;
   gameState.selectedPlayerId = null;
   gameState.selectedSlotIndex = null;
+  gameState.profileModalPlayerId = null;
   gameState.facilities = { stadium: 1, training: 1, scouting: 1 };
   gameState.facilityFeedback = '';
   gameState.negotiationSession = null;
   gameState.pendingMegaOffer = null;
+  gameState.incomingTransferOffer = null;
+  gameState.incomingOffers = [];
+  gameState.targetShortlist = [];
+  gameState.transferMarket = [];
+  gameState.youthCandidates = [];
+  gameState.marketFilter = {
+    clubId: 'ALL',
+    position: 'ALL',
+    sortKey: 'ovr-desc',
+    searchQuery: ''
+  };
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
   const assignedManagers = [];
@@ -11951,6 +12004,12 @@ function initGame() {
   const incomingOffersContainer = document.getElementById('incoming-offers-container');
   if (incomingOffersContainer) {
     incomingOffersContainer.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
       const acceptBtn = e.target.closest('[data-offer-accept]');
       if (acceptBtn) {
         e.stopPropagation();
@@ -12408,7 +12467,12 @@ function saveGameToStorage(force = false) {
         transferMarket: gameState.transferMarket,
         youthCandidates: gameState.youthCandidates,
         facilities: gameState.facilities,
-        lastSettlement: gameState.lastSettlement
+        lastSettlement: gameState.lastSettlement,
+        incomingOffers: gameState.incomingOffers || [],
+        targetShortlist: gameState.targetShortlist || [],
+        incomingTransferOffer: gameState.incomingTransferOffer || null,
+        pendingMegaOffer: gameState.pendingMegaOffer || null,
+        marketSubtab: gameState.marketSubtab || 'market'
       }
     };
     localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
@@ -12452,6 +12516,8 @@ function loadGameFromStorage() {
       playerIdCounter = savedCounter;
     }
     Object.assign(gameState, state);
+    if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
+    if (!Array.isArray(gameState.targetShortlist)) gameState.targetShortlist = [];
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
@@ -12780,6 +12846,20 @@ function initReloadPrevention() {
     const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
 
+    // 作戦ボード表示時の縦スクロール完全遮断（控えトレイ・ベンチ外トレイの左右スワイプのみ許可）
+    const isRosterBoard = gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board');
+    if (isRosterBoard) {
+      const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
+      const isSubOrReserveList = e.target && e.target.closest && (e.target.closest('.pitch-bench-list') || e.target.closest('.pitch-reserves-list'));
+      if (isHorizontal && isSubOrReserveList) {
+        return;
+      }
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      return;
+    }
+
     // 横方向へのスワイプ（テーブルやカルーセルの横スクロール等）は基本ブロックしない
     if (Math.abs(deltaX) >= Math.abs(deltaY)) {
       // ただしテーブルが左端/右端に達した状態でさらに外側へ引っ張る操作は、
@@ -12846,6 +12926,14 @@ function initReloadPrevention() {
       el.scrollLeft = maxScroll;
     }
   }, { passive: true, capture: true });
+
+  window.addEventListener('scroll', () => {
+    if (gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board')) {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    }
+  }, { passive: true });
 
   // 誤リロード・誤離脱時の確認ダイアログ
   window.addEventListener('beforeunload', (e) => {
