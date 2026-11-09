@@ -6735,7 +6735,7 @@ function submitNegotiationOffer() {
   if (!Array.isArray(gameState.outgoingOffers)) gameState.outgoingOffers = [];
   
   // 既存の同一選手へのアクティブオファーがあれば更新、なければ新規作成
-  const existingIdx = gameState.outgoingOffers.findIndex(o => o.playerId === target.id && (o.status === 'pending' || o.status === 'agreed'));
+  const existingIdx = gameState.outgoingOffers.findIndex(o => o.playerId === target.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
   const offerObj = {
     id: existingIdx !== -1 ? gameState.outgoingOffers[existingIdx].id : `out_${Date.now()}_${target.id}`,
     playerId: target.id,
@@ -6753,7 +6753,7 @@ function submitNegotiationOffer() {
     demandedWage: demandedWage,
     willAgree: willAgree,
     status: 'pending', // 'pending' | 'agreed' | 'rejected' | 'signed' | 'cancelled'
-    pendingDays: 2, // 2日後に返答
+    pendingDays: 5, // 5日後に返答
     createdDayIndex: gameState.currentDayIndex,
     resolvedDayIndex: null
   };
@@ -6766,7 +6766,7 @@ function submitNegotiationOffer() {
 
   session.completed = true;
   session.statusType = 'info';
-  session.statusMessage = `【オファー送信完了】${sellerClub ? sellerClub.name : 'クラブ'}へ ${target.name}の獲得オファー（移籍金 ${formatMoney(session.offeredFee)} / 週給 ${formatWage(offeredWage)}）を正式提示しました。約2日後に回答が届きます。`;
+  session.statusMessage = `【オファー送信完了】${sellerClub ? sellerClub.name : 'クラブ'}へ ${target.name}の獲得オファー（移籍金 ${formatMoney(session.offeredFee)} / 週給 ${formatWage(offeredWage)}）を正式提示しました。約5日後に回答が届きます。`;
 
   addDailyLog(`【オファー提示】${sellerClub ? sellerClub.name : 'フリー'}の ${target.pos} ${target.name} へ移籍金 ${formatMoney(session.offeredFee)} の獲得オファーを送信しました（回答待ち）。`);
   if (typeof showToast === 'function') {
@@ -6802,11 +6802,26 @@ function updateOutgoingOffersExpiry() {
           showToast(`【オファー合意】${offer.playerName}の獲得交渉が合意に達しました！`);
         }
       } else {
-        offer.status = 'rejected';
-        hadResponseToday = true;
-        addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を拒絶しました。`);
-        if (typeof showToast === 'function') {
-          showToast(`【オファー拒絶】${offer.sellerClubName}はオファーを拒否しました`);
+        // 相手クラブからの上乗せ逆オファー（条件吊り上げ）の判定
+        // 相手が要求する移籍金が提示額以上の場合、50%の確率で「上乗せ提示（逆オファー）」を返してくる
+        const canCounter = offer.demandedFee > offer.offeredFee && !offer.hasCountered;
+        if (canCounter && Math.random() < 0.50) {
+          offer.status = 'cpu_counter';
+          offer.hasCountered = true;
+          offer.counterFee = Math.round(Math.max(offer.demandedFee, offer.offeredFee * 1.2) / 100) * 100;
+          offer.pendingDays = 3; // 逆オファーへの回答期限
+          hadResponseToday = true;
+          addDailyLog(`【相手からの増額要求】${offer.sellerClubName} から ${offer.playerName} の移籍金引き上げ要求（${formatMoney(offer.counterFee)}）が届きました。「オファー」タブより承認または拒否を選択してください。`);
+          if (typeof showToast === 'function') {
+            showToast(`【増額要求】${offer.sellerClubName}より移籍金 ${formatMoney(offer.counterFee)} の逆提示が届きました`);
+          }
+        } else {
+          offer.status = 'rejected';
+          hadResponseToday = true;
+          addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を拒絶しました。`);
+          if (typeof showToast === 'function') {
+            showToast(`【オファー拒絶】${offer.sellerClubName}はオファーを拒否しました`);
+          }
         }
       }
     }
@@ -6819,6 +6834,32 @@ function updateOutgoingOffersExpiry() {
 /**
  * 合意済みの送信オファーの契約締結を完了する（資金支払いと選手加入）
  */
+/**
+ * 相手クラブからの増額逆提示を承認して合意状態にする
+ */
+function acceptCpuCounterOffer(offerId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (!Array.isArray(gameState.outgoingOffers)) return;
+
+  const offer = gameState.outgoingOffers.find(o => o.id === offerId);
+  if (!offer || offer.status !== 'cpu_counter') return;
+
+  const playerClub = getPlayerClub();
+  if (playerClub && playerClub.funds < offer.counterFee) {
+    alert(`資金が不足しています（必要額: ${formatMoney(offer.counterFee)} / クラブ資金: ${formatMoney(playerClub.funds)}）`);
+    return;
+  }
+
+  offer.offeredFee = offer.counterFee;
+  offer.status = 'agreed';
+  addDailyLog(`【増額要求受諾】${offer.sellerClubName} の提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を受け入れ、獲得合意に達しました！「契約を確定して加入」より正式契約を行えます。`);
+  if (typeof showToast === 'function') {
+    showToast(`${offer.sellerClubName}の増額提示を承認しました`);
+  }
+  updateMarketBadges();
+  renderAll();
+}
+
 function completeOutgoingTransferSigning(offerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
   const playerClub = getPlayerClub();
@@ -9597,7 +9638,7 @@ function updateMarketBadges() {
   
   // アクティブなオファー件数（未完了）
   const incomingActiveCount = (gameState.incomingOffers || []).filter(o => o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed').length;
-  const outgoingActiveCount = (gameState.outgoingOffers || []).filter(o => o.status === 'pending' || o.status === 'agreed').length;
+  const outgoingActiveCount = (gameState.outgoingOffers || []).filter(o => o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter').length;
   const totalActiveOffers = incomingActiveCount + outgoingActiveCount;
 
   const bShortlist = document.getElementById('badge-shortlist-count');
@@ -9752,6 +9793,12 @@ function renderIncomingOffers() {
         statusBadge = `<span class="offer-deadline-badge mono accent-gold" style="border: 1px solid rgba(243, 156, 18, 0.4); background: rgba(243, 156, 18, 0.1);">相手回答待ち（残り約${offer.pendingDays || 1}日）</span>`;
         actionButtons = `
           <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">オファー撤回</button>
+        `;
+      } else if (offer.status === 'cpu_counter') {
+        statusBadge = `<span class="offer-deadline-badge mono accent-gold" style="border: 1px solid rgba(243, 156, 18, 0.4); background: rgba(243, 156, 18, 0.15); font-weight: 700;">相手より増額逆提示あり（回答期限: 残り${offer.pendingDays || 1}日）</span>`;
+        actionButtons = `
+          <button type="button" class="btn btn-sm btn-offer-accept" data-outgoing-accept-counter="${offer.id}" style="font-weight: 700;">増額を受け入れて合意 (${formatMoney(offer.counterFee)})</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">拒否・交渉終了</button>
         `;
       } else if (offer.status === 'agreed') {
         statusBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">合意！ 契約確定待ち</span>`;
@@ -12969,6 +13016,14 @@ function initGame() {
       if (counterBtn) {
         e.stopPropagation();
         counterIncomingOffer(counterBtn.dataset.offerCounter);
+        return;
+      }
+
+      // 送信オファー：相手からの増額提示を承認
+      const acceptCpuCounterBtn = e.target.closest('[data-outgoing-accept-counter]');
+      if (acceptCpuCounterBtn) {
+        e.stopPropagation();
+        acceptCpuCounterOffer(acceptCpuCounterBtn.dataset.outgoingAcceptCounter);
         return;
       }
 
