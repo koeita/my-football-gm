@@ -865,99 +865,104 @@
       </div>
     </main>
 
-    <!-- タブ4：経営（施設投資 ＆ ユース） -->
-    <main id="view-facilities" class="tab-view hidden">
+    <!-- タブ4：経営・施設・人事（3分割：施設投資・監督指導陣・ユース） -->
+    <main id="view-facilities" class="tab-view hidden" data-facilities-subtab="investment">
+      <!-- 経営サブタブ切り替えナビゲーションバー -->
+      <div class="roster-subnav-bar facilities-subnav-bar" id="facilities-subnav-bar" role="tablist" aria-label="経営メニュー">
+        <button type="button" class="roster-subtab-btn active" data-facilities-subtab="investment" id="facilities-subtab-btn-investment" role="tab" aria-selected="true">施設投資</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="staff" id="facilities-subtab-btn-staff" role="tab" aria-selected="false">監督・指導陣</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユースチーム</button>
+      </div>
+
       <!-- 投資・昇格アクションの通知フィードバックバー -->
       <div id="facility-feedback-banner" class="facility-feedback-banner hidden"></div>
 
-      <!-- 施設投資パネル -->
-      <div class="panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">施設投資</h2>
+      <!-- サブタブ1：施設投資 -->
+      <div class="facilities-subview" id="facilities-subview-investment" role="tabpanel">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">施設投資</h2>
+            </div>
+            <div class="team-power-badges">
+              <span class="power-badge">資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
+              <span class="power-badge">ホーム収入 <strong class="mono accent-green" id="facilities-stadium-bonus">+0%</strong></span>
+            </div>
           </div>
-          <div class="team-power-badges">
-            <span class="power-badge">資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
-            <span class="power-badge">ホーム収入 <strong class="mono accent-green" id="facilities-stadium-bonus">+0%</strong></span>
-          </div>
-        </div>
-        <div class="panel-body">
-          <div class="facilities-grid" id="facilities-grid">
-            <!-- JSで3つの施設カードを描画 -->
+          <div class="panel-body">
+            <div class="facilities-grid" id="facilities-grid">
+              <!-- JSで3つの施設カードを描画 -->
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 監督人事パネル（TECHNICAL STAFF） -->
-      <div class="panel manager-management-panel" id="manager-management-panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">監督人事</h2>
+      <!-- サブタブ2：監督人事 ＆ 指導陣（1つにまとめて表示） -->
+      <div class="facilities-subview hidden" id="facilities-subview-staff" role="tabpanel">
+        <!-- 監督人事パネル（TECHNICAL STAFF） -->
+        <div class="panel manager-management-panel" id="manager-management-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">監督人事</h2>
+            </div>
+            <div class="team-power-badges" id="manager-header-badges">
+              <span class="power-badge">現場信頼度 <strong class="mono accent-green" id="manager-panel-trust">80%</strong></span>
+              <span class="power-badge">監督週給 <strong class="mono accent-gold" id="manager-panel-wage">£80k</strong></span>
+            </div>
           </div>
-          <div class="team-power-badges" id="manager-header-badges">
-            <span class="power-badge">現場信頼度 <strong class="mono accent-green" id="manager-panel-trust">80%</strong></span>
-            <span class="power-badge">監督週給 <strong class="mono accent-gold" id="manager-panel-wage">£80k</strong></span>
+          <div class="panel-body" id="manager-panel-body">
+            <!-- JSで現在の監督情報カード ＆ 後任監督候補リストを描画 -->
           </div>
         </div>
-        <div class="panel-body" id="manager-panel-body">
-          <!-- JSで現在の監督情報カード ＆ 後任監督候補リストを描画 -->
+
+        <!-- 指導陣パネル（COACHING STAFF / 全6枠） -->
+        <div class="panel coaching-staff-panel" id="coaching-staff-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">指導陣</h2>
+            </div>
+            <div class="team-power-badges" id="coach-header-badges">
+              <span class="power-badge">体制 <strong class="mono accent-green" id="coach-panel-count">4 / 6枠</strong></span>
+              <span class="power-badge">指導陣週給 <strong class="mono accent-gold" id="coach-panel-wage">£120k</strong></span>
+            </div>
+          </div>
+          <div class="panel-body" id="coach-panel-body">
+            <!-- JSで全6スロット（オフェンス2、ディフェンス2、GK1、フィジカル1）を描画 -->
+          </div>
         </div>
       </div>
 
-      <!-- 指導陣パネル（COACHING STAFF / 全6枠） -->
-      <div class="panel coaching-staff-panel" id="coaching-staff-panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">指導陣</h2>
+      <!-- サブタブ3：ユースチーム -->
+      <div class="facilities-subview hidden" id="facilities-subview-youth" role="tabpanel">
+        <div class="panel youth-squad-panel" id="youth-squad-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">ユースチーム</h2>
+            </div>
+            <div class="team-power-badges">
+              <span class="power-badge">所属 <strong class="mono accent-green" id="youth-squad-count">0 / 10名</strong></span>
+              <span class="power-badge">トップ登録 <strong class="mono" id="youth-top-capacity">20名</strong></span>
+            </div>
           </div>
-          <div class="team-power-badges" id="coach-header-badges">
-            <span class="power-badge">体制 <strong class="mono accent-green" id="coach-panel-count">4 / 6枠</strong></span>
-            <span class="power-badge">指導陣週給 <strong class="mono accent-gold" id="coach-panel-wage">£120k</strong></span>
+          <div class="table-wrapper">
+            <table class="data-table youth-squad-table">
+              <thead>
+                <tr>
+                  <th class="col-pos">POS</th>
+                  <th class="col-name">選手名</th>
+                  <th class="col-num col-youth-age">年齢</th>
+                  <th class="col-num col-youth-ovr">OVR</th>
+                  <th class="col-num col-youth-atk">攻撃</th>
+                  <th class="col-num col-youth-def">守備</th>
+                  <th class="col-num col-youth-wage">週給</th>
+                  <th class="col-action">昇格</th>
+                </tr>
+              </thead>
+              <tbody id="youth-squad-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div class="panel-body" id="coach-panel-body">
-          <!-- JSで全6スロット（オフェンス2、ディフェンス2、GK1、フィジカル1）を描画 -->
-        </div>
-      </div>
-
-      <!-- ユースチームパネル -->
-      <div class="panel youth-squad-panel" id="youth-squad-panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">ユースチーム</h2>
-          </div>
-          <div class="team-power-badges">
-            <span class="power-badge">所属 <strong class="mono accent-green" id="youth-squad-count">0 / 10名</strong></span>
-            <span class="power-badge">トップ登録 <strong class="mono" id="youth-top-capacity">20名</strong></span>
-          </div>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table youth-squad-table">
-            <thead>
-              <tr>
-                <th class="col-pos">POS</th>
-                <th class="col-name">選手名</th>
-                <th class="col-num col-youth-age">年齢</th>
-                <th class="col-num col-youth-ovr">OVR</th>
-                <th class="col-num col-youth-atk">攻撃</th>
-                <th class="col-num col-youth-def">守備</th>
-                <th class="col-num col-youth-wage">週給</th>
-                <th class="col-action">昇格</th>
-              </tr>
-            </thead>
-            <tbody id="youth-squad-tbody">
-              <!-- JSで描画 -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-              </tr>
-            </thead>
-            <tbody id="youth-squad-tbody">
-              <!-- JSで描画 -->
-            </tbody>
-          </table>
         </div>
       </div>
     </main>

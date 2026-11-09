@@ -2,7 +2,8 @@
    上部サブタブナビゲーション（セグメントコントロール：編成・移籍 共通UI）
    ========================================== */
 .roster-subnav-bar,
-.market-subnav-bar {
+.market-subnav-bar,
+.facilities-subnav-bar {
   display: flex !important;
   align-items: center !important;
   justify-content: stretch !important;
@@ -363,13 +364,17 @@
     padding-top: 0 !important;
   }
 
-  .roster-subnav-bar {
+  .roster-subnav-bar,
+  .market-subnav-bar,
+  .facilities-subnav-bar {
     position: static !important;
     max-width: 480px;
     margin: 0 auto 12px auto;
   }
 
-  #view-roster {
+  #view-roster,
+  #view-market,
+  #view-facilities {
     padding-top: 0 !important;
   }
 
@@ -7031,9 +7036,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     -webkit-tap-highlight-color: rgba(46, 204, 113, 0.2) !important;
   }
 
-  /* 編成・移籍サブタブバー（固定ヘッダー直下の統一セグメントコントロール） */
+  /* 編成・移籍・経営サブタブバー（固定ヘッダー直下の統一セグメントコントロール） */
   .roster-subnav-bar,
-  .market-subnav-bar {
+  .market-subnav-bar,
+  .facilities-subnav-bar {
     position: fixed !important;
     top: calc(52px + env(safe-area-inset-top, 0px)) !important;
     left: 6px !important;
@@ -7061,7 +7067,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .roster-subnav-bar .roster-subtab-btn,
-  .market-subnav-bar .roster-subtab-btn {
+  .market-subnav-bar .roster-subtab-btn,
+  .facilities-subnav-bar .roster-subtab-btn {
     flex: 1 1 0 !important;
     height: 36px !important;
     min-height: 36px !important;
@@ -7076,8 +7083,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     text-overflow: ellipsis !important;
   }
 
-  /* 移籍タブ上部：サブタブバー固定分のパディング確保 */
-  #view-market {
+  /* 移籍タブ・経営タブ上部：サブタブバー固定分のパディング確保 */
+  #view-market,
+  #view-facilities {
     padding-top: 48px !important;
   }
 
@@ -11429,8 +11437,13 @@ button.hidden,
    ---------------------------------------------------- */
 
 
-.market-subview.hidden {
+.market-subview.hidden,
+.facilities-subview.hidden {
   display: none !important;
+}
+
+.facilities-subview {
+  width: 100%;
 }
 
 /* 受信オファーリスト グリッド */
