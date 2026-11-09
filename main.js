@@ -12902,14 +12902,22 @@ function initGame() {
     });
   }
 
-  // 消化済みマッチサマリー振り返りモーダルの閉じるボタン
+  // 消化済みマッチサマリー振り返りモーダルの閉じるボタンおよび背景クリック
   const btnClosePastMatch = document.getElementById('btn-close-past-match-modal');
   if (btnClosePastMatch) {
     btnClosePastMatch.addEventListener('click', closePastMatchSummaryModal);
   }
-  const btnFooterClosePastMatch = document.getElementById('btn-footer-close-past-match');
-  if (btnFooterClosePastMatch) {
-    btnFooterClosePastMatch.addEventListener('click', closePastMatchSummaryModal);
+  const modalPastSummary = document.getElementById('past-match-modal');
+  if (modalPastSummary) {
+    modalPastSummary.addEventListener('click', (e) => {
+      if (e.target === modalPastSummary) closePastMatchSummaryModal();
+    });
+  }
+  const modalFixturePreview = document.getElementById('fixture-preview-modal');
+  if (modalFixturePreview) {
+    modalFixturePreview.addEventListener('click', (e) => {
+      if (e.target === modalFixturePreview) closePendingMatchPreviewModal();
+    });
   }
 
   initReloadPrevention();

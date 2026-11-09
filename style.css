@@ -12552,3 +12552,58 @@ button.hidden,
     font-size: 11px;
   }
 }
+
+/* ==========================================
+   サマリー＆対戦スカウティングモーダル最適化（左右均等中央配置・閉じるボタン削除対応）
+   ========================================== */
+.past-match-modal-card {
+  max-width: 860px;
+  width: 94%;
+  max-height: 90vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fixture-preview-modal-card {
+  max-width: 720px;
+  width: 94%;
+  max-height: 90vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#past-match-modal-body,
+#fixture-preview-modal-body {
+  padding: 16px 20px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .past-match-modal-card,
+  .fixture-preview-modal-card {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 90vh !important;
+    margin: 0 auto !important;
+    border-radius: 6px !important;
+  }
+
+  #past-match-modal-body,
+  #fixture-preview-modal-body {
+    padding: 10px 12px 16px 12px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+}
