@@ -12894,3 +12894,19 @@ button.hidden,
     display: flex !important;
   }
 }
+
+.btn-counter-preset {
+  background: #21262d !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #c9d1d9 !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.btn-counter-preset.active {
+  background: rgba(46, 204, 113, 0.2) !important;
+  border-color: var(--accent-green, #2ecc71) !important;
+  color: var(--accent-green, #2ecc71) !important;
+}

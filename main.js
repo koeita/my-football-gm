@@ -7025,34 +7025,127 @@ function rejectIncomingOffer(offerId) {
  * 受信オファー上乗せ要求（COUNTER）
  * 70%の確率で相手合意（提示額引き上げ＆期限延長）、30%で決裂（相手撤退）
  */
-function counterIncomingOffer(offerId) {
+let activeCounterOfferId = null;
+
+/**
+ * 移籍オファー上乗せ要求モーダルを開く
+ */
+function openCounterOfferModal(offerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
   if (!gameState.incomingOffers) return;
   const offer = gameState.incomingOffers.find(o => o.id === offerId);
-  if (!offer) return;
+  if (!offer || offer.status === 'negotiating') return;
 
-  const isAgreed = Math.random() < 0.70;
-  if (isAgreed) {
-    const newFee = offer.counterFee;
-    offer.offerFee = newFee;
-    offer.counterFee = clamp(Math.round((newFee * 1.15) / 100) * 100, newFee + 200, 130000);
-    offer.daysLeft = Math.max(offer.daysLeft, 3);
-    addDailyLog(`【上乗せ合意】${offer.buyerClubName} が ${offer.playerName} の増額オファー（${formatMoney(newFee)}）を承諾！回答期限が延長されました。`);
-    gameState.facilityFeedback = `【交渉進展】${offer.buyerClubName} が増額提示 ${formatMoney(newFee)} に同意しました。`;
-  } else {
-    // 決裂撤退
-    gameState.incomingOffers = gameState.incomingOffers.filter(o => o.id !== offerId);
-    addDailyLog(`【交渉決裂】${offer.buyerClubName} は ${offer.playerName} の上乗せ要求を拒否し、獲得交渉から撤退しました。`);
-    gameState.facilityFeedback = `【相手撤退】${offer.buyerClubName} は増額要求に応じず撤退しました。`;
+  activeCounterOfferId = offerId;
+  const modalEl = document.getElementById('counter-offer-modal');
+  if (!modalEl) return;
+
+  const playerClub = getPlayerClub();
+  const player = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+  const infoEl = document.getElementById('counter-offer-modal-player-info');
+  if (infoEl) {
+    infoEl.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 12px;">
+        <div>
+          <span class="accent-green mono font-bold">[${offer.playerPos}]</span>
+          <span style="font-weight: 700; font-size: 14px; margin-left: 4px;">#${offer.squadNumber} ${offer.playerName}</span>
+          <span class="text-muted" style="font-size: 11.5px; margin-left: 6px;">(${offer.playerAge}歳 / OVR ${offer.ovr})</span>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; color: #8b949e;">オファー元クラブ</div>
+          <div style="font-weight: 700; font-size: 12.5px; color: #e6edf3;">${offer.buyerClubName}</div>
+        </div>
+      </div>
+    `;
   }
 
+  const currentFeeEl = document.getElementById('counter-current-fee');
+  if (currentFeeEl) currentFeeEl.textContent = formatMoney(offer.offerFee);
+
+  const slider = document.getElementById('counter-fee-slider');
+  if (slider) slider.value = 120;
+
+  // プリセットボタンのリセット
+  document.querySelectorAll('.btn-counter-preset').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.ratio === '1.20');
+  });
+
+  updateCounterOfferModalCalculation(offer.offerFee, 1.20);
+  modalEl.classList.remove('hidden');
+}
+
+/**
+ * 上乗せモーダル内の計算＆表示更新
+ */
+function updateCounterOfferModalCalculation(baseFee, ratio) {
+  const targetFee = Math.round(baseFee * ratio);
+  const targetEl = document.getElementById('counter-target-fee');
+  if (targetEl) targetEl.textContent = formatMoney(targetFee);
+
+  const chanceEl = document.getElementById('counter-agree-chance');
+  if (chanceEl) {
+    if (ratio <= 1.15) {
+      chanceEl.textContent = '合意期待度: 極めて高 (~85%)';
+      chanceEl.className = 'accent-green font-bold';
+    } else if (ratio <= 1.25) {
+      chanceEl.textContent = '合意期待度: 高 (~70%)';
+      chanceEl.className = 'accent-green font-bold';
+    } else if (ratio <= 1.40) {
+      chanceEl.textContent = '合意期待度: 中 (~45%)';
+      chanceEl.className = 'accent-gold font-bold';
+    } else {
+      chanceEl.textContent = '合意期待度: 低 (~20%)';
+      chanceEl.className = 'accent-red font-bold';
+    }
+  }
+}
+
+/**
+ * 移籍オファー上乗せ要求モーダルを閉じる
+ */
+function closeCounterOfferModal() {
+  const modalEl = document.getElementById('counter-offer-modal');
+  if (modalEl) modalEl.classList.add('hidden');
+  activeCounterOfferId = null;
+}
+
+/**
+ * 上乗せ提示を実行
+ */
+function submitCounterOffer() {
+  if (!activeCounterOfferId || !gameState.incomingOffers) return;
+  const offer = gameState.incomingOffers.find(o => o.id === activeCounterOfferId);
+  if (!offer) {
+    closeCounterOfferModal();
+    return;
+  }
+
+  const slider = document.getElementById('counter-fee-slider');
+  const ratio = slider ? (parseInt(slider.value, 10) / 100) : 1.20;
+  const demandedFee = Math.round(offer.offerFee * ratio);
+
+  offer.status = 'negotiating';
+  offer.demandedFee = demandedFee;
+  offer.pendingDays = 2; // 2日後に相手から合意または決裂の回答
+
+  addDailyLog(`【上乗せ提示】${offer.buyerClubName}へ ${offer.playerName}の移籍金 ${formatMoney(demandedFee)}（+${Math.round((ratio - 1) * 100)}%）を提示しました。回答待ちとなります。`);
+  if (typeof showToast === 'function') {
+    showToast(`${offer.buyerClubName}へ移籍金 ${formatMoney(demandedFee)} の上乗せ要求を提示しました`);
+  }
+
+  closeCounterOfferModal();
   updateMarketBadges();
   renderAll();
 }
 
 /**
- * 買取オファー決断モーダルを開く
+ * 移籍オファー上乗せ（旧関数名ラッパー）
  */
+function counterIncomingOffer(offerId) {
+  openCounterOfferModal(offerId);
+}
+
+
 function openIncomingOfferModal() {
   const offer = gameState.incomingTransferOffer;
   if (!offer) return;
@@ -9533,10 +9626,16 @@ function renderIncomingOffers() {
           </div>
         </div>
 
-        <div class="offer-card-actions">
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
-          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="移籍金の+18%上乗せを要求（相手合意率70%）">上乗せ (COUNTER)</button>
+                <div class="offer-card-actions">
+          ${offer.status === 'negotiating' ? `
+            <div style="flex: 1; text-align: center; padding: 6px 10px; background: rgba(243, 156, 18, 0.15); border: 1px solid rgba(243, 156, 18, 0.4); border-radius: 4px; color: #f39c12; font-size: 11.5px; font-weight: 700;" class="mono">
+              相手クラブ回答待ち中 (希望: ${formatMoney(offer.demandedFee || offer.counterFee)} / 残り${offer.pendingDays || 1}日)
+            </div>
+          ` : `
+            <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
+            <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
+            <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ (COUNTER)</button>
+          `}
         </div>
       </div>
     `;
@@ -12874,6 +12973,53 @@ function initGame() {
   }
 
   // 買取オファーモーダルの閉じるボタン＆オーバーレイクリック
+    // 移籍オファー上乗せ要求モーダルのイベント登録
+  const counterModal = document.getElementById('counter-offer-modal');
+  const btnCloseCounter = document.getElementById('btn-close-counter-modal');
+  const btnCancelCounter = document.getElementById('btn-cancel-counter-modal');
+  const btnSubmitCounter = document.getElementById('btn-submit-counter-offer');
+  const counterSlider = document.getElementById('counter-fee-slider');
+
+  if (btnCloseCounter) btnCloseCounter.addEventListener('click', closeCounterOfferModal);
+  if (btnCancelCounter) btnCancelCounter.addEventListener('click', closeCounterOfferModal);
+  if (btnSubmitCounter) btnSubmitCounter.addEventListener('click', submitCounterOffer);
+
+  if (counterModal) {
+    counterModal.addEventListener('click', (e) => {
+      if (e.target === counterModal) {
+        closeCounterOfferModal();
+      }
+    });
+  }
+
+  if (counterSlider) {
+    counterSlider.addEventListener('input', (e) => {
+      if (!activeCounterOfferId || !gameState.incomingOffers) return;
+      const offer = gameState.incomingOffers.find(o => o.id === activeCounterOfferId);
+      if (!offer) return;
+      const ratio = parseInt(e.target.value, 10) / 100;
+      // プリセットボタンスタイル更新
+      document.querySelectorAll('.btn-counter-preset').forEach(btn => {
+        btn.classList.toggle('active', Math.abs(parseFloat(btn.dataset.ratio) - ratio) < 0.01);
+      });
+      updateCounterOfferModalCalculation(offer.offerFee, ratio);
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    const presetBtn = e.target.closest('.btn-counter-preset');
+    if (presetBtn && activeCounterOfferId && gameState.incomingOffers) {
+      const offer = gameState.incomingOffers.find(o => o.id === activeCounterOfferId);
+      if (!offer) return;
+      const ratio = parseFloat(presetBtn.dataset.ratio);
+      const slider = document.getElementById('counter-fee-slider');
+      if (slider) slider.value = Math.round(ratio * 100);
+      document.querySelectorAll('.btn-counter-preset').forEach(b => b.classList.remove('active'));
+      presetBtn.classList.add('active');
+      updateCounterOfferModalCalculation(offer.offerFee, ratio);
+    }
+  });
+
   const incomingOfferModal = document.getElementById('incoming-offer-modal');
   const btnCloseIncoming = document.getElementById('btn-close-incoming-modal');
   if (btnCloseIncoming) {
