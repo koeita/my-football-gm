@@ -13254,19 +13254,28 @@ function hireNewManager(managerId) {
   const idx = (gameState.freeManagers || []).findIndex(m => m.id === managerId);
   if (idx === -1) return false;
 
-  const newMgr = gameState.freeManagers.splice(idx, 1)[0];
+  const newMgr = gameState.freeManagers[idx];
   const oldMgr = club.manager;
   let buyoutMsg = '';
+
   if (oldMgr) {
     const fee = getManagerBuyoutFee(oldMgr);
     if (club.funds < fee) {
       alert(`資金不足です。現任監督の解任違約金 £${fee.toLocaleString()}k を支払えません。`);
       return false;
     }
+    const ok = window.confirm(`${oldMgr.name}監督を解任し、${newMgr.name}氏を新監督として招聘しますか？\n（前任違約金: £${fee.toLocaleString()}k / 新監督週給: £${newMgr.weeklyWage}k）`);
+    if (!ok) return false;
+
+    gameState.freeManagers.splice(idx, 1);
     club.funds -= fee;
     oldMgr.trust = 70;
     gameState.freeManagers.push(oldMgr);
     buyoutMsg = `（前任違約金 £${fee.toLocaleString()}k 支払）`;
+  } else {
+    const ok = window.confirm(`${newMgr.name}氏を新監督として招聘しますか？\n（契約期間: 3年 / 週給: £${newMgr.weeklyWage}k）`);
+    if (!ok) return false;
+    gameState.freeManagers.splice(idx, 1);
   }
 
   newMgr.trust = 80;
@@ -13280,7 +13289,7 @@ function hireNewManager(managerId) {
     assignStartersToFormationSlots(club, true);
   }
 
-  const tDef = TACTICS_DEFINITIONS[normalizeTacticKey(newMgr.preferredTactic)] || { label: newMgr.preferredTactic };
+  const tacticLabel = getManagerTacticLabel(newMgr.preferredTactic);
   addDailyLog(`[監督人事] ${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
   renderAll();
   return true;
