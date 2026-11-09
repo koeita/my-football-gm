@@ -6969,7 +6969,10 @@ function cancelOutgoingOffer(offerId) {
 function triggerIncomingTransferOffer(force = false) {
   const playerClub = getPlayerClub();
   if (!playerClub || playerClub.players.length <= 11) return false;
-  if (!gameState.incomingOffers) gameState.incomingOffers = [];
+  if (!gameState.incomingOffers) 
+  gameState.incomingOffers = [];
+  gameState.outgoingOffers = [];
+  gameState.offersSubtab = 'incoming';
   if (gameState.incomingOffers.length >= 6) return false;
 
   const currentDay = getCurrentCalendarDay();
@@ -9706,7 +9709,25 @@ function renderShortlist() {
     const isBargain = p.contractYears === 1;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・約50%割安</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
-    const footBadge = formatFootBadge(p);
+
+    const activeOutOffer = (gameState.outgoingOffers || []).find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
+    let offerStatusBadge = '';
+    let offerBtnHtml = '';
+
+    if (activeOutOffer) {
+      if (activeOutOffer.status === 'agreed') {
+        offerStatusBadge = '<span class="sub-badge badge-bargain" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; border-color: #2ecc71;">オファー合意</span>';
+        offerBtnHtml = `<button type="button" class="btn btn-sm btn-offer-accept" data-goto-offers="outgoing" style="font-weight: 700; padding: 2px 8px; font-size: 11px;">契約確定へ</button>`;
+      } else if (activeOutOffer.status === 'cpu_counter') {
+        offerStatusBadge = '<span class="sub-badge" style="background: rgba(243, 156, 18, 0.2); color: #f39c12; border-color: #f39c12;">増額逆提示あり</span>';
+        offerBtnHtml = `<button type="button" class="btn btn-sm" data-goto-offers="outgoing" style="background: #f39c12; color: #0d1117; font-weight: 700; padding: 2px 8px; font-size: 11px;">回答確認</button>`;
+      } else {
+        offerStatusBadge = `<span class="sub-badge" style="background: rgba(243, 156, 18, 0.15); color: #f39c12;">回答待ち(${activeOutOffer.pendingDays || 1}日)</span>`;
+        offerBtnHtml = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity: 0.6; padding: 2px 8px; font-size: 11px;">送信中</button>`;
+      }
+    } else {
+      offerBtnHtml = `${offerBtnHtml}`;
+    }    const footBadge = formatFootBadge(p);
 
     rows.push(`
       <tr>
@@ -9715,7 +9736,7 @@ function renderShortlist() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
             ${getPlayerAvatarHtml(p, ctx.club, 'avatar-sm table-avatar')}${p.name}
           </button>
-          ${bargainBadge}${failedBadge}
+          ${bargainBadge}${failedBadge}${offerStatusBadge}
         </td>
         <td class="col-team"><strong>${clubName}</strong></td>
         <td class="col-num">${p.age}歳</td>
@@ -9726,7 +9747,7 @@ function renderShortlist() {
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
         <td class="col-action" style="white-space: nowrap;">
           <button type="button" class="btn btn-secondary btn-sm" data-profile-id="${p.id}" title="選手詳細スカウティングレポート">詳細</button>
-          <button type="button" class="btn btn-primary btn-sm btn-formal-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>正式オファー</button>
+          ${offerBtnHtml}
           <button type="button" class="btn btn-outline btn-sm btn-shortlist-remove" data-shortlist-remove="${p.id}" title="ターゲットリストから除外">解除</button>
         </td>
       </tr>
@@ -12961,6 +12982,14 @@ function initGame() {
   const shortlistTbody = document.getElementById('shortlist-tbody');
   if (shortlistTbody) {
     shortlistTbody.addEventListener('click', (e) => {
+      const gotoOffersBtn = e.target.closest('[data-goto-offers]');
+      if (gotoOffersBtn) {
+        e.stopPropagation();
+        switchMarketSubtab('offers');
+        switchOffersTab(gotoOffersBtn.dataset.gotoOffers || 'outgoing');
+        return;
+      }
+
       const profileEl = e.target.closest('[data-profile-id]');
       if (profileEl) {
         e.stopPropagation();
@@ -12984,68 +13013,88 @@ function initGame() {
 
   // 受信オファーリスト（INCOMING OFFERS）内 クリックイベント
     // オファー一覧（受信オファー / 送信オファー）コンテナのクリックイベント
-  const incomingOffersContainer = document.getElementById('incoming-offers-container');
-  if (incomingOffersContainer) {
-    incomingOffersContainer.addEventListener('click', (e) => {
-      // 選手プロフィールリンク
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
-        e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
-        return;
-      }
+    // オファー一覧（受信オファー / 送信オファー）コンテナおよびドキュメント全体の委譲クリック
+  function handleOfferActions(e) {
+    // 選手プロフィールリンク
+    const profileBtn = e.target.closest('[data-profile-id]');
+    if (profileBtn && !e.target.closest('button:not(.player-name-link):not(.offer-player-avatar-wrap):not([data-profile-id])')) {
+      e.stopPropagation();
+      openPlayerProfileModal(profileBtn.dataset.profileId);
+      return;
+    }
 
-      // 受信オファー：承諾
-      const acceptBtn = e.target.closest('[data-offer-accept]');
-      if (acceptBtn) {
-        e.stopPropagation();
-        acceptIncomingOffer(acceptBtn.dataset.offerAccept);
-        return;
-      }
+    // 受信オファー：承諾 (ACCEPT)
+    const acceptBtn = e.target.closest('[data-offer-accept]');
+    if (acceptBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = acceptBtn.getAttribute('data-offer-accept') || acceptBtn.dataset.offerAccept;
+      acceptIncomingOffer(offerId);
+      return;
+    }
 
-      // 受信オファー：拒否
-      const rejectBtn = e.target.closest('[data-offer-reject]');
-      if (rejectBtn) {
-        e.stopPropagation();
-        rejectIncomingOffer(rejectBtn.dataset.offerReject);
-        return;
-      }
+    // 受信オファー：拒否 (REJECT)
+    const rejectBtn = e.target.closest('[data-offer-reject]');
+    if (rejectBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = rejectBtn.getAttribute('data-offer-reject') || rejectBtn.dataset.offerReject;
+      rejectIncomingOffer(offerId);
+      return;
+    }
 
-      // 受信オファー：上乗せ要求モーダルを開く
-      const counterBtn = e.target.closest('[data-offer-counter]');
-      if (counterBtn) {
-        e.stopPropagation();
-        counterIncomingOffer(counterBtn.dataset.offerCounter);
-        return;
-      }
+    // 受信オファー：上乗せ要求モーダルを開く
+    const counterBtn = e.target.closest('[data-offer-counter]');
+    if (counterBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = counterBtn.getAttribute('data-offer-counter') || counterBtn.dataset.offerCounter;
+      counterIncomingOffer(offerId);
+      return;
+    }
 
-      // 送信オファー：相手からの増額提示を承認
-      const acceptCpuCounterBtn = e.target.closest('[data-outgoing-accept-counter]');
-      if (acceptCpuCounterBtn) {
-        e.stopPropagation();
-        acceptCpuCounterOffer(acceptCpuCounterBtn.dataset.outgoingAcceptCounter);
-        return;
-      }
+    // 送信オファー：相手からの増額提示を承認
+    const acceptCpuCounterBtn = e.target.closest('[data-outgoing-accept-counter]');
+    if (acceptCpuCounterBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = acceptCpuCounterBtn.getAttribute('data-outgoing-accept-counter') || acceptCpuCounterBtn.dataset.outgoingAcceptCounter;
+      acceptCpuCounterOffer(offerId);
+      return;
+    }
 
-      // 送信オファー：契約確定（SIGN）
-      const signBtn = e.target.closest('[data-outgoing-sign]');
-      if (signBtn) {
-        e.stopPropagation();
-        completeOutgoingTransferSigning(signBtn.dataset.outgoingSign);
-        return;
-      }
+    // 送信オファー：契約確定（SIGN）
+    const signBtn = e.target.closest('[data-outgoing-sign]');
+    if (signBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = signBtn.getAttribute('data-outgoing-sign') || signBtn.dataset.outgoingSign;
+      completeOutgoingTransferSigning(offerId);
+      return;
+    }
 
-      // 送信オファー：オファー撤回・キャンセル
-      const cancelBtn = e.target.closest('[data-outgoing-cancel]');
-      if (cancelBtn) {
-        e.stopPropagation();
-        cancelOutgoingOffer(cancelBtn.dataset.outgoingCancel);
-        return;
-      }
-    });
+    // 送信オファー：オファー撤回・キャンセル
+    const cancelBtn = e.target.closest('[data-outgoing-cancel]');
+    if (cancelBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = cancelBtn.getAttribute('data-outgoing-cancel') || cancelBtn.dataset.outgoingCancel;
+      cancelOutgoingOffer(offerId);
+      return;
+    }
   }
 
-  // オファーサブタブ（受信 / 送信）切り替えボタンのクリックイベント
+  const incomingOffersContainer = document.getElementById('incoming-offers-container');
+  if (incomingOffersContainer) {
+    incomingOffersContainer.addEventListener('click', handleOfferActions);
+  }
+  // 万一コンテナ外や再描画タイミングで外れても確実に動作するグローバル委譲
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-offer-accept], [data-offer-reject], [data-offer-counter], [data-outgoing-sign], [data-outgoing-cancel], [data-outgoing-accept-counter]')) {
+      handleOfferActions(e);
+    }
+  });
+
   const offersFilterTabs = document.getElementById('offers-filter-tabs');
   if (offersFilterTabs) {
     offersFilterTabs.addEventListener('click', (e) => {
