@@ -1,4 +1,12 @@
 
+const BENCH_DRAWER_POS_ORDER = {
+  'CF': 1, 'ST': 1, 'LW': 2, 'RW': 2,
+  'AM': 3, 'LM': 4, 'RM': 4, 'CM': 5, 'DM': 6,
+  'LB': 7, 'RB': 7, 'CB': 8,
+  'GK': 9
+};
+
+
 const TACTIC_JP_NAMES = {
   possession: 'ポゼッション',
   gegenpress: 'ゲーゲンプレス',
@@ -6898,6 +6906,39 @@ function updateIncomingOffersExpiry() {
   const expired = [];
   const active = [];
   for (const offer of gameState.incomingOffers) {
+    // 上乗せ交渉中のオファーに対する相手クラブからの回答処理
+    if (offer.status === 'negotiating') {
+      offer.pendingDays = (offer.pendingDays || 1) - 1;
+      if (offer.pendingDays <= 0) {
+        // 交渉判定: 要求額の比率に応じた合意確率 (1.3倍以下なら65%、それ以上は35%)
+        const ratio = (offer.demandedFee || offer.counterFee) / offer.offerFee;
+        const successRate = ratio <= 1.3 ? 0.65 : 0.35;
+        const isAgreed = Math.random() < successRate;
+
+        if (isAgreed) {
+          offer.status = 'pending';
+          offer.offerFee = offer.demandedFee || offer.counterFee;
+          offer.daysLeft = 3; // 合意後、承諾期限3日
+          addDailyLog(`【上乗せ合意！】${offer.buyerClubName} が ${offer.playerName} の要求移籍金 ${formatMoney(offer.offerFee)} を受け入れました！`);
+          if (typeof showToast === 'function') {
+            showToast(`【上乗せ合意】${offer.buyerClubName}が要求額を承認しました！`);
+          }
+          active.push(offer);
+        } else {
+          // 交渉決裂・撤退
+          addDailyLog(`【交渉決裂】${offer.buyerClubName} は ${offer.playerName} の増額要求に応じずオファーを撤回しました。`);
+          if (typeof showToast === 'function') {
+            showToast(`【交渉決裂】${offer.buyerClubName}はオファーを撤回しました。`);
+          }
+          // active に入れず終了
+        }
+        continue;
+      } else {
+        active.push(offer);
+        continue;
+      }
+    }
+
     offer.daysLeft -= 1;
     if (offer.daysLeft <= 0) {
       expired.push(offer);
@@ -8921,8 +8962,8 @@ function renderTacticalBoard() {
     if (subGuideEl) subGuideEl.textContent = '';
 
     const sortedBench = [...benchPlayers].sort((a, b) => {
-      const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
-      const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
+      const orderA = (typeof BENCH_DRAWER_POS_ORDER !== 'undefined' ? BENCH_DRAWER_POS_ORDER[a.pos] : 99) || 99;
+      const orderB = (typeof BENCH_DRAWER_POS_ORDER !== 'undefined' ? BENCH_DRAWER_POS_ORDER[b.pos] : 99) || 99;
       if (orderA !== orderB) return orderA - orderB;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
@@ -8989,8 +9030,8 @@ function renderTacticalBoard() {
           if (aFit !== bFit) return bFit - aFit;
           return getEffectivePlayerRatingForSlot(b, selectedSlot.pos) - getEffectivePlayerRatingForSlot(a, selectedSlot.pos);
         } else {
-          const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
-          const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
+          const orderA = (typeof BENCH_DRAWER_POS_ORDER !== 'undefined' ? BENCH_DRAWER_POS_ORDER[a.pos] : 99) || 99;
+          const orderB = (typeof BENCH_DRAWER_POS_ORDER !== 'undefined' ? BENCH_DRAWER_POS_ORDER[b.pos] : 99) || 99;
           if (orderA !== orderB) return orderA - orderB;
           return getPlayerOverallRating(b) - getPlayerOverallRating(a);
         }
