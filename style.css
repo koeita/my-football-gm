@@ -411,6 +411,14 @@
   --danger-red-dark: #c0392b;
   --font-sans: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: 'Roboto Mono', Menlo, Consolas, monospace;
+
+  /* セーフエリア & 画面レイアウト一元管理変数 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-content-h: 56px;
+  --header-total-h: calc(var(--safe-top) + var(--header-content-h));
+  --tab-nav-base-h: 56px;
+  --tab-nav-total-h: calc(var(--tab-nav-base-h) + var(--safe-bottom));
 }
 
 
@@ -4353,6 +4361,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   backdrop-filter: blur(6px) !important;
   overscroll-behavior: contain !important;
   touch-action: pan-y !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: max(var(--safe-top), 16px) !important;
+  padding-bottom: max(var(--safe-bottom), 16px) !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  box-sizing: border-box !important;
 }
 
 .modal-card,
@@ -5578,12 +5594,23 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   /* スマホ表示時：本部（office）タブ以外では、上部の巨大なステータスヘッダーカードを非表示にして全画面を活用 */
 
 
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+    --header-content-h: 56px;
+    --tab-nav-base-h: 56px;
+  }
+
   /* 全体コンテナ（下部固定ナビゲーション＆セーフエリア用パディング確保・全タブ完全統一） */
   .app-container {
-    padding: calc(54px + env(safe-area-inset-top, 0px)) 6px calc(88px + env(safe-area-inset-bottom, 0px)) !important;
-    max-width: 100%;
-    overflow-x: clip;
+    padding-top: calc(var(--header-total-h) + 6px) !important;
+    padding-bottom: calc(var(--tab-nav-total-h) + 24px) !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    max-width: 100% !important;
+    overflow-x: clip !important;
     box-sizing: border-box !important;
+    min-height: 100dvh !important;
   }
 
   /* 1. ヘッダー＆ステータスバーのコンパクト化 */
@@ -5597,8 +5624,12 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
+    justify-content: flex-end !important;
     gap: 3px !important;
-    padding: max(env(safe-area-inset-top, 0px), 5px) 12px 5px !important;
+    padding-top: var(--safe-top) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 5px !important;
     margin: 0 !important;
     border-radius: 0 0 8px 8px !important;
     border: none !important;
@@ -5608,8 +5639,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
-    height: calc(46px + max(env(safe-area-inset-top, 0px), 5px)) !important;
-    max-height: calc(46px + max(env(safe-area-inset-top, 0px), 5px)) !important;
+    height: var(--header-total-h) !important;
+    max-height: var(--header-total-h) !important;
     box-sizing: border-box !important;
   }
 
@@ -5756,7 +5787,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     display: flex !important;
     align-items: center !important;
     position: absolute !important;
-    top: max(env(safe-area-inset-top, 0px), 5px) !important;
+    top: calc(var(--safe-top) + 5px) !important;
     right: 8px !important;
     height: 22px !important;
     z-index: 950 !important;
@@ -5872,7 +5903,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     justify-content: space-around !important;
     align-items: center !important;
     margin: 0 !important;
-    padding: 6px 4px max(env(safe-area-inset-bottom, 0px), 12px) !important;
+    padding-top: 4px !important;
+    padding-bottom: var(--safe-bottom) !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    height: var(--tab-nav-total-h) !important;
     width: 100% !important;
     box-sizing: border-box !important;
     overflow: visible !important;
@@ -6210,10 +6245,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   /* 8. GM就任モーダル：完全固定サイズ・改行ガタつき根絶UI（どのクラブでもサイズ不変） */
   .intro-modal-card {
     width: 95vw !important;
-    max-width: 95vw !important;
-    height: 555px !important;
-    max-height: 94vh !important;
+    max-width: 480px !important;
+    height: auto !important;
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px) !important;
     border-radius: 8px !important;
+    margin: auto !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
@@ -6588,8 +6624,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .modal-card,
-  .profile-modal-card,
-  .intro-modal-card {
+  .profile-modal-card {
     width: 92vw !important;
     max-width: 92vw !important;
     height: 85vh !important;
@@ -6598,6 +6633,17 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     display: flex;
     flex-direction: column;
     border-radius: 6px;
+  }
+
+  .intro-modal-card {
+    width: 95vw !important;
+    max-width: 480px !important;
+    height: auto !important;
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px) !important;
+    margin: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 8px !important;
   }
 
   .modal-body,
@@ -7062,7 +7108,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .facilities-subnav-bar,
   .team-subnav-bar {
     position: fixed !important;
-    top: calc(52px + env(safe-area-inset-top, 0px)) !important;
+    top: var(--header-total-h) !important;
     left: 6px !important;
     right: 6px !important;
     width: calc(100% - 12px) !important;
@@ -7118,8 +7164,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
-    height: calc(100dvh - 54px - 76px) !important;
-    max-height: calc(100dvh - 54px - 76px) !important;
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h)) !important;
+    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h)) !important;
     display: flex !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
@@ -11244,8 +11290,8 @@ button.hidden,
     max-height: 100dvh !important;
     overflow: hidden !important;
     overflow: clip !important;
-    padding-top: calc(52px + env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: var(--header-total-h) !important;
+    padding-bottom: var(--tab-nav-total-h) !important;
     padding-left: 6px !important;
     padding-right: 6px !important;
     box-sizing: border-box !important;
@@ -11335,7 +11381,7 @@ button.hidden,
     width: 100% !important;
     flex: 1 1 0 !important;
     height: auto !important;
-    min-height: 160px !important;
+    min-height: 130px !important;
     max-height: none !important;
     position: relative !important;
     overflow: hidden !important;
@@ -11386,12 +11432,12 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {
     margin: 0 !important;
-    padding: 3px 5px !important;
+    padding: 2px 4px !important;
     border-radius: 4px !important;
     background: var(--bg-panel, #161b22) !important;
     position: static !important;
     flex-shrink: 0 !important;
-    min-height: 52px !important;
+    min-height: 44px !important;
     box-sizing: border-box !important;
     touch-action: pan-x !important;
   }
@@ -12635,47 +12681,12 @@ button.hidden,
    PWA スタンドアロン起動時（ホーム画面追加）のiOSノッチ・セーフエリア完全対策
    ========================================================================== */
 @media all and (display-mode: standalone) {
-  body, #app, .app-container {
-    padding-top: max(env(safe-area-inset-top, 0px), 48px) !important;
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
-    box-sizing: border-box !important;
-  }
-
-  .status-header {
-    padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
-    height: calc(48px + max(env(safe-area-inset-top, 0px), 44px)) !important;
-    max-height: calc(48px + max(env(safe-area-inset-top, 0px), 44px)) !important;
-  }
-
-  .status-header-right {
-    top: calc(max(env(safe-area-inset-top, 0px), 44px) + 2px) !important;
-  }
-
-  .app-container {
-    padding-top: calc(52px + max(env(safe-area-inset-top, 0px), 44px)) !important;
-    padding-bottom: calc(76px + max(env(safe-area-inset-bottom, 0px), 20px)) !important;
-  }
-
-  .roster-subnav-bar,
-  .market-subnav-bar,
-  .facilities-subnav-bar,
-  .team-subnav-bar {
-    top: calc(50px + max(env(safe-area-inset-top, 0px), 44px)) !important;
-  }
-
-  #view-market,
-  #view-facilities,
-  #view-team {
-    padding-top: 50px !important;
-  }
-
-  #view-roster {
-    padding-top: 44px !important;
-  }
-
-  .tab-nav {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
-    height: calc(54px + max(env(safe-area-inset-bottom, 0px), 20px)) !important;
+  :root {
+    /* iOSスタンドアロン起動時：ノッチ/Dynamic Islandおよび下部ホームバーへの食い込みを完全に防止 */
+    --safe-top: max(env(safe-area-inset-top, 0px), 48px);
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+    --header-content-h: 56px;
+    --tab-nav-base-h: 56px;
   }
 
   .main-menu-inner {
