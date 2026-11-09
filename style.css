@@ -2195,7 +2195,6 @@ body {
 /* PC環境：モバイル用控えスライドシート関連要素を完全非表示 */
 .btn-open-bench-sheet,
 .btn-side-bench-drawer,
-.btn-header-bench-drawer,
 .bench-sheet-handle,
 .bench-sheet-backdrop {
   display: none !important;
@@ -11292,51 +11291,7 @@ button.hidden,
     padding: 0 8px !important;
   }
 
-  /* モバイル作戦ボードヘッダー内：控え選手ドロワー展開ボタン */
-  .btn-header-bench-drawer {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    height: 32px !important;
-    padding: 0 12px !important;
-    background: linear-gradient(180deg, #1f2732 0%, #151b22 100%) !important;
-    border: 1px solid rgba(46, 204, 113, 0.6) !important;
-    border-radius: 5px !important;
-    color: #f0f3f6 !important;
-    cursor: pointer !important;
-    touch-action: manipulation !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
-    flex-shrink: 0 !important;
-  }
-
-  .btn-header-bench-drawer:active {
-    background: #252f3d !important;
-    border-color: var(--accent-green, #2ecc71) !important;
-  }
-
-  .header-bench-label {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    color: #e6edf3 !important;
-    letter-spacing: 0.02em !important;
-  }
-
-  .header-bench-badge {
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    padding: 1px 5px !important;
-    background: rgba(46, 204, 113, 0.18) !important;
-    border: 1px solid var(--accent-green, #2ecc71) !important;
-    border-radius: 3px !important;
-    color: var(--accent-green, #2ecc71) !important;
-  }
-
-  .header-bench-arrow {
-    font-size: 9px !important;
-    color: var(--accent-green, #2ecc71) !important;
-    font-weight: 700 !important;
-  }
+  
 
   /* 作戦ボード（右スライドサイドドロワー方式）：ピッチを画面いっぱいに表示し、控えは右からスライド展開 */
   .btn-side-bench-drawer {
@@ -11526,10 +11481,7 @@ button.hidden,
   }
 
   /* ドラッグ操作時：ドロワーを半透明＆透過にし、ピッチ上のスタメンを丸見えにする！ */
-  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column.is-dragging-card {
-    opacity: 0.15 !important;
-    pointer-events: none !important;
-  }
+  
 
   /* 引き出しヘッダーバー（ドロワー内上部） */
   .bench-sheet-handle {
@@ -11574,19 +11526,45 @@ button.hidden,
     font-weight: 700 !important;
   }
 
+  /* 控え選手リスト：ドロワー内で横に2人ずつ並ぶ2列グリッド配置 */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 4px 2px 16px 2px !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item {
-    min-width: 66px !important;
-    max-width: 72px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 6px 4px !important;
+    background: #1c222b !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 6px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-avatar-wrap {
     width: 44px !important;
     height: 44px !important;
+    margin-bottom: 2px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-text {
-    font-size: 9px !important;
-    max-width: 50px !important;
+    font-size: 10px !important;
+    max-width: 90px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {

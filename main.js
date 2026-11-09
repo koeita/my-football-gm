@@ -8917,8 +8917,6 @@ function renderTacticalBoard() {
     if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名)`;
     const sideBenchBadge = document.getElementById('side-bench-badge');
     if (sideBenchBadge) sideBenchBadge.textContent = `${benchPlayers.length}名`;
-    const headerBenchBadge = document.getElementById('header-bench-badge');
-    if (headerBenchBadge) headerBenchBadge.textContent = `${benchPlayers.length}名`;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -12224,13 +12222,6 @@ function initGame() {
 
   if (btnOpenBenchSheet) {
     btnOpenBenchSheet.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleBenchSheet(true);
-    });
-  }
-  const btnHeaderBenchDrawer = document.getElementById('btn-header-bench-drawer');
-  if (btnHeaderBenchDrawer) {
-    btnHeaderBenchDrawer.addEventListener('click', (e) => {
       e.stopPropagation();
       toggleBenchSheet(true);
     });
