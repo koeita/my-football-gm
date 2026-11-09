@@ -10851,7 +10851,7 @@ function openPlayerProfileModal(playerId) {
               </div>
             ` : `
               <div class="profile-metric-card">
-                <span class="profile-metric-label">CS (完封)</span>
+                <span class="profile-metric-label">クリーンシート (CS)</span>
                 <span class="profile-metric-val mono text-muted">-</span>
               </div>
             `}
