@@ -6686,8 +6686,11 @@ function triggerIncomingTransferOffer(force = false) {
   };
 
   gameState.incomingOffers.push(newOffer);
+  stopAdvancingCalendar();
+  showToast(`【買取オファー着信】${buyerClubName} から ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診が届きました！`, 'info');
   addDailyLog(`【オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診（回答期限: 5日）`);
   updateMarketBadges();
+  renderAll();
   return true;
 }
 
@@ -7339,6 +7342,12 @@ function dismissYouthCandidate(candidateId) {
 function handleGmDutyAction(actionKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
+  if (actionKey === 'goto-market-offers') {
+    switchTab('market');
+    switchMarketSubtab('offers');
+    return;
+  }
+
   if (actionKey === 'open-mega-offer') {
     openMegaOfferModal();
     return;
@@ -7989,15 +7998,23 @@ function renderHeader() {
 
   document.getElementById('tab-badge-roster').textContent = `${squadCount}名`;
 
-  // 移籍市場バッジ：グローバル移籍市場（全20クラブの登録選手総数）を表示
-  const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+  // 移籍市場バッジ：受信オファーがある場合は赤色強調「〇件打診」、通常時は全登録選手数
   const marketBadge = document.getElementById('tab-badge-market');
   if (marketBadge) {
-    marketBadge.textContent = `${totalMarketPlayers}名`;
-    if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
-      marketBadge.classList.add('badge-highlight');
-    } else {
+    const offersCount = (gameState.incomingOffers || []).length;
+    if (offersCount > 0) {
+      marketBadge.textContent = `${offersCount}件打診`;
+      marketBadge.classList.add('badge-offer-incoming');
       marketBadge.classList.remove('badge-highlight');
+    } else {
+      const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+      marketBadge.textContent = `${totalMarketPlayers}名`;
+      marketBadge.classList.remove('badge-offer-incoming');
+      if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
+        marketBadge.classList.add('badge-highlight');
+      } else {
+        marketBadge.classList.remove('badge-highlight');
+      }
     }
   }
 
@@ -9169,12 +9186,15 @@ function renderIncomingOffers() {
         </div>
 
         <div class="offer-card-player-row">
-          <div class="offer-player-avatar-wrap">
+          <button type="button" class="offer-player-avatar-wrap clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィールを表示" style="background: none; border: none; padding: 0; cursor: pointer;">
             ${avatarHtml}
-          </div>
+          </button>
           <div class="offer-player-meta">
             <div class="offer-player-name">
-              <span class="accent-green mono">[${offer.playerPos}]</span> #${offer.squadNumber} ${offer.playerName}
+              <span class="accent-green mono">[${offer.playerPos}]</span>
+              <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィールを表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
+                #${offer.squadNumber} ${offer.playerName}
+              </button>
             </div>
             <div class="offer-player-tags">
               <span>${offer.playerAge}歳</span>
@@ -9454,6 +9474,19 @@ function renderGmDuties() {
   }
 
   const duties = [];
+
+  // 受信オファーが届いている場合は最優先タスクとして表示
+  if (gameState.incomingOffers && gameState.incomingOffers.length > 0) {
+    const firstOffer = gameState.incomingOffers[0];
+    duties.push({
+      level: 'important',
+      badge: `オファー着信 (${gameState.incomingOffers.length}件)`,
+      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への買取打診`,
+      desc: `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「移籍」タブで承諾・拒否・上乗せを選択してください。`,
+      btnText: 'オファー確認',
+      action: 'goto-market-offers'
+    });
+  }
 
   // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
   if (gameState.pendingMegaOffer) {
@@ -11951,6 +11984,12 @@ function initGame() {
   const incomingOffersContainer = document.getElementById('incoming-offers-container');
   if (incomingOffersContainer) {
     incomingOffersContainer.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
       const acceptBtn = e.target.closest('[data-offer-accept]');
       if (acceptBtn) {
         e.stopPropagation();

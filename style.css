@@ -11728,3 +11728,23 @@ button.hidden,
   background: #e74c3c;
   color: #fff;
 }
+
+/* 移籍オファー着信通知バッジ（ボトムナビ強調点灯） */
+.tab-badge.badge-offer-incoming {
+  background: #e74c3c !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.7) !important;
+  animation: pulse-offer-badge 1.8s infinite ease-in-out !important;
+}
+
+@keyframes pulse-offer-badge {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.88;
+  }
+}
