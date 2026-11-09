@@ -2194,6 +2194,7 @@ body {
 
 /* PC環境：モバイル用控えスライドシート関連要素を完全非表示 */
 .btn-open-bench-sheet,
+.btn-side-bench-drawer,
 .bench-sheet-handle,
 .bench-sheet-backdrop {
   display: none !important;
@@ -12787,5 +12788,23 @@ button.hidden,
   .main-menu-inner {
     padding-top: max(env(safe-area-inset-top, 0px), 50px) !important;
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
+  }
+}
+
+/* タップ交代モード時のスタメン選択可能ハイライト */
+.pitch-node.can-sub-target {
+  cursor: pointer !important;
+  box-shadow: 0 0 0 2px #2ecc71, 0 0 14px rgba(46, 204, 113, 0.6) !important;
+  animation: pulse-sub-target 1.2s infinite alternate ease-in-out !important;
+}
+
+@keyframes pulse-sub-target {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 2px #2ecc71, 0 0 8px rgba(46, 204, 113, 0.4);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px #2ecc71, 0 0 18px rgba(46, 204, 113, 0.8);
   }
 }

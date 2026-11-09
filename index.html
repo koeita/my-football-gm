@@ -510,23 +510,22 @@
                 <div class="pitch-nodes-layer" id="pitch-nodes-layer">
                   <!-- JSで11スロット描画 -->
                 </div>
+
+                <!-- モバイル用：作戦ボード右端から引き出すサイドタブトリガー -->
+                <button type="button" class="btn-side-bench-drawer" id="btn-open-bench-sheet" aria-label="控え選手一覧を右から展開">
+                  <span class="side-drawer-arrow">◀</span>
+                  <span class="side-drawer-text">控え</span>
+                  <span class="side-drawer-badge mono" id="side-bench-badge">9名</span>
+                </button>
               </div>
 
-              <!-- モバイル用：控えシート展開ボタントリガー（ピッチ直下に常設） -->
-              <button type="button" class="btn-open-bench-sheet" id="btn-open-bench-sheet">
-                <span class="btn-bench-badge mono">控え 9名 / 枠外</span>
-                <span class="btn-bench-text">控え・ベンチ外を確認・交代</span>
-                <span class="btn-bench-arrow">▲ スライド展開</span>
-              </button>
-
-              <!-- 控え（ベンチ最大9名）＆ ベンチ外（リザーブ）ボトムスライドシート -->
+              <!-- 控え（ベンチ最大9名）＆ ベンチ外（リザーブ）右スライドサイドドロワー -->
               <div class="bench-sheet-backdrop" id="bench-sheet-backdrop"></div>
               <div class="tactical-side-column" id="tactical-side-column">
-                <button type="button" class="bench-sheet-handle" id="bench-sheet-handle" aria-label="控え選手シートを閉じる">
-                  <span class="bench-sheet-bar"></span>
+                <button type="button" class="bench-sheet-handle" id="bench-sheet-handle" aria-label="控え選手ドロワーを閉じる">
                   <div class="bench-sheet-label">
                     <span class="sheet-title" id="bench-sheet-title">控え・ベンチ外選手</span>
-                    <span class="sheet-subhint mono" id="bench-sheet-hint">閉じる ▼</span>
+                    <span class="sheet-subhint mono" id="bench-sheet-hint">閉じる ▶</span>
                   </div>
                 </button>
                 <div class="pitch-sub-box" id="pitch-sub-box">

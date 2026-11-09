@@ -11543,6 +11543,10 @@ function initTacticalDragAndDrop() {
     document.querySelectorAll('.drag-drop-target-active').forEach(el => {
       el.classList.remove('drag-drop-target-active');
     });
+    const tacticalSideCol = document.getElementById('tactical-side-column');
+    if (tacticalSideCol) {
+      tacticalSideCol.classList.remove('is-dragging-card');
+    }
     dragSource = null;
     isDragging = false;
     isTouchReady = false;
@@ -11771,10 +11775,10 @@ function initTacticalDragAndDrop() {
       // モバイルで控え選手カードに対するタッチ操作の分岐：
       if (isTouch && dragSource.type === 'bench') {
         const isUpward = deltaY < -8 && Math.abs(deltaY) > Math.abs(deltaX) * 0.6;
+        const isLeftward = deltaX < -8 && Math.abs(deltaX) > Math.abs(deltaY) * 0.5;
         const isHorizontalSwipe = Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY);
 
-        if (isTouchReady || isUpward) {
-          // A. 長押し完了、または上方向（ピッチ方向）への引き上げ → ドラッグ開始！
+        if (isTouchReady || isUpward || isLeftward) {
           isDragging = true;
           isBenchScrolling = false;
           if (longPressTimer) {
@@ -11786,6 +11790,8 @@ function initTacticalDragAndDrop() {
             dragSource.element.classList.add('dragging');
           }
 
+          const tacticalSideCol = document.getElementById('tactical-side-column');
+          if (tacticalSideCol) tacticalSideCol.classList.add('is-dragging-card');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
           ghostEl.classList.remove('bench-sub-item', 'dragging', 'touch-drag-ready', 'drag-drop-target-active', 'selected');
@@ -11982,6 +11988,7 @@ function initTacticalDragAndDrop() {
         }
       } else if (source.type === 'bench') {
         substituteBenchPlayerToSlot(source.playerId, targetSlotIndex);
+        if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
       }
     } else if (finalMatch.type === 'bench-item' && finalMatch.element.dataset.playerId) {
       const targetPlayerId = finalMatch.element.dataset.playerId;
@@ -12178,7 +12185,18 @@ function initGame() {
   window.__setJustFinishedDragging = function(val) { justFinishedDragging = val; };
   window.__getJustFinishedDragging = function() { return justFinishedDragging; };
 
-  // 作戦ボード（ピッチ）のスタメン枠クリック：詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
+  // 控え選手タップ選択による交代管理
+  let pendingSubBenchPlayerId = null;
+
+  function clearPendingSub() {
+    pendingSubBenchPlayerId = null;
+    document.querySelectorAll('.pitch-node.can-sub-target').forEach(el => {
+      el.classList.remove('can-sub-target');
+    });
+  }
+  window.clearPendingSub = clearPendingSub;
+
+  // 作戦ボード（ピッチ）のスタメン枠クリック：タップ交代または詳細プロフィール表示
   const pitchNodesLayer = document.getElementById('pitch-nodes-layer');
   if (pitchNodesLayer) {
     pitchNodesLayer.addEventListener('click', (e) => {
@@ -12187,14 +12205,28 @@ function initGame() {
         return;
       }
       const nodeEl = e.target.closest('.pitch-node');
-      if (nodeEl && nodeEl.dataset.playerId) {
+      if (!nodeEl) return;
+
+      // タップ交代モード時：控え選手が選択されている場合は即時交代！
+      if (pendingSubBenchPlayerId && nodeEl.dataset.slotIndex !== undefined) {
+        e.stopPropagation();
+        const slotIdx = parseInt(nodeEl.dataset.slotIndex, 10);
+        substituteBenchPlayerToSlot(pendingSubBenchPlayerId, slotIdx);
+        clearPendingSub();
+        if (typeof showToast === 'function') {
+          showToast('選手交代を完了しました');
+        }
+        return;
+      }
+
+      if (nodeEl.dataset.playerId) {
         e.stopPropagation();
         openPlayerProfileModal(nodeEl.dataset.playerId);
       }
     });
   }
 
-  // 控え・ベンチ外ボトムスライドシートの開閉制御
+  // 控え・ベンチ外右スライドサイドドロワーの開閉制御
   const btnOpenBenchSheet = document.getElementById('btn-open-bench-sheet');
   const benchSheetHandle = document.getElementById('bench-sheet-handle');
   const tacticalSideColumn = document.getElementById('tactical-side-column');
@@ -12233,6 +12265,7 @@ function initGame() {
   const clearSlotBtn = document.getElementById('btn-clear-slot-select');
   if (clearSlotBtn) {
     clearSlotBtn.addEventListener('click', () => {
+      clearPendingSub();
       gameState.selectedSlotIndex = null;
       gameState.selectedPlayerId = null;
       renderRoster();
@@ -12255,7 +12288,7 @@ function initGame() {
     });
   }
 
-  // 作戦ボード横の控え選手リスト：クリック時は詳細プロフィール表示（クリック交代は完全撤廃しドラッグ＆ドロップのみで交代）
+  // 控え選手リスト：タップで交代待機状態にし、ドロワーを閉じてピッチのスタメンを選択可能にする
   const pitchBenchList = document.getElementById('pitch-bench-list');
   if (pitchBenchList) {
     pitchBenchList.addEventListener('click', (e) => {
@@ -12264,9 +12297,29 @@ function initGame() {
         return;
       }
       const itemEl = e.target.closest('.bench-sub-item');
-      if (itemEl && itemEl.dataset.playerId) {
+      if (!itemEl || !itemEl.dataset.playerId) return;
+
+      // 選手名部分の直接タップはプロフィール詳細モーダル表示
+      if (e.target.closest('.pitch-node-name-btn, .clickable-player-name')) {
         e.stopPropagation();
         openPlayerProfileModal(itemEl.dataset.playerId);
+        return;
+      }
+
+      // カード本体タップ：タップ交代モード発動！
+      e.stopPropagation();
+      pendingSubBenchPlayerId = itemEl.dataset.playerId;
+
+      // ドロワーを閉じてピッチを全開にする
+      toggleBenchSheet(false);
+
+      // ピッチ上のスタメン枠を交代ターゲットとしてハイライト
+      document.querySelectorAll('#pitch-nodes-layer .pitch-node').forEach(node => {
+        node.classList.add('can-sub-target');
+      });
+
+      if (typeof showToast === 'function') {
+        showToast('交代するスタメン選手をピッチ上でタップしてください');
       }
     });
   }
