@@ -13013,6 +13013,40 @@ function initReloadPrevention() {
       e.preventDefault();
     }
   });
+
+  // モバイルでのダブルタップズーム防止（touchend / dblclick）
+  let lastTouchEndTime = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEndTime <= 300) {
+      const tag = e.target ? e.target.tagName : '';
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (!isInput && e.cancelable) {
+        e.preventDefault();
+        // 通常のボタン・リンク・クリック可能要素の連打タップは遮断せず発火
+        const clickable = e.target.closest('button, a, .btn, [role="button"], input[type="button"], input[type="submit"]');
+        if (clickable) {
+          clickable.click();
+        }
+      }
+    }
+    lastTouchEndTime = now;
+  }, { passive: false });
+
+  // dblclick イベントのブラウザズーム抑止
+  document.addEventListener('dblclick', (e) => {
+    const tag = e.target ? e.target.tagName : '';
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  // iOS Safari のピンチズームジェスチャー抑止（gesturestart / gesturechange / gestureend）
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initGame);

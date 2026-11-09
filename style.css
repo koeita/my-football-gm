@@ -411,6 +411,11 @@
   --font-mono: 'Roboto Mono', Menlo, Consolas, monospace;
 }
 
+
+/* 全体ダブルタップズーム防止（touch-action: manipulation） */
+*, *::before, *::after {
+  touch-action: manipulation;
+}
 * {
   box-sizing: border-box;
   margin: 0;
@@ -418,6 +423,7 @@
 }
 
 html {
+  touch-action: manipulation;
   overscroll-behavior-y: none;
   overscroll-behavior: none;
   scrollbar-gutter: stable;
@@ -445,6 +451,7 @@ html::-webkit-scrollbar-thumb:hover {
 }
 
 body {
+  touch-action: manipulation;
   background-color: var(--bg-main);
   color: var(--text-main);
   overscroll-behavior-y: none;

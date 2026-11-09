@@ -1,5 +1,14 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## モバイルでのダブルタップズームおよびピンチズーム防止機能の実装
+- **1. CSSプロパティによるダブルタップズーム抑止**:
+  - `html`, `body` および全要素（`*`）に `touch-action: manipulation !important` を適用。
+  - パン（スクロール）操作のみを許可し、モバイルブラウザ（iOS Safari / Android Chrome）標準のダブルタップによる意図しない画面拡大やレイアウト崩れをCSSレベルで遮断。
+- **2. JavaScriptタッチイベントによる確実な二重保護**:
+  - `touchend` イベントハンドラにおいて、直前のタップ時刻との差分が300ms以内の連続タップ操作を検知し、ズームジェスチャーを `e.preventDefault()` で抑止。
+  - テキスト入力要素（input, textarea, select）の操作や、ボタン・リンク等のクリック連打操作は損なわずに保持。
+  - `dblclick` イベントおよび iOS Safari 特有のピンチズームジェスチャー（`gesturestart`, `gesturechange`, `gestureend`）もすべて遮断し、ゲーム全域で一定の縮尺を完全維持。
+
 ## 「新監督として招聘する」実行時エラーの修正
 - **1. 新監督招聘処理における未定義変数エラーの解消**:
   - **発生原因**: `hireNewManager()` 内のデイリーログ生成処理で、未定義の `tacticLabel` を参照していたため `ReferenceError: tacticLabel is not defined` が発生し、ボタンをクリックしてもスクリプトが中断されて新監督が就任できない不具合を特定。
