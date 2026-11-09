@@ -13699,7 +13699,7 @@ function renderTacticalManagerBanner() {
         </div>
         <div class="manager-banner-info">
           <div class="manager-banner-title">
-            <span class="text-muted">就任中監督:</span>
+            <span class="text-muted">監督:</span>
             <strong class="manager-name">${mgr.name}</strong>
             <span class="manager-trust-label mono">[信頼度 ${mgr.trust}%]</span>
           </div>
@@ -13748,7 +13748,7 @@ function renderManagerManagementPanel() {
           <div class="manager-current-info">
             <div class="manager-current-name">
               ${mgr.name}
-              <span class="badge badge-accent mono">[就任中]</span>
+              
               <span class="mono text-muted" style="font-size: 11px;">(${mgr.nationality} / ${mgr.age}歳)</span>
             </div>
             <div class="manager-current-meta mono">
