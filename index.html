@@ -802,7 +802,7 @@
       <div class="roster-subnav-bar market-subnav-bar" id="market-subnav-bar" role="tablist" aria-label="移籍メニュー">
         <button type="button" class="roster-subtab-btn active" data-market-subtab="market" id="market-subtab-btn-market" role="tab" aria-selected="true">選手市場</button>
         <button type="button" class="roster-subtab-btn" data-market-subtab="shortlist" id="market-subtab-btn-shortlist" role="tab" aria-selected="false">獲得ターゲット <span class="nav-badge-pill" id="badge-shortlist-count">(0)</span></button>
-        <button type="button" class="roster-subtab-btn" data-market-subtab="offers" id="market-subtab-btn-offers" role="tab" aria-selected="false">受信オファー <span class="nav-badge-pill" id="badge-offers-count">(0)</span></button>
+        <button type="button" class="roster-subtab-btn" data-market-subtab="offers" id="market-subtab-btn-offers" role="tab" aria-selected="false">オファー <span class="nav-badge-pill" id="badge-offers-count">(0)</span></button>
       </div>
 
       <!-- サブタブ1：全選手市場 -->
@@ -922,18 +922,23 @@
       </div>
 
       <!-- サブタブ3：受信オファーリスト（INCOMING OFFERS） -->
+           <!-- サブタブ3：オファー一覧（受信オファー / 送信オファー） -->
       <div class="market-subview hidden" id="market-subview-offers" role="tabpanel">
         <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2 class="panel-title">受信オファー</h2>
+          <div class="panel-header" style="flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 class="panel-title" style="margin: 0;">移籍オファー</h2>
+              <div class="offers-toggle-group" id="offers-filter-tabs">
+                <button type="button" class="btn-offers-toggle active" data-offers-tab="incoming" id="offers-tab-btn-incoming">受信オファー <span class="offers-toggle-badge" id="badge-incoming-offers-count">(0)</span></button>
+                <button type="button" class="btn-offers-toggle" data-offers-tab="outgoing" id="offers-tab-btn-outgoing">送信オファー <span class="offers-toggle-badge" id="badge-outgoing-offers-count">(0)</span></button>
+              </div>
             </div>
             <div class="team-power-badges">
-              <span class="power-badge">未回答オファー <strong class="mono" id="offers-summary-count">0件</strong></span>
+              <span class="power-badge">アクティブ件数: <strong class="mono" id="offers-summary-count">0件</strong></span>
             </div>
           </div>
           <div class="incoming-offers-grid" id="incoming-offers-container">
-            <!-- JSでオファーカードを描画 -->
+            <!-- JSでオファーカード描画 -->
           </div>
         </div>
       </div>
@@ -1202,6 +1207,59 @@
   </div>
 
   <!-- 他クラブからの買取オファー（双方向オファー）モーダルダイアログ -->
+  
+  <!-- 移籍オファー上乗せ要求モーダル -->
+  <div id="counter-offer-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="counter-offer-modal-title">
+    <div class="modal-card" style="max-width: 480px; width: 92vw;">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <span class="modal-category mono">TRANSFER NEGOTIATION / COUNTER OFFER</span>
+          <h2 class="modal-title" id="counter-offer-modal-title">移籍金の上乗せ要求</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-counter-modal" aria-label="閉じる">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <div id="counter-offer-modal-player-info" style="margin-bottom: 14px;"></div>
+        
+        <div class="counter-fee-selector-box" style="background: #161b22; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span class="text-muted mono" style="font-size: 11px;">相手クラブの提示額:</span>
+            <span class="mono accent-gold" id="counter-current-fee" style="font-weight: 700; font-size: 14px;">£0.0M</span>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-weight: 700; font-size: 13px;">希望移籍金:</span>
+            <span class="mono accent-green font-bold" id="counter-target-fee" style="font-size: 22px;">£0.0M</span>
+          </div>
+
+          <div class="counter-preset-btns" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px;">
+            <button type="button" class="btn btn-sm btn-counter-preset" data-ratio="1.10">+10%</button>
+            <button type="button" class="btn btn-sm btn-counter-preset active" data-ratio="1.20">+20%</button>
+            <button type="button" class="btn btn-sm btn-counter-preset" data-ratio="1.30">+30%</button>
+            <button type="button" class="btn btn-sm btn-counter-preset" data-ratio="1.50">+50%</button>
+          </div>
+
+          <input type="range" id="counter-fee-slider" min="105" max="200" step="5" value="120" style="width: 100%; accent-color: #2ecc71; cursor: pointer;">
+          
+          <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #8b949e; margin-top: 6px;" class="mono">
+            <span>+5% (確実)</span>
+            <span id="counter-agree-chance" class="accent-green">合意期待度: 高 (~70%)</span>
+            <span>+100% (強気)</span>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: #8b949e; line-height: 1.5; margin-bottom: 14px;">
+          ※上乗せ提示後、相手クラブからの回答が届くまで約2日間オファーリストに保持されます。相手が合意した場合は新金額で成立、決裂した場合はオファー撤回となります。
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" id="btn-cancel-counter-modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" style="flex: 2; font-weight: 700;" id="btn-submit-counter-offer">この金額で提示する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="incoming-offer-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="incoming-offer-title">
     <div class="modal-card incoming-offer-card">
       <div class="profile-modal-header">
