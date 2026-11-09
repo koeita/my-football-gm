@@ -306,6 +306,7 @@
           <h3 class="weekly-schedule-title">週間スケジュール</h3>
         </div>
         <div class="weekly-schedule-badges mono">
+          <button type="button" class="btn-view-full-schedule mono" id="btn-view-full-schedule" title="シーズン全日程・結果を表示">全日程 ➔</button>
           <span class="market-status-pill badge-market-open" id="weekly-market-badge">移籍市場 OPEN</span>
           <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次戦まで 0日</span>
         </div>
@@ -316,13 +317,22 @@
     </section>
   </main>
 
-    <!-- タブ1：チーム（順位表・得点ランキング） -->
-    <main id="view-team" class="tab-view hidden view-team-layout">
-      <section class="column-main">
-        <!-- 順位表パネル -->
+    <!-- タブ1：チーム（順位表・日程/結果・個人スタッツ） -->
+    <main id="view-team" class="tab-view hidden view-team-layout" data-team-subtab="standings">
+      <!-- チームサブタブ切り替えナビゲーションバー（他画面と同一スタイル） -->
+      <div class="roster-subnav-bar team-subnav-bar" id="team-subnav-bar" role="tablist" aria-label="チームメニュー">
+        <button type="button" class="roster-subtab-btn active" data-team-subtab="standings" id="team-subtab-btn-standings" role="tab" aria-selected="true">順位表</button>
+        <button type="button" class="roster-subtab-btn" data-team-subtab="schedule" id="team-subtab-btn-schedule" role="tab" aria-selected="false">日程・結果</button>
+        <button type="button" class="roster-subtab-btn" data-team-subtab="stats" id="team-subtab-btn-stats" role="tab" aria-selected="false">個人スタッツ</button>
+      </div>
+
+      <!-- サブタブ1：順位表 -->
+      <div class="team-subview" id="team-subview-standings" role="tabpanel">
         <div class="panel">
           <div class="panel-header">
-            <h2 class="panel-title">順位表</h2>
+            <div>
+              <h2 class="panel-title">リーグ順位表</h2>
+            </div>
             <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 38</span>
           </div>
           <div class="table-wrapper">
@@ -347,12 +357,61 @@
             </table>
           </div>
         </div>
+      </div>
 
-        <!-- リーグ得点ランキング -->
+      <!-- サブタブ2：日程・結果（月間カレンダー ＆ リスト切り替え） -->
+      <div class="team-subview hidden" id="team-subview-schedule" role="tabpanel">
+        <div class="panel team-schedule-panel">
+          <!-- カレンダー / リスト 表示切り替え ＆ 月送りナビゲーションバー -->
+          <div class="schedule-view-controls">
+            <!-- 月送りナビゲーション -->
+            <div class="calendar-month-nav" id="calendar-month-nav">
+              <button type="button" class="btn-cal-nav mono" id="btn-cal-prev-month" aria-label="前月">◀</button>
+              <span class="calendar-month-label mono" id="calendar-current-month-label">2026年 8月</span>
+              <button type="button" class="btn-cal-nav mono" id="btn-cal-next-month" aria-label="翌月">▶</button>
+              <button type="button" class="btn-cal-today mono" id="btn-cal-go-today">今月</button>
+            </div>
+
+            <!-- 表示形式トグル（カレンダー / リスト） -->
+            <div class="schedule-view-toggle" id="schedule-view-toggle" role="group" aria-label="表示形式切り替え">
+              <button type="button" class="btn-view-toggle active mono" data-view-mode="calendar" id="btn-view-toggle-calendar">カレンダー</button>
+              <button type="button" class="btn-view-toggle mono" data-view-mode="list" id="btn-view-toggle-list">リスト</button>
+            </div>
+          </div>
+
+          <!-- ビュー1：月間カレンダーグリッド表示（7列グリッド） -->
+          <div class="season-calendar-view" id="season-calendar-view">
+            <!-- 曜日ヘッダー（日〜土） -->
+            <div class="calendar-weekdays-row mono">
+              <span class="cal-weekday col-sun">日</span>
+              <span class="cal-weekday">月</span>
+              <span class="cal-weekday">火</span>
+              <span class="cal-weekday">水</span>
+              <span class="cal-weekday">木</span>
+              <span class="cal-weekday">金</span>
+              <span class="cal-weekday col-sat">土</span>
+            </div>
+            <!-- 7列日付グリッド -->
+            <div class="calendar-days-grid" id="calendar-days-grid">
+              <!-- JSでマス目を描画 -->
+            </div>
+          </div>
+
+          <!-- ビュー2：縦スクロールリスト表示（従来のリスト） -->
+          <div class="season-schedule-list hidden" id="season-schedule-list">
+            <!-- JSで全38節カードを描画 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- サブタブ3：個人スタッツ（得点ランキング等） -->
+      <div class="team-subview hidden" id="team-subview-stats" role="tabpanel">
         <div class="panel">
           <div class="panel-header">
-            <h2 class="panel-title">得点ランキング</h2>
-            <span class="panel-subtitle mono">TOP 5</span>
+            <div>
+              <h2 class="panel-title">得点ランキング</h2>
+            </div>
+            <span class="panel-subtitle mono">TOP 10</span>
           </div>
           <div class="table-wrapper">
             <table class="data-table top-scorers-table">
@@ -373,9 +432,7 @@
             </table>
           </div>
         </div>
-      </section>
-
-      
+      </div>
     </main>
 
     <!-- タブ2：編成（作戦ボード・選手一覧・戦術） -->
@@ -1423,6 +1480,41 @@
             次の日程へ進む
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 消化済み試合 マッチサマリー振り返りモーダル（試合後サマリーと完全一致UI） -->
+  <div id="past-match-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="past-match-modal-title">
+    <div class="modal-card past-match-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono" id="past-match-modal-category">MATCH REPLAY / SUMMARY</span>
+          <h2 class="info-popup-title" id="past-match-modal-title">第1節 公式戦サマリー</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-past-match-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body match-summary-body" id="past-match-modal-body">
+        <!-- 試合後サマリーと完全同一のHTMLを描画 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 未消化試合 対戦プレビュー（スカウティング＆相手スカッド・戦術）モーダル -->
+  <div id="fixture-preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fixture-preview-title">
+    <div class="modal-card fixture-preview-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono" id="fixture-preview-tag">[NEXT FIXTURE SCOUTING]</span>
+          <h2 class="info-popup-title" id="fixture-preview-title">第1節 対戦スカウティングレポート</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-fixture-preview-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body" id="fixture-preview-modal-body">
+        <!-- JSで相手クラブの順位・戦術・想定スタメン11人スカッドを描画 -->
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; align-items: center;">
+        <button type="button" class="btn btn-primary btn-sm mono" id="btn-go-to-tactics-board" style="font-weight: 700; padding: 8px 16px;">作戦ボードへ移動して準備 ➔</button>
       </div>
     </div>
   </div>

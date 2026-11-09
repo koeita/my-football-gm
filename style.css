@@ -3,7 +3,8 @@
    ========================================== */
 .roster-subnav-bar,
 .market-subnav-bar,
-.facilities-subnav-bar {
+.facilities-subnav-bar,
+.team-subnav-bar {
   display: flex !important;
   align-items: center !important;
   justify-content: stretch !important;
@@ -366,7 +367,8 @@
 
   .roster-subnav-bar,
   .market-subnav-bar,
-  .facilities-subnav-bar {
+  .facilities-subnav-bar,
+  .team-subnav-bar {
     position: static !important;
     max-width: 480px;
     margin: 0 auto 12px auto;
@@ -7057,7 +7059,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   /* 編成・移籍・経営サブタブバー（固定ヘッダー直下の統一セグメントコントロール） */
   .roster-subnav-bar,
   .market-subnav-bar,
-  .facilities-subnav-bar {
+  .facilities-subnav-bar,
+  .team-subnav-bar {
     position: fixed !important;
     top: calc(52px + env(safe-area-inset-top, 0px)) !important;
     left: 6px !important;
@@ -7086,7 +7089,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .roster-subnav-bar .roster-subtab-btn,
   .market-subnav-bar .roster-subtab-btn,
-  .facilities-subnav-bar .roster-subtab-btn {
+  .facilities-subnav-bar .roster-subtab-btn,
+  .team-subnav-bar .roster-subtab-btn {
     flex: 1 1 0 !important;
     height: 36px !important;
     min-height: 36px !important;
@@ -7101,9 +7105,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     text-overflow: ellipsis !important;
   }
 
-  /* 移籍タブ・経営タブ上部：サブタブバー固定分のパディング確保 */
+  /* 移籍タブ・経営タブ・チームタブ上部：サブタブバー固定分のパディング確保 */
   #view-market,
-  #view-facilities {
+  #view-facilities,
+  #view-team {
     padding-top: 48px !important;
   }
 
@@ -11735,5 +11740,893 @@ button.hidden,
   50% {
     transform: scale(1.08);
     opacity: 0.88;
+  }
+}
+
+/* ==========================================
+   シーズン日程・結果カレンダー ＆ サマリー振り返り
+   ========================================== */
+.btn-view-full-schedule {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.btn-view-full-schedule:hover {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: var(--accent-green);
+}
+
+.season-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  max-height: 68vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-month-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #14171a;
+  border-left: 3px solid var(--accent-green);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #dbe2e9;
+  margin-top: 6px;
+}
+
+.schedule-month-badge {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.schedule-fixture-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #1a1d20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.schedule-fixture-card.fixture-played {
+  cursor: pointer;
+}
+
+.schedule-fixture-card.fixture-played:hover {
+  background: #23272c;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.schedule-fixture-card.fixture-next {
+  border-color: var(--accent-green);
+  background: rgba(46, 204, 113, 0.06);
+}
+
+.fixture-left-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fixture-round-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 42px;
+  flex-shrink: 0;
+}
+
+.fixture-date-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a94a0;
+  flex-shrink: 0;
+}
+
+.fixture-venue-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.fixture-venue-home {
+  background: rgba(46, 204, 113, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.fixture-venue-away {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.fixture-opponent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fixture-right-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fixture-unplayed-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.fixture-next-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-green);
+  color: #0e1114;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.fixture-result-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.result-win {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.result-draw {
+  background: rgba(241, 196, 15, 0.18);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.4);
+}
+
+.result-lose {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.fixture-score-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 44px;
+  text-align: center;
+}
+
+.fixture-replay-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .schedule-fixture-card {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .fixture-left-col {
+    gap: 6px;
+  }
+  .fixture-round-badge {
+    width: 36px;
+    font-size: 10px;
+  }
+  .fixture-date-badge {
+    font-size: 10px;
+  }
+  .fixture-opponent-name {
+    font-size: 12px;
+  }
+  .fixture-score-text {
+    font-size: 12px;
+    min-width: 36px;
+  }
+  .fixture-replay-hint {
+    display: none;
+  }
+}
+
+.past-match-modal-card .info-popup-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+/* ==========================================
+   月間カレンダー形式（7列グリッド ＆ 表示切り替え）
+   ========================================== */
+.schedule-view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 14px;
+  background: #14171a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.calendar-month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-cal-nav {
+  width: 32px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e2226;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #dbe2e9;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cal-nav:hover {
+  background: #282d33;
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.calendar-month-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 110px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.btn-cal-today {
+  height: 30px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  border-radius: 4px;
+  color: var(--accent-green);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cal-today:hover {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: var(--accent-green);
+}
+
+.schedule-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: #1e2226;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.btn-view-toggle {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: #8a94a0;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-view-toggle.active {
+  background: #2ecc71;
+  color: #0e1114;
+  font-weight: 700;
+}
+
+/* カレンダーグリッド */
+.season-calendar-view {
+  display: flex;
+  flex-direction: column;
+  background: #111417;
+  padding: 4px 12px 12px 12px;
+  box-sizing: border-box;
+}
+
+.calendar-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+  padding: 4px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a94a0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.calendar-weekdays-row .col-sun {
+  color: #e74c3c;
+}
+
+.calendar-weekdays-row .col-sat {
+  color: #3498db;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* マス目（日付セル） */
+.cal-day-cell {
+  min-height: 84px;
+  background: #171a1d;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  padding: 4px 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cal-day-cell.is-empty {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: transparent;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cal-day-cell.col-sun .cal-day-num {
+  color: #e74c3c;
+}
+
+.cal-day-cell.col-sat .cal-day-num {
+  color: #3498db;
+}
+
+/* ゲーム内現在日：ピッチグリーン太枠ハイライト */
+.cal-day-cell.is-current-day {
+  border: 2px solid #2ecc71 !important;
+  background: rgba(46, 204, 113, 0.08) !important;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.25);
+}
+
+.cal-day-cell.is-current-day .cal-day-num {
+  color: #2ecc71 !important;
+  font-weight: 800;
+}
+
+/* 試合日マス */
+.cal-day-cell.has-match {
+  background: #1e2226;
+  border-color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.cal-day-cell.has-match:hover {
+  background: #262c32;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.cal-day-cell.match-next {
+  border-color: rgba(46, 204, 113, 0.6);
+  background: rgba(46, 204, 113, 0.06);
+}
+
+/* 日付ヘッダー部分 */
+.cal-cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.cal-day-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a94a0;
+  line-height: 1;
+}
+
+.cal-today-badge {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 800;
+  background: #2ecc71;
+  color: #0e1114;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 1.2;
+}
+
+/* 特別イベント期日タグ */
+.cal-event-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  background: rgba(241, 196, 15, 0.18);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.4);
+  border-radius: 2px;
+  padding: 1px 3px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* 試合情報コンテンツ */
+.cal-match-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+  width: 100%;
+}
+
+.cal-match-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.cal-venue-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 1.2;
+}
+
+.cal-venue-tag.venue-home {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.cal-venue-tag.venue-away {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.4);
+}
+
+.cal-next-tag {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 800;
+  background: var(--accent-green);
+  color: #0e1114;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 1.2;
+}
+
+.cal-opponent-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #e1e7ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.cal-score-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  padding: 1px 2px;
+  border-radius: 3px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.cal-score-badge.badge-win {
+  background: rgba(46, 204, 113, 0.22);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.45);
+}
+
+.cal-score-badge.badge-draw {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+  border: 1px solid rgba(241, 196, 15, 0.45);
+}
+
+.cal-score-badge.badge-lose {
+  background: rgba(231, 76, 60, 0.22);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.45);
+}
+
+/* モバイル対応（幅768px以下） */
+@media (max-width: 768px) {
+  .schedule-view-controls {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+  .calendar-month-label {
+    font-size: 12px;
+    min-width: 90px;
+  }
+  .btn-cal-nav {
+    width: 26px;
+    height: 24px;
+    font-size: 9.5px;
+  }
+  .btn-cal-today {
+    height: 24px;
+    padding: 0 6px;
+    font-size: 9.5px;
+  }
+  .btn-view-toggle {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+  .season-calendar-view {
+    padding: 2px 3px 4px 3px;
+  }
+  .calendar-weekdays-row {
+    padding: 2px 0;
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+  .calendar-days-grid {
+    gap: 2.5px;
+  }
+  .cal-day-cell {
+    min-height: 48px;
+    padding: 2px 2px;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .cal-day-header {
+    line-height: 1;
+    margin-bottom: 1px;
+  }
+  .cal-day-num {
+    font-size: 9px;
+    line-height: 1;
+  }
+  .cal-today-badge {
+    font-size: 7px;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .cal-venue-tag {
+    font-size: 7.5px;
+    padding: 0 1.5px;
+    line-height: 1;
+  }
+  .cal-next-tag {
+    font-size: 7px;
+    padding: 0 1.5px;
+    line-height: 1;
+  }
+  .cal-opponent-name {
+    font-size: 8px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-score-badge {
+    font-size: 7.5px;
+    padding: 1px 2px;
+    line-height: 1;
+  }
+  .cal-event-tag {
+    font-size: 7px;
+    padding: 0 1px;
+    line-height: 1;
+  }
+}
+
+/* ==========================================
+   対戦スカウティングレポート（相手スカッド・戦術プレビュー）
+   ========================================== */
+.scout-matchup-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #14171a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.scout-team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.scout-team-col.home {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.scout-team-col.away {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.scout-team-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.scout-team-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.scout-vs-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.scout-vs-badge {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  letter-spacing: 0.06em;
+}
+
+.scout-venue-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* 相手チーム戦術＆戦力サマリーグリッド */
+.scout-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.scout-metric-box {
+  background: #1a1d20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scout-metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.scout-metric-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* 相手スカッド（想定スタメン一覧） */
+.scout-squad-panel {
+  background: #14171a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.scout-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 6px;
+}
+
+.scout-panel-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #dbe2e9;
+  letter-spacing: 0.04em;
+}
+
+.scout-squad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.scout-squad-table th {
+  padding: 6px 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scout-squad-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.scout-key-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(241, 196, 15, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.45);
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-left: 6px;
+}
+
+@media (max-width: 768px) {
+  .scout-matchup-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .scout-team-name {
+    font-size: 14px;
+  }
+  .scout-vs-badge {
+    font-size: 15px;
+  }
+  .scout-overview-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .scout-squad-table th, .scout-squad-table td {
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+}
+
+/* ==========================================
+   サマリー＆対戦スカウティングモーダル最適化（左右均等中央配置・閉じるボタン削除対応）
+   ========================================== */
+.past-match-modal-card {
+  max-width: 860px;
+  width: 94%;
+  max-height: 90vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fixture-preview-modal-card {
+  max-width: 720px;
+  width: 94%;
+  max-height: 90vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#past-match-modal-body,
+#fixture-preview-modal-body {
+  padding: 16px 20px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .past-match-modal-card,
+  .fixture-preview-modal-card {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 90vh !important;
+    margin: 0 auto !important;
+    border-radius: 6px !important;
+  }
+
+  #past-match-modal-body,
+  #fixture-preview-modal-body {
+    padding: 10px 12px 16px 12px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    gap: 8px !important;
   }
 }
