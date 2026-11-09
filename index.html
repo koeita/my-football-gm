@@ -722,82 +722,145 @@
       </div>
     </main>
 
-    <!-- タブ3：移籍市場 -->
-    <main id="view-market" class="tab-view hidden">
-      <div class="panel">
-        <div class="panel-header">
-          <div>
-            <h2 class="panel-title">移籍市場</h2>
+    <!-- タブ3：移籍市場（2段階リスト制：市場・獲得ターゲット・受信オファー） -->
+    <main id="view-market" class="tab-view hidden" data-market-subtab="market">
+      <!-- 移籍サブタブ切り替えナビゲーションバー -->
+      <div class="roster-subnav-bar market-subnav-bar" id="market-subnav-bar" role="tablist" aria-label="移籍メニュー">
+        <button type="button" class="roster-subtab-btn active" data-market-subtab="market" id="market-subtab-btn-market" role="tab" aria-selected="true">選手市場 (MARKET)</button>
+        <button type="button" class="roster-subtab-btn" data-market-subtab="shortlist" id="market-subtab-btn-shortlist" role="tab" aria-selected="false">獲得ターゲット <span class="nav-badge-pill" id="badge-shortlist-count">0</span></button>
+        <button type="button" class="roster-subtab-btn" data-market-subtab="offers" id="market-subtab-btn-offers" role="tab" aria-selected="false">受信オファー <span class="nav-badge-pill" id="badge-offers-count">0</span></button>
+      </div>
+
+      <!-- サブタブ1：全選手市場（MARKET） -->
+      <div class="market-subview" id="market-subview-market" role="tabpanel">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">移籍市場 (TRANSFER MARKET)</h2>
+            </div>
+            <div class="team-power-badges" id="market-pos-summary">
+              <!-- 予算・登録枠・表示件数 -->
+            </div>
           </div>
-          <div class="team-power-badges" id="market-pos-summary">
-            <!-- 予算・登録枠・表示件数 -->
+
+          <!-- 移籍市場フィルターバー -->
+          <div class="market-filter-bar">
+            <div class="filter-group">
+              <label class="filter-label mono">CLUB:</label>
+              <select id="market-filter-club" class="market-select mono">
+                <option value="ALL">全クラブ</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label mono">POS:</label>
+              <select id="market-filter-pos" class="market-select mono">
+                <option value="ALL">全ポジション</option>
+                <option value="GK">GK</option>
+                <option value="CB">CB</option>
+                <option value="RB">RB</option>
+                <option value="LB">LB</option>
+                <option value="DM">DM</option>
+                <option value="CM">CM</option>
+                <option value="AM">AM</option>
+                <option value="RW">RW</option>
+                <option value="LW">LW</option>
+                <option value="CF">CF</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label mono">SORT:</label>
+              <select id="market-filter-sort" class="market-select mono">
+                <option value="ovr-desc">OVR 高い順</option>
+                <option value="fee-desc">市場価値 高い順</option>
+                <option value="fee-asc">市場価値 安い順</option>
+                <option value="wage-desc">週給 高い順</option>
+                <option value="age-asc">年齢 若い順</option>
+                <option value="contract-asc">契約残 少ない順</option>
+              </select>
+            </div>
+
+            <div class="filter-group filter-search-wrap">
+              <label class="filter-label mono">SEARCH:</label>
+              <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名検索...">
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table market-table">
+              <thead>
+                <tr>
+                  <th class="col-pos">POS</th>
+                  <th class="col-name">選手名</th>
+                  <th class="col-team">所属</th>
+                  <th class="col-num">年齢</th>
+                  <th class="col-num">利き足</th>
+                  <th class="col-num">OVR</th>
+                  <th class="col-num">市場価値</th>
+                  <th class="col-num">週給</th>
+                  <th class="col-num">契約残</th>
+                  <th class="col-action">ターゲット登録</th>
+                </tr>
+              </thead>
+              <tbody id="market-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
 
-        <!-- 移籍市場フィルターバー -->
-        <div class="market-filter-bar">
-          <div class="filter-group">
-            <label class="filter-label mono">CLUB:</label>
-            <select id="market-filter-club" class="market-select mono">
-              <option value="ALL">全クラブ</option>
-              <!-- JSで全クラブを投入 -->
-            </select>
+      <!-- サブタブ2：獲得ターゲットリスト（SHORTLIST） -->
+      <div class="market-subview hidden" id="market-subview-shortlist" role="tabpanel">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">獲得ターゲットリスト (SHORTLIST)</h2>
+            </div>
+            <div class="team-power-badges">
+              <span class="power-badge">登録件数 <strong class="mono" id="shortlist-summary-count">0件</strong></span>
+              <span class="power-badge">獲得可能予算 <strong class="mono accent-gold" id="shortlist-summary-funds">£0.0M</strong></span>
+            </div>
           </div>
-
-          <div class="filter-group">
-            <label class="filter-label mono">POS:</label>
-            <select id="market-filter-pos" class="market-select mono">
-              <option value="ALL">全ポジション</option>
-              <option value="GK">GK</option>
-              <option value="CB">CB</option>
-              <option value="RB">RB</option>
-              <option value="LB">LB</option>
-              <option value="DM">DM</option>
-              <option value="CM">CM</option>
-              <option value="AM">AM</option>
-              <option value="RW">RW</option>
-              <option value="LW">LW</option>
-              <option value="CF">CF</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label mono">SORT:</label>
-            <select id="market-filter-sort" class="market-select mono">
-              <option value="ovr-desc">OVR 高い順</option>
-              <option value="fee-desc">移籍金 高い順</option>
-              <option value="fee-asc">移籍金 安い順</option>
-              <option value="wage-desc">週給 高い順</option>
-              <option value="age-asc">年齢 若い順</option>
-              <option value="contract-asc">契約残 少ない順</option>
-            </select>
-          </div>
-
-          <div class="filter-group filter-search-wrap">
-            <label class="filter-label mono">SEARCH:</label>
-            <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名検索...">
+          <div class="table-wrapper">
+            <table class="data-table shortlist-table">
+              <thead>
+                <tr>
+                  <th class="col-pos">POS</th>
+                  <th class="col-name">選手名</th>
+                  <th class="col-team">所属</th>
+                  <th class="col-num">年齢</th>
+                  <th class="col-num">利き足</th>
+                  <th class="col-num">OVR</th>
+                  <th class="col-num">市場価値</th>
+                  <th class="col-num">現在週給</th>
+                  <th class="col-num">契約残</th>
+                  <th class="col-action">アクション</th>
+                </tr>
+              </thead>
+              <tbody id="shortlist-tbody">
+                <!-- JSで描画 -->
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
 
-        <div class="table-wrapper">
-          <table class="data-table market-table">
-            <thead>
-              <tr>
-                <th class="col-pos">POS</th>
-                <th class="col-name">選手名</th>
-                <th class="col-team">所属</th>
-                <th class="col-num">年齢</th>
-                <th class="col-num">OVR</th>
-                <th class="col-num">移籍金</th>
-                <th class="col-num">週給</th>
-                <th class="col-num">契約残</th>
-                <th class="col-action">交渉</th>
-              </tr>
-            </thead>
-            <tbody id="market-tbody">
-              <!-- JSで描画 -->
-            </tbody>
-          </table>
+      <!-- サブタブ3：受信オファーリスト（INCOMING OFFERS） -->
+      <div class="market-subview hidden" id="market-subview-offers" role="tabpanel">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">受信オファーリスト (INCOMING OFFERS)</h2>
+            </div>
+            <div class="team-power-badges">
+              <span class="power-badge">未回答オファー <strong class="mono" id="offers-summary-count">0件</strong></span>
+            </div>
+          </div>
+          <div class="incoming-offers-grid" id="incoming-offers-container">
+            <!-- JSでオファーカードを描画 -->
+          </div>
         </div>
       </div>
     </main>

@@ -1168,6 +1168,9 @@ const gameState = {
   negotiationSession: null,
   pendingMegaOffer: null,
   incomingTransferOffer: null,   // 他クラブからの買取オファー
+  incomingOffers: [],            // 受信オファーリスト（プール制）
+  targetShortlist: [],           // 獲得ターゲットリスト（SHORTLIST）
+  marketSubtab: 'market',        // 移籍タブ内サブタブ ('market' | 'shortlist' | 'offers')
   marketFilter: {                // グローバル移籍市場の絞り込み状態
     clubId: 'ALL',
     position: 'ALL',
@@ -1680,33 +1683,131 @@ function calculatePlayerSalary(pos, atk, def, sta, age) {
 }
 
 /**
- * 移籍市場での市場価格・推定移籍金（単位：£1K、£1.5M〜£90.0M）を算出
- * 契約残り1年の選手は約50%OFFの割安価格
+ * 欧州サッカーの現実的な相場感に適合した市場価値（Market Value / 単位：£1K）を算出
+ * 基準額テーブル（OVR 65〜85+）：
+ *   - OVR 65〜69: £1.5M 〜 £4.0M
+ *   - OVR 70〜74: £5.0M 〜 £15.0M
+ *   - OVR 75〜79: £16.0M 〜 £35.0M
+ *   - OVR 80〜84: £40.0M 〜 £75.0M
+ *   - OVR 85以上（ワールドクラス）: £80.0M 〜 最大£130.0M
+ * 補正係数：
+ *   - 年齢補正：18〜23歳（x1.2〜1.4）、24〜28歳（x1.0）、29〜32歳（x0.75）、33歳以上（x0.4〜0.5）
+ *   - 契約残り補正：残り1年未満は市場価値が半減（フリー移籍リスク）
  */
-function calculateTransferFee(player) {
-  const ovr = getPlayerOverallRating(player);
-  let baseVal;
-  if (ovr <= 60) {
-    baseVal = 1500 + Math.max(0, ovr - 50) * 220;
-  } else if (ovr <= 70) {
-    baseVal = 3800 + Math.pow(ovr - 60, 1.35) * 520;
-  } else if (ovr <= 80) {
-    baseVal = 11000 + Math.pow(ovr - 70, 1.45) * 2000;
-  } else if (ovr <= 86) {
-    baseVal = 39000 + Math.pow(ovr - 80, 1.4) * 4800;
+
+/**
+ * 選手の利き足・逆足ウインガー判定バッジHTMLを生成
+ * 【RW（右ウイング）】：左利きなら [左利き / 逆足]、右利きなら [右利き / 順足]、両足なら [両足]
+ * 【LW（左ウイング）】：右利きなら [右利き / 逆足]、左利きなら [左利き / 順足]、両足なら [両足]
+ * 【他ポジション】：[右足] / [左足] / [両足]
+ */
+function formatFootBadge(player) {
+  if (!player) return '';
+  const pos = player.primaryPosition || player.preferredPosition || player.pos || '';
+  const foot = player.preferredFoot || 'Right';
+  
+  if (pos === 'RW') {
+    if (foot === 'Left') {
+      return '<span class="foot-badge foot-badge-inverted" title="右サイドから中央へ切り込む現代的カットイン型ウイング">左利き / 逆足</span>';
+    } else if (foot === 'Right') {
+      return '<span class="foot-badge" title="右サイドを縦に突破してクロスを供給する順足型ウイング">右利き / 順足</span>';
+    } else {
+      return '<span class="foot-badge foot-badge-both" title="内外両方向へ自在に仕掛けられる両利きウイング">両足</span>';
+    }
+  }
+  
+  if (pos === 'LW') {
+    if (foot === 'Right') {
+      return '<span class="foot-badge foot-badge-inverted" title="左サイドから中央へ切り込む現代的カットイン型ウイング">右利き / 逆足</span>';
+    } else if (foot === 'Left') {
+      return '<span class="foot-badge" title="左サイドを縦に突破してクロスを供給する順足型ウイング">左利き / 順足</span>';
+    } else {
+      return '<span class="foot-badge foot-badge-both" title="内外両方向へ自在に仕掛けられる両利きウイング">両足</span>';
+    }
+  }
+  
+  if (foot === 'Left') {
+    return '<span class="foot-badge" title="貴重な左利き">左足</span>';
+  } else if (foot === 'Both') {
+    return '<span class="foot-badge foot-badge-both" title="左右両足の卓越したキック精度">両足</span>';
+  }
+  return '<span class="foot-badge">右足</span>';
+}
+
+function getFootShortText(player) {
+  if (!player) return '右足';
+  const pos = player.primaryPosition || player.preferredPosition || player.pos || '';
+  const foot = player.preferredFoot || 'Right';
+  if (pos === 'RW') {
+    if (foot === 'Left') return '左足 (逆足)';
+    if (foot === 'Right') return '右足 (順足)';
+    return '両足';
+  }
+  if (pos === 'LW') {
+    if (foot === 'Right') return '右足 (逆足)';
+    if (foot === 'Left') return '左足 (順足)';
+    return '両足';
+  }
+  if (foot === 'Left') return '左足';
+  if (foot === 'Both') return '両足';
+  return '右足';
+}
+
+function calculatePlayerMarketValue(player) {
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || 70);
+  let baseVal = 0;
+  if (ovr < 60) {
+    baseVal = 200 + Math.max(0, ovr - 50) * 30; // 200k..500k
+  } else if (ovr <= 64) {
+    const t = (ovr - 60) / 4;
+    baseVal = 500 + t * 900; // 500k..1400k (£0.5M〜£1.4M)
+  } else if (ovr <= 69) {
+    const t = (ovr - 65) / 4;
+    baseVal = 1500 + t * 2500; // 1500k..4000k (£1.5M〜£4.0M)
+  } else if (ovr <= 74) {
+    const t = (ovr - 70) / 4;
+    baseVal = 5000 + t * 10000; // 5000k..15000k (£5.0M〜£15.0M)
+  } else if (ovr <= 79) {
+    const t = (ovr - 75) / 4;
+    baseVal = 16000 + t * 19000; // 16000k..35000k (£16.0M〜£35.0M)
+  } else if (ovr <= 84) {
+    const t = (ovr - 80) / 4;
+    baseVal = 40000 + t * 35000; // 40000k..75000k (£40.0M〜£75.0M)
   } else {
-    baseVal = 70000 + Math.pow(ovr - 86, 1.3) * 6000;
+    // OVR 85以上（ワールドクラス）：£80.0M 〜 最大£130.0M
+    const extra = Math.min(6, ovr - 85); // 85..91
+    const t = extra / 6;
+    baseVal = 80000 + t * 50000; // 80000k..130000k (£80.0M〜£130.0M)
   }
 
-  const ageFactor = player.age <= 22 ? 1.30 : (player.age <= 25 ? 1.15 : (player.age >= 31 ? 0.60 : (player.age >= 34 ? 0.35 : 1.0)));
+  // 年齢補正：18〜23歳（x1.2〜1.4）、24〜28歳（x1.0）、29〜32歳（x0.75）、33歳以上（x0.4〜0.5）
+  const age = player.age || 25;
+  let ageFactor = 1.0;
+  if (age <= 19) ageFactor = 1.40;
+  else if (age <= 21) ageFactor = 1.30;
+  else if (age <= 23) ageFactor = 1.20;
+  else if (age <= 28) ageFactor = 1.00;
+  else if (age <= 32) ageFactor = 0.75;
+  else if (age <= 34) ageFactor = 0.50;
+  else ageFactor = 0.40;
 
+  // 契約残り補正：残り1年未満は市場価値が半減
   let contractFactor = 1.0;
-  if (player.contractYears === 1) contractFactor = 0.50; // 残り1年は約50%OFF
-  else if (player.contractYears === 2) contractFactor = 0.85;
-  else if (player.contractYears >= 4) contractFactor = 1.20;
+  const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
+  if (contractYears <= 1) {
+    contractFactor = 0.50;
+  } else if (contractYears === 2) {
+    contractFactor = 0.85;
+  } else if (contractYears >= 4) {
+    contractFactor = 1.15;
+  }
 
   const fee = Math.round((baseVal * ageFactor * contractFactor) / 100) * 100;
-  return clamp(fee, 1500, 95000);
+  return clamp(fee, 200, 130000);
+}
+
+function calculateTransferFee(player) {
+  return calculatePlayerMarketValue(player);
 }
 
 /**
@@ -1788,26 +1889,28 @@ function generateRandomStaffName(nationality = null, usedNames = null) {
 /**
  * 利き足（'Right', 'Left', 'Both'）を生成
  */
+/**
+ * ポジションおよび現代サッカーの戦術傾向に応じた利き足の生成
+ * 【RW（右ウイング）】：左利き（逆足カットイン型） 55%、右利き（順足縦突破型） 35%、両足 10%
+ * 【LW（左ウイング）】：右利き（逆足カットイン型） 55%、左利き（順足縦突破型） 35%、両足 10%
+ * 【他ポジション（CF, CM, CB, SB等）】：右利き 70%、左利き 25%、両足 5%
+ */
 function generatePreferredFoot(pos) {
   const r = Math.random();
-  if (pos === 'LB' || pos === 'LM' || pos === 'LW') {
-    if (r < 0.76) return 'Left';
-    if (r < 0.88) return 'Both';
-    return 'Right';
+  if (pos === 'RW') {
+    if (r < 0.55) return 'Left';   // 左利き（逆足カットイン型）55%
+    if (r < 0.90) return 'Right';  // 右利き（順足縦突破型）35%
+    return 'Both';                 // 両足 10%
   }
-  if (pos === 'RB' || pos === 'RM' || pos === 'RW') {
-    if (r < 0.76) return 'Right';
-    if (r < 0.88) return 'Both';
-    return 'Left';
+  if (pos === 'LW') {
+    if (r < 0.55) return 'Right';  // 右利き（逆足カットイン型）55%
+    if (r < 0.90) return 'Left';   // 左利き（順足縦突破型）35%
+    return 'Both';                 // 両足 10%
   }
-  if (pos === 'SB' || pos === 'WG' || pos === 'SM') {
-    if (r < 0.56) return 'Right';
-    if (r < 0.86) return 'Left';
-    return 'Both';
-  }
-  if (r < 0.68) return 'Right';
-  if (r < 0.90) return 'Left';
-  return 'Both';
+  // 他ポジション（CF, CM, CB, SB, GK, DM, AM, LB, RB等）
+  if (r < 0.70) return 'Right';    // 右利き 70%
+  if (r < 0.95) return 'Left';     // 左利き 25%
+  return 'Both';                   // 両足 5%
 }
 
 /**
@@ -3128,9 +3231,10 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
-  // 2. 移籍ウィンドウ期間中のイベント判定（双方向の他クラブ買取オファー）
+  // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新
+  updateIncomingOffersExpiry();
   let eventTriggered = false;
-  if (nextDay.windowOpen && !gameState.incomingTransferOffer && !gameState.pendingMegaOffer) {
+  if (nextDay.windowOpen && !gameState.pendingMegaOffer) {
     const offerFired = triggerIncomingTransferOffer(false);
     if (offerFired) {
       eventTriggered = true;
@@ -6477,6 +6581,11 @@ function submitNegotiationOffer() {
     playerClub.players.push(target);
     ensureValidSquadAndStarters(playerClub);
 
+    // 獲得成功：ターゲットリストから自動除外
+    if (gameState.targetShortlist) {
+      gameState.targetShortlist = gameState.targetShortlist.filter(id => id !== target.id);
+    }
+
     session.completed = true;
     session.statusType = 'success';
     session.statusMessage = `【移籍合意・獲得完了】${sellerClub ? sellerClub.name : '相手クラブ'}および ${target.name} 本人と全面合意に達しました！移籍金 ${formatMoney(session.offeredFee)}・週給 ${formatWage(offeredWage)}（${session.offeredYears}年契約 / 背番号 #${target.squadNumber}）で当クラブへ正式加入しました。`;
@@ -6523,33 +6632,39 @@ function submitNegotiationOffer() {
 }
 
 /**
- * 移籍ウィンドウ期間中（8月・1月）に他クラブ（国内他19クラブまたは海外メガクラブ）から
- * 自クラブ主力選手に対する買取オファーを抽選・発生させる
+ * 移籍ウィンドウ期間中（8月・1月）に他クラブから自クラブ選手に対する買取オファーを発生
+ * 2段階リスト制：即時ポップアップを廃止し、受信オファーリスト（INCOMING OFFERS）にプール
+ * オファー額は市場価値の 0.85〜1.35倍、最大£120M前後に抑制
  */
 function triggerIncomingTransferOffer(force = false) {
   const playerClub = getPlayerClub();
   if (!playerClub || playerClub.players.length <= 11) return false;
-  if (gameState.incomingTransferOffer) return false;
+  if (!gameState.incomingOffers) gameState.incomingOffers = [];
+  if (gameState.incomingOffers.length >= 6) return false;
 
   const currentDay = getCurrentCalendarDay();
   if (!force) {
     if (!currentDay || !currentDay.windowOpen) return false;
-    // 移籍期間中、1日あたり約12%の確率でオファー発生
-    if (Math.random() > 0.12) return false;
+    // 移籍期間中、1日あたり約14%の確率でオファー発生
+    if (Math.random() > 0.14) return false;
   }
 
-  // オファー対象候補：主力選手、得点ランキング上位、高OVR選手
+  // オファー対象候補：主力選手、得点上位、高OVR選手
   const candidates = [...playerClub.players].filter(p => !p.isRetired);
   if (candidates.length === 0) return false;
 
-  candidates.sort((a, b) => {
+  // 既にオファー受信中の選手は除外
+  const existingPlayerIds = new Set(gameState.incomingOffers.map(o => o.playerId));
+  const availableCandidates = candidates.filter(p => !existingPlayerIds.has(p.id));
+  if (availableCandidates.length === 0) return false;
+
+  availableCandidates.sort((a, b) => {
     const scoreA = getPlayerOverallRating(a) * 1.5 + (a.goals || 0) * 4 + (a.age <= 23 ? 10 : 0);
     const scoreB = getPlayerOverallRating(b) * 1.5 + (b.goals || 0) * 4 + (b.age <= 23 ? 10 : 0);
     return scoreB - scoreA;
   });
 
-  // 上位からランダムに選定
-  const pickPool = candidates.slice(0, Math.min(6, candidates.length));
+  const pickPool = availableCandidates.slice(0, Math.min(6, availableCandidates.length));
   const target = pickPool[randInt(0, pickPool.length - 1)];
   if (!target) return false;
 
@@ -6577,13 +6692,14 @@ function triggerIncomingTransferOffer(force = false) {
   }
 
   const baseValue = calculateTransferFee(target);
-  // メガクラブなら 1.35〜1.9倍、国内クラブなら 1.15〜1.6倍
-  const multiplier = isMegaClub ? (1.35 + Math.random() * 0.55) : (1.15 + Math.random() * 0.45);
-  const offerFee = Math.round((baseValue * multiplier) / 100) * 100;
-  const counterFee = Math.round((offerFee * 1.35) / 100) * 100;
+  // オファー額：市場価値の 0.85倍〜1.35倍 の範囲でランダム提示、最大£120M前後に収める
+  const multiplier = 0.85 + Math.random() * 0.50; // 0.85..1.35
+  let offerFee = Math.round((baseValue * multiplier) / 100) * 100;
+  offerFee = clamp(offerFee, 300, 120000); // 最小300k、最大120M
+  const counterFee = clamp(Math.round((offerFee * 1.18) / 100) * 100, offerFee + 200, 125000);
 
-  gameState.incomingTransferOffer = {
-    id: 'offer-' + Date.now(),
+  const newOffer = {
+    id: 'offer-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
     buyerClubName,
     buyerClubCountry,
     buyerClubId,
@@ -6594,20 +6710,139 @@ function triggerIncomingTransferOffer(force = false) {
     squadNumber: target.squadNumber || '-',
     playerAge: target.age,
     ovr: getPlayerOverallRating(target),
-    wage: target.wage || Math.round(target.salary / 52),
+    wage: target.wage || Math.round((target.salary || 1000) / 52),
+    preferredFoot: target.preferredFoot || 'Right',
     baseFee: baseValue,
     offerFee,
     counterFee,
-    ratioPercent: Math.round(((offerFee - baseValue) / Math.max(1, baseValue)) * 100),
-    status: 'pending',
-    dateStr: currentDay ? currentDay.formattedDate : ''
+    daysLeft: 5, // 回答期限: 残り5日
+    dateStr: currentDay ? currentDay.formattedDate : '',
+    status: 'pending'
   };
 
-  stopAdvancingCalendar();
-  addDailyLog(`【買取オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の正式打診！`);
-
-  openIncomingOfferModal();
+  gameState.incomingOffers.push(newOffer);
+  addDailyLog(`【オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診（回答期限: 5日）`);
+  updateMarketBadges();
   return true;
+}
+
+/**
+ * 日付進行時に受信オファーの回答期限を更新
+ */
+function updateIncomingOffersExpiry() {
+  if (!gameState.incomingOffers || gameState.incomingOffers.length === 0) return;
+  const expired = [];
+  const active = [];
+  for (const offer of gameState.incomingOffers) {
+    offer.daysLeft -= 1;
+    if (offer.daysLeft <= 0) {
+      expired.push(offer);
+    } else {
+      active.push(offer);
+    }
+  }
+  gameState.incomingOffers = active;
+  for (const exp of expired) {
+    addDailyLog(`【オファー失効】${exp.buyerClubName} からの ${exp.playerName} への打診は回答期限切れとなりました。`);
+  }
+  updateMarketBadges();
+}
+
+/**
+ * 受信オファー承諾（ACCEPT）
+ */
+function acceptIncomingOffer(offerId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.incomingOffers) return;
+
+  const idx = gameState.incomingOffers.findIndex(o => o.id === offerId);
+  if (idx === -1) return;
+  const offer = gameState.incomingOffers[idx];
+
+  const target = playerClub.players.find(p => p.id === offer.playerId);
+  if (!target) {
+    gameState.incomingOffers.splice(idx, 1);
+    updateMarketBadges();
+    renderAll();
+    return;
+  }
+
+  // クラブに選手が11名以下になる場合は売却不可
+  if (playerClub.players.length <= 11) {
+    alert('所属選手数が11名以下になるため、これ以上の選手放出はできません。');
+    return;
+  }
+
+  // 移籍金受け取り
+  playerClub.funds += offer.offerFee;
+
+  // 選手を自クラブから除外
+  playerClub.players = playerClub.players.filter(p => p.id !== target.id);
+  ensureValidSquadAndStarters(playerClub);
+
+  // 買い手クラブが存在すればそちらに加入
+  if (offer.buyerClubId) {
+    const buyerClub = gameState.clubs.find(c => c.id === offer.buyerClubId);
+    if (buyerClub) {
+      buyerClub.players.push(target);
+      ensureValidSquadAndStarters(buyerClub);
+    }
+  }
+
+  // オファー削除
+  gameState.incomingOffers.splice(idx, 1);
+
+  addDailyLog(`【移籍成立】${target.pos} #${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} へ完全移籍（移籍金 ${formatMoney(offer.offerFee)} を獲得）`);
+  gameState.facilityFeedback = `【移籍金獲得】${target.name} を ${offer.buyerClubName} へ売却し、移籍金 ${formatMoney(offer.offerFee)} を得ました。`;
+
+  updateMarketBadges();
+  renderAll();
+}
+
+/**
+ * 受信オファー拒否（REJECT）
+ */
+function rejectIncomingOffer(offerId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (!gameState.incomingOffers) return;
+  const idx = gameState.incomingOffers.findIndex(o => o.id === offerId);
+  if (idx === -1) return;
+  const offer = gameState.incomingOffers[idx];
+  gameState.incomingOffers.splice(idx, 1);
+
+  addDailyLog(`【オファー拒否】${offer.buyerClubName} からの ${offer.playerName} への獲得打診を拒否しました。`);
+  updateMarketBadges();
+  renderAll();
+}
+
+/**
+ * 受信オファー上乗せ要求（COUNTER）
+ * 70%の確率で相手合意（提示額引き上げ＆期限延長）、30%で決裂（相手撤退）
+ */
+function counterIncomingOffer(offerId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (!gameState.incomingOffers) return;
+  const offer = gameState.incomingOffers.find(o => o.id === offerId);
+  if (!offer) return;
+
+  const isAgreed = Math.random() < 0.70;
+  if (isAgreed) {
+    const newFee = offer.counterFee;
+    offer.offerFee = newFee;
+    offer.counterFee = clamp(Math.round((newFee * 1.15) / 100) * 100, newFee + 200, 130000);
+    offer.daysLeft = Math.max(offer.daysLeft, 3);
+    addDailyLog(`【上乗せ合意】${offer.buyerClubName} が ${offer.playerName} の増額オファー（${formatMoney(newFee)}）を承諾！回答期限が延長されました。`);
+    gameState.facilityFeedback = `【交渉進展】${offer.buyerClubName} が増額提示 ${formatMoney(newFee)} に同意しました。`;
+  } else {
+    // 決裂撤退
+    gameState.incomingOffers = gameState.incomingOffers.filter(o => o.id !== offerId);
+    addDailyLog(`【交渉決裂】${offer.buyerClubName} は ${offer.playerName} の上乗せ要求を拒否し、獲得交渉から撤退しました。`);
+    gameState.facilityFeedback = `【相手撤退】${offer.buyerClubName} は増額要求に応じず撤退しました。`;
+  }
+
+  updateMarketBadges();
+  renderAll();
 }
 
 /**
@@ -7609,9 +7844,11 @@ function switchTab(tabName) {
     }
   }
 
-  // 編成タブに切り替えた場合はサブタブの属性と表示状態を適用
+  // 編成タブ・移籍タブに切り替えた場合はサブタブの属性と表示状態を適用
   if (tabName === 'roster') {
     switchRosterSubtab(gameState.rosterSubtab || 'board');
+  } else if (tabName === 'market') {
+    switchMarketSubtab(gameState.marketSubtab || 'market');
   }
 
   renderAll();
@@ -7725,7 +7962,14 @@ function renderAll() {
   renderMatchLog();
   renderRoster();
   renderYouthSquad();
-  renderMarket();
+  updateMarketBadges();
+  if (gameState.marketSubtab === 'shortlist') {
+    renderShortlist();
+  } else if (gameState.marketSubtab === 'offers') {
+    renderIncomingOffers();
+  } else {
+    renderMarket();
+  }
   renderFacilitiesAndYouth();
   if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') {
     saveGameToStorage(false);
@@ -8770,6 +9014,235 @@ function renderRoster() {
 /**
  * 全20クラブの全所属選手を網羅するグローバル移籍市場の描画
  */
+
+/**
+ * 獲得ターゲットリスト（SHORTLIST）への追加／解除トグル
+ */
+function toggleShortlist(playerId) {
+  if (!gameState.targetShortlist) gameState.targetShortlist = [];
+  const idx = gameState.targetShortlist.indexOf(playerId);
+  const ctx = findPlayerWithContextById(playerId);
+  const pName = ctx ? ctx.player.name : '選手';
+
+  if (idx !== -1) {
+    gameState.targetShortlist.splice(idx, 1);
+    addDailyLog(`【ターゲット解除】${pName} を獲得ターゲットリストから除外しました。`);
+  } else {
+    gameState.targetShortlist.push(playerId);
+    addDailyLog(`【ターゲット登録】${pName} を獲得ターゲットリストに追加しました。`);
+  }
+  updateMarketBadges();
+  renderMarket();
+  renderShortlist();
+}
+
+function isInShortlist(playerId) {
+  return Boolean(gameState.targetShortlist && gameState.targetShortlist.includes(playerId));
+}
+
+/**
+ * 移籍タブ内のサブタブ切り替え ('market' | 'shortlist' | 'offers')
+ */
+function switchMarketSubtab(subtabKey) {
+  gameState.marketSubtab = subtabKey;
+  const viewMarket = document.getElementById('view-market');
+  if (viewMarket) {
+    viewMarket.setAttribute('data-market-subtab', subtabKey);
+  }
+
+  // ボタンのアクティブ状態更新
+  const btns = document.querySelectorAll('#market-subnav-bar .roster-subtab-btn');
+  btns.forEach(btn => {
+    const isAct = btn.dataset.marketSubtab === subtabKey;
+    btn.classList.toggle('active', isAct);
+    btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+  });
+
+  // サブビューの表示切り替え
+  const subviews = {
+    market: document.getElementById('market-subview-market'),
+    shortlist: document.getElementById('market-subview-shortlist'),
+    offers: document.getElementById('market-subview-offers')
+  };
+
+  Object.keys(subviews).forEach(key => {
+    const el = subviews[key];
+    if (el) {
+      el.classList.toggle('hidden', key !== subtabKey);
+    }
+  });
+
+  if (subtabKey === 'market') renderMarket();
+  else if (subtabKey === 'shortlist') renderShortlist();
+  else if (subtabKey === 'offers') renderIncomingOffers();
+}
+
+/**
+ * 移籍サブタブのバッジ件数表示を更新
+ */
+function updateMarketBadges() {
+  const shortlistCount = (gameState.targetShortlist || []).length;
+  const offersCount = (gameState.incomingOffers || []).length;
+
+  const bShortlist = document.getElementById('badge-shortlist-count');
+  if (bShortlist) {
+    bShortlist.textContent = shortlistCount;
+    bShortlist.classList.toggle('has-items', shortlistCount > 0);
+  }
+
+  const bOffers = document.getElementById('badge-offers-count');
+  if (bOffers) {
+    bOffers.textContent = offersCount;
+    bOffers.classList.toggle('has-items', offersCount > 0);
+  }
+
+  const summaryCount = document.getElementById('shortlist-summary-count');
+  if (summaryCount) summaryCount.textContent = `${shortlistCount}件`;
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const summaryFunds = document.getElementById('shortlist-summary-funds');
+  if (summaryFunds && playerClub) summaryFunds.textContent = formatMoney(playerClub.funds);
+
+  const offersSummaryCount = document.getElementById('offers-summary-count');
+  if (offersSummaryCount) offersSummaryCount.textContent = `${offersCount}件`;
+}
+
+/**
+ * 獲得ターゲットリスト（SHORTLIST）を描画
+ */
+function renderShortlist() {
+  const tbody = document.getElementById('shortlist-tbody');
+  if (!tbody) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const ids = gameState.targetShortlist || [];
+  if (ids.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10" class="empty-log-message" style="text-align: center; padding: 28px;">
+          現在獲得ターゲットに登録されている選手はいません。「選手市場 (MARKET)」タブから気になる選手を「＋ SHORTLIST」で追加してください。
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const rows = [];
+  for (const id of ids) {
+    const ctx = findPlayerWithContextById(id);
+    if (!ctx) continue;
+    const { player: p, clubName } = ctx;
+    const ovr = getPlayerOverallRating(p);
+    const fee = calculateTransferFee(p);
+    const isBargain = p.contractYears === 1;
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・約50%割安</span>' : '';
+    const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
+    const footBadge = formatFootBadge(p);
+
+    rows.push(`
+      <tr>
+        <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
+        <td class="col-name">
+          <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
+            ${getPlayerAvatarHtml(p, ctx.club, 'avatar-sm table-avatar')}${p.name}
+          </button>
+          ${bargainBadge}${failedBadge}
+        </td>
+        <td class="col-team"><strong>${clubName}</strong></td>
+        <td class="col-num">${p.age}歳</td>
+        <td class="col-num">${footBadge}</td>
+        <td class="col-num accent-green"><strong>${ovr}</strong></td>
+        <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
+        <td class="col-num mono">${formatWage(p.wage || 20)}</td>
+        <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
+        <td class="col-action" style="white-space: nowrap;">
+          <button type="button" class="btn btn-secondary btn-sm" data-profile-id="${p.id}" title="選手詳細スカウティングレポート">詳細</button>
+          <button type="button" class="btn btn-primary btn-sm btn-formal-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>正式オファー</button>
+          <button type="button" class="btn btn-outline btn-sm btn-shortlist-remove" data-shortlist-remove="${p.id}" title="ターゲットリストから除外">解除</button>
+        </td>
+      </tr>
+    `);
+  }
+
+  tbody.innerHTML = rows.join('');
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
+}
+
+/**
+ * 受信オファーリスト（INCOMING OFFERS）を描画
+ */
+function renderIncomingOffers() {
+  const container = document.getElementById('incoming-offers-container');
+  if (!container) return;
+
+  const offers = gameState.incomingOffers || [];
+  if (offers.length === 0) {
+    container.innerHTML = `
+      <div class="empty-log-message" style="text-align: center; padding: 32px; background: #161b22; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.15);">
+        現在他クラブからの買取オファーはありません。移籍ウィンドウが開いている期間中、主力選手の活躍に応じて国内外のクラブから獲得打診が届きます。
+      </div>
+    `;
+    return;
+  }
+
+  const playerClub = getPlayerClub();
+  container.innerHTML = offers.map(offer => {
+    const target = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+    const avatarHtml = target ? getPlayerAvatarHtml(target, playerClub, 'avatar-md') : '';
+    const footBadge = target ? formatFootBadge(target) : '';
+
+    return `
+      <div class="incoming-offer-card-item ${offer.isMegaClub ? 'is-mega' : ''}">
+        <div class="offer-card-header">
+          <div class="offer-club-badge">
+            <span>${offer.isMegaClub ? '★ ' : ''}<strong>${offer.buyerClubName}</strong> (${offer.buyerClubCountry})</span>
+          </div>
+          <div class="offer-deadline-badge mono">
+            回答期限: 残り${offer.daysLeft}日
+          </div>
+        </div>
+
+        <div class="offer-card-player-row">
+          <div class="offer-player-avatar-wrap">
+            ${avatarHtml}
+          </div>
+          <div class="offer-player-meta">
+            <div class="offer-player-name">
+              <span class="accent-green mono">[${offer.playerPos}]</span> #${offer.squadNumber} ${offer.playerName}
+            </div>
+            <div class="offer-player-tags">
+              <span>${offer.playerAge}歳</span>
+              <span>OVR <strong class="accent-green">${offer.ovr}</strong></span>
+              <span>${footBadge}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="offer-card-finances">
+          <div class="offer-finance-block">
+            <span class="offer-finance-label">提示移籍金</span>
+            <span class="offer-finance-val accent-gold mono">${formatMoney(offer.offerFee)}</span>
+          </div>
+          <div class="offer-finance-block">
+            <span class="offer-finance-label">現在週給</span>
+            <span class="offer-finance-val mono">${formatWage(offer.wage)}</span>
+          </div>
+        </div>
+
+        <div class="offer-card-actions">
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
+          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="移籍金の+18%上乗せを要求（相手合意率70%）">上乗せ (COUNTER)</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(container);
+}
+
 function renderMarket() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
@@ -8899,6 +9372,7 @@ function renderMarket() {
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・約50%割安</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
+    const footBadge = formatFootBadge(p);
 
     let actionBtnHtml = '';
     if (entry.isMyClub) {
@@ -8908,18 +9382,10 @@ function renderMarket() {
         </button>
       `;
     } else {
-      const canAfford = playerClub.funds >= fee;
-      const isFailed = Boolean(p.negotiationFailed);
-      const canOffer = !isFull && canAfford && !isFailed && !gameState.isGameOver && !gameState.isSimulating;
-
-      let btnText = '獲得オファー';
-      if (isFailed) btnText = '交渉決裂済';
-      else if (isFull) btnText = '登録枠上限';
-      else if (!canAfford) btnText = '予算不足';
-
+      const inShortlist = isInShortlist(p.id);
       actionBtnHtml = `
-        <button type="button" class="btn btn-primary btn-sm btn-offer-transfer" data-offer-id="${p.id}" data-offer-player-id="${p.id}" ${canOffer ? '' : 'disabled'}>
-          ${btnText}
+        <button type="button" class="btn btn-sm btn-shortlist-toggle ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? 'ターゲットリストから解除' : '獲得ターゲットリストに追加'}">
+          ${inShortlist ? '✓ 登録済' : '＋ SHORTLIST'}
         </button>
       `;
     }
@@ -8935,6 +9401,7 @@ function renderMarket() {
         </td>
         <td class="col-team"><strong>${c.name}</strong></td>
         <td class="col-num">${p.age}歳</td>
+        <td class="col-num">${footBadge}</td>
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
         <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
         <td class="col-num mono">${formatWage(p.wage)}</td>
@@ -9893,11 +10360,12 @@ function openPlayerProfileModal(playerId) {
 
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
+    const footBadgeStr = formatFootBadge(p);
     bioRowEl.innerHTML = `
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
-      <span class="profile-bio-chip">${footShortText}</span>
+      <span class="profile-bio-chip">${footBadgeStr}</span>
     `;
   }
 
@@ -11452,7 +11920,25 @@ function initGame() {
     }
   });
 
+  // 移籍サブタブバー切り替えイベント
+  const marketSubnav = document.getElementById('market-subnav-bar');
+  if (marketSubnav) {
+    marketSubnav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.roster-subtab-btn');
+      if (btn && btn.dataset.marketSubtab) {
+        switchMarketSubtab(btn.dataset.marketSubtab);
+      }
+    });
+  }
+
+  // 移籍市場テーブル内 クリックイベント（詳細＆ショートリストトグル）
   document.getElementById('market-tbody').addEventListener('click', (e) => {
+    const slBtn = e.target.closest('[data-shortlist-toggle]');
+    if (slBtn) {
+      e.stopPropagation();
+      toggleShortlist(slBtn.dataset.shortlistToggle);
+      return;
+    }
     const profileBtn = e.target.closest('[data-profile-id]');
     if (profileBtn) {
       e.stopPropagation();
@@ -11471,6 +11957,56 @@ function initGame() {
       signMarketPlayer(signBtn.dataset.signId);
     }
   });
+
+  // 獲得ターゲットリスト（SHORTLIST）テーブル内 クリックイベント
+  const shortlistTbody = document.getElementById('shortlist-tbody');
+  if (shortlistTbody) {
+    shortlistTbody.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
+      const formalBtn = e.target.closest('[data-formal-offer-id]');
+      if (formalBtn) {
+        e.stopPropagation();
+        openTransferNegotiationModal(formalBtn.dataset.formalOfferId);
+        return;
+      }
+      const removeBtn = e.target.closest('[data-shortlist-remove]');
+      if (removeBtn) {
+        e.stopPropagation();
+        toggleShortlist(removeBtn.dataset.shortlistRemove);
+        return;
+      }
+    });
+  }
+
+  // 受信オファーリスト（INCOMING OFFERS）内 クリックイベント
+  const incomingOffersContainer = document.getElementById('incoming-offers-container');
+  if (incomingOffersContainer) {
+    incomingOffersContainer.addEventListener('click', (e) => {
+      const acceptBtn = e.target.closest('[data-offer-accept]');
+      if (acceptBtn) {
+        e.stopPropagation();
+        acceptIncomingOffer(acceptBtn.dataset.offerAccept);
+        return;
+      }
+      const rejectBtn = e.target.closest('[data-offer-reject]');
+      if (rejectBtn) {
+        e.stopPropagation();
+        rejectIncomingOffer(rejectBtn.dataset.offerReject);
+        return;
+      }
+      const counterBtn = e.target.closest('[data-offer-counter]');
+      if (counterBtn) {
+        e.stopPropagation();
+        counterIncomingOffer(counterBtn.dataset.offerCounter);
+        return;
+      }
+    });
+  }
 
   // 常設ユースチーム（U-21 SQUAD）テーブルのイベント（昇格＆詳細プロフィール）
   const youthSquadTbody = document.getElementById('youth-squad-tbody');
