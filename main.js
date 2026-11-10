@@ -1305,11 +1305,12 @@ function formatPlayerPositionsHtml(p) {
     ? p.subPositions.filter(s => !majors.includes(s))
     : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !majors.includes(s)) : []);
 
-  const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join(' ');
+  const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join('');
+  const wrappedMajors = `<div class="pos-tags-wrap">${majorsHtml}</div>`;
   if (subs.length === 0) {
-    return majorsHtml;
+    return wrappedMajors;
   }
-  return `${majorsHtml}<span class="pos-sub-text">/ ${subs.join('・')}</span>`;
+  return `${wrappedMajors}<span class="pos-sub-text">/ ${subs.join('・')}</span>`;
 }
 
 /**

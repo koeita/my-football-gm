@@ -1282,6 +1282,15 @@ body {
   min-width: 28px;
 }
 
+.pos-tags-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  vertical-align: middle;
+}
+
 .pos-GK { color: var(--accent-gold); }
 .pos-CB, .pos-LB, .pos-RB, .pos-LWB, .pos-RWB, .pos-SB { color: #38bdf8; }
 .pos-DM, .pos-CM, .pos-LM, .pos-RM, .pos-SM, .pos-AM { color: var(--accent-green); }
@@ -7923,12 +7932,30 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     max-width: 42px !important;
     padding: 4px 1px !important;
     font-size: 11px !important;
+    overflow: visible !important;
+  }
+
+  .roster-table td.col-pos .pos-tags-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    width: 100% !important;
+  }
+
+  .roster-table td.col-pos .pos-tag {
+    font-size: 10px !important;
+    min-width: auto !important;
+    line-height: 1.1 !important;
+    padding: 0 1px !important;
   }
 
   .roster-table td.col-pos .pos-sub-text {
     font-size: 7.5px !important;
     max-width: 40px !important;
     letter-spacing: -0.02em !important;
+    margin-top: 1px !important;
   }
 
   .roster-table th.col-name,
