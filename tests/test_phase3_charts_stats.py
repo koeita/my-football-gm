@@ -67,5 +67,11 @@ class TestPhase3ChartsAndStats(unittest.TestCase):
         self.assertIn('.market-value-svg', self.css)
         self.assertIn('.profile-metrics-row-4col', self.css)
 
+    def test_market_value_from_ovr_and_age_safety(self):
+        """OVR直接計算関数とNaN対策が実装されていること"""
+        self.assertIn('function calculateMarketValueFromOvrAndAge(', self.js)
+        self.assertIn('hasInvalid = Array.isArray(p.valueHistory)', self.js)
+        self.assertIn('safePeakVal = Number.isFinite(peakVal)', self.js)
+
 if __name__ == '__main__':
     unittest.main()

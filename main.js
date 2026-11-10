@@ -1489,6 +1489,7 @@ function clamp(val, min, max) {
  * 通貨フォーマット（内部単位：£1K = 1,000ポンド -> 「£45.0M」「£500K」等の欧州標準スタイル）
  */
 function formatMoney(kPounds) {
+  if (typeof kPounds !== 'number' || Number.isNaN(kPounds)) return '£0';
   const rounded = Math.round(kPounds);
   if (rounded === 0) return '£0';
   const sign = rounded < 0 ? '-' : '';
@@ -2070,58 +2071,80 @@ function getFootShortText(player) {
   return '右足';
 }
 
-function calculatePlayerMarketValue(player) {
-  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || 70);
+/**
+ * OVR・年齢・残り契約年数から直接市場価値（£k単位）を算出するコアロジック
+ */
+function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2) {
+  const safeOvr = (typeof ovr === 'number' && !Number.isNaN(ovr)) ? ovr : 70;
+  const safeAge = (typeof age === 'number' && !Number.isNaN(age)) ? age : 25;
+  const safeContractYears = (typeof contractYears === 'number' && !Number.isNaN(contractYears)) ? contractYears : 2;
+
   let baseVal = 0;
-  if (ovr < 60) {
-    baseVal = 200 + Math.max(0, ovr - 50) * 30; // 200k..500k
-  } else if (ovr <= 64) {
-    const t = (ovr - 60) / 4;
+  if (safeOvr < 60) {
+    baseVal = 200 + Math.max(0, safeOvr - 50) * 30; // 200k..500k
+  } else if (safeOvr <= 64) {
+    const t = (safeOvr - 60) / 4;
     baseVal = 500 + t * 900; // 500k..1400k (£0.5M〜£1.4M)
-  } else if (ovr <= 69) {
-    const t = (ovr - 65) / 4;
+  } else if (safeOvr <= 69) {
+    const t = (safeOvr - 65) / 4;
     baseVal = 1500 + t * 2500; // 1500k..4000k (£1.5M〜£4.0M)
-  } else if (ovr <= 74) {
-    const t = (ovr - 70) / 4;
+  } else if (safeOvr <= 74) {
+    const t = (safeOvr - 70) / 4;
     baseVal = 5000 + t * 10000; // 5000k..15000k (£5.0M〜£15.0M)
-  } else if (ovr <= 79) {
-    const t = (ovr - 75) / 4;
+  } else if (safeOvr <= 79) {
+    const t = (safeOvr - 75) / 4;
     baseVal = 16000 + t * 19000; // 16000k..35000k (£16.0M〜£35.0M)
-  } else if (ovr <= 84) {
-    const t = (ovr - 80) / 4;
+  } else if (safeOvr <= 84) {
+    const t = (safeOvr - 80) / 4;
     baseVal = 40000 + t * 35000; // 40000k..75000k (£40.0M〜£75.0M)
   } else {
     // OVR 85以上（ワールドクラス）：£80.0M 〜 最大£130.0M
-    const extra = Math.min(6, ovr - 85); // 85..91
+    const extra = Math.min(6, safeOvr - 85); // 85..91
     const t = extra / 6;
     baseVal = 80000 + t * 50000; // 80000k..130000k (£80.0M〜£130.0M)
   }
 
   // 年齢補正：18〜23歳（x1.2〜1.4）、24〜28歳（x1.0）、29〜32歳（x0.75）、33歳以上（x0.4〜0.5）
-  const age = player.age || 25;
   let ageFactor = 1.0;
-  if (age <= 19) ageFactor = 1.40;
-  else if (age <= 21) ageFactor = 1.30;
-  else if (age <= 23) ageFactor = 1.20;
-  else if (age <= 28) ageFactor = 1.00;
-  else if (age <= 32) ageFactor = 0.75;
-  else if (age <= 34) ageFactor = 0.50;
+  if (safeAge <= 19) ageFactor = 1.40;
+  else if (safeAge <= 21) ageFactor = 1.30;
+  else if (safeAge <= 23) ageFactor = 1.20;
+  else if (safeAge <= 28) ageFactor = 1.00;
+  else if (safeAge <= 32) ageFactor = 0.75;
+  else if (safeAge <= 34) ageFactor = 0.50;
   else ageFactor = 0.40;
 
   // 契約残り年数による軽微な補正（市場価値そのものは実力・年齢ベースであり、契約年数で不自然に半減させない）
-  // 残り1年でも市場価値（客観的評価）の低下は最大-5%程度にとどめる
   let contractFactor = 1.0;
-  const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
-  if (contractYears <= 1) {
-    contractFactor = 0.95; // わずか5%の軽微補正（市場価値の崩落を防止）
-  } else if (contractYears === 2) {
+  if (safeContractYears <= 1) {
+    contractFactor = 0.95;
+  } else if (safeContractYears === 2) {
     contractFactor = 0.98;
-  } else if (contractYears >= 4) {
+  } else if (safeContractYears >= 4) {
     contractFactor = 1.05;
   }
 
   const fee = Math.round((baseVal * ageFactor * contractFactor) / 100) * 100;
   return clamp(fee, 200, 130000);
+}
+
+function calculatePlayerMarketValue(player) {
+  if (!player) return 1000;
+
+  // すでに ovr プロパティが数値で存在していればそれを最優先（過去推移オブジェクトやキャッシュ対応）
+  let ovr = 70;
+  if (typeof player.ovr === 'number' && !Number.isNaN(player.ovr)) {
+    ovr = player.ovr;
+  } else if (typeof getPlayerOverallRating === 'function') {
+    const calc = getPlayerOverallRating(player);
+    if (typeof calc === 'number' && !Number.isNaN(calc)) {
+      ovr = calc;
+    }
+  }
+
+  const age = typeof player.age === 'number' && !Number.isNaN(player.age) ? player.age : 25;
+  const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
+  return calculateMarketValueFromOvrAndAge(ovr, age, contractYears);
 }
 
 /**
@@ -13594,9 +13617,15 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 function ensurePlayerValueHistory(p, currentClubName) {
   if (!p) return [];
 
+  // 既存の履歴に NaN や無効値が含まれている場合は強制的に再生成
+  const hasInvalid = Array.isArray(p.valueHistory) && p.valueHistory.some(pt => !pt || typeof pt.value !== 'number' || Number.isNaN(pt.value) || typeof pt.ovr !== 'number' || Number.isNaN(pt.ovr));
+  if (hasInvalid) {
+    p.valueHistory = null;
+  }
+
   const currentVal = calculatePlayerMarketValue(p);
-  const currentOvr = getPlayerOverallRating(p);
-  const currentAge = p.age || 24;
+  const currentOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (p.ovr || 70);
+  const currentAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 24;
 
   // すでに十分な数年前からの推移データ（3点以上）が存在する場合は最新値のみ更新して返却
   if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 3) {
@@ -13618,18 +13647,16 @@ function ensurePlayerValueHistory(p, currentClubName) {
     // 最大直近6シーズン分（キャリア初期〜前シーズン）を時系列順に抽出
     const pastSubset = seasonHistory.slice(-6);
     pastSubset.forEach((sh) => {
-      const approxVal = calculatePlayerMarketValue({
-        ovr: sh.ovr,
-        age: sh.age,
-        contractYears: 2
-      });
+      const shOvr = (typeof sh.ovr === 'number' && !Number.isNaN(sh.ovr)) ? sh.ovr : 65;
+      const shAge = (typeof sh.age === 'number' && !Number.isNaN(sh.age)) ? sh.age : 22;
+      const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2);
       vHistory.push({
-        label: `${sh.seasonYear.slice(2, 7)} (${sh.age}歳)`,
+        label: `${sh.seasonYear.slice(2, 7)} (${shAge}歳)`,
         shortLabel: `${sh.seasonYear.slice(2, 7)}`,
-        fullLabel: `${sh.seasonYear} (${sh.age}歳 / OVR ${sh.ovr})`,
+        fullLabel: `${sh.seasonYear} (${shAge}歳 / OVR ${shOvr})`,
         season: sh.seasonYear,
-        age: sh.age,
-        ovr: sh.ovr,
+        age: shAge,
+        ovr: shOvr,
         value: approxVal,
         isPast: true
       });
@@ -13640,7 +13667,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
   if (vHistory.length === 0) {
     const debutAge = Math.max(17, currentAge - 2);
     const debutOvr = Math.max(50, currentOvr - 6);
-    const debutVal = calculatePlayerMarketValue({ ovr: debutOvr, age: debutAge, contractYears: 3 });
+    const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3);
     vHistory.push({
       label: `2年前 (${debutAge}歳)`,
       shortLabel: `2年前`,
@@ -13654,7 +13681,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
 
     const midAge = Math.max(18, currentAge - 1);
     const midOvr = Math.max(52, currentOvr - 3);
-    const midVal = calculatePlayerMarketValue({ ovr: midOvr, age: midAge, contractYears: 2 });
+    const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2);
     vHistory.push({
       label: `前年 (${midAge}歳)`,
       shortLabel: `前年`,
@@ -13670,7 +13697,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     const firstH = vHistory[0];
     const debutAge = Math.max(17, firstH.age - 1);
     const debutOvr = Math.max(50, firstH.ovr - 4);
-    const debutVal = calculatePlayerMarketValue({ ovr: debutOvr, age: debutAge, contractYears: 3 });
+    const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3);
     vHistory.unshift({
       label: `デビュー (${debutAge}歳)`,
       shortLabel: `デビュー`,
@@ -13708,8 +13735,9 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     return `<div class="empty-chart-msg">市場価値データがありません</div>`;
   }
 
-  const values = history.map(h => h.value);
-  const peakVal = Math.max(...values);
+  const values = history.map(h => (Number.isFinite(h.value) ? h.value : 0));
+  const peakVal = values.length > 0 ? Math.max(...values) : 1000;
+  const safePeakVal = Number.isFinite(peakVal) && peakVal > 0 ? peakVal : 1000;
 
   // グラフキャンバスのサイズ設計（余裕のある横幅とプロット領域）
   const W = 540;
@@ -13723,8 +13751,8 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 
   // Y軸のスケール（最小値0〜最大値+25%でキリの良い数値に丸め）
   const yMin = 0;
-  const rawMax = Math.max(peakVal * 1.25, 2000);
-  const yMax = rawMax > 50000 ? Math.ceil(rawMax / 10000) * 10000 : Math.ceil(rawMax / 5000) * 5000;
+  const rawMax = Math.max(safePeakVal * 1.25, 2000);
+  const yMax = Number.isFinite(rawMax) && rawMax > 0 ? (rawMax > 50000 ? Math.ceil(rawMax / 10000) * 10000 : Math.ceil(rawMax / 5000) * 5000) : 5000;
 
   const getX = (idx) => {
     if (history.length === 1) return padL + plotW / 2;
@@ -13844,9 +13872,9 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 function buildPlayerMarketValueTabHtml(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
   const currentVal = calculatePlayerMarketValue(p);
-  const peakVal = Math.max(...history.map(h => h.value), currentVal);
+  const peakVal = Math.max(...history.map(h => (Number.isFinite(h.value) ? h.value : 0)), currentVal);
   const firstPoint = history[0] || { value: currentVal, age: p.age };
-  const initialVal = firstPoint.value;
+  const initialVal = Number.isFinite(firstPoint.value) ? firstPoint.value : currentVal;
   const deltaFromInitial = currentVal - initialVal;
   const deltaPercent = initialVal > 0 ? Math.round((deltaFromInitial / initialVal) * 100) : 0;
   const isUp = deltaFromInitial >= 0;

@@ -1,5 +1,17 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## フェーズ3追加改善：市場価値推移におけるNaN解消・OVR直接計算および過去推移の復旧
+- **概要**:
+  - **市場価値の `£NaNK` / `£NaNM` 表示不具合の解消**:
+    - `calculatePlayerMarketValue` において、`getPlayerOverallRating` が詳細属性（`def`, `atk`, `sta`）を持たない過去推移用の軽量オブジェクトに対して `NaN` を返していた問題を修正。
+    - OVR・年齢・残り契約年数から直接客観的市場価値（£k単位）を算出するコアロジック `calculateMarketValueFromOvrAndAge(ovr, age, contractYears)` を新設。
+    - `calculatePlayerMarketValue` は `player.ovr` の存在を最優先で安全に参照し、フォールバック（デフォルト70）を保証。
+    - `formatMoney` にも `NaN` / 非数値安全ガードを追加（`£NaN` 表示の根本防止）。
+  - **過去推移データ（valueHistory）の自己修復**:
+    - `ensurePlayerValueHistory` で過去推移ポイントの算出時に `calculateMarketValueFromOvrAndAge(sh.ovr, sh.age, 2)` を直接呼び出すよう刷新。
+    - セーブデータやメモリ内に既存の `NaN` レコードが含まれている場合、`hasInvalid` チェックにより自動的に破棄・再生成して正常な市場価値推移・折れ線SVGグラフ・テーブルを復元。
+- **変更ファイル**: `main.js`, `tests/test_phase3_charts_stats.py`, `DEVLOG.md`
+
 ## フェーズ3：市場価値曲線（SVG折れ線グラフ） ＆ 個人スタッツ（7大カテゴリー）の実装 (feat-phase3-charts-stats)
 - **概要**:
   - **プロフィールタブ1列収容 & 開幕時点からの市場価値推移の可視化 & 絵文字全削除**:
