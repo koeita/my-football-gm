@@ -16456,25 +16456,6 @@ function initGame() {
         }
       }
     }
-  }
-
-  // 月初（月替わり時）に全選手の市場価値推移（valueHistory）を最新状況で更新
-  if (nextDay.day === 1) {
-    for (const club of gameState.clubs) {
-      for (const p of club.players) {
-        if (p.isRetired) continue;
-        if (Array.isArray(p.valueHistory) && p.valueHistory.length > 0) {
-          const curVal = calculatePlayerMarketValue(p);
-          const curOvr = getPlayerOverallRating(p);
-          const lastPt = p.valueHistory[p.valueHistory.length - 1];
-          if (lastPt) {
-            lastPt.value = curVal;
-            lastPt.ovr = curOvr;
-            lastPt.age = p.age || lastPt.age;
-          }
-        }
-      }
-    }
   });
 
   // 編成サブタブ（作戦ボード / 選手一覧 / 戦術）の切り替え
