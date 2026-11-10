@@ -291,10 +291,24 @@ const CLUB_SHORT_CODES = {
 };
 
 function getClubShortCode(clubOrId) {
+  if (!clubOrId) return 'LFC';
   const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
   if (id && CLUB_SHORT_CODES[id]) return CLUB_SHORT_CODES[id];
   if (typeof clubOrId === 'object' && clubOrId && clubOrId.shortName) return clubOrId.shortName;
-  return 'LFC';
+
+  // 名前からCLUB_DEFINITIONSを逆引き
+  const name = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.name);
+  if (name) {
+    const matched = CLUB_DEFINITIONS.find(c => c.name === name || name.includes(c.name));
+    if (matched && CLUB_SHORT_CODES[matched.id]) return CLUB_SHORT_CODES[matched.id];
+  }
+
+  // フォールバック: 英数字から3文字抽出
+  if (name) {
+    const cleaned = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (cleaned.length >= 3) return cleaned.slice(0, 3);
+  }
+  return (id || 'LFC').slice(0, 3).toUpperCase();
 }
 
 let modalLockSavedScrollY = 0;
@@ -5230,7 +5244,8 @@ function buildMatchSummaryHtml(md) {
             <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
               <div class="summary-club-header-wrap">
                 ${getClubEmblemSvg(homeClub, 22, 'summary-club-emblem')}
-                <span class="summary-club-name">${homeClub.name}</span>
+                <span class="summary-club-name name-full">${homeClub.name}</span>
+                <span class="summary-club-name name-short mono">${getClubShortCode(homeClub)}</span>
               </div>
               <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
@@ -5240,7 +5255,8 @@ function buildMatchSummaryHtml(md) {
             </div>
             <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
               <div class="summary-club-header-wrap">
-                <span class="summary-club-name">${awayClub.name}</span>
+                <span class="summary-club-name name-short mono">${getClubShortCode(awayClub)}</span>
+                <span class="summary-club-name name-full">${awayClub.name}</span>
                 ${getClubEmblemSvg(awayClub, 22, 'summary-club-emblem')}
               </div>
               <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
@@ -5719,8 +5735,12 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
 
   if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
   if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
-  if (homeName) homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text">${homeClub.name}</span>`;
-  if (awayName) awayName.innerHTML = `<span class="match-live-team-name-text">${awayClub.name}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
+  if (homeName) {
+    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text name-full">${homeClub.name}</span><span class="match-live-team-name-text name-short mono">${getClubShortCode(homeClub)}</span>`;
+  }
+  if (awayName) {
+    awayName.innerHTML = `<span class="match-live-team-name-text name-short mono">${getClubShortCode(awayClub)}</span><span class="match-live-team-name-text name-full">${awayClub.name}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
+  }
   if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
   if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
   if (shEl) shEl.textContent = '0';

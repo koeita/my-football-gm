@@ -13355,3 +13355,28 @@ button.hidden,
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
+
+
+/* デスクトップ：フルネームを表示、3文字略称は非表示 */
+.name-short {
+  display: none !important;
+}
+.name-full {
+  display: inline !important;
+}
+
+/* モバイル（幅768px以下）：スコアボード＆サマリーではアルファベット3文字略称（MCI, CHE等）で美しく表記 */
+@media (max-width: 768px) {
+  .match-live-scoreboard .name-full,
+  .summary-score-row .name-full {
+    display: none !important;
+  }
+  .match-live-scoreboard .name-short,
+  .summary-score-row .name-short {
+    display: inline-block !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.05em !important;
+    white-space: nowrap !important;
+  }
+}
