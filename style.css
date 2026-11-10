@@ -14019,3 +14019,190 @@ button.hidden,
     padding-left: 2px !important;
   }
 }
+
+/* ==========================================================================
+   UNSLOP UI REFINEMENT
+   - AI特有の安っぽい過剰ネオン・粗雑な余白・安易なグラデーションを完全クレンジング
+   - 洗練された欧州フットボールGM風のプレミアム・ダークテーマへ昇華
+   ========================================================================== */
+
+/* 1. タイポグラフィと数字の整然とした組版 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.mono,
+.cal-weekday,
+.cal-day-num,
+.standings-table td,
+.metric-value {
+  font-feature-settings: "tnum" 1, "cv05" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 2. ヘッダー＆トップバーの質感向上（ガラスモーフィズムと精密なボーダー） */
+.status-header {
+  background: rgba(16, 19, 23, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+.finance-status-badge,
+.target-rank-badge {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* 3. セグメントコントロール（サブタブ）のUnslop（クリーン＆触感の良いUI） */
+.roster-subnav-bar,
+.market-subnav-bar,
+.facilities-subnav-bar,
+.team-subnav-bar {
+  background: #14161a !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 10px !important;
+}
+
+.roster-subtab-btn {
+  color: #94a3b8 !important;
+  letter-spacing: 0.02em !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.roster-subtab-btn:hover {
+  color: #f1f5f9 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.roster-subtab-btn.active {
+  background: #22c55e !important;
+  color: #091e11 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 4. メインボトムナビゲーションの洗練 */
+.tab-nav {
+  background: rgba(14, 17, 21, 0.94) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.tab-btn {
+  transition: all 0.15s ease !important;
+}
+
+.tab-btn.active {
+  color: #22c55e !important;
+}
+
+.tab-btn:not(.tab-btn-office).active .tab-icon svg {
+  stroke: #22c55e !important;
+  filter: drop-shadow(0 2px 6px rgba(34, 197, 94, 0.35)) !important;
+}
+
+/* 本部タブ（中央フローティング緑バッジ）内のアイコンは白ではっきりと視認 */
+.tab-btn-office .tab-office-circle svg {
+  stroke: #ffffff !important;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.tab-btn-office.active .tab-office-circle svg {
+  stroke: #ffffff !important;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.tab-btn-office:not(.active) .tab-office-circle svg {
+  stroke: #cbd5e1 !important;
+}
+
+/* 5. 順位表のシャープなレイアウトと視線誘導 */
+.standings-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.standings-table thead th {
+  background: #14171c !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.standings-table tbody tr {
+  transition: background-color 0.1s ease !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+.standings-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.standings-table tbody tr.row-player-club {
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+.standings-table tbody tr.row-player-club:hover {
+  background: rgba(34, 197, 94, 0.09) !important;
+}
+
+/* 6. カレンダービューのグリッド＆バッジのUnslop */
+.cal-day-cell {
+  background: #15181d !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease !important;
+}
+
+.cal-day-cell:hover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: #191d23 !important;
+}
+
+.cal-day-cell.is-empty {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.cal-cup-badge,
+.day-event-badge {
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 7. MATCHDAYカード＆アクションボタンの洗練 */
+.matchday-card-preview {
+  background: linear-gradient(180deg, #181c22 0%, #13161a 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 14px !important;
+}
+
+.btn-primary,
+.btn-kickoff-pulse {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  letter-spacing: 0.02em !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
+.btn-primary:active,
+.btn-kickoff-pulse:active {
+  transform: scale(0.98) !important;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25) !important;
+}
+
