@@ -17035,6 +17035,8 @@ function switchTeamSubtab(subtabKey) {
   if (viewTeam) {
     viewTeam.setAttribute('data-team-subtab', subtabKey);
   }
+  document.body.setAttribute('data-team-subtab', subtabKey);
+  document.documentElement.setAttribute('data-team-subtab', subtabKey);
 
   // サブタブボタンのアクティブ状態更新
   const btns = document.querySelectorAll('#team-subnav-bar .roster-subtab-btn');
@@ -17293,6 +17295,13 @@ function switchScheduleViewMode(mode, updateState = true) {
     gameState.scheduleViewMode = mode;
   }
   const currentMode = gameState.scheduleViewMode || 'calendar';
+
+  const viewTeam = document.getElementById('view-team');
+  if (viewTeam) {
+    viewTeam.setAttribute('data-schedule-mode', currentMode);
+  }
+  document.body.setAttribute('data-schedule-mode', currentMode);
+  document.documentElement.setAttribute('data-schedule-mode', currentMode);
 
   const btnCal = document.getElementById('btn-view-toggle-calendar');
   const btnList = document.getElementById('btn-view-toggle-list');
@@ -17590,6 +17599,11 @@ function renderMonthCalendar() {
       </div>
     `);
   });
+
+  // 常に6行分（全42マス：7列 × 6行）のスペースを確保するため、末尾を空セルで埋める
+  while (cellsHtml.length < 42) {
+    cellsHtml.push('<div class="cal-day-cell is-empty" aria-hidden="true"></div>');
+  }
 
   gridEl.innerHTML = cellsHtml.join('');
 }
