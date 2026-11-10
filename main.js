@@ -11357,7 +11357,6 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
-                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11437,7 +11436,6 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
-                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11489,7 +11487,6 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
-                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11562,7 +11559,6 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
-                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(rp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(rp)}/100">疲労:${getPlayerFatigue(rp)}</span>
                 ${injuryBadgeHtml}
               </div>
             </div>
