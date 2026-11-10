@@ -95,5 +95,18 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertNotIn('カラバオ', self.main_js)
         self.assertNotIn('FAカップ', self.index_html)
 
+    def test_subnav_and_second_division_highlight_fix(self):
+        """2部リーグの行背景ハイライトが消去され、サブナビの改行・潰れ防止スタイルが適用されていること"""
+        # 2部昇格・降格圏の行背景ハイライトが transparent になっていること
+        self.assertIn('.zone-promotion', self.style_css)
+        self.assertIn('background: transparent !important;', self.style_css)
+        self.assertNotIn('rgba(34, 197, 94, 0.08) !important', self.style_css)
+        self.assertNotIn('rgba(239, 68, 68, 0.08) !important', self.style_css)
+
+        # サブナビにグループ化と nowrap が適用されていること
+        self.assertIn('comp-subnav-group', self.main_js)
+        self.assertIn('comp-subnav-group', self.style_css)
+        self.assertIn('white-space: nowrap;', self.style_css)
+
 if __name__ == '__main__':
     unittest.main()

@@ -10310,8 +10310,6 @@ function renderStandings() {
   const tableWrapper = document.querySelector('#team-subview-standings .table-wrapper');
   const bracketWrapper = document.getElementById('comp-bracket-wrapper');
   const subnavRow = document.getElementById('comp-subnav-row');
-  const subnavLabel = document.getElementById('comp-subnav-label');
-  const subnavBtns = document.getElementById('comp-subnav-btns');
   const statusText = document.getElementById('standings-status-text');
   const legendEl = document.getElementById('standings-legend');
 
@@ -10321,20 +10319,22 @@ function renderStandings() {
     if (bracketWrapper) bracketWrapper.classList.add('hidden');
     if (subnavRow) {
       subnavRow.classList.remove('hidden');
-      if (subnavLabel) subnavLabel.textContent = 'ディビジョン:';
       const curDiv = gameState.selectedLeagueDivision || (compView === 'championship' ? 'd2' : 'd1');
-      if (subnavBtns) {
-        subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curDiv === 'd1' ? 'active' : ''}" data-league-div="d1">ファースト (ENG-D1)</button>
-          <button type="button" class="comp-sub-btn mono ${curDiv === 'd2' ? 'active' : ''}" data-league-div="d2">セカンド (ENG-D2)</button>
-        `;
-        subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
-          b.onclick = () => {
-            gameState.selectedLeagueDivision = b.dataset.leagueDiv;
-            renderStandings();
-          };
-        });
-      }
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">ディビジョン:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curDiv === 'd1' ? 'active' : ''}" data-league-div="d1">ファースト (ENG-D1)</button>
+            <button type="button" class="comp-sub-btn mono ${curDiv === 'd2' ? 'active' : ''}" data-league-div="d2">セカンド (ENG-D2)</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('.comp-sub-btn').forEach(b => {
+        b.onclick = () => {
+          gameState.selectedLeagueDivision = b.dataset.leagueDiv;
+          renderStandings();
+        };
+      });
     }
 
     const curDiv = gameState.selectedLeagueDivision || (compView === 'championship' ? 'd2' : 'd1');
@@ -10425,20 +10425,22 @@ function renderStandings() {
 
     if (subnavRow) {
       subnavRow.classList.remove('hidden');
-      if (subnavLabel) subnavLabel.textContent = '国内カップ:';
       const curDom = gameState.selectedDomesticCup || 'leagueCup';
-      if (subnavBtns) {
-        subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-sub-cup="leagueCup">リーグ・トロフィー (L-CUP)</button>
-          <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-sub-cup="nationalCup">ナショナル・カップ (N-CUP)</button>
-        `;
-        subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
-          b.onclick = () => {
-            gameState.selectedDomesticCup = b.dataset.subCup;
-            renderStandings();
-          };
-        });
-      }
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">国内カップ:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-sub-cup="leagueCup">リーグ・トロフィー (L-CUP)</button>
+            <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-sub-cup="nationalCup">ナショナル・カップ (N-CUP)</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('.comp-sub-btn').forEach(b => {
+        b.onclick = () => {
+          gameState.selectedDomesticCup = b.dataset.subCup;
+          renderStandings();
+        };
+      });
     }
     const curDom = gameState.selectedDomesticCup || 'leagueCup';
     if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
@@ -10465,30 +10467,36 @@ function renderStandings() {
 
     if (subnavRow) {
       subnavRow.classList.remove('hidden');
-      if (subnavLabel) subnavLabel.textContent = '欧州大会:';
-      if (subnavBtns) {
-        subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">ECT</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EPC</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECS</button>
-          <span style="border-left: 1px solid rgba(255,255,255,0.15); margin: 0 4px;"></span>
-          <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表</button>
-          <button type="button" class="euro-phase-btn mono ${curTab === 'schedule' ? 'active' : ''}" data-euro-tab="schedule">日程・結果</button>
-          <button type="button" class="euro-phase-btn mono ${curTab === 'bracket' ? 'active' : ''}" data-euro-tab="bracket">トーナメント表</button>
-        `;
-        subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
-          b.onclick = () => {
-            gameState.selectedEuroCup = b.dataset.subCup;
-            renderStandings();
-          };
-        });
-        subnavBtns.querySelectorAll('.euro-phase-btn').forEach(b => {
-          b.onclick = () => {
-            gameState.selectedEuroSubtab = b.dataset.euroTab;
-            renderStandings();
-          };
-        });
-      }
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">欧州大会:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">ECT</button>
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EPC</button>
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECS</button>
+          </div>
+        </div>
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">表示切替:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表</button>
+            <button type="button" class="euro-phase-btn mono ${curTab === 'schedule' ? 'active' : ''}" data-euro-tab="schedule">日程・結果</button>
+            <button type="button" class="euro-phase-btn mono ${curTab === 'bracket' ? 'active' : ''}" data-euro-tab="bracket">トーナメント表</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('[data-sub-cup]').forEach(b => {
+        b.onclick = () => {
+          gameState.selectedEuroCup = b.dataset.subCup;
+          renderStandings();
+        };
+      });
+      subnavRow.querySelectorAll('[data-euro-tab]').forEach(b => {
+        b.onclick = () => {
+          gameState.selectedEuroSubtab = b.dataset.euroTab;
+          renderStandings();
+        };
+      });
     }
 
     const compName = curEuro === 'championsCup' ? 'EURO CHAMPIONS TROPHY (ECT)' : (curEuro === 'europaCup' ? 'EURO PRESTIGE CUP (EPC)' : 'EURO CONFERENCE SHIELD (ECS)');
