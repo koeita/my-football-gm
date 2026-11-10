@@ -14793,3 +14793,139 @@ body {
   }
 }
 
+/* --- Phase 3: 個人スタッツ（7大カテゴリー） & 市場価値推移（折れ線グラフ） --- */
+
+/* スタッツカテゴリー切り替えナビゲーションバー */
+.stats-category-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.stats-category-nav-bar::-webkit-scrollbar {
+  height: 4px;
+}
+.stats-category-nav-bar::-webkit-scrollbar-thumb {
+  background: #2a313a;
+  border-radius: 4px;
+}
+
+.stats-cat-btn {
+  background: #14181c;
+  border: 1px solid #282f37;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stats-cat-btn:hover {
+  background: #1b2127;
+  color: var(--text-main);
+  border-color: #3b4550;
+}
+.stats-cat-btn.active {
+  background: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border-color: rgba(46, 204, 113, 0.45);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.2);
+}
+
+/* 個人スタッツランキングテーブル */
+.stats-ranking-panel .panel-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: block;
+}
+.stats-ranking-table .col-num strong {
+  font-family: var(--font-mono);
+}
+
+/* 選手プロフィールモーダル：市場価値推移タブ & SVG折れ線グラフ */
+.profile-status-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+.badge-hot {
+  background: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+.badge-rising {
+  background: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+.badge-prime {
+  background: rgba(241, 196, 15, 0.18);
+  color: var(--accent-gold);
+  border: 1px solid rgba(241, 196, 15, 0.4);
+}
+.badge-veteran {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.badge-stable {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-metrics-row-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.market-value-chart-wrapper {
+  background: #111417;
+  border: 1px solid #23282f;
+  border-radius: 8px;
+  padding: 12px 14px 6px;
+  overflow: hidden;
+  position: relative;
+}
+.market-value-svg {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  display: block;
+}
+
+.profile-metric-clickable {
+  transition: all 0.15s ease;
+}
+.profile-metric-clickable:hover {
+  background: rgba(46, 204, 113, 0.08);
+  border-color: rgba(46, 204, 113, 0.35);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .profile-metrics-row-4col {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .stats-cat-btn {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+  }
+  .market-value-chart-wrapper {
+    padding: 8px 6px 4px !important;
+  }
+}
+

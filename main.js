@@ -3733,6 +3733,25 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
+  // 月初（月替わり時）に全選手の市場価値推移（valueHistory）を最新状況で更新
+  if (nextDay.day === 1) {
+    for (const club of gameState.clubs) {
+      for (const p of club.players) {
+        if (p.isRetired) continue;
+        if (Array.isArray(p.valueHistory) && p.valueHistory.length > 0) {
+          const curVal = calculatePlayerMarketValue(p);
+          const curOvr = getPlayerOverallRating(p);
+          const lastPt = p.valueHistory[p.valueHistory.length - 1];
+          if (lastPt) {
+            lastPt.value = curVal;
+            lastPt.ovr = curOvr;
+            lastPt.age = p.age || lastPt.age;
+          }
+        }
+      }
+    }
+  }
+
   // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新
     // 2. 移籍ウィンドウ期間中のイベント判定・オファー更新
   const incomingResponded = updateIncomingOffersExpiry();
@@ -4864,7 +4883,13 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
 
   const momEntry = allEntries[0];
   allEntries.forEach(entry => {
-    entry.p.isMOM = Boolean(momEntry && entry.p.id === momEntry.p.id);
+    const isMom = Boolean(momEntry && entry.p.id === momEntry.p.id);
+    entry.p.isMOM = isMom;
+    if (isMom) {
+      entry.p.momCount = (entry.p.momCount || 0) + 1;
+      if (!entry.p.careerStats) entry.p.careerStats = { appearances: entry.p.appearances || 0, goals: entry.p.goals || 0, assists: entry.p.assists || 0 };
+      entry.p.careerStats.momCount = (entry.p.careerStats.momCount || 0) + 1;
+    }
   });
 
   return {
@@ -5068,6 +5093,32 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
       }
     });
   }
+
+  // 警告（イエロー）・退場（レッド）カードの記録シミュレーション
+  const simulateCardsForSquad = (starters) => {
+    const cardWeights = [45, 38, 14, 3];
+    const numYellow = typeof avatarWeightedPick === 'function' ? avatarWeightedPick(cardWeights, Math.random) : randInt(0, 1);
+    const nonGk = starters.filter(p => (p.assignedPos || p.pos) !== 'GK');
+    const pool = nonGk.length > 0 ? nonGk : starters;
+    for (let c = 0; c < numYellow; c++) {
+      const target = pool[randInt(0, pool.length - 1)];
+      if (target) {
+        target.yellowCards = (target.yellowCards || 0) + 1;
+        if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
+        target.careerStats.yellowCards = (target.careerStats.yellowCards || 0) + 1;
+      }
+    }
+    if (Math.random() < 0.025) {
+      const target = pool[randInt(0, pool.length - 1)];
+      if (target) {
+        target.redCards = (target.redCards || 0) + 1;
+        if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
+        target.careerStats.redCards = (target.careerStats.redCards || 0) + 1;
+      }
+    }
+  };
+  simulateCardsForSquad(homeStarters);
+  simulateCardsForSquad(awayStarters);
 
   const isHomeWin = homeScore > awayScore;
   const isDraw = homeScore === awayScore;
@@ -10968,50 +11019,184 @@ function setupCompetitionNavListeners() {
 }
 
 /**
- * リーグ得点ランキング（TOP 5）の描画
+ * リーグ個人スタッツ（7大カテゴリー：得点・アシスト・評価点・完封・MOM・出場・警告退場）の定義
  */
-function renderTopScorers() {
+let currentLeagueStatsCategory = 'goals';
+
+const LEAGUE_STATS_CATEGORIES = {
+  goals: {
+    id: 'goals',
+    icon: '⚽',
+    title: '⚽ リーグ得点ランキング',
+    desc: 'イングランド・ディビジョン1 ゴール数ランキング',
+    mainColHeader: 'ゴール',
+    getScore: p => p.goals || 0,
+    formatScore: (val) => `<strong class="accent-gold">${val}</strong>`,
+    secondaryColHeader: '平均評価',
+    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+  },
+  assists: {
+    id: 'assists',
+    icon: '🅰️',
+    title: '🅰️ リーグアシストランキング',
+    desc: '決定的なラストパスを供給したアシスト王争い',
+    mainColHeader: 'アシスト',
+    getScore: p => p.assists || 0,
+    formatScore: (val) => `<strong class="text-cyan">${val}</strong>`,
+    secondaryColHeader: '平均評価',
+    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+  },
+  ratings: {
+    id: 'ratings',
+    icon: '⭐',
+    title: '⭐ リーグ平均評価点ランキング',
+    desc: '公式戦2試合以上出場のハイパフォーマンス選手（平均7.0以上が高水準）',
+    mainColHeader: '平均評価',
+    getScore: (p, apps) => (apps >= 2 ? (p.totalRating / apps) : 0),
+    formatScore: (val) => {
+      const cls = val >= 7.5 ? 'accent-gold' : (val >= 7.0 ? 'accent-green' : 'text-main');
+      return `<strong class="${cls}">★ ${val.toFixed(2)}</strong>`;
+    },
+    secondaryColHeader: 'G / A',
+    formatSecondary: (p) => `<span class="mono">${p.goals || 0}G / ${p.assists || 0}A</span>`
+  },
+  cleansheets: {
+    id: 'cleansheets',
+    icon: '🧤',
+    title: '🧤 クリーンシート（完封）ランキング',
+    desc: '相手攻撃をシャットアウトした守護神（GK）＆DF陣の完封記録',
+    filter: p => ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos) || POS_ROLE_GROUP[p.pos] === 'GK' || POS_ROLE_GROUP[p.pos] === 'DF',
+    mainColHeader: 'クリーンシート',
+    getScore: p => p.cleanSheets || 0,
+    formatScore: (val) => `<strong class="accent-gold">${val} <small style="font-size:10px; color:var(--text-muted);">試合</small></strong>`,
+    secondaryColHeader: '平均評価',
+    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+  },
+  moms: {
+    id: 'moms',
+    icon: '👑',
+    title: '👑 マン・オブ・ザ・マッチ（MOM）獲得数ランキング',
+    desc: '試合で最も輝いたMVP選出回数トップのスタープレイヤー',
+    mainColHeader: 'MOM獲得数',
+    getScore: p => p.momCount || 0,
+    formatScore: (val) => `<strong class="accent-gold">👑 ${val} <small style="font-size:10px; color:var(--text-muted);">回</small></strong>`,
+    secondaryColHeader: '平均評価',
+    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+  },
+  appearances: {
+    id: 'appearances',
+    icon: '⏱️',
+    title: '⏱️ リーグ最多出場・鉄人ランキング',
+    desc: 'チームを支え続けるタフな最多出場記録（疲労度併記）',
+    mainColHeader: '出場数',
+    getScore: p => p.appearances || 0,
+    formatScore: (val, p) => {
+      const ftg = typeof getPlayerFatigue === 'function' ? getPlayerFatigue(p) : 0;
+      const ftgSt = typeof getPlayerFatigueStatus === 'function' ? getPlayerFatigueStatus(ftg) : { color: '#2ecc71', label: '万全' };
+      return `<strong>${val}試合</strong> <span class="mono" style="font-size:9.5px; color:${ftgSt.color}; margin-left:4px;">(疲労:${ftg})</span>`;
+    },
+    secondaryColHeader: '平均評価',
+    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+  },
+  cards: {
+    id: 'cards',
+    icon: '🟨',
+    title: '🟨 警告（イエロー）・退場（レッド）ランキング',
+    desc: '激しいファウル・警告カードを受けたカード枚数ランキング',
+    mainColHeader: '🟨 警告',
+    getScore: p => ((p.redCards || 0) * 3 + (p.yellowCards || 0)),
+    formatScore: (val, p) => `<strong style="color:#f1c40f;">🟨 ${p.yellowCards || 0}</strong>`,
+    secondaryColHeader: '🟥 退場',
+    formatSecondary: (p) => `<strong style="color:#e74c3c;">🟥 ${p.redCards || 0}</strong>`
+  }
+};
+
+/**
+ * リーグ個人スタッツ（選択されたカテゴリー）の描画
+ */
+function renderLeagueStats(catKey = 'goals') {
+  currentLeagueStatsCategory = catKey;
+  const config = LEAGUE_STATS_CATEGORIES[catKey] || LEAGUE_STATS_CATEGORIES.goals;
+
+  const titleEl = document.getElementById('stats-panel-title');
+  const descEl = document.getElementById('stats-panel-desc');
+  const subtitleEl = document.getElementById('stats-panel-subtitle');
+  const theadEl = document.getElementById('stats-ranking-thead');
   const tbody = document.getElementById('top-scorers-tbody');
+
+  if (titleEl) titleEl.textContent = config.title;
+  if (descEl) descEl.textContent = config.desc;
+  if (subtitleEl) subtitleEl.textContent = 'TOP 10';
+
+  // ナビゲーションバーのactiveクラス切り替え
+  const navBar = document.getElementById('stats-category-nav-bar');
+  if (navBar) {
+    navBar.querySelectorAll('.stats-cat-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.statsCat === catKey);
+    });
+  }
+
+  // テーブルヘッダー列の更新
+  if (theadEl) {
+    theadEl.innerHTML = `
+      <tr>
+        <th class="col-rank">順位</th>
+        <th class="col-pos">POS</th>
+        <th class="col-name">選手名</th>
+        <th class="col-team">所属クラブ</th>
+        <th class="col-num">出場</th>
+        <th class="col-num">${config.mainColHeader}</th>
+        <th class="col-num">${config.secondaryColHeader}</th>
+      </tr>
+    `;
+  }
+
   if (!tbody) return;
 
   const allPlayers = [];
   for (const club of gameState.clubs) {
     for (const p of club.players) {
-      if (p.appearances > 0 || p.goals > 0) {
-        const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : '-';
-        allPlayers.push({
-          player: p,
-          clubName: club.name,
-          isPlayerClub: club.isPlayer,
-          avgRating
-        });
-      }
+      if (p.isRetired) continue;
+      if (config.filter && !config.filter(p)) continue;
+
+      const apps = p.appearances || 0;
+      const avgRating = apps > 0 ? (p.totalRating / apps).toFixed(1) : '-';
+      const score = config.getScore(p, apps);
+
+      allPlayers.push({
+        player: p,
+        clubName: club.name,
+        isPlayerClub: club.isPlayer,
+        apps,
+        avgRating,
+        score
+      });
     }
   }
 
   allPlayers.sort((a, b) => {
-    if (b.player.goals !== a.player.goals) {
-      return b.player.goals - a.player.goals;
-    }
+    if (b.score !== a.score) return b.score - a.score;
     const rateA = parseFloat(a.avgRating) || 0;
     const rateB = parseFloat(b.avgRating) || 0;
-    return rateB - rateA;
+    if (rateB !== rateA) return rateB - rateA;
+    return b.apps - a.apps;
   });
 
-  const top5 = allPlayers.slice(0, 5);
+  const top10 = allPlayers.slice(0, 10);
+  const hasData = top10.length > 0 && top10[0].score > 0;
 
-  if (top5.length === 0 || top5[0].player.goals === 0) {
+  if (!hasData) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty-log-message">まだ得点記録がありません。試合が進行すると得点者ランキングが表示されます。</td>
+        <td colspan="7" class="empty-log-message">まだ${config.mainColHeader}の記録がありません。公式戦が進行するとランキングがリアルタイム集計されます。</td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = top5.map((item, idx) => {
+  tbody.innerHTML = top10.map((item, idx) => {
     const rank = idx + 1;
-    const rankClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
+    const rankClass = rank === 1 ? 'rank-badge rank-1' : (rank <= 3 ? 'rank-badge rank-2' : 'rank-badge');
     const rowClass = item.isPlayerClub ? 'row-player-club' : '';
 
     return `
@@ -11024,13 +11209,21 @@ function renderTopScorers() {
           </button>
         </td>
         <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(item.clubName, 18, 'scorers-emblem')}<span class="team-name-text">${item.clubName}</span></span></td>
-        <td class="col-num">${item.player.appearances}</td>
-        <td class="col-num accent-gold"><strong>${item.player.goals}</strong></td>
-        <td class="col-num accent-green">${item.avgRating}</td>
+        <td class="col-num">${item.apps}</td>
+        <td class="col-num">${config.formatScore(item.score, item.player)}</td>
+        <td class="col-num">${config.formatSecondary(item.player, item.avgRating)}</td>
       </tr>
     `;
   }).join('');
+
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
+}
+
+/**
+ * リーグ得点ランキング（下位互換ラッパー）
+ */
+function renderTopScorers() {
+  renderLeagueStats(currentLeagueStatsCategory);
 }
 
 /**
@@ -13158,10 +13351,10 @@ function buildPlayerHexagonChartSvg(attrs) {
 }
 
 /**
- * 選手プロフィールモーダル内のタブ切り替え（能力 / 今季成績 / 年別成績 / 経歴）
+ * 選手プロフィールモーダル内のタブ切り替え（能力 / 今季成績 / 年別成績 / 市場価値推移 / 経歴）
  */
 function switchProfileModalTab(tabKey) {
-  const validTabs = ['ability', 'season', 'yearly', 'career'];
+  const validTabs = ['ability', 'season', 'yearly', 'market-value', 'career'];
   const activeKey = validTabs.includes(tabKey) ? tabKey : 'ability';
   gameState.profileActiveTab = activeKey;
 
@@ -13393,6 +13586,315 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     curSeasonStr
   };
 }
+
+/**
+ * 選手の市場価値推移履歴（valueHistory）を初期化・補完する
+ * 過去シーズンのOVR・年齢・成長実績から算出した市場価値推移を保持
+ */
+function ensurePlayerValueHistory(p, currentClubName) {
+  if (!p) return [];
+  if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 2) {
+    return p.valueHistory;
+  }
+
+  const historyData = ensurePlayerHistoryAndCareer(p, currentClubName);
+  const { seasonHistory } = historyData;
+  const currentVal = calculatePlayerMarketValue(p);
+  const currentOvr = getPlayerOverallRating(p);
+  const currentAge = p.age || 24;
+
+  const vHistory = [];
+  // 過去シーズンの履歴から市場価値ポイントを抽出（最大直近5シーズン分）
+  if (seasonHistory && seasonHistory.length > 0) {
+    const pastSubset = seasonHistory.slice(-5);
+    pastSubset.forEach((sh) => {
+      const approxVal = calculatePlayerMarketValue({
+        ovr: sh.ovr,
+        age: sh.age,
+        contractYears: 2
+      });
+      vHistory.push({
+        label: `${sh.seasonYear.slice(2, 7)}`,
+        fullLabel: `${sh.seasonYear} (${sh.age}歳)`,
+        season: sh.seasonYear,
+        age: sh.age,
+        ovr: sh.ovr,
+        value: approxVal
+      });
+    });
+  }
+
+  // もし過去データが空または1件のみ（若手ルーキー等）の場合は、過去の推移を補完
+  if (vHistory.length === 0) {
+    const pastOvr = Math.max(50, currentOvr - 4);
+    const pastVal = calculatePlayerMarketValue({ ovr: pastOvr, age: Math.max(16, currentAge - 1), contractYears: 3 });
+    vHistory.push({
+      label: `入団時`,
+      fullLabel: `入団時 (${Math.max(16, currentAge - 1)}歳)`,
+      season: 'Debut',
+      age: Math.max(16, currentAge - 1),
+      ovr: pastOvr,
+      value: pastVal
+    });
+  }
+
+  // 最新（現在）ポイント
+  vHistory.push({
+    label: `現在`,
+    fullLabel: `現在 (${currentAge}歳 / OVR ${currentOvr})`,
+    season: 'Current',
+    age: currentAge,
+    ovr: currentOvr,
+    value: currentVal
+  });
+
+  p.valueHistory = vHistory;
+  return vHistory;
+}
+
+/**
+ * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画
+ */
+function buildPlayerMarketValueChartSvg(p, currentClubName) {
+  const history = ensurePlayerValueHistory(p, currentClubName);
+  if (!history || history.length === 0) {
+    return `<div class="empty-chart-msg">市場価値データがありません</div>`;
+  }
+
+  const values = history.map(h => h.value);
+  const peakVal = Math.max(...values);
+  const currentVal = values[values.length - 1];
+
+  // グラフキャンバスのサイズ設計
+  const W = 520;
+  const H = 200;
+  const padL = 62;
+  const padR = 32;
+  const padT = 32;
+  const padB = 40;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // Y軸のスケール（最小値0〜最大値+20%でキリの良い数値に丸め）
+  const yMin = 0;
+  const rawMax = Math.max(peakVal * 1.25, 2000);
+  const yMax = rawMax > 50000 ? Math.ceil(rawMax / 10000) * 10000 : Math.ceil(rawMax / 5000) * 5000;
+
+  const getX = (idx) => {
+    if (history.length === 1) return padL + plotW / 2;
+    return padL + (idx / (history.length - 1)) * plotW;
+  };
+  const getY = (val) => {
+    const ratio = (val - yMin) / (yMax - yMin);
+    return padT + plotH - ratio * plotH;
+  };
+
+  // グリッド線（3本）
+  const gridSteps = [0.33, 0.66, 1.0];
+  let gridLinesSvg = '';
+  gridSteps.forEach(step => {
+    const valAtStep = yMin + (yMax - yMin) * step;
+    const yPos = getY(valAtStep);
+    const label = formatMoney(valAtStep);
+    gridLinesSvg += `
+      <line x1="${padL}" y1="${yPos.toFixed(1)}" x2="${W - padR}" y2="${yPos.toFixed(1)}" stroke="#242a30" stroke-dasharray="3,3" stroke-width="1" />
+      <text x="${padL - 8}" y="${(yPos + 3.5).toFixed(1)}" fill="#6c757d" font-size="9" font-family="var(--font-mono)" text-anchor="end">${label}</text>
+    `;
+  });
+  // ベースライン（y = 0）
+  const baseLineY = getY(0);
+  gridLinesSvg += `<line x1="${padL}" y1="${baseLineY.toFixed(1)}" x2="${W - padR}" y2="${baseLineY.toFixed(1)}" stroke="#343a40" stroke-width="1.5" />`;
+
+  // 各データポイントの座標算出
+  const points = history.map((h, i) => ({
+    x: getX(i),
+    y: getY(h.value),
+    h
+  }));
+
+  // 折れ線用 points 文字列
+  const polylinePoints = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+
+  // エリア（塗りつぶし）用 path 文字列
+  const areaPathD = `
+    M ${points[0].x.toFixed(1)} ${baseLineY.toFixed(1)}
+    L ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}
+    ${points.slice(1).map(pt => `L ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ')}
+    L ${points[points.length - 1].x.toFixed(1)} ${baseLineY.toFixed(1)}
+    Z
+  `;
+
+  // X軸ラベルと各データポイント（サークル・値ラベル）
+  let pointsSvg = '';
+  let xLabelsSvg = '';
+  const gradId = `mvGrad_${p.id || Math.random().toString(36).slice(2, 7)}`;
+
+  points.forEach((pt, i) => {
+    const isPeak = (pt.h.value === peakVal && peakVal > 0);
+    const isLast = (i === points.length - 1);
+    const formattedVal = formatMoney(pt.h.value);
+
+    // X軸ラベル
+    xLabelsSvg += `
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--text-main)' : '#8b949e'}" font-size="9.5" font-family="var(--font-mono)" font-weight="${isLast ? '700' : '400'}" text-anchor="middle">
+        ${pt.h.label}
+      </text>
+    `;
+
+    // サークルとハイライト
+    if (isPeak) {
+      pointsSvg += `
+        <!-- PEAKハイライト -->
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="8" fill="rgba(241, 196, 15, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.5" fill="#f1c40f" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 12).toFixed(1)}" fill="#f1c40f" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">👑 PEAK ${formattedVal}</text>
+      `;
+    } else if (isLast) {
+      pointsSvg += `
+        <!-- 現在値ハイライト -->
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7" fill="rgba(46, 204, 113, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#2ecc71" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#2ecc71" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">${formattedVal}</text>
+      `;
+    } else {
+      pointsSvg += `
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="#14171b" stroke="#38bdf8" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 7).toFixed(1)}" fill="#94a3b8" font-size="8.5" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+      `;
+    }
+  });
+
+  return `
+    <div class="market-value-chart-wrapper">
+      <svg class="market-value-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2ecc71" stop-opacity="0.35" />
+            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.10" />
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+        ${gridLinesSvg}
+        <path d="${areaPathD}" fill="url(#${gradId})" />
+        <polyline points="${polylinePoints}" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        ${pointsSvg}
+        ${xLabelsSvg}
+      </svg>
+    </div>
+  `;
+}
+
+/**
+ * 選手プロフィールモーダル用：市場価値推移タブのHTML構築
+ */
+function buildPlayerMarketValueTabHtml(p, currentClubName) {
+  const history = ensurePlayerValueHistory(p, currentClubName);
+  const currentVal = calculatePlayerMarketValue(p);
+  const peakVal = Math.max(...history.map(h => h.value), currentVal);
+  const firstVal = history[0] ? history[0].value : currentVal;
+  const delta = currentVal - firstVal;
+  const deltaPercent = firstVal > 0 ? Math.round((delta / firstVal) * 100) : 0;
+  const isUp = delta >= 0;
+
+  // 選手の市場ステータス
+  const age = p.age || 24;
+  const ovr = getPlayerOverallRating(p);
+  let statusText = '安定稼働中 (STABLE)';
+  let statusBadgeClass = 'badge-stable';
+  if (age <= 21 && ovr >= 74) {
+    statusText = '🔥 若手有望株 (HOT PROSPECT)';
+    statusBadgeClass = 'badge-hot';
+  } else if (age <= 23 && delta > 0) {
+    statusText = '📈 急成長中 (ON THE RISE)';
+    statusBadgeClass = 'badge-rising';
+  } else if (age >= 25 && age <= 29 && ovr >= 80) {
+    statusText = '⭐ 全盛期・看板選手 (PRIME ASSET)';
+    statusBadgeClass = 'badge-prime';
+  } else if (age >= 32) {
+    statusText = '🛡️ ベテラン (EXPERIENCED)';
+    statusBadgeClass = 'badge-veteran';
+  }
+
+  const chartSvgHtml = buildPlayerMarketValueChartSvg(p, currentClubName);
+
+  return `
+    <div class="profile-tab-panel hidden" data-profile-panel="market-value">
+      <div class="profile-box">
+        <div class="profile-box-header">
+          <div>
+            <span class="profile-box-title">📈 推定市場価値の推移 (Market Value Trend)</span>
+            <div class="mono text-muted" style="font-size: 10px; margin-top: 2px;">
+              選手のOVR・年齢・成長実績から算出した市場価値の歴史的推移
+            </div>
+          </div>
+          <span class="profile-status-pill mono ${statusBadgeClass}">${statusText}</span>
+        </div>
+
+        <!-- 4大メトリクス要約カード -->
+        <div class="profile-metrics-row profile-metrics-row-4col" style="margin-top: 8px;">
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">現在推定価値</span>
+            <span class="profile-metric-val mono accent-green"><strong>${formatMoney(currentVal)}</strong></span>
+          </div>
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">キャリア最高価値</span>
+            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
+          </div>
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">通算価値変動</span>
+            <span class="profile-metric-val mono ${isUp ? 'accent-green' : 'text-danger'}">
+              <strong>${isUp ? '+' : ''}${formatMoney(delta)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
+            </span>
+          </div>
+          <div class="profile-metric-card">
+            <span class="profile-metric-label">要求移籍金目安</span>
+            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(calculateTransferFee(p))}</strong></span>
+          </div>
+        </div>
+
+        <!-- SVG折れ線グラフ -->
+        <div class="profile-chart-section" style="margin-top: 10px;">
+          ${chartSvgHtml}
+        </div>
+
+        <!-- 履歴データ詳細テーブル -->
+        <div class="profile-yearly-table-wrap" style="margin-top: 10px;">
+          <table class="data-table profile-yearly-table">
+            <thead>
+              <tr>
+                <th>時期 / シーズン</th>
+                <th class="col-num">年齢</th>
+                <th class="col-num">OVR</th>
+                <th class="col-num">推定市場価値</th>
+                <th class="col-num">特記事項</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${history.map((h, idx) => {
+                const isPeak = (h.value === peakVal);
+                const isCur = (idx === history.length - 1);
+                return `
+                  <tr class="${isCur ? 'profile-yearly-current-row' : ''}">
+                    <td class="mono">${h.season || h.label}</td>
+                    <td class="mono col-num">${h.age}</td>
+                    <td class="mono col-num">${h.ovr}</td>
+                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : '')}">
+                      <strong>${formatMoney(h.value)}</strong>
+                    </td>
+                    <td class="mono col-num text-muted" style="font-size: 10px;">
+                      ${isPeak ? '👑 キャリア最高値' : (isCur ? '● 最新' : '-')}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 let lastProfileOpenScrollY = 0;
 let lastProfileOpenContainerScrolls = [];
 
@@ -13770,9 +14272,12 @@ function openPlayerProfileModal(playerId) {
               <span class="profile-metric-label">契約残年数</span>
               <span class="profile-metric-val">${p.contractYears}年</span>
             </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">${isMarket ? '移籍金' : '推定市場価値'}</span>
-              <span class="profile-metric-val">${formatMoney(estMarketValue)}</span>
+            <div class="profile-metric-card profile-metric-clickable" data-switch-profile-tab="market-value" title="クリックで市場価値推移グラフを表示" style="cursor: pointer;">
+              <span class="profile-metric-label" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>${isMarket ? '移籍金' : '推定市場価値'}</span>
+                <span class="mono accent-green" style="font-size:9.5px;">📈 グラフ ▶</span>
+              </span>
+              <span class="profile-metric-val accent-green">${formatMoney(estMarketValue)}</span>
             </div>
           </div>
         `}
@@ -13895,7 +14400,10 @@ function openPlayerProfileModal(playerId) {
         </div>
       </div>
 
-      <!-- タブ4：経歴 -->
+      <!-- タブ4：市場価値推移（SVG折れ線グラフ ＆ 4大メトリクス） -->
+      ${buildPlayerMarketValueTabHtml(p, clubName)}
+
+      <!-- タブ5：経歴 -->
       <div class="profile-tab-panel hidden" data-profile-panel="career">
         <div class="profile-section-grid">
           <div class="profile-box">
@@ -13971,6 +14479,16 @@ function openPlayerProfileModal(playerId) {
         }
       });
     }
+
+    // タブ内からの別タブジャンプ（推定市場価値カード等）
+    bodyEl.querySelectorAll('[data-switch-profile-tab]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.dataset.switchProfileTab) {
+          switchProfileModalTab(btn.dataset.switchProfileTab);
+        }
+      });
+    });
   }
 
   // デフォルトで「能力」タブを選択状態にする
@@ -15626,6 +16144,17 @@ function initGame() {
     });
   }
 
+  // 個人スタッツ（7大カテゴリー：得点・アシスト・評価点・完封・MOM・出場・警告退場）の切り替え
+  const statsCatNavBar = document.getElementById('stats-category-nav-bar');
+  if (statsCatNavBar) {
+    statsCatNavBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.stats-cat-btn');
+      if (btn && btn.dataset.statsCat) {
+        renderLeagueStats(btn.dataset.statsCat);
+      }
+    });
+  }
+
   // GM業務タスク一覧（折りたたみトグル＆実行ボタン）のイベント
   const btnToggleGmTasks = document.getElementById('btn-toggle-gm-tasks');
   if (btnToggleGmTasks) {
@@ -15924,6 +16453,25 @@ function initGame() {
         const gmOverlay = document.getElementById('gm-modal-overlay');
         if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
           gmOverlay.classList.add('hidden');
+        }
+      }
+    }
+  }
+
+  // 月初（月替わり時）に全選手の市場価値推移（valueHistory）を最新状況で更新
+  if (nextDay.day === 1) {
+    for (const club of gameState.clubs) {
+      for (const p of club.players) {
+        if (p.isRetired) continue;
+        if (Array.isArray(p.valueHistory) && p.valueHistory.length > 0) {
+          const curVal = calculatePlayerMarketValue(p);
+          const curOvr = getPlayerOverallRating(p);
+          const lastPt = p.valueHistory[p.valueHistory.length - 1];
+          if (lastPt) {
+            lastPt.value = curVal;
+            lastPt.ovr = curOvr;
+            lastPt.age = p.age || lastPt.age;
+          }
         }
       }
     }
