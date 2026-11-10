@@ -3519,8 +3519,33 @@ function getCalendarDayPlayerMatch(day) {
     }
   }
 
-  // 2. カップ戦 / 欧州戦
+  // 2. カップ戦 / 欧州戦 / プレシーズン親善杯
   if (day.isCupMatchDay) {
+    // プレシーズン親善杯（ワールド・チャレンジ・トロフィー）
+    if (day.cupCompType === 'preseasonCup') {
+      const comp = gameState.competitions && gameState.competitions.preseasonCup;
+      const roundNum = day.preseasonRound || 1;
+      if (comp && comp.matches) {
+        const m = comp.matches.find(x => x.round === roundNum);
+        if (m) {
+          const isHome = m.homeId === playerClub.id;
+          const oppClub = isHome ? m.awayClub : m.homeClub;
+          return {
+            type: 'preseasonCup',
+            compKey: 'preseasonCup',
+            comp,
+            title: `WCT ${m.roundName || `第${roundNum}戦`}`,
+            compCode: 'WCT',
+            match: m,
+            isHome,
+            oppClub,
+            played: Boolean(m.played || day.played),
+            isPreseason: true
+          };
+        }
+      }
+    }
+
     // 欧州リーグフェーズ（MD1〜8）
     if (day.cupCompType === 'euroLeaguePhase' || day.euroMd) {
       const md = day.euroMd || 1;
@@ -3813,12 +3838,28 @@ function advanceCalendarDay(skipRender = false) {
           nextDay.played = true;
         }
       }
+    } else if (nextDay.cupCompType === 'preseasonCup') {
+      // プレシーズン親善杯（WCT）
+      isNextDayCupPlayerMatch = true;
     } else if (typeof processCupMatchDay === 'function') {
       const cupRes = processCupMatchDay(nextDay.cupCompType, nextDay.cupRoundKey);
       if (cupRes && cupRes.playerMatch) {
         isNextDayCupPlayerMatch = true;
       } else {
         nextDay.played = true;
+      }
+    }
+  }
+
+  // 2.8 選択式ランダムイベント判定（平日・非試合日）
+  if (!isNextDayCupPlayerMatch && !nextDay.isMatchDay && typeof checkAndTriggerGmEvent === 'function') {
+    const gmEv = checkAndTriggerGmEvent();
+    if (gmEv) {
+      stopAdvancingCalendar();
+      eventTriggered = true;
+      // 自動的にイベントモーダルを開く
+      if (typeof openGmEventModal === 'function') {
+        setTimeout(() => openGmEventModal(gmEv), 200);
       }
     }
   }
@@ -3956,7 +3997,12 @@ function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = [
   const tKey = normalizeTacticKey(club.tactic);
   const tacticMult = tKey === 'gegenpress' ? 1.25 : (tKey === 'counter' ? 0.85 : 1.0);
   const coaching = typeof getClubCoachingEffects === 'function' ? getClubCoachingEffects(club) : { staDrainMult: 1.0 };
-  const drainMult = tacticMult * (coaching.staDrainMult || 1.0);
+
+  // プレシーズン親善試合の場合は疲労蓄積半減（親善試合仕様）
+  const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  const isPreseasonMatch = Boolean(curDay && (curDay.cupCompType === 'preseasonCup' || curDay.preseasonRound));
+  const preseasonMult = isPreseasonMatch ? 0.5 : 1.0;
+  const drainMult = tacticMult * (coaching.staDrainMult || 1.0) * preseasonMult;
 
   // スタメン（フル出場）
   starters.forEach(p => {
@@ -4003,6 +4049,107 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
   const playerClub = getPlayerClub();
   if (!playerClub) return;
+
+  // 0. プレシーズン親善杯（ワールド・チャレンジ・トロフィー）の場合
+  if (currentDay.cupCompType === 'preseasonCup') {
+    const comp = gameState.competitions && gameState.competitions.preseasonCup;
+    const roundNum = currentDay.preseasonRound || 1;
+    const myMatch = comp && comp.matches && comp.matches.find(m => m.round === roundNum);
+
+    if (!myMatch || !comp) {
+      currentDay.played = true;
+      startAdvancingToNextMatch();
+      return;
+    }
+
+    const isHome = myMatch.homeId === playerClub.id;
+    const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
+    ensureClubStartersForMatch(playerClub);
+    ensureClubStartersForMatch(oppClub);
+
+    const simRes = simQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub);
+    const homeScore = simRes.homeScore;
+    const awayScore = simRes.awayScore;
+    myMatch.homeScore = homeScore;
+    myMatch.awayScore = awayScore;
+    myMatch.played = true;
+
+    // 選手出場・疲労反映（プレシーズンは疲労半減）
+    applyPostMatchPlayerFatigue(playerClub);
+    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+    const cupRatings = calculateAndAssignMatchRatings(
+      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
+      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
+      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
+      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    );
+
+    const myScore = isHome ? homeScore : awayScore;
+    const oppScore = isHome ? awayScore : homeScore;
+    const userWon = myScore > oppScore;
+    const userDraw = myScore === oppScore;
+
+    // 親善大会賞金とボーナス
+    let prize = 300; // 参加賞 £300K
+    let fanGain = 400;
+    let moraleGain = 4;
+    if (userWon) {
+      prize += 500; // 勝利ボーナス +£500K
+      fanGain += 800;
+      moraleGain += 8;
+      if (roundNum === 3) {
+        prize += 1500; // 決勝制覇ボーナス +£1.5M
+        fanGain += 1500;
+        moraleGain += 15;
+      }
+    } else if (userDraw) {
+      prize += 200; // 引き分け +£200K
+      fanGain += 300;
+      moraleGain += 3;
+    }
+
+    playerClub.funds = (playerClub.funds || 0) + prize;
+    playerClub.fanCount = (playerClub.fanCount || 10000) + fanGain;
+    playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
+
+    const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
+    const finalBonusText = (roundNum === 3 && userWon) ? ' 🏆 WCTトロフィー獲得！' : '';
+    addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
+    if (typeof showToast === 'function') {
+      showToast(`WCT ${myMatch.roundName}：${resText}！ 賞金+${formatMoney(prize)}獲得！`, userWon ? 'success' : 'info');
+    }
+
+    currentDay.played = true;
+    currentDay.matchResult = {
+      isHome,
+      homeScore,
+      awayScore,
+      oppClub,
+      title: `WCT ${myMatch.roundName}`,
+      scorers: homeScorers.concat(awayScorers)
+    };
+
+    if (typeof openMatchSummaryModal === 'function') {
+      openMatchSummaryModal({
+        title: `WCT ${myMatch.roundName}`,
+        compCode: 'WCT',
+        isHome,
+        homeClub: isHome ? playerClub : oppClub,
+        awayClub: isHome ? oppClub : playerClub,
+        homeScore,
+        awayScore,
+        scorers: homeScorers.concat(awayScorers),
+        userWon,
+        userDraw,
+        playerRatings: cupRatings,
+        prize: `+${formatMoney(prize)}`,
+        fanGain: `+${fanGain}人`
+      });
+    }
+
+    renderAll();
+    return;
+  }
 
   // 1. 欧州リーグフェーズ（MD1〜8）の場合
   if (currentDay.cupCompType === 'euroLeaguePhase' || currentDay.euroMd) {
@@ -9873,6 +10020,13 @@ function dismissYouthCandidate(candidateId) {
 function handleGmDutyAction(actionKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
+  if (actionKey === 'open-gm-event') {
+    if (typeof openGmEventModal === 'function') {
+      openGmEventModal();
+    }
+    return;
+  }
+
   if (actionKey === 'goto-market-offers') {
     switchTab('market');
     switchMarketSubtab('offers');
@@ -12790,6 +12944,19 @@ function renderGmDuties() {
   }
 
   const duties = [];
+
+  // -1. GM緊急決断イベントが保留中の場合は最優先タスクとして表示
+  if (gameState.pendingGmEvent && !gameState.pendingGmEvent.resolved) {
+    const ev = gameState.pendingGmEvent;
+    duties.push({
+      level: 'critical',
+      badge: 'GM緊急決断 / URGENT',
+      title: `${ev.title}`,
+      desc: `${ev.description}`,
+      btnText: '決断を下す',
+      action: 'open-gm-event'
+    });
+  }
 
 
 

@@ -14978,3 +14978,121 @@ body {
   }
 }
 
+/* --- Phase 4: 選択式ランダムイベントシステム（GM業務イベント） --- */
+.gm-event-modal-card {
+  max-width: 640px;
+  width: 92vw;
+  max-height: 88vh;
+  border: 1px solid #3b4554;
+  border-top: 4px solid var(--accent-gold);
+  background: #181d24;
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.gm-event-header {
+  padding: 16px 20px 14px;
+  background: #14181f;
+  border-bottom: 1px solid #28303d;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.gm-event-modal-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gm-event-desc-box {
+  background: #1f2631;
+  border: 1px solid #2f3b4d;
+  border-left: 4px solid var(--accent-gold);
+  padding: 14px 16px;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.gm-event-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gm-event-option-card {
+  background: #141920;
+  border: 1px solid #2b3543;
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gm-event-option-card:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  background: #19202a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.gm-event-option-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gm-event-option-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.gm-event-option-title {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.gm-event-option-detail {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.gm-event-option-effect {
+  background: #0f1318;
+  border: 1px solid #222b37;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--accent-green);
+}
+
+.gm-event-option-effect .effect-label {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.btn-select-gm-option {
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 8px 16px;
+}
+
+
