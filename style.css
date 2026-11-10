@@ -13150,3 +13150,48 @@ button.hidden,
   text-align: center !important;
   box-sizing: border-box !important;
 }
+
+
+/* ==========================================================================
+   クラブエンブレム（バッジ）共通スタイル
+   ========================================================================== */
+.club-emblem {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  transition: transform 0.15s ease;
+}
+
+.team-cell-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.team-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.club-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.header-club-emblem {
+  flex-shrink: 0 !important;
+}
+
+#profile-club-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
