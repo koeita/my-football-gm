@@ -5810,24 +5810,41 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     margin: 0 !important;
   }
 
+  .header-utility-actions #btn-header-settings,
   .header-utility-actions #btn-return-title {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 2px 6px !important;
+    padding: 2px 7px !important;
     font-size: 10px !important;
     font-weight: 700 !important;
     min-height: 22px !important;
     height: 22px !important;
     line-height: 1 !important;
-    background-color: #262b31 !important;
-    border: 1px solid #3a4048 !important;
-    border-left: 3px solid #2ecc71 !important;
+    background-color: #20242a !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     color: #e6edf3 !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     white-space: nowrap !important;
     cursor: pointer !important;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4) !important;
+    gap: 4px !important;
+  }
+
+  .header-utility-actions #btn-header-settings .header-settings-icon {
+    width: 13px !important;
+    height: 13px !important;
+    stroke: #2ecc71 !important;
+    display: inline-block !important;
+    transition: transform 0.25s ease !important;
+  }
+
+  .header-utility-actions #btn-header-settings:active .header-settings-icon {
+    transform: rotate(45deg) !important;
+  }
+
+  .header-utility-actions #btn-header-settings .btn-text-pc {
+    display: none !important;
   }
 
   .header-utility-actions #btn-return-title .btn-text-pc {
@@ -8387,34 +8404,67 @@ body.main-menu-active {
   gap: 6px;
 }
 
+.header-utility-actions #btn-header-settings,
 .header-utility-actions #btn-return-title {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 12px;
   font-weight: 700;
-  padding: 5px 12px;
-  border-left: 3px solid #2ecc71;
-  background-color: #262b31;
-  border: 1px solid #3a4048;
+  padding: 4px 10px;
+  background-color: #20242a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-left: 3px solid #2ecc71;
   color: #e6edf3;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
+.header-utility-actions #btn-header-settings:hover,
 .header-utility-actions #btn-return-title:hover {
-  background-color: #2f353c;
+  background-color: #2a3038;
   border-color: #2ecc71;
 }
 
-.header-utility-actions #btn-return-title .btn-text-mob {
-  display: none;
+.header-utility-actions #btn-header-settings .header-settings-icon {
+  width: 15px;
+  height: 15px;
+  stroke: #2ecc71;
+  display: inline-block;
+  vertical-align: middle;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-utility-actions #btn-header-settings:hover .header-settings-icon {
+  transform: rotate(45deg);
+}
+
+.header-utility-actions #btn-header-settings .btn-text-pc {
+  display: inline;
 }
 
 .header-utility-actions #btn-open-intro {
   display: none !important;
+}
+
+.settings-select {
+  background-color: #1a1e24;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.settings-select:focus {
+  border-color: #2ecc71;
+}
+.settings-title-return-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 /* 殿堂・実績モーダル & 環境設定モーダル */
@@ -8830,8 +8880,35 @@ body.main-menu-active {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+.match-live-team.is-player {
+  background: rgba(46, 204, 113, 0.08);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+  border-radius: 6px;
+  padding: 3px 8px;
+  box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.15);
+}
+.match-live-team.is-opponent {
+  background: rgba(231, 76, 60, 0.05);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
 .match-live-team.is-player .match-live-team-name {
   color: var(--accent-green);
+}
+.match-live-you-tag {
+  display: inline-block;
+  background-color: #2ecc71;
+  color: #0d1117;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.1;
+  letter-spacing: 0.05em;
+  margin: 0 4px;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.6);
+  vertical-align: middle;
 }
 
 .match-live-team-sub {
@@ -9013,7 +9090,7 @@ body.main-menu-active {
   height: 18px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: left 0.26s ease-out, top 0.26s ease-out;
+  transition: left 0.35s cubic-bezier(0.25, 1, 0.5, 1), top 0.35s cubic-bezier(0.25, 1, 0.5, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9033,13 +9110,21 @@ body.main-menu-active {
   border: 1.5px solid #ffffff;
   color: #ffffff;
 }
+.pitch-2d-token.token-player {
+  box-shadow: 0 0 7px rgba(46, 204, 113, 0.8), 0 2px 5px rgba(0, 0, 0, 0.8);
+  border: 2px solid #ffffff !important;
+}
+.pitch-2d-token.token-opponent {
+  opacity: 0.92;
+  border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+}
 .pitch-2d-token.is-gk {
   background-color: #f1c40f;
   color: #111;
 }
 .pitch-2d-token.active-actor {
-  transform: translate(-50%, -50%) scale(1.32);
-  box-shadow: 0 0 10px #f1c40f;
+  transform: translate(-50%, -50%) scale(1.35);
+  box-shadow: 0 0 12px #f1c40f;
   z-index: 5;
 }
 
@@ -9048,7 +9133,7 @@ body.main-menu-active {
   font-size: 16px;
   line-height: 1;
   transform: translate(-50%, -50%);
-  transition: left 0.24s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.24s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: left 0.32s cubic-bezier(0.22, 1, 0.36, 1), top 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 6;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
   pointer-events: none;
@@ -9076,6 +9161,21 @@ body.main-menu-active {
 .match-pitch-event-popup.popup-save {
   border-color: #3498db;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 18px rgba(52, 152, 219, 0.35);
+}
+
+.match-pitch-event-popup.popup-player {
+  border-color: #2ecc71 !important;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px rgba(46, 204, 113, 0.45) !important;
+}
+.match-pitch-event-popup.popup-player .event-popup-badge {
+  color: #2ecc71 !important;
+}
+.match-pitch-event-popup.popup-opponent {
+  border-color: #e74c3c !important;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px rgba(231, 76, 60, 0.35) !important;
+}
+.match-pitch-event-popup.popup-opponent .event-popup-badge {
+  color: #ff6b6b !important;
 }
 
 @keyframes matchGoalPopIn {

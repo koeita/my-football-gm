@@ -232,5 +232,25 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("day.cupRoundKey === 'R32'", self.main_js)
         self.assertIn("roundText = '1回戦'", self.main_js)
 
+    def test_phase1_header_settings_and_match_team_distinction(self):
+        """フェーズ1: ヘッダー設定マークボタンと試合中チーム識別・滑らかな速度制御が存在すること"""
+        # 1. ヘッダー右上設定ボタン
+        self.assertIn('id="btn-header-settings"', self.index_html)
+        self.assertIn('.header-settings-icon', self.style_css)
+
+        # 2. 設定モーダル内のタイトルへ戻るボタン & 試合スピード設定
+        self.assertIn('id="btn-settings-return-title"', self.index_html)
+        self.assertIn('id="setting-match-speed"', self.index_html)
+
+        # 3. 試合中チーム識別（自チームハイライト・YOUタグ・トークン識別）
+        self.assertIn('match-live-you-tag', self.main_js)
+        self.assertIn('.match-live-team.is-player', self.style_css)
+        self.assertIn('.pitch-2d-token.token-player', self.style_css)
+        self.assertIn('popup-player', self.main_js)
+        self.assertIn('.match-pitch-event-popup.popup-player', self.style_css)
+
+        # 4. 試合スピードと連動したスムーズ移動
+        self.assertIn('cubic-bezier(0.25, 1, 0.5, 1)', self.main_js)
+
 if __name__ == '__main__':
     unittest.main()
