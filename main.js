@@ -1772,23 +1772,54 @@ function calculatePlayerMarketValue(player) {
   else if (age <= 34) ageFactor = 0.50;
   else ageFactor = 0.40;
 
-  // 契約残り補正：残り1年未満は市場価値が半減
+  // 契約残り年数による軽微な補正（市場価値そのものは実力・年齢ベースであり、契約年数で不自然に半減させない）
+  // 残り1年でも市場価値（客観的評価）の低下は最大-5%程度にとどめる
   let contractFactor = 1.0;
   const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
   if (contractYears <= 1) {
-    contractFactor = 0.50;
+    contractFactor = 0.95; // わずか5%の軽微補正（市場価値の崩落を防止）
   } else if (contractYears === 2) {
-    contractFactor = 0.85;
+    contractFactor = 0.98;
   } else if (contractYears >= 4) {
-    contractFactor = 1.15;
+    contractFactor = 1.05;
   }
 
   const fee = Math.round((baseVal * ageFactor * contractFactor) / 100) * 100;
   return clamp(fee, 200, 130000);
 }
 
+/**
+ * 移籍市場における要求移籍金（Ask Price / 取引目安価格）の算出
+ * 契約残り1年の選手はフリー流出を防ぐためのクラブ側の割引（15%〜25%引き、0.75倍〜0.88倍）が適用される。
+ * 若手（23歳以下）や高能力（OVR 80以上）の選手は争奪戦が起きるため、値引き幅が小さく抑えられる（0.85倍〜0.95倍）。
+ */
 function calculateTransferFee(player) {
-  return calculatePlayerMarketValue(player);
+  const marketVal = calculatePlayerMarketValue(player);
+  const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
+
+  if (contractYears <= 1) {
+    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || 70);
+    const age = player.age || 25;
+
+    let discountRatio = 0.80; // 基本は20%引き（0.80倍）
+
+    if (age <= 23 && ovr >= 80) {
+      discountRatio = 0.92; // 若手スター：8%引き（0.92倍）
+    } else if (age <= 23) {
+      discountRatio = 0.88; // 若手有望株：12%引き（0.88倍）
+    } else if (ovr >= 80) {
+      discountRatio = 0.86; // 主力・実力者：14%引き（0.86倍）
+    } else if (age >= 32) {
+      discountRatio = 0.75; // ベテラン：25%引き（0.75倍）
+    } else {
+      discountRatio = 0.80; // 中堅一般：20%引き（0.80倍）
+    }
+
+    const discountedFee = Math.round((marketVal * discountRatio) / 100) * 100;
+    return clamp(discountedFee, 200, 130000);
+  }
+
+  return marketVal;
 }
 
 /**
@@ -6535,7 +6566,7 @@ function renderNegotiationModal() {
   ` : `
     <div class="neg-demand-row">
       <span class="neg-demand-label">要求移籍金</span>
-      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (残1年割安)' : ''}</span>
+      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (契約最終年)' : ''}</span>
     </div>
     <div class="neg-demand-row">
       <span class="neg-demand-label">要求年俸</span>
@@ -7024,10 +7055,14 @@ function triggerIncomingTransferOffer(force = false) {
     isMegaClub = true;
   }
 
+  const marketVal = calculatePlayerMarketValue(target);
+  const isExpiring = (target.contractYears !== undefined ? target.contractYears : 2) <= 1;
+  // オファー額算出：通常は市場価値の 0.90倍〜1.35倍。契約残り1年の場合は手堅く0.78倍〜0.92倍（タダ同然の半額は防止）
+  const multiplier = isExpiring
+    ? (0.78 + Math.random() * 0.14) // 0.78..0.92（市場価値ベースで手堅いオファー）
+    : (0.90 + Math.random() * 0.45); // 0.90..1.35
   const baseValue = calculateTransferFee(target);
-  // オファー額：市場価値の 0.85倍〜1.35倍 の範囲でランダム提示、最大£120M前後に収める
-  const multiplier = 0.85 + Math.random() * 0.50; // 0.85..1.35
-  let offerFee = Math.round((baseValue * multiplier) / 100) * 100;
+  let offerFee = Math.round((marketVal * multiplier) / 100) * 100;
   offerFee = clamp(offerFee, 300, 120000); // 最小300k、最大120M
   const counterFee = clamp(Math.round((offerFee * 1.18) / 100) * 100, offerFee + 200, 125000);
 
@@ -9707,7 +9742,7 @@ function renderShortlist() {
     const ovr = getPlayerOverallRating(p);
     const fee = calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・約50%割安</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
 
     const activeOutOffer = (gameState.outgoingOffers || []).find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
@@ -10117,7 +10152,7 @@ function renderMarket() {
     const ovr = getPlayerOverallRating(p);
     const fee = calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">残1年・約50%割安</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
     const footBadge = formatFootBadge(p);
