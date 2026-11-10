@@ -12966,3 +12966,114 @@ button.hidden,
 .btn-offers-toggle.active .offers-toggle-badge.has-items {
   color: #721c24 !important;
 }
+
+
+/* ==========================================================================
+   フリー移籍（事前合意・無所属獲得）＆ レンタル移籍（LOAN IN / OUT）用スタイル
+   ========================================================================== */
+
+/* 選手バッジ */
+.badge-loan {
+  background-color: rgba(155, 89, 182, 0.22);
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.5);
+  font-weight: 700;
+}
+
+.badge-loanout {
+  background-color: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+}
+
+.badge-loanlisted {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+}
+
+.badge-precontract {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  font-weight: 700;
+}
+
+.badge-free {
+  background-color: rgba(234, 179, 8, 0.18);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.45);
+}
+
+/* ピッチノード上のLOANバッジ */
+.pitch-node-loan {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  letter-spacing: 0.5px;
+}
+
+/* 交渉モーダル内 取引種別切り替えタブ */
+.neg-dealtype-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: rgba(13, 17, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.btn-dealtype {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted, #8b949e);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.btn-dealtype:hover:not(:disabled) {
+  color: #f0f6fc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-dealtype.active {
+  background: rgba(46, 204, 113, 0.18);
+  color: var(--accent-green, #2ecc71);
+  border-color: rgba(46, 204, 113, 0.4);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.neg-dealtype-pill {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 6px;
+}
+
+.btn-loan-listing {
+  font-size: 11px;
+  padding: 2px 8px;
+}
