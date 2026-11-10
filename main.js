@@ -3275,7 +3275,14 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
-  // 3. const isNextDayMatch = Boolean(nextDay.isMatchDay && !nextDay.played);
+  // 3. 次の日の試合判定および重要オファー返答イベント判定
+  const isNextDayMatch = Boolean(nextDay.isMatchDay && !nextDay.played);
+
+  if (outgoingResponded) {
+    // 送信オファーの回答が返ってきた場合は確実にカレンダー進行を停止
+    stopAdvancingCalendar();
+    eventTriggered = true;
+  }
 
   if (isNextDayMatch || eventTriggered) {
     if (!skipRender) {
@@ -6072,7 +6079,7 @@ function computeStatGrowth(player, isPlayerClub = false) {
   let dDef = randInt(defRange[0], defRange[1]);
   let dSta = randInt(staRange[0], staRange[1]);
 
-  // 武者修行（レンタル放出中）の若手選手は成長率が通常控え時の+30%加速
+  // レンタル（レンタル放出中）の若手選手は成長率が通常控え時の+30%加速
   if (player.loanStatus && player.loanStatus.isLoanOut) {
     if (dAtk > 0) dAtk = Math.max(dAtk + 1, Math.round(dAtk * 1.30));
     if (dDef > 0) dDef = Math.max(dDef + 1, Math.round(dDef * 1.30));
@@ -6411,7 +6418,7 @@ function isPreContractEligible(player) {
 }
 
 /**
- * 22歳以下の若手選手の武者修行（レンタル放出）リスト登録トグル
+ * 22歳以下の若手選手のレンタル（レンタル放出）リスト登録トグル
  */
 function toggleLoanListing(playerId) {
   const playerClub = getPlayerClub();
@@ -6421,21 +6428,21 @@ function toggleLoanListing(playerId) {
 
   p.isLoanListed = !p.isLoanListed;
   if (p.isLoanListed) {
-    addDailyLog(`【武者修行リスト登録】#${p.squadNumber || '-'} ${p.name} (22歳以下) をレンタル放出（武者修行）リストに設定しました。他クラブから打診が届くようになります。`);
+    addDailyLog(`【レンタル放出登録】#${p.squadNumber || '-'} ${p.name} (22歳以下) をレンタル放出（レンタル）リストに設定しました。他クラブから打診が届くようになります。`);
     if (typeof showToast === 'function') {
-      showToast(`${p.name}を武者修行リストに登録しました`);
+      showToast(`${p.name}をレンタル放出リストに登録しました`);
     }
   } else {
-    addDailyLog(`【武者修行解除】#${p.squadNumber || '-'} ${p.name} のレンタル放出設定を解除しました。`);
+    addDailyLog(`【レンタル放出解除】#${p.squadNumber || '-'} ${p.name} のレンタル放出設定を解除しました。`);
     if (typeof showToast === 'function') {
-      showToast(`${p.name}の武者修行設定を解除しました`);
+      showToast(`${p.name}のレンタル放出設定を解除しました`);
     }
   }
   renderAll();
 }
 
 /**
- * 移籍ウィンドウ期間中の武者修行打診オファー発生処理
+ * 移籍ウィンドウ期間中のレンタル打診オファー発生処理
  */
 function triggerLoanListingOffers() {
   const playerClub = getPlayerClub();
@@ -6475,9 +6482,9 @@ function triggerLoanListingOffers() {
   };
 
   gameState.incomingOffers.unshift(loanOffer);
-  addDailyLog(`【レンタル打診】${buyerName} から武者修行中の ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し、1年間の期限付き移籍（給与100%相手負担）の打診が届きました！`);
+  addDailyLog(`【レンタル打診】${buyerName} からレンタル放出リストの ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し、1年間の期限付き移籍（給与100%相手負担）の打診が届きました！`);
   if (typeof showToast === 'function') {
-    showToast(`【武者修行打診】${buyerName}より${target.name}へのレンタルオファーが届きました`);
+    showToast(`【レンタル打診】${buyerName}より${target.name}へのレンタルオファーが届きました`);
   }
   return true;
 }
@@ -7574,10 +7581,9 @@ function cancelOutgoingOffer(offerId) {
 function triggerIncomingTransferOffer(force = false) {
   const playerClub = getPlayerClub();
   if (!playerClub || playerClub.players.length <= 11) return false;
-  if (!gameState.incomingOffers) 
-  gameState.incomingOffers = [];
-  gameState.outgoingOffers = [];
-  gameState.offersSubtab = 'incoming';
+  if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
+  if (!Array.isArray(gameState.outgoingOffers)) gameState.outgoingOffers = [];
+  if (!gameState.offersSubtab) gameState.offersSubtab = 'incoming';
   if (gameState.incomingOffers.length >= 6) return false;
 
   const currentDay = getCurrentCalendarDay();
@@ -7761,7 +7767,7 @@ function acceptIncomingOffer(offerId) {
     return;
   }
 
-  // レンタル打診（武者修行）の場合
+  // レンタル打診（レンタル）の場合
   if (offer.isLoanOffer) {
     target.loanStatus = {
       isLoanOut: true,
@@ -7774,9 +7780,9 @@ function acceptIncomingOffer(offerId) {
     offer.status = 'accepted';
     ensureValidSquadAndStarters(playerClub);
 
-    addDailyLog(`【武者修行へ出発】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
+    addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
     if (typeof showToast === 'function') {
-      showToast(`【武者修行】${target.name}が${offer.buyerClubName}へレンタル移籍しました`);
+      showToast(`【レンタル】${target.name}が${offer.buyerClubName}へレンタル移籍しました`);
     }
     updateMarketBadges();
     renderAll();
@@ -8830,10 +8836,10 @@ function startNextSeason() {
     playerClub.players = playerClub.players.filter(p => !p.loanStatus || !p.loanStatus.isLoan);
   }
 
-  // 2. レンタル放出（武者修行）選手の成長復帰
+  // 2. レンタル放出（レンタル）選手の成長復帰
   playerClub.players.forEach(p => {
     if (p.loanStatus && p.loanStatus.isLoanOut) {
-      addDailyLog(`🎉【武者修行から頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間の武者修行を終え、実力を高めてチームへ合流しました！`);
+      addDailyLog(`🎉【レンタルから頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間のレンタル期間を終え、実力を高めてチームへ合流しました！`);
       p.loanStatus = null;
       p.isLoanListed = false;
     }
@@ -10122,13 +10128,13 @@ function renderRoster() {
       demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
     }
 
-    // 22歳以下の若手に対する「武者修行（レンタル放出）」ボタン
+    // 22歳以下の若手に対する「レンタル（レンタル放出）」ボタン
     let loanListingBtnHtml = '';
     if (p.age <= 22 && !p.isStarter && (!p.loanStatus || !p.loanStatus.isLoanOut) && !p.loanStatus?.isLoan) {
       if (p.isLoanListed) {
-        loanListingBtnHtml = `<button type="button" class="btn btn-outline btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="武者修行リストから解除" style="color:#f39c12;border-color:#f39c12;">修行解除</button>`;
+        loanListingBtnHtml = `<button type="button" class="btn btn-outline btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="レンタルリストから解除" style="color:#f39c12;border-color:#f39c12;">レンタル解除</button>`;
       } else {
-        loanListingBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="他クラブへの1年間武者修行（レンタル放出）リストに設定（成長加速ボーナス+30%）">武者修行</button>`;
+        loanListingBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="他クラブへの1年間レンタル（レンタル放出）リストに設定（成長加速ボーナス+30%）">レンタル</button>`;
       }
     }
 
@@ -10154,8 +10160,8 @@ function renderRoster() {
     const refusedBadge = p.contractRefused ? `<span class="sub-badge badge-refused">流出確定</span>` : '';
     const moraleBadge = (!p.contractRefused && p.megaOfferRejected) ? `<span class="sub-badge badge-morale-down">昇給要求</span>` : '';
     const loanInBadge = p.loanStatus?.isLoan ? '<span class="sub-badge badge-loan">LOAN</span>' : '';
-    const loanOutBadge = p.loanStatus?.isLoanOut ? `<span class="sub-badge badge-loanout">修行中(${p.loanStatus.toClubName})</span>` : '';
-    const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">修行募集</span>' : '';
+    const loanOutBadge = p.loanStatus?.isLoanOut ? `<span class="sub-badge badge-loanout">レンタル中(${p.loanStatus.toClubName})</span>` : '';
+    const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">レンタル募集中</span>' : '';
     const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
     let ovrDisplay = `<strong>${effOvr}</strong>`;
@@ -10205,13 +10211,15 @@ function renderRoster() {
           <span class="text-muted" style="font-size:10px;">(${formatMoney(p.salary)})</span>
         </td>
         <td class="col-action">
-          <div class="action-btn-group">
-            ${extendBtnHtml}
-            ${loanListingBtnHtml}
-            ${demoteBtnHtml}
-            <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
-              ${releaseBtnLabel}
-            </button>
+          <div class="action-btn-group action-btn-grid">
+            <div class="action-slot slot-extend">${extendBtnHtml}</div>
+            <div class="action-slot slot-loan">${loanListingBtnHtml}</div>
+            <div class="action-slot slot-demote">${demoteBtnHtml}</div>
+            <div class="action-slot slot-release">
+              <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
+                ${releaseBtnLabel}
+              </button>
+            </div>
           </div>
         </td>
       </tr>
@@ -10335,8 +10343,8 @@ function switchFacilitiesSubtab(subtabKey) {
 function updateMarketBadges() {
   const shortlistCount = (gameState.targetShortlist || []).length;
   
-  // アクティブなオファー件数（未完了）
-  const incomingActiveCount = (gameState.incomingOffers || []).filter(o => o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed').length;
+  // アクティブなオファー件数（未完了かつ期限内のもののみカウント）
+  const incomingActiveCount = (gameState.incomingOffers || []).filter(o => (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)).length;
   const outgoingActiveCount = (gameState.outgoingOffers || []).filter(o => o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter').length;
   const totalActiveOffers = incomingActiveCount + outgoingActiveCount;
 
@@ -10527,14 +10535,23 @@ function renderIncomingOffers() {
           <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">見送り (CANCEL)</button>
         `;
       } else if (offer.status === 'signed') {
-        statusBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.8;">加入完了</span>`;
-        actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">契約成立・チーム加入済み</span>`;
+        statusBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.9;">加入完了</span>`;
+        actionButtons = `
+          <span class="mono accent-green" style="font-size: 11.5px; padding: 4px;">契約成立・チーム加入済み</span>
+          <button type="button" class="btn btn-outline btn-sm btn-outgoing-remove" data-outgoing-remove="${offer.id}" style="font-size: 11px; padding: 2px 8px; opacity: 0.7;" title="この履歴を一覧から消去">履歴削除</button>
+        `;
       } else if (offer.status === 'rejected') {
         statusBadge = `<span class="offer-deadline-badge mono text-danger" style="border: 1px solid rgba(231, 76, 60, 0.4); background: rgba(231, 76, 60, 0.1);">交渉決裂（相手拒絶）</span>`;
-        actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">オファーは拒絶されました</span>`;
+        actionButtons = `
+          <span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">オファーは拒絶されました</span>
+          <button type="button" class="btn btn-outline btn-sm btn-outgoing-remove" data-outgoing-remove="${offer.id}" style="font-size: 11px; padding: 2px 8px; opacity: 0.7;" title="この履歴を一覧から消去">履歴削除</button>
+        `;
       } else {
         statusBadge = `<span class="offer-deadline-badge mono text-muted">撤回済み</span>`;
-        actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">撤回済み</span>`;
+        actionButtons = `
+          <span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">撤回済み</span>
+          <button type="button" class="btn btn-outline btn-sm btn-outgoing-remove" data-outgoing-remove="${offer.id}" style="font-size: 11px; padding: 2px 8px; opacity: 0.7;" title="この履歴を一覧から消去">履歴削除</button>
+        `;
       }
 
       return `
@@ -10631,9 +10648,9 @@ function renderIncomingOffers() {
     } else {
       // 通常の pending
       if (offer.isLoanOffer) {
-        deadlineBadge = `<div class="offer-deadline-badge mono accent-green">武者修行打診（残り${offer.daysLeft}日）</div>`;
+        deadlineBadge = `<div class="offer-deadline-badge mono accent-green">レンタル打診（残り${offer.daysLeft}日）</div>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">武者修行へ送り出す (承諾)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">レンタルへ送り出す (承諾)</button>
           <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる (拒絶)</button>
         `;
       } else {
@@ -10679,7 +10696,7 @@ function renderIncomingOffers() {
         <div class="offer-card-finances">
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '取引種別' : '提示移籍金'}</span>
-            <span class="offer-finance-val ${offer.isLoanOffer ? 'accent-green' : 'accent-gold'} mono">${offer.isLoanOffer ? '1年レンタル (武者修行)' : formatMoney(offer.offerFee)}</span>
+            <span class="offer-finance-val ${offer.isLoanOffer ? 'accent-green' : 'accent-gold'} mono">${offer.isLoanOffer ? '1年レンタル (レンタル)' : formatMoney(offer.offerFee)}</span>
           </div>
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '給与負担' : '選手週給'}</span>
@@ -11013,14 +11030,21 @@ function renderGmDuties() {
   }
   duties.push(criticalDuty);
 
-  // 2. 推奨タスク（RECOMMENDED）
-  if (gameState.incomingOffers && gameState.incomingOffers.length > 0) {
-    const firstOffer = gameState.incomingOffers[0];
+  // 2. 推奨タスク（RECOMMENDED）：期限内のアクティブな受信オファーのみ対象
+  const activeIncomingOffers = (gameState.incomingOffers || []).filter(o => 
+    (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)
+  );
+  if (activeIncomingOffers.length > 0) {
+    const firstOffer = activeIncomingOffers[0];
+    const typeLabel = firstOffer.isLoanOffer ? 'レンタル打診' : '買取打診';
+    const descText = firstOffer.isLoanOffer
+      ? `${firstOffer.buyerClubName} より1年間のレンタル打診（給与相手100%負担）が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「オファー」タブで承諾または拒否を選択してください。`
+      : `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「オファー」タブで承諾・拒否・上乗せを検討してください。`;
     duties.push({
       level: 'recommended',
       badge: '推奨',
-      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への買取打診 (${gameState.incomingOffers.length}件)`,
-      desc: `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「移籍」タブで承諾・拒否・上乗せを検討してください。`,
+      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への${typeLabel} (${activeIncomingOffers.length}件)`,
+      desc: descText,
       btnText: 'オファー確認',
       action: 'goto-market-offers'
     });
@@ -13790,6 +13814,20 @@ function initGame() {
       return;
     }
 
+    // 送信オファー：履歴削除
+    const removeBtn = e.target.closest('[data-outgoing-remove]');
+    if (removeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const offerId = removeBtn.getAttribute('data-outgoing-remove') || removeBtn.dataset.outgoingRemove;
+      if (Array.isArray(gameState.outgoingOffers)) {
+        gameState.outgoingOffers = gameState.outgoingOffers.filter(o => o.id !== offerId);
+        updateMarketBadges();
+        renderAll();
+      }
+      return;
+    }
+
     // 送信オファー：オファー撤回・キャンセル
     const cancelBtn = e.target.closest('[data-outgoing-cancel]');
     if (cancelBtn) {
@@ -13807,7 +13845,7 @@ function initGame() {
   }
   // 万一コンテナ外や再描画タイミングで外れても確実に動作するグローバル委譲
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-offer-accept], [data-offer-reject], [data-offer-counter], [data-outgoing-sign], [data-outgoing-cancel], [data-outgoing-accept-counter]')) {
+    if (e.target.closest('[data-offer-accept], [data-offer-reject], [data-offer-counter], [data-outgoing-sign], [data-outgoing-cancel], [data-outgoing-accept-counter], [data-outgoing-remove]')) {
       handleOfferActions(e);
     }
   });
