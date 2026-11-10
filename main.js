@@ -5564,18 +5564,29 @@ function showMatchPitchPopup(ev) {
   }
 
   const isGoal = ev.type === 'goal';
-  const isPlayerAction = Boolean(ev.club && ev.club.isPlayer);
-  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'} ${isPlayerAction ? 'popup-player' : 'popup-opponent'}`;
+  const md = matchLiveState.matchData;
+  const homeClub = md ? md.homeClub : null;
+  const awayClub = md ? md.awayClub : null;
+
+  // スーパーセーブの主役は守護神（キーパー）！
+  // シューター側がhomeならkeeperはaway、シューター側がawayならkeeperはhome
+  const keeperClub = ev.side === 'home' ? awayClub : homeClub;
+  const isPlayerSuccess = isGoal
+    ? Boolean(ev.club && ev.club.isPlayer)
+    : Boolean(keeperClub && keeperClub.isPlayer);
+
+  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'} ${isPlayerSuccess ? 'popup-player' : 'popup-opponent'}`;
 
   const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
-  const playerPrefix = isPlayerAction ? '【自チーム】' : '【相手チーム】';
+  const targetClub = isGoal ? ev.club : (keeperClub || ev.club);
+  const playerPrefix = isPlayerSuccess ? '【自チーム】' : '【相手チーム】';
   const badgeText = isGoal ? `⚽ GOAL!! (${ev.minute}')` : `🧤 SUPER SAVE! (${ev.minute}')`;
   const subText = isGoal
     ? `${playerPrefix} ${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
-    : `${playerPrefix} ${ev.actor ? ev.actor.name : ''} の決定機を阻止！`;
+    : `${playerPrefix} GK ${targetPlayer ? targetPlayer.name : ''}（${targetClub ? targetClub.name : ''}）が決定機を阻止！`;
   const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
-  const avatarHtml = (targetPlayer && typeof getPlayerAvatarHtml === 'function')
-    ? getPlayerAvatarHtml(targetPlayer, ev.club, 'avatar-md', 42)
+  const avatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
+    ? getPlayerAvatarHtml(targetPlayer, targetClub, 'avatar-md', 42)
     : '';
 
   popupEl.innerHTML = `
