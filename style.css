@@ -13586,6 +13586,13 @@ button.hidden,
   min-height: 400px;
 }
 
+.comp-bracket-wrapper.standings-view,
+.comp-bracket-wrapper:has(.euro-standings-table),
+.comp-bracket-wrapper:has(.standings-table) {
+  padding: 0 !important;
+  overflow-x: hidden !important;
+}
+
 .cup-bracket-container {
   display: flex;
   flex-direction: column;
