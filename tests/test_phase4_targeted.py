@@ -55,5 +55,16 @@ class TestPhase4Targeted(unittest.TestCase):
         # openMatchPrecheckModal がカップ戦にも対応していること
         self.assertIn("getCalendarDayPlayerMatch(currentDay)", self.main_js)
 
+    def test_weekly_schedule_and_cup_match_viewing(self):
+        """週間カレンダーへの表記とカップ戦・欧州戦の試合観戦（2Dピッチモーダル）連携を検証"""
+        # 週間カレンダーで getCalendarDayPlayerMatch を使用して対戦表記すること
+        self.assertIn("getCalendarDayPlayerMatch(day)", self.main_js)
+        # playCurrentCupMatchday から openMatchEventModal を呼び出して観戦できること
+        self.assertIn("openMatchEventModal(matchData", self.main_js)
+        # 仮想スタメン保証関数が存在すること
+        self.assertIn("ensureClubStartersForMatch", self.main_js)
+        # スコアラー自動生成関数が存在すること
+        self.assertIn("generateScorersForQuickMatch", self.main_js)
+
 if __name__ == '__main__':
     unittest.main()

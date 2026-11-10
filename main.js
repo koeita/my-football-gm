@@ -3760,7 +3760,66 @@ function stopAdvancingCalendar() {
  * 本日のMatchday（試合日）の試合を消化する
  */
 /**
- * 本日のカップ戦（ミッドウィーク）の試合を消化する
+ * カップ戦・欧州戦用のスコアラー自動選定
+ */
+function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore) {
+  const homeStarters = ensureClubStartersForMatch(homeClub);
+  const awayStarters = ensureClubStartersForMatch(awayClub);
+
+  const pickScorer = (starters) => {
+    const fwMf = starters.filter(p => ['CF', 'LW', 'RW', 'ST', 'AM', 'CM', 'LM', 'RM'].includes(p.assignedPos || p.pos));
+    const pool = fwMf.length > 0 ? fwMf : starters.slice(1);
+    return pool[Math.floor(Math.random() * pool.length)] || starters[0];
+  };
+
+  const homeScorers = [];
+  for (let i = 0; i < homeScore; i++) {
+    const p = pickScorer(homeStarters);
+    const minute = Math.floor(Math.random() * 88) + 2;
+    if (homeClub.isPlayer && p) {
+      p.goals = (p.goals || 0) + 1;
+      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+    }
+    homeScorers.push({ minute, scorer: p, name: p.name });
+  }
+
+  const awayScorers = [];
+  for (let i = 0; i < awayScore; i++) {
+    const p = pickScorer(awayStarters);
+    const minute = Math.floor(Math.random() * 88) + 2;
+    if (awayClub.isPlayer && p) {
+      p.goals = (p.goals || 0) + 1;
+      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+    }
+    awayScorers.push({ minute, scorer: p, name: p.name });
+  }
+
+  homeScorers.sort((a, b) => a.minute - b.minute);
+  awayScorers.sort((a, b) => a.minute - b.minute);
+  return { homeScorers, awayScorers };
+}
+
+/**
+ * 試合出場選手の疲労・スタミナ消費および特訓進行
+ */
+function applyPostMatchPlayerFatigue(club) {
+  if (!club || !club.players) return;
+  const starters = club.players.filter(p => p.isStarter);
+  starters.forEach(p => {
+    p.appearances = (p.appearances || 0) + 1;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
+    p.sta = Math.max(20, (p.sta || 100) - Math.floor(Math.random() * 8 + 12));
+    if (club.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
+      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
+    }
+  });
+}
+
+/**
+ * 本日のカップ戦（ミッドウィーク / 欧州戦）の試合を消化する（2Dピッチ観戦対応）
  */
 function playCurrentCupMatchday(skipAnimation = false) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
@@ -3768,57 +3827,182 @@ function playCurrentCupMatchday(skipAnimation = false) {
   const currentDay = getCurrentCalendarDay();
   if (!currentDay || !currentDay.isCupMatchDay || currentDay.played) return;
 
-  if (currentDay.cupCompType === 'euroLeaguePhase') {
-    // 欧州リーグフェーズでの自クラブ試合消化
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  // 1. 欧州リーグフェーズ（MD1〜8）の場合
+  if (currentDay.cupCompType === 'euroLeaguePhase' || currentDay.euroMd) {
     const euroMd = currentDay.euroMd || 1;
-    const euroRes = advanceEuroLeaguePhase(euroMd);
+    const euroRes = typeof advanceEuroLeaguePhase === 'function' ? advanceEuroLeaguePhase(euroMd) : null;
     const myMatch = euroRes && euroRes.playerMatch;
-    const playerClub = getPlayerClub();
-    if (!myMatch || !playerClub) {
+    const comp = (euroRes && euroRes.playerComp) || (gameState.competitions && gameState.competitions.championsCup);
+
+    // 自クラブが不出場または試合なし
+    if (!myMatch || !comp) {
       currentDay.played = true;
       startAdvancingToNextMatch();
       return;
     }
+
     const isHome = myMatch.homeId === playerClub.id;
     const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
+    ensureClubStartersForMatch(playerClub);
+    ensureClubStartersForMatch(oppClub);
+
     const simRes = simQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub);
-    myMatch.homeScore = simRes.homeScore;
-    myMatch.awayScore = simRes.awayScore;
+    const homeScore = simRes.homeScore;
+    const awayScore = simRes.awayScore;
+    myMatch.homeScore = homeScore;
+    myMatch.awayScore = awayScore;
     myMatch.played = true;
 
-    const comp = euroRes.playerComp;
+    // 星取表・順位表の更新
     const h = comp.participants.find(c => c.id === myMatch.homeId);
     const a = comp.participants.find(c => c.id === myMatch.awayId);
     if (h && a) {
       h.played++;
       a.played++;
-      h.gf += simRes.homeScore;
-      h.ga += simRes.awayScore;
-      a.gf += simRes.awayScore;
-      a.ga += simRes.homeScore;
+      h.gf += homeScore;
+      h.ga += awayScore;
+      a.gf += awayScore;
+      a.ga += homeScore;
       h.gd = h.gf - h.ga;
       a.gd = a.gf - a.ga;
-      if (simRes.homeScore > simRes.awayScore) { h.won++; h.pts += 3; a.lost++; }
-      else if (simRes.homeScore < simRes.awayScore) { a.won++; a.pts += 3; h.lost++; }
+      if (homeScore > awayScore) { h.won++; h.pts += 3; a.lost++; }
+      else if (homeScore < awayScore) { a.won++; a.pts += 3; h.lost++; }
       else { h.drawn++; a.drawn++; h.pts++; a.pts++; }
     }
 
-    currentDay.played = true;
-    const myScore = isHome ? simRes.homeScore : simRes.awayScore;
-    const oppScore = isHome ? simRes.awayScore : simRes.homeScore;
-    const resText = myScore > oppScore ? '勝利！' : (myScore < oppScore ? '敗戦' : '引分');
+    // 選手出場・疲労反映
+    applyPostMatchPlayerFatigue(playerClub);
+    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+
+    const myScore = isHome ? homeScore : awayScore;
+    const oppScore = isHome ? awayScore : homeScore;
+    const userWon = myScore > oppScore;
+    const userDraw = myScore === oppScore;
+    const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
     addDailyLog(`【${comp.name} 第${euroMd}節】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}`);
-    showGmModal({
-      category: `EUROPEAN LEAGUE / ${comp.shortCode}`,
-      title: `${comp.name} リーグフェーズ第${euroMd}節 試合結果`,
-      description: `vs ${oppClub.name}（${isHome ? 'HOME' : 'AWAY'}）の欧州リーグ戦が終了しました。試合結果は ${myScore} - ${oppScore} で${resText}です。`,
-      detailHtml: `自クラブ: ${playerClub.name} ${myScore}<br>対戦相手: ${oppClub.name} ${oppScore}`,
-      actions: [{ label: '確認して次へ', className: 'btn btn-primary', onClick: () => renderAll() }]
+
+    const matchData = {
+      week: euroMd,
+      compTitle: `${comp.name} リーグフェーズ第${euroMd}節`,
+      isEuroLeague: true,
+      isKnockout: false,
+      userWon,
+      homeClub: isHome ? playerClub : oppClub,
+      awayClub: isHome ? oppClub : playerClub,
+      homeScore,
+      awayScore,
+      homePossession: simRes.homePossession || (userWon ? 54 : 46),
+      awayPossession: 100 - (simRes.homePossession || (userWon ? 54 : 46)),
+      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
+      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
+      awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
+      isPlayerHome: isHome,
+      isPlayerMatch: true,
+      matchIncome: isHome ? Math.round(playerClub.supporters * 0.12 * 80) : 0,
+      awayBroadcastingFee: !isHome ? 2200 : 0,
+      playerSupportersDelta: userWon ? 180 : (userDraw ? 40 : -50),
+      homeScorers,
+      awayScorers
+    };
+
+    currentDay.played = true;
+
+    if (skipAnimation) {
+      renderAll();
+      return;
+    }
+
+    openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      renderAll();
     });
-    renderAll();
     return;
   }
 
+  // 2. 欧州プレーオフ（PO）の場合
+  if (currentDay.cupCompType === 'euroPlayoff') {
+    const poRes = typeof advanceEuroPlayoffRound === 'function' ? advanceEuroPlayoffRound() : null;
+    const myMatch = poRes && poRes.playerMatch;
+    const comp = poRes && poRes.playerComp;
+
+    if (!myMatch || !comp) {
+      currentDay.played = true;
+      startAdvancingToNextMatch();
+      return;
+    }
+
+    const isHome = myMatch.homeId === playerClub.id;
+    const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
+    ensureClubStartersForMatch(playerClub);
+    ensureClubStartersForMatch(oppClub);
+
+    const simRes = simKnockoutMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub);
+    const homeScore = simRes.homeScore;
+    const awayScore = simRes.awayScore;
+    const userWon = simRes.winnerId === playerClub.id;
+
+    myMatch.homeScore = homeScore;
+    myMatch.awayScore = awayScore;
+    myMatch.winnerId = simRes.winnerId;
+    myMatch.played = true;
+
+    applyPostMatchPlayerFatigue(playerClub);
+    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+
+    const myScore = isHome ? homeScore : awayScore;
+    const oppScore = isHome ? awayScore : homeScore;
+    const pkText = simRes.pkHome != null ? ` (PK ${simRes.pkHome}-${simRes.pkAway})` : '';
+    const resText = userWon ? '勝利・決勝T進出！' : '惜敗・欧州敗退';
+    addDailyLog(`【${comp.name} PO】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resText}`);
+
+    const matchData = {
+      week: 'PO',
+      compTitle: `${comp.name} 決勝T進出プレーオフ`,
+      isEuroLeague: false,
+      isKnockout: true,
+      userWon,
+      pkHome: simRes.pkHome,
+      pkAway: simRes.pkAway,
+      homeClub: isHome ? playerClub : oppClub,
+      awayClub: isHome ? oppClub : playerClub,
+      homeScore,
+      awayScore,
+      homePossession: simRes.homePossession || (userWon ? 53 : 47),
+      awayPossession: 100 - (simRes.homePossession || (userWon ? 53 : 47)),
+      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
+      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
+      awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
+      isPlayerHome: isHome,
+      isPlayerMatch: true,
+      matchIncome: isHome ? Math.round(playerClub.supporters * 0.12 * 80) : 0,
+      awayBroadcastingFee: !isHome ? 2500 : 0,
+      playerSupportersDelta: userWon ? 200 : -60,
+      homeScorers,
+      awayScorers
+    };
+
+    currentDay.played = true;
+
+    if (skipAnimation) {
+      renderAll();
+      return;
+    }
+
+    openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      renderAll();
+    });
+    return;
+  }
+
+  // 3. 国内カップ戦（リーグ杯 / ナショナル杯）または欧州決勝トーナメント
   const compType = currentDay.cupCompType;
   const roundKey = currentDay.cupRoundKey;
   const comp = gameState.competitions && gameState.competitions[compType];
@@ -3828,55 +4012,84 @@ function playCurrentCupMatchday(skipAnimation = false) {
     return;
   }
 
-  const playerClub = getPlayerClub();
   const roundMatches = comp.rounds[roundKey];
   const myMatch = roundMatches.find(m => (m.homeId === playerClub.id || m.awayId === playerClub.id) && !m.played);
 
   if (!myMatch) {
+    // 自クラブが敗退または不出場：他クラブの対戦を自動シミュレート
+    if (typeof processCupMatchDay === 'function') {
+      processCupMatchDay(compType, roundKey);
+    }
     currentDay.played = true;
     startAdvancingToNextMatch();
     return;
   }
 
   // 他クラブの対戦を高速ダイジェスト計算
-  processCupMatchDay(compType, roundKey);
+  if (typeof processCupMatchDay === 'function') {
+    processCupMatchDay(compType, roundKey);
+  }
 
   // 自クラブの対戦カード計算
   const isHome = myMatch.homeId === playerClub.id;
   const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
+  ensureClubStartersForMatch(playerClub);
+  ensureClubStartersForMatch(oppClub);
 
   const simRes = simKnockoutMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub);
-  const userWon = isHome ? (simRes.winnerId === playerClub.id) : (simRes.winnerId === playerClub.id);
   const homeScore = simRes.homeScore;
   const awayScore = simRes.awayScore;
+  const userWon = isHome ? (simRes.winnerId === playerClub.id) : (simRes.winnerId === playerClub.id);
 
   finalizeCupMatch(compType, roundKey, myMatch, userWon, homeScore, awayScore, simRes.pkHome, simRes.pkAway);
+  applyPostMatchPlayerFatigue(playerClub);
+  const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+
   currentDay.played = true;
 
   const myScore = isHome ? homeScore : awayScore;
   const oppScore = isHome ? awayScore : homeScore;
   const pkText = simRes.pkHome != null ? ` (PK ${isHome ? simRes.pkHome : simRes.pkAway}-${isHome ? simRes.pkAway : simRes.pkHome})` : '';
   const resultText = userWon ? '勝利・次ラウンド進出！' : '惜敗・敗退';
-
   addDailyLog(`【${comp.name} ${currentDay.cupLabel || roundKey}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resultText}`);
 
-  showGmModal({
-    category: `CUP MATCH / ${comp.shortCode}`,
-    title: `${comp.name} ${currentDay.cupLabel || roundKey} 試合結果`,
-    description: `vs ${oppClub.name}（${isHome ? 'HOME' : 'AWAY'}）のカップ戦が終了しました。試合結果は ${myScore} - ${oppScore}${pkText} で${resultText}です。`,
-    detailHtml: `自クラブ: ${playerClub.name} ${myScore}<br>対戦相手: ${oppClub.name} ${oppScore}${pkText}<br>進出状況: <strong>${userWon ? '次ラウンド進出' : '大会敗退'}</strong>`,
-    actions: [
-      {
-        label: '試合結果を確認して次へ',
-        className: 'btn btn-primary',
-        onClick: () => {
-          renderAll();
-        }
-      }
-    ]
-  });
+  const matchData = {
+    week: roundKey,
+    compTitle: `${comp.name} ${currentDay.cupLabel || roundKey}`,
+    isEuroLeague: false,
+    isKnockout: true,
+    userWon,
+    pkHome: simRes.pkHome,
+    pkAway: simRes.pkAway,
+    homeClub: isHome ? playerClub : oppClub,
+    awayClub: isHome ? oppClub : playerClub,
+    homeScore,
+    awayScore,
+    homePossession: simRes.homePossession || (userWon ? 52 : 48),
+    awayPossession: 100 - (simRes.homePossession || (userWon ? 52 : 48)),
+    homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
+    awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
+    homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
+    awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+    homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
+    awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
+    isPlayerHome: isHome,
+    isPlayerMatch: true,
+    matchIncome: isHome ? Math.round(playerClub.supporters * 0.1 * 70) : 0,
+    awayBroadcastingFee: !isHome ? 1500 : 0,
+    playerSupportersDelta: userWon ? 160 : -40,
+    homeScorers,
+    awayScorers
+  };
 
-  renderAll();
+  if (skipAnimation) {
+    renderAll();
+    return;
+  }
+
+  openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+    renderAll();
+  });
 }
 
 function playCurrentMatchday(skipAnimation = false) {
@@ -3946,11 +4159,14 @@ function renderWeeklySchedule() {
   // 次の試合日までの日数を算出
   let daysUntilMatch = null;
   let nextMatchDay = null;
+  let nextMatchTitle = '';
   for (let i = currentIdx; i < gameState.calendar.length; i++) {
     const d = gameState.calendar[i];
-    if (d.isMatchDay && !d.played) {
+    const mInfo = getCalendarDayPlayerMatch(d);
+    if ((d.isMatchDay || (d.isCupMatchDay && mInfo)) && !d.played) {
       daysUntilMatch = i - currentIdx;
       nextMatchDay = d;
+      nextMatchTitle = mInfo ? mInfo.title : `第${d.matchWeek}節`;
       break;
     }
   }
@@ -3962,9 +4178,9 @@ function renderWeeklySchedule() {
     if (gameState.isSeasonOver) {
       hintEl.innerHTML = 'シーズン終了（オフ期間）';
     } else if (daysUntilMatch === 0) {
-      hintEl.innerHTML = `${congestionPrefix}本日 Matchday（第${nextMatchDay.matchWeek}節）`;
+      hintEl.innerHTML = `${congestionPrefix}本日 Matchday（${nextMatchTitle}）`;
     } else if (daysUntilMatch !== null) {
-      hintEl.innerHTML = `${congestionPrefix}次の試合（第${nextMatchDay.matchWeek}節）まで あと${daysUntilMatch}日`;
+      hintEl.innerHTML = `${congestionPrefix}次の試合（${nextMatchTitle}）まで あと${daysUntilMatch}日`;
     } else {
       hintEl.innerHTML = `${congestionPrefix}全日程消化完了`;
     }
@@ -3981,22 +4197,19 @@ function renderWeeklySchedule() {
 
   trackEl.innerHTML = daysToShow.map((day, idx) => {
     const isToday = idx === 0;
-    const isMatch = day.isMatchDay && !day.played;
+    const matchInfo = getCalendarDayPlayerMatch(day);
+    const isMatch = Boolean(matchInfo && !day.played);
 
     let eventHtml = '';
-    if (day.isMatchDay) {
-      let fixtureText = `第${day.matchWeek}節`;
-      if (playerClub && day.matchFixture) {
-        const myFix = day.matchFixture.find(f => f.homeId === playerClub.id || f.awayId === playerClub.id);
-        if (myFix) {
-          const isHome = myFix.homeId === playerClub.id;
-          const oppId = isHome ? myFix.awayId : myFix.homeId;
-          const oppClub = getClubById(oppId);
-          const oppName = oppClub ? (oppClub.name.length > 8 ? oppClub.name.substring(0, 7) + '..' : oppClub.name) : '相手';
-          fixtureText = `vs ${getClubShortCode(oppClub)} (${isHome ? 'H' : 'A'})`;
-        }
-      }
-      eventHtml = `<span class="day-event-badge day-event-match">${fixtureText}</span>`;
+    if (matchInfo) {
+      const isHome = matchInfo.isHome;
+      const oppClub = matchInfo.oppClub;
+      const oppCode = getClubShortCode(oppClub);
+      const compBadge = matchInfo.compCode ? `[${matchInfo.compCode}] ` : '';
+      eventHtml = `<span class="day-event-badge day-event-match">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
+    } else if (day.isCupMatchDay) {
+      const compCode = day.cupCode || 'CUP';
+      eventHtml = `<span class="day-event-badge badge-comp-${compCode.toLowerCase()}">[${compCode}] 開催日</span>`;
     } else if (day.isTransferDeadline) {
       eventHtml = `<span class="day-event-badge day-event-market">市場最終日</span>`;
     } else if (day.windowOpen) {
@@ -4957,6 +5170,41 @@ function clearMatchLiveTimers() {
 }
 
 /**
+ * 試合相手クラブ（他国クラブや2部クラブなど）のスタメン配列を保証
+ */
+function ensureClubStartersForMatch(club) {
+  if (!club) return [];
+  if (club.players && club.players.length >= 11) {
+    if (typeof ensureValidSquadAndStarters === 'function' && club.isPlayer) {
+      ensureValidSquadAndStarters(club);
+    }
+    return club.players.slice(0, 11);
+  }
+  if (!club.players || club.players.length === 0) {
+    const baseP = club.basePower || club.ovr || 74;
+    const positions = ['GK', 'LB', 'CB', 'CB', 'RB', 'DM', 'CM', 'AM', 'LW', 'CF', 'RW'];
+    const cCode = getClubShortCode(club);
+    club.players = positions.map((pos, idx) => ({
+      id: `${club.id}_p${idx + 1}`,
+      name: `${cCode} #${idx + 1}`,
+      squadNumber: idx + 1,
+      pos: pos,
+      assignedPos: pos,
+      atk: Math.round(baseP + (Math.random() * 6 - 3)),
+      def: Math.round(baseP + (Math.random() * 6 - 3)),
+      sta: 100,
+      isStarter: true,
+      slotIndex: idx,
+      appearances: 0,
+      goals: 0,
+      assists: 0,
+      lastMatchRating: 6.5
+    }));
+  }
+  return club.players.slice(0, 11);
+}
+
+/**
  * 90分間の詳細な試合経過タイムライン（ゴール・セーブ・シュート・攻防）を構築
  */
 function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
@@ -4964,8 +5212,8 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
   const byMinute = {};
   const highlights = [];
 
-  const homeStarters = homeClub.players.slice(0, 11);
-  const awayStarters = awayClub.players.slice(0, 11);
+  const homeStarters = ensureClubStartersForMatch(homeClub);
+  const awayStarters = ensureClubStartersForMatch(awayClub);
   const homeGk = homeStarters.find(p => (p.assignedPos || p.pos) === 'GK') || homeStarters[0];
   const awayGk = awayStarters.find(p => (p.assignedPos || p.pos) === 'GK') || awayStarters[0];
 
@@ -5098,8 +5346,8 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
 
   const hDef = getClubFormationDef(homeClub);
   const aDef = getClubFormationDef(awayClub);
-  const homeStarters = homeClub.players.slice(0, 11);
-  const awayStarters = awayClub.players.slice(0, 11);
+  const homeStarters = ensureClubStartersForMatch(homeClub);
+  const awayStarters = ensureClubStartersForMatch(awayClub);
 
   matchLiveState.homeBaseTokens = [];
   matchLiveState.awayBaseTokens = [];
@@ -5459,7 +5707,14 @@ function buildMatchSummaryHtml(md) {
   const myScore = isPlayerHome ? homeScore : awayScore;
   const oppScore = isPlayerHome ? awayScore : homeScore;
   const resType = myScore > oppScore ? 'win' : (myScore < oppScore ? 'lose' : 'draw');
-  const resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  let resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  if (md.isKnockout) {
+    const userWon = Boolean(md.userWon);
+    const pkInfo = (md.pkHome != null && md.pkAway != null) ? ` (PK ${md.pkHome}-${md.pkAway})` : '';
+    resLabel = userWon ? `WIN! 勝利・次進出${pkInfo}` : `LOSE 惜敗・敗退${pkInfo}`;
+  } else if (md.isEuroLeague) {
+    resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  }
 
   const homeScorersHtml = homeScorers.length > 0
     ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
@@ -5676,7 +5931,14 @@ function transitionToMatchSummary() {
   const myScore = isPlayerHome ? homeScore : awayScore;
   const oppScore = isPlayerHome ? awayScore : homeScore;
   const resType = myScore > oppScore ? 'win' : (myScore < oppScore ? 'lose' : 'draw');
-  const resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  let resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  if (md.isKnockout) {
+    const userWon = Boolean(md.userWon);
+    const pkInfo = (md.pkHome != null && md.pkAway != null) ? ` (PK ${md.pkHome}-${md.pkAway})` : '';
+    resLabel = userWon ? `WIN! 勝利・次進出${pkInfo}` : `LOSE 惜敗・敗退${pkInfo}`;
+  } else if (md.isEuroLeague) {
+    resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  }
 
   const homeScorersHtml = homeScorers.length > 0
     ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
@@ -6012,7 +6274,7 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
   const attEl = document.getElementById('match-modal-attendance');
   const attendance = Math.min(60000, Math.round(homeClub.supporters * 0.95 + randInt(120, 850)));
 
-  if (weekBadge) weekBadge.textContent = `第${week}節 公式戦`;
+  if (weekBadge) weekBadge.textContent = matchData.compTitle || `第${week}節 公式戦`;
   if (venueEl) venueEl.textContent = `${homeClub.name}・スタジアム`;
   if (attEl) attEl.textContent = `観客 ${attendance.toLocaleString()}人`;
 
