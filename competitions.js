@@ -970,13 +970,6 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   const sorted = [...comp.participants].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
 
   let html = `
-    <div class="euro-league-header">
-      <div class="euro-league-badge-title">
-        <span class="euro-badge-code mono">${comp.shortCode}</span>
-        <span class="euro-badge-name">${comp.name} 総合順位表</span>
-      </div>
-      <span class="euro-md-status mono">MATCHWEEK ${comp.currentMatchweek || 0} / 8</span>
-    </div>
     <table class="data-table standings-table euro-standings-table">
       <thead>
         <tr>
@@ -1099,11 +1092,6 @@ function renderCupBracketHtml(compKey) {
   };
 
   let html = `<div class="cup-bracket-container">
-    <div class="cup-header-banner">
-      <h3 class="cup-title">${comp.name} (${comp.enName})</h3>
-      <span class="cup-prize mono">優勝賞金: £${(comp.prizeMoney / 1000).toFixed(1)}M</span>
-      ${comp.winner ? `<span class="cup-winner-badge">🏆 覇者: ${comp.winner.name}</span>` : ''}
-    </div>
     <div class="bracket-rounds-wrapper">
   `;
 

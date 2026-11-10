@@ -10428,7 +10428,6 @@ function renderStandings() {
       const curDom = gameState.selectedDomesticCup || 'leagueCup';
       subnavRow.innerHTML = `
         <div class="comp-subnav-group">
-          <span class="comp-subnav-label mono">国内カップ:</span>
           <div class="comp-subnav-btns">
             <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-sub-cup="leagueCup">リーグ・トロフィー (L-CUP)</button>
             <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-sub-cup="nationalCup">ナショナル・カップ (N-CUP)</button>
@@ -10503,7 +10502,9 @@ function renderStandings() {
 
     if (curTab === 'standings') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
-      if (statusText) statusText.textContent = `${compName} - 総合順位表`;
+      const euroComp = gameState.competitions && gameState.competitions[curEuro];
+      const mw = euroComp ? euroComp.currentMatchweek || 0 : 0;
+      if (statusText) statusText.textContent = `${compName} MATCHWEEK ${mw} / 8`;
     } else if (curTab === 'schedule') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
       if (statusText) statusText.textContent = `${compName} - 対戦日程・結果`;

@@ -108,5 +108,11 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn('comp-subnav-group', self.style_css)
         self.assertIn('white-space: nowrap;', self.style_css)
 
+        # カップ・欧州コンペのサブタブ下の青いラベルが非表示または削除されていること
+        self.assertNotIn('<div class="cup-header-banner">', self.comp_js)
+        self.assertNotIn('<div class="euro-league-header">', self.comp_js)
+        self.assertIn('.cup-header-banner', self.style_css)
+        self.assertIn('.euro-league-header', self.style_css)
+
 if __name__ == '__main__':
     unittest.main()
