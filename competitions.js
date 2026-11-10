@@ -876,9 +876,10 @@ function renderChampionshipStandingsHtml() {
     const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
     const gdSign = c.gd > 0 ? `+${c.gd}` : `${c.gd || 0}`;
     const emblemSvg = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(c, 20, 'standings-emblem') : '';
+    const zoneClass = rank <= 3 ? 'zone-ucl' : (rank >= 22 ? 'zone-rel' : '');
 
     html += `
-      <tr>
+      <tr class="${zoneClass}">
         <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
         <td class="col-team"><span class="team-cell-wrap">${emblemSvg}<span class="team-name-text">${c.name}</span></span></td>
         <td class="col-num col-played">${c.played || 0}</td>
@@ -893,11 +894,18 @@ function renderChampionshipStandingsHtml() {
     `;
   });
 
-  html += '</tbody></table>';
+  html += `
+      </tbody>
+    </table>
+    <div class="standings-legend">
+      <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: プレミアリーグ自動昇格</span></div>
+      <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">22-24位: 降格圏</span></div>
+    </div>
+  `;
   return html;
 }
 
-// 欧州コンペ：全36チーム スイス方式総合順位表描画（1〜8位緑、9〜24位黄、25〜36位赤）
+// 欧州コンペ：全36チーム スイス方式総合順位表描画（1〜8位緑、9〜24位黄、25〜36位赤の左端ライン統一、文字表示削除、下部注釈付き）
 function renderEuroLeaguePhaseStandingsHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.participants) return '<p class="empty-state">欧州コンペデータがありません</p>';
@@ -908,7 +916,7 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
     <div class="euro-league-header">
       <div class="euro-league-badge-title">
         <span class="euro-badge-code mono">${comp.shortCode}</span>
-        <span class="euro-badge-name">${comp.name} 総合順位表 (全36チーム / 各8試合)</span>
+        <span class="euro-badge-name">${comp.name} 総合順位表</span>
       </div>
       <span class="euro-md-status mono">MATCHWEEK ${comp.currentMatchweek || 0} / 8</span>
     </div>
@@ -937,24 +945,17 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
     const emblemSvg = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(c, 20, 'standings-emblem') : '';
 
     let zoneClass = '';
-    let zoneTag = '';
     if (rank <= 8) {
-      // 1〜8位：緑ライン（ベスト16直行）
       zoneClass = 'zone-ucl zone-direct-r16';
-      zoneTag = '<span class="standings-zone-tag zone-tag-cl">ベスト16直行</span>';
     } else if (rank <= 24) {
-      // 9〜24位：黄ライン（プレーオフ進出圏）
       zoneClass = 'zone-uel zone-playoff';
-      zoneTag = '<span class="standings-zone-tag zone-tag-el">プレーオフ圏</span>';
     } else {
-      // 25〜36位：赤ライン（敗退圏）
       zoneClass = 'zone-rel zone-eliminated';
-      zoneTag = '<span class="standings-zone-tag zone-tag-rel">敗退</span>';
     }
 
     html += `
       <tr class="${zoneClass}">
-        <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span>${zoneTag}</td>
+        <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
         <td class="col-team"><span class="team-cell-wrap">${emblemSvg}<span class="team-name-text">${c.name}</span></span></td>
         <td class="col-num col-played">${c.played || 0}</td>
         <td class="col-num col-won">${c.won || 0}</td>
@@ -968,7 +969,15 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
     `;
   });
 
-  html += '</tbody></table>';
+  html += `
+      </tbody>
+    </table>
+    <div class="standings-legend">
+      <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-8位: ラウンド16直行</span></div>
+      <div class="legend-item"><span class="legend-color-box zone-uel-bg"></span><span class="legend-text">9-24位: 決勝トーナメント進出プレーオフ</span></div>
+      <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">25-36位: 敗退</span></div>
+    </div>
+  `;
   return html;
 }
 
@@ -994,16 +1003,20 @@ function renderEuroScheduleListHtml(compKey) {
       const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 16) : '';
       const scoreText = m.played ? `${m.homeScore} - ${m.awayScore}` : 'VS';
 
+      // プレミアリーグのクラブも確実に3文字コードを取得
+      const homeCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.homeClub) : ((m.homeClub && m.homeClub.shortName) || 'HOM');
+      const awayCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.awayClub) : ((m.awayClub && m.awayClub.shortName) || 'AWY');
+
       html += `
         <div class="euro-match-tile ${isMyMatch ? 'my-match' : ''} ${m.played ? 'played' : ''}">
           <div class="euro-tile-team home">
             ${homeEmblem}
-            <span class="mono">${m.homeClub ? (m.homeClub.shortName || m.homeClub.name.slice(0,3)) : ''}</span>
+            <span class="mono">${homeCode}</span>
           </div>
           <span class="euro-tile-score mono ${m.played ? 'score-played' : ''}">${scoreText}</span>
           <div class="euro-tile-team away">
             ${awayEmblem}
-            <span class="mono">${m.awayClub ? (m.awayClub.shortName || m.awayClub.name.slice(0,3)) : ''}</span>
+            <span class="mono">${awayCode}</span>
           </div>
         </div>
       `;

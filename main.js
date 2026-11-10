@@ -9943,13 +9943,23 @@ function renderStandings() {
   const subnavLabel = document.getElementById('comp-subnav-label');
   const subnavBtns = document.getElementById('comp-subnav-btns');
   const statusText = document.getElementById('standings-status-text');
+  const legendEl = document.getElementById('standings-legend');
 
   if (compView === 'prem') {
-    // プレミアリーグ順位表（PC表示に CL圏 / EL圏 / 降格圏 の文字バッジ表示）
+    // プレミアリーグ順位表（左端カラーライン統一、文字表示削除、下部注釈表示）
     if (tableWrapper) tableWrapper.classList.remove('hidden');
     if (bracketWrapper) bracketWrapper.classList.add('hidden');
     if (subnavRow) subnavRow.classList.add('hidden');
     if (statusText) statusText.textContent = `MATCHWEEK ${gameState.currentWeek} / ${gameState.totalWeeks}`;
+
+    if (legendEl) {
+      legendEl.classList.remove('hidden');
+      legendEl.innerHTML = `
+        <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-4位: チャンピオンズリーグ出場権</span></div>
+        <div class="legend-item"><span class="legend-color-box zone-uel-bg"></span><span class="legend-text">5位: ヨーロッパリーグ出場権</span></div>
+        <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">18-20位: 降格</span></div>
+      `;
+    }
 
     const sorted = getSortedStandings();
     const tbody = document.getElementById('standings-tbody');
@@ -9961,19 +9971,9 @@ function renderStandings() {
         const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
         const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd}`;
 
-        // PC表示用：CL圏、EL圏、降格圏の文字バッジ
-        let zoneTagHtml = '';
-        if (rank <= 4) {
-          zoneTagHtml = '<span class="standings-zone-tag zone-tag-cl">CL圏</span>';
-        } else if (rank === 5) {
-          zoneTagHtml = '<span class="standings-zone-tag zone-tag-el">EL圏</span>';
-        } else if (rank >= 18) {
-          zoneTagHtml = '<span class="standings-zone-tag zone-tag-rel">降格圏</span>';
-        }
-
         return `
           <tr class="${rowClass}">
-            <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span>${zoneTagHtml}</td>
+            <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
             <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
             <td class="col-num col-played">${club.played}</td>
             <td class="col-num col-won">${club.won}</td>
@@ -9988,10 +9988,18 @@ function renderStandings() {
       }).join('');
     }
   } else if (compView === 'championship') {
-    // 2部リーグ順位表（プレミアリーグと全く同じテーブル構造・クラス名を使用、昇格圏/降格圏の文字表示は撤廃）
+    // 2部リーグ順位表（左端カラーライン統一、文字表示削除、下部注釈表示）
     if (tableWrapper) tableWrapper.classList.remove('hidden');
     if (bracketWrapper) bracketWrapper.classList.add('hidden');
     if (subnavRow) subnavRow.classList.add('hidden');
+
+    if (legendEl) {
+      legendEl.classList.remove('hidden');
+      legendEl.innerHTML = `
+        <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: プレミアリーグ自動昇格</span></div>
+        <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">22-24位: 降格圏</span></div>
+      `;
+    }
 
     const comp = gameState.competitions && gameState.competitions.championship;
     const sorted = comp && comp.clubs ? [...comp.clubs].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0)) : [];
@@ -10004,9 +10012,10 @@ function renderStandings() {
         const rank = idx + 1;
         const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
         const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd || 0}`;
+        const zoneClass = rank <= 3 ? 'zone-promotion' : (rank >= 22 ? 'zone-relegation-p2' : '');
 
         return `
-          <tr>
+          <tr class="${zoneClass}">
             <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
             <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
             <td class="col-num col-played">${club.played || 0}</td>
@@ -10025,6 +10034,8 @@ function renderStandings() {
     // 国内カップ戦（トーナメントブラケット表示）
     if (tableWrapper) tableWrapper.classList.add('hidden');
     if (bracketWrapper) bracketWrapper.classList.remove('hidden');
+    if (legendEl) legendEl.classList.add('hidden');
+
     if (subnavRow) {
       subnavRow.classList.remove('hidden');
       if (subnavLabel) subnavLabel.textContent = '国内カップ:';
@@ -10049,9 +10060,9 @@ function renderStandings() {
     // 欧州コンペ：全36チーム スイス方式リーグフェーズ（各8試合） ＆ 日程 ＆ 決勝トーナメント
     if (tableWrapper) tableWrapper.classList.add('hidden');
     if (bracketWrapper) bracketWrapper.classList.remove('hidden');
+    if (legendEl) legendEl.classList.add('hidden');
 
     const playerClub = getPlayerClub();
-    // 自チームが出場している大会があればそれを優先選択
     if (!gameState.selectedEuroCup && playerClub && gameState.competitions) {
       if (gameState.competitions.championsCup && gameState.competitions.championsCup.participants.some(c => c.id === playerClub.id)) {
         gameState.selectedEuroCup = 'championsCup';
@@ -10074,7 +10085,7 @@ function renderStandings() {
           <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EL</button>
           <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECL</button>
           <span style="border-left: 1px solid rgba(255,255,255,0.15); margin: 0 4px;"></span>
-          <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表 (全36チーム)</button>
+          <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表</button>
           <button type="button" class="euro-phase-btn mono ${curTab === 'schedule' ? 'active' : ''}" data-euro-tab="schedule">日程・結果</button>
           <button type="button" class="euro-phase-btn mono ${curTab === 'bracket' ? 'active' : ''}" data-euro-tab="bracket">トーナメント表</button>
         `;
@@ -10097,10 +10108,10 @@ function renderStandings() {
 
     if (curTab === 'standings') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
-      if (statusText) statusText.textContent = `${compName} - 総合順位表 (各8試合)`;
+      if (statusText) statusText.textContent = `${compName} - 総合順位表`;
     } else if (curTab === 'schedule') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
-      if (statusText) statusText.textContent = `${compName} - 全8節 対戦日程・結果`;
+      if (statusText) statusText.textContent = `${compName} - 対戦日程・結果`;
     } else {
       if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
       if (statusText) statusText.textContent = `${compName} - 決勝トーナメント`;
