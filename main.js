@@ -13589,7 +13589,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
 /**
  * 選手の市場価値推移履歴（valueHistory）を初期化・補完する
- * ゲーム開始時点（開幕時）からの推移と過去シーズン実績を一貫して保持
+ * プレイ開始前の数年前（デビュー時〜過去各シーズン）からの成長・市場価値曲線を一貫して保持
  */
 function ensurePlayerValueHistory(p, currentClubName) {
   if (!p) return [];
@@ -13598,15 +13598,10 @@ function ensurePlayerValueHistory(p, currentClubName) {
   const currentOvr = getPlayerOverallRating(p);
   const currentAge = p.age || 24;
 
-  // ゲーム開始時（開幕時）の初期市場価値を選手オブジェクトに永続保持
-  if (typeof p.startMarketValue !== 'number') {
-    p.startMarketValue = currentVal;
-  }
-
-  if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 2) {
-    // 既存履歴の最新値を現在の状態に更新
+  // すでに十分な数年前からの推移データ（3点以上）が存在する場合は最新値のみ更新して返却
+  if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 3) {
     const lastPt = p.valueHistory[p.valueHistory.length - 1];
-    if (lastPt && lastPt.season === 'Current') {
+    if (lastPt) {
       lastPt.value = currentVal;
       lastPt.ovr = currentOvr;
     }
@@ -13618,9 +13613,10 @@ function ensurePlayerValueHistory(p, currentClubName) {
 
   const vHistory = [];
 
-  // 1. 過去シーズンの履歴（直近2〜3シーズン分を参考ポイントとして抽出）
+  // 1. プレイしていない数年前からの過去各シーズンの市場価値推移
   if (seasonHistory && seasonHistory.length > 0) {
-    const pastSubset = seasonHistory.slice(-3);
+    // 最大直近6シーズン分（キャリア初期〜前シーズン）を時系列順に抽出
+    const pastSubset = seasonHistory.slice(-6);
     pastSubset.forEach((sh) => {
       const approxVal = calculatePlayerMarketValue({
         ovr: sh.ovr,
@@ -13628,8 +13624,9 @@ function ensurePlayerValueHistory(p, currentClubName) {
         contractYears: 2
       });
       vHistory.push({
-        label: `${sh.seasonYear.slice(2, 7)}`,
-        fullLabel: `${sh.seasonYear} (${sh.age}歳)`,
+        label: `${sh.seasonYear.slice(2, 7)} (${sh.age}歳)`,
+        shortLabel: `${sh.seasonYear.slice(2, 7)}`,
+        fullLabel: `${sh.seasonYear} (${sh.age}歳 / OVR ${sh.ovr})`,
         season: sh.seasonYear,
         age: sh.age,
         ovr: sh.ovr,
@@ -13639,20 +13636,57 @@ function ensurePlayerValueHistory(p, currentClubName) {
     });
   }
 
-  // 2. ゲーム開始時点（開幕時）のポイントを明確に刻む
-  vHistory.push({
-    label: `開幕時`,
-    fullLabel: `ゲーム開始時 (開幕時点 / ${currentAge}歳)`,
-    season: '開幕時',
-    age: currentAge,
-    ovr: currentOvr,
-    value: p.startMarketValue,
-    isStart: true
-  });
+  // 2. 若手選手（過去シーズンが少ない場合）でもデビュー初期からの推移を自然に補完
+  if (vHistory.length === 0) {
+    const debutAge = Math.max(17, currentAge - 2);
+    const debutOvr = Math.max(50, currentOvr - 6);
+    const debutVal = calculatePlayerMarketValue({ ovr: debutOvr, age: debutAge, contractYears: 3 });
+    vHistory.push({
+      label: `2年前 (${debutAge}歳)`,
+      shortLabel: `2年前`,
+      fullLabel: `プロデビュー初期 (${debutAge}歳 / OVR ${debutOvr})`,
+      season: 'Debut',
+      age: debutAge,
+      ovr: debutOvr,
+      value: debutVal,
+      isPast: true
+    });
 
-  // 3. 現在のポイント（ゲーム開始直後で同値の場合は現在ポイントとして末尾に配置）
+    const midAge = Math.max(18, currentAge - 1);
+    const midOvr = Math.max(52, currentOvr - 3);
+    const midVal = calculatePlayerMarketValue({ ovr: midOvr, age: midAge, contractYears: 2 });
+    vHistory.push({
+      label: `前年 (${midAge}歳)`,
+      shortLabel: `前年`,
+      fullLabel: `前シーズン台頭時 (${midAge}歳 / OVR ${midOvr})`,
+      season: 'LastSeason',
+      age: midAge,
+      ovr: midOvr,
+      value: midVal,
+      isPast: true
+    });
+  } else if (vHistory.length === 1) {
+    // 過去1年のみの場合、デビュー時の基点を先頭に補足
+    const firstH = vHistory[0];
+    const debutAge = Math.max(17, firstH.age - 1);
+    const debutOvr = Math.max(50, firstH.ovr - 4);
+    const debutVal = calculatePlayerMarketValue({ ovr: debutOvr, age: debutAge, contractYears: 3 });
+    vHistory.unshift({
+      label: `デビュー (${debutAge}歳)`,
+      shortLabel: `デビュー`,
+      fullLabel: `プロデビュー時 (${debutAge}歳 / OVR ${debutOvr})`,
+      season: 'Debut',
+      age: debutAge,
+      ovr: debutOvr,
+      value: debutVal,
+      isPast: true
+    });
+  }
+
+  // 3. 最新（現在）の市場価値ポイント
   vHistory.push({
-    label: `現在`,
+    label: `現在 (${currentAge}歳)`,
+    shortLabel: `現在`,
     fullLabel: `現在 (${currentAge}歳 / OVR ${currentOvr})`,
     season: 'Current',
     age: currentAge,
@@ -13666,7 +13700,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
 }
 
 /**
- * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画（絵文字なし）
+ * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画（数年前〜現在）
  */
 function buildPlayerMarketValueChartSvg(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
@@ -13677,13 +13711,13 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
   const values = history.map(h => h.value);
   const peakVal = Math.max(...values);
 
-  // グラフキャンバスのサイズ設計
-  const W = 520;
-  const H = 200;
-  const padL = 62;
-  const padR = 32;
-  const padT = 32;
-  const padB = 40;
+  // グラフキャンバスのサイズ設計（余裕のある横幅とプロット領域）
+  const W = 540;
+  const H = 210;
+  const padL = 64;
+  const padR = 36;
+  const padT = 34;
+  const padB = 42;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
@@ -13744,13 +13778,13 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
   points.forEach((pt, i) => {
     const isPeak = (pt.h.value === peakVal && peakVal > 0);
     const isLast = (i === points.length - 1);
-    const isStart = Boolean(pt.h.isStart);
+    const isFirst = (i === 0);
     const formattedVal = formatMoney(pt.h.value);
 
-    // X軸ラベル
+    // X軸ラベル（年度・年齢）
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--text-main)' : (isStart ? 'var(--text-main)' : '#8b949e')}" font-size="9.5" font-family="var(--font-mono)" font-weight="${isLast || isStart ? '700' : '400'}" text-anchor="middle">
-        ${pt.h.label}
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#8b949e')}" font-size="9" font-family="var(--font-mono)" font-weight="${isLast || isPeak ? '700' : '400'}" text-anchor="middle">
+        ${pt.h.label || pt.h.shortLabel}
       </text>
     `;
 
@@ -13762,13 +13796,6 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.5" fill="#f1c40f" stroke="#14171b" stroke-width="2" />
         <text x="${pt.x.toFixed(1)}" y="${(pt.y - 11).toFixed(1)}" fill="#f1c40f" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
       `;
-    } else if (isStart) {
-      pointsSvg += `
-        <!-- 開幕時（開始時点）ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6.5" fill="rgba(56, 189, 248, 0.25)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#38bdf8" font-size="9.5" font-family="var(--font-mono)" font-weight="700" text-anchor="middle">開幕 ${formattedVal}</text>
-      `;
     } else if (isLast) {
       pointsSvg += `
         <!-- 現在値ハイライト -->
@@ -13776,10 +13803,17 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#2ecc71" stroke="#14171b" stroke-width="2" />
         <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#2ecc71" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">${formattedVal}</text>
       `;
+    } else if (isFirst) {
+      pointsSvg += `
+        <!-- 初期・数年前の開始点ハイライト -->
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="rgba(56, 189, 248, 0.2)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#38bdf8" font-size="8.5" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+      `;
     } else {
       pointsSvg += `
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="#14171b" stroke="#38bdf8" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 7).toFixed(1)}" fill="#94a3b8" font-size="8.5" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="#14171b" stroke="#64748b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 7).toFixed(1)}" fill="#94a3b8" font-size="8" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
       `;
     }
   });
@@ -13805,16 +13839,17 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 }
 
 /**
- * 選手プロフィールモーダル用：市場価値推移タブのHTML構築（絵文字なし）
+ * 選手プロフィールモーダル用：市場価値推移タブのHTML構築（数年前〜現在）
  */
 function buildPlayerMarketValueTabHtml(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
   const currentVal = calculatePlayerMarketValue(p);
   const peakVal = Math.max(...history.map(h => h.value), currentVal);
-  const startVal = typeof p.startMarketValue === 'number' ? p.startMarketValue : currentVal;
-  const deltaFromStart = currentVal - startVal;
-  const deltaPercent = startVal > 0 ? Math.round((deltaFromStart / startVal) * 100) : 0;
-  const isUp = deltaFromStart >= 0;
+  const firstPoint = history[0] || { value: currentVal, age: p.age };
+  const initialVal = firstPoint.value;
+  const deltaFromInitial = currentVal - initialVal;
+  const deltaPercent = initialVal > 0 ? Math.round((deltaFromInitial / initialVal) * 100) : 0;
+  const isUp = deltaFromInitial >= 0;
 
   // 選手の市場ステータス（絵文字なし）
   const age = p.age || 24;
@@ -13824,7 +13859,7 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
   if (age <= 21 && ovr >= 74) {
     statusText = '若手有望株 (HOT PROSPECT)';
     statusBadgeClass = 'badge-hot';
-  } else if (age <= 23 && deltaFromStart > 0) {
+  } else if (age <= 23 && deltaFromInitial > 0) {
     statusText = '急成長中 (ON THE RISE)';
     statusBadgeClass = 'badge-rising';
   } else if (age >= 25 && age <= 29 && ovr >= 80) {
@@ -13844,31 +13879,31 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
           <div>
             <span class="profile-box-title">推定市場価値の推移 (Market Value Trend)</span>
             <div class="mono text-muted" style="font-size: 10px; margin-top: 2px;">
-              ゲーム開始時（開幕）から現在までの市場価値推移と成長実績
+              デビュー初期・数年前から現在に至るキャリア全体の市場価値推移
             </div>
           </div>
           <span class="profile-status-pill mono ${statusBadgeClass}">${statusText}</span>
         </div>
 
-        <!-- 4大メトリクス要約カード（開始時点からの推移を明瞭化・絵文字なし） -->
+        <!-- 4大メトリクス要約カード（数年前からの推移・絵文字なし） -->
         <div class="profile-metrics-row profile-metrics-row-4col" style="margin-top: 8px;">
           <div class="profile-metric-card">
             <span class="profile-metric-label">現在推定価値</span>
             <span class="profile-metric-val mono accent-green"><strong>${formatMoney(currentVal)}</strong></span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">開幕時（開始時点）</span>
-            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(startVal)}</strong></span>
+            <span class="profile-metric-label">キャリア最高価値</span>
+            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">開始時からの変動</span>
+            <span class="profile-metric-label">数年前からの通算変動</span>
             <span class="profile-metric-val mono ${isUp ? 'accent-green' : 'text-danger'}">
-              <strong>${isUp ? '+' : ''}${formatMoney(deltaFromStart)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
+              <strong>${isUp ? '+' : ''}${formatMoney(deltaFromInitial)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
             </span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">キャリア最高価値</span>
-            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
+            <span class="profile-metric-label">キャリア初期評価額</span>
+            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(initialVal)}</strong></span>
           </div>
         </div>
 
@@ -13882,7 +13917,7 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
           <table class="data-table profile-yearly-table">
             <thead>
               <tr>
-                <th>時期 / タイミング</th>
+                <th>シーズン / 年齢</th>
                 <th class="col-num">年齢</th>
                 <th class="col-num">OVR</th>
                 <th class="col-num">推定市場価値</th>
@@ -13893,17 +13928,17 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
               ${history.map((h, idx) => {
                 const isPeak = (h.value === peakVal);
                 const isCur = (idx === history.length - 1);
-                const isStart = Boolean(h.isStart);
+                const isFirst = (idx === 0);
                 return `
                   <tr class="${isCur ? 'profile-yearly-current-row' : ''}">
                     <td class="mono">${h.season || h.label}</td>
                     <td class="mono col-num">${h.age}</td>
                     <td class="mono col-num">${h.ovr}</td>
-                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : (isStart ? 'text-cyan' : ''))}">
+                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : (isFirst ? 'text-cyan' : ''))}">
                       <strong>${formatMoney(h.value)}</strong>
                     </td>
                     <td class="mono col-num text-muted" style="font-size: 10px;">
-                      ${isPeak ? '最高値' : (isStart ? '開始時点 (開幕)' : (isCur ? '最新' : '-'))}
+                      ${isPeak ? 'キャリア最高値' : (isFirst ? 'デビュー・初期' : (isCur ? '最新' : 'キャリア推移'))}
                     </td>
                   </tr>
                 `;
