@@ -13358,3 +13358,657 @@ button.hidden,
 
 
 
+
+/* ==========================================================================
+   フェーズ4: 2部リーグ・昇降格・国内カップ・欧州3大カップ戦 スタイル
+   ========================================================================== */
+
+/* 大会切り替えセグメントコントロール */
+.comp-segment-nav {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.comp-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94A3B8;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.comp-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #F8FAFC;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.comp-tab-btn.active {
+  background: #00F0FF;
+  border-color: #00F0FF;
+  color: #0B0E14;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+/* サブナビゲーション（国内カップ・欧州コンペの大会選択） */
+.comp-subnav-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 240, 255, 0.03);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.comp-subnav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.comp-subnav-label {
+  font-size: 11px;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.comp-subnav-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.comp-sub-btn,
+.euro-phase-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #CBD5E1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.comp-sub-btn:hover,
+.euro-phase-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+}
+
+.comp-sub-btn.active,
+.euro-phase-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00F0FF;
+  color: #00F0FF;
+  font-weight: 600;
+}
+
+/* 2部リーグ昇格・降格圏ハイライト（背景色は消去し左端カラーラインに統一） */
+.zone-promotion {
+  background: transparent !important;
+  border-left: none !important;
+}
+
+.zone-relegation-p2 {
+  background: transparent !important;
+  border-left: none !important;
+}
+
+.zone-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.badge-promo {
+  background: #22C55E;
+  color: #000000;
+}
+
+.badge-releg {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+/* カレンダー日付マスの大会識別バッジ */
+.cal-cup-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-bottom: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.badge-comp-lgc,
+.badge-comp-l-cup {
+  background: #0284C7;
+  color: #FFFFFF;
+  border: 1px solid #38BDF8;
+}
+
+.badge-comp-nat,
+.badge-comp-n-cup {
+  background: #DC2626;
+  color: #FFFFFF;
+  border: 1px solid #F87171;
+}
+
+.badge-comp-cl,
+.badge-comp-ect {
+  background: #0A192F;
+  color: #38BDF8;
+  border: 1px solid #00F0FF;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+}
+
+.badge-comp-el,
+.badge-comp-epc {
+  background: #B45309;
+  color: #FEF08A;
+  border: 1px solid #F59E0B;
+}
+
+.badge-comp-ecl,
+.badge-comp-ecs {
+  background: #065F46;
+  color: #A7F3D0;
+  border: 1px solid #10B981;
+}
+
+.badge-comp-d1,
+.badge-comp-eng-d1 {
+  background: #1E293B;
+  color: #38BDF8;
+  border: 1px solid #38BDF8;
+}
+
+.badge-comp-d2,
+.badge-comp-eng-d2 {
+  background: #1E293B;
+  color: #CBD5E1;
+  border: 1px solid #64748B;
+}
+
+/* 過密日程アラートバッジ */
+.congested-alert-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #F59E0B;
+  color: #FCD34D;
+  font-size: 11px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* トーナメント表（ブラケット）スタイル */
+.comp-bracket-wrapper {
+  padding: 16px;
+  overflow-x: auto;
+  min-height: 400px;
+}
+
+.cup-bracket-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 720px;
+}
+
+.cup-header-banner {
+  display: none !important;
+}
+
+.cup-title {
+  margin: 0;
+  font-size: 16px;
+  color: #F8FAFC;
+  font-weight: 700;
+}
+
+.cup-prize {
+  font-size: 13px;
+  color: #38BDF8;
+  font-weight: 600;
+}
+
+.cup-winner-badge {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #000;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.bracket-rounds-wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.bracket-round-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 170px;
+}
+
+.bracket-round-title {
+  margin: 0;
+  font-size: 12px;
+  color: #94A3B8;
+  text-align: center;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.bracket-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  justify-content: space-around;
+}
+
+.bracket-match-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.bracket-match-card:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.bracket-match-placeholder {
+  padding: 16px 8px;
+  text-align: center;
+  color: #64748B;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+.bracket-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+}
+
+.bracket-team-row:last-child {
+  border-bottom: none;
+}
+
+.bracket-team-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.bracket-team-name {
+  color: #CBD5E1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.bracket-team-score {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94A3B8;
+  padding-left: 6px;
+}
+
+.bracket-team-row.match-winner {
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.bracket-team-row.match-winner .bracket-team-name {
+  color: #00F0FF;
+  font-weight: 700;
+}
+
+.bracket-team-row.match-winner .bracket-team-score {
+  color: #00F0FF;
+}
+
+/* ==========================================================================
+   順位表ゾーンバッジ（PC表示）：CL圏、EL圏、降格圏
+   ========================================================================== */
+.standings-zone-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  vertical-align: middle;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
+
+.zone-tag-cl {
+  background: rgba(0, 240, 255, 0.15) !important;
+  color: #00F0FF !important;
+  border: 1px solid rgba(0, 240, 255, 0.4) !important;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.2);
+}
+
+.zone-tag-el {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #FCD34D !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.zone-tag-rel {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #F87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+/* PC環境では col-rank を広げてタグが見やすく収まるようにする */
+@media (min-width: 769px) {
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    text-align: left !important;
+    padding-left: 8px !important;
+  }
+}
+
+/* モバイル環境では文字バッジを非表示（左端のカラーバーのみ表示） */
+@media (max-width: 768px) {
+  .standings-zone-tag {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   欧州コンペ：全36チーム リーグフェーズ用スタイル
+   ========================================================================== */
+.euro-league-header {
+  display: none !important;
+}
+
+.euro-league-badge-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.euro-badge-code {
+  background: #00F0FF;
+  color: #0B0E14;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.euro-badge-name {
+  color: #F8FAFC;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.euro-md-status {
+  font-size: 11px;
+  color: #38BDF8;
+  font-weight: 700;
+}
+
+/* フェーズ切り替えトグル（リーグフェーズ / 決勝トーナメント） */
+.euro-phase-toggle {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.euro-phase-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #CBD5E1;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.euro-phase-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+}
+
+.euro-phase-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00F0FF;
+  color: #00F0FF;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   欧州コンペ：スイス方式 36チーム順位表ゾーンカラーライン & 日程表示
+   ========================================================================== */
+.zone-direct-r16 td.col-rank {
+  box-shadow: inset 4px 0 0 #22C55E !important;
+}
+
+.zone-playoff td.col-rank {
+  box-shadow: inset 4px 0 0 #F59E0B !important;
+}
+
+.zone-eliminated td.col-rank {
+  box-shadow: inset 4px 0 0 #EF4444 !important;
+}
+
+/* 欧州日程リスト（対戦カードグリッド） */
+.euro-schedule-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px 4px;
+}
+
+.euro-schedule-md-block {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.euro-schedule-md-title {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #38BDF8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.euro-schedule-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.euro-match-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.euro-match-tile.my-match {
+  border-color: #00F0FF;
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.euro-tile-team {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #CBD5E1;
+}
+
+.euro-tile-team.home {
+  justify-content: flex-start;
+}
+
+.euro-tile-team.away {
+  justify-content: flex-end;
+}
+
+.euro-tile-score {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  padding: 0 6px;
+}
+
+.euro-tile-score.score-played {
+  color: #00F0FF;
+}
+
+/* ==========================================================================
+   順位表：左端カラーライン統一 ＆ 下部注釈（レジェンド）スタイル
+   ========================================================================== */
+.standings-table tbody tr.zone-ucl td.col-rank,
+.standings-table tbody tr.zone-promotion td.col-rank,
+.standings-table tbody tr.zone-direct-r16 td.col-rank {
+  box-shadow: inset 4px 0 0 #22C55E !important;
+}
+
+.standings-table tbody tr.zone-uel td.col-rank {
+  box-shadow: inset 4px 0 0 #38BDF8 !important;
+}
+
+.standings-table tbody tr.zone-playoff td.col-rank {
+  box-shadow: inset 4px 0 0 #F59E0B !important;
+}
+
+.standings-table tbody tr.zone-rel td.col-rank,
+.standings-table tbody tr.zone-relegation-p2 td.col-rank,
+.standings-table tbody tr.zone-eliminated td.col-rank {
+  box-shadow: inset 4px 0 0 #EF4444 !important;
+}
+
+/* 順位表下部の注釈（レジェンド） */
+.standings-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.standings-legend.hidden {
+  display: none !important;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.legend-color-box {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.zone-ucl-bg {
+  background-color: #22C55E !important;
+}
+
+.zone-uel-bg {
+  background-color: #38BDF8 !important;
+}
+
+.zone-playoff-bg {
+  background-color: #F59E0B !important;
+}
+
+.zone-rel-bg {
+  background-color: #EF4444 !important;
+}
+
+@media (min-width: 769px) {
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    text-align: center !important;
+    padding-left: 2px !important;
+  }
+}
