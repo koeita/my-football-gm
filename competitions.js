@@ -626,18 +626,18 @@ function injectCupMatchesIntoCalendar() {
   };
 
   const domesticCupScheduleList = [
-    // 9月: リーグ・トロフィー2回戦 (水)
-    { month: 9, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 2回戦', code: 'L-CUP' },
-    // 10月: リーグ・トロフィー3回戦 (水)
-    { month: 10, minDay: 25, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 3回戦', code: 'L-CUP' },
+    // 9月: リーグ・トロフィー1回戦 (水)
+    { month: 9, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 1回戦', code: 'L-CUP' },
+    // 10月: リーグ・トロフィー2回戦 (水)
+    { month: 10, minDay: 25, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 2回戦', code: 'L-CUP' },
     // 12月: リーグ・トロフィー準々決勝 (水)
     { month: 12, minDay: 16, maxDay: 24, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'L-CUP 準々決勝', code: 'L-CUP' },
-    // 1月: ナショナル・カップ2回戦 (水)
-    { month: 1, minDay: 5, maxDay: 12, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 2回戦', code: 'N-CUP' },
+    // 1月: ナショナル・カップ1回戦 (水)
+    { month: 1, minDay: 5, maxDay: 12, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 1回戦', code: 'N-CUP' },
     // 2月: リーグ・トロフィー決勝 (水)
     { month: 2, minDay: 3, maxDay: 12, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
-    // 3月: ナショナル・カップ3回戦 (水)
-    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 3回戦', code: 'N-CUP' },
+    // 3月: ナショナル・カップ2回戦 (水)
+    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 2回戦', code: 'N-CUP' },
     // 4月: ナショナル・カップ準々決勝 (水)
     { month: 4, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
     // 5月: ナショナル・カップ決勝 (水)

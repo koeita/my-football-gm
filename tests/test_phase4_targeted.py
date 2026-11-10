@@ -220,5 +220,17 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("body[data-active-tab=\"team\"][data-team-subtab=\"schedule\"][data-schedule-mode=\"calendar\"]", self.style_css)
         self.assertIn("overflow: hidden !important;", self.style_css)
 
+    def test_cup_round_labels_consistency(self):
+        """国内カップ戦の1回戦（R32）が2回戦と誤表記されず、1回戦として正しく表示されること"""
+        # competitions.js の domesticCupScheduleList で R32 が「1回戦」になっていること
+        self.assertIn("roundKey: 'R32', label: 'L-CUP 1回戦'", self.comp_js)
+        self.assertIn("roundKey: 'R32', label: 'N-CUP 1回戦'", self.comp_js)
+        self.assertNotIn("roundKey: 'R32', label: 'L-CUP 2回戦'", self.comp_js)
+        self.assertNotIn("roundKey: 'R32', label: 'N-CUP 2回戦'", self.comp_js)
+
+        # main.js の getCalendarDayPlayerMatch で R32 が「1回戦」にマッピングされていること
+        self.assertIn("day.cupRoundKey === 'R32'", self.main_js)
+        self.assertIn("roundText = '1回戦'", self.main_js)
+
 if __name__ == '__main__':
     unittest.main()
