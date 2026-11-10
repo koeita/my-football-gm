@@ -14911,12 +14911,15 @@ body {
   width: 100%;
   box-sizing: border-box;
 }
-.market-value-svg {
+.market-value-svg[data-device="desktop"] {
   width: 100%;
   height: auto;
-  max-height: 400px;
+  max-height: 420px;
   min-height: 280px;
   display: block;
+}
+.market-value-svg[data-device="mobile"] {
+  display: none;
 }
 
 .profile-metric-clickable {
@@ -14936,12 +14939,42 @@ body {
     font-size: 11px !important;
     padding: 5px 10px !important;
   }
-  .market-value-chart-wrapper {
-    padding: 10px 8px 6px !important;
+
+  /* モバイル時の市場価値タブ：余白をすべて埋めて縦幅いっぱいに拡大 */
+  .profile-tab-panel[data-profile-panel="market-value"]:not(.hidden) {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: calc(85vh - 200px) !important;
   }
-  .market-value-svg {
-    max-height: 320px !important;
-    min-height: 220px !important;
+  .profile-box-market-value,
+  .profile-tab-panel[data-profile-panel="market-value"] .profile-chart-section {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+  .market-value-chart-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: calc(85vh - 210px) !important;
+    padding: 10px 6px 8px !important;
+    justify-content: center !important;
+  }
+  .market-value-svg[data-device="desktop"] {
+    display: none !important;
+  }
+  .market-value-svg[data-device="mobile"] {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 1 auto !important;
+    max-height: calc(85vh - 220px) !important;
+    min-height: 380px !important;
   }
 }
 

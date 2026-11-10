@@ -13727,25 +13727,17 @@ function ensurePlayerValueHistory(p, currentClubName) {
 }
 
 /**
- * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として大きく描画（数年前〜現在）
+ * SVG折れ線グラフの内部コンテンツを生成するヘルパー関数（PC・モバイル両対応）
  */
-function buildPlayerMarketValueChartSvg(p, currentClubName) {
-  const history = ensurePlayerValueHistory(p, currentClubName);
-  if (!history || history.length === 0) {
-    return `<div class="empty-chart-msg" style="padding: 40px 0; text-align: center; color: #8b949e;">市場価値データがありません</div>`;
-  }
-
+function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
   const values = history.map(h => (Number.isFinite(h.value) ? h.value : 0));
   const peakVal = values.length > 0 ? Math.max(...values) : 1000;
   const safePeakVal = Number.isFinite(peakVal) && peakVal > 0 ? peakVal : 1000;
 
-  // グラフキャンバスのサイズ設計（タブ全体を専有する大型ワイドレイアウト）
-  const W = 640;
-  const H = 340;
-  const padL = 72;
-  const padR = 44;
-  const padT = 38;
-  const padB = 46;
+  const padL = isMobile ? 58 : 72;
+  const padR = isMobile ? 32 : 44;
+  const padT = isMobile ? 36 : 38;
+  const padB = isMobile ? 44 : 46;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
@@ -13763,8 +13755,8 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     return padT + plotH - ratio * plotH;
   };
 
-  // グリッド線（4段階：0.25, 0.50, 0.75, 1.0）
-  const gridSteps = [0.25, 0.50, 0.75, 1.0];
+  // グリッド線（モバイルは縦長のため5段階、PCは4段階）
+  const gridSteps = isMobile ? [0.20, 0.40, 0.60, 0.80, 1.0] : [0.25, 0.50, 0.75, 1.0];
   let gridLinesSvg = '';
   gridSteps.forEach(step => {
     const valAtStep = yMin + (yMax - yMin) * step;
@@ -13772,7 +13764,7 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     const label = formatMoney(valAtStep);
     gridLinesSvg += `
       <line x1="${padL}" y1="${yPos.toFixed(1)}" x2="${W - padR}" y2="${yPos.toFixed(1)}" stroke="#22272e" stroke-dasharray="3,3" stroke-width="1" />
-      <text x="${padL - 10}" y="${(yPos + 4).toFixed(1)}" fill="#6c757d" font-size="10.5" font-family="var(--font-mono)" text-anchor="end">${label}</text>
+      <text x="${padL - (isMobile ? 8 : 10)}" y="${(yPos + 4).toFixed(1)}" fill="#6c757d" font-size="${isMobile ? '10' : '10.5'}" font-family="var(--font-mono)" text-anchor="end">${label}</text>
     `;
   });
   // ベースライン（y = 0）
@@ -13801,7 +13793,7 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
   // X軸ラベルと各データポイント（サークル・値ラベル）
   let pointsSvg = '';
   let xLabelsSvg = '';
-  const gradId = `mvGrad_${p.id || Math.random().toString(36).slice(2, 7)}`;
+  const gradId = `mvGrad_${isMobile ? 'm_' : 'd_'}${p.id || Math.random().toString(36).slice(2, 7)}`;
 
   points.forEach((pt, i) => {
     const isPeak = (pt.h.value === peakVal && peakVal > 0);
@@ -13810,9 +13802,10 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     const formattedVal = formatMoney(pt.h.value);
 
     // X軸ラベル（年度・年齢）
+    const xLabelText = pt.h.label || pt.h.shortLabel;
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 18).toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#9ba3af')}" font-size="11" font-family="var(--font-mono)" font-weight="${isLast || isPeak ? '700' : '500'}" text-anchor="middle">
-        ${pt.h.label || pt.h.shortLabel}
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + (isMobile ? 16 : 18)).toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#9ba3af')}" font-size="${isMobile ? '10' : '11'}" font-family="var(--font-mono)" font-weight="${isLast || isPeak ? '700' : '500'}" text-anchor="middle">
+        ${xLabelText}
       </text>
     `;
 
@@ -13820,48 +13813,67 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     if (isPeak) {
       pointsSvg += `
         <!-- PEAKハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="9" fill="rgba(241, 196, 15, 0.25)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="#f1c40f" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 13).toFixed(1)}" fill="#f1c40f" font-size="11.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 8 : 9}" fill="rgba(241, 196, 15, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 5 : 5.5}" fill="#f1c40f" stroke="#14171b" stroke-width="2.5" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 11 : 13)).toFixed(1)}" fill="#f1c40f" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
       `;
     } else if (isLast) {
       pointsSvg += `
         <!-- 現在値ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="8" fill="rgba(46, 204, 113, 0.25)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="#2ecc71" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 12).toFixed(1)}" fill="#2ecc71" font-size="11.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 7.5 : 8}" fill="rgba(46, 204, 113, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 4.5 : 5}" fill="#2ecc71" stroke="#14171b" stroke-width="2.5" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 10 : 12)).toFixed(1)}" fill="#2ecc71" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
       `;
     } else if (isFirst) {
       pointsSvg += `
         <!-- 初期・数年前の開始点ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7" fill="rgba(56, 189, 248, 0.2)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#38bdf8" font-size="10.5" font-family="var(--font-mono)" font-weight="700" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 6 : 7}" fill="rgba(56, 189, 248, 0.2)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 3.5 : 4}" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 9 : 10)).toFixed(1)}" fill="#38bdf8" font-size="${isMobile ? '9.5' : '10.5'}" font-family="var(--font-mono)" font-weight="700" text-anchor="middle">${formattedVal}</text>
       `;
     } else {
       pointsSvg += `
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="#14171b" stroke="#94a3b8" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 9).toFixed(1)}" fill="#cbd5e1" font-size="10" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 3 : 3.5}" fill="#14171b" stroke="#94a3b8" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#cbd5e1" font-size="${isMobile ? '9' : '10'}" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
       `;
     }
   });
 
   return `
+    <svg class="market-value-svg" data-device="${isMobile ? 'mobile' : 'desktop'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2ecc71" stop-opacity="0.35" />
+          <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.10" />
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+        </linearGradient>
+      </defs>
+      ${gridLinesSvg}
+      <path d="${areaPathD}" fill="url(#${gradId})" />
+      <polyline points="${polylinePoints}" fill="none" stroke="#2ecc71" stroke-width="${isMobile ? '2.5' : '3'}" stroke-linecap="round" stroke-linejoin="round" />
+      ${pointsSvg}
+      ${xLabelsSvg}
+    </svg>
+  `;
+}
+
+/**
+ * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画（数年前〜現在）
+ * モバイルでは縦幅余白を限界まで活かした縦長SVG（360x480）、PCではワイドSVG（640x340）を両立描画
+ */
+function buildPlayerMarketValueChartSvg(p, currentClubName) {
+  const history = ensurePlayerValueHistory(p, currentClubName);
+  if (!history || history.length === 0) {
+    return `<div class="empty-chart-msg" style="padding: 40px 0; text-align: center; color: #8b949e;">市場価値データがありません</div>`;
+  }
+
+  const desktopSvg = renderMarketValueSvgContent(p, history, 640, 340, false);
+  const mobileSvg = renderMarketValueSvgContent(p, history, 360, 480, true);
+
+  return `
     <div class="market-value-chart-wrapper">
-      <svg class="market-value-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#2ecc71" stop-opacity="0.35" />
-            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.10" />
-            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
-          </linearGradient>
-        </defs>
-        ${gridLinesSvg}
-        <path d="${areaPathD}" fill="url(#${gradId})" />
-        <polyline points="${polylinePoints}" fill="none" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-        ${pointsSvg}
-        ${xLabelsSvg}
-      </svg>
+      ${desktopSvg}
+      ${mobileSvg}
     </div>
   `;
 }
@@ -13874,8 +13886,8 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
 
   return `
     <div class="profile-tab-panel hidden" data-profile-panel="market-value">
-      <div class="profile-box profile-box-market-value" style="padding: 6px 0; background: transparent; border: none;">
-        <div class="profile-chart-section" style="margin-top: 0;">
+      <div class="profile-box profile-box-market-value" style="padding: 0; background: transparent; border: none; height: 100%; display: flex; flex-direction: column;">
+        <div class="profile-chart-section" style="margin-top: 0; height: 100%; display: flex; flex-direction: column; flex: 1;">
           ${chartSvgHtml}
         </div>
       </div>
