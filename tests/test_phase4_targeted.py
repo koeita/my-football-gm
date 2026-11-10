@@ -180,5 +180,32 @@ class TestPhase4Targeted(unittest.TestCase):
         # 4. 週間カレンダーでクリックキックオフ（openMatchPrecheckModal）がサポートされていること
         self.assertIn("onclick=\"openMatchPrecheckModal()\"", self.main_js)
 
+    def test_scheduling_collision_resolution_and_interval_guarantee(self):
+        """欧州戦と国内カップ戦のバッティング回避、最低中2日インターバル、週上限スロット制限の検証"""
+        # 1. 欧州戦最優先固定
+        self.assertIn("euroScheduleList", self.comp_js)
+        self.assertIn("domesticCupScheduleList", self.comp_js)
+
+        # 2. スロット検証ヘルパーと最低中2日ルール（差3日以上空けること）
+        self.assertIn("isCupSlotValid", self.comp_js)
+        self.assertIn("Math.abs(d.dayIndex - other.dayIndex) < 3", self.comp_js)
+
+        # 3. 週上限スロット制限（月曜〜日曜でミッドウィーク1試合制限）
+        self.assertIn("getCalendarWeekIndex", self.comp_js)
+
+        # 4. 空きミッドウィークへの自動スライド探索
+        self.assertIn("candidates", self.comp_js)
+        self.assertIn("Math.abs(d.dayIndex - baseIdx)", self.comp_js)
+
+    def test_unconfirmed_tournament_schedule_hidden(self):
+        """トーナメントの未決定スケジュールがカレンダー（月間・週間）に表示されないこと"""
+        # 月間カレンダーで対戦未定時の [CUP] バッジ描画（eventTagHtml += cal-cup-badge）が削除されていること
+        self.assertNotIn("eventTagHtml += `<div class=\"cal-cup-badge", self.main_js)
+        # 週間カレンダーで対戦未定時の [CUP] 開催日バッジが削除されていること
+        self.assertNotIn("[${compCode}] 開催日", self.main_js)
+        # matchInfo.oppClub がある場合のみ試合として描画・カウントされること
+        self.assertIn("d.isCupMatchDay && mInfo && mInfo.oppClub", self.main_js)
+        self.assertIn("Boolean(matchInfo && matchInfo.oppClub && !day.played)", self.main_js)
+
 if __name__ == '__main__':
     unittest.main()

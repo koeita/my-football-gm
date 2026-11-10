@@ -4189,7 +4189,7 @@ function renderWeeklySchedule() {
   for (let i = currentIdx; i < gameState.calendar.length; i++) {
     const d = gameState.calendar[i];
     const mInfo = getCalendarDayPlayerMatch(d);
-    if ((d.isMatchDay || (d.isCupMatchDay && mInfo)) && !d.played) {
+    if ((d.isMatchDay || (d.isCupMatchDay && mInfo && mInfo.oppClub)) && !d.played) {
       daysUntilMatch = i - currentIdx;
       nextMatchDay = d;
       nextMatchTitle = mInfo ? mInfo.title : `第${d.matchWeek}節`;
@@ -4224,19 +4224,16 @@ function renderWeeklySchedule() {
   trackEl.innerHTML = daysToShow.map((day, idx) => {
     const isToday = idx === 0;
     const matchInfo = getCalendarDayPlayerMatch(day);
-    const isMatch = Boolean(matchInfo && !day.played);
+    const isMatch = Boolean(matchInfo && matchInfo.oppClub && !day.played);
 
     let eventHtml = '';
-    if (matchInfo) {
+    if (matchInfo && matchInfo.oppClub) {
       const isHome = matchInfo.isHome;
       const oppClub = matchInfo.oppClub;
       const oppCode = getClubShortCode(oppClub);
       const compBadge = matchInfo.compCode ? `[${matchInfo.compCode}] ` : '';
       const badgeCls = matchInfo.compCode ? `badge-comp-${matchInfo.compCode.toLowerCase()}` : '';
       eventHtml = `<span class="day-event-badge day-event-match ${badgeCls}">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
-    } else if (day.isCupMatchDay) {
-      const compCode = day.cupCode || 'CUP';
-      eventHtml = `<span class="day-event-badge badge-comp-${compCode.toLowerCase()}">[${compCode}] 開催日</span>`;
     } else if (day.isTransferDeadline) {
       eventHtml = `<span class="day-event-badge day-event-market">市場最終日</span>`;
     } else if (day.windowOpen) {
@@ -17521,8 +17518,6 @@ function renderMonthCalendar() {
             ${scoreBadge}
           </div>
         `;
-      } else {
-        eventTagHtml += `<div class="cal-cup-badge ${badgeClass}" title="${d.cupLabel || compCode}">[${compCode}]</div>`;
       }
     } else if (d.isMatchDay && d.matchWeek) {
       const weekIdx = d.matchWeek - 1;
