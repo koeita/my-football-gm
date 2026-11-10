@@ -5228,22 +5228,22 @@ function buildMatchSummaryHtml(md) {
         <div class="summary-hero-box">
           <div class="summary-score-row">
             <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px;">
-                ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
+              <div class="summary-club-header-wrap">
+                ${getClubEmblemSvg(homeClub, 22, 'summary-club-emblem')}
                 <span class="summary-club-name">${homeClub.name}</span>
               </div>
-              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+              <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
             <div class="summary-score-center">
               <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
               <span class="summary-result-pill res-${resType}">${resLabel}</span>
             </div>
             <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:2px;">
-                ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
+              <div class="summary-club-header-wrap">
                 <span class="summary-club-name">${awayClub.name}</span>
+                ${getClubEmblemSvg(awayClub, 22, 'summary-club-emblem')}
               </div>
-              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
+              <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
           </div>
           <div class="summary-scorers-grid">
@@ -5552,7 +5552,10 @@ function openMatchPrecheckModal() {
           <div class="precheck-card-subhead mono">MATCHDAY FIXTURE</div>
           <div class="precheck-vs-row">
             <div class="precheck-club-box is-player">
-              <span class="precheck-club-name">${playerClub.name}</span>
+              <div class="precheck-club-title-wrap">
+                ${getClubEmblemSvg(playerClub, 28, 'precheck-emblem')}
+                <span class="precheck-club-name">${playerClub.name}</span>
+              </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
@@ -5560,7 +5563,10 @@ function openMatchPrecheckModal() {
             </div>
             <div class="precheck-vs-badge">VS</div>
             <div class="precheck-club-box">
-              <span class="precheck-club-name">${oppName}</span>
+              <div class="precheck-club-title-wrap">
+                ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}
+                <span class="precheck-club-name">${oppName}</span>
+              </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
@@ -5713,8 +5719,8 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
 
   if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
   if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
-  if (homeName) homeName.textContent = homeClub.name;
-  if (awayName) awayName.textContent = awayClub.name;
+  if (homeName) homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text">${homeClub.name}</span>`;
+  if (awayName) awayName.innerHTML = `<span class="match-live-team-name-text">${awayClub.name}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
   if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
   if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
   if (shEl) shEl.textContent = '0';
@@ -12827,7 +12833,7 @@ function renderIntroClubDetail() {
     <div class="detail-header-card">
       <div class="detail-title-row">
         <div class="detail-club-title-group">
-          <span class="detail-club-avatar mono">${getClubShortCode(club)}</span>
+          ${getClubEmblemSvg(club, 48, 'intro-club-emblem')}
           <div class="detail-club-header-text">
             <h3 class="detail-club-name">${club.name}</h3>
             <span class="detail-tier-badge">${club.tier}</span>
@@ -12863,7 +12869,7 @@ function renderIntroClubDetail() {
   `;
 
   if (summaryEl) {
-    summaryEl.innerHTML = `選択: <strong class="accent-green">${club.name}</strong> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
+    summaryEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">${getClubEmblemSvg(club, 20, 'intro-summary-emblem')}選択: <strong class="accent-green">${club.name}</strong></span> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
   }
 }
 
@@ -16708,9 +16714,12 @@ function openPendingMatchPreview(weekNum) {
     <!-- クラブ対決カード -->
     <div class="scout-matchup-card">
       <div class="scout-team-col home">
-        <span class="scout-team-name ${playerClub.id === match.homeId ? 'accent-green' : ''}">
-          ${match.homeId === playerClub.id ? playerClub.name : oppClub.name}
-        </span>
+        <div class="scout-team-title-wrap">
+          ${getClubEmblemSvg(match.homeId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
+          <span class="scout-team-name ${playerClub.id === match.homeId ? 'accent-green' : ''}">
+            ${match.homeId === playerClub.id ? playerClub.name : oppClub.name}
+          </span>
+        </div>
         <span class="scout-team-meta mono">
           ${match.homeId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
         </span>
@@ -16723,9 +16732,12 @@ function openPendingMatchPreview(weekNum) {
         <span class="mono" style="font-size:10.5px; color:#8a94a0;">${dateStr}</span>
       </div>
       <div class="scout-team-col away">
-        <span class="scout-team-name ${playerClub.id === match.awayId ? 'accent-green' : ''}">
-          ${match.awayId === playerClub.id ? playerClub.name : oppClub.name}
-        </span>
+        <div class="scout-team-title-wrap">
+          <span class="scout-team-name ${playerClub.id === match.awayId ? 'accent-green' : ''}">
+            ${match.awayId === playerClub.id ? playerClub.name : oppClub.name}
+          </span>
+          ${getClubEmblemSvg(match.awayId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
+        </div>
         <span class="scout-team-meta mono">
           ${match.awayId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
         </span>
