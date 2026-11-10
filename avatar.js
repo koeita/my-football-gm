@@ -2,41 +2,45 @@
 
 /**
  * 選手ドット絵アバター（Pixel Avatar）ジェネレーター
- * - 32x32 の論理グリッドに Canvas 2D で1ピクセルずつ描画するレトロ風顔写真
+ * - 32x32 の論理グリッドに Canvas 2D で1ピクセルずつ描画する16-bitレトロモダン・ピクセルポートレート
+ * - 円形バストアップ（Base Circle）＋3段スキントーン（ハイライト・ベース・影）
  * - 選手ごとの「アバター遺伝子（avatarData）」から決定論的に描画
- * - 生成済み画像は dataURL としてインメモリキャッシュし、再描画コストを最小化
- * - 外部画像・絵文字は一切使用しない
+ * - 生成済み画像はマスターCanvasおよびDataURLとしてインメモリキャッシュし、再描画コストを最小化
+ * - 外部画像や重いライブラリは一切使用しない
  */
 
 // ---------------------------------------------------------------------------
-// パレット定義
+// パレット定義（スキントーン・髪型・髪色・クラブカラー）
 // ---------------------------------------------------------------------------
+
+// スキントーン（肌色パレット）：ハイライト・中間色・影色の3段構成
 const AVATAR_SKIN_TONES = [
-  { key: 'fair',   label: '色白',   base: '#f3d5c1', shade: '#dcb39b' },
-  { key: 'medium', label: '普通',   base: '#e6b590', shade: '#c9946f' },
-  { key: 'tan',    label: '日焼け', base: '#c78d62', shade: '#a8714a' },
-  { key: 'brown',  label: '褐色',   base: '#8f5b3a', shade: '#74462a' },
-  { key: 'dark',   label: 'ダーク', base: '#5b3924', shade: '#452a19' }
+  { key: 'fair',       label: '色白',       base: '#f0c5a3', shadow: '#d8a07c', highlight: '#fbe3cc', shade: '#d8a07c' },
+  { key: 'tan',        label: '小麦色',     base: '#d29462', shadow: '#b07345', highlight: '#dfa87a', shade: '#b07345' },
+  { key: 'olive',      label: '褐色',       base: '#bc7d4d', shadow: '#965a30', highlight: '#cc8f5f', shade: '#965a30' },
+  { key: 'dark_brown', label: 'アフリカ系', base: '#7a4628', shadow: '#5a3018', highlight: '#8f5835', shade: '#5a3018' },
+  { key: 'deep_black', label: '濃褐色',     base: '#4d2b1a', shadow: '#33190e', highlight: '#613923', shade: '#33190e' }
 ];
 
 const AVATAR_HAIR_STYLES = ['short', 'spiky', 'perm', 'afro', 'dreads', 'buzz', 'centerpart', 'long'];
 const AVATAR_HAIR_STYLE_LABELS = {
-  short: '短髪', spiky: 'ツンツン', perm: 'パーマ', afro: 'アフロ',
-  dreads: 'ドレッド', buzz: '坊主', centerpart: 'センター分け', long: '長髪'
+  short: '短髪フェード', spiky: 'ツンツン', perm: 'パーマ', afro: 'アフロ',
+  dreads: 'ドレッド', buzz: '坊主', centerpart: 'センター分け', long: 'ウェーブ長髪'
 };
 
+// 髪色パレット：黒、濃茶、金髪、赤茶、アッシュ/白髪
 const AVATAR_HAIR_COLORS = [
-  { key: 'black', label: '黒',     base: '#1d1b1b', shade: '#0e0d0d' },
-  { key: 'brown', label: '茶',     base: '#5b3a22', shade: '#432a17' },
-  { key: 'blond', label: '金',     base: '#d8b45c', shade: '#b48f3d' },
-  { key: 'red',   label: '赤',     base: '#a5462a', shade: '#82341d' },
-  { key: 'grey',  label: 'グレー', base: '#a9a9a9', shade: '#858585' }
+  { key: 'black',  label: '黒',           base: '#1a1a1a', shadow: '#0c0c0c', highlight: '#333333', shade: '#0c0c0c' },
+  { key: 'brown',  label: '濃茶',         base: '#3d2817', shadow: '#24170d', highlight: '#5c3d25', shade: '#24170d' },
+  { key: 'blond',  label: '金髪',         base: '#c99a4a', shadow: '#96702d', highlight: '#e2bb69', shade: '#96702d' },
+  { key: 'auburn', label: '赤茶',         base: '#8d3d24', shadow: '#612513', highlight: '#ab5233', shade: '#612513' },
+  { key: 'grey',   label: 'アッシュ/白髪', base: '#888888', shadow: '#5e5e5e', highlight: '#aaaaaa', shade: '#5e5e5e' }
 ];
 
 const AVATAR_FACIAL_HAIR = ['none', 'mustache', 'goatee', 'beard'];
 const AVATAR_ACCESSORIES = ['none', 'glasses', 'band'];
 
-// 国籍ごとの肌色出現ウェイト [色白, 普通, 日焼け, 褐色, ダーク]
+// 国籍ごとの肌色出現ウェイト [色白, 小麦色, 褐色, アフリカ系, 濃褐色]
 const AVATAR_SKIN_WEIGHTS_BY_NATIONALITY = {
   England:     [34, 28, 12, 13, 13],
   France:      [24, 24, 14, 18, 20],
@@ -52,7 +56,7 @@ const AVATAR_SKIN_WEIGHTS_BY_NATIONALITY = {
   Japan:       [42, 50, 8, 0, 0]
 };
 
-// 肌色ごとの髪色ウェイト [黒, 茶, 金, 赤, グレー]
+// 肌色ごとの髪色ウェイト [黒, 濃茶, 金髪, 赤茶, アッシュ/白髪]
 const AVATAR_HAIR_COLOR_WEIGHTS_BY_SKIN = [
   [26, 36, 26, 11, 1],
   [44, 40, 12, 3, 1],
@@ -93,11 +97,31 @@ const CLUB_KIT_COLORS = {
   southampton_s: ['#d71920', '#ffffff'],
   ipswich_t:     ['#3a64a3', '#ffffff']
 };
-const AVATAR_DEFAULT_KIT = ['#4a525a', '#c9d1d9'];
+const AVATAR_DEFAULT_KIT = ['#334155', '#e2e8f0'];
 
 // ---------------------------------------------------------------------------
-// 乱数ユーティリティ
+// ヘルパー＆乱数ユーティリティ
 // ---------------------------------------------------------------------------
+function findSkinPalette(key) {
+  if (!key) return AVATAR_SKIN_TONES[1];
+  if (key === 'fair') return AVATAR_SKIN_TONES[0];
+  if (key === 'tan' || key === 'medium') return AVATAR_SKIN_TONES[1];
+  if (key === 'olive') return AVATAR_SKIN_TONES[2];
+  if (key === 'dark_brown' || key === 'brown') return AVATAR_SKIN_TONES[3];
+  if (key === 'deep_black' || key === 'dark') return AVATAR_SKIN_TONES[4];
+  return AVATAR_SKIN_TONES.find(s => s.key === key) || AVATAR_SKIN_TONES[1];
+}
+
+function findHairPalette(key) {
+  if (!key) return AVATAR_HAIR_COLORS[0];
+  if (key === 'black') return AVATAR_HAIR_COLORS[0];
+  if (key === 'brown') return AVATAR_HAIR_COLORS[1];
+  if (key === 'blond') return AVATAR_HAIR_COLORS[2];
+  if (key === 'auburn' || key === 'red') return AVATAR_HAIR_COLORS[3];
+  if (key === 'grey' || key === 'gray') return AVATAR_HAIR_COLORS[4];
+  return AVATAR_HAIR_COLORS.find(h => h.key === key) || AVATAR_HAIR_COLORS[0];
+}
+
 function avatarHashString(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -128,6 +152,21 @@ function avatarWeightedPick(weights, rng) {
   return weights.length - 1;
 }
 
+function hexToRgb(hex) {
+  const h = (hex || '#000000').replace('#', '');
+  return [
+    parseInt(h.slice(0, 2), 16) || 0,
+    parseInt(h.slice(2, 4), 16) || 0,
+    parseInt(h.slice(4, 6), 16) || 0
+  ];
+}
+
+function shadeHex(hex, amount) {
+  const [r, g, b] = hexToRgb(hex);
+  const f = (v) => Math.max(0, Math.min(255, Math.round(v + amount)));
+  return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
+}
+
 // ---------------------------------------------------------------------------
 // アバター遺伝子の生成
 // ---------------------------------------------------------------------------
@@ -154,7 +193,7 @@ function generateAvatarData(nationality, age, rng = Math.random) {
     18 + Math.round(beardBoost * 0.5)
   ];
   const facialIdx = avatarWeightedPick(facialWeights, rng);
-  const accessoryIdx = avatarWeightedPick([80, 7, 13], rng);
+  const accessoryIdx = avatarWeightedPick([84, 6, 10], rng);
 
   // 若手選手がグレーになるのは不自然なので黒に寄せる
   if (hairColorIdx === 4 && a < 30) hairColorIdx = 0;
@@ -201,215 +240,370 @@ function getAvatarKitColors(player, club) {
 }
 
 // ---------------------------------------------------------------------------
-// ピクセル描画コア（32x32 論理グリッド）
+// 16-bit レトロモダン・ピクセルポートレート描画コア（32x32 グリッド）
 // ---------------------------------------------------------------------------
-function hexToRgb(hex) {
-  const h = hex.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-
-function shadeHex(hex, amount) {
-  const [r, g, b] = hexToRgb(hex);
-  const f = (v) => Math.max(0, Math.min(255, Math.round(v + amount)));
-  return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
-}
-
 /**
- * 32x32 グリッドへ顔を描画
+ * 32x32 グリッドへ円形バストアップのドット絵を描画
  * @param {CanvasRenderingContext2D} ctx 既に scale 済みのコンテキスト
  */
 function drawPixelAvatarOnContext(ctx, genes, age, kit) {
   const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
   const set = (c) => { ctx.fillStyle = c; };
 
-  const skin = AVATAR_SKIN_TONES.find(s => s.key === genes.skinColor) || AVATAR_SKIN_TONES[1];
-  let hair = AVATAR_HAIR_COLORS.find(h => h.key === genes.hairColor) || AVATAR_HAIR_COLORS[0];
-  // 加齢表現：34歳以上はグレー化
-  if (age >= 34) hair = AVATAR_HAIR_COLORS[4];
+  const skin = findSkinPalette(genes.skinColor);
+  let hair = findHairPalette(genes.hairColor);
+  if (age >= 34) hair = findHairPalette('grey');
   const isVeteranSaltPepper = age >= 31 && age < 34 && hair.key !== 'grey' && hair.key !== 'blond';
 
-  const style = genes.hairStyle;
-  const [kitMain, kitAccent] = kit;
+  const style = genes.hairStyle || 'short';
+  const [kitMain, kitAccent] = kit || AVATAR_DEFAULT_KIT;
 
-  // --- 背景：暗めの丸枠＋クラブカラーのうっすら背景 ---
   ctx.clearRect(0, 0, 32, 32);
-  ctx.beginPath();
-  ctx.arc(16, 16, 16, 0, Math.PI * 2);
-  ctx.closePath();
-  set('#1a1d20');
-  ctx.fill();
+
+  // 1. 【背景円（Base Circle）】
+  // 32x32 Canvas中央に、半径約14.8pxのダークグレー（#1c2026）の塗りつぶし円を描画
   ctx.save();
-  ctx.clip();
+  ctx.beginPath();
+  ctx.arc(16, 16, 14.8, 0, Math.PI * 2);
+  ctx.closePath();
+  set('#1c2026');
+  ctx.fill();
+  ctx.clip(); // 円形クリッピング
+
+  // アンビエントライト（クラブカラーの微かな光 ＋ 上部ソフトハイライト）
   const [kr, kg, kb] = hexToRgb(kitMain);
-  ctx.fillStyle = `rgba(${kr}, ${kg}, ${kb}, 0.22)`;
+  ctx.fillStyle = `rgba(${kr}, ${kg}, ${kb}, 0.16)`;
   ctx.fillRect(0, 0, 32, 32);
   set('rgba(255, 255, 255, 0.04)');
-  px(0, 0, 32, 10);
+  px(0, 0, 32, 11);
 
-  // --- 後ろ髪レイヤー（顔の背面） ---
+  // 2. 【後ろ髪レイヤー（頭部・首の背面）】
   set(hair.base);
   if (style === 'afro') {
-    px(8, 2, 16, 1); px(6, 3, 20, 1); px(5, 4, 22, 8); px(6, 12, 20, 3); px(7, 15, 4, 2); px(21, 15, 4, 2);
-    set(hair.shade);
-    for (let y = 4; y < 15; y += 2) for (let x = 6 + (y % 4 === 0 ? 0 : 1); x < 26; x += 3) px(x, y);
+    // 豊かなアフロの球状シルエット
+    px(8, 2, 16, 2);
+    px(6, 4, 20, 2);
+    px(4, 6, 24, 8);
+    px(5, 14, 22, 3);
+    px(6, 17, 4, 2); px(22, 17, 4, 2);
+    // アフロの陰影・ハイライトテクスチャ
+    set(hair.shadow);
+    for (let y = 3; y < 18; y += 2) {
+      for (let x = 5 + (y % 4 === 1 ? 1 : 0); x < 27; x += 3) {
+        if ((x - 16) * (x - 16) + (y - 10) * (y - 10) <= 120) px(x, y);
+      }
+    }
+    set(hair.highlight);
+    for (let y = 3; y < 10; y += 2) {
+      for (let x = 9 + (y % 3); x < 23; x += 4) px(x, y);
+    }
   } else if (style === 'long') {
-    px(8, 7, 16, 16); px(9, 23, 14, 2);
-    set(hair.shade); px(8, 18, 2, 6); px(22, 18, 2, 6);
+    // 肩まで広がるウェーブ長髪（背面）
+    px(7, 7, 18, 17);
+    px(8, 24, 16, 2);
+    set(hair.shadow);
+    px(7, 14, 2, 11); px(23, 14, 2, 11);
+    set(hair.highlight);
+    px(9, 10, 1, 12); px(22, 10, 1, 12);
   } else if (style === 'dreads') {
-    for (const x of [8, 10, 21, 23]) {
-      set(hair.base); px(x, 9, 1, 14);
-      set(hair.shade); for (let y = 10; y < 23; y += 3) px(x, y);
+    // 肩まで垂れ下がるドレッドの束（背面）
+    for (const x of [6, 8, 23, 25]) {
+      set(hair.base); px(x, 8, 2, 16);
+      set(hair.shadow); for (let y = 9; y < 24; y += 3) px(x, y, 2, 1);
+      set(hair.highlight); for (let y = 10; y < 24; y += 3) px(x, y, 1, 1);
     }
   }
 
-  // --- 首 ---
-  set(skin.shade);
-  px(13, 20, 6, 6);
-
-  // --- ユニフォーム（肩・襟元） ---
-  set(kitMain);
-  px(8, 25, 16, 1); px(6, 26, 20, 1); px(4, 27, 24, 5);
-  set(shadeHex(kitMain, -28));
-  px(4, 30, 24, 2);
-  // V襟
-  set(kitAccent);
-  px(11, 25, 2, 1); px(19, 25, 2, 1); px(12, 26, 2, 1); px(18, 26, 2, 1); px(13, 27, 2, 1); px(17, 27, 2, 1); px(15, 28, 2, 1);
-  set(skin.shade);
-  px(13, 25, 6, 1); px(14, 26, 4, 1); px(15, 27, 2, 1);
-  // 肩のアクセントライン
-  set(kitAccent);
-  px(5, 27, 1, 1); px(26, 27, 1, 1);
-
-  // --- 耳 ---
-  set(skin.base); px(9, 13, 1, 4); px(22, 13, 1, 4);
-  set(skin.shade); px(9, 14, 1, 2); px(22, 14, 1, 2);
-
-  // --- 顔の輪郭 ---
+  // 3. 【首と顎下の深い影】
+  // 首のベース幅 6px (X=13〜18, Y=22〜26)
   set(skin.base);
-  px(11, 8, 10, 1); px(10, 9, 12, 11); px(11, 20, 10, 1); px(12, 21, 8, 1);
-  // 陰影（右側・顎下）
-  set(skin.shade);
-  px(21, 10, 1, 10); px(20, 20, 1, 1); px(12, 21, 8, 1);
+  px(13, 22, 6, 4);
+  // 首元・耳の内側・顎下の濃い影ピクセル（立体感のコア）
+  set(skin.shadow);
+  px(13, 22, 6, 2); // 顎の直下の濃い影
+  px(13, 24, 1, 2); px(18, 24, 1, 2); // 首の両脇の影
 
-  // --- 眉 ---
-  set(hair.shade);
-  px(12, 12, 3, 1); px(17, 12, 3, 1);
+  // 4. 【ユニフォーム襟元（Kit Collar）】
+  // 円の下部（Y座標25〜31付近）に所属クラブカラー（メイン・サブ）を描画
+  set(kitMain);
+  px(11, 25, 10, 1);
+  px(8, 26, 16, 1);
+  px(5, 27, 22, 1);
+  px(3, 28, 26, 4);
 
-  // --- 目 ---
+  // ユニフォーム裾・影側の立体陰影
+  set(shadeHex(kitMain, -32));
+  px(3, 30, 26, 2);
+  px(22, 27, 7, 4); // 右半身の陰影
+
+  // 襟元（Collar）ストライプ
+  set(kitAccent);
+  // 首元のVネックまたはリブカラー
+  px(11, 25, 2, 1); px(19, 25, 2, 1);
+  px(12, 26, 2, 1); px(18, 26, 2, 1);
+  px(13, 27, 2, 1); px(17, 27, 2, 1);
+  px(15, 28, 2, 1); // Vの先端
+
+  // 襟元中央の隙間（首元の影肌）
+  set(skin.shadow);
+  px(14, 25, 4, 1);
+  px(14, 26, 4, 1);
+  px(15, 27, 2, 1);
+
+  // 肩・袖のアクセントストライプ（4〜5px）
+  set(kitAccent);
+  px(5, 28, 2, 4);
+  px(25, 28, 2, 4);
+
+  // 5. 【耳】
+  // 左耳 (X=8〜9, Y=13〜16) / 右耳 (X=22〜23, Y=13〜16)
+  set(skin.base);
+  px(8, 13, 2, 4); px(22, 13, 2, 4);
+  // 耳の内側の濃い影
+  set(skin.shadow);
+  px(9, 14, 1, 2); px(22, 14, 1, 2);
+
+  // 6. 【顔の輪郭（角ばった顎ライン・立体シェーディング）】
+  // 顔ベース（X=10〜21, Y=8〜21）
+  set(skin.base);
+  px(11, 8, 10, 2);   // 額
+  px(10, 10, 12, 10); // 頬・顔中央
+  px(11, 20, 10, 1);  // 顎上部
+  px(12, 21, 8, 1);   // 角ばった顎ライン
+  px(13, 22, 6, 1);   // 顎先端
+
+  // 立体感シェーディング：右側・顎エッジ・顎下の影
+  set(skin.shadow);
+  px(21, 10, 1, 10);  // 右頬の縦シャドウ
+  px(20, 20, 1, 1);   // 顎右角シャドウ
+  px(11, 20, 1, 1);   // 顎左角シャドウ
+  px(12, 21, 1, 1); px(19, 21, 1, 1); // 顎下角
+  px(13, 22, 6, 1);   // 顎底辺の境界シャドウ
+
+  // ハイライト（左上からの光源）：額と左頬
+  set(skin.highlight);
+  px(12, 9, 6, 1);    // 額ハイライト
+  px(11, 11, 1, 4);   // 左頬ハイライト
+
+  // 7. 【眉】
+  // キリッとした横2〜3pxの引き締まったライン
+  const browColor = hair.key === 'blond' ? '#8a6425' : hair.key === 'grey' ? '#4a4a4a' : hair.shadow;
+  set(browColor);
+  px(11, 12, 3, 1);
+  px(18, 12, 3, 1);
+  px(13, 13, 1, 1);
+  px(18, 13, 1, 1);
+
+  // 8. 【目（横3px：自信のある瞳）】
   const ev = genes.eyeVariant || 0;
-  if (ev === 0) {
-    set('#f2f2f2'); px(12, 14, 1, 1); px(17, 14, 1, 1);
-    set('#1a1a1a'); px(13, 14, 1, 2); px(18, 14, 1, 2);
-  } else if (ev === 1) {
-    set('#1a1a1a'); px(12, 14, 2, 1); px(17, 14, 2, 1); // 細め（鋭い目）
+  // まぶたの影
+  set(skin.shadow);
+  px(11, 13, 2, 1); px(19, 13, 2, 1);
+
+  if (ev === 1) {
+    // パターン1：鋭い眼光（横3px：白1px + 黒2px）
+    set('#f8fafc'); px(11, 14, 1, 1); px(20, 14, 1, 1);
+    set('#111827'); px(12, 14, 2, 1); px(18, 14, 2, 1);
+  } else if (ev === 2) {
+    // パターン2：青/琥珀系の澄んだ瞳（横3px：白 + 虹彩 + 白）
+    set('#f8fafc');
+    px(11, 14, 1, 1); px(13, 14, 1, 1);
+    px(18, 14, 1, 1); px(20, 14, 1, 1);
+    const irisColor = (genes.skinColor === 'fair' || genes.skinColor === 'tan') ? '#2563eb' : '#b45309';
+    set(irisColor);
+    px(12, 14, 1, 1); px(19, 14, 1, 1);
   } else {
-    set('#f2f2f2'); px(12, 14, 2, 1); px(17, 14, 2, 1);
-    set('#2b4a6b'); px(13, 14, 1, 2); px(18, 14, 1, 2); // 青系の瞳
+    // パターン0：正面を見据える自信のある瞳（横3px：白 + 黒 + 白）
+    set('#f8fafc');
+    px(11, 14, 1, 1); px(13, 14, 1, 1);
+    px(18, 14, 1, 1); px(20, 14, 1, 1);
+    set('#111827');
+    px(12, 14, 1, 1); px(19, 14, 1, 1);
   }
 
-  // --- 鼻 ---
-  set(skin.shade);
-  px(15, 16, 1, 2); px(16, 17, 1, 1);
+  // 9. 【鼻】
+  // 鼻筋ハイライトと小鼻・鼻下の影
+  set(skin.highlight);
+  px(15, 14, 1, 3); // 鼻筋
+  set(skin.shadow);
+  px(15, 17, 2, 1); // 鼻下シャドウ
+  px(14, 17, 1, 1); // 左小鼻
+  px(17, 17, 1, 1); // 右小鼻
 
-  // --- 口 ---
-  set('#7d3f33');
-  px(14, 19, 4, 1);
+  // 10. 【口】
+  // 顎から2px上（Y=19）に、引き締まった横2〜3pxの直線ライン
+  set('#7a3328');
+  px(14, 19, 4, 1); // 直線リップ
+  // 下唇の立体シャドウ
+  set(skin.shadow);
+  px(15, 20, 2, 1);
 
-  // --- ヒゲ ---
-  const facial = genes.facialHair;
+  // 11. 【髭（Facial Hair）】
+  const facial = genes.facialHair || 'none';
   const beardColor = hair.base;
-  if (facial === 'mustache' || facial === 'beard') {
-    set(beardColor); px(13, 18, 6, 1);
-  }
-  if (facial === 'goatee') {
-    set(beardColor); px(13, 18, 6, 1); px(15, 20, 2, 1); px(14, 21, 4, 1);
-  }
-  if (facial === 'beard') {
+  const beardShadow = hair.shadow;
+
+  if (facial === 'mustache') {
     set(beardColor);
-    px(10, 15, 1, 5); px(21, 15, 1, 5); px(11, 18, 2, 3); px(19, 18, 2, 3); px(13, 20, 6, 1); px(12, 21, 8, 1);
-    set(hair.shade); px(14, 21, 4, 1);
-    set('#7d3f33'); px(14, 19, 4, 1);
-  }
-  if (facial === 'none' && age >= 28) {
-    // 無精ヒゲのうっすら表現
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+    px(13, 18, 6, 1);
+    set(beardShadow);
+    px(13, 19, 1, 1); px(18, 19, 1, 1);
+  } else if (facial === 'goatee') {
+    set(beardColor);
+    px(13, 18, 6, 1); // 口髭
+    px(15, 20, 2, 1);
+    px(14, 21, 4, 1); // 顎髭
+    set(beardShadow);
+    px(14, 22, 4, 1);
+  } else if (facial === 'beard') {
+    // フルビアード・精悍な無精髭
+    set(beardColor);
+    px(10, 15, 1, 5); px(21, 15, 1, 5); // もみあげ
+    px(11, 18, 2, 3); px(19, 18, 2, 3); // 頬髭
+    px(13, 18, 6, 1); // 口髭
+    px(12, 20, 8, 2); // 顎髭全体
+    set(beardShadow);
+    px(13, 22, 6, 1);
+    set('#7a3328');
+    px(14, 19, 4, 1); // 髭の間から覗く口
+  } else if (age >= 28) {
+    // 大人の選手：薄い無精髭のシャドウ
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
     px(11, 18, 10, 3);
   }
 
-  // --- 前髪レイヤー ---
+  // 12. 【前髪・トップヘアレイヤー】
   set(hair.base);
   switch (style) {
-    case 'short':
-      px(11, 6, 10, 1); px(10, 7, 12, 3); px(10, 10, 1, 3); px(21, 10, 1, 3);
-      set(hair.shade); px(10, 9, 12, 1);
+    case 'short': // サイド刈り上げフェード・短髪ツーブロック
+      px(11, 5, 10, 1);
+      px(10, 6, 12, 3);
+      px(10, 9, 2, 3); px(20, 9, 2, 3);
+      set(hair.highlight);
+      px(12, 6, 7, 1);
+      set(skin.shadow);
+      px(9, 10, 1, 3); px(22, 10, 1, 3);
       break;
-    case 'spiky':
-      px(10, 7, 12, 3); px(10, 10, 1, 2); px(21, 10, 1, 2);
-      px(11, 5, 1, 2); px(13, 4, 1, 3); px(15, 5, 1, 2); px(17, 4, 1, 3); px(19, 5, 1, 2); px(20, 6, 1, 1);
-      set(hair.shade); px(12, 6, 1, 1); px(16, 6, 1, 1); px(18, 6, 1, 1);
+
+    case 'spiky': // スポーティなツンツンヘア
+      px(10, 7, 12, 2);
+      px(10, 9, 1, 2); px(21, 9, 1, 2);
+      px(11, 4, 2, 3);
+      px(14, 3, 2, 4);
+      px(17, 3, 2, 4);
+      px(19, 5, 2, 2);
+      set(hair.highlight);
+      px(14, 4, 1, 2); px(17, 4, 1, 2);
+      set(hair.shadow);
+      px(10, 8, 12, 1);
       break;
-    case 'perm':
-      px(10, 5, 12, 1); px(9, 6, 14, 5); px(9, 11, 2, 4); px(21, 11, 2, 4);
-      set(hair.shade);
-      for (let y = 6; y < 15; y += 2) for (let x = 9 + (y % 4 === 2 ? 1 : 0); x < 23; x += 2) {
-        if (y >= 11 && x > 10 && x < 21) continue;
-        px(x, y);
+
+    case 'perm': // パーマ・カーリー
+      px(10, 5, 12, 1);
+      px(9, 6, 14, 4);
+      px(8, 10, 3, 4); px(21, 10, 3, 4);
+      set(hair.highlight);
+      for (let y = 6; y < 12; y += 2) {
+        for (let x = 10 + (y % 4 === 0 ? 0 : 2); x < 22; x += 3) px(x, y);
+      }
+      set(hair.shadow);
+      for (let y = 7; y < 13; y += 2) {
+        for (let x = 11 + (y % 4 === 0 ? 0 : 2); x < 21; x += 3) px(x, y);
       }
       break;
-    case 'afro':
-      px(10, 8, 12, 2);
+
+    case 'afro': // アフロ（前髪側）
+      px(10, 7, 12, 2);
+      set(hair.shadow);
+      px(10, 8, 12, 1);
       break;
-    case 'dreads':
-      px(11, 6, 10, 1); px(10, 7, 12, 3); px(10, 10, 1, 2); px(21, 10, 1, 2);
-      set(hair.shade); for (let x = 10; x < 22; x += 2) px(x, 8);
+
+    case 'dreads': // ドレッドヘア（前髪側）
+      px(10, 6, 12, 2);
+      for (const x of [9, 12, 17, 20]) {
+        set(hair.base); px(x, 7, 2, 8);
+        set(hair.shadow); px(x, 10, 2, 1); px(x, 14, 2, 1);
+        set(hair.highlight); px(x, 8, 1, 2);
+      }
       break;
-    case 'buzz':
+
+    case 'buzz': // スキンヘッド・坊主
       ctx.fillStyle = hair.base;
-      ctx.globalAlpha = 0.55;
-      px(11, 7, 10, 1); px(10, 8, 12, 2);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.5;
+      px(11, 6, 10, 1);
+      px(10, 7, 12, 2);
+      px(10, 9, 1, 3); px(21, 9, 1, 3);
+      ctx.globalAlpha = 1.0;
       break;
-    case 'centerpart':
-      px(11, 6, 10, 1); px(10, 7, 12, 3); px(10, 10, 2, 4); px(20, 10, 2, 4);
-      set(skin.base); px(15, 7, 2, 2);
-      set(hair.shade); px(14, 9, 1, 1); px(17, 9, 1, 1);
+
+    case 'centerpart': // センター分け・カーテンヘア
+      px(11, 5, 10, 1);
+      px(10, 6, 12, 3);
+      px(9, 9, 3, 4); px(20, 9, 3, 4);
+      set(skin.base);
+      px(15, 7, 2, 3);
+      set(hair.shadow);
+      px(14, 9, 1, 2); px(17, 9, 1, 2);
+      set(hair.highlight);
+      px(12, 6, 3, 1); px(17, 6, 3, 1);
       break;
-    case 'long':
-      px(11, 6, 10, 1); px(10, 7, 12, 3); px(9, 10, 2, 9); px(21, 10, 2, 9);
-      set(hair.shade); px(12, 9, 8, 1);
+
+    case 'long': // ウェーブ長髪（前髪・サイド）
+      px(11, 5, 10, 1);
+      px(10, 6, 12, 3);
+      px(8, 9, 3, 12); px(21, 9, 3, 12);
+      set(hair.highlight);
+      px(12, 6, 7, 1);
+      px(9, 11, 1, 8); px(22, 11, 1, 8);
+      set(hair.shadow);
+      px(11, 8, 10, 1);
       break;
+
     default:
-      px(11, 6, 10, 1); px(10, 7, 12, 3);
+      px(11, 5, 10, 1);
+      px(10, 6, 12, 3);
+      set(hair.highlight);
+      px(12, 6, 8, 1);
   }
 
-  // 31〜33歳：白髪交じり（ごま塩）
+  // ベテラン選手（31〜33歳）のごま塩・白髪ハイライト
   if (isVeteranSaltPepper && style !== 'buzz') {
-    set('rgba(200, 200, 200, 0.55)');
-    px(11, 7); px(14, 8); px(18, 7); px(20, 9); px(10, 10);
+    set('rgba(220, 225, 230, 0.65)');
+    px(11, 6); px(14, 7); px(18, 6); px(20, 8); px(10, 10); px(21, 11);
   }
 
-  // --- アクセサリー ---
+  // 13. 【アクセサリー（メガネ・ヘアバンド）】
   if (genes.accessories === 'glasses') {
-    set('#202326');
-    px(11, 13, 4, 1); px(11, 16, 4, 1); px(11, 13, 1, 4); px(14, 13, 1, 4);
-    px(17, 13, 4, 1); px(17, 16, 4, 1); px(17, 13, 1, 4); px(20, 13, 1, 4);
-    px(15, 14, 2, 1); px(10, 14, 1, 1); px(21, 14, 1, 1);
-    ctx.fillStyle = 'rgba(180, 220, 255, 0.18)';
-    px(12, 14, 2, 2); px(18, 14, 2, 2);
+    // 細いフレームのインテリ風眼鏡
+    set('#232830');
+    // 左フレーム
+    px(10, 13, 4, 1); px(10, 16, 4, 1);
+    px(10, 14, 1, 2); px(13, 14, 1, 2);
+    // 右フレーム
+    px(17, 13, 4, 1); px(17, 16, 4, 1);
+    px(17, 14, 1, 2); px(20, 14, 1, 2);
+    // 中央ブリッジ & つる
+    px(14, 14, 3, 1);
+    px(9, 14, 1, 1); px(21, 14, 1, 1);
+    // レンズ反射ハイライト
+    ctx.fillStyle = 'rgba(210, 235, 255, 0.28)';
+    px(11, 14, 2, 2); px(18, 14, 2, 2);
   } else if (genes.accessories === 'band') {
-    set(kitAccent === '#ffffff' || kitAccent === '#f2f2f2' ? '#f0f2f5' : kitAccent);
+    // ヘアバンド
+    const bandColor = kitAccent === '#ffffff' || kitAccent === '#f2f2f2' ? '#f8fafc' : kitAccent;
+    set(bandColor);
+    px(10, 9, 12, 1);
+    set(shadeHex(bandColor, -35));
     px(10, 10, 12, 1);
-    set(shadeHex(kitAccent, -40));
-    px(10, 11, 12, 1);
   }
 
   ctx.restore();
 
-  // --- 外周リング ---
+  // 14. 【外周リング】
   ctx.beginPath();
-  ctx.arc(16, 16, 15.5, 0, Math.PI * 2);
+  ctx.arc(16, 16, 15.2, 0, Math.PI * 2);
   ctx.lineWidth = 1;
-  ctx.strokeStyle = `rgba(${kr}, ${kg}, ${kb}, 0.65)`;
+  ctx.strokeStyle = '#252a32';
   ctx.stroke();
 }
 
@@ -548,7 +742,6 @@ function generateManagerAvatar(manager, targetCanvas = null, canvasSize = 48) {
   const nat = manager.nationality || 'England';
   if (!manager.avatarData && typeof generateAvatarData === 'function') {
     manager.avatarData = generateAvatarData(nat, age);
-    // 監督風アバター補正（ヒゲやメガネ率UP）
     if (manager.avatarData) {
       if (Math.random() < 0.6) manager.avatarData.facialHair = 'beard';
       if (Math.random() < 0.4) manager.avatarData.accessories = 'glasses';
@@ -597,4 +790,3 @@ function getCoachAvatarHtml(coach, extraClass = 'avatar-sm', canvasSize = 48) {
   const kit = getCoachKitColors(coach.category);
   return getPlayerAvatarHtml({ ...coach, id: coach.id || `coach_${coach.name || 'x'}` }, { kitColors: kit }, extraClass, canvasSize);
 }
-
