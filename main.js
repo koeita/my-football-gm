@@ -5406,6 +5406,13 @@ function ensureClubStartersForMatch(club) {
     if (typeof ensureValidSquadAndStarters === 'function' && club.isPlayer) {
       ensureValidSquadAndStarters(club);
     }
+    // スタメン11名を厳格に抽出
+    const starters = club.players.filter(p => p.isStarter && !p.isRetired);
+    if (starters.length === 11) return starters;
+    if (starters.length > 0 && starters.length <= 11) {
+      const remaining = club.players.filter(p => !starters.some(s => s.id === p.id) && !p.isRetired);
+      return starters.concat(remaining.slice(0, 11 - starters.length));
+    }
     return club.players.slice(0, 11);
   }
   if (!club.players || club.players.length === 0) {
@@ -5953,15 +5960,43 @@ function resumeSecondHalfMatch() {
  * マッチサマリー用：両チーム全出場選手の詳細採点一覧HTMLを構築
  */
 function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
-  const homeStarters = ensureClubStartersForMatch(homeClub);
-  const awayStarters = ensureClubStartersForMatch(awayClub);
+  const getStartersList = (club) => {
+    if (!club || !club.players) return [];
+    if (club.isPlayer && typeof ensureValidSquadAndStarters === 'function') {
+      ensureValidSquadAndStarters(club);
+    }
+    const starters = club.players.filter(p => p.isStarter && !p.isRetired);
+    if (starters.length === 11) return starters;
+    if (starters.length > 0) {
+      const rest = club.players.filter(p => !starters.some(s => s.id === p.id) && !p.isRetired);
+      return starters.concat(rest.slice(0, 11 - starters.length));
+    }
+    return club.players.slice(0, 11);
+  };
+
+  const homeStarters = getStartersList(homeClub);
+  const awayStarters = getStartersList(awayClub);
   const homeSubs = (typeof matchLiveState !== 'undefined' && matchLiveState.homeSubs) ? matchLiveState.homeSubs : [];
   const awaySubs = (typeof matchLiveState !== 'undefined' && matchLiveState.awaySubs) ? matchLiveState.awaySubs : [];
   const homeScorers = md.homeScorers || [];
   const awayScorers = md.awayScorers || [];
 
+  const POS_ORDER = {
+    GK: 1,
+    CB: 2, LB: 3, RB: 4, LWB: 5, RWB: 6,
+    DM: 7, CM: 8, LM: 9, RM: 10, AM: 11,
+    LW: 12, RW: 13, CF: 14, ST: 15
+  };
+
   const renderClubList = (club, starters, subs, scorers, isHome) => {
-    const all = starters.map(p => ({ p, isSub: false })).concat(subs.map(p => ({ p, isSub: true })));
+    // スタメン11名をポジション順に整列
+    const sortedStarters = [...starters].sort((a, b) => {
+      const posA = a.assignedPos || a.pos || 'MF';
+      const posB = b.assignedPos || b.pos || 'MF';
+      return (POS_ORDER[posA] || 99) - (POS_ORDER[posB] || 99);
+    });
+
+    const all = sortedStarters.map(p => ({ p, isSub: false })).concat(subs.map(p => ({ p, isSub: true })));
     const rowsHtml = all.map(({ p, isSub }) => {
       const pos = p.assignedPos || p.pos || 'MF';
       const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
@@ -6117,51 +6152,53 @@ function buildMatchSummaryHtml(md) {
 
   const ratingsHtml = buildSummaryPlayerRatingsHtml(homeClub, awayClub, md);
 
-  return `
-    <div class="summary-wrapper">
-      <!-- 最上部：スコア＆得点者ボード（共通表示） -->
-      <div class="summary-hero-box">
-        <div class="summary-score-row">
-          <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
-            <div class="summary-club-header-wrap">
-              ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
-              <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
-            </div>
-            <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+  const scoreHeroHtml = `
+    <div class="summary-hero-box">
+      <div class="summary-score-row">
+        <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+          <div class="summary-club-header-wrap">
+            ${getClubEmblemSvg(homeClub, 22, 'summary-club-emblem')}
+            <span class="summary-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
           </div>
-          <div class="summary-score-center">
-            <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
-            <span class="summary-result-pill res-${resType}">${resLabel}</span>
-          </div>
-          <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
-            <div class="summary-club-header-wrap">
-              <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
-              ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
-            </div>
-            <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
-          </div>
+          <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
         </div>
-        <div class="summary-scorers-grid">
-          <div class="summary-scorers-col home">${homeScorersHtml}</div>
-          <div class="summary-scorers-col away">${awayScorersHtml}</div>
+        <div class="summary-score-center">
+          <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
+          <span class="summary-result-pill res-${resType}">${resLabel}</span>
+        </div>
+        <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+          <div class="summary-club-header-wrap">
+            <span class="summary-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
+            ${getClubEmblemSvg(awayClub, 22, 'summary-club-emblem')}
+          </div>
+          <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
         </div>
       </div>
+      <div class="summary-scorers-grid">
+        <div class="summary-scorers-col home">${homeScorersHtml}</div>
+        <div class="summary-scorers-col away">${awayScorersHtml}</div>
+      </div>
+    </div>
+  `;
 
-      <!-- サマリー内タブ切り替えピル（スタッツ ⇄ 選手採点） -->
+  return `
+    <div class="summary-wrapper">
+      <!-- サマリー内タブ切り替えバー（スタッツ ⇄ 選手採点） -->
       <div class="summary-subnav-bar">
         <button type="button" class="summary-subnav-btn active" data-subnav="stats">
-          📊 チームスタッツ・経過
+          📊 試合結果・チームスタッツ
         </button>
         <button type="button" class="summary-subnav-btn" data-subnav="ratings">
           ⭐ 全選手評価点一覧
         </button>
       </div>
 
-      <!-- タブ1：チームスタッツ ＆ ハイライト ＆ GM収支 -->
+      <!-- タブ1：チームスタッツ ＆ ハイライト ＆ GM収支（元の左右2列黄金レイアウト） -->
       <div class="summary-tab-pane" id="summary-tab-stats">
         <div class="summary-grid-layout">
-          <!-- 左列：チームスタッツ比較 -->
+          <!-- 左列：スコアボード ＆ スタッツ比較 -->
           <div class="summary-col-left">
+            ${scoreHeroHtml}
             <div class="summary-section-card summary-stats-card">
               <div class="summary-section-title">▼ チームスタッツ比較</div>
               <div class="stat-compare-row">
@@ -6251,6 +6288,12 @@ function buildMatchSummaryHtml(md) {
 
       <!-- タブ2：全選手評価点一覧 -->
       <div class="summary-tab-pane hidden" id="summary-tab-ratings">
+        <div class="summary-mini-score-bar">
+          <span class="mini-score-club home mono ${homeClub.isPlayer ? 'accent-green' : ''}">${getClubShortCode(homeClub)}</span>
+          <span class="mini-score-nums mono"><strong>${homeScore} - ${awayScore}</strong></span>
+          <span class="mini-score-club away mono ${awayClub.isPlayer ? 'accent-green' : ''}">${getClubShortCode(awayClub)}</span>
+          <span class="summary-result-pill res-${resType}" style="margin-left:8px;">${resLabel}</span>
+        </div>
         ${ratingsHtml}
       </div>
     </div>
@@ -13389,6 +13432,8 @@ function openPlayerProfileModal(playerId) {
   const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
   const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+  const pFtgVal = getPlayerFatigue(p);
+  const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
 
   const footLabelMap = {
     Right: 'Right（右利き）',
@@ -13466,8 +13511,6 @@ function openPlayerProfileModal(playerId) {
         <span class="profile-bio-chip mono" style="background:rgba(241,196,15,0.18);color:var(--accent-gold);border-color:rgba(241,196,15,0.4);">将来性: ${starStr}</span>
       `;
     }
-    const pFtgVal = getPlayerFatigue(p);
-    const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
 
     bioRowEl.innerHTML = `
       <span class="profile-bio-chip">${nationalityDisplay}</span>
