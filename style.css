@@ -8847,11 +8847,11 @@ body.main-menu-active {
 .match-live-scoreboard {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  align-items: stretch;
   background-color: #101316;
   border: 1px solid #282e35;
   border-radius: 8px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   gap: 10px;
   flex-shrink: 0;
 }
@@ -8859,8 +8859,11 @@ body.main-menu-active {
 .match-live-team {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
   min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
 }
 .match-live-team.home {
   align-items: flex-start;
@@ -8912,8 +8915,13 @@ body.main-menu-active {
 }
 
 .match-live-team-sub {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .match-live-center {
@@ -13359,13 +13367,18 @@ button.hidden,
 .match-live-scoreboard {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
-  align-items: center !important;
+  align-items: stretch !important;
   gap: 8px !important;
 }
 
 .match-live-team {
   min-width: 0 !important;
   overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .match-live-team.home {
@@ -13401,6 +13414,15 @@ button.hidden,
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
   min-width: 0 !important;
+}
+
+.match-live-team-sub {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  line-height: 1.2 !important;
+  font-size: 9.5px !important;
 }
 
 .match-live-center {

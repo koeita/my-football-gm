@@ -1,5 +1,19 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## スコアボード左右高さ統一・折り返し防止・設定順序整理と試合速度ゆったり調整 (feat-phase1-match-ui-settings)
+- **概要**:
+  - **試合スコアボードの左右チームボックスサイズ不揃いの解消**:
+    - アウェイ側の戦術名（例: `WING PLAY`）が幅狭により折り返して2行になり、左右でボックスの縦サイズが不揃いになっていた問題を修正。
+    - `.match-live-scoreboard` に `align-items: stretch !important;` を適用し、`.match-live-team` を `height: 100% !important; justify-content: center !important;` とすることで左右の縦サイズを完全一致。
+    - `.match-live-team-sub` に `white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;` を指定し、折り返し改行を完全に防止。
+  - **試合演出スピードのゆったり化**:
+    - 1倍（1x）の進行インターバルを従来の260msから **480ms/分** に変更（45分で約21秒、90分で約43秒）。ボールの配給やパス回し、実況コメントをじっくり観戦できるペースへ調整。
+    - 2xは200ms、4xは75msとし、滑らかなトランジション補間も連動。
+  - **環境設定モーダルの順序と文言の整理**:
+    - 試合演出スピードの選択肢から `（通常）` 等の冗長な括弧文言を排除し、「1x」「2x」「4x」のシンプルな表記に統一。
+    - 「メインメニュー（タイトル画面へ戻る）」行を「セーブデータ初期化」の直上へ配置移動。
+- **変更ファイル**: `index.html`, `main.js`, `style.css`, `DEVLOG.md`
+
 ## フェーズ1：設定マーク化・試合中チーム識別・滑らかなアニメーション制御の実装 (feat-phase1-match-ui-settings)
 - **概要**:
   - **ヘッダー設定マーク化 & モーダル内タイトル遷移統合**:

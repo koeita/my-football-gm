@@ -5619,18 +5619,18 @@ function startMatchLiveTimer() {
     matchLiveState.timerId = null;
   }
 
-  // 1x: 260ms/分, 2x: 130ms/分, 4x: 60ms/分
-  const baseInterval = matchLiveState.speed === 4 ? 60 : (matchLiveState.speed === 2 ? 130 : 260);
+  // 1x: 480ms/分 (じっくり観戦), 2x: 200ms/分 (テンポ良く), 4x: 75ms/分 (高速消化)
+  const baseInterval = matchLiveState.speed === 4 ? 75 : (matchLiveState.speed === 2 ? 200 : 480);
 
   // 滑らかなCSSトランジション時間をスピード設定に連動
-  const moveDuration = Math.round(baseInterval * 0.95);
+  const moveDuration = Math.round(baseInterval * 0.9);
   const pitchTokens = document.querySelectorAll('.pitch-2d-token');
   pitchTokens.forEach(el => {
     el.style.transition = `left ${moveDuration}ms cubic-bezier(0.25, 1, 0.5, 1), top ${moveDuration}ms cubic-bezier(0.25, 1, 0.5, 1)`;
   });
   const ballEl = document.getElementById('match-pitch-ball');
   if (ballEl) {
-    ballEl.style.transition = `left ${Math.round(moveDuration * 0.9)}ms cubic-bezier(0.22, 1, 0.36, 1), top ${Math.round(moveDuration * 0.9)}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+    ballEl.style.transition = `left ${Math.round(moveDuration * 0.85)}ms cubic-bezier(0.22, 1, 0.36, 1), top ${Math.round(moveDuration * 0.85)}ms cubic-bezier(0.22, 1, 0.36, 1)`;
   }
 
   matchLiveState.timerId = setInterval(() => {
