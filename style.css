@@ -13809,3 +13809,90 @@ button.hidden,
   color: #0B0E14;
   font-weight: 700;
 }
+
+/* ==========================================================================
+   欧州コンペ：スイス方式 36チーム順位表ゾーンカラーライン & 日程表示
+   ========================================================================== */
+.zone-direct-r16 td.col-rank {
+  box-shadow: inset 4px 0 0 #22C55E !important;
+}
+
+.zone-playoff td.col-rank {
+  box-shadow: inset 4px 0 0 #F59E0B !important;
+}
+
+.zone-eliminated td.col-rank {
+  box-shadow: inset 4px 0 0 #EF4444 !important;
+}
+
+/* 欧州日程リスト（対戦カードグリッド） */
+.euro-schedule-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px 4px;
+}
+
+.euro-schedule-md-block {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.euro-schedule-md-title {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #38BDF8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.euro-schedule-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.euro-match-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.euro-match-tile.my-match {
+  border-color: #00F0FF;
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.euro-tile-team {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #CBD5E1;
+}
+
+.euro-tile-team.home {
+  justify-content: flex-start;
+}
+
+.euro-tile-team.away {
+  justify-content: flex-end;
+}
+
+.euro-tile-score {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  padding: 0 6px;
+}
+
+.euro-tile-score.score-played {
+  color: #00F0FF;
+}

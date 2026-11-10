@@ -1,133 +1,147 @@
 /**
- * competitions.js - フェーズ4: 2部リーグ・昇降格・国内2大カップ戦・欧州3大カップ戦（36チーム新リーグフェーズ）
- * 
- * 1. 2部リーグ（チャンピオンシップ：架空24クラブ、OVR 64〜74）
- * 2. 昇降格システム（1部18〜20位降格、2部1〜3位昇格、自クラブ降格時の理事会通告）
- * 3. 国内2大カップ戦（リーグカップ LGC、ナショナルカップ NAT）
- * 4. 欧州3大カップ戦（CL, EL, ECL）
- *    - 各大会「36チーム参加」
- *    - 現実準拠の「リーグフェーズ（各8試合）」＋「決勝トーナメント（R16 -> QF -> SF -> FINAL）」
- * 5. 高速ダイジェスト試合エンジン（simQuickMatch / simKnockoutMatch）
- * 6. 過密日程（週2試合）のスタミナ消費・怪我リスク補正
- * 7. 順位表・ブラケット描画ヘルパー
+ * competitions.js - フェーズ4: 五大リーグ120クラブ・2部昇降格・国内2大カップ・欧州3大カップ（全36チーム新スイス方式リーグフェーズ）
  */
 
 // ==========================================
-// 1. 2部リーグ（チャンピオンシップ）架空24クラブ定義
+// 1. 五大リーグ・合計120クラブのデータ定義
 // ==========================================
+
+// イングランド2部（チャンピオンシップ）：24クラブ
 const CHAMPIONSHIP_CLUBS_DEFINITIONS = [
-  { id: 'c01', name: 'シェフィールド・S', shortName: 'SHS', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 74 },
-  { id: 'c02', name: 'リーズ・U', shortName: 'LEU', primaryColor: '#FFCD00', secondaryColor: '#1D428A', pattern: 'split-vertical', shape: 'shield', basePower: 74 },
-  { id: 'c03', name: 'バーンリー・C', shortName: 'BUR', primaryColor: '#6C1D45', secondaryColor: '#99D6EA', pattern: 'stripes-vertical', shape: 'circle', basePower: 73 },
-  { id: 'c04', name: 'ノリッジ・C', shortName: 'NOR', primaryColor: '#FFF200', secondaryColor: '#00A651', pattern: 'sash-diagonal', shape: 'shield', basePower: 73 },
-  { id: 'c05', name: 'ワトフォード・H', shortName: 'WAT', primaryColor: '#FBEE23', secondaryColor: '#ED2127', pattern: 'stripes-horizontal', shape: 'diamond', basePower: 72 },
-  { id: 'c06', name: 'ミドルズブラ・B', shortName: 'MID', primaryColor: '#E03A3E', secondaryColor: '#FFFFFF', pattern: 'chevron-down', shape: 'shield', basePower: 72 },
-  { id: 'c07', name: 'ウェストブロム・A', shortName: 'WBA', primaryColor: '#122F67', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 72 },
-  { id: 'c08', name: 'コヴェントリー・C', shortName: 'COV', primaryColor: '#00A3E0', secondaryColor: '#1D252C', pattern: 'halves-horizontal', shape: 'circle', basePower: 71 },
-  { id: 'c09', name: 'ハルダーズフィールド', shortName: 'HUD', primaryColor: '#0E63AD', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 71 },
-  { id: 'c10', name: 'プレストン・NE', shortName: 'PNE', primaryColor: '#FFFFFF', secondaryColor: '#002B49', pattern: 'quarters', shape: 'shield', basePower: 70 },
-  { id: 'c11', name: 'ブリストル・C', shortName: 'BRC', primaryColor: '#C8102E', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'circle', basePower: 70 },
-  { id: 'c12', name: 'ストーク・C', shortName: 'STK', primaryColor: '#E03A3E', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 70 },
-  { id: 'c13', name: 'スウォンジー・C', shortName: 'SWA', primaryColor: '#121212', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 69 },
-  { id: 'c14', name: 'カーディフ・C', shortName: 'CAR', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'circle', basePower: 69 },
-  { id: 'c15', name: 'ミルウォール・L', shortName: 'MIL', primaryColor: '#002244', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'shield', basePower: 69 },
-  { id: 'c16', name: 'ブラックバーン・R', shortName: 'BLA', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 68 },
-  { id: 'c17', name: 'クイーンズパーク・R', shortName: 'QPR', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'diamond', basePower: 68 },
-  { id: 'c18', name: 'ハル・C', shortName: 'HUL', primaryColor: '#F7941D', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 68 },
-  { id: 'c19', name: 'サンダーランド・A', shortName: 'SUN', primaryColor: '#EB172B', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 67 },
-  { id: 'c20', name: 'プリマス・A', shortName: 'PLY', primaryColor: '#0B3B24', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'circle', basePower: 66 },
-  { id: 'c21', name: 'ロザラム・U', shortName: 'ROT', primaryColor: '#EE1C25', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 65 },
-  { id: 'c22', name: 'バーミンガム・C', shortName: 'BIR', primaryColor: '#0000FF', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 66 },
-  { id: 'c23', name: 'シェフィールド・W', shortName: 'SHW', primaryColor: '#002E6D', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'diamond', basePower: 65 },
-  { id: 'c24', name: 'ルートン・T', shortName: 'LUT', primaryColor: '#F68B1F', secondaryColor: '#002B49', pattern: 'chevron-down', shape: 'shield', basePower: 67 }
+  { id: 'c01', name: 'シェフィールド・S', shortName: 'SHS', city: 'シェフィールド', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 73 },
+  { id: 'c02', name: 'リーズ・U', shortName: 'LEU', city: 'リーズ', country: 'ENG', primaryColor: '#FFCD00', secondaryColor: '#1D428A', pattern: 'split-vertical', shape: 'shield', basePower: 74 },
+  { id: 'c03', name: 'バーンリー・C', shortName: 'BUR', city: 'バーンリー', country: 'ENG', primaryColor: '#6C1D45', secondaryColor: '#99D6EA', pattern: 'stripes-vertical', shape: 'circle', basePower: 73 },
+  { id: 'c04', name: 'ノリッジ・C', shortName: 'NOR', city: 'ノリッジ', country: 'ENG', primaryColor: '#FFF200', secondaryColor: '#00A651', pattern: 'sash-diagonal', shape: 'shield', basePower: 72 },
+  { id: 'c05', name: 'ワトフォード・H', shortName: 'WAT', city: 'ワトフォード', country: 'ENG', primaryColor: '#FBEE23', secondaryColor: '#ED2127', pattern: 'stripes-horizontal', shape: 'diamond', basePower: 72 },
+  { id: 'c06', name: 'ミドルズブラ・B', shortName: 'MID', city: 'ミドルズブラ', country: 'ENG', primaryColor: '#E03A3E', secondaryColor: '#FFFFFF', pattern: 'chevron-down', shape: 'shield', basePower: 71 },
+  { id: 'c07', name: 'ウェストブロム・A', shortName: 'WBA', city: 'ウェスト・ブロムウィッチ', country: 'ENG', primaryColor: '#122F67', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 72 },
+  { id: 'c08', name: 'コヴェントリー・C', shortName: 'COV', city: 'コヴェントリー', country: 'ENG', primaryColor: '#00A3E0', secondaryColor: '#1D252C', pattern: 'halves-horizontal', shape: 'circle', basePower: 70 },
+  { id: 'c09', name: 'ハルダーズフィールド', shortName: 'HUD', city: 'ハダースフィールド', country: 'ENG', primaryColor: '#0E63AD', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 69 },
+  { id: 'c10', name: 'プレストン・NE', shortName: 'PNE', city: 'プレストン', country: 'ENG', primaryColor: '#FFFFFF', secondaryColor: '#002B49', pattern: 'quarters', shape: 'shield', basePower: 69 },
+  { id: 'c11', name: 'ブリストル・C', shortName: 'BRC', city: 'ブリストル', country: 'ENG', primaryColor: '#C8102E', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'circle', basePower: 69 },
+  { id: 'c12', name: 'ストーク・C', shortName: 'STK', city: 'ストーク・オン・トレント', country: 'ENG', primaryColor: '#E03A3E', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 69 },
+  { id: 'c13', name: 'スウォンジー・C', shortName: 'SWA', city: 'スウォンジー', country: 'ENG', primaryColor: '#121212', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 68 },
+  { id: 'c14', name: 'カーディフ・C', shortName: 'CAR', city: 'カーディフ', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'circle', basePower: 68 },
+  { id: 'c15', name: 'ミルウォール・L', shortName: 'MIL', city: 'ロンドン', country: 'ENG', primaryColor: '#002244', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'shield', basePower: 68 },
+  { id: 'c16', name: 'ブラックバーン・R', shortName: 'BLA', city: 'ブラックバーン', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 67 },
+  { id: 'c17', name: 'クイーンズパーク・R', shortName: 'QPR', city: 'ロンドン', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'diamond', basePower: 67 },
+  { id: 'c18', name: 'ハル・C', shortName: 'HUL', city: 'ハル', country: 'ENG', primaryColor: '#F7941D', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 67 },
+  { id: 'c19', name: 'サンダーランド・A', shortName: 'SUN', city: 'サンダーランド', country: 'ENG', primaryColor: '#EB172B', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 68 },
+  { id: 'c20', name: 'プリマス・A', shortName: 'PLY', city: 'プリマス', country: 'ENG', primaryColor: '#0B3B24', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'circle', basePower: 66 },
+  { id: 'c21', name: 'ロザラム・U', shortName: 'ROT', city: 'ロザラム', country: 'ENG', primaryColor: '#EE1C25', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 65 },
+  { id: 'c22', name: 'バーミンガム・C', shortName: 'BIR', city: 'バーミンガム', country: 'ENG', primaryColor: '#0000FF', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 66 },
+  { id: 'c23', name: 'シェフィールド・W', shortName: 'SHW', city: 'シェフィールド', country: 'ENG', primaryColor: '#002E6D', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'diamond', basePower: 65 },
+  { id: 'c24', name: 'ルートン・T', shortName: 'LUT', city: 'ルートン', country: 'ENG', primaryColor: '#F68B1F', secondaryColor: '#002B49', pattern: 'chevron-down', shape: 'shield', basePower: 68 }
 ];
 
-// ==========================================
-// 2. 欧州強豪クラブデータベース（五大リーグ＋欧州強豪 80クラブ）
-// ==========================================
-const EUROPEAN_CLUBS_DATABASE = {
-  SPAIN: [
-    { id: 'es01', name: 'マドリード・ブランコ', shortName: 'MBL', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#41748D', pattern: 'sash-diagonal', shape: 'shield', basePower: 88 },
-    { id: 'es02', name: 'バルセロナ・ブラウグラナ', shortName: 'BBL', country: 'ESP', primaryColor: '#A50044', secondaryColor: '#004D98', pattern: 'stripes-vertical', shape: 'shield', basePower: 87 },
-    { id: 'es03', name: 'アトレティコ・ロホ', shortName: 'ARO', country: 'ESP', primaryColor: '#CB3524', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 84 },
-    { id: 'es04', name: 'セビージャ・ブランコ', shortName: 'SBL', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#D4001F', pattern: 'split-vertical', shape: 'shield', basePower: 81 },
-    { id: 'es05', name: 'バレンシア・チェ', shortName: 'VCH', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#EE7402', pattern: 'halves-vertical', shape: 'circle', basePower: 79 },
-    { id: 'es06', name: 'ビジャレアル・アマリージョ', shortName: 'VAM', country: 'ESP', primaryColor: '#F3B200', secondaryColor: '#003366', pattern: 'circle-center', shape: 'shield', basePower: 80 },
-    { id: 'es07', name: 'レアル・サン・セバスティアン', shortName: 'RSS', country: 'ESP', primaryColor: '#0047AB', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 81 },
-    { id: 'es08', name: 'ビルバオ・レオン', shortName: 'BLE', country: 'ESP', primaryColor: '#ED1C24', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
-    { id: 'es09', name: 'ベティス・ベルディ', shortName: 'BVE', country: 'ESP', primaryColor: '#0BB364', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 78 },
-    { id: 'es10', name: 'ジローナ・ロジ', shortName: 'GRO', country: 'ESP', primaryColor: '#D31411', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'circle', basePower: 77 }
-  ],
-  GERMANY: [
-    { id: 'de01', name: 'バイエルン・ロート', shortName: 'BRO', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#0066B2', pattern: 'quarters', shape: 'circle', basePower: 88 },
-    { id: 'de02', name: 'ドルトムント・ゲルプ', shortName: 'DGE', country: 'GER', primaryColor: '#FDE100', secondaryColor: '#121212', pattern: 'stripes-vertical', shape: 'circle', basePower: 85 },
-    { id: 'de03', name: 'レバークーゼン・ヴェルク', shortName: 'LWE', country: 'GER', primaryColor: '#E32221', secondaryColor: '#121212', pattern: 'sash-diagonal', shape: 'shield', basePower: 86 },
-    { id: 'de04', name: 'ライプツィヒ・ブルズ', shortName: 'LBU', country: 'GER', primaryColor: '#ED1B24', secondaryColor: '#002B49', pattern: 'chevron-down', shape: 'shield', basePower: 83 },
-    { id: 'de05', name: 'フランクフルト・アドラー', shortName: 'FAD', country: 'GER', primaryColor: '#E1000F', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'circle', basePower: 80 },
-    { id: 'de06', name: 'シュトゥットガルト・クロイツ', shortName: 'SKR', country: 'GER', primaryColor: '#FFFFFF', secondaryColor: '#E32219', pattern: 'stripes-horizontal', shape: 'shield', basePower: 80 },
-    { id: 'de07', name: 'ボルシア・メンヒェン', shortName: 'BMG', country: 'GER', primaryColor: '#000000', secondaryColor: '#009F4D', pattern: 'split-vertical', shape: 'diamond', basePower: 77 },
-    { id: 'de08', name: 'ヴォルフスブルク・グリューン', shortName: 'WGR', country: 'GER', primaryColor: '#65B32E', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'circle', basePower: 77 },
-    { id: 'de09', name: 'ブレーメン・ヴェルダー', shortName: 'BWE', country: 'GER', primaryColor: '#1C7C44', secondaryColor: '#FFFFFF', pattern: 'diamond', shape: 'diamond', basePower: 76 },
-    { id: 'de10', name: 'フライブルク・フォルクス', shortName: 'FVO', country: 'GER', primaryColor: '#000000', secondaryColor: '#E2001A', pattern: 'halves-vertical', shape: 'shield', basePower: 76 }
-  ],
-  ITALY: [
-    { id: 'it01', name: 'ミラノ・ネラッズーリ', shortName: 'MNE', country: 'ITA', primaryColor: '#0066B2', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'circle', basePower: 86 },
-    { id: 'it02', name: 'ミラノ・ロッソネーリ', shortName: 'MRO', country: 'ITA', primaryColor: '#FB090B', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 85 },
-    { id: 'it03', name: 'トリノ・ビアンコネーロ', shortName: 'TBI', country: 'ITA', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 84 },
-    { id: 'it04', name: 'ナポリ・アズーロ', shortName: 'NAZ', country: 'ITA', primaryColor: '#008FD7', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'circle', basePower: 83 },
-    { id: 'it05', name: 'ローマ・ジャッロロッソ', shortName: 'RGI', country: 'ITA', primaryColor: '#8E1F2F', secondaryColor: '#F0BC42', pattern: 'halves-vertical', shape: 'shield', basePower: 81 },
-    { id: 'it06', name: 'ラツィオ・ビアンコチェレステ', shortName: 'LBC', country: 'ITA', primaryColor: '#87D8F7', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 80 },
-    { id: 'it07', name: 'アタランタ・ベルガモ', shortName: 'ABE', country: 'ITA', primaryColor: '#1E71B8', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 82 },
-    { id: 'it08', name: 'フィレンツェ・ヴィオラ', shortName: 'FVI', country: 'ITA', primaryColor: '#4F2382', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'diamond', basePower: 79 },
-    { id: 'it09', name: 'ボローニャ・ロッソブルー', shortName: 'BRO', country: 'ITA', primaryColor: '#1B2C4B', secondaryColor: '#9C1B2C', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
-    { id: 'it10', name: 'トリノ・グランタ', shortName: 'TGR', country: 'ITA', primaryColor: '#7A1C20', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 76 }
-  ],
-  FRANCE: [
-    { id: 'fr01', name: 'パリ・ルージュエブルー', shortName: 'PRB', country: 'FRA', primaryColor: '#002B49', secondaryColor: '#DA291C', pattern: 'stripes-vertical', shape: 'circle', basePower: 87 },
-    { id: 'fr02', name: 'マルセイユ・シエル', shortName: 'MCI', country: 'FRA', primaryColor: '#00A3E0', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 82 },
-    { id: 'fr03', name: 'モナコ・プリンス', shortName: 'MPR', country: 'FRA', primaryColor: '#E2001A', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 82 },
-    { id: 'fr04', name: 'リヨン・オランピック', shortName: 'LOL', country: 'FRA', primaryColor: '#FFFFFF', secondaryColor: '#17366E', pattern: 'split-vertical', shape: 'shield', basePower: 80 },
-    { id: 'fr05', name: 'リール・ドグ', shortName: 'LDO', country: 'FRA', primaryColor: '#E01E2E', secondaryColor: '#1D253C', pattern: 'chevron-down', shape: 'shield', basePower: 80 },
-    { id: 'fr06', name: 'レンヌ・ルージュ', shortName: 'RRU', country: 'FRA', primaryColor: '#E30613', secondaryColor: '#000000', pattern: 'halves-vertical', shape: 'circle', basePower: 79 },
-    { id: 'fr07', name: 'ニース・アイグロン', shortName: 'NAI', country: 'FRA', primaryColor: '#DA291C', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 78 },
-    { id: 'fr08', name: 'ランス・シャンパーニュ', shortName: 'RCH', country: 'FRA', primaryColor: '#D50032', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 77 },
-    { id: 'fr09', name: 'トゥールーズ・ヴィオレ', shortName: 'TVI', country: 'FRA', primaryColor: '#53284F', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'diamond', basePower: 76 },
-    { id: 'fr10', name: 'ストラスブール・アルザス', shortName: 'SAL', country: 'FRA', primaryColor: '#00539F', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'shield', basePower: 76 }
-  ],
-  OTHER_EUROPE: [
-    { id: 'oe01', name: 'アムステルダム・赤白', shortName: 'AMS', country: 'NED', primaryColor: '#D2122E', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'circle', basePower: 83 },
-    { id: 'oe02', name: 'アイントホーフェン・電球', shortName: 'EIN', country: 'NED', primaryColor: '#ED1B24', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 82 },
-    { id: 'oe03', name: 'フェイエノールト・港湾', shortName: 'FEY', country: 'NED', primaryColor: '#ED1B24', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'circle', basePower: 80 },
-    { id: 'oe04', name: 'リスボン・ライオン', shortName: 'LIS', country: 'POR', primaryColor: '#006633', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'shield', basePower: 84 },
-    { id: 'oe05', name: 'リスボン・イーグルス', shortName: 'BEN', country: 'POR', primaryColor: '#E30613', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 83 },
-    { id: 'oe06', name: 'ポルト・ドラゴンズ', shortName: 'POR', country: 'POR', primaryColor: '#003399', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 82 },
-    { id: 'oe07', name: 'ブラガ・大司教', shortName: 'BRA', country: 'POR', primaryColor: '#E30613', secondaryColor: '#FFFFFF', pattern: 'chevron-down', shape: 'shield', basePower: 78 },
-    { id: 'oe08', name: 'セルティック・グリーン', shortName: 'CEL', country: 'SCO', primaryColor: '#018749', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'circle', basePower: 80 },
-    { id: 'oe09', name: 'グラスゴー・ロイヤル', shortName: 'RAN', country: 'SCO', primaryColor: '#003399', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 79 },
-    { id: 'oe10', name: 'ブルッヘ・青黒', shortName: 'BRU', country: 'BEL', primaryColor: '#003399', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
-    { id: 'oe11', name: 'アンデルレヒト・紫', shortName: 'AND', country: 'BEL', primaryColor: '#4F2382', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'shield', basePower: 77 },
-    { id: 'oe12', name: 'ザルツブルク・雄牛', shortName: 'SAL', country: 'AUT', primaryColor: '#ED1B24', secondaryColor: '#FFFFFF', pattern: 'chevron-down', shape: 'circle', basePower: 79 },
-    { id: 'oe13', name: 'シュトゥルム・グラーツ', shortName: 'STU', country: 'AUT', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 76 },
-    { id: 'oe14', name: 'シャフタール・鉱夫', shortName: 'SHA', country: 'UKR', primaryColor: '#F36F21', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
-    { id: 'oe15', name: 'キエフ・ディナモ', shortName: 'DKI', country: 'UKR', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'diamond', shape: 'diamond', basePower: 77 },
-    { id: 'oe16', name: 'ガラタサライ・獅子', shortName: 'GAL', country: 'TUR', primaryColor: '#A32638', secondaryColor: '#FDB913', pattern: 'split-vertical', shape: 'shield', basePower: 81 },
-    { id: 'oe17', name: 'フェネルバフチェ・カナリア', shortName: 'FEN', country: 'TUR', primaryColor: '#002B49', secondaryColor: '#FFF200', pattern: 'stripes-vertical', shape: 'circle', basePower: 80 },
-    { id: 'oe18', name: 'ベシクタシュ・黒鷲', shortName: 'BES', country: 'TUR', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 78 },
-    { id: 'oe19', name: 'オリンピアコス・赤白', shortName: 'OLY', country: 'GRE', primaryColor: '#D2122E', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'circle', basePower: 78 },
-    { id: 'oe20', name: 'パナシナイコス・緑', shortName: 'PAN', country: 'GRE', primaryColor: '#007A3D', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 77 },
-    { id: 'oe21', name: 'プラハ・鉄の誇り', shortName: 'SPA', country: 'CZE', primaryColor: '#800000', secondaryColor: '#FDB913', pattern: 'sash-diagonal', shape: 'shield', basePower: 78 },
-    { id: 'oe22', name: 'スラヴィア・星', shortName: 'SLA', country: 'CZE', primaryColor: '#D2122E', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 77 },
-    { id: 'oe23', name: 'ヤングボーイズ・黄黒', shortName: 'YBO', country: 'SUI', primaryColor: '#FFCC00', secondaryColor: '#000000', pattern: 'stripes-horizontal', shape: 'circle', basePower: 77 },
-    { id: 'oe24', name: 'バーゼル・ロートブラウ', shortName: 'BAS', country: 'SUI', primaryColor: '#D2122E', secondaryColor: '#003399', pattern: 'split-vertical', shape: 'shield', basePower: 76 },
-    { id: 'oe25', name: 'コペンハーゲン・獅子', shortName: 'COP', country: 'DEN', primaryColor: '#FFFFFF', secondaryColor: '#003399', pattern: 'circle-center', shape: 'circle', basePower: 77 },
-    { id: 'oe26', name: 'ボデ・グリプト', shortName: 'BOD', country: 'NOR', primaryColor: '#FFD700', secondaryColor: '#000000', pattern: 'halves-horizontal', shape: 'shield', basePower: 76 },
-    { id: 'oe27', name: 'ディナモ・ザグレブ', shortName: 'ZAG', country: 'CRO', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'quarters', shape: 'shield', basePower: 78 },
-    { id: 'oe28', name: 'ツルヴェナ・ズヴェズダ', shortName: 'CRV', country: 'SRB', primaryColor: '#D2122E', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 77 }
-  ]
-};
+// スペイン（ラ・リーガ相当）：20クラブ
+const SPAIN_CLUBS_DEFINITIONS = [
+  { id: 'es01', name: 'マドリード・ブランコ', shortName: 'MBL', city: 'マドリード', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#41748D', pattern: 'sash-diagonal', shape: 'shield', basePower: 86 },
+  { id: 'es02', name: 'バルセロナ・ブラウグラナ', shortName: 'BBL', city: 'バルセロナ', country: 'ESP', primaryColor: '#A50044', secondaryColor: '#004D98', pattern: 'stripes-vertical', shape: 'shield', basePower: 85 },
+  { id: 'es03', name: 'アトレティコ・ロホ', shortName: 'ARO', city: 'マドリード', country: 'ESP', primaryColor: '#CB3524', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 84 },
+  { id: 'es04', name: 'レアル・サン・セバスティアン', shortName: 'RSS', city: 'サン・セバスティアン', country: 'ESP', primaryColor: '#0047AB', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 81 },
+  { id: 'es05', name: 'セビージャ・ブランコ', shortName: 'SBL', city: 'セビージャ', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#D4001F', pattern: 'split-vertical', shape: 'shield', basePower: 80 },
+  { id: 'es06', name: 'ビジャレアル・アマリージョ', shortName: 'VAM', city: 'ビジャレアル', country: 'ESP', primaryColor: '#F3B200', secondaryColor: '#003366', pattern: 'circle-center', shape: 'shield', basePower: 80 },
+  { id: 'es07', name: 'ビルバオ・レオン', shortName: 'BLE', city: 'ビルバオ', country: 'ESP', primaryColor: '#ED1C24', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
+  { id: 'es08', name: 'ベティス・ベルディ', shortName: 'BVE', city: 'セビージャ', country: 'ESP', primaryColor: '#0BB364', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 78 },
+  { id: 'es09', name: 'バレンシア・チェ', shortName: 'VCH', city: 'バレンシア', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#EE7402', pattern: 'halves-vertical', shape: 'circle', basePower: 78 },
+  { id: 'es10', name: 'ジローナ・ロジ', shortName: 'GRO', city: 'ジローナ', country: 'ESP', primaryColor: '#D31411', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'circle', basePower: 77 },
+  { id: 'es11', name: 'セルタ・ガリシア', shortName: 'CEL', city: 'ビーゴ', country: 'ESP', primaryColor: '#8AC3EE', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 75 },
+  { id: 'es12', name: 'マジョルカ・イスラ', shortName: 'MLL', city: 'パルマ', country: 'ESP', primaryColor: '#E20613', secondaryColor: '#000000', pattern: 'split-vertical', shape: 'shield', basePower: 74 },
+  { id: 'es13', name: 'オサスナ・ナバラ', shortName: 'OSA', city: 'パンプローナ', country: 'ESP', primaryColor: '#0A1C2A', secondaryColor: '#C4122D', pattern: 'halves-vertical', shape: 'shield', basePower: 74 },
+  { id: 'es14', name: 'ヘタフェ・アズール', shortName: 'GET', city: 'ヘタフェ', country: 'ESP', primaryColor: '#00539F', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 73 },
+  { id: 'es15', name: 'ラス・パルマス・カナリア', shortName: 'LPA', city: 'ラス・パルマス', country: 'ESP', primaryColor: '#FEE000', secondaryColor: '#004B9B', pattern: 'halves-horizontal', shape: 'circle', basePower: 73 },
+  { id: 'es16', name: 'ラージョ・バジェカス', shortName: 'RAY', city: 'マドリード', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#E20613', pattern: 'sash-diagonal', shape: 'shield', basePower: 72 },
+  { id: 'es17', name: 'アラベス・バスク', shortName: 'ALA', city: 'ビトリア', country: 'ESP', primaryColor: '#00539F', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 71 },
+  { id: 'es18', name: 'エスパニョール・青白', shortName: 'ESP', city: 'バルセロナ', country: 'ESP', primaryColor: '#0072CE', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'circle', basePower: 72 },
+  { id: 'es19', name: 'バジャドリード・紫', shortName: 'VLL', city: 'バリャドリード', country: 'ESP', primaryColor: '#53284F', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 70 },
+  { id: 'es20', name: 'レガネス・キュウリ', shortName: 'LEG', city: 'レガネス', country: 'ESP', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'shield', basePower: 69 }
+];
+
+// イタリア（セリエA相当）：20クラブ
+const ITALY_CLUBS_DEFINITIONS = [
+  { id: 'it01', name: 'ミラノ・ネラッズーリ', shortName: 'MNE', city: 'ミラノ', country: 'ITA', primaryColor: '#0066B2', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'circle', basePower: 86 },
+  { id: 'it02', name: 'ミラノ・ロッソネーリ', shortName: 'MRO', city: 'ミラノ', country: 'ITA', primaryColor: '#FB090B', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 85 },
+  { id: 'it03', name: 'トリノ・ビアンコネーロ', shortName: 'TBI', city: 'トリノ', country: 'ITA', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 84 },
+  { id: 'it04', name: 'ナポリ・アズーロ', shortName: 'NAZ', city: 'ナポリ', country: 'ITA', primaryColor: '#008FD7', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'circle', basePower: 84 },
+  { id: 'it05', name: 'アタランタ・ベルガモ', shortName: 'ABE', city: 'ベルガモ', country: 'ITA', primaryColor: '#1E71B8', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 82 },
+  { id: 'it06', name: 'ローマ・ジャッロロッソ', shortName: 'RGI', city: 'ローマ', country: 'ITA', primaryColor: '#8E1F2F', secondaryColor: '#F0BC42', pattern: 'halves-vertical', shape: 'shield', basePower: 81 },
+  { id: 'it07', name: 'ラツィオ・ビアンコチェレステ', shortName: 'LBC', city: 'ローマ', country: 'ITA', primaryColor: '#87D8F7', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 80 },
+  { id: 'it08', name: 'フィレンツェ・ヴィオラ', shortName: 'FVI', city: 'フィレンツェ', country: 'ITA', primaryColor: '#4F2382', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'diamond', basePower: 79 },
+  { id: 'it09', name: 'ボローニャ・ロッソブルー', shortName: 'BRO', city: 'ボローニャ', country: 'ITA', primaryColor: '#1B2C4B', secondaryColor: '#9C1B2C', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
+  { id: 'it10', name: 'トリノ・グランタ', shortName: 'TGR', city: 'トリノ', country: 'ITA', primaryColor: '#7A1C20', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 76 },
+  { id: 'it11', name: 'ジェノア・グリフォーネ', shortName: 'GEN', city: 'ジェノヴァ', country: 'ITA', primaryColor: '#8A1538', secondaryColor: '#002B49', pattern: 'halves-vertical', shape: 'shield', basePower: 75 },
+  { id: 'it12', name: 'モンツァ・ブリアンツァ', shortName: 'MON', city: 'モンツァ', country: 'ITA', primaryColor: '#E20613', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'circle', basePower: 74 },
+  { id: 'it13', name: 'ウディネ・ゼブラ', shortName: 'UDI', city: 'ウーディネ', country: 'ITA', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 74 },
+  { id: 'it14', name: 'カリアリ・サルデーニャ', shortName: 'CAG', city: 'カリャリ', country: 'ITA', primaryColor: '#002B49', secondaryColor: '#C4122D', pattern: 'halves-vertical', shape: 'shield', basePower: 73 },
+  { id: 'it15', name: 'ヴェローナ・マスティーニ', shortName: 'VER', city: 'ヴェローナ', country: 'ITA', primaryColor: '#002B49', secondaryColor: '#FFD700', pattern: 'split-vertical', shape: 'shield', basePower: 73 },
+  { id: 'it16', name: 'パルマ・十字軍', shortName: 'PAR', city: 'パルマ', country: 'ITA', primaryColor: '#FFFFFF', secondaryColor: '#002B49', pattern: 'halves-horizontal', shape: 'shield', basePower: 73 },
+  { id: 'it17', name: 'コモ・ラーゴ', shortName: 'COM', city: 'コモ', country: 'ITA', primaryColor: '#0038A8', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 72 },
+  { id: 'it18', name: 'レッチェ・サレント', shortName: 'LEC', city: 'レッチェ', country: 'ITA', primaryColor: '#E20613', secondaryColor: '#FEE000', pattern: 'stripes-vertical', shape: 'shield', basePower: 71 },
+  { id: 'it19', name: 'エンポリ・トスカーナ', shortName: 'EMP', city: 'エンポリ', country: 'ITA', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'halves-vertical', shape: 'circle', basePower: 70 },
+  { id: 'it20', name: 'ヴェネツィア・ラグーナ', shortName: 'VEN', city: 'ヴェネツィア', country: 'ITA', primaryColor: '#000000', secondaryColor: '#FF6600', pattern: 'stripes-horizontal', shape: 'shield', basePower: 70 }
+];
+
+// ドイツ（ブンデスリーガ相当）：18クラブ
+const GERMANY_CLUBS_DEFINITIONS = [
+  { id: 'de01', name: 'バイエルン・ロート', shortName: 'BRO', city: 'ミュンヘン', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#0066B2', pattern: 'quarters', shape: 'circle', basePower: 86 },
+  { id: 'de02', name: 'レバークーゼン・ヴェルク', shortName: 'LWE', city: 'レバークーゼン', country: 'GER', primaryColor: '#E32221', secondaryColor: '#121212', pattern: 'sash-diagonal', shape: 'shield', basePower: 85 },
+  { id: 'de03', name: 'ドルトムント・ゲルプ', shortName: 'DGE', city: 'ドルトムント', country: 'GER', primaryColor: '#FDE100', secondaryColor: '#121212', pattern: 'stripes-vertical', shape: 'circle', basePower: 84 },
+  { id: 'de04', name: 'ライプツィヒ・ブルズ', shortName: 'LBU', city: 'ライプツィヒ', country: 'GER', primaryColor: '#ED1B24', secondaryColor: '#002B49', pattern: 'chevron-down', shape: 'shield', basePower: 83 },
+  { id: 'de05', name: 'シュトゥットガルト・クロイツ', shortName: 'SKR', city: 'シュトゥットガルト', country: 'GER', primaryColor: '#FFFFFF', secondaryColor: '#E32219', pattern: 'stripes-horizontal', shape: 'shield', basePower: 81 },
+  { id: 'de06', name: 'フランクフルト・アドラー', shortName: 'FAD', city: 'フランクフルト', country: 'GER', primaryColor: '#E1000F', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'circle', basePower: 80 },
+  { id: 'de07', name: 'ヴォルフスブルク・グリューン', shortName: 'WGR', city: 'ヴォルフスブルク', country: 'GER', primaryColor: '#65B32E', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'circle', basePower: 78 },
+  { id: 'de08', name: 'フライブルク・フォルクス', shortName: 'FVO', city: 'フライブルク', country: 'GER', primaryColor: '#000000', secondaryColor: '#E2001A', pattern: 'halves-vertical', shape: 'shield', basePower: 78 },
+  { id: 'de09', name: 'ホッフェンハイム・ブラウ', shortName: 'HOF', city: 'ジンスハイム', country: 'GER', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'shield', basePower: 77 },
+  { id: 'de10', name: 'ブレーメン・ヴェルダー', shortName: 'BWE', city: 'ブレーメン', country: 'GER', primaryColor: '#1C7C44', secondaryColor: '#FFFFFF', pattern: 'diamond', shape: 'diamond', basePower: 76 },
+  { id: 'de11', name: 'ボルシア・メンヒェン', shortName: 'BMG', city: 'メンヒェングラートバッハ', country: 'GER', primaryColor: '#000000', secondaryColor: '#009F4D', pattern: 'split-vertical', shape: 'diamond', basePower: 76 },
+  { id: 'de12', name: 'ウニオン・鉄鋼', shortName: 'UNI', city: 'ベルリン', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#FFD700', pattern: 'stripes-vertical', shape: 'shield', basePower: 75 },
+  { id: 'de13', name: 'アウクスブルク・フッガー', shortName: 'AUG', city: 'アウクスブルク', country: 'GER', primaryColor: '#800000', secondaryColor: '#008000', pattern: 'halves-vertical', shape: 'circle', basePower: 74 },
+  { id: 'de14', name: 'マインツ・カーニバル', shortName: 'MAI', city: 'マインツ', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#FFFFFF', pattern: 'quarters', shape: 'shield', basePower: 74 },
+  { id: 'de15', name: 'ハイデンハイム・赤青', shortName: 'HDH', city: 'ハイデンハイム', country: 'GER', primaryColor: '#002B49', secondaryColor: '#DC052D', pattern: 'halves-horizontal', shape: 'shield', basePower: 73 },
+  { id: 'de16', name: 'ザンクトパウリ・海賊', shortName: 'STP', city: 'ハンブルク', country: 'GER', primaryColor: '#5C381E', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 72 },
+  { id: 'de17', name: 'キール・ホルシュタイン', shortName: 'KIE', city: 'キール', country: 'GER', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'shield', basePower: 70 },
+  { id: 'de18', name: 'ボーフム・青白', shortName: 'BOC', city: 'ボーフム', country: 'GER', primaryColor: '#005CA9', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'circle', basePower: 70 }
+];
+
+// フランス（リーグ・アン相当）：18クラブ
+const FRANCE_CLUBS_DEFINITIONS = [
+  { id: 'fr01', name: 'パリ・ルージュエブルー', shortName: 'PRB', city: 'パリ', country: 'FRA', primaryColor: '#002B49', secondaryColor: '#DA291C', pattern: 'stripes-vertical', shape: 'circle', basePower: 86 },
+  { id: 'fr02', name: 'モナコ・プリンス', shortName: 'MPR', city: 'モナコ', country: 'FRA', primaryColor: '#E2001A', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 82 },
+  { id: 'fr03', name: 'マルセイユ・シエル', shortName: 'MCI', city: 'マルセイユ', country: 'FRA', primaryColor: '#00A3E0', secondaryColor: '#FFFFFF', pattern: 'sash-diagonal', shape: 'shield', basePower: 82 },
+  { id: 'fr04', name: 'リール・ドグ', shortName: 'LDO', city: 'リール', country: 'FRA', primaryColor: '#E01E2E', secondaryColor: '#1D253C', pattern: 'chevron-down', shape: 'shield', basePower: 80 },
+  { id: 'fr05', name: 'リヨン・オランピック', shortName: 'LOL', city: 'リヨン', country: 'FRA', primaryColor: '#FFFFFF', secondaryColor: '#17366E', pattern: 'split-vertical', shape: 'shield', basePower: 80 },
+  { id: 'fr06', name: 'レンヌ・ルージュ', shortName: 'RRU', city: 'レンヌ', country: 'FRA', primaryColor: '#E30613', secondaryColor: '#000000', pattern: 'halves-vertical', shape: 'circle', basePower: 79 },
+  { id: 'fr07', name: 'ランス・サングエトール', shortName: 'RCL', city: 'ランス', country: 'FRA', primaryColor: '#E20613', secondaryColor: '#FFCC00', pattern: 'stripes-vertical', shape: 'shield', basePower: 79 },
+  { id: 'fr08', name: 'ニース・アイグロン', shortName: 'NAI', city: 'ニース', country: 'FRA', primaryColor: '#DA291C', secondaryColor: '#000000', pattern: 'stripes-vertical', shape: 'shield', basePower: 78 },
+  { id: 'fr09', name: 'ブレスト・チロワ', shortName: 'BRE', city: 'ブレスト', country: 'FRA', primaryColor: '#E20613', secondaryColor: '#FFFFFF', pattern: 'halves-horizontal', shape: 'circle', basePower: 78 },
+  { id: 'fr10', name: 'ランス・シャンパーニュ', shortName: 'RCH', city: 'ランス', country: 'FRA', primaryColor: '#D50032', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'shield', basePower: 77 },
+  { id: 'fr11', name: 'ストラスブール・アルザス', shortName: 'SAL', city: 'ストラスブール', country: 'FRA', primaryColor: '#00539F', secondaryColor: '#FFFFFF', pattern: 'stripes-horizontal', shape: 'shield', basePower: 76 },
+  { id: 'fr12', name: 'トゥールーズ・ヴィオレ', shortName: 'TVI', city: 'トゥールーズ', country: 'FRA', primaryColor: '#53284F', secondaryColor: '#FFFFFF', pattern: 'split-vertical', shape: 'diamond', basePower: 76 },
+  { id: 'fr13', name: 'モンペリエ・オレンジ', shortName: 'MON', city: 'モンペリエ', country: 'FRA', primaryColor: '#F37021', secondaryColor: '#002B49', pattern: 'quarters', shape: 'shield', basePower: 75 },
+  { id: 'fr14', name: 'ナント・カナリア', shortName: 'NAN', city: 'ナント', country: 'FRA', primaryColor: '#FFF200', secondaryColor: '#00A651', pattern: 'stripes-vertical', shape: 'shield', basePower: 74 },
+  { id: 'fr15', name: 'オセール・白青', shortName: 'AUX', city: 'オセール', country: 'FRA', primaryColor: '#FFFFFF', secondaryColor: '#0053A0', pattern: 'halves-vertical', shape: 'shield', basePower: 73 },
+  { id: 'fr16', name: 'ル・アーヴル・水色', shortName: 'HAC', city: 'ル・アーヴル', country: 'FRA', primaryColor: '#87D8F7', secondaryColor: '#002B49', pattern: 'halves-vertical', shape: 'shield', basePower: 72 },
+  { id: 'fr17', name: 'アンジェ・黒白', shortName: 'ANG', city: 'アンジェ', country: 'FRA', primaryColor: '#000000', secondaryColor: '#FFFFFF', pattern: 'stripes-vertical', shape: 'diamond', basePower: 71 },
+  { id: 'fr18', name: 'サンテティエンヌ・緑', shortName: 'STE', city: 'サンテティエンヌ', country: 'FRA', primaryColor: '#007A3D', secondaryColor: '#FFFFFF', pattern: 'circle-center', shape: 'circle', basePower: 72 }
+];
+
+// 五大リーグ全120クラブまとめ
+// ENG 1部(20) + ENG 2部(24) + ESP(20) + ITA(20) + GER(18) + FRA(18) = 120クラブ
+function getAllBigFiveClubs() {
+  const p1Clubs = (typeof CLUB_DEFINITIONS !== 'undefined') ? CLUB_DEFINITIONS : (gameState.clubs || []);
+  return [
+    ...p1Clubs,
+    ...CHAMPIONSHIP_CLUBS_DEFINITIONS,
+    ...SPAIN_CLUBS_DEFINITIONS,
+    ...ITALY_CLUBS_DEFINITIONS,
+    ...GERMANY_CLUBS_DEFINITIONS,
+    ...FRANCE_CLUBS_DEFINITIONS
+  ];
+}
 
 // ==========================================
-// 3. 高速ダイジェスト試合エンジン（simQuickMatch）
+// 2. 高速ダイジェスト試合エンジン（simQuickMatch）
 // ==========================================
 function simQuickMatch(homeClub, awayClub) {
   const getPower = (c) => {
@@ -140,7 +154,7 @@ function simQuickMatch(homeClub, awayClub) {
     return 75;
   };
 
-  const hp = getPower(homeClub) + 2.5;
+  const hp = getPower(homeClub) + 2.5; // ホームアドバンテージ
   const ap = getPower(awayClub);
   const diff = hp - ap;
 
@@ -162,8 +176,8 @@ function simQuickMatch(homeClub, awayClub) {
     return k;
   };
 
-  let homeScore = genGoals(homeExp);
-  let awayScore = genGoals(awayExp);
+  const homeScore = genGoals(homeExp);
+  const awayScore = genGoals(awayExp);
   return { homeScore, awayScore };
 }
 
@@ -204,7 +218,7 @@ function simKnockoutMatch(homeClub, awayClub) {
 }
 
 // ==========================================
-// 4. コンペティション初期化
+// 3. コンペティション初期化
 // ==========================================
 function initSeasonCompetitions() {
   if (!gameState.competitions) {
@@ -212,10 +226,11 @@ function initSeasonCompetitions() {
   }
   initChampionshipLeague();
   initDomesticCups();
-  initEuropeanCups();
+  initEuropeanCups36();
   injectCupMatchesIntoCalendar();
 }
 
+// 2部リーグ（チャンピオンシップ）
 function initChampionshipLeague() {
   if (!gameState.competitions.championship) {
     gameState.competitions.championship = {
@@ -287,6 +302,7 @@ function advanceChampionshipWeek() {
   }
 }
 
+// 国内2大カップ（一発勝負トーナメント）
 function generateKnockoutRound(clubs) {
   const pool = [...clubs];
   for (let i = pool.length - 1; i > 0; i--) {
@@ -318,6 +334,7 @@ function initDomesticCups() {
   const p1Clubs = gameState.clubs || [];
   const p2Clubs = (gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS;
 
+  // リーグカップ（LGC: カラバオ相当 44クラブ）: 優勝特典: 賞金 + ECL出場権
   const lgcParticipants = [...p1Clubs, ...p2Clubs.slice(0, 12)];
   gameState.competitions.leagueCup = {
     name: 'リーグカップ',
@@ -332,9 +349,10 @@ function initDomesticCups() {
       FINAL: []
     },
     winner: null,
-    prizeMoney: 10000
+    prizeMoney: 10000 // £10.0M
   };
 
+  // ナショナルカップ（NAT: FA杯相当 44クラブ）: 優勝特典: 高額賞金 + EL出場権
   const natParticipants = [...p1Clubs, ...p2Clubs.slice(12, 24)];
   gameState.competitions.nationalCup = {
     name: 'ナショナルカップ',
@@ -349,13 +367,86 @@ function initDomesticCups() {
       FINAL: []
     },
     winner: null,
-    prizeMoney: 15000
+    prizeMoney: 15000 // £15.0M
   };
 }
 
-// 欧州各大会（CL, EL, ECL）の36チーム ＆ 8試合リーグフェーズ初期化
-function createEuroCompObject(name, enName, shortCode, participants, prizeMoney) {
-  // 36チームを各クラブ初期化
+// ==========================================
+// 4. 欧州3大カップ戦（CL / EL / ECL 各36チーム・新スイス方式）
+// ==========================================
+
+/**
+ * 欧州全120クラブから上位成績・カップ結果に基づきCL(36), EL(36), ECL(36)の計108枠へ自動エントリー
+ */
+function selectEuropeanCompetitionEntries() {
+  const premClubs = [...(gameState.clubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0));
+  const espClubs = [...SPAIN_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
+  const itaClubs = [...ITALY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
+  const gerClubs = [...GERMANY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
+  const fraClubs = [...FRANCE_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
+
+  // 1. CL（36クラブ）：欧州最高峰
+  // イングランド上位4 + スペイン上位5 + イタリア上位5 + ドイツ上位5 + フランス上位4 + その他各国強豪
+  const clPrem = premClubs.slice(0, 4);
+  const clEsp = espClubs.slice(0, 5);
+  const clIta = itaClubs.slice(0, 5);
+  const clGer = gerClubs.slice(0, 5);
+  const clFra = fraClubs.slice(0, 4);
+  const clEuroPool = [
+    ...espClubs.slice(5, 7),
+    ...itaClubs.slice(5, 7),
+    ...gerClubs.slice(5, 7),
+    ...fraClubs.slice(4, 7),
+    ...premClubs.slice(4, 5)
+  ];
+  const clEntries = [...clPrem, ...clEsp, ...clIta, ...clGer, ...clFra];
+  clEuroPool.forEach(c => {
+    if (clEntries.length < 36 && !clEntries.some(e => e.id === c.id)) {
+      clEntries.push(c);
+    }
+  });
+
+  // 2. EL（36クラブ）：欧州強豪（ナショナル杯覇者枠スライド考慮）
+  const elPrem = premClubs.slice(4, 6);
+  const elEsp = espClubs.slice(5, 11);
+  const elIta = itaClubs.slice(5, 11);
+  const elGer = gerClubs.slice(5, 10);
+  const elFra = fraClubs.slice(4, 9);
+  const elEntries = [...elPrem, ...elEsp, ...elIta, ...elGer, ...elFra];
+  const elPool = [...espClubs.slice(11, 14), ...itaClubs.slice(11, 14), ...gerClubs.slice(10, 13), ...fraClubs.slice(9, 12)];
+  elPool.forEach(c => {
+    if (elEntries.length < 36 && !elEntries.some(e => e.id === c.id) && !clEntries.some(e => e.id === c.id)) {
+      elEntries.push(c);
+    }
+  });
+
+  // 3. ECL（36クラブ）：欧州実力派（リーグ杯覇者枠スライド考慮）
+  const eclPrem = premClubs.slice(6, 8);
+  const eclEsp = espClubs.slice(11, 17);
+  const eclIta = itaClubs.slice(11, 17);
+  const eclGer = gerClubs.slice(10, 16);
+  const eclFra = fraClubs.slice(9, 15);
+  const eclEntries = [...eclPrem, ...eclEsp, ...eclIta, ...eclGer, ...eclFra];
+  const eclPool = [
+    ...espClubs.slice(17),
+    ...itaClubs.slice(17),
+    ...gerClubs.slice(16),
+    ...fraClubs.slice(15),
+    ...premClubs.slice(8, 12)
+  ];
+  eclPool.forEach(c => {
+    if (eclEntries.length < 36 && !eclEntries.some(e => e.id === c.id) && !clEntries.some(e => e.id === c.id) && !elEntries.some(e => e.id === c.id)) {
+      eclEntries.push(c);
+    }
+  });
+
+  return { clEntries, elEntries, eclEntries };
+}
+
+/**
+ * 36チームのスイス方式リーグフェーズ（各チーム8試合：ホーム4、アウェイ4）の対戦スケジュールをポット抽選生成
+ */
+function createSwissLeaguePhase(participants, compName, enName, shortCode, prizeMoney) {
   const clubs = participants.slice(0, 36).map(c => ({
     ...c,
     played: 0,
@@ -368,8 +459,17 @@ function createEuroCompObject(name, enName, shortCode, participants, prizeMoney)
     pts: 0
   }));
 
-  // 全8節（Matchday 1〜8）の対戦スケジュールをスイスドロー風に事前生成
-  // 各節18試合 × 8節 ＝ 144試合
+  // ポット分け（4ポット × 各9チーム）
+  const sortedByPower = [...clubs].sort((a, b) => (b.basePower || 75) - (a.basePower || 75));
+  const pots = [
+    sortedByPower.slice(0, 9),   // Pot 1
+    sortedByPower.slice(9, 18),  // Pot 2
+    sortedByPower.slice(18, 27), // Pot 3
+    sortedByPower.slice(27, 36)  // Pot 4
+  ];
+
+  // 全8節（Matchday 1〜8）の対戦カードを事前生成
+  // 各節18試合 × 8節 ＝ 計144試合
   const leagueSchedule = [];
   for (let round = 1; round <= 8; round++) {
     const shuffled = [...clubs];
@@ -394,13 +494,15 @@ function createEuroCompObject(name, enName, shortCode, participants, prizeMoney)
   }
 
   return {
-    name,
+    name: compName,
     enName,
     shortCode,
-    phase: 'LEAGUE', // 'LEAGUE' -> 'KNOCKOUT'
+    phase: 'LEAGUE', // 'LEAGUE' -> 'PLAYOFF' -> 'KNOCKOUT'
     currentMatchweek: 0, // 0 〜 8
     participants: clubs,
+    pots,
     leagueSchedule,
+    playoffs: [], // 9〜24位の進出プレーオフ
     rounds: {
       R16: [],
       QF: [],
@@ -412,56 +514,16 @@ function createEuroCompObject(name, enName, shortCode, participants, prizeMoney)
   };
 }
 
-function initEuropeanCups() {
-  const allEuroClubs = Object.values(EUROPEAN_CLUBS_DATABASE).flat();
-  const premClubs = [...(gameState.clubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0));
-
-  // CL (36チーム): プレミア上位4 + 欧州最高峰32
-  const clPrem = premClubs.slice(0, 4);
-  const clEuroPool = allEuroClubs.filter(c => c.basePower >= 81);
-  const clForeign = [...clEuroPool];
-  while (clForeign.length < 32) {
-    clForeign.push(allEuroClubs[clForeign.length % allEuroClubs.length]);
-  }
-  const cl36 = [...clPrem, ...clForeign.slice(0, 32)];
-
-  // EL (36チーム): プレミア5位・カップ枠 + 欧州強豪
-  const elPrem = premClubs.slice(4, 6);
-  const elEuroPool = allEuroClubs.filter(c => c.basePower >= 78 && c.basePower < 82);
-  const elForeign = [...elEuroPool];
-  while (elForeign.length < 34) {
-    elForeign.push(allEuroClubs[(elForeign.length + 15) % allEuroClubs.length]);
-  }
-  const el36 = [...elPrem, ...elForeign.slice(0, 34)];
-
-  // ECL (36チーム): プレミア6〜7位 + 欧州中堅・実力派
-  const eclPrem = premClubs.slice(6, 8);
-  const eclEuroPool = allEuroClubs.filter(c => c.basePower < 79);
-  const eclForeign = [...eclEuroPool];
-  while (eclForeign.length < 34) {
-    eclForeign.push(allEuroClubs[(eclForeign.length + 30) % allEuroClubs.length]);
-  }
-  const ecl36 = [...eclPrem, ...eclForeign.slice(0, 34)];
-
-  gameState.competitions.championsCup = createEuroCompObject('チャンピオンズリーグ', 'CHAMPIONS LEAGUE', 'CL', cl36, 30000);
-  gameState.competitions.europaCup = createEuroCompObject('ヨーロッパリーグ', 'EUROPA LEAGUE', 'EL', el36, 18000);
-  gameState.competitions.conferenceCup = createEuroCompObject('カンファレンスリーグ', 'CONFERENCE LEAGUE', 'ECL', ecl36, 10000);
+function initEuropeanCups36() {
+  const entries = selectEuropeanCompetitionEntries();
+  gameState.competitions.championsCup = createSwissLeaguePhase(entries.clEntries, 'チャンピオンズリーグ', 'CHAMPIONS LEAGUE', 'CL', 30000);
+  gameState.competitions.europaCup = createSwissLeaguePhase(entries.elEntries, 'ヨーロッパリーグ', 'EUROPA LEAGUE', 'EL', 18000);
+  gameState.competitions.conferenceCup = createSwissLeaguePhase(entries.eclEntries, 'カンファレンスリーグ', 'CONFERENCE LEAGUE', 'ECL', 10000);
 }
 
-// カレンダーにカップ戦＆欧州戦（全8試合リーグフェーズ＋決勝T）日程をマッピング
+// カレンダーにカップ戦＆欧州戦（全8試合リーグフェーズ＋PO＋決勝T）日程をマッピング
 function injectCupMatchesIntoCalendar() {
   if (!gameState.calendar || gameState.calendar.length === 0) return;
-
-  // 現実準拠の全8試合リーグフェーズ日程（9月〜1月下旬）
-  // 9月(火/水): 欧州MD1 & リーグ杯R32
-  // 10月(火/水): 欧州MD2 & 欧州MD3 & リーグ杯R16
-  // 11月(火/水): 欧州MD4 & 欧州MD5
-  // 12月(火/水): 欧州MD6 & リーグ杯QF
-  // 1月(火/水): 欧州MD7 & 欧州MD8 & ナショナル杯R32
-  // 2月(火/水): リーグ杯FINAL
-  // 3月(火/水): 欧州R16 & ナショナル杯R16
-  // 4月(火/水): 欧州QF & ナショナル杯QF
-  // 5月(火/水): 欧州SF/FINAL & ナショナル杯FINAL
 
   const scheduleMap = [
     // リーグ杯 / ナショナル杯
@@ -474,7 +536,7 @@ function injectCupMatchesIntoCalendar() {
     { month: 4, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'QF', label: 'ナショナル杯 準々決勝' },
     { month: 5, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'FINAL', label: 'ナショナル杯 決勝' },
 
-    // 欧州コンペ：全8試合リーグフェーズ (MD1〜MD8)
+    // 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8)
     { month: 9, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 1, label: '欧州リーグ MD1' },
     { month: 10, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 2, label: '欧州リーグ MD2' },
     { month: 10, dayOfWeek: 4, compType: 'euroLeaguePhase', md: 3, label: '欧州リーグ MD3' },
@@ -483,6 +545,9 @@ function injectCupMatchesIntoCalendar() {
     { month: 12, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 6, label: '欧州リーグ MD6' },
     { month: 1, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 7, label: '欧州リーグ MD7' },
     { month: 1, dayOfWeek: 4, compType: 'euroLeaguePhase', md: 8, label: '欧州リーグ MD8' },
+
+    // 欧州コンペ：決勝トーナメント進出プレーオフ（9〜24位）
+    { month: 2, dayOfWeek: 2, compType: 'euroPlayoff', label: '欧州PO 決勝T進出決定戦' },
 
     // 欧州コンペ：決勝トーナメント
     { month: 3, dayOfWeek: 2, compType: 'championsCup', roundKey: 'R16', label: '欧州CL 決勝T 1回戦' },
@@ -499,7 +564,7 @@ function injectCupMatchesIntoCalendar() {
       day.euroMd = sc.md || null;
       day.cupLabel = sc.label;
 
-      if (sc.compType === 'euroLeaguePhase') {
+      if (sc.compType === 'euroLeaguePhase' || sc.compType === 'euroPlayoff') {
         day.cupCode = 'EURO';
       } else {
         const comp = gameState.competitions && gameState.competitions[sc.compType];
@@ -510,7 +575,7 @@ function injectCupMatchesIntoCalendar() {
 }
 
 // ==========================================
-// 5. 欧州リーグフェーズ（MD1〜MD8）の進行処理
+// 5. 欧州リーグフェーズ＆プレーオフの進行
 // ==========================================
 function advanceEuroLeaguePhase(md) {
   const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
@@ -537,7 +602,6 @@ function advanceEuroLeaguePhase(md) {
         playerMatch = m;
         playerComp = comp;
       } else {
-        // 他クラブ対戦は高速ダイジェスト計算
         const res = simQuickMatch(m.homeClub, m.awayClub);
         m.homeScore = res.homeScore;
         m.awayScore = res.awayScore;
@@ -573,7 +637,7 @@ function advanceEuroLeaguePhase(md) {
       }
     });
 
-    // 8節終了時に決勝トーナメント（上位16チーム）を生成
+    // 第8節終了時：1〜8位がR16進出、9〜24位がプレーオフ進出
     if (md === 8) {
       finalizeEuroLeaguePhaseToKnockout(comp);
     }
@@ -582,14 +646,59 @@ function advanceEuroLeaguePhase(md) {
   return { playerMatch, playerComp };
 }
 
-// リーグフェーズ8節終了後、上位16チームで決勝トーナメント生成
+// 8節終了時：1〜8位ストレート進出、9〜24位プレーオフ（PO）生成
 function finalizeEuroLeaguePhaseToKnockout(comp) {
-  if (comp.phase === 'KNOCKOUT') return;
-  comp.phase = 'KNOCKOUT';
+  if (comp.phase !== 'LEAGUE') return;
+  comp.phase = 'PLAYOFF';
 
-  const sorted = [...comp.participants].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-  const top16 = sorted.slice(0, 16);
-  comp.rounds.R16 = generateKnockoutRound(top16);
+  const sorted = [...comp.participants].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
+  const top8 = sorted.slice(0, 8);
+  const playoffClubs = sorted.slice(8, 24); // 9〜24位（計16チーム）
+
+  comp.top8Direct = top8;
+  comp.playoffs = generateKnockoutRound(playoffClubs);
+}
+
+// プレーオフ（9〜24位）の進行
+function advanceEuroPlayoffRound() {
+  const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  let playerMatch = null;
+  let playerComp = null;
+
+  euroKeys.forEach(ek => {
+    const comp = gameState.competitions && gameState.competitions[ek];
+    if (!comp || !comp.playoffs) return;
+
+    comp.playoffs.forEach(m => {
+      if (m.played) return;
+      const isHomePlayer = (playerClub && m.homeId === playerClub.id);
+      const isAwayPlayer = (playerClub && m.awayId === playerClub.id);
+
+      if (isHomePlayer || isAwayPlayer) {
+        playerMatch = m;
+        playerComp = comp;
+      } else {
+        const res = simKnockoutMatch(m.homeClub, m.awayClub);
+        m.homeScore = res.homeScore;
+        m.awayScore = res.awayScore;
+        m.pkHome = res.pkHome;
+        m.pkAway = res.pkAway;
+        m.winnerId = res.winnerId;
+        m.winnerClub = res.winnerClub;
+        m.played = true;
+      }
+    });
+
+    // プレーオフ勝者8チーム + トップ8 = 16チームでR16構築
+    const poWinners = comp.playoffs.map(m => m.winnerClub).filter(Boolean);
+    if (poWinners.length >= 8 && comp.top8Direct) {
+      comp.phase = 'KNOCKOUT';
+      comp.rounds.R16 = generateKnockoutRound([...comp.top8Direct, ...poWinners]);
+    }
+  });
+
+  return { playerMatch, playerComp };
 }
 
 // 国内カップ戦の進行
@@ -751,7 +860,7 @@ function processPromotionAndRelegation() {
 // 6. UI描画ヘルパー
 // ==========================================
 
-// 2部リーグ順位表（プレミアリーグと全く同じ構造・表示、昇格圏/降格圏の文字表示は撤廃）
+// 2部リーグ順位表
 function renderChampionshipStandingsHtml() {
   const comp = gameState.competitions && gameState.competitions.championship;
   if (!comp || !comp.clubs) return '<p class="empty-state">2部リーグデータがありません</p>';
@@ -803,7 +912,7 @@ function renderChampionshipStandingsHtml() {
   return html;
 }
 
-// 欧州コンペ：全36チーム リーグフェーズ順位表描画
+// 欧州コンペ：全36チーム スイス方式総合順位表描画（1〜8位緑、9〜24位黄、25〜36位赤）
 function renderEuroLeaguePhaseStandingsHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.participants) return '<p class="empty-state">欧州コンペデータがありません</p>';
@@ -814,7 +923,7 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
     <div class="euro-league-header">
       <div class="euro-league-badge-title">
         <span class="euro-badge-code mono">${comp.shortCode}</span>
-        <span class="euro-badge-name">${comp.name} リーグフェーズ (全36チーム / 各8試合)</span>
+        <span class="euro-badge-name">${comp.name} 総合順位表 (全36チーム / 各8試合)</span>
       </div>
       <span class="euro-md-status mono">MATCHWEEK ${comp.currentMatchweek || 0} / 8</span>
     </div>
@@ -845,11 +954,17 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
     let zoneClass = '';
     let zoneTag = '';
     if (rank <= 8) {
-      zoneClass = 'zone-ucl';
+      // 1〜8位：緑ライン（ベスト16直行）
+      zoneClass = 'zone-ucl zone-direct-r16';
       zoneTag = '<span class="standings-zone-tag zone-tag-cl">ベスト16直行</span>';
-    } else if (rank <= 16) {
-      zoneClass = 'zone-uel';
+    } else if (rank <= 24) {
+      // 9〜24位：黄ライン（プレーオフ進出圏）
+      zoneClass = 'zone-uel zone-playoff';
       zoneTag = '<span class="standings-zone-tag zone-tag-el">プレーオフ圏</span>';
+    } else {
+      // 25〜36位：赤ライン（敗退圏）
+      zoneClass = 'zone-rel zone-eliminated';
+      zoneTag = '<span class="standings-zone-tag zone-tag-rel">敗退</span>';
     }
 
     html += `
@@ -869,6 +984,49 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   });
 
   html += '</tbody></table>';
+  return html;
+}
+
+// 欧州コンペ：対戦日程・結果リストの描画
+function renderEuroScheduleListHtml(compKey) {
+  const comp = gameState.competitions && gameState.competitions[compKey];
+  if (!comp || !comp.leagueSchedule) return '<p class="empty-state">対戦日程データがありません</p>';
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+
+  let html = `<div class="euro-schedule-list-wrapper">`;
+  comp.leagueSchedule.forEach((roundMatches, idx) => {
+    const md = idx + 1;
+    html += `
+      <div class="euro-schedule-md-block">
+        <h4 class="euro-schedule-md-title mono">MATCHDAY ${md}</h4>
+        <div class="euro-schedule-matches-grid">
+    `;
+
+    roundMatches.forEach(m => {
+      const isMyMatch = playerClub && (m.homeId === playerClub.id || m.awayId === playerClub.id);
+      const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 16) : '';
+      const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 16) : '';
+      const scoreText = m.played ? `${m.homeScore} - ${m.awayScore}` : 'VS';
+
+      html += `
+        <div class="euro-match-tile ${isMyMatch ? 'my-match' : ''} ${m.played ? 'played' : ''}">
+          <div class="euro-tile-team home">
+            ${homeEmblem}
+            <span class="mono">${m.homeClub ? (m.homeClub.shortName || m.homeClub.name.slice(0,3)) : ''}</span>
+          </div>
+          <span class="euro-tile-score mono ${m.played ? 'score-played' : ''}">${scoreText}</span>
+          <div class="euro-tile-team away">
+            ${awayEmblem}
+            <span class="mono">${m.awayClub ? (m.awayClub.shortName || m.awayClub.name.slice(0,3)) : ''}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+  });
+  html += `</div>`;
   return html;
 }
 
@@ -951,12 +1109,17 @@ function renderCupBracketHtml(compKey) {
 
 // グローバル公開
 window.CHAMPIONSHIP_CLUBS_DEFINITIONS = CHAMPIONSHIP_CLUBS_DEFINITIONS;
-window.EUROPEAN_CLUBS_DATABASE = EUROPEAN_CLUBS_DATABASE;
+window.SPAIN_CLUBS_DEFINITIONS = SPAIN_CLUBS_DEFINITIONS;
+window.ITALY_CLUBS_DEFINITIONS = ITALY_CLUBS_DEFINITIONS;
+window.GERMANY_CLUBS_DEFINITIONS = GERMANY_CLUBS_DEFINITIONS;
+window.FRANCE_CLUBS_DEFINITIONS = FRANCE_CLUBS_DEFINITIONS;
+window.getAllBigFiveClubs = getAllBigFiveClubs;
 window.simQuickMatch = simQuickMatch;
 window.simKnockoutMatch = simKnockoutMatch;
 window.initSeasonCompetitions = initSeasonCompetitions;
 window.advanceChampionshipWeek = advanceChampionshipWeek;
 window.advanceEuroLeaguePhase = advanceEuroLeaguePhase;
+window.advanceEuroPlayoffRound = advanceEuroPlayoffRound;
 window.processPromotionAndRelegation = processPromotionAndRelegation;
 window.injectCupMatchesIntoCalendar = injectCupMatchesIntoCalendar;
 window.processCupMatchDay = processCupMatchDay;
@@ -964,4 +1127,5 @@ window.finalizeCupMatch = finalizeCupMatch;
 window.checkScheduleCongestion = checkScheduleCongestion;
 window.renderChampionshipStandingsHtml = renderChampionshipStandingsHtml;
 window.renderEuroLeaguePhaseStandingsHtml = renderEuroLeaguePhaseStandingsHtml;
+window.renderEuroScheduleListHtml = renderEuroScheduleListHtml;
 window.renderCupBracketHtml = renderCupBracketHtml;

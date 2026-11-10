@@ -3559,6 +3559,15 @@ function advanceCalendarDay(skipRender = false) {
           nextDay.played = true;
         }
       }
+    } else if (nextDay.cupCompType === 'euroPlayoff') {
+      if (typeof advanceEuroPlayoffRound === 'function') {
+        const poRes = advanceEuroPlayoffRound();
+        if (poRes && poRes.playerMatch) {
+          isNextDayCupPlayerMatch = true;
+        } else {
+          nextDay.played = true;
+        }
+      }
     } else if (typeof processCupMatchDay === 'function') {
       const cupRes = processCupMatchDay(nextDay.cupCompType, nextDay.cupRoundKey);
       if (cupRes && cupRes.playerMatch) {
@@ -10037,22 +10046,37 @@ function renderStandings() {
     if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
     if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE CUP TOURNAMENT' : 'NATIONAL CUP TOURNAMENT';
   } else if (compView === 'europe') {
-    // 欧州コンペ：全36チーム リーグフェーズ（各8試合） ＆ 決勝トーナメント
+    // 欧州コンペ：全36チーム スイス方式リーグフェーズ（各8試合） ＆ 日程 ＆ 決勝トーナメント
     if (tableWrapper) tableWrapper.classList.add('hidden');
     if (bracketWrapper) bracketWrapper.classList.remove('hidden');
+
+    const playerClub = getPlayerClub();
+    // 自チームが出場している大会があればそれを優先選択
+    if (!gameState.selectedEuroCup && playerClub && gameState.competitions) {
+      if (gameState.competitions.championsCup && gameState.competitions.championsCup.participants.some(c => c.id === playerClub.id)) {
+        gameState.selectedEuroCup = 'championsCup';
+      } else if (gameState.competitions.europaCup && gameState.competitions.europaCup.participants.some(c => c.id === playerClub.id)) {
+        gameState.selectedEuroCup = 'europaCup';
+      } else if (gameState.competitions.conferenceCup && gameState.competitions.conferenceCup.participants.some(c => c.id === playerClub.id)) {
+        gameState.selectedEuroCup = 'conferenceCup';
+      }
+    }
+
+    const curEuro = gameState.selectedEuroCup || 'championsCup';
+    const curTab = gameState.selectedEuroSubtab || 'standings';
+
     if (subnavRow) {
       subnavRow.classList.remove('hidden');
-      if (subnavLabel) subnavLabel.textContent = '欧州コンペ:';
-      const curEuro = gameState.selectedEuroCup || 'championsCup';
-      const curPhase = gameState.selectedEuroPhase || 'league';
+      if (subnavLabel) subnavLabel.textContent = '欧州大会:';
       if (subnavBtns) {
         subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">CL (欧州チャンピオンズ)</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EL (欧州ヨーロッパ)</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECL (カンファレンス)</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">CL</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EL</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECL</button>
           <span style="border-left: 1px solid rgba(255,255,255,0.15); margin: 0 4px;"></span>
-          <button type="button" class="euro-phase-btn mono ${curPhase === 'league' ? 'active' : ''}" data-sub-phase="league">リーグフェーズ (全36チーム)</button>
-          <button type="button" class="euro-phase-btn mono ${curPhase === 'knockout' ? 'active' : ''}" data-sub-phase="knockout">決勝トーナメント</button>
+          <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表 (全36チーム)</button>
+          <button type="button" class="euro-phase-btn mono ${curTab === 'schedule' ? 'active' : ''}" data-euro-tab="schedule">日程・結果</button>
+          <button type="button" class="euro-phase-btn mono ${curTab === 'bracket' ? 'active' : ''}" data-euro-tab="bracket">トーナメント表</button>
         `;
         subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
           b.onclick = () => {
@@ -10062,21 +10086,24 @@ function renderStandings() {
         });
         subnavBtns.querySelectorAll('.euro-phase-btn').forEach(b => {
           b.onclick = () => {
-            gameState.selectedEuroPhase = b.dataset.subPhase;
+            gameState.selectedEuroSubtab = b.dataset.euroTab;
             renderStandings();
           };
         });
       }
     }
-    const curEuro = gameState.selectedEuroCup || 'championsCup';
-    const curPhase = gameState.selectedEuroPhase || 'league';
 
-    if (curPhase === 'league') {
+    const compName = curEuro === 'championsCup' ? 'UEFA CHAMPIONS LEAGUE' : (curEuro === 'europaCup' ? 'UEFA EUROPA LEAGUE' : 'UEFA CONFERENCE LEAGUE');
+
+    if (curTab === 'standings') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
-      if (statusText) statusText.textContent = `${curEuro === 'championsCup' ? 'UEFA CHAMPIONS LEAGUE' : (curEuro === 'europaCup' ? 'UEFA EUROPA LEAGUE' : 'UEFA CONFERENCE LEAGUE')} - LEAGUE PHASE`;
+      if (statusText) statusText.textContent = `${compName} - 総合順位表 (各8試合)`;
+    } else if (curTab === 'schedule') {
+      if (bracketWrapper) bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
+      if (statusText) statusText.textContent = `${compName} - 全8節 対戦日程・結果`;
     } else {
       if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
-      if (statusText) statusText.textContent = `${curEuro === 'championsCup' ? 'UEFA CHAMPIONS LEAGUE' : (curEuro === 'europaCup' ? 'UEFA EUROPA LEAGUE' : 'UEFA CONFERENCE LEAGUE')} - KNOCKOUT STAGE`;
+      if (statusText) statusText.textContent = `${compName} - 決勝トーナメント`;
     }
   }
 }
