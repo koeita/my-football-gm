@@ -13077,3 +13077,49 @@ button.hidden,
   font-size: 11px;
   padding: 2px 8px;
 }
+
+
+/* 選手一覧（ロスター）アクション列の4スロット固定グリッド配置 */
+.action-btn-grid {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+}
+
+.action-slot {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+}
+
+.action-slot.slot-extend {
+  width: 72px;
+  min-width: 72px;
+}
+
+.action-slot.slot-loan {
+  width: 78px;
+  min-width: 78px;
+}
+
+.action-slot.slot-demote {
+  width: 70px;
+  min-width: 70px;
+}
+
+.action-slot.slot-release {
+  width: 68px;
+  min-width: 68px;
+}
+
+.action-slot > button,
+.action-slot > a {
+  width: 100% !important;
+  padding: 3px 0 !important;
+  font-size: 11px !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
