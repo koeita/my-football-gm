@@ -14206,3 +14206,77 @@ body {
   box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25) !important;
 }
 
+/* 8. 業務タスクパネルとタスクカードのUnslop（高級感あるダークカードと明瞭なコントラスト） */
+.gm-tasks-panel {
+  background: #14171c !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.gm-duty-card {
+  background: #181c22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.15s ease, border-color 0.15s ease !important;
+}
+
+.gm-duty-card:hover {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: #1b2027 !important;
+}
+
+.duty-priority-badge {
+  border-radius: 4px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.03em !important;
+  padding: 3px 8px !important;
+}
+
+.btn-duty-action {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border: 1px solid rgba(34, 197, 94, 0.4) !important;
+  color: #22c55e !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-duty-action:hover {
+  background: #22c55e !important;
+  color: #091e11 !important;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3) !important;
+}
+
+/* 9. メインアクションバー（次戦へ進める / 翌日へ）のUnslop */
+.office-action-section {
+  margin: 12px 0 !important;
+}
+
+.btn-advance-large {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  letter-spacing: 0.03em !important;
+}
+
+.btn-advance-large:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+}
+
+.btn-advance-sub {
+  border-radius: 10px !important;
+  background: #181c22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-advance-sub:hover {
+  background: #20252d !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
