@@ -221,13 +221,17 @@ function simKnockoutMatch(homeClub, awayClub) {
 // 3. コンペティション初期化
 // ==========================================
 function initSeasonCompetitions() {
-  if (!gameState.competitions) {
-    gameState.competitions = {};
+  try {
+    if (!gameState.competitions) {
+      gameState.competitions = {};
+    }
+    initChampionshipLeague();
+    initDomesticCups();
+    initEuropeanCups36();
+    injectCupMatchesIntoCalendar();
+  } catch (err) {
+    console.error('Error in initSeasonCompetitions:', err);
   }
-  initChampionshipLeague();
-  initDomesticCups();
-  initEuropeanCups36();
-  injectCupMatchesIntoCalendar();
 }
 
 // 2部リーグ（チャンピオンシップ）
@@ -380,65 +384,45 @@ function initDomesticCups() {
  */
 function selectEuropeanCompetitionEntries() {
   const premClubs = [...(gameState.clubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0));
+  const p2Clubs = [...((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS)].sort((a, b) => (b.pts || 0) - (a.pts || 0));
   const espClubs = [...SPAIN_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const itaClubs = [...ITALY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const gerClubs = [...GERMANY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const fraClubs = [...FRANCE_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
 
-  // 1. CL（36クラブ）：欧州最高峰
-  // イングランド上位4 + スペイン上位5 + イタリア上位5 + ドイツ上位5 + フランス上位4 + その他各国強豪
-  const clPrem = premClubs.slice(0, 4);
-  const clEsp = espClubs.slice(0, 5);
-  const clIta = itaClubs.slice(0, 5);
-  const clGer = gerClubs.slice(0, 5);
-  const clFra = fraClubs.slice(0, 4);
-  const clEuroPool = [
-    ...espClubs.slice(5, 7),
-    ...itaClubs.slice(5, 7),
-    ...gerClubs.slice(5, 7),
-    ...fraClubs.slice(4, 7),
-    ...premClubs.slice(4, 5)
+  // 1. CL (36クラブ): 欧州最高峰
+  // ENG 1〜4位 (4) + ESP 1〜8位 (8) + ITA 1〜8位 (8) + GER 1〜8位 (8) + FRA 1〜8位 (8) = 36クラブ
+  const clEntries = [
+    ...premClubs.slice(0, 4),
+    ...espClubs.slice(0, 8),
+    ...itaClubs.slice(0, 8),
+    ...gerClubs.slice(0, 8),
+    ...fraClubs.slice(0, 8)
   ];
-  const clEntries = [...clPrem, ...clEsp, ...clIta, ...clGer, ...clFra];
-  clEuroPool.forEach(c => {
-    if (clEntries.length < 36 && !clEntries.some(e => e.id === c.id)) {
-      clEntries.push(c);
-    }
-  });
 
-  // 2. EL（36クラブ）：欧州強豪（ナショナル杯覇者枠スライド考慮）
-  const elPrem = premClubs.slice(4, 6);
-  const elEsp = espClubs.slice(5, 11);
-  const elIta = itaClubs.slice(5, 11);
-  const elGer = gerClubs.slice(5, 10);
-  const elFra = fraClubs.slice(4, 9);
-  const elEntries = [...elPrem, ...elEsp, ...elIta, ...elGer, ...elFra];
-  const elPool = [...espClubs.slice(11, 14), ...itaClubs.slice(11, 14), ...gerClubs.slice(10, 13), ...fraClubs.slice(9, 12)];
-  elPool.forEach(c => {
-    if (elEntries.length < 36 && !elEntries.some(e => e.id === c.id) && !clEntries.some(e => e.id === c.id)) {
-      elEntries.push(c);
-    }
-  });
-
-  // 3. ECL（36クラブ）：欧州実力派（リーグ杯覇者枠スライド考慮）
-  const eclPrem = premClubs.slice(6, 8);
-  const eclEsp = espClubs.slice(11, 17);
-  const eclIta = itaClubs.slice(11, 17);
-  const eclGer = gerClubs.slice(10, 16);
-  const eclFra = fraClubs.slice(9, 15);
-  const eclEntries = [...eclPrem, ...eclEsp, ...eclIta, ...eclGer, ...eclFra];
-  const eclPool = [
-    ...espClubs.slice(17),
-    ...itaClubs.slice(17),
-    ...gerClubs.slice(16),
-    ...fraClubs.slice(15),
-    ...premClubs.slice(8, 12)
+  // 2. EL (36クラブ): 欧州強豪
+  // ENG 5〜8位 (4: FA杯枠含む) + ESP 9〜16位 (8) + ITA 9〜16位 (8) + GER 9〜16位 (8) + FRA 9〜16位 (8) = 36クラブ
+  const elEntries = [
+    ...premClubs.slice(4, 8),
+    ...espClubs.slice(8, 16),
+    ...itaClubs.slice(8, 16),
+    ...gerClubs.slice(8, 16),
+    ...fraClubs.slice(8, 16)
   ];
-  eclPool.forEach(c => {
-    if (eclEntries.length < 36 && !eclEntries.some(e => e.id === c.id) && !clEntries.some(e => e.id === c.id) && !elEntries.some(e => e.id === c.id)) {
-      eclEntries.push(c);
-    }
-  });
+
+  // 3. ECL (36クラブ): 欧州実力派
+  // ENG 9〜16位 (8: リーグ杯枠含む) + ESP 17〜20位 (4) + ITA 17〜20位 (4) + GER 17〜18位 (2) + FRA 17〜18位 (2) + ENG 17〜18位 (2) + ENG 2部上位14 (14) = 36クラブ
+  const eclEntries = [
+    ...premClubs.slice(8, 16),
+    ...espClubs.slice(16, 20),
+    ...itaClubs.slice(16, 20),
+    ...gerClubs.slice(16, 18),
+    ...fraClubs.slice(16, 18),
+    ...premClubs.slice(16, 18),
+    ...p2Clubs.slice(0, 14)
+  ];
+
+  // 残り12クラブ（ENG 1部19〜20位の2クラブ ＋ ENG 2部15〜24位の10クラブ）は国内専念
 
   return { clEntries, elEntries, eclEntries };
 }
@@ -480,6 +464,7 @@ function createSwissLeaguePhase(participants, compName, enName, shortCode, prize
 
     const matches = [];
     for (let i = 0; i < shuffled.length; i += 2) {
+      if (!shuffled[i] || !shuffled[i + 1]) continue;
       matches.push({
         homeId: shuffled[i].id,
         awayId: shuffled[i + 1].id,

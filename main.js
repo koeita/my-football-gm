@@ -15162,9 +15162,15 @@ function initGame() {
 
   initReloadPrevention();
 
-  // 背景の初期ゲーム状態を準備した上で、メインメニュー（タイトル画面）を表示
-  setupNewGame(gameState.selectedClubId);
+  // メインメニュー（タイトル画面）のイベントリスナーを最優先で初期化
   initMainMenuAndModals();
+
+  try {
+    setupNewGame(gameState.selectedClubId);
+  } catch (err) {
+    console.error('setupNewGame error:', err);
+  }
+
   showMainMenuScreen();
 }
 
