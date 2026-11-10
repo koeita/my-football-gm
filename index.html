@@ -338,6 +338,20 @@
             </div>
             <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 38</span>
           </div>
+          <!-- 大会切り替えセグメントコントロール -->
+          <div class="comp-segment-nav" id="comp-segment-nav" role="tablist" aria-label="大会切り替え">
+            <button type="button" class="comp-tab-btn active mono" data-comp="prem" id="comp-btn-prem">プレミアリーグ</button>
+            <button type="button" class="comp-tab-btn mono" data-comp="championship" id="comp-btn-championship">2部リーグ</button>
+            <button type="button" class="comp-tab-btn mono" data-comp="domestic" id="comp-btn-domestic">国内カップ</button>
+            <button type="button" class="comp-tab-btn mono" data-comp="europe" id="comp-btn-europe">欧州コンペ</button>
+          </div>
+          <!-- 国内カップ・欧州コンペ用のサブセレクタ -->
+          <div class="comp-subnav-row hidden" id="comp-subnav-row">
+            <span class="comp-subnav-label mono" id="comp-subnav-label">大会:</span>
+            <div class="comp-subnav-btns" id="comp-subnav-btns">
+              <!-- JSで動的ボタン挿入 -->
+            </div>
+          </div>
           <div class="table-wrapper">
             <table class="data-table standings-table">
               <thead>
@@ -358,6 +372,10 @@
                 <!-- JSで描画 -->
               </tbody>
             </table>
+          </div>
+          <!-- トーナメント表（ブラケット）表示エリア（国内カップ・欧州コンペ選択時に表示） -->
+          <div class="comp-bracket-wrapper hidden" id="comp-bracket-wrapper">
+            <!-- JSで動的描画 -->
           </div>
         </div>
       </div>
@@ -1595,6 +1613,7 @@
   </div>
 
   <script src="avatar.js?v=20261108_0925"></script>
+  <script src="competitions.js?v=20261110_01"></script>
   <script src="main.js?v=20261109_0215"></script>
 </body>
 </html>
