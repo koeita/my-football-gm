@@ -66,5 +66,34 @@ class TestPhase4Targeted(unittest.TestCase):
         # スコアラー自動生成関数が存在すること
         self.assertIn("generateScorersForQuickMatch", self.main_js)
 
+    def test_competition_fictional_names_and_unified_league_tab(self):
+        """リーグタブの統合と架空大会名称・略称タグへの置換を検証"""
+        # 1. リーグタブ統合
+        self.assertIn('data-comp="league"', self.index_html)
+        self.assertIn('data-league-div="d1"', self.main_js)
+        self.assertIn('data-league-div="d2"', self.main_js)
+        self.assertNotIn('id="comp-btn-prem"', self.index_html)
+        self.assertNotIn('id="comp-btn-championship"', self.index_html)
+
+        # 2. 架空大会名称
+        self.assertIn('ユーロ・チャンピオンズ・トロフィー', self.comp_js)
+        self.assertIn('ユーロ・プレステージ・カップ', self.comp_js)
+        self.assertIn('ユーロ・カンファレンス・シールド', self.comp_js)
+        self.assertIn('リーグ・トロフィー', self.comp_js)
+        self.assertIn('ナショナル・カップ', self.comp_js)
+        self.assertIn('イングランド・セカンドディビジョン', self.comp_js)
+
+        # 3. 略称タグ
+        self.assertIn("'ECT'", self.comp_js)
+        self.assertIn("'EPC'", self.comp_js)
+        self.assertIn("'ECS'", self.comp_js)
+        self.assertIn("'L-CUP'", self.comp_js)
+        self.assertIn("'N-CUP'", self.comp_js)
+
+        # 4. 旧実在名称が表示テキストとして残っていないこと
+        self.assertNotIn('カラバオ', self.index_html)
+        self.assertNotIn('カラバオ', self.main_js)
+        self.assertNotIn('FAカップ', self.index_html)
+
 if __name__ == '__main__':
     unittest.main()

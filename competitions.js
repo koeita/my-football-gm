@@ -234,12 +234,12 @@ function initSeasonCompetitions() {
   }
 }
 
-// 2部リーグ（チャンピオンシップ）
+// 2部リーグ（イングランド・セカンドディビジョン）
 function initChampionshipLeague() {
   if (!gameState.competitions.championship) {
     gameState.competitions.championship = {
-      name: '2部リーグ（チャンピオンシップ）',
-      shortName: 'チャンピオンシップ',
+      name: 'イングランド・セカンドディビジョン',
+      shortName: 'ENG-D2',
       clubs: CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => ({
         ...c,
         played: 0,
@@ -338,12 +338,12 @@ function initDomesticCups() {
   const p1Clubs = gameState.clubs || [];
   const p2Clubs = (gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS;
 
-  // リーグカップ（LGC: カラバオ相当 44クラブ）: 優勝特典: 賞金 + ECL出場権
+  // リーグ・トロフィー（L-CUP: 旧リーグ杯相当 44クラブ）: 優勝特典: 賞金 + ECS出場権
   const lgcParticipants = [...p1Clubs, ...p2Clubs.slice(0, 12)];
   gameState.competitions.leagueCup = {
-    name: 'リーグカップ',
-    enName: 'LEAGUE CUP',
-    shortCode: 'LGC',
+    name: 'リーグ・トロフィー',
+    enName: 'LEAGUE TROPHY',
+    shortCode: 'L-CUP',
     currentRoundKey: 'R32',
     rounds: {
       R32: generateKnockoutRound(lgcParticipants),
@@ -356,12 +356,12 @@ function initDomesticCups() {
     prizeMoney: 10000 // £10.0M
   };
 
-  // ナショナルカップ（NAT: FA杯相当 44クラブ）: 優勝特典: 高額賞金 + EL出場権
+  // ナショナル・カップ（N-CUP: 旧FA杯相当 44クラブ）: 優勝特典: 高額賞金 + EPC出場権
   const natParticipants = [...p1Clubs, ...p2Clubs.slice(12, 24)];
   gameState.competitions.nationalCup = {
-    name: 'ナショナルカップ',
+    name: 'ナショナル・カップ',
     enName: 'NATIONAL CUP',
-    shortCode: 'NAT',
+    shortCode: 'N-CUP',
     currentRoundKey: 'R32',
     rounds: {
       R32: generateKnockoutRound(natParticipants),
@@ -501,18 +501,18 @@ function createSwissLeaguePhase(participants, compName, enName, shortCode, prize
 
 function initEuropeanCups36() {
   const entries = selectEuropeanCompetitionEntries();
-  gameState.competitions.championsCup = createSwissLeaguePhase(entries.clEntries, 'チャンピオンズリーグ', 'CHAMPIONS LEAGUE', 'CL', 30000);
-  gameState.competitions.europaCup = createSwissLeaguePhase(entries.elEntries, 'ヨーロッパリーグ', 'EUROPA LEAGUE', 'EL', 18000);
-  gameState.competitions.conferenceCup = createSwissLeaguePhase(entries.eclEntries, 'カンファレンスリーグ', 'CONFERENCE LEAGUE', 'ECL', 10000);
+  gameState.competitions.championsCup = createSwissLeaguePhase(entries.clEntries, 'ユーロ・チャンピオンズ・トロフィー', 'EURO CHAMPIONS TROPHY', 'ECT', 30000);
+  gameState.competitions.europaCup = createSwissLeaguePhase(entries.elEntries, 'ユーロ・プレステージ・カップ', 'EURO PRESTIGE CUP', 'EPC', 18000);
+  gameState.competitions.conferenceCup = createSwissLeaguePhase(entries.eclEntries, 'ユーロ・カンファレンス・シールド', 'EURO CONFERENCE SHIELD', 'ECS', 10000);
 }
 
 // カレンダーにカップ戦＆欧州戦（全8試合リーグフェーズ＋PO＋決勝T）日程をマッピング
 function injectCupMatchesIntoCalendar() {
   if (!gameState.calendar || gameState.calendar.length === 0) return;
 
-  // プレイヤーが参加している欧州大会コード（CL, EL, ECL）の特定
+  // プレイヤーが参加している欧州大会コード（ECT, EPC, ECS）の特定
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
-  let playerEuroCode = 'CL';
+  let playerEuroCode = 'ECT';
   if (gameState.competitions && playerClub) {
     for (const ek of ['championsCup', 'europaCup', 'conferenceCup']) {
       const comp = gameState.competitions[ek];
@@ -535,43 +535,43 @@ function injectCupMatchesIntoCalendar() {
 
   const scheduleMap = [
     // 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ 国内カップ戦
-    // 9月: MD1 (火/木), リーグ杯2回戦 (水)
-    { month: 9, minDay: 15, maxDay: 22, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 1, label: `欧州${playerEuroCode} MD1`, code: playerEuroCode },
-    { month: 9, minDay: 23, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'リーグ杯 2回戦', code: 'LGC' },
+    // 9月: MD1 (火/木), リーグ・トロフィー2回戦 (水)
+    { month: 9, minDay: 15, maxDay: 22, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 1, label: `${playerEuroCode} MD1`, code: playerEuroCode },
+    { month: 9, minDay: 23, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 2回戦', code: 'L-CUP' },
 
-    // 10月: MD2 (火), MD3 (木), リーグ杯3回戦 (水)
-    { month: 10, minDay: 1, maxDay: 10, preferredDays: [2], compType: 'euroLeaguePhase', md: 2, label: `欧州${playerEuroCode} MD2`, code: playerEuroCode },
-    { month: 10, minDay: 18, maxDay: 25, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 3, label: `欧州${playerEuroCode} MD3`, code: playerEuroCode },
-    { month: 10, minDay: 26, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'リーグ杯 3回戦', code: 'LGC' },
+    // 10月: MD2 (火), MD3 (木), リーグ・トロフィー3回戦 (水)
+    { month: 10, minDay: 1, maxDay: 10, preferredDays: [2], compType: 'euroLeaguePhase', md: 2, label: `${playerEuroCode} MD2`, code: playerEuroCode },
+    { month: 10, minDay: 18, maxDay: 25, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 3, label: `${playerEuroCode} MD3`, code: playerEuroCode },
+    { month: 10, minDay: 26, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 3回戦', code: 'L-CUP' },
 
     // 11月: MD4 (火), MD5 (木)
-    { month: 11, minDay: 3, maxDay: 12, preferredDays: [2], compType: 'euroLeaguePhase', md: 4, label: `欧州${playerEuroCode} MD4`, code: playerEuroCode },
-    { month: 11, minDay: 22, maxDay: 29, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 5, label: `欧州${playerEuroCode} MD5`, code: playerEuroCode },
+    { month: 11, minDay: 3, maxDay: 12, preferredDays: [2], compType: 'euroLeaguePhase', md: 4, label: `${playerEuroCode} MD4`, code: playerEuroCode },
+    { month: 11, minDay: 22, maxDay: 29, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 5, label: `${playerEuroCode} MD5`, code: playerEuroCode },
 
-    // 12月: MD6 (火), リーグ杯準々決勝 (水)
-    { month: 12, minDay: 8, maxDay: 15, preferredDays: [2], compType: 'euroLeaguePhase', md: 6, label: `欧州${playerEuroCode} MD6`, code: playerEuroCode },
-    { month: 12, minDay: 16, maxDay: 23, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'リーグ杯 準々決勝', code: 'LGC' },
+    // 12月: MD6 (火), リーグ・トロフィー準々決勝 (水)
+    { month: 12, minDay: 8, maxDay: 15, preferredDays: [2], compType: 'euroLeaguePhase', md: 6, label: `${playerEuroCode} MD6`, code: playerEuroCode },
+    { month: 12, minDay: 16, maxDay: 23, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'L-CUP 準々決勝', code: 'L-CUP' },
 
-    // 1月: ナショナル杯2回戦 (水), MD7 (火), MD8 (木)
-    { month: 1, minDay: 6, maxDay: 14, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'ナショナル杯 2回戦', code: 'NAT' },
-    { month: 1, minDay: 19, maxDay: 24, preferredDays: [2], compType: 'euroLeaguePhase', md: 7, label: `欧州${playerEuroCode} MD7`, code: playerEuroCode },
-    { month: 1, minDay: 26, maxDay: 31, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 8, label: `欧州${playerEuroCode} MD8`, code: playerEuroCode },
+    // 1月: ナショナル・カップ2回戦 (水), MD7 (火), MD8 (木)
+    { month: 1, minDay: 6, maxDay: 14, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 2回戦', code: 'N-CUP' },
+    { month: 1, minDay: 19, maxDay: 24, preferredDays: [2], compType: 'euroLeaguePhase', md: 7, label: `${playerEuroCode} MD7`, code: playerEuroCode },
+    { month: 1, minDay: 26, maxDay: 31, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 8, label: `${playerEuroCode} MD8`, code: playerEuroCode },
 
-    // 2月: 欧州PO (火), リーグ杯決勝 (水)
-    { month: 2, minDay: 10, maxDay: 18, preferredDays: [2], compType: 'euroPlayoff', label: `欧州${playerEuroCode} 決勝T進出PO`, code: playerEuroCode },
-    { month: 2, minDay: 24, maxDay: 28, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'リーグ杯 決勝', code: 'LGC' },
+    // 2月: 欧州PO (火), リーグ・トロフィー決勝 (水)
+    { month: 2, minDay: 10, maxDay: 18, preferredDays: [2], compType: 'euroPlayoff', label: `${playerEuroCode} 決勝T進出PO`, code: playerEuroCode },
+    { month: 2, minDay: 24, maxDay: 28, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
 
-    // 3月: 欧州決勝T R16 (火), ナショナル杯3回戦 (水)
-    { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: 'championsCup', roundKey: 'R16', label: `欧州${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
-    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'ナショナル杯 3回戦', code: 'NAT' },
+    // 3月: 欧州決勝T R16 (火), ナショナル・カップ3回戦 (水)
+    { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: 'championsCup', roundKey: 'R16', label: `${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
+    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 3回戦', code: 'N-CUP' },
 
-    // 4月: 欧州決勝T 準々決勝 (火), ナショナル杯準々決勝 (水)
-    { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: 'championsCup', roundKey: 'QF', label: `欧州${playerEuroCode} 準々決勝`, code: playerEuroCode },
-    { month: 4, minDay: 15, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'ナショナル杯 準々決勝', code: 'NAT' },
+    // 4月: 欧州決勝T 準々決勝 (火), ナショナル・カップ準々決勝 (水)
+    { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: 'championsCup', roundKey: 'QF', label: `${playerEuroCode} 準々決勝`, code: playerEuroCode },
+    { month: 4, minDay: 15, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
 
-    // 5月: ナショナル杯決勝 (水), 欧州決勝 (火)
-    { month: 5, minDay: 13, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'ナショナル杯 決勝', code: 'NAT' },
-    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: 'championsCup', roundKey: 'FINAL', label: `欧州${playerEuroCode} 決勝`, code: playerEuroCode }
+    // 5月: ナショナル・カップ決勝 (水), 欧州決勝 (火)
+    { month: 5, minDay: 13, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' },
+    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: 'championsCup', roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
   ];
 
   scheduleMap.forEach(sc => {
@@ -902,10 +902,10 @@ function processPromotionAndRelegation() {
 // 6. UI描画ヘルパー
 // ==========================================
 
-// 2部リーグ順位表
+// セカンドディビジョン（ENG-D2）順位表
 function renderChampionshipStandingsHtml() {
   const comp = gameState.competitions && gameState.competitions.championship;
-  if (!comp || !comp.clubs) return '<p class="empty-state">2部リーグデータがありません</p>';
+  if (!comp || !comp.clubs) return '<p class="empty-state">セカンドディビジョン（ENG-D2）データがありません</p>';
 
   const sorted = [...comp.clubs].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
 
@@ -955,7 +955,7 @@ function renderChampionshipStandingsHtml() {
       </tbody>
     </table>
     <div class="standings-legend">
-      <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: プレミアリーグ自動昇格</span></div>
+      <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: ファーストディビジョン（ENG-D1）自動昇格</span></div>
       <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">22-24位: 降格圏</span></div>
     </div>
   `;

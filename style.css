@@ -13489,35 +13489,54 @@ button.hidden,
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.badge-comp-lgc {
+.badge-comp-lgc,
+.badge-comp-l-cup {
   background: #0284C7;
   color: #FFFFFF;
   border: 1px solid #38BDF8;
 }
 
-.badge-comp-nat {
+.badge-comp-nat,
+.badge-comp-n-cup {
   background: #DC2626;
   color: #FFFFFF;
   border: 1px solid #F87171;
 }
 
-.badge-comp-cl {
+.badge-comp-cl,
+.badge-comp-ect {
   background: #0A192F;
   color: #38BDF8;
   border: 1px solid #00F0FF;
   box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
 }
 
-.badge-comp-el {
+.badge-comp-el,
+.badge-comp-epc {
   background: #B45309;
   color: #FEF08A;
   border: 1px solid #F59E0B;
 }
 
-.badge-comp-ecl {
+.badge-comp-ecl,
+.badge-comp-ecs {
   background: #065F46;
   color: #A7F3D0;
   border: 1px solid #10B981;
+}
+
+.badge-comp-d1,
+.badge-comp-eng-d1 {
+  background: #1E293B;
+  color: #38BDF8;
+  border: 1px solid #38BDF8;
+}
+
+.badge-comp-d2,
+.badge-comp-eng-d2 {
+  background: #1E293B;
+  color: #CBD5E1;
+  border: 1px solid #64748B;
 }
 
 /* 過密日程アラートバッジ */

@@ -3401,7 +3401,7 @@ function getCalendarDayPlayerMatch(day) {
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   if (!playerClub) return null;
 
-  // 1. 通常リーグ戦（プレミアリーグ）
+  // 1. 通常リーグ戦（イングランド・ファーストディビジョン）
   if (day.isMatchDay && day.matchFixture) {
     const m = day.matchFixture.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
     if (m) {
@@ -3410,8 +3410,8 @@ function getCalendarDayPlayerMatch(day) {
       const isPlayed = Boolean(m.played || day.played);
       return {
         type: 'league',
-        title: `第${day.matchWeek}節 公式戦`,
-        compCode: 'PL',
+        title: `ENG-D1 第${day.matchWeek}節`,
+        compCode: 'ENG-D1',
         match: m,
         isHome,
         oppClub,
@@ -3437,8 +3437,8 @@ function getCalendarDayPlayerMatch(day) {
               type: 'euroLeague',
               compKey: ek,
               comp,
-              title: `${comp.name} リーグフェーズ第${md}節`,
-              compCode: comp.shortCode || 'CL',
+              title: `${comp.name} 第${md}節`,
+              compCode: comp.shortCode || 'ECT',
               match: m,
               isHome,
               oppClub,
@@ -3464,7 +3464,7 @@ function getCalendarDayPlayerMatch(day) {
               compKey: ek,
               comp,
               title: `${comp.name} 決勝T進出プレーオフ`,
-              compCode: comp.shortCode || 'CL',
+              compCode: comp.shortCode || 'ECT',
               match: m,
               isHome,
               oppClub,
@@ -3489,7 +3489,7 @@ function getCalendarDayPlayerMatch(day) {
           compKey,
           comp,
           title: `${comp.name} ${day.cupLabel || day.cupRoundKey}`,
-          compCode: comp.shortCode || (compKey === 'leagueCup' ? 'LGC' : 'NAT'),
+          compCode: comp.shortCode || (compKey === 'leagueCup' ? 'L-CUP' : 'N-CUP'),
           match: m,
           isHome,
           oppClub,
@@ -7141,12 +7141,12 @@ function processSeasonEnd(isSkipped = false) {
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
     showGmModal({
       category: 'BOARD OF DIRECTORS / CRITICAL WARNING',
-      title: '【緊急通告】2部リーグへの降格処分と最後通告',
-      description: `今シーズンの成績不振により、当クラブは2部リーグ（チャンピオンシップ）への降格が決定いたしました。理事会は極めて遺憾の意を表明するとともに、来季1年での「1部復帰（昇格）」を絶対厳命といたします。達成できなかった場合は即時解任となります。`,
+      title: '【緊急通告】セカンドディビジョン（ENG-D2）への降格処分と最後通告',
+      description: `今シーズンの成績不振により、当クラブはイングランド・セカンドディビジョン（ENG-D2）への降格が決定いたしました。理事会は極めて遺憾の意を表明するとともに、来季1年での「ファーストディビジョン（ENG-D1）復帰（昇格）」を絶対厳命といたします。達成できなかった場合は即時解任となります。`,
       detailHtml: `降格クラブ: ${promoRelResult.relegated.join('、')}<br>昇格クラブ: ${promoRelResult.promoted.join('、')}`,
       actions: [
         {
-          label: '厳命を受託し、1年での1部復帰を誓う',
+          label: '厳命を受託し、1年でのD1復帰を誓う',
           className: 'btn btn-primary',
           onClick: () => {
             renderAll();
@@ -10306,7 +10306,7 @@ function renderSeasonSettlement() {
  * 順位表の描画
  */
 function renderStandings() {
-  const compView = gameState.selectedCompView || 'prem';
+  const compView = gameState.selectedCompView || 'league';
   const tableWrapper = document.querySelector('#team-subview-standings .table-wrapper');
   const bracketWrapper = document.getElementById('comp-bracket-wrapper');
   const subnavRow = document.getElementById('comp-subnav-row');
@@ -10315,90 +10315,107 @@ function renderStandings() {
   const statusText = document.getElementById('standings-status-text');
   const legendEl = document.getElementById('standings-legend');
 
-  if (compView === 'prem') {
-    // プレミアリーグ順位表（左端カラーライン統一、文字表示削除、下部注釈表示）
+  if (compView === 'league' || compView === 'prem' || compView === 'championship') {
+    // リーグ（ENG-D1 / ENG-D2）の切り替え表示
     if (tableWrapper) tableWrapper.classList.remove('hidden');
     if (bracketWrapper) bracketWrapper.classList.add('hidden');
-    if (subnavRow) subnavRow.classList.add('hidden');
-    if (statusText) statusText.textContent = `MATCHWEEK ${gameState.currentWeek} / ${gameState.totalWeeks}`;
-
-    if (legendEl) {
-      legendEl.classList.remove('hidden');
-      legendEl.innerHTML = `
-        <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-4位: チャンピオンズリーグ出場権</span></div>
-        <div class="legend-item"><span class="legend-color-box zone-uel-bg"></span><span class="legend-text">5位: ヨーロッパリーグ出場権</span></div>
-        <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">18-20位: 降格</span></div>
-      `;
-    }
-
-    const sorted = getSortedStandings();
-    const tbody = document.getElementById('standings-tbody');
-    if (tbody) {
-      tbody.innerHTML = sorted.map((club, idx) => {
-        const rank = idx + 1;
-        const zoneClass = rank <= 4 ? 'zone-ucl' : (rank === 5 ? 'zone-uel' : (rank >= 18 ? 'zone-rel' : ''));
-        const rowClass = [club.isPlayer ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
-        const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
-        const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd}`;
-
-        return `
-          <tr class="${rowClass}">
-            <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
-            <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
-            <td class="col-num col-played">${club.played}</td>
-            <td class="col-num col-won">${club.won}</td>
-            <td class="col-num col-drawn">${club.drawn}</td>
-            <td class="col-num col-lost">${club.lost}</td>
-            <td class="col-num col-gf"><span class="td-pc">${club.gf}</span><span class="td-mob">${club.gf}-${club.ga}</span></td>
-            <td class="col-num col-ga">${club.ga}</td>
-            <td class="col-num col-gd">${gdSign}</td>
-            <td class="col-pts">${club.pts}</td>
-          </tr>
+    if (subnavRow) {
+      subnavRow.classList.remove('hidden');
+      if (subnavLabel) subnavLabel.textContent = 'ディビジョン:';
+      const curDiv = gameState.selectedLeagueDivision || (compView === 'championship' ? 'd2' : 'd1');
+      if (subnavBtns) {
+        subnavBtns.innerHTML = `
+          <button type="button" class="comp-sub-btn mono ${curDiv === 'd1' ? 'active' : ''}" data-league-div="d1">ファースト (ENG-D1)</button>
+          <button type="button" class="comp-sub-btn mono ${curDiv === 'd2' ? 'active' : ''}" data-league-div="d2">セカンド (ENG-D2)</button>
         `;
-      }).join('');
-    }
-  } else if (compView === 'championship') {
-    // 2部リーグ順位表（左端カラーライン統一、文字表示削除、下部注釈表示）
-    if (tableWrapper) tableWrapper.classList.remove('hidden');
-    if (bracketWrapper) bracketWrapper.classList.add('hidden');
-    if (subnavRow) subnavRow.classList.add('hidden');
-
-    if (legendEl) {
-      legendEl.classList.remove('hidden');
-      legendEl.innerHTML = `
-        <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: プレミアリーグ自動昇格</span></div>
-        <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">22-24位: 降格圏</span></div>
-      `;
+        subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
+          b.onclick = () => {
+            gameState.selectedLeagueDivision = b.dataset.leagueDiv;
+            renderStandings();
+          };
+        });
+      }
     }
 
-    const comp = gameState.competitions && gameState.competitions.championship;
-    const sorted = comp && comp.clubs ? [...comp.clubs].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0)) : [];
-    const playedCount = sorted[0] ? sorted[0].played || 0 : 0;
-    if (statusText) statusText.textContent = `MATCHWEEK ${playedCount} / 46`;
+    const curDiv = gameState.selectedLeagueDivision || (compView === 'championship' ? 'd2' : 'd1');
 
-    const tbody = document.getElementById('standings-tbody');
-    if (tbody) {
-      tbody.innerHTML = sorted.map((club, idx) => {
-        const rank = idx + 1;
-        const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
-        const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd || 0}`;
-        const zoneClass = rank <= 3 ? 'zone-promotion' : (rank >= 22 ? 'zone-relegation-p2' : '');
-
-        return `
-          <tr class="${zoneClass}">
-            <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
-            <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
-            <td class="col-num col-played">${club.played || 0}</td>
-            <td class="col-num col-won">${club.won || 0}</td>
-            <td class="col-num col-drawn">${club.drawn || 0}</td>
-            <td class="col-num col-lost">${club.lost || 0}</td>
-            <td class="col-num col-gf"><span class="td-pc">${club.gf || 0}</span><span class="td-mob">${club.gf || 0}-${club.ga || 0}</span></td>
-            <td class="col-num col-ga">${club.ga || 0}</td>
-            <td class="col-num col-gd">${gdSign}</td>
-            <td class="col-pts">${club.pts || 0}</td>
-          </tr>
+    if (curDiv === 'd1') {
+      // イングランド・ファーストディビジョン（ENG-D1）順位表
+      if (statusText) statusText.textContent = `ENG-D1 MATCHWEEK ${gameState.currentWeek} / ${gameState.totalWeeks}`;
+      if (legendEl) {
+        legendEl.classList.remove('hidden');
+        legendEl.innerHTML = `
+          <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-4位: ユーロ・チャンピオンズ・トロフィー（ECT）出場権</span></div>
+          <div class="legend-item"><span class="legend-color-box zone-uel-bg"></span><span class="legend-text">5位: ユーロ・プレステージ・カップ（EPC）出場権</span></div>
+          <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">18-20位: セカンドディビジョン（ENG-D2）降格</span></div>
         `;
-      }).join('');
+      }
+
+      const sorted = getSortedStandings();
+      const tbody = document.getElementById('standings-tbody');
+      if (tbody) {
+        tbody.innerHTML = sorted.map((club, idx) => {
+          const rank = idx + 1;
+          const zoneClass = rank <= 4 ? 'zone-ucl' : (rank === 5 ? 'zone-uel' : (rank >= 18 ? 'zone-rel' : ''));
+          const rowClass = [club.isPlayer ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
+          const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
+          const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd}`;
+
+          return `
+            <tr class="${rowClass}">
+              <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
+              <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
+              <td class="col-num col-played">${club.played}</td>
+              <td class="col-num col-won">${club.won}</td>
+              <td class="col-num col-drawn">${club.drawn}</td>
+              <td class="col-num col-lost">${club.lost}</td>
+              <td class="col-num col-gf"><span class="td-pc">${club.gf}</span><span class="td-mob">${club.gf}-${club.ga}</span></td>
+              <td class="col-num col-ga">${club.ga}</td>
+              <td class="col-num col-gd">${gdSign}</td>
+              <td class="col-pts">${club.pts}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } else {
+      // イングランド・セカンドディビジョン（ENG-D2）順位表
+      if (legendEl) {
+        legendEl.classList.remove('hidden');
+        legendEl.innerHTML = `
+          <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-3位: ファーストディビジョン（ENG-D1）自動昇格</span></div>
+          <div class="legend-item"><span class="legend-color-box zone-rel-bg"></span><span class="legend-text">22-24位: 降格圏</span></div>
+        `;
+      }
+
+      const comp = gameState.competitions && gameState.competitions.championship;
+      const sorted = comp && comp.clubs ? [...comp.clubs].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0)) : [];
+      const playedCount = sorted[0] ? sorted[0].played || 0 : 0;
+      if (statusText) statusText.textContent = `ENG-D2 MATCHWEEK ${playedCount} / 46`;
+
+      const tbody = document.getElementById('standings-tbody');
+      if (tbody) {
+        tbody.innerHTML = sorted.map((club, idx) => {
+          const rank = idx + 1;
+          const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
+          const gdSign = club.gd > 0 ? `+${club.gd}` : `${club.gd || 0}`;
+          const zoneClass = rank <= 3 ? 'zone-promotion' : (rank >= 22 ? 'zone-relegation-p2' : '');
+
+          return `
+            <tr class="${zoneClass}">
+              <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
+              <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
+              <td class="col-num col-played">${club.played || 0}</td>
+              <td class="col-num col-won">${club.won || 0}</td>
+              <td class="col-num col-drawn">${club.drawn || 0}</td>
+              <td class="col-num col-lost">${club.lost || 0}</td>
+              <td class="col-num col-gf"><span class="td-pc">${club.gf || 0}</span><span class="td-mob">${club.gf || 0}-${club.ga || 0}</span></td>
+              <td class="col-num col-ga">${club.ga || 0}</td>
+              <td class="col-num col-gd">${gdSign}</td>
+              <td class="col-pts">${club.pts || 0}</td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
   } else if (compView === 'domestic') {
     // 国内カップ戦（トーナメントブラケット表示）
@@ -10412,8 +10429,8 @@ function renderStandings() {
       const curDom = gameState.selectedDomesticCup || 'leagueCup';
       if (subnavBtns) {
         subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-sub-cup="leagueCup">リーグカップ (LGC)</button>
-          <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-sub-cup="nationalCup">ナショナルカップ (NAT)</button>
+          <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-sub-cup="leagueCup">リーグ・トロフィー (L-CUP)</button>
+          <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-sub-cup="nationalCup">ナショナル・カップ (N-CUP)</button>
         `;
         subnavBtns.querySelectorAll('.comp-sub-btn').forEach(b => {
           b.onclick = () => {
@@ -10425,7 +10442,7 @@ function renderStandings() {
     }
     const curDom = gameState.selectedDomesticCup || 'leagueCup';
     if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
-    if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE CUP TOURNAMENT' : 'NATIONAL CUP TOURNAMENT';
+    if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE TROPHY (L-CUP)' : 'NATIONAL CUP (N-CUP)';
   } else if (compView === 'europe') {
     // 欧州コンペ：全36チーム スイス方式リーグフェーズ（各8試合） ＆ 日程 ＆ 決勝トーナメント
     if (tableWrapper) tableWrapper.classList.add('hidden');
@@ -10451,9 +10468,9 @@ function renderStandings() {
       if (subnavLabel) subnavLabel.textContent = '欧州大会:';
       if (subnavBtns) {
         subnavBtns.innerHTML = `
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">CL</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EL</button>
-          <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECL</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-sub-cup="championsCup">ECT</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-sub-cup="europaCup">EPC</button>
+          <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-sub-cup="conferenceCup">ECS</button>
           <span style="border-left: 1px solid rgba(255,255,255,0.15); margin: 0 4px;"></span>
           <button type="button" class="euro-phase-btn mono ${curTab === 'standings' ? 'active' : ''}" data-euro-tab="standings">順位表</button>
           <button type="button" class="euro-phase-btn mono ${curTab === 'schedule' ? 'active' : ''}" data-euro-tab="schedule">日程・結果</button>
@@ -10474,7 +10491,7 @@ function renderStandings() {
       }
     }
 
-    const compName = curEuro === 'championsCup' ? 'UEFA CHAMPIONS LEAGUE' : (curEuro === 'europaCup' ? 'UEFA EUROPA LEAGUE' : 'UEFA CONFERENCE LEAGUE');
+    const compName = curEuro === 'championsCup' ? 'EURO CHAMPIONS TROPHY (ECT)' : (curEuro === 'europaCup' ? 'EURO PRESTIGE CUP (EPC)' : 'EURO CONFERENCE SHIELD (ECS)');
 
     if (curTab === 'standings') {
       if (bracketWrapper) bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
