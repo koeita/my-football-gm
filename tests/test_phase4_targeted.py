@@ -207,5 +207,18 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("d.isCupMatchDay && mInfo && mInfo.oppClub", self.main_js)
         self.assertIn("Boolean(matchInfo && matchInfo.oppClub && !day.played)", self.main_js)
 
+    def test_mobile_calendar_fixed_six_rows_and_zero_scroll(self):
+        """モバイルカレンダーが常に6行（全42マス）分の枠を確保し、縦スクロールゼロで1画面に収まること"""
+        # 1. main.js で常に42マス（7列×6行）分の枠を生成していること
+        self.assertIn("while (cellsHtml.length < 42)", self.main_js)
+        self.assertIn("cellsHtml.push('<div class=\"cal-day-cell is-empty\" aria-hidden=\"true\"></div>')", self.main_js)
+
+        # 2. style.css モバイルカレンダーで 6行均等グリッドが設定されていること
+        self.assertIn("grid-template-rows: repeat(6, 1fr) !important;", self.style_css)
+
+        # 3. カレンダー表示時にスクロールをゼロにする overflow: hidden 設定
+        self.assertIn("body[data-active-tab=\"team\"][data-team-subtab=\"schedule\"][data-schedule-mode=\"calendar\"]", self.style_css)
+        self.assertIn("overflow: hidden !important;", self.style_css)
+
 if __name__ == '__main__':
     unittest.main()

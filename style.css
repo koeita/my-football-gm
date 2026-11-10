@@ -12560,11 +12560,35 @@ button.hidden,
   border: 1px solid rgba(231, 76, 60, 0.45);
 }
 
-/* モバイル対応（幅768px以下） */
+/* モバイル対応（幅768px以下）：カレンダー表示時は常に6行分の均等枠を確保し縦スクロールゼロで1画面に収める */
 @media (max-width: 768px) {
+  body[data-active-tab="team"][data-team-subtab="schedule"][data-schedule-mode="calendar"] {
+    overflow: hidden !important;
+  }
+  body[data-active-tab="team"][data-team-subtab="schedule"][data-schedule-mode="calendar"] .app-container {
+    overflow: hidden !important;
+    padding-bottom: var(--tab-nav-total-h) !important;
+  }
+  body[data-active-tab="team"][data-team-subtab="schedule"][data-schedule-mode="calendar"] #view-team {
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+  }
+
+  .team-schedule-panel:has(#season-calendar-view:not(.hidden)),
+  #view-team[data-schedule-mode="calendar"] .team-schedule-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    /* 画面高さからヘッダー、チームサブタブバー(48px)、ボトムナビ、微小余白を引いたぴったり高さ */
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
+    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
+    margin-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+
   .schedule-view-controls {
-    padding: 4px 6px;
-    gap: 6px;
+    flex-shrink: 0 !important;
+    padding: 4px 6px !important;
+    gap: 6px !important;
   }
   .calendar-month-label {
     font-size: 12px;
@@ -12586,24 +12610,42 @@ button.hidden,
     font-size: 10px;
   }
   .season-calendar-view {
-    padding: 2px 3px 4px 3px;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    padding: 2px 3px 3px 3px !important;
+    overflow: hidden !important;
   }
   .calendar-weekdays-row {
-    padding: 2px 0;
-    margin-bottom: 3px;
-    font-size: 10px;
+    flex-shrink: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2.5px !important;
+    padding: 2px 0 !important;
+    margin-bottom: 2px !important;
+    font-size: 10px !important;
   }
   .calendar-days-grid {
-    gap: 3px;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    grid-template-rows: repeat(6, 1fr) !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    gap: 2.5px !important;
+    box-sizing: border-box !important;
   }
   .cal-day-cell {
-    min-height: clamp(74px, 11dvh, 88px) !important;
-    padding: 3px 2px;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-sizing: border-box;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 2px 2px !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   .cal-cell-header,
   .cal-day-header {
@@ -14180,8 +14222,9 @@ body {
 }
 
 .cal-day-cell.is-empty {
-  background: rgba(0, 0, 0, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.02) !important;
+  background: rgba(255, 255, 255, 0.015) !important;
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  opacity: 0.35 !important;
 }
 
 .cal-cup-badge,
