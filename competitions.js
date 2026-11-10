@@ -535,49 +535,24 @@ function injectCupMatchesIntoCalendar() {
     delete d.cupCode;
   });
 
-  const scheduleMap = [
-    // 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ 国内カップ戦
-    // 9月: MD1 (火/木), リーグ・トロフィー2回戦 (水)
-    { month: 9, minDay: 15, maxDay: 22, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 1, label: `${playerEuroCode} MD1`, code: playerEuroCode },
-    { month: 9, minDay: 23, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 2回戦', code: 'L-CUP' },
-
-    // 10月: MD2 (火), MD3 (木), リーグ・トロフィー3回戦 (水)
+  // 1. 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ PO ＆ 決勝T（最優先固定）
+  const euroScheduleList = [
+    { month: 9, minDay: 15, maxDay: 22, preferredDays: [2], compType: 'euroLeaguePhase', md: 1, label: `${playerEuroCode} MD1`, code: playerEuroCode },
     { month: 10, minDay: 1, maxDay: 10, preferredDays: [2], compType: 'euroLeaguePhase', md: 2, label: `${playerEuroCode} MD2`, code: playerEuroCode },
-    { month: 10, minDay: 18, maxDay: 25, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 3, label: `${playerEuroCode} MD3`, code: playerEuroCode },
-    { month: 10, minDay: 26, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 3回戦', code: 'L-CUP' },
-
-    // 11月: MD4 (火), MD5 (木)
+    { month: 10, minDay: 18, maxDay: 25, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 3, label: `${playerEuroCode} MD3`, code: playerEuroCode },
     { month: 11, minDay: 3, maxDay: 12, preferredDays: [2], compType: 'euroLeaguePhase', md: 4, label: `${playerEuroCode} MD4`, code: playerEuroCode },
-    { month: 11, minDay: 22, maxDay: 29, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 5, label: `${playerEuroCode} MD5`, code: playerEuroCode },
-
-    // 12月: MD6 (火), リーグ・トロフィー準々決勝 (水)
-    { month: 12, minDay: 8, maxDay: 15, preferredDays: [2], compType: 'euroLeaguePhase', md: 6, label: `${playerEuroCode} MD6`, code: playerEuroCode },
-    { month: 12, minDay: 16, maxDay: 23, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'L-CUP 準々決勝', code: 'L-CUP' },
-
-    // 1月: ナショナル・カップ2回戦 (水), MD7 (火), MD8 (木)
-    { month: 1, minDay: 6, maxDay: 14, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 2回戦', code: 'N-CUP' },
-    { month: 1, minDay: 19, maxDay: 24, preferredDays: [2], compType: 'euroLeaguePhase', md: 7, label: `${playerEuroCode} MD7`, code: playerEuroCode },
-    { month: 1, minDay: 26, maxDay: 31, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 8, label: `${playerEuroCode} MD8`, code: playerEuroCode },
-
-    // 2月: 欧州PO (火), リーグ・トロフィー決勝 (水)
+    { month: 11, minDay: 22, maxDay: 29, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 5, label: `${playerEuroCode} MD5`, code: playerEuroCode },
+    { month: 12, minDay: 7, maxDay: 15, preferredDays: [2], compType: 'euroLeaguePhase', md: 6, label: `${playerEuroCode} MD6`, code: playerEuroCode },
+    { month: 1, minDay: 18, maxDay: 24, preferredDays: [2], compType: 'euroLeaguePhase', md: 7, label: `${playerEuroCode} MD7`, code: playerEuroCode },
+    { month: 1, minDay: 25, maxDay: 31, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 8, label: `${playerEuroCode} MD8`, code: playerEuroCode },
     { month: 2, minDay: 10, maxDay: 18, preferredDays: [2], compType: 'euroPlayoff', label: `${playerEuroCode} 決勝T進出PO`, code: playerEuroCode },
-    { month: 2, minDay: 24, maxDay: 28, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
-
-    // 3月: 欧州決勝T R16 (火), ナショナル・カップ3回戦 (水)
     { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'R16', label: `${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
-    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 3回戦', code: 'N-CUP' },
-
-    // 4月: 欧州決勝T 準々決勝 (火), ナショナル・カップ準々決勝 (水)
     { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'QF', label: `${playerEuroCode} 準々決勝`, code: playerEuroCode },
-    { month: 4, minDay: 15, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
-
-    // 5月: ナショナル・カップ決勝 (水), 欧州決勝 (火)
-    { month: 5, minDay: 13, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' },
-    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: playerEuroCompKey, roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
+    { month: 5, minDay: 24, maxDay: 31, preferredDays: [2, 3], compType: playerEuroCompKey, roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
   ];
 
-  scheduleMap.forEach(sc => {
-    // まず範囲内かつ希望曜日の未割当マスを探す
+  // 欧州コンペの日程を最優先固定で割り振り
+  euroScheduleList.forEach(sc => {
     let targetDay = gameState.calendar.find(d => 
       d.month === sc.month &&
       d.day >= sc.minDay &&
@@ -587,7 +562,6 @@ function injectCupMatchesIntoCalendar() {
       !d.isCupMatchDay
     );
 
-    // 見つからなければ、同月内の希望曜日の未割当マスを探す
     if (!targetDay) {
       targetDay = gameState.calendar.find(d =>
         d.month === sc.month &&
@@ -597,7 +571,6 @@ function injectCupMatchesIntoCalendar() {
       );
     }
 
-    // それでも見つからなければ、同月内の平日（火〜木: 2, 3, 4）の未割当マスを探す
     if (!targetDay) {
       targetDay = gameState.calendar.find(d =>
         d.month === sc.month &&
@@ -612,6 +585,106 @@ function injectCupMatchesIntoCalendar() {
       targetDay.cupCompType = sc.compType;
       targetDay.cupRoundKey = sc.roundKey || null;
       targetDay.euroMd = sc.md || null;
+      targetDay.cupLabel = sc.label;
+      targetDay.cupCode = sc.code;
+      targetDay.eventType = 'match';
+    }
+  });
+
+  // 2. 国内カップ戦（L-CUP / N-CUP）：試合間隔インターバル検査とスライド処理
+  // 週の計算ヘルパー（月曜始まり: 7/1(水)は週の3日目、offset + 2 を 7 で割る）
+  const getCalendarWeekIndex = (dayIndex) => Math.floor((dayIndex + 2) / 7);
+
+  // 指定日が国内カップ戦のスロットとして有効（最低中2日・週上限スロット制限を満たす）か検査
+  const isCupSlotValid = (d) => {
+    if (!d || d.isMatchDay || d.isCupMatchDay) return false;
+    // プレシーズン（8/15以前）またはシーズン終了期（オフシーズン）除外
+    if (d.dayIndex < 45 || d.dayIndex >= 340) return false;
+    // 平日ミッドウィーク（火曜: 2 または 水曜: 3）であること
+    if (d.dayOfWeek !== 2 && d.dayOfWeek !== 3) return false;
+
+    // 【最低中2日ルール】：既存の全試合（リーグ戦・欧州戦・他カップ戦）と最低3日以上（中2日以上）離れていること
+    for (const other of gameState.calendar) {
+      if (other.isMatchDay || other.isCupMatchDay) {
+        if (Math.abs(d.dayIndex - other.dayIndex) < 3) {
+          return false;
+        }
+      }
+    }
+
+    // 【週上限スロット制限】：同一週（月曜〜日曜）にすでにミッドウィーク試合（火・水・木）が入っていないこと
+    const targetWeek = getCalendarWeekIndex(d.dayIndex);
+    for (const other of gameState.calendar) {
+      if ((other.isMatchDay || other.isCupMatchDay) && [2, 3, 4].includes(other.dayOfWeek)) {
+        if (getCalendarWeekIndex(other.dayIndex) === targetWeek) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const domesticCupScheduleList = [
+    // 9月: リーグ・トロフィー2回戦 (水)
+    { month: 9, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 2回戦', code: 'L-CUP' },
+    // 10月: リーグ・トロフィー3回戦 (水)
+    { month: 10, minDay: 25, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 3回戦', code: 'L-CUP' },
+    // 12月: リーグ・トロフィー準々決勝 (水)
+    { month: 12, minDay: 16, maxDay: 24, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'L-CUP 準々決勝', code: 'L-CUP' },
+    // 1月: ナショナル・カップ2回戦 (水)
+    { month: 1, minDay: 5, maxDay: 12, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 2回戦', code: 'N-CUP' },
+    // 2月: リーグ・トロフィー決勝 (水)
+    { month: 2, minDay: 3, maxDay: 12, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
+    // 3月: ナショナル・カップ3回戦 (水)
+    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 3回戦', code: 'N-CUP' },
+    // 4月: ナショナル・カップ準々決勝 (水)
+    { month: 4, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
+    // 5月: ナショナル・カップ決勝 (水)
+    { month: 5, minDay: 10, maxDay: 18, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' }
+  ];
+
+  domesticCupScheduleList.forEach(sc => {
+    // まず希望月・指定範囲内で有効スロットを検索
+    let targetDay = gameState.calendar.find(d => 
+      d.month === sc.month &&
+      d.day >= sc.minDay &&
+      d.day <= sc.maxDay &&
+      sc.preferredDays.includes(d.dayOfWeek) &&
+      isCupSlotValid(d)
+    );
+
+    // 見つからなければ、同月内の希望曜日の有効スロットを検索
+    if (!targetDay) {
+      targetDay = gameState.calendar.find(d =>
+        d.month === sc.month &&
+        sc.preferredDays.includes(d.dayOfWeek) &&
+        isCupSlotValid(d)
+      );
+    }
+
+    // 重複・過密発生時：欧州戦のない前後の空きミッドウィーク（火・水）へ自動スライド
+    if (!targetDay) {
+      // 基準位置（希望月・範囲の中央付近）
+      const baseDay = gameState.calendar.find(d => d.month === sc.month && d.day >= sc.minDay && d.day <= sc.maxDay) || gameState.calendar[120];
+      const baseIdx = baseDay ? baseDay.dayIndex : 120;
+
+      // カレンダー全域から有効な空きミッドウィークを距離順でソート
+      const candidates = gameState.calendar
+        .filter(d => isCupSlotValid(d))
+        .map(d => ({ day: d, dist: Math.abs(d.dayIndex - baseIdx) }))
+        .sort((a, b) => a.dist - b.dist);
+
+      if (candidates.length > 0) {
+        targetDay = candidates[0].day;
+      }
+    }
+
+    if (targetDay) {
+      targetDay.isCupMatchDay = true;
+      targetDay.cupCompType = sc.compType;
+      targetDay.cupRoundKey = sc.roundKey || null;
+      targetDay.euroMd = null;
       targetDay.cupLabel = sc.label;
       targetDay.cupCode = sc.code;
       targetDay.eventType = 'match';
