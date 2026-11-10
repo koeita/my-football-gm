@@ -6237,10 +6237,10 @@ function buildMatchSummaryHtml(md) {
       <!-- サマリー内タブ切り替えバー（スタッツ ⇄ 選手採点） -->
       <div class="summary-subnav-bar">
         <button type="button" class="summary-subnav-btn active" data-subnav="stats">
-          📊 試合結果・チームスタッツ
+          試合結果・チームスタッツ
         </button>
         <button type="button" class="summary-subnav-btn" data-subnav="ratings">
-          ⭐ 全選手評価点一覧
+          全選手評価点一覧
         </button>
       </div>
 
@@ -11026,8 +11026,8 @@ let currentLeagueStatsCategory = 'goals';
 const LEAGUE_STATS_CATEGORIES = {
   goals: {
     id: 'goals',
-    icon: '⚽',
-    title: '⚽ リーグ得点ランキング',
+    icon: '',
+    title: 'リーグ得点ランキング',
     desc: 'イングランド・ディビジョン1 ゴール数ランキング',
     mainColHeader: 'ゴール',
     getScore: p => p.goals || 0,
@@ -11037,8 +11037,8 @@ const LEAGUE_STATS_CATEGORIES = {
   },
   assists: {
     id: 'assists',
-    icon: '🅰️',
-    title: '🅰️ リーグアシストランキング',
+    icon: '',
+    title: 'リーグアシストランキング',
     desc: '決定的なラストパスを供給したアシスト王争い',
     mainColHeader: 'アシスト',
     getScore: p => p.assists || 0,
@@ -11048,22 +11048,22 @@ const LEAGUE_STATS_CATEGORIES = {
   },
   ratings: {
     id: 'ratings',
-    icon: '⭐',
-    title: '⭐ リーグ平均評価点ランキング',
+    icon: '',
+    title: 'リーグ平均評価点ランキング',
     desc: '公式戦2試合以上出場のハイパフォーマンス選手（平均7.0以上が高水準）',
     mainColHeader: '平均評価',
     getScore: (p, apps) => (apps >= 2 ? (p.totalRating / apps) : 0),
     formatScore: (val) => {
       const cls = val >= 7.5 ? 'accent-gold' : (val >= 7.0 ? 'accent-green' : 'text-main');
-      return `<strong class="${cls}">★ ${val.toFixed(2)}</strong>`;
+      return `<strong class="${cls}">${val.toFixed(2)}</strong>`;
     },
     secondaryColHeader: 'G / A',
     formatSecondary: (p) => `<span class="mono">${p.goals || 0}G / ${p.assists || 0}A</span>`
   },
   cleansheets: {
     id: 'cleansheets',
-    icon: '🧤',
-    title: '🧤 クリーンシート（完封）ランキング',
+    icon: '',
+    title: 'クリーンシート（完封）ランキング',
     desc: '相手攻撃をシャットアウトした守護神（GK）＆DF陣の完封記録',
     filter: p => ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos) || POS_ROLE_GROUP[p.pos] === 'GK' || POS_ROLE_GROUP[p.pos] === 'DF',
     mainColHeader: 'クリーンシート',
@@ -11074,19 +11074,19 @@ const LEAGUE_STATS_CATEGORIES = {
   },
   moms: {
     id: 'moms',
-    icon: '👑',
-    title: '👑 マン・オブ・ザ・マッチ（MOM）獲得数ランキング',
+    icon: '',
+    title: 'マン・オブ・ザ・マッチ（MOM）獲得数ランキング',
     desc: '試合で最も輝いたMVP選出回数トップのスタープレイヤー',
     mainColHeader: 'MOM獲得数',
     getScore: p => p.momCount || 0,
-    formatScore: (val) => `<strong class="accent-gold">👑 ${val} <small style="font-size:10px; color:var(--text-muted);">回</small></strong>`,
+    formatScore: (val) => `<strong class="accent-gold">${val} <small style="font-size:10px; color:var(--text-muted);">回</small></strong>`,
     secondaryColHeader: '平均評価',
     formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
   },
   appearances: {
     id: 'appearances',
-    icon: '⏱️',
-    title: '⏱️ リーグ最多出場・鉄人ランキング',
+    icon: '',
+    title: 'リーグ最多出場ランキング',
     desc: 'チームを支え続けるタフな最多出場記録（疲労度併記）',
     mainColHeader: '出場数',
     getScore: p => p.appearances || 0,
@@ -11100,14 +11100,14 @@ const LEAGUE_STATS_CATEGORIES = {
   },
   cards: {
     id: 'cards',
-    icon: '🟨',
-    title: '🟨 警告（イエロー）・退場（レッド）ランキング',
+    icon: '',
+    title: '警告・退場ランキング',
     desc: '激しいファウル・警告カードを受けたカード枚数ランキング',
-    mainColHeader: '🟨 警告',
+    mainColHeader: '警告数 (黄)',
     getScore: p => ((p.redCards || 0) * 3 + (p.yellowCards || 0)),
-    formatScore: (val, p) => `<strong style="color:#f1c40f;">🟨 ${p.yellowCards || 0}</strong>`,
-    secondaryColHeader: '🟥 退場',
-    formatSecondary: (p) => `<strong style="color:#e74c3c;">🟥 ${p.redCards || 0}</strong>`
+    formatScore: (val, p) => `<strong style="color:#f1c40f;">${p.yellowCards || 0}枚</strong>`,
+    secondaryColHeader: '退場数 (赤)',
+    formatSecondary: (p) => `<strong style="color:#e74c3c;">${p.redCards || 0}枚</strong>`
   }
 };
 
@@ -13589,24 +13589,38 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
 /**
  * 選手の市場価値推移履歴（valueHistory）を初期化・補完する
- * 過去シーズンのOVR・年齢・成長実績から算出した市場価値推移を保持
+ * ゲーム開始時点（開幕時）からの推移と過去シーズン実績を一貫して保持
  */
 function ensurePlayerValueHistory(p, currentClubName) {
   if (!p) return [];
+
+  const currentVal = calculatePlayerMarketValue(p);
+  const currentOvr = getPlayerOverallRating(p);
+  const currentAge = p.age || 24;
+
+  // ゲーム開始時（開幕時）の初期市場価値を選手オブジェクトに永続保持
+  if (typeof p.startMarketValue !== 'number') {
+    p.startMarketValue = currentVal;
+  }
+
   if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 2) {
+    // 既存履歴の最新値を現在の状態に更新
+    const lastPt = p.valueHistory[p.valueHistory.length - 1];
+    if (lastPt && lastPt.season === 'Current') {
+      lastPt.value = currentVal;
+      lastPt.ovr = currentOvr;
+    }
     return p.valueHistory;
   }
 
   const historyData = ensurePlayerHistoryAndCareer(p, currentClubName);
   const { seasonHistory } = historyData;
-  const currentVal = calculatePlayerMarketValue(p);
-  const currentOvr = getPlayerOverallRating(p);
-  const currentAge = p.age || 24;
 
   const vHistory = [];
-  // 過去シーズンの履歴から市場価値ポイントを抽出（最大直近5シーズン分）
+
+  // 1. 過去シーズンの履歴（直近2〜3シーズン分を参考ポイントとして抽出）
   if (seasonHistory && seasonHistory.length > 0) {
-    const pastSubset = seasonHistory.slice(-5);
+    const pastSubset = seasonHistory.slice(-3);
     pastSubset.forEach((sh) => {
       const approxVal = calculatePlayerMarketValue({
         ovr: sh.ovr,
@@ -13619,33 +13633,32 @@ function ensurePlayerValueHistory(p, currentClubName) {
         season: sh.seasonYear,
         age: sh.age,
         ovr: sh.ovr,
-        value: approxVal
+        value: approxVal,
+        isPast: true
       });
     });
   }
 
-  // もし過去データが空または1件のみ（若手ルーキー等）の場合は、過去の推移を補完
-  if (vHistory.length === 0) {
-    const pastOvr = Math.max(50, currentOvr - 4);
-    const pastVal = calculatePlayerMarketValue({ ovr: pastOvr, age: Math.max(16, currentAge - 1), contractYears: 3 });
-    vHistory.push({
-      label: `入団時`,
-      fullLabel: `入団時 (${Math.max(16, currentAge - 1)}歳)`,
-      season: 'Debut',
-      age: Math.max(16, currentAge - 1),
-      ovr: pastOvr,
-      value: pastVal
-    });
-  }
+  // 2. ゲーム開始時点（開幕時）のポイントを明確に刻む
+  vHistory.push({
+    label: `開幕時`,
+    fullLabel: `ゲーム開始時 (開幕時点 / ${currentAge}歳)`,
+    season: '開幕時',
+    age: currentAge,
+    ovr: currentOvr,
+    value: p.startMarketValue,
+    isStart: true
+  });
 
-  // 最新（現在）ポイント
+  // 3. 現在のポイント（ゲーム開始直後で同値の場合は現在ポイントとして末尾に配置）
   vHistory.push({
     label: `現在`,
     fullLabel: `現在 (${currentAge}歳 / OVR ${currentOvr})`,
     season: 'Current',
     age: currentAge,
     ovr: currentOvr,
-    value: currentVal
+    value: currentVal,
+    isCurrent: true
   });
 
   p.valueHistory = vHistory;
@@ -13653,7 +13666,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
 }
 
 /**
- * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画
+ * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画（絵文字なし）
  */
 function buildPlayerMarketValueChartSvg(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
@@ -13663,7 +13676,6 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 
   const values = history.map(h => h.value);
   const peakVal = Math.max(...values);
-  const currentVal = values[values.length - 1];
 
   // グラフキャンバスのサイズ設計
   const W = 520;
@@ -13675,7 +13687,7 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
-  // Y軸のスケール（最小値0〜最大値+20%でキリの良い数値に丸め）
+  // Y軸のスケール（最小値0〜最大値+25%でキリの良い数値に丸め）
   const yMin = 0;
   const rawMax = Math.max(peakVal * 1.25, 2000);
   const yMax = rawMax > 50000 ? Math.ceil(rawMax / 10000) * 10000 : Math.ceil(rawMax / 5000) * 5000;
@@ -13732,27 +13744,35 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
   points.forEach((pt, i) => {
     const isPeak = (pt.h.value === peakVal && peakVal > 0);
     const isLast = (i === points.length - 1);
+    const isStart = Boolean(pt.h.isStart);
     const formattedVal = formatMoney(pt.h.value);
 
     // X軸ラベル
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--text-main)' : '#8b949e'}" font-size="9.5" font-family="var(--font-mono)" font-weight="${isLast ? '700' : '400'}" text-anchor="middle">
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--text-main)' : (isStart ? 'var(--text-main)' : '#8b949e')}" font-size="9.5" font-family="var(--font-mono)" font-weight="${isLast || isStart ? '700' : '400'}" text-anchor="middle">
         ${pt.h.label}
       </text>
     `;
 
-    // サークルとハイライト
+    // サークルとハイライト（絵文字なし）
     if (isPeak) {
       pointsSvg += `
         <!-- PEAKハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="8" fill="rgba(241, 196, 15, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7.5" fill="rgba(241, 196, 15, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.5" fill="#f1c40f" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 12).toFixed(1)}" fill="#f1c40f" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">👑 PEAK ${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 11).toFixed(1)}" fill="#f1c40f" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
+      `;
+    } else if (isStart) {
+      pointsSvg += `
+        <!-- 開幕時（開始時点）ハイライト -->
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6.5" fill="rgba(56, 189, 248, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#38bdf8" font-size="9.5" font-family="var(--font-mono)" font-weight="700" text-anchor="middle">開幕 ${formattedVal}</text>
       `;
     } else if (isLast) {
       pointsSvg += `
         <!-- 現在値ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7" fill="rgba(46, 204, 113, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6.5" fill="rgba(46, 204, 113, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#2ecc71" stroke="#14171b" stroke-width="2" />
         <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#2ecc71" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">${formattedVal}</text>
       `;
@@ -13785,33 +13805,33 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 }
 
 /**
- * 選手プロフィールモーダル用：市場価値推移タブのHTML構築
+ * 選手プロフィールモーダル用：市場価値推移タブのHTML構築（絵文字なし）
  */
 function buildPlayerMarketValueTabHtml(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
   const currentVal = calculatePlayerMarketValue(p);
   const peakVal = Math.max(...history.map(h => h.value), currentVal);
-  const firstVal = history[0] ? history[0].value : currentVal;
-  const delta = currentVal - firstVal;
-  const deltaPercent = firstVal > 0 ? Math.round((delta / firstVal) * 100) : 0;
-  const isUp = delta >= 0;
+  const startVal = typeof p.startMarketValue === 'number' ? p.startMarketValue : currentVal;
+  const deltaFromStart = currentVal - startVal;
+  const deltaPercent = startVal > 0 ? Math.round((deltaFromStart / startVal) * 100) : 0;
+  const isUp = deltaFromStart >= 0;
 
-  // 選手の市場ステータス
+  // 選手の市場ステータス（絵文字なし）
   const age = p.age || 24;
   const ovr = getPlayerOverallRating(p);
   let statusText = '安定稼働中 (STABLE)';
   let statusBadgeClass = 'badge-stable';
   if (age <= 21 && ovr >= 74) {
-    statusText = '🔥 若手有望株 (HOT PROSPECT)';
+    statusText = '若手有望株 (HOT PROSPECT)';
     statusBadgeClass = 'badge-hot';
-  } else if (age <= 23 && delta > 0) {
-    statusText = '📈 急成長中 (ON THE RISE)';
+  } else if (age <= 23 && deltaFromStart > 0) {
+    statusText = '急成長中 (ON THE RISE)';
     statusBadgeClass = 'badge-rising';
   } else if (age >= 25 && age <= 29 && ovr >= 80) {
-    statusText = '⭐ 全盛期・看板選手 (PRIME ASSET)';
+    statusText = '全盛期・主力 (PRIME ASSET)';
     statusBadgeClass = 'badge-prime';
   } else if (age >= 32) {
-    statusText = '🛡️ ベテラン (EXPERIENCED)';
+    statusText = 'ベテラン (EXPERIENCED)';
     statusBadgeClass = 'badge-veteran';
   }
 
@@ -13822,33 +13842,33 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
       <div class="profile-box">
         <div class="profile-box-header">
           <div>
-            <span class="profile-box-title">📈 推定市場価値の推移 (Market Value Trend)</span>
+            <span class="profile-box-title">推定市場価値の推移 (Market Value Trend)</span>
             <div class="mono text-muted" style="font-size: 10px; margin-top: 2px;">
-              選手のOVR・年齢・成長実績から算出した市場価値の歴史的推移
+              ゲーム開始時（開幕）から現在までの市場価値推移と成長実績
             </div>
           </div>
           <span class="profile-status-pill mono ${statusBadgeClass}">${statusText}</span>
         </div>
 
-        <!-- 4大メトリクス要約カード -->
+        <!-- 4大メトリクス要約カード（開始時点からの推移を明瞭化・絵文字なし） -->
         <div class="profile-metrics-row profile-metrics-row-4col" style="margin-top: 8px;">
           <div class="profile-metric-card">
             <span class="profile-metric-label">現在推定価値</span>
             <span class="profile-metric-val mono accent-green"><strong>${formatMoney(currentVal)}</strong></span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">キャリア最高価値</span>
-            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
+            <span class="profile-metric-label">開幕時（開始時点）</span>
+            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(startVal)}</strong></span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">通算価値変動</span>
+            <span class="profile-metric-label">開始時からの変動</span>
             <span class="profile-metric-val mono ${isUp ? 'accent-green' : 'text-danger'}">
-              <strong>${isUp ? '+' : ''}${formatMoney(delta)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
+              <strong>${isUp ? '+' : ''}${formatMoney(deltaFromStart)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
             </span>
           </div>
           <div class="profile-metric-card">
-            <span class="profile-metric-label">要求移籍金目安</span>
-            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(calculateTransferFee(p))}</strong></span>
+            <span class="profile-metric-label">キャリア最高価値</span>
+            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
           </div>
         </div>
 
@@ -13862,27 +13882,28 @@ function buildPlayerMarketValueTabHtml(p, currentClubName) {
           <table class="data-table profile-yearly-table">
             <thead>
               <tr>
-                <th>時期 / シーズン</th>
+                <th>時期 / タイミング</th>
                 <th class="col-num">年齢</th>
                 <th class="col-num">OVR</th>
                 <th class="col-num">推定市場価値</th>
-                <th class="col-num">特記事項</th>
+                <th class="col-num">区分</th>
               </tr>
             </thead>
             <tbody>
               ${history.map((h, idx) => {
                 const isPeak = (h.value === peakVal);
                 const isCur = (idx === history.length - 1);
+                const isStart = Boolean(h.isStart);
                 return `
                   <tr class="${isCur ? 'profile-yearly-current-row' : ''}">
                     <td class="mono">${h.season || h.label}</td>
                     <td class="mono col-num">${h.age}</td>
                     <td class="mono col-num">${h.ovr}</td>
-                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : '')}">
+                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : (isStart ? 'text-cyan' : ''))}">
                       <strong>${formatMoney(h.value)}</strong>
                     </td>
                     <td class="mono col-num text-muted" style="font-size: 10px;">
-                      ${isPeak ? '👑 キャリア最高値' : (isCur ? '● 最新' : '-')}
+                      ${isPeak ? '最高値' : (isStart ? '開始時点 (開幕)' : (isCur ? '最新' : '-'))}
                     </td>
                   </tr>
                 `;
@@ -14275,7 +14296,7 @@ function openPlayerProfileModal(playerId) {
             <div class="profile-metric-card profile-metric-clickable" data-switch-profile-tab="market-value" title="クリックで市場価値推移グラフを表示" style="cursor: pointer;">
               <span class="profile-metric-label" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>${isMarket ? '移籍金' : '推定市場価値'}</span>
-                <span class="mono accent-green" style="font-size:9.5px;">📈 グラフ ▶</span>
+                <span class="mono accent-green" style="font-size:9.5px;">推移グラフ ▶</span>
               </span>
               <span class="profile-metric-val accent-green">${formatMoney(estMarketValue)}</span>
             </div>

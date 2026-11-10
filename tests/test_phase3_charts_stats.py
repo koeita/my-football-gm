@@ -37,7 +37,8 @@ class TestPhase3ChartsAndStats(unittest.TestCase):
         self.assertIn('function buildPlayerMarketValueTabHtml(', self.js)
         self.assertIn('<svg class="market-value-svg"', self.js)
         self.assertIn('<polyline points=', self.js)
-        self.assertIn('👑 PEAK', self.js)
+        self.assertIn('PEAK', self.js)
+        self.assertIn('開幕時', self.js)
 
     def test_profile_modal_tab_switching_market_value(self):
         """switchProfileModalTab で market-value タブがサポートされていること"""

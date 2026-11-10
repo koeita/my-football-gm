@@ -3247,15 +3247,17 @@ body {
   }
 }
 
-/* 選手詳細モーダル：4タブナビゲーションバー（能力 / 今季成績 / 年別成績 / 経歴） */
+/* 選手詳細モーダル：5タブナビゲーションバー（能力 / 今季成績 / 年別成績 / 市場価値 / 経歴） */
 .profile-subnav-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 8px 20px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  padding: 8px 16px;
   background-color: #16191d;
   border-bottom: 1px solid #32383e;
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-tab-btn {
@@ -3265,13 +3267,17 @@ body {
   border-radius: 4px;
   color: var(--text-muted);
   font-family: var(--font-sans);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 7px 6px;
+  padding: 7px 4px;
   text-align: center;
   cursor: pointer;
   transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
   user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .profile-tab-btn:hover {
@@ -3537,13 +3543,16 @@ body {
   }
 
   .profile-subnav-bar {
-    padding: 6px 12px;
-    gap: 4px;
+    padding: 6px 8px !important;
+    gap: 3px !important;
+    grid-template-columns: repeat(5, 1fr) !important;
   }
 
   .profile-tab-btn {
-    font-size: 11.5px;
-    padding: 7px 4px;
+    font-size: 10.5px !important;
+    padding: 6px 2px !important;
+    letter-spacing: -0.02em !important;
+    white-space: nowrap !important;
   }
 
   .profile-season-stats-grid {
