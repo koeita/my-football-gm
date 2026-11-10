@@ -3510,11 +3510,28 @@ function getCalendarDayPlayerMatch(day) {
       if (m) {
         const isHome = m.homeId === playerClub.id;
         const oppClub = isHome ? m.awayClub : m.homeClub;
+        
+        // ラウンド名称の正規化マッピング（R32は1回戦、R16は国内カップ戦なら2回戦、欧州なら決勝T 1回戦）
+        let roundText = '';
+        if (day.cupRoundKey === 'R32') {
+          roundText = '1回戦';
+        } else if (day.cupRoundKey === 'R16') {
+          roundText = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup') ? '決勝T 1回戦' : '2回戦';
+        } else if (day.cupRoundKey === 'QF') {
+          roundText = '準々決勝';
+        } else if (day.cupRoundKey === 'SF') {
+          roundText = '準決勝';
+        } else if (day.cupRoundKey === 'FINAL') {
+          roundText = '決勝';
+        } else {
+          roundText = day.cupLabel || day.cupRoundKey;
+        }
+
         return {
           type: 'cup',
           compKey,
           comp,
-          title: `${comp.name} ${day.cupLabel || day.cupRoundKey}`,
+          title: `${comp.name} ${roundText}`,
           compCode: comp.shortCode || (compKey === 'leagueCup' ? 'L-CUP' : 'N-CUP'),
           match: m,
           isHome,
@@ -4073,15 +4090,30 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
   currentDay.played = true;
 
+  let cupRoundTitle = '';
+  if (roundKey === 'R32') {
+    cupRoundTitle = '1回戦';
+  } else if (roundKey === 'R16') {
+    cupRoundTitle = (compType === 'championsCup' || compType === 'europaCup' || compType === 'conferenceCup') ? '決勝T 1回戦' : '2回戦';
+  } else if (roundKey === 'QF') {
+    cupRoundTitle = '準々決勝';
+  } else if (roundKey === 'SF') {
+    cupRoundTitle = '準決勝';
+  } else if (roundKey === 'FINAL') {
+    cupRoundTitle = '決勝';
+  } else {
+    cupRoundTitle = currentDay.cupLabel || roundKey;
+  }
+
   const myScore = isHome ? homeScore : awayScore;
   const oppScore = isHome ? awayScore : homeScore;
   const pkText = simRes.pkHome != null ? ` (PK ${isHome ? simRes.pkHome : simRes.pkAway}-${isHome ? simRes.pkAway : simRes.pkHome})` : '';
   const resultText = userWon ? '勝利・次ラウンド進出！' : '惜敗・敗退';
-  addDailyLog(`【${comp.name} ${currentDay.cupLabel || roundKey}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resultText}`);
+  addDailyLog(`【${comp.name} ${cupRoundTitle}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resultText}`);
 
   const matchData = {
     week: roundKey,
-    compTitle: `${comp.name} ${currentDay.cupLabel || roundKey}`,
+    compTitle: `${comp.name} ${cupRoundTitle}`,
     isEuroLeague: false,
     isKnockout: true,
     userWon,
@@ -15801,6 +15833,21 @@ function loadGameFromStorage() {
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
+
+    // カップ戦のラウンドラベルの正規化（旧データの R32: 2回戦 ➔ 1回戦、R16: 3回戦 ➔ 2回戦）
+    if (Array.isArray(gameState.calendar)) {
+      gameState.calendar.forEach(d => {
+        if (d.isCupMatchDay && d.cupRoundKey === 'R32') {
+          if (d.cupLabel && d.cupLabel.includes('2回戦')) {
+            d.cupLabel = d.cupLabel.replace('2回戦', '1回戦');
+          }
+        } else if (d.isCupMatchDay && d.cupRoundKey === 'R16' && (d.cupCompType === 'leagueCup' || d.cupCompType === 'nationalCup')) {
+          if (d.cupLabel && d.cupLabel.includes('3回戦')) {
+            d.cupLabel = d.cupLabel.replace('3回戦', '2回戦');
+          }
+        }
+      });
+    }
 
     // 大会データの整合性チェック＆復元
     if (!gameState.competitions || !gameState.competitions.championsCup) {
