@@ -1426,9 +1426,9 @@ function buildPlayerPitchProficiencyHtml(p) {
   const getPosTitle = (pos, label) => {
     const normPos = (pos === 'LWB') ? 'LB' : ((pos === 'RWB') ? 'RB' : pos);
     const isMajor = mains.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normPos);
-    if (isMajor) return `${label}: 本適性 (◎ 100%)`;
+    if (isMajor) return `${label}: 本適性`;
     const isSub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normPos);
-    if (isSub) return `${label}: 薄適性 (◯ 96%)`;
+    if (isSub) return `${label}: 薄適性`;
     return `${label}: 適性外`;
   };
 
@@ -1460,10 +1460,9 @@ function buildPlayerPitchProficiencyHtml(p) {
         <div class="ef-pos-slot ef-pos-gk ${getPosClass('GK')}" title="${getPosTitle('GK', 'GK')}">GK</div>
       </div>
       <div class="ef-pitch-legend">
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性 (◎)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性 (◯)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color" style="background:#f1c40f;"></span>近接 (△)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>不適 (✕)</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>適性外</div>
       </div>
     </div>
   `;
@@ -11912,12 +11911,18 @@ function openPlayerProfileModal(playerId) {
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
-    const subBadgesHtml = subPosList.length > 0
-      ? subPosList.map(sp => `<span class="profile-pos-badge-sub" title="サブ適性ポジション">${sp}</span>`).join('')
-      : '';
+    ensurePlayerProficiencies(p);
+    const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+      ? p.mainPositions
+      : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+    const subs = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+
+    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main" title="本適性ポジション">${mp}</span>`).join(' ');
+    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub" title="薄適性ポジション">${sp}</span>`).join(' ');
+
     posPillEl.innerHTML = `
       <div class="profile-pos-badges-wrap">
-        <span class="profile-pos-badge-main" title="メイン適性ポジション">${primaryPos}</span>
+        ${mainBadgesHtml}
         ${subBadgesHtml}
       </div>
     `;
@@ -12144,19 +12149,19 @@ function openPlayerProfileModal(playerId) {
             </div>
           </div>
 
-          <!-- 右：適性ポジション図（イーフト風ピッチボード） ＆ トレーニング -->
+          <!-- 右：適性ポジション図 ＆ トレーニング -->
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">適正ポジション図（イーフト仕様）</span>
+              <span class="profile-box-title">POSITIONS</span>
             </div>
             ${buildPlayerPitchProficiencyHtml(p)}
-            <div class="profile-pos-fit-list" style="margin-top: 4px;">
+            <div class="profile-pos-fit-list" style="margin-top: 6px;">
               <div class="profile-fit-row">
-                <span class="text-muted">本適性（◎ 100%）</span>
+                <span class="text-muted"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;margin-right:4px;"></span>本適性</span>
                 <span class="mono text-accent-green"><strong>${(p.mainPositions || [primaryPos]).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ')}</strong></span>
               </div>
               <div class="profile-fit-row">
-                <span class="text-muted">薄適性（◯ 96%）</span>
+                <span class="text-muted"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-right:4px;"></span>薄適性</span>
                 <span class="mono text-cyan"><strong>${(p.subPositions || []).length > 0 ? (p.subPositions || []).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ') : 'なし'}</strong></span>
               </div>
               ${currentSlotBanner}
