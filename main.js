@@ -3851,19 +3851,6 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
-  // 2.8 選択式ランダムイベント判定（平日・非試合日）
-  if (!isNextDayCupPlayerMatch && !nextDay.isMatchDay && typeof checkAndTriggerGmEvent === 'function') {
-    const gmEv = checkAndTriggerGmEvent();
-    if (gmEv) {
-      stopAdvancingCalendar();
-      eventTriggered = true;
-      // 自動的にイベントモーダルを開く
-      if (typeof openGmEventModal === 'function') {
-        setTimeout(() => openGmEventModal(gmEv), 200);
-      }
-    }
-  }
-
   // 週末リーグ戦にあわせて2部リーグも1節進行
   if (nextDay.isMatchDay && !nextDay.played) {
     if (typeof advanceChampionshipWeek === 'function') {
@@ -4129,25 +4116,46 @@ function playCurrentCupMatchday(skipAnimation = false) {
       scorers: homeScorers.concat(awayScorers)
     };
 
-    if (typeof openMatchSummaryModal === 'function') {
-      openMatchSummaryModal({
-        title: `WCT ${myMatch.roundName}`,
-        compCode: 'WCT',
-        isHome,
-        homeClub: isHome ? playerClub : oppClub,
-        awayClub: isHome ? oppClub : playerClub,
-        homeScore,
-        awayScore,
-        scorers: homeScorers.concat(awayScorers),
-        userWon,
-        userDraw,
-        playerRatings: cupRatings,
-        prize: `+${formatMoney(prize)}`,
-        fanGain: `+${fanGain}人`
-      });
+    const matchData = {
+      week: roundNum,
+      compTitle: `WCT ${myMatch.roundName}`,
+      compCode: 'WCT',
+      isPreseason: true,
+      userWon,
+      homeClub: isHome ? playerClub : oppClub,
+      awayClub: isHome ? oppClub : playerClub,
+      homeScore,
+      awayScore,
+      momPlayer: cupRatings.momPlayer,
+      momClub: cupRatings.momClub,
+      momRating: cupRatings.momRating,
+      homePossession: simRes.homePossession || (userWon ? 54 : 46),
+      awayPossession: 100 - (simRes.homePossession || (userWon ? 54 : 46)),
+      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
+      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
+      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
+      awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
+      isPlayerHome: isHome,
+      isPlayerMatch: true,
+      matchIncome: prize,
+      playerSupportersDelta: fanGain,
+      homeScorers,
+      awayScorers,
+      prizeText: `+${formatMoney(prize)}`,
+      fanGainText: `+${fanGain}人`
+    };
+
+    if (skipAnimation) {
+      renderAll();
+      return;
     }
 
-    renderAll();
+    // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示
+    openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      renderAll();
+    });
     return;
   }
 
@@ -10020,13 +10028,6 @@ function dismissYouthCandidate(candidateId) {
 function handleGmDutyAction(actionKey) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
-  if (actionKey === 'open-gm-event') {
-    if (typeof openGmEventModal === 'function') {
-      openGmEventModal();
-    }
-    return;
-  }
-
   if (actionKey === 'goto-market-offers') {
     switchTab('market');
     switchMarketSubtab('offers');
@@ -12944,21 +12945,6 @@ function renderGmDuties() {
   }
 
   const duties = [];
-
-  // -1. GM緊急決断イベントが保留中の場合は最優先タスクとして表示
-  if (gameState.pendingGmEvent && !gameState.pendingGmEvent.resolved) {
-    const ev = gameState.pendingGmEvent;
-    duties.push({
-      level: 'critical',
-      badge: 'GM緊急決断 / URGENT',
-      title: `${ev.title}`,
-      desc: `${ev.description}`,
-      btnText: '決断を下す',
-      action: 'open-gm-event'
-    });
-  }
-
-
 
   // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
   if (gameState.pendingMegaOffer) {
