@@ -13150,3 +13150,211 @@ button.hidden,
   text-align: center !important;
   box-sizing: border-box !important;
 }
+
+
+/* ==========================================================================
+   クラブエンブレム（バッジ）共通スタイル
+   ========================================================================== */
+.club-emblem {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  transition: transform 0.15s ease;
+}
+
+.team-cell-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.team-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.club-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.header-club-emblem {
+  flex-shrink: 0 !important;
+}
+
+#profile-club-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+
+/* ==========================================================================
+   試合スコア・チーム名の干渉防止 ＆ エンブレム配置最適化
+   ========================================================================== */
+
+/* 1. 試合中ライブスコアボード */
+.match-live-scoreboard {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.match-live-team {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.match-live-team.home {
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+
+.match-live-team.away {
+  align-items: flex-end !important;
+  text-align: right !important;
+}
+
+.match-live-team-name {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  font-weight: 700 !important;
+}
+
+.match-live-team.home .match-live-team-name {
+  justify-content: flex-start !important;
+}
+
+.match-live-team.away .match-live-team-name {
+  justify-content: flex-end !important;
+}
+
+.match-live-team-name-text {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+
+.match-live-center {
+  flex-shrink: 0 !important;
+  min-width: 72px !important;
+  text-align: center !important;
+  padding: 0 4px !important;
+}
+
+/* 2. 試合サマリー画面のスコア＆チーム名 */
+.summary-score-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.summary-club-col {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.summary-club-col.home {
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+
+.summary-club-col.away {
+  align-items: flex-end !important;
+  text-align: right !important;
+}
+
+.summary-club-header-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.summary-club-col.home .summary-club-header-wrap {
+  justify-content: flex-start !important;
+}
+
+.summary-club-col.away .summary-club-header-wrap {
+  justify-content: flex-end !important;
+}
+
+.summary-club-name {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.summary-club-role {
+  font-size: 9.5px !important;
+  color: var(--text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.summary-score-center {
+  flex-shrink: 0 !important;
+  min-width: 100px !important;
+  text-align: center !important;
+  padding: 0 6px !important;
+}
+
+/* 3. 作戦最終確認（openMatchPrecheckModal）対戦カード */
+.precheck-club-title-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.precheck-club-title-wrap .precheck-club-name {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 4. 対戦スカウティングレポート（openPendingMatchPreview） */
+.scout-team-title-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.scout-team-col.home .scout-team-title-wrap {
+  justify-content: flex-start !important;
+}
+
+.scout-team-col.away .scout-team-title-wrap {
+  justify-content: flex-end !important;
+}
+
+.scout-team-title-wrap .scout-team-name {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+

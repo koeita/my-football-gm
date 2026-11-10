@@ -291,10 +291,24 @@ const CLUB_SHORT_CODES = {
 };
 
 function getClubShortCode(clubOrId) {
+  if (!clubOrId) return 'LFC';
   const id = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.id);
   if (id && CLUB_SHORT_CODES[id]) return CLUB_SHORT_CODES[id];
   if (typeof clubOrId === 'object' && clubOrId && clubOrId.shortName) return clubOrId.shortName;
-  return 'LFC';
+
+  // 名前からCLUB_DEFINITIONSを逆引き
+  const name = typeof clubOrId === 'string' ? clubOrId : (clubOrId && clubOrId.name);
+  if (name) {
+    const matched = CLUB_DEFINITIONS.find(c => c.name === name || name.includes(c.name));
+    if (matched && CLUB_SHORT_CODES[matched.id]) return CLUB_SHORT_CODES[matched.id];
+  }
+
+  // フォールバック: 英数字から3文字抽出
+  if (name) {
+    const cleaned = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (cleaned.length >= 3) return cleaned.slice(0, 3);
+  }
+  return (id || 'LFC').slice(0, 3).toUpperCase();
 }
 
 let modalLockSavedScrollY = 0;
@@ -341,9 +355,170 @@ function setBodyModalLock(locked) {
   }
 }
 
+
+/**
+ * 欧州20クラブの固有エンブレム定義（形状・配色・パターン・頭文字シンボル）
+ */
+const CLUB_EMBLEM_MAP = {
+  'manchester_b': { shape: 'circle', primaryColor: '#6ba4d9', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'M' },
+  'manchester_r': { shape: 'shield', primaryColor: '#da020e', secondaryColor: '#ffe500', pattern: 'diagonal', symbol: 'M' },
+  'liverpool_b': { shape: 'shield', primaryColor: '#c8102e', secondaryColor: '#00b2a9', pattern: 'solid', symbol: 'L' },
+  'northlondon_a': { shape: 'shield', primaryColor: '#ef0107', secondaryColor: '#ffffff', pattern: 'split', symbol: 'A' },
+  'london_fc': { shape: 'circle', primaryColor: '#034694', secondaryColor: '#dba111', pattern: 'solid', symbol: 'L' },
+  'northlondon_w': { shape: 'shield', primaryColor: '#132257', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'W' },
+  'newcastle_u': { shape: 'shield', primaryColor: '#241f20', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'N' },
+  'aston_v': { shape: 'shield', primaryColor: '#670e36', secondaryColor: '#95bfe5', pattern: 'diagonal', symbol: 'V' },
+  'brighton_g': { shape: 'circle', primaryColor: '#0057b8', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'B' },
+  'eastlondon_h': { shape: 'shield', primaryColor: '#7a263a', secondaryColor: '#1bb1e7', pattern: 'chevron', symbol: 'H' },
+  'southlondon_p': { shape: 'shield', primaryColor: '#1b458f', secondaryColor: '#c4122e', pattern: 'stripes', symbol: 'P' },
+  'westlondon_c': { shape: 'shield', primaryColor: '#1a1d20', secondaryColor: '#cc0000', pattern: 'solid', symbol: 'C' },
+  'westlondon_b': { shape: 'circle', primaryColor: '#e30613', secondaryColor: '#ffffff', pattern: 'diagonal', symbol: 'B' },
+  'midlands_w': { shape: 'diamond', primaryColor: '#fdb913', secondaryColor: '#231f20', pattern: 'solid', symbol: 'W' },
+  'merseyside_b': { shape: 'shield', primaryColor: '#003399', secondaryColor: '#ffffff', pattern: 'chevron', symbol: 'M' },
+  'southcoast_c': { shape: 'shield', primaryColor: '#da291c', secondaryColor: '#111111', pattern: 'stripes', symbol: 'C' },
+  'nottingham_r': { shape: 'shield', primaryColor: '#dd0000', secondaryColor: '#ffffff', pattern: 'solid', symbol: 'N' },
+  'leicester_f': { shape: 'circle', primaryColor: '#003090', secondaryColor: '#fdbe11', pattern: 'solid', symbol: 'F' },
+  'southampton_s': { shape: 'shield', primaryColor: '#d71920', secondaryColor: '#ffffff', pattern: 'diagonal', symbol: 'S' },
+  'ipswich_t': { shape: 'shield', primaryColor: '#004494', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'T' }
+};
+
+let emblemSvgUidCounter = 0;
+
+/**
+ * クラブエンブレム（バッジ）を動的インラインSVGとして生成する
+ * 外部画像不要・高精細ベクトル描画・絵文字不使用
+ * @param {Object|string} clubOrNameOrId クラブオブジェクト、ID、またはクラブ名
+ * @param {number} size 表示ピクセルサイズ（width/height）
+ * @param {string} extraClass 追加CSSクラス名
+ * @returns {string} インラインSVGタグ文字列
+ */
+function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
+  if (!clubOrNameOrId) return '';
+
+  let clubId = '';
+  let clubName = '';
+  let emblemConf = null;
+
+  if (typeof clubOrNameOrId === 'object') {
+    clubId = clubOrNameOrId.id || '';
+    clubName = clubOrNameOrId.name || '';
+    emblemConf = clubOrNameOrId.emblem || (clubId ? CLUB_EMBLEM_MAP[clubId] : null);
+  } else if (typeof clubOrNameOrId === 'string') {
+    if (CLUB_EMBLEM_MAP[clubOrNameOrId]) {
+      clubId = clubOrNameOrId;
+      emblemConf = CLUB_EMBLEM_MAP[clubOrNameOrId];
+    } else {
+      clubName = clubOrNameOrId;
+      // クラブ名から検索
+      const matchedClub = (Array.isArray(gameState.clubs) && gameState.clubs.find(c => c.name === clubName || clubName.includes(c.name)))
+        || CLUB_DEFINITIONS.find(c => c.name === clubName || clubName.includes(c.name));
+      if (matchedClub) {
+        clubId = matchedClub.id;
+        emblemConf = matchedClub.emblem || CLUB_EMBLEM_MAP[clubId];
+      }
+    }
+  }
+
+  // フォールバック生成（海外クラブや未定義名などの場合）
+  if (!emblemConf) {
+    const seed = (clubName || clubId || 'FC').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const shapes = ['shield', 'circle', 'diamond'];
+    const patterns = ['stripes', 'diagonal', 'chevron', 'solid', 'split'];
+    const palettes = [
+      { p: '#1e3a8a', s: '#ffffff' },
+      { p: '#b91c1c', s: '#f59e0b' },
+      { p: '#047857', s: '#ffffff' },
+      { p: '#4c1d95', s: '#f3e8ff' },
+      { p: '#0f172a', s: '#38bdf8' },
+      { p: '#c2410c', s: '#ffffff' },
+      { p: '#0284c7', s: '#ffffff' },
+      { p: '#831843', s: '#fbcfe8' }
+    ];
+    const pal = palettes[seed % palettes.length];
+    const initialChar = (clubName || clubId || 'F').replace(/[^a-zA-Z0-9぀-ゟ゠-ヿ]/g, '').charAt(0).toUpperCase() || 'F';
+
+    emblemConf = {
+      shape: shapes[seed % shapes.length],
+      primaryColor: pal.p,
+      secondaryColor: pal.s,
+      pattern: patterns[seed % patterns.length],
+      symbol: initialChar
+    };
+  }
+
+  const { shape, primaryColor, secondaryColor, pattern, symbol } = emblemConf;
+  const uid = 'emb-' + (++emblemSvgUidCounter);
+
+  let shapePath = '';
+  let clipShape = '';
+  let borderElement = '';
+
+  if (shape === 'circle') {
+    clipShape = `<circle cx="50" cy="50" r="44"/>`;
+    borderElement = `<circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85"/>`;
+  } else if (shape === 'diamond') {
+    shapePath = 'M 50 8 L 92 50 L 50 92 L 8 50 Z';
+    clipShape = `<path d="${shapePath}"/>`;
+    borderElement = `<path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85" stroke-linejoin="round"/>`;
+  } else {
+    // デフォルト: shield
+    shapePath = 'M 14 12 L 86 12 L 86 52 C 86 76, 50 94, 50 94 C 50 94, 14 76, 14 52 Z';
+    clipShape = `<path d="${shapePath}"/>`;
+    borderElement = `<path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85" stroke-linejoin="round"/>`;
+  }
+
+  // 内部幾何学パターン
+  let patternElements = '';
+  if (pattern === 'stripes') {
+    patternElements = `
+      <rect x="27" y="0" width="15" height="100" fill="${secondaryColor}" opacity="0.9"/>
+      <rect x="58" y="0" width="15" height="100" fill="${secondaryColor}" opacity="0.9"/>
+    `;
+  } else if (pattern === 'diagonal') {
+    patternElements = `
+      <polygon points="0,0 38,0 100,62 100,100" fill="${secondaryColor}" opacity="0.9"/>
+      <polygon points="0,62 0,100 38,100" fill="${secondaryColor}" opacity="0.9"/>
+    `;
+  } else if (pattern === 'chevron') {
+    patternElements = `
+      <path d="M 0 35 L 50 65 L 100 35 L 100 55 L 50 85 L 0 55 Z" fill="${secondaryColor}" opacity="0.9"/>
+    `;
+  } else if (pattern === 'split') {
+    patternElements = `
+      <rect x="50" y="0" width="50" height="100" fill="${secondaryColor}" opacity="0.9"/>
+    `;
+  } else {
+    // solid（単色）：アクセントの同心ライン
+    patternElements = `
+      <circle cx="50" cy="50" r="36" fill="none" stroke="${secondaryColor}" stroke-width="2" opacity="0.4"/>
+    `;
+  }
+
+  return `
+    <svg class="club-emblem ${extraClass}" width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:inline-block; vertical-align:middle; flex-shrink:0;">
+      <defs>
+        <clipPath id="${uid}">
+          ${clipShape}
+        </clipPath>
+      </defs>
+      <!-- 背景メイン色 -->
+      <g clip-path="url(#${uid})">
+        <rect x="0" y="0" width="100" height="100" fill="${primaryColor}"/>
+        ${patternElements}
+      </g>
+      <!-- 外枠境界線 -->
+      ${borderElement}
+      <!-- 中央シンボル（イニシャル） -->
+      <circle cx="50" cy="52" r="21" fill="rgba(15, 23, 42, 0.85)" stroke="#ffffff" stroke-width="2" stroke-opacity="0.8"/>
+      <text x="50" y="53" font-family="'Roboto Mono', 'Arial Black', sans-serif" font-weight="900" font-size="22" text-anchor="middle" dominant-baseline="central" fill="#ffffff">${symbol}</text>
+    </svg>
+  `.trim();
+}
+
 const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
+    emblem: CLUB_EMBLEM_MAP['manchester_b'],
     name: 'マンチェスター・B',
     tier: 'MEGA RICH',
     desc: '潤沢なオイルマネーと世界屈指の戦力を誇る現王者',
@@ -357,6 +532,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'manchester_r',
+    emblem: CLUB_EMBLEM_MAP['manchester_r'],
     name: 'マンチェスター・R',
     tier: 'TRADITIONAL',
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
@@ -370,6 +546,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'liverpool_b',
+    emblem: CLUB_EMBLEM_MAP['liverpool_b'],
     name: 'リバプール・B',
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
@@ -383,6 +560,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'northlondon_a',
+    emblem: CLUB_EMBLEM_MAP['northlondon_a'],
     name: 'ノースロンドン・A',
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
@@ -396,6 +574,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'london_fc',
+    emblem: CLUB_EMBLEM_MAP['london_fc'],
     name: 'ロンドン・FC',
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
@@ -409,6 +588,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'northlondon_w',
+    emblem: CLUB_EMBLEM_MAP['northlondon_w'],
     name: 'ノースロンドン・W',
     tier: 'BIG CLUB',
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
@@ -422,6 +602,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'newcastle_u',
+    emblem: CLUB_EMBLEM_MAP['newcastle_u'],
     name: 'ニューカッスル・U',
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
@@ -435,6 +616,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'aston_v',
+    emblem: CLUB_EMBLEM_MAP['aston_v'],
     name: 'アストン・V',
     tier: 'CHALLENGER',
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
@@ -448,6 +630,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'brighton_g',
+    emblem: CLUB_EMBLEM_MAP['brighton_g'],
     name: 'ブライトン・G',
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
@@ -461,6 +644,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'eastlondon_h',
+    emblem: CLUB_EMBLEM_MAP['eastlondon_h'],
     name: 'イーストロンドン・H',
     tier: 'MID TABLE',
     desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
@@ -474,6 +658,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'southlondon_p',
+    emblem: CLUB_EMBLEM_MAP['southlondon_p'],
     name: 'サウスロンドン・P',
     tier: 'MID TABLE',
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
@@ -487,6 +672,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'westlondon_c',
+    emblem: CLUB_EMBLEM_MAP['westlondon_c'],
     name: 'ウェストロンドン・C',
     tier: 'MID TABLE',
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
@@ -500,6 +686,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'westlondon_b',
+    emblem: CLUB_EMBLEM_MAP['westlondon_b'],
     name: 'ウェストロンドン・B',
     tier: 'MONEYBALL',
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
@@ -513,6 +700,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'midlands_w',
+    emblem: CLUB_EMBLEM_MAP['midlands_w'],
     name: 'ミッドランズ・W',
     tier: 'MID TABLE',
     desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
@@ -526,6 +714,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'merseyside_b',
+    emblem: CLUB_EMBLEM_MAP['merseyside_b'],
     name: 'マージーサイド・B',
     tier: 'TRADITIONAL',
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
@@ -539,6 +728,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'southcoast_c',
+    emblem: CLUB_EMBLEM_MAP['southcoast_c'],
     name: 'サウスコースト・C',
     tier: 'CHALLENGER',
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
@@ -552,6 +742,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'nottingham_r',
+    emblem: CLUB_EMBLEM_MAP['nottingham_r'],
     name: 'ノッティンガム・R',
     tier: 'HISTORIC',
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
@@ -565,6 +756,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'leicester_f',
+    emblem: CLUB_EMBLEM_MAP['leicester_f'],
     name: 'レスター・F',
     tier: 'MIRACLE',
     desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
@@ -578,6 +770,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'southampton_s',
+    emblem: CLUB_EMBLEM_MAP['southampton_s'],
     name: 'サウサンプトン・S',
     tier: 'ACADEMY',
     desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
@@ -591,6 +784,7 @@ const CLUB_DEFINITIONS = [
   },
   {
     id: 'ipswich_t',
+    emblem: CLUB_EMBLEM_MAP['ipswich_t'],
     name: 'イプスウィッチ・T',
     tier: 'PROMOTED',
     desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
@@ -606,12 +800,18 @@ const CLUB_DEFINITIONS = [
 
 // 他国（スペイン、ドイツ、イタリア、フランス）の主要メガクラブ（欧州強豪データとして内部保持）
 const EUROPEAN_MEGA_CLUBS = [
-  { id: 'madrid', name: 'マドリード・ブランコス', country: 'スペイン', basePower: 75, budget: 120000 },
-  { id: 'barcelona', name: 'バルセロナ・カタルーニャ', country: 'スペイン', basePower: 73, budget: 95000 },
-  { id: 'munich', name: 'ミュンヘン・バヴァリア', country: 'ドイツ', basePower: 74, budget: 105000 },
-  { id: 'milano', name: 'ミラノ・ロッソネリ', country: 'イタリア', basePower: 71, budget: 82000 },
-  { id: 'torino', name: 'トリノ・ビアンコネリ', country: 'イタリア', basePower: 71, budget: 85000 },
-  { id: 'paris', name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
+  { id: 'madrid',
+    emblem: CLUB_EMBLEM_MAP['madrid'], name: 'マドリード・ブランコス', country: 'スペイン', basePower: 75, budget: 120000 },
+  { id: 'barcelona',
+    emblem: CLUB_EMBLEM_MAP['barcelona'], name: 'バルセロナ・カタルーニャ', country: 'スペイン', basePower: 73, budget: 95000 },
+  { id: 'munich',
+    emblem: CLUB_EMBLEM_MAP['munich'], name: 'ミュンヘン・バヴァリア', country: 'ドイツ', basePower: 74, budget: 105000 },
+  { id: 'milano',
+    emblem: CLUB_EMBLEM_MAP['milano'], name: 'ミラノ・ロッソネリ', country: 'イタリア', basePower: 71, budget: 82000 },
+  { id: 'torino',
+    emblem: CLUB_EMBLEM_MAP['torino'], name: 'トリノ・ビアンコネリ', country: 'イタリア', basePower: 71, budget: 85000 },
+  { id: 'paris',
+    emblem: CLUB_EMBLEM_MAP['paris'], name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
 // 12ポジション定義とカテゴリ分類
@@ -829,10 +1029,14 @@ const PRIZE_MONEY_TABLE = [
 
 // 4つの成長曲線（growthCurve）定義
 const GROWTH_CURVES = [
-  { id: 'early', label: '早熟' },
-  { id: 'standard', label: '標準' },
-  { id: 'late', label: '晩成' },
-  { id: 'fragile', label: '天才' }
+  { id: 'early',
+    emblem: CLUB_EMBLEM_MAP['early'], label: '早熟' },
+  { id: 'standard',
+    emblem: CLUB_EMBLEM_MAP['standard'], label: '標準' },
+  { id: 'late',
+    emblem: CLUB_EMBLEM_MAP['late'], label: '晩成' },
+  { id: 'fragile',
+    emblem: CLUB_EMBLEM_MAP['fragile'], label: '天才' }
 ];
 
 // 5大チーム戦術スタイル定義
@@ -1133,6 +1337,7 @@ const PREFERRED_SQUAD_NUMBERS = {
 const FACILITY_DEFINITIONS = {
   stadium: {
     id: 'stadium',
+    emblem: CLUB_EMBLEM_MAP['stadium'],
     code: 'STADIUM EXPANSION',
     iconLabel: 'STADIUM',
     name: 'スタジアム拡張',
@@ -1145,6 +1350,7 @@ const FACILITY_DEFINITIONS = {
   },
   training: {
     id: 'training',
+    emblem: CLUB_EMBLEM_MAP['training'],
     code: 'TRAINING & MEDICAL',
     iconLabel: 'TRAINING',
     name: 'トレーニング＆メディカル施設',
@@ -1157,6 +1363,7 @@ const FACILITY_DEFINITIONS = {
   },
   scouting: {
     id: 'scouting',
+    emblem: CLUB_EMBLEM_MAP['scouting'],
     code: 'GLOBAL SCOUTING NET',
     iconLabel: 'SCOUTING',
     name: 'グローバルスカウト網',
@@ -3491,7 +3698,7 @@ function renderWeeklySchedule() {
           const oppId = isHome ? myFix.awayId : myFix.homeId;
           const oppClub = getClubById(oppId);
           const oppName = oppClub ? (oppClub.name.length > 8 ? oppClub.name.substring(0, 7) + '..' : oppClub.name) : '相手';
-          fixtureText = `vs ${oppName} (${isHome ? 'H' : 'A'})`;
+          fixtureText = `vs ${getClubShortCode(oppClub)} (${isHome ? 'H' : 'A'})`;
         }
       }
       eventHtml = `<span class="day-event-badge day-event-match">${fixtureText}</span>`;
@@ -5035,16 +5242,22 @@ function buildMatchSummaryHtml(md) {
         <div class="summary-hero-box">
           <div class="summary-score-row">
             <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
-              <span class="summary-club-name">${homeClub.name}</span>
-              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+              <div class="summary-club-header-wrap">
+                ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
+                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
+              </div>
+              <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
             <div class="summary-score-center">
               <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
               <span class="summary-result-pill res-${resType}">${resLabel}</span>
             </div>
             <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
-              <span class="summary-club-name">${awayClub.name}</span>
-              <span class="mono" style="font-size:9.5px;color:var(--text-muted);">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
+              <div class="summary-club-header-wrap">
+                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
+                ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
+              </div>
+              <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
           </div>
           <div class="summary-scorers-grid">
@@ -5353,7 +5566,10 @@ function openMatchPrecheckModal() {
           <div class="precheck-card-subhead mono">MATCHDAY FIXTURE</div>
           <div class="precheck-vs-row">
             <div class="precheck-club-box is-player">
-              <span class="precheck-club-name">${playerClub.name}</span>
+              <div class="precheck-club-title-wrap">
+                ${getClubEmblemSvg(playerClub, 28, 'precheck-emblem')}
+                <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(playerClub)}</span>
+              </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
@@ -5361,7 +5577,10 @@ function openMatchPrecheckModal() {
             </div>
             <div class="precheck-vs-badge">VS</div>
             <div class="precheck-club-box">
-              <span class="precheck-club-name">${oppName}</span>
+              <div class="precheck-club-title-wrap">
+                <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(opponentClub || oppName)}</span>
+                ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}
+              </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
@@ -5514,8 +5733,12 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
 
   if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
   if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
-  if (homeName) homeName.textContent = homeClub.name;
-  if (awayName) awayName.textContent = awayClub.name;
+  if (homeName) {
+    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>`;
+  }
+  if (awayName) {
+    awayName.innerHTML = `<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
+  }
   if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
   if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
   if (shEl) shEl.textContent = '0';
@@ -9264,7 +9487,10 @@ function renderHeader() {
   const payroll = getClubTotalPayroll(playerClub);
   const squadCount = playerClub.players.length;
 
-  document.getElementById('header-club-name').textContent = playerClub.name;
+  const headerClubEl = document.getElementById('header-club-name');
+  if (headerClubEl) {
+    headerClubEl.innerHTML = `${getClubEmblemSvg(playerClub, 24, 'header-club-emblem')}<span>${playerClub.name}</span>`;
+  }
   document.getElementById('header-gm-name').textContent = gameState.gmName;
   document.getElementById('header-target-rank').textContent = `目標：${playerClub.targetLabel || '4位以内'}`;
   document.getElementById('header-season').textContent = `${gameState.season}年目`;
@@ -9507,7 +9733,7 @@ function renderStandings() {
     return `
       <tr class="${rowClass}">
         <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
-        <td class="col-team">${club.name}</td>
+        <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(club, 20, 'standings-emblem')}<span class="team-name-text">${club.name}</span></span></td>
         <td class="col-num col-played">${club.played}</td>
         <td class="col-num col-won">${club.won}</td>
         <td class="col-num col-drawn">${club.drawn}</td>
@@ -9577,7 +9803,7 @@ function renderTopScorers() {
             ${getPlayerAvatarHtml(item.player, null, 'avatar-sm table-avatar')}${item.player.name}
           </button>
         </td>
-        <td class="col-team">${item.clubName}</td>
+        <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(item.clubName, 18, 'scorers-emblem')}<span class="team-name-text">${item.clubName}</span></span></td>
         <td class="col-num">${item.player.appearances}</td>
         <td class="col-num accent-gold"><strong>${item.player.goals}</strong></td>
         <td class="col-num accent-green">${item.avgRating}</td>
@@ -9623,12 +9849,18 @@ function renderMatchLog() {
           </div>
           <div class="matchday-vs-hero">
             <div class="matchday-club-side ${home.isPlayer ? 'is-player-side' : ''}">
-              <span class="matchday-club-name">${home.name}</span>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
+                ${getClubEmblemSvg(home, 26, 'matchday-club-emblem')}
+                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(home)}</span>
+              </div>
               <span class="matchday-club-ovr">OVR ${homeOvr} ${home.isPlayer ? '(自チーム)' : ''}</span>
             </div>
             <div class="matchday-vs-badge">VS</div>
             <div class="matchday-club-side ${away.isPlayer ? 'is-player-side' : ''}">
-              <span class="matchday-club-name">${away.name}</span>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
+                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(away)}</span>
+                ${getClubEmblemSvg(away, 26, 'matchday-club-emblem')}
+              </div>
               <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
             </div>
           </div>
@@ -10532,7 +10764,7 @@ function renderShortlist() {
           </button>
           ${preContractBadge}${freeBadge}${bargainBadge}${failedBadge}${offerStatusBadge}
         </td>
-        <td class="col-team"><strong>${clubName}</strong></td>
+        <td class="col-team" title="${clubName}"><span class="team-cell-wrap">${getClubEmblemSvg(ctx.club || clubName, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(ctx.club || clubName)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
@@ -10661,7 +10893,7 @@ function renderIncomingOffers() {
         <div class="incoming-offer-card-item">
           <div class="offer-card-header">
             <div class="offer-club-badge">
-              <span>相手クラブ: <strong>${offer.sellerClubName}</strong></span>
+              <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">相手クラブ: ${getClubEmblemSvg(offer.sellerClubId || offer.sellerClubName, 18, 'offer-club-emblem')}<strong>${offer.sellerClubName}</strong></span>
             </div>
             <div>
               ${statusBadge}
@@ -10773,7 +11005,7 @@ function renderIncomingOffers() {
       <div class="incoming-offer-card-item ${offer.isMegaClub ? 'is-mega' : ''}">
         <div class="offer-card-header">
           <div class="offer-club-badge">
-            <span>${offer.isMegaClub ? '★ ' : ''}<strong>${offer.buyerClubName}</strong> (${offer.buyerClubCountry})</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">${offer.isMegaClub ? '★ ' : ''}${getClubEmblemSvg(offer.buyerClubName, 18, 'offer-club-emblem')}<strong>${offer.buyerClubName}</strong> (${offer.buyerClubCountry})</span>
           </div>
           <div>
             ${deadlineBadge}
@@ -10980,7 +11212,7 @@ function renderMarket() {
           </button>
           ${preContractBadge}${freeBadge}${bargainBadge}${myClubBadge}${failedBadge}
         </td>
-        <td class="col-team"><strong>${c.name}</strong></td>
+        <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
@@ -11965,7 +12197,7 @@ function openPlayerProfileModal(playerId) {
   }
 
   const clubLabelEl = document.getElementById('profile-club-label');
-  if (clubLabelEl) clubLabelEl.textContent = clubName;
+  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 18, 'profile-club-emblem')}<span>${clubName}</span>`;
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
@@ -12619,7 +12851,7 @@ function renderIntroClubDetail() {
     <div class="detail-header-card">
       <div class="detail-title-row">
         <div class="detail-club-title-group">
-          <span class="detail-club-avatar mono">${getClubShortCode(club)}</span>
+          ${getClubEmblemSvg(club, 48, 'intro-club-emblem')}
           <div class="detail-club-header-text">
             <h3 class="detail-club-name">${club.name}</h3>
             <span class="detail-tier-badge">${club.tier}</span>
@@ -12655,7 +12887,7 @@ function renderIntroClubDetail() {
   `;
 
   if (summaryEl) {
-    summaryEl.innerHTML = `選択: <strong class="accent-green">${club.name}</strong> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
+    summaryEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">${getClubEmblemSvg(club, 20, 'intro-summary-emblem')}選択: <strong class="accent-green">${club.name}</strong></span> <span class="summary-sep">/</span> 目標: <strong>${club.targetLabel}</strong> <span class="summary-sep">/</span> 予算: <strong class="accent-gold">${formatMoney(club.initialFunds)}</strong>`;
   }
 }
 
@@ -16040,7 +16272,7 @@ function renderSeasonSchedule() {
           <span class="fixture-round-badge">第${weekNum}節</span>
           <span class="fixture-date-badge">${dateStr}</span>
           <span class="fixture-venue-badge ${isHome ? 'fixture-venue-home' : 'fixture-venue-away'}">${isHome ? 'HOME' : 'AWAY'}</span>
-          <span class="fixture-opponent-name">vs ${oppClub.name}</span>
+          <span class="fixture-opponent-name" style="display:inline-flex;align-items:center;gap:6px;">vs ${getClubEmblemSvg(oppClub, 18, 'fixture-opp-emblem')}<span class="mono" style="font-weight:700;">${getClubShortCode(oppClub)}</span></span>
         </div>
         ${statusColHtml}
       </div>
@@ -16366,7 +16598,7 @@ function renderMonthCalendar() {
                 <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
                 <span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>
               </div>
-              <div class="cal-opponent-name" title="${oppClub.name}">${oppName}</div>
+              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span class="mono" style="font-weight:700;font-size:9.5px;">${getClubShortCode(oppClub)}</span></div>
               <div class="cal-score-badge ${badgeClass}">${resLabel} ${match.homeScore}-${match.awayScore}</div>
             </div>
           `;
@@ -16380,7 +16612,7 @@ function renderMonthCalendar() {
                 <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
                 ${isNext ? '<span class="cal-next-tag">NEXT</span>' : `<span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>`}
               </div>
-              <div class="cal-opponent-name" title="${oppClub.name}">${oppName}</div>
+              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span class="mono" style="font-weight:700;font-size:9.5px;">${getClubShortCode(oppClub)}</span></div>
               <div class="cal-score-badge mono" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 8.5px;">VS</div>
             </div>
           `;
@@ -16500,9 +16732,12 @@ function openPendingMatchPreview(weekNum) {
     <!-- クラブ対決カード -->
     <div class="scout-matchup-card">
       <div class="scout-team-col home">
-        <span class="scout-team-name ${playerClub.id === match.homeId ? 'accent-green' : ''}">
-          ${match.homeId === playerClub.id ? playerClub.name : oppClub.name}
-        </span>
+        <div class="scout-team-title-wrap">
+          ${getClubEmblemSvg(match.homeId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
+          <span class="scout-team-name mono ${playerClub.id === match.homeId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(match.homeId === playerClub.id ? playerClub : oppClub)}
+          </span>
+        </div>
         <span class="scout-team-meta mono">
           ${match.homeId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
         </span>
@@ -16515,9 +16750,12 @@ function openPendingMatchPreview(weekNum) {
         <span class="mono" style="font-size:10.5px; color:#8a94a0;">${dateStr}</span>
       </div>
       <div class="scout-team-col away">
-        <span class="scout-team-name ${playerClub.id === match.awayId ? 'accent-green' : ''}">
-          ${match.awayId === playerClub.id ? playerClub.name : oppClub.name}
-        </span>
+        <div class="scout-team-title-wrap">
+          <span class="scout-team-name mono ${playerClub.id === match.awayId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(match.awayId === playerClub.id ? playerClub : oppClub)}
+          </span>
+          ${getClubEmblemSvg(match.awayId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
+        </div>
         <span class="scout-team-meta mono">
           ${match.awayId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
         </span>
