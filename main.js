@@ -3698,7 +3698,7 @@ function renderWeeklySchedule() {
           const oppId = isHome ? myFix.awayId : myFix.homeId;
           const oppClub = getClubById(oppId);
           const oppName = oppClub ? (oppClub.name.length > 8 ? oppClub.name.substring(0, 7) + '..' : oppClub.name) : '相手';
-          fixtureText = `vs ${oppName} (${isHome ? 'H' : 'A'})`;
+          fixtureText = `vs ${getClubShortCode(oppClub)} (${isHome ? 'H' : 'A'})`;
         }
       }
       eventHtml = `<span class="day-event-badge day-event-match">${fixtureText}</span>`;
@@ -5243,9 +5243,8 @@ function buildMatchSummaryHtml(md) {
           <div class="summary-score-row">
             <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
               <div class="summary-club-header-wrap">
-                ${getClubEmblemSvg(homeClub, 22, 'summary-club-emblem')}
-                <span class="summary-club-name name-full">${homeClub.name}</span>
-                <span class="summary-club-name name-short mono">${getClubShortCode(homeClub)}</span>
+                ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
+                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
               </div>
               <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
@@ -5255,9 +5254,8 @@ function buildMatchSummaryHtml(md) {
             </div>
             <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
               <div class="summary-club-header-wrap">
-                <span class="summary-club-name name-short mono">${getClubShortCode(awayClub)}</span>
-                <span class="summary-club-name name-full">${awayClub.name}</span>
-                ${getClubEmblemSvg(awayClub, 22, 'summary-club-emblem')}
+                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
+                ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
               </div>
               <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
             </div>
@@ -5570,7 +5568,7 @@ function openMatchPrecheckModal() {
             <div class="precheck-club-box is-player">
               <div class="precheck-club-title-wrap">
                 ${getClubEmblemSvg(playerClub, 28, 'precheck-emblem')}
-                <span class="precheck-club-name">${playerClub.name}</span>
+                <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(playerClub)}</span>
               </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
@@ -5580,8 +5578,8 @@ function openMatchPrecheckModal() {
             <div class="precheck-vs-badge">VS</div>
             <div class="precheck-club-box">
               <div class="precheck-club-title-wrap">
+                <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(opponentClub || oppName)}</span>
                 ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}
-                <span class="precheck-club-name">${oppName}</span>
               </div>
               <div class="precheck-club-meta">
                 <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
@@ -5736,10 +5734,10 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
   if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
   if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
   if (homeName) {
-    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text name-full">${homeClub.name}</span><span class="match-live-team-name-text name-short mono">${getClubShortCode(homeClub)}</span>`;
+    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>`;
   }
   if (awayName) {
-    awayName.innerHTML = `<span class="match-live-team-name-text name-short mono">${getClubShortCode(awayClub)}</span><span class="match-live-team-name-text name-full">${awayClub.name}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
+    awayName.innerHTML = `<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
   }
   if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
   if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
@@ -9853,15 +9851,15 @@ function renderMatchLog() {
             <div class="matchday-club-side ${home.isPlayer ? 'is-player-side' : ''}">
               <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
                 ${getClubEmblemSvg(home, 26, 'matchday-club-emblem')}
-                <span class="matchday-club-name">${home.name}</span>
+                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(home)}</span>
               </div>
               <span class="matchday-club-ovr">OVR ${homeOvr} ${home.isPlayer ? '(自チーム)' : ''}</span>
             </div>
             <div class="matchday-vs-badge">VS</div>
             <div class="matchday-club-side ${away.isPlayer ? 'is-player-side' : ''}">
               <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
+                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(away)}</span>
                 ${getClubEmblemSvg(away, 26, 'matchday-club-emblem')}
-                <span class="matchday-club-name">${away.name}</span>
               </div>
               <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
             </div>
@@ -16274,7 +16272,7 @@ function renderSeasonSchedule() {
           <span class="fixture-round-badge">第${weekNum}節</span>
           <span class="fixture-date-badge">${dateStr}</span>
           <span class="fixture-venue-badge ${isHome ? 'fixture-venue-home' : 'fixture-venue-away'}">${isHome ? 'HOME' : 'AWAY'}</span>
-          <span class="fixture-opponent-name" style="display:inline-flex;align-items:center;gap:6px;">vs ${getClubEmblemSvg(oppClub, 18, 'fixture-opp-emblem')}<span>${oppClub.name}</span></span>
+          <span class="fixture-opponent-name" style="display:inline-flex;align-items:center;gap:6px;">vs ${getClubEmblemSvg(oppClub, 18, 'fixture-opp-emblem')}<span class="mono" style="font-weight:700;">${getClubShortCode(oppClub)}</span></span>
         </div>
         ${statusColHtml}
       </div>
@@ -16600,7 +16598,7 @@ function renderMonthCalendar() {
                 <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
                 <span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>
               </div>
-              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span>${oppName}</span></div>
+              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span class="mono" style="font-weight:700;font-size:9.5px;">${getClubShortCode(oppClub)}</span></div>
               <div class="cal-score-badge ${badgeClass}">${resLabel} ${match.homeScore}-${match.awayScore}</div>
             </div>
           `;
@@ -16614,7 +16612,7 @@ function renderMonthCalendar() {
                 <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
                 ${isNext ? '<span class="cal-next-tag">NEXT</span>' : `<span class="mono" style="font-size: 8.5px; color: var(--text-muted);">#${d.matchWeek}</span>`}
               </div>
-              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span>${oppName}</span></div>
+              <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">${getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem')}<span class="mono" style="font-weight:700;font-size:9.5px;">${getClubShortCode(oppClub)}</span></div>
               <div class="cal-score-badge mono" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 8.5px;">VS</div>
             </div>
           `;
@@ -16736,8 +16734,8 @@ function openPendingMatchPreview(weekNum) {
       <div class="scout-team-col home">
         <div class="scout-team-title-wrap">
           ${getClubEmblemSvg(match.homeId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
-          <span class="scout-team-name ${playerClub.id === match.homeId ? 'accent-green' : ''}">
-            ${match.homeId === playerClub.id ? playerClub.name : oppClub.name}
+          <span class="scout-team-name mono ${playerClub.id === match.homeId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(match.homeId === playerClub.id ? playerClub : oppClub)}
           </span>
         </div>
         <span class="scout-team-meta mono">
@@ -16753,8 +16751,8 @@ function openPendingMatchPreview(weekNum) {
       </div>
       <div class="scout-team-col away">
         <div class="scout-team-title-wrap">
-          <span class="scout-team-name ${playerClub.id === match.awayId ? 'accent-green' : ''}">
-            ${match.awayId === playerClub.id ? playerClub.name : oppClub.name}
+          <span class="scout-team-name mono ${playerClub.id === match.awayId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(match.awayId === playerClub.id ? playerClub : oppClub)}
           </span>
           ${getClubEmblemSvg(match.awayId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
         </div>
