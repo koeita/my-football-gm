@@ -10764,7 +10764,7 @@ function renderShortlist() {
           </button>
           ${preContractBadge}${freeBadge}${bargainBadge}${failedBadge}${offerStatusBadge}
         </td>
-        <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(ctx.club || clubName, 18, 'market-club-emblem')}<strong>${clubName}</strong></span></td>
+        <td class="col-team" title="${clubName}"><span class="team-cell-wrap">${getClubEmblemSvg(ctx.club || clubName, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(ctx.club || clubName)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
@@ -11212,7 +11212,7 @@ function renderMarket() {
           </button>
           ${preContractBadge}${freeBadge}${bargainBadge}${myClubBadge}${failedBadge}
         </td>
-        <td class="col-team"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong>${c.name}</strong></span></td>
+        <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
