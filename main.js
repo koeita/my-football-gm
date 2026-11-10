@@ -1272,13 +1272,23 @@ function getGrowthCurveLabel(curve) {
  * 選手のメイン適性とサブ適性を合わせた表記文字列を返す（例: "CF / WG", "CB (SB)"）
  */
 function formatPlayerPositionsText(p, style = 'slash') {
+  ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
-  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
-  if (subs.length === 0) return primary;
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? [...p.mainPositions]
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? [...p.majorPositions] : [primary]);
+  if (!mains.includes(primary)) mains.unshift(primary);
+  const mainStr = mains.join('・');
+
+  const subs = Array.isArray(p.subPositions)
+    ? p.subPositions.filter(s => !mains.includes(s))
+    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !mains.includes(s)) : []);
+
+  if (subs.length === 0) return mainStr;
   if (style === 'paren') {
-    return `${primary} (${subs.join('/')})`;
+    return `${mainStr} (${subs.join('/')})`;
   }
-  return `${primary} / ${subs.join('・')}`;
+  return `${mainStr} / ${subs.join('・')}`;
 }
 
 /**
@@ -1287,9 +1297,13 @@ function formatPlayerPositionsText(p, style = 'slash') {
 function formatPlayerPositionsHtml(p) {
   ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
-  const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primary];
-  if (!majors.includes(primary)) majors.push(primary);
-  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  const majors = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? [...p.mainPositions]
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? [...p.majorPositions] : [primary]);
+  if (!majors.includes(primary)) majors.unshift(primary);
+  const subs = Array.isArray(p.subPositions)
+    ? p.subPositions.filter(s => !majors.includes(s))
+    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !majors.includes(s)) : []);
 
   const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join(' ');
   if (subs.length === 0) {
@@ -1426,9 +1440,9 @@ function buildPlayerPitchProficiencyHtml(p) {
   const getPosTitle = (pos, label) => {
     const normPos = (pos === 'LWB') ? 'LB' : ((pos === 'RWB') ? 'RB' : pos);
     const isMajor = mains.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normPos);
-    if (isMajor) return `${label}: 本適性 (◎ 100%)`;
+    if (isMajor) return `${label}: 本適性`;
     const isSub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normPos);
-    if (isSub) return `${label}: 薄適性 (◯ 96%)`;
+    if (isSub) return `${label}: 薄適性`;
     return `${label}: 適性外`;
   };
 
@@ -1460,10 +1474,9 @@ function buildPlayerPitchProficiencyHtml(p) {
         <div class="ef-pos-slot ef-pos-gk ${getPosClass('GK')}" title="${getPosTitle('GK', 'GK')}">GK</div>
       </div>
       <div class="ef-pitch-legend">
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性 (◎)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性 (◯)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color" style="background:#f1c40f;"></span>近接 (△)</div>
-        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>不適 (✕)</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-major"></span>本適性</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-sub"></span>薄適性</div>
+        <div class="ef-legend-item"><span class="ef-legend-color ef-pos-none"></span>適性外</div>
       </div>
     </div>
   `;
@@ -11912,12 +11925,18 @@ function openPlayerProfileModal(playerId) {
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
-    const subBadgesHtml = subPosList.length > 0
-      ? subPosList.map(sp => `<span class="profile-pos-badge-sub" title="サブ適性ポジション">${sp}</span>`).join('')
-      : '';
+    ensurePlayerProficiencies(p);
+    const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+      ? p.mainPositions
+      : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+    const subs = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+
+    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main" title="本適性ポジション">${mp}</span>`).join(' ');
+    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub" title="薄適性ポジション">${sp}</span>`).join(' ');
+
     posPillEl.innerHTML = `
       <div class="profile-pos-badges-wrap">
-        <span class="profile-pos-badge-main" title="メイン適性ポジション">${primaryPos}</span>
+        ${mainBadgesHtml}
         ${subBadgesHtml}
       </div>
     `;
@@ -12144,23 +12163,12 @@ function openPlayerProfileModal(playerId) {
             </div>
           </div>
 
-          <!-- 右：適性ポジション図（イーフト風ピッチボード） ＆ トレーニング -->
+          <!-- 右：適性ポジション図 ＆ トレーニング -->
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">適正ポジション図（イーフト仕様）</span>
+              <span class="profile-box-title">適性ポジション</span>
             </div>
             ${buildPlayerPitchProficiencyHtml(p)}
-            <div class="profile-pos-fit-list" style="margin-top: 4px;">
-              <div class="profile-fit-row">
-                <span class="text-muted">本適性（◎ 100%）</span>
-                <span class="mono text-accent-green"><strong>${(p.mainPositions || [primaryPos]).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ')}</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">薄適性（◯ 96%）</span>
-                <span class="mono text-cyan"><strong>${(p.subPositions || []).length > 0 ? (p.subPositions || []).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ') : 'なし'}</strong></span>
-              </div>
-              ${currentSlotBanner}
-            </div>
 
             ${trainingSectionHtml}
 

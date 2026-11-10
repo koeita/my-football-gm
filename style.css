@@ -1283,7 +1283,7 @@ body {
 }
 
 .pos-GK { color: var(--accent-gold); }
-.pos-CB, .pos-LB, .pos-RB, .pos-LWB, .pos-RWB, .pos-SB { color: var(--text-main); }
+.pos-CB, .pos-LB, .pos-RB, .pos-LWB, .pos-RWB, .pos-SB { color: #38bdf8; }
 .pos-DM, .pos-CM, .pos-LM, .pos-RM, .pos-SM, .pos-AM { color: var(--accent-green); }
 .pos-LW, .pos-RW, .pos-WG, .pos-CF { color: var(--accent-gold); }
 
