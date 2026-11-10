@@ -225,6 +225,7 @@ function initSeasonCompetitions() {
     if (!gameState.competitions) {
       gameState.competitions = {};
     }
+    initPreseasonCup();
     initChampionshipLeague();
     initDomesticCups();
     initEuropeanCups36();
@@ -232,6 +233,93 @@ function initSeasonCompetitions() {
   } catch (err) {
     console.error('Error in initSeasonCompetitions:', err);
   }
+}
+
+/**
+ * プレシーズン・フレンドリーコンペティション（ワールド・チャレンジ・トロフィー）
+ * 7月中旬〜8月上旬に国内外の招待クラブ3チームと対戦する全3試合の親善大会
+ */
+function initPreseasonCup() {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  if (!playerClub) return;
+
+  // 招待候補クラブプール（欧州メガクラブおよび英2部強豪）
+  const candidates = [
+    { id: 'pre_madrid', name: 'マドリード・ブランコ', shortName: 'MBL', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#41748D', basePower: 86 },
+    { id: 'pre_bayern', name: 'バイエルン・ロート', shortName: 'BRO', city: 'ミュンヘン', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#0066B2', basePower: 86 },
+    { id: 'pre_milan', name: 'ミラノ・ネラッズーリ', shortName: 'MNE', city: 'ミラノ', country: 'ITA', primaryColor: '#0066B2', secondaryColor: '#000000', basePower: 85 },
+    { id: 'pre_paris', name: 'パリ・メトロポリタン', shortName: 'PME', city: 'パリ', country: 'FRA', primaryColor: '#002B49', secondaryColor: '#DA291C', basePower: 84 },
+    { id: 'pre_leeds', name: 'リーズ・U', shortName: 'LEU', city: 'リーズ', country: 'ENG', primaryColor: '#FFCD00', secondaryColor: '#1D428A', basePower: 74 },
+    { id: 'pre_sheff', name: 'シェフィールド・S', shortName: 'SHS', city: 'シェフィールド', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', basePower: 73 }
+  ];
+
+  // シャッフルして3チームを選出
+  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+  const invitedClubs = shuffled.slice(0, 3);
+
+  const participants = [
+    {
+      id: playerClub.id,
+      name: playerClub.name,
+      shortName: playerClub.shortCode || 'LON',
+      country: 'ENG',
+      isPlayer: true,
+      avgOvr: playerClub.avgOvr || 78
+    },
+    ...invitedClubs.map(c => ({
+      ...c,
+      isPlayer: false,
+      avgOvr: c.basePower || 78
+    }))
+  ];
+
+  // プレイヤーの3試合対戦カード（Match 1, Match 2, Match 3）
+  const matches = [
+    {
+      round: 1,
+      roundName: 'グループ第1戦',
+      homeId: playerClub.id,
+      awayId: invitedClubs[0].id,
+      homeClub: participants[0],
+      awayClub: invitedClubs[0],
+      played: false,
+      homeScore: null,
+      awayScore: null
+    },
+    {
+      round: 2,
+      roundName: 'グループ第2戦',
+      homeId: invitedClubs[1].id,
+      awayId: playerClub.id,
+      homeClub: invitedClubs[1],
+      awayClub: participants[0],
+      played: false,
+      homeScore: null,
+      awayScore: null
+    },
+    {
+      round: 3,
+      roundName: 'トロフィー決定戦',
+      homeId: playerClub.id,
+      awayId: invitedClubs[2].id,
+      homeClub: participants[0],
+      awayClub: invitedClubs[2],
+      played: false,
+      homeScore: null,
+      awayScore: null
+    }
+  ];
+
+  gameState.competitions.preseasonCup = {
+    name: 'ワールド・チャレンジ・トロフィー',
+    shortName: 'WCT',
+    shortCode: 'WCT',
+    type: 'preseasonCup',
+    participants,
+    matches,
+    currentRound: 1,
+    completed: false
+  };
 }
 
 // 2部リーグ（イングランド・セカンドディビジョン）
@@ -533,6 +621,42 @@ function injectCupMatchesIntoCalendar() {
     delete d.euroMd;
     delete d.cupLabel;
     delete d.cupCode;
+    delete d.preseasonRound;
+  });
+
+  // 0. プレシーズン親善杯（WCT）：7月中旬〜8月上旬の土曜日（全3試合）
+  const preseasonScheduleList = [
+    { month: 7, minDay: 15, maxDay: 21, round: 1, label: 'WCT 第1戦', code: 'WCT' },
+    { month: 7, minDay: 22, maxDay: 28, round: 2, label: 'WCT 第2戦', code: 'WCT' },
+    { month: 8, minDay: 1, maxDay: 7, round: 3, label: 'WCT 決勝戦', code: 'WCT' }
+  ];
+
+  preseasonScheduleList.forEach(sc => {
+    let targetDay = gameState.calendar.find(d =>
+      d.month === sc.month &&
+      d.day >= sc.minDay &&
+      d.day <= sc.maxDay &&
+      d.dayOfWeek === 6 &&
+      !d.isMatchDay &&
+      !d.isCupMatchDay
+    );
+    if (!targetDay) {
+      targetDay = gameState.calendar.find(d =>
+        d.month === sc.month &&
+        d.day >= sc.minDay &&
+        d.day <= sc.maxDay &&
+        !d.isMatchDay &&
+        !d.isCupMatchDay
+      );
+    }
+    if (targetDay) {
+      targetDay.isCupMatchDay = true;
+      targetDay.cupCompType = 'preseasonCup';
+      targetDay.preseasonRound = sc.round;
+      targetDay.cupLabel = sc.label;
+      targetDay.cupCode = sc.code;
+      targetDay.eventType = 'match';
+    }
   });
 
   // 1. 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ PO ＆ 決勝T（最優先固定）
