@@ -1179,7 +1179,8 @@ const gameState = {
   incomingOffers: [],            // 受信オファーリスト（プール制）
   outgoingOffers: [],            // 送信オファーリスト（プール＆履歴）
   offersSubtab: 'incoming',      // オファータブ内の表示 ('incoming' | 'outgoing')
-  targetShortlist: [],           // 獲得ターゲットリスト（SHORTLIST）
+  targetShortlist: [],
+  preContractPlayers: [],        // 来季事前合意（内定）選手リスト           // 獲得ターゲットリスト（SHORTLIST）
   facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
   teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
   scheduleViewMode: 'calendar',  // 日程・結果表示モード ('calendar' | 'list')
@@ -2480,6 +2481,20 @@ function generateTransferMarket() {
     candidates.push(player);
   }
 
+  // 完全フリー選手（無所属 / Free Agents）を2名追加生成
+  for (let f = 0; f < 2; f++) {
+    const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
+    const basePower = randInt(minPower - 2, maxPower);
+    const freePlayer = createPlayer(pos, basePower, false, usedNames, [20, 32]);
+    freePlayer.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
+    freePlayer.isFreeAgent = true;
+    freePlayer.contractYears = 0;
+    freePlayer.transferFee = 0;
+    freePlayer.salary = calculatePlayerSalary(freePlayer.pos, freePlayer.atk, freePlayer.def, freePlayer.sta, freePlayer.age);
+    freePlayer.wage = Math.max(5, Math.round(freePlayer.salary / 52));
+    candidates.push(freePlayer);
+  }
+
   candidates.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
   gameState.transferMarket = candidates;
 }
@@ -3253,7 +3268,9 @@ function advanceCalendarDay(skipRender = false) {
   }
   if (nextDay.windowOpen && !gameState.pendingMegaOffer) {
     const offerFired = triggerIncomingTransferOffer(false);
-    if (offerFired) {
+    const loanFired = triggerLoanListingOffers();
+    const preContractFired = triggerPreContractDepartures();
+    if (offerFired || loanFired || preContractFired) {
       eventTriggered = true;
     }
   }
@@ -6055,6 +6072,13 @@ function computeStatGrowth(player, isPlayerClub = false) {
   let dDef = randInt(defRange[0], defRange[1]);
   let dSta = randInt(staRange[0], staRange[1]);
 
+  // 武者修行（レンタル放出中）の若手選手は成長率が通常控え時の+30%加速
+  if (player.loanStatus && player.loanStatus.isLoanOut) {
+    if (dAtk > 0) dAtk = Math.max(dAtk + 1, Math.round(dAtk * 1.30));
+    if (dDef > 0) dDef = Math.max(dDef + 1, Math.round(dDef * 1.30));
+    if (dSta > 0) dSta = Math.max(dSta + 1, Math.round(dSta * 1.30));
+  }
+
   // トレーニング＆メディカル施設Lvによる若手・成長期ボーナス
   if (isPlayerClub) {
     const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
@@ -6368,6 +6392,140 @@ function openContractNegotiationModal(playerId) {
 /**
  * 移籍市場の獲得交渉モーダルを開く（全クラブ対象）
  */
+
+/**
+ * 契約残り半年（1月冬ウィンドウ以降 かつ 残り契約1年以下）の事前合意適格判定
+ */
+function isPreContractEligible(player) {
+  if (!player) return false;
+  const playerClub = getPlayerClub();
+  if (playerClub && playerClub.players.some(p => p.id === player.id)) return false;
+  if (player.isFreeAgent) return false;
+  if (player.contractYears > 1) return false;
+
+  const currentDay = getCurrentCalendarDay();
+  if (!currentDay) return false;
+  // 1月以降（month === 1 または 1〜5月）かつ 契約残り1年以下なら事前合意（ボスマン）対象
+  const isPostJanuary = currentDay.month === 1 || (currentDay.month >= 1 && currentDay.month <= 5);
+  return isPostJanuary;
+}
+
+/**
+ * 22歳以下の若手選手の武者修行（レンタル放出）リスト登録トグル
+ */
+function toggleLoanListing(playerId) {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+  const p = playerClub.players.find(x => x.id === playerId);
+  if (!p || p.age > 22) return;
+
+  p.isLoanListed = !p.isLoanListed;
+  if (p.isLoanListed) {
+    addDailyLog(`【武者修行リスト登録】#${p.squadNumber || '-'} ${p.name} (22歳以下) をレンタル放出（武者修行）リストに設定しました。他クラブから打診が届くようになります。`);
+    if (typeof showToast === 'function') {
+      showToast(`${p.name}を武者修行リストに登録しました`);
+    }
+  } else {
+    addDailyLog(`【武者修行解除】#${p.squadNumber || '-'} ${p.name} のレンタル放出設定を解除しました。`);
+    if (typeof showToast === 'function') {
+      showToast(`${p.name}の武者修行設定を解除しました`);
+    }
+  }
+  renderAll();
+}
+
+/**
+ * 移籍ウィンドウ期間中の武者修行打診オファー発生処理
+ */
+function triggerLoanListingOffers() {
+  const playerClub = getPlayerClub();
+  if (!playerClub || !Array.isArray(gameState.incomingOffers)) return false;
+
+  const currentDay = getCurrentCalendarDay();
+  if (!currentDay || !currentDay.windowOpen) return false;
+  if (gameState.incomingOffers.length >= 6) return false;
+
+  const listedPlayers = playerClub.players.filter(p => p.isLoanListed && !p.isStarter && !p.isRetired && (!p.loanStatus || !p.loanStatus.isLoanOut));
+  if (listedPlayers.length === 0) return false;
+
+  // 約15%の確率で打診オファー発生
+  if (Math.random() > 0.18) return false;
+
+  const target = listedPlayers[randInt(0, listedPlayers.length - 1)];
+  if (gameState.incomingOffers.some(o => o.playerId === target.id)) return false;
+
+  const cpuClubs = gameState.clubs.filter(c => !c.isPlayer);
+  const loanBuyerClub = cpuClubs[randInt(0, cpuClubs.length - 1)];
+  const buyerName = loanBuyerClub ? loanBuyerClub.name : '海外クラブ';
+
+  const loanOffer = {
+    id: `loan_in_${Date.now()}_${target.id}`,
+    playerId: target.id,
+    playerName: target.name,
+    buyerClubId: loanBuyerClub ? loanBuyerClub.id : null,
+    buyerClubName: buyerName,
+    offeredFee: 0,
+    counterFee: 0,
+    offeredSalary: target.salary || (target.wage * 52),
+    daysLeft: 5,
+    status: 'pending',
+    isLoanOffer: true,
+    loanCoveragePercent: 100, // 相手クラブが給与100%負担
+    createdDayIndex: gameState.currentDayIndex
+  };
+
+  gameState.incomingOffers.unshift(loanOffer);
+  addDailyLog(`【レンタル打診】${buyerName} から武者修行中の ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し、1年間の期限付き移籍（給与100%相手負担）の打診が届きました！`);
+  if (typeof showToast === 'function') {
+    showToast(`【武者修行打診】${buyerName}より${target.name}へのレンタルオファーが届きました`);
+  }
+  return true;
+}
+
+/**
+ * 1月冬ウィンドウ中の自クラブ主力選手の他クラブ事前合意（ボスマン流出）イベント
+ */
+function triggerPreContractDepartures() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return false;
+
+  const currentDay = getCurrentCalendarDay();
+  if (!currentDay || currentDay.month !== 1 || !currentDay.windowOpen) return false;
+
+  // 既に今シーズン事前合意流出が発生済みならスキップ（シーズン最大1名）
+  if (gameState.hasPreContractDepartureThisSeason) return false;
+
+  // 対象：契約残り1年以下、未更新、未決裂、主力級
+  const eligible = playerClub.players.filter(p => 
+    p.contractYears <= 1 && 
+    !p.contractRefused && 
+    !p.preContractDeparture && 
+    !p.isRetired &&
+    getPlayerOverallRating(p) >= 70
+  );
+  if (eligible.length === 0) return false;
+
+  // 1日あたり約3%の低確率
+  if (Math.random() > 0.03) return false;
+
+  const target = eligible[randInt(0, eligible.length - 1)];
+  const foreignClubs = ['バイエルン', 'レアル・マドリード', 'パリ・サンジェルマン', 'インテル', 'バルセロナ', 'ユヴェントス', 'ドルトムント'];
+  const foreignClub = foreignClubs[randInt(0, foreignClubs.length - 1)];
+
+  target.preContractDeparture = {
+    toClubName: foreignClub,
+    effectiveSeason: (gameState.season || 1) + 1
+  };
+  target.contractRefused = true; // 今季中のこれ以上の更新は不可に
+  gameState.hasPreContractDepartureThisSeason = true;
+
+  addDailyLog(`🚨【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClub} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
+  if (typeof showToast === 'function') {
+    showToast(`【事前合意流出】${target.name}が来季${foreignClub}へのフリー移籍に事前合意しました`);
+  }
+  return true;
+}
+
 function openTransferNegotiationModal(candidateId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
@@ -6394,14 +6552,24 @@ function openTransferNegotiationModal(candidateId) {
 
   closePlayerProfileModal();
 
-  const demandedFee = calculateTransferFee(target);
-  const demandedWage = Math.max(5, Math.round((target.wage || 20) * 1.15));
+  const isFreeAgent = Boolean(target.isFreeAgent || (!sellerClub && target.contractYears === 0));
+  const isPreContract = !isFreeAgent && isPreContractEligible(target);
+
+  // 取引種別（dealType）の初期決定
+  let dealType = 'buy';
+  if (isFreeAgent) {
+    dealType = 'free_agent';
+  }
+
+  const baseOvr = getPlayerOverallRating(target);
+  const demandedFee = isFreeAgent ? 0 : calculateTransferFee(target);
+  const demandedWage = Math.max(5, Math.round((target.wage || 20) * (isFreeAgent ? 1.05 : 1.15)));
   const demandedSalary = demandedWage * 52;
   const demandedYears = clamp(target.contractYears >= 3 ? 3 : 4, 1, 5);
   const failCount = target.transferFailCount || 0;
   const isRefused = Boolean(target.negotiationFailed);
 
-  const clubName = sellerClub ? sellerClub.name : '相手クラブ';
+  const clubName = isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ');
   let statusType = 'info';
   let statusMessage = `${clubName}は移籍金 ${formatMoney(demandedFee)}、${target.name} 本人は週給 ${formatWage(demandedWage)}（年俸 ${formatMoney(demandedSalary)} ／ ${demandedYears}年契約）を希望しています。`;
 
@@ -6415,6 +6583,9 @@ function openTransferNegotiationModal(candidateId) {
 
   gameState.negotiationSession = {
     mode: 'transfer',
+    dealType: dealType, // 'buy' | 'loan' | 'pre_contract' | 'free_agent'
+    isFreeAgent: isFreeAgent,
+    isPreContractEligible: isPreContract,
     playerId: target.id,
     sellerClubId: sellerClub ? sellerClub.id : null,
     sellerClubName: clubName,
@@ -6426,6 +6597,9 @@ function openTransferNegotiationModal(candidateId) {
     demandedSalary,
     demandedYears,
     demandedFee,
+    // レンタル用設定
+    loanCoveragePercent: 100, // 提示週給負担率 (50%〜100%)
+    demandedLoanCoverage: target.age <= 22 ? 70 : 90, // 要求週給負担率
     failCount,
     completed: isRefused,
     statusType,
@@ -6473,14 +6647,22 @@ function renderNegotiationModal() {
 
   const squadNumEl = document.getElementById('neg-squad-num');
   if (squadNumEl) {
-    squadNumEl.textContent = isRenewal ? `#${target.squadNumber || 10}` : 'SIGN';
+    squadNumEl.textContent = isRenewal ? `#${target.squadNumber || 10}` : (session.dealType === 'loan' ? 'LOAN' : 'SIGN');
   }
 
   const catEl = document.getElementById('neg-modal-category');
   if (catEl) {
-    catEl.textContent = isRenewal
-      ? '契約延長交渉'
-      : `獲得交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+    if (isRenewal) {
+      catEl.textContent = '契約延長交渉';
+    } else if (session.dealType === 'loan') {
+      catEl.textContent = `レンタル加入交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+    } else if (session.dealType === 'pre_contract') {
+      catEl.textContent = `来季事前合意 (ボスマン) 交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+    } else if (session.dealType === 'free_agent') {
+      catEl.textContent = '無所属選手・獲得交渉';
+    } else {
+      catEl.textContent = `獲得交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+    }
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
@@ -6495,9 +6677,12 @@ function renderNegotiationModal() {
   const metaEl = document.getElementById('neg-player-meta');
   if (metaEl) {
     const avgRat = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
-    metaEl.innerHTML = isRenewal
-      ? `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>今季成績: <strong>${target.appearances}試合 ${target.goals}得点</strong></span><span>|</span><span>現給与: <strong class="accent-gold">${formatWage(target.wage)} (残り${target.contractYears}年)</strong></span>`
-      : `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>所属: <strong>${sellerClub ? sellerClub.name : '他クラブ'}</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>現給与: <strong>${formatWage(target.wage)}</strong></span>`;
+    if (isRenewal) {
+      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>今季成績: <strong>${target.appearances}試合 ${target.goals}得点</strong></span><span>|</span><span>現給与: <strong class="accent-gold">${formatWage(target.wage)} (残り${target.contractYears}年)</strong></span>`;
+    } else {
+      const clubDisplay = session.isFreeAgent ? '<strong class="accent-gold">無所属 (Free Agent)</strong>' : `<strong>${sellerClub ? sellerClub.name : '他クラブ'}</strong>`;
+      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>所属: ${clubDisplay}</span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>現給与: <strong>${formatWage(target.wage)}</strong></span>`;
+    }
   }
 
   const maxFails = 2;
@@ -6514,6 +6699,35 @@ function renderNegotiationModal() {
     patienceLabel = '交渉決裂';
   }
 
+  // 取引種別トグルバー（移籍モードのみ）
+  let dealTypeTabsHtml = '';
+  if (!isRenewal) {
+    if (session.isFreeAgent) {
+      dealTypeTabsHtml = `
+        <div class="neg-dealtype-tabs">
+          <div class="neg-dealtype-pill active">完全フリー獲得 (移籍金 £0)</div>
+        </div>
+      `;
+    } else {
+      const isPreContractOk = session.isPreContractEligible;
+      dealTypeTabsHtml = `
+        <div class="neg-dealtype-tabs" id="neg-dealtype-group">
+          <button type="button" class="btn-dealtype ${session.dealType === 'buy' ? 'active' : ''}" data-deal-type="buy" ${session.completed ? 'disabled' : ''}>
+            完全移籍 (BUY)
+          </button>
+          <button type="button" class="btn-dealtype ${session.dealType === 'loan' ? 'active' : ''}" data-deal-type="loan" ${session.completed ? 'disabled' : ''}>
+            レンタル (LOAN)
+          </button>
+          ${isPreContractOk ? `
+            <button type="button" class="btn-dealtype ${session.dealType === 'pre_contract' ? 'active' : ''}" data-deal-type="pre_contract" ${session.completed ? 'disabled' : ''} title="残り契約半年・来季7/1加入内定">
+              事前合意 (FREE)
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }
+  }
+
   // スライダー範囲の算出
   const minSalary = Math.max(500, Math.round((session.demandedSalary * 0.65) / 50) * 50);
   const maxSalary = Math.max(minSalary + 1000, Math.round((session.demandedSalary * 1.55) / 50) * 50);
@@ -6521,70 +6735,319 @@ function renderNegotiationModal() {
   const minFee = isRenewal ? 0 : Math.max(300, Math.round((session.demandedFee * 0.65) / 100) * 100);
   const maxFee = isRenewal ? 0 : Math.max(minFee + 2000, Math.round((session.demandedFee * 1.45) / 100) * 100);
 
-  const feeControlHtml = isRenewal ? '' : `
-    <div class="neg-control-group">
-      <div class="neg-control-header">
-        <span class="neg-control-label">提示移籍金</span>
-        <span class="neg-control-val" id="neg-offered-fee-display">${formatMoney(session.offeredFee)}</span>
-      </div>
-      <div class="neg-slider-row">
-        <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
-        <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
-      </div>
-      <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-        <span>要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
-        <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
-      </div>
-    </div>
-  `;
+  // 取引種別に応じた提示コントロール
+  let dealControlsHtml = '';
 
-  const curContractY = target.contractYears || 0;
+  if (isRenewal) {
+    // 契約延長
+    const curContractY = target.contractYears || 0;
+    const yearsButtonsHtml = [1, 2, 3, 4].map(yr => `
+      <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+        ${yr}年延長
+      </button>
+    `).join('');
 
-  const yearsButtonsHtml = [1, 2, 3, 4].map(yr => `
-    <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
-      ${yr}年契約
-    </button>
-  `).join('');
+    dealControlsHtml = `
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示年俸</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+        </div>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+          <span>増減: £50K</span>
+        </div>
+      </div>
 
-  const demandRowsHtml = isRenewal ? `
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">現在年俸 / 残契約</span>
-      <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${curContractY}年</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">今季成績</span>
-      <span class="neg-demand-val accent-green">${target.appearances}試合 / ${target.goals}G / OVR ${ovr}</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">代理人の要求年俸</span>
-      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">代理人の要求期間</span>
-      <span class="neg-demand-val">${session.demandedYears}年契約</span>
-    </div>
-  ` : `
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">要求移籍金</span>
-      <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (契約最終年)' : ''}</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">要求年俸</span>
-      <span class="neg-demand-val accent-green">${formatMoney(session.demandedSalary)} / 年</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">希望期間</span>
-      <span class="neg-demand-val">${session.demandedYears}年契約</span>
-    </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">当クラブ予算 / 枠</span>
-      <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
-    </div>
-  `;
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">延長契約年数</span>
+          <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年延長 (計${curContractY + session.offeredYears}年)</strong></span>
+        </div>
+        <div class="neg-years-group" id="neg-years-group">
+          ${yearsButtonsHtml}
+        </div>
+      </div>
+    `;
+  } else if (session.dealType === 'loan') {
+    // レンタル（LOAN）
+    const weeklyWage = target.wage || 20;
+    const coverageAmt = Math.round(weeklyWage * (session.loanCoveragePercent / 100));
+    dealControlsHtml = `
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">移籍金</span>
+          <span class="neg-control-val accent-green">£0 (レンタル加入)</span>
+        </div>
+        <div class="text-muted" style="font-size: 11px;">
+          相手クラブへの移籍金支払いは発生しません。
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">週給負担率</span>
+          <span class="neg-control-val accent-gold" id="neg-loan-coverage-display">${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-loan-slider" class="neg-slider" min="50" max="100" step="5" value="${session.loanCoveragePercent}" ${session.completed ? 'disabled' : ''}>
+          <span class="mono text-muted" style="font-size: 12px; width: 60px; text-align: right;">${session.loanCoveragePercent}%</span>
+        </div>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+          <span>相手側要求負担率: <strong class="mono accent-gold">${session.demandedLoanCoverage}% 以上</strong></span>
+          <span>選手現週給: <strong class="mono">${formatWage(weeklyWage)}</strong></span>
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">レンタル期間</span>
+          <span class="mono accent-green"><strong>1シーズン（今季終了まで）</strong></span>
+        </div>
+        <div class="text-muted" style="font-size: 11px;">
+          シーズン終了時に元クラブへ自動復帰します。
+        </div>
+      </div>
+    `;
+  } else if (session.dealType === 'pre_contract') {
+    // 事前合意（PRE-CONTRACT / ボスマン移籍）
+    const yearsButtonsHtml = [2, 3, 4].map(yr => `
+      <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+        ${yr}年契約
+      </button>
+    `).join('');
+
+    dealControlsHtml = `
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">移籍金</span>
+          <span class="neg-control-val accent-green">£0 (事前合意・移籍金なし)</span>
+        </div>
+        <div class="text-muted" style="font-size: 11px;">
+          契約満了に伴うボスマンルールに基づき、クラブ間移籍金は不要です。
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">来季提示年俸</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+        </div>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+          <span>合流時期: <strong class="accent-green">来季7月1日付で合流</strong></span>
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">来季契約年数</span>
+          <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
+        </div>
+        <div class="neg-years-group" id="neg-years-group">
+          ${yearsButtonsHtml}
+        </div>
+      </div>
+    `;
+  } else if (session.dealType === 'free_agent') {
+    // 完全フリー（無所属選手）
+    const yearsButtonsHtml = [1, 2, 3].map(yr => `
+      <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+        ${yr}年契約
+      </button>
+    `).join('');
+
+    dealControlsHtml = `
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">移籍金</span>
+          <span class="neg-control-val accent-green">£0 (無所属・即時加入)</span>
+        </div>
+        <div class="text-muted" style="font-size: 11px;">
+          所属クラブがないため移籍金£0で即時サイン可能です。
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示年俸</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示契約年数</span>
+          <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
+        </div>
+        <div class="neg-years-group" id="neg-years-group">
+          ${yearsButtonsHtml}
+        </div>
+      </div>
+    `;
+  } else {
+    // 完全移籍 (BUY)
+    const yearsButtonsHtml = [1, 2, 3, 4].map(yr => `
+      <button type="button" class="btn-neg-year ${session.offeredYears === yr ? 'active' : ''}" data-neg-year="${yr}" ${session.completed ? 'disabled' : ''}>
+        ${yr}年契約
+      </button>
+    `).join('');
+
+    dealControlsHtml = `
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示移籍金</span>
+          <span class="neg-control-val" id="neg-offered-fee-display">${formatMoney(session.offeredFee)}</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+        </div>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+          <span>要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
+          <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示年俸</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+        </div>
+        <div class="neg-slider-row">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+        </div>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
+          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+          <span>増減: £50K</span>
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">提示契約年数</span>
+          <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
+        </div>
+        <div class="neg-years-group" id="neg-years-group">
+          ${yearsButtonsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  // 要求パネルの表示
+  let demandRowsHtml = '';
+  if (isRenewal) {
+    demandRowsHtml = `
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">現在年俸 / 残契約</span>
+        <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${target.contractYears || 0}年</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">今季成績</span>
+        <span class="neg-demand-val accent-green">${target.appearances}試合 / ${target.goals}G / OVR ${ovr}</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">代理人の要求年俸</span>
+        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">代理人の要求期間</span>
+        <span class="neg-demand-val">${session.demandedYears}年契約</span>
+      </div>
+    `;
+  } else if (session.dealType === 'loan') {
+    demandRowsHtml = `
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">取引種別</span>
+        <span class="neg-demand-val accent-green">1シーズン レンタル</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">選手週給</span>
+        <span class="neg-demand-val">${formatWage(target.wage)} / 週</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">相手側要求負担率</span>
+        <span class="neg-demand-val accent-gold">${session.demandedLoanCoverage}% 以上</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">所属元クラブ</span>
+        <span class="neg-demand-val">${sellerClub ? sellerClub.name : '相手クラブ'}</span>
+      </div>
+    `;
+  } else if (session.dealType === 'pre_contract') {
+    demandRowsHtml = `
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">取引種別</span>
+        <span class="neg-demand-val accent-green">来季事前合意 (ボスマン)</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">現契約</span>
+        <span class="neg-demand-val text-danger">残り半年（今季限りで満了）</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">要求年俸</span>
+        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">移籍金負担</span>
+        <span class="neg-demand-val accent-green">£0 (フリー移籍)</span>
+      </div>
+    `;
+  } else if (session.dealType === 'free_agent') {
+    demandRowsHtml = `
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">所属ステータス</span>
+        <span class="neg-demand-val accent-green">無所属 (フリー)</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">希望年俸</span>
+        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">移籍金負担</span>
+        <span class="neg-demand-val accent-green">£0 (即時加入可能)</span>
+      </div>
+    `;
+  } else {
+    demandRowsHtml = `
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">要求移籍金</span>
+        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (契約最終年)' : ''}</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">要求年俸</span>
+        <span class="neg-demand-val accent-green">${formatMoney(session.demandedSalary)} / 年</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">希望期間</span>
+        <span class="neg-demand-val">${session.demandedYears}年契約</span>
+      </div>
+      <div class="neg-demand-row">
+        <span class="neg-demand-label">当クラブ予算 / 枠</span>
+        <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+      </div>
+    `;
+  }
 
   const bodyEl = document.getElementById('neg-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
+      ${dealTypeTabsHtml}
+
       <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
         ${session.statusMessage}
       </div>
@@ -6608,35 +7071,38 @@ function renderNegotiationModal() {
             <span class="mono text-muted" style="font-size: 10px;">GBP (£)</span>
           </div>
 
-          ${feeControlHtml}
-
-          <div class="neg-control-group">
-            <div class="neg-control-header">
-              <span class="neg-control-label">提示年俸</span>
-              <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
-            </div>
-            <div class="neg-slider-row">
-              <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
-              <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
-            </div>
-            <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-              <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
-              <span>増減: £50K</span>
-            </div>
-          </div>
-
-          <div class="neg-control-group">
-            <div class="neg-control-header">
-              <span class="neg-control-label">提示契約年数</span>
-              <span class="mono accent-green" id="neg-offered-years-display"><strong>${session.offeredYears}年契約</strong></span>
-            </div>
-            <div class="neg-years-group" id="neg-years-group">
-              ${yearsButtonsHtml}
-            </div>
-          </div>
+          ${dealControlsHtml}
         </div>
       </div>
     `;
+
+    // 取引種別タブのイベント登録
+    bodyEl.querySelectorAll('.btn-dealtype').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const dType = e.currentTarget.dataset.dealType;
+        session.dealType = dType;
+        if (dType === 'loan') {
+          session.offeredFee = 0;
+        } else if (dType === 'pre_contract' || dType === 'free_agent') {
+          session.offeredFee = 0;
+        } else {
+          session.offeredFee = session.demandedFee;
+        }
+        renderNegotiationModal();
+      });
+    });
+
+    // レンタルスライダーのイベント登録
+    const loanSlider = bodyEl.querySelector('#neg-loan-slider');
+    if (loanSlider) {
+      loanSlider.addEventListener('input', (e) => {
+        session.loanCoveragePercent = parseInt(e.target.value, 10);
+        const weeklyWage = target.wage || 20;
+        const coverageAmt = Math.round(weeklyWage * (session.loanCoveragePercent / 100));
+        const disp = document.getElementById('neg-loan-coverage-display');
+        if (disp) disp.textContent = `${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)`;
+      });
+    }
   }
 
   const submitBtn = document.getElementById('btn-submit-neg-offer');
@@ -6648,7 +7114,17 @@ function renderNegotiationModal() {
     } else {
       submitBtn.classList.remove('hidden');
       if (negFooterEl) negFooterEl.classList.remove('hidden');
-      submitBtn.textContent = isRenewal ? 'この条件で契約延長オファーを提示' : 'この条件で獲得オファーを提示';
+      if (isRenewal) {
+        submitBtn.textContent = 'この条件で契約延長オファーを提示';
+      } else if (session.dealType === 'loan') {
+        submitBtn.textContent = 'この条件でレンタルオファーを提示';
+      } else if (session.dealType === 'pre_contract') {
+        submitBtn.textContent = 'この条件で来季事前合意オファーを提示';
+      } else if (session.dealType === 'free_agent') {
+        submitBtn.textContent = 'この条件で無所属獲得オファーを提示';
+      } else {
+        submitBtn.textContent = 'この条件で獲得オファーを提示';
+      }
     }
   }
 }
@@ -6667,13 +7143,11 @@ function submitNegotiationOffer() {
     const target = playerClub.players.find(p => p.id === session.playerId);
     if (!target) return;
 
-    // 契約年数が要求より短い場合は年俸の要求水準がわずかに上がり、長い場合はわずかに緩和
     const yearDiff = session.offeredYears - session.demandedYears;
     const yearAdjustment = yearDiff >= 0 ? 0.97 : (1 + Math.abs(yearDiff) * 0.04);
     const requiredSalary = Math.round(session.demandedSalary * yearAdjustment);
 
     if (session.offeredSalary >= requiredSalary) {
-      // 合意（契約更新成立：既存の残り年数に提示契約年数が加算）
       const prevYears = target.contractYears || 0;
       const newContractYears = Math.min(5, prevYears + session.offeredYears);
       target.salary = session.offeredSalary;
@@ -6693,12 +7167,10 @@ function submitNegotiationOffer() {
       return;
     }
 
-    // 不満・決裂判定
     target.renewalFailCount = (target.renewalFailCount || 0) + 1;
     session.failCount = target.renewalFailCount;
 
     if (target.renewalFailCount >= 2) {
-      // 2回連続決裂 -> 交渉打ち切り（オフにフリー流出確定）
       target.contractRefused = true;
       target.contractYears = Math.min(target.contractYears, 1);
       session.completed = true;
@@ -6706,7 +7178,6 @@ function submitNegotiationOffer() {
       session.statusMessage = `【交渉決裂・打ち切り】2度目の低額オファー（提示 ${formatMoney(session.offeredSalary)}）に対し、#${target.squadNumber || '-'} ${target.name} 陣営が態度を硬化させ交渉打ち切りを通告しました。オフシーズンにフリー移籍での退団が確定しました。`;
       gameState.facilityFeedback = `【契約交渉決裂】#${target.squadNumber || '-'} ${target.name} との契約延長交渉が決裂しました（オフにフリー流出確定）。`;
     } else {
-      // 1回目不満・保留（要求引き上げ）
       const raisedSalary = Math.round((session.demandedSalary * 1.08) / 50) * 50;
       target.demandedSalary = raisedSalary;
       session.demandedSalary = raisedSalary;
@@ -6737,35 +7208,60 @@ function submitNegotiationOffer() {
   }
   if (!target) return;
 
-  if (playerClub.players.length >= MAX_SQUAD_SIZE) {
+  if (session.dealType !== 'pre_contract' && playerClub.players.length >= MAX_SQUAD_SIZE) {
     session.statusType = 'error';
     session.statusMessage = `【獲得不可】チームの登録上限（${MAX_SQUAD_SIZE}名）に達しているため獲得できません。先に選手を放出して枠を空けてください。`;
     renderNegotiationModal();
     return;
   }
 
-  if (playerClub.funds < session.offeredFee) {
+  const dealType = session.dealType || 'buy';
+
+  if (dealType === 'buy' && playerClub.funds < session.offeredFee) {
     session.statusType = 'error';
     session.statusMessage = `【資金不足】提示移籍金（${formatMoney(session.offeredFee)}）が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。移籍金を調整してください。`;
     renderNegotiationModal();
     return;
   }
 
-  const feeThresholdFactor = target.contractYears === 1 ? 0.90 : 0.96;
-  const requiredFee = Math.round(session.demandedFee * feeThresholdFactor);
-  const offeredWage = session.offeredWage || Math.round(session.offeredSalary / 52) || 20;
-  const demandedWage = session.demandedWage || Math.round(session.demandedSalary / 52) || 20;
-  const salaryYearFactor = session.offeredYears >= session.demandedYears ? 0.95 : 1.02;
-  const requiredWage = Math.round(demandedWage * salaryYearFactor);
+  let willAgree = false;
+  let demandedFee = session.demandedFee;
+  let offeredFee = session.offeredFee;
+  let offeredWage = session.offeredWage || Math.round(session.offeredSalary / 52) || 20;
+  let demandedWage = session.demandedWage || Math.round(session.demandedSalary / 52) || 20;
 
-  const clubAgreed = session.offeredFee >= requiredFee;
-  const playerAgreed = offeredWage >= requiredWage;
-  const willAgree = clubAgreed && playerAgreed;
+  if (dealType === 'loan') {
+    // レンタル交渉判定
+    offeredFee = 0;
+    demandedFee = 0;
+    const requiredCoverage = session.demandedLoanCoverage || 75;
+    willAgree = session.loanCoveragePercent >= requiredCoverage;
+  } else if (dealType === 'pre_contract') {
+    // 事前合意判定
+    offeredFee = 0;
+    demandedFee = 0;
+    const salaryYearFactor = session.offeredYears >= session.demandedYears ? 0.95 : 1.02;
+    const requiredWage = Math.round(demandedWage * salaryYearFactor);
+    willAgree = offeredWage >= requiredWage;
+  } else if (dealType === 'free_agent') {
+    // 無所属獲得判定
+    offeredFee = 0;
+    demandedFee = 0;
+    const requiredWage = Math.round(demandedWage * 0.95);
+    willAgree = offeredWage >= requiredWage;
+  } else {
+    // 完全移籍 (BUY)
+    const feeThresholdFactor = target.contractYears === 1 ? 0.90 : 0.96;
+    const requiredFee = Math.round(demandedFee * feeThresholdFactor);
+    const salaryYearFactor = session.offeredYears >= session.demandedYears ? 0.95 : 1.02;
+    const requiredWage = Math.round(demandedWage * salaryYearFactor);
+    const clubAgreed = offeredFee >= requiredFee;
+    const playerAgreed = offeredWage >= requiredWage;
+    willAgree = clubAgreed && playerAgreed;
+  }
 
-  // 送信オファーリスト（gameState.outgoingOffers）に登録し、回答待ちにする
   if (!Array.isArray(gameState.outgoingOffers)) gameState.outgoingOffers = [];
   
-  // 既存の同一選手へのアクティブオファーがあれば更新、なければ新規作成
   const existingIdx = gameState.outgoingOffers.findIndex(o => o.playerId === target.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
   const offerObj = {
     id: existingIdx !== -1 ? gameState.outgoingOffers[existingIdx].id : `out_${Date.now()}_${target.id}`,
@@ -6776,15 +7272,17 @@ function submitNegotiationOffer() {
     ovr: getPlayerOverallRating(target),
     squadNumber: target.squadNumber || 10,
     sellerClubId: sellerClub ? sellerClub.id : null,
-    sellerClubName: sellerClub ? sellerClub.name : 'フリー',
-    offeredFee: session.offeredFee,
+    sellerClubName: sellerClub ? sellerClub.name : (target.isFreeAgent ? '無所属' : 'フリー'),
+    dealType: dealType,
+    loanCoveragePercent: session.loanCoveragePercent || 100,
+    offeredFee: offeredFee,
     offeredWage: offeredWage,
     offeredYears: session.offeredYears,
-    demandedFee: session.demandedFee,
+    demandedFee: demandedFee,
     demandedWage: demandedWage,
     willAgree: willAgree,
-    status: 'pending', // 'pending' | 'agreed' | 'rejected' | 'signed' | 'cancelled'
-    pendingDays: 5, // 5日後に返答
+    status: 'pending',
+    pendingDays: 5,
     createdDayIndex: gameState.currentDayIndex,
     resolvedDayIndex: null
   };
@@ -6797,23 +7295,23 @@ function submitNegotiationOffer() {
 
   session.completed = true;
   session.statusType = 'info';
-  session.statusMessage = `【オファー送信完了】${sellerClub ? sellerClub.name : 'クラブ'}へ ${target.name}の獲得オファー（移籍金 ${formatMoney(session.offeredFee)} / 週給 ${formatWage(offeredWage)}）を正式提示しました。約5日後に回答が届きます。`;
 
-  addDailyLog(`【オファー提示】${sellerClub ? sellerClub.name : 'フリー'}の ${target.pos} ${target.name} へ移籍金 ${formatMoney(session.offeredFee)} の獲得オファーを送信しました（回答待ち）。`);
+  let typeName = '獲得オファー';
+  if (dealType === 'loan') typeName = 'レンタルオファー';
+  else if (dealType === 'pre_contract') typeName = '事前合意オファー';
+  else if (dealType === 'free_agent') typeName = '無所属獲得オファー';
+
+  session.statusMessage = `【オファー送信完了】${offerObj.sellerClubName}へ ${target.name}の${typeName}を正式提示しました。約5日後に回答が届きます。`;
+  addDailyLog(`【オファー提示】${offerObj.sellerClubName}の ${target.pos} ${target.name} へ${typeName}を送信しました（回答待ち）。`);
   if (typeof showToast === 'function') {
-    showToast(`${target.name}へ移籍オファーを提示しました（送信オファータブで確認可能）`);
+    showToast(`${target.name}へ${typeName}を提示しました（送信オファータブで確認可能）`);
   }
 
-  // 移籍モーダルを閉じる
   closeNegotiationModal();
   updateMarketBadges();
   renderAll();
 }
 
-/**
- * 送信オファーの成否判定＆回答処理（カレンダー進行時に毎日呼び出し）
- * 合意または決裂の返答が届いた日は true を返し、カレンダー早送りを停止させる
- */
 function updateOutgoingOffersExpiry() {
   if (!Array.isArray(gameState.outgoingOffers) || gameState.outgoingOffers.length === 0) return false;
 
@@ -6899,12 +7397,14 @@ function completeOutgoingTransferSigning(offerId) {
   const offer = gameState.outgoingOffers.find(o => o.id === offerId);
   if (!offer || offer.status !== 'agreed') return;
 
-  if (playerClub.players.length >= MAX_SQUAD_SIZE) {
+  const dealType = offer.dealType || 'buy';
+
+  if (dealType !== 'pre_contract' && playerClub.players.length >= MAX_SQUAD_SIZE) {
     alert(`チーム上限枠（${MAX_SQUAD_SIZE}名）に達しているため契約締結できません。選手を放出して枠を空けてください。`);
     return;
   }
 
-  if (playerClub.funds < offer.offeredFee) {
+  if (dealType === 'buy' && playerClub.funds < offer.offeredFee) {
     alert(`移籍金（${formatMoney(offer.offeredFee)}）に対して資金が不足しています（現在資金: ${formatMoney(playerClub.funds)}）。`);
     return;
   }
@@ -6940,19 +7440,81 @@ function completeOutgoingTransferSigning(offerId) {
     return;
   }
 
-  // 移籍金の支払いと選手移動
-  playerClub.funds -= offer.offeredFee;
-  if (sellerClub) {
-    sellerClub.funds += offer.offeredFee;
-    sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
-    ensureValidSquadAndStarters(sellerClub);
-  } else {
-    gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
+  if (dealType === 'pre_contract') {
+    // 事前合意（来季加入内定）
+    if (!Array.isArray(gameState.preContractPlayers)) gameState.preContractPlayers = [];
+    
+    target.preContract = {
+      toClubId: playerClub.id,
+      toClubName: playerClub.name,
+      effectiveSeason: (gameState.season || 1) + 1,
+      wage: offer.offeredWage,
+      salary: offer.offeredWage * 52,
+      contractYears: offer.offeredYears
+    };
+
+    if (!gameState.preContractPlayers.some(p => p.id === target.id)) {
+      gameState.preContractPlayers.push(target);
+    }
+
+    if (gameState.targetShortlist) {
+      gameState.targetShortlist = gameState.targetShortlist.filter(id => id !== target.id);
+    }
+
+    offer.status = 'signed';
+    addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
+    if (typeof showToast === 'function') {
+      showToast(`【事前合意】${target.name}の来季加入内定が成立しました！`);
+    }
+    updateMarketBadges();
+    renderAll();
+    return;
   }
 
-  target.wage = offer.offeredWage;
-  target.salary = offer.offeredWage * 52;
-  target.contractYears = offer.offeredYears;
+  // レンタル・完全移籍・無所属獲得の処理
+  if (dealType === 'buy') {
+    playerClub.funds -= offer.offeredFee;
+    if (sellerClub) {
+      sellerClub.funds += offer.offeredFee;
+      sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
+      ensureValidSquadAndStarters(sellerClub);
+    } else {
+      gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
+    }
+    target.wage = offer.offeredWage;
+    target.salary = offer.offeredWage * 52;
+    target.contractYears = offer.offeredYears;
+    target.loanStatus = null;
+  } else if (dealType === 'loan') {
+    // レンタル加入
+    if (sellerClub) {
+      sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
+      ensureValidSquadAndStarters(sellerClub);
+    } else {
+      gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
+    }
+    const weeklyWage = target.wage || 20;
+    const coveragePercent = offer.loanCoveragePercent || 100;
+    target.wage = Math.max(5, Math.round(weeklyWage * (coveragePercent / 100)));
+    target.salary = target.wage * 52;
+    target.contractYears = 1;
+    target.loanStatus = {
+      isLoan: true,
+      fromClubId: sellerClub ? sellerClub.id : null,
+      fromClubName: sellerClub ? sellerClub.name : '相手クラブ',
+      returnYear: (gameState.season || 1) + 1,
+      wageCoverage: coveragePercent
+    };
+  } else if (dealType === 'free_agent') {
+    // 無所属獲得
+    gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
+    target.wage = offer.offeredWage;
+    target.salary = offer.offeredWage * 52;
+    target.contractYears = offer.offeredYears;
+    target.loanStatus = null;
+    target.isFreeAgent = false;
+  }
+
   target.isStarter = false;
   target.assignedPos = null;
   target.slotIndex = null;
@@ -6971,9 +7533,21 @@ function completeOutgoingTransferSigning(offerId) {
 
   offer.status = 'signed';
 
-  addDailyLog(`【新戦力加入】${target.pos} #${target.squadNumber} ${target.name} と正式契約を締結！背番号は #${target.squadNumber} です。`);
-  if (typeof showToast === 'function') {
-    showToast(`【獲得完了】${target.name}がクラブに正式加入しました！`);
+  if (dealType === 'loan') {
+    addDailyLog(`【レンタル加入】${target.pos} #${target.squadNumber} ${target.name} が1年間の期限付き移籍（レンタル）で加入！週給負担率: ${offer.loanCoveragePercent}%。`);
+    if (typeof showToast === 'function') {
+      showToast(`【レンタル加入】${target.name}が1年ローンで加入しました！`);
+    }
+  } else if (dealType === 'free_agent') {
+    addDailyLog(`【無所属獲得】${target.pos} #${target.squadNumber} ${target.name} が移籍金£0で正式加入！背番号は #${target.squadNumber} です。`);
+    if (typeof showToast === 'function') {
+      showToast(`【フリー獲得】${target.name}が正式加入しました！`);
+    }
+  } else {
+    addDailyLog(`【新戦力加入】${target.pos} #${target.squadNumber} ${target.name} と正式契約を締結！背番号は #${target.squadNumber} です。`);
+    if (typeof showToast === 'function') {
+      showToast(`【獲得完了】${target.name}がクラブに正式加入しました！`);
+    }
   }
 
   updateMarketBadges();
@@ -7187,15 +7761,37 @@ function acceptIncomingOffer(offerId) {
     return;
   }
 
-  // 売却確定処理
-  playerClub.funds += offer.offerFee;
+  // レンタル打診（武者修行）の場合
+  if (offer.isLoanOffer) {
+    target.loanStatus = {
+      isLoanOut: true,
+      toClubName: offer.buyerClubName,
+      returnYear: (gameState.season || 1) + 1
+    };
+    target.isStarter = false;
+    target.assignedPos = null;
+    target.slotIndex = null;
+    offer.status = 'accepted';
+    ensureValidSquadAndStarters(playerClub);
+
+    addDailyLog(`【武者修行へ出発】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
+    if (typeof showToast === 'function') {
+      showToast(`【武者修行】${target.name}が${offer.buyerClubName}へレンタル移籍しました`);
+    }
+    updateMarketBadges();
+    renderAll();
+    return;
+  }
+
+  // 通常売却確定処理
+  playerClub.funds += (offer.offerFee || offer.counterFee || 0);
   playerClub.players = playerClub.players.filter(p => p.id !== target.id);
   ensureValidSquadAndStarters(playerClub);
 
   // 履歴としてステータス更新
   offer.status = 'accepted';
 
-  addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(offer.offerFee)}）。`);
+  addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(offer.offerFee || offer.counterFee)}）。`);
   if (typeof showToast === 'function') {
     showToast(`【売却完了】${target.name}を${offer.buyerClubName}へ売却しました`);
   }
@@ -8225,12 +8821,62 @@ function startNextSeason() {
 
   const playerClub = getPlayerClub();
 
-  // 契約残り0年のまま更新されなかった選手、または交渉決裂で流出確定した選手はフリー移籍でチームを離脱
+  // 1. レンタル加入選手の所属元クラブへの返却
+  const loanInPlayers = playerClub.players.filter(p => p.loanStatus && p.loanStatus.isLoan);
+  if (loanInPlayers.length > 0) {
+    loanInPlayers.forEach(p => {
+      addDailyLog(`【レンタル満了・復帰】#${p.squadNumber || '-'} ${p.name} の1年間期限付き移籍が満了し、${p.loanStatus.fromClubName || '所属元'}へ復帰しました。`);
+    });
+    playerClub.players = playerClub.players.filter(p => !p.loanStatus || !p.loanStatus.isLoan);
+  }
+
+  // 2. レンタル放出（武者修行）選手の成長復帰
+  playerClub.players.forEach(p => {
+    if (p.loanStatus && p.loanStatus.isLoanOut) {
+      addDailyLog(`🎉【武者修行から頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間の武者修行を終え、実力を高めてチームへ合流しました！`);
+      p.loanStatus = null;
+      p.isLoanListed = false;
+    }
+  });
+
+  // 3. 事前合意（ボスマン）流出選手の退団
+  const departingPlayers = playerClub.players.filter(p => p.preContractDeparture);
+  if (departingPlayers.length > 0) {
+    departingPlayers.forEach(p => {
+      addDailyLog(`【フリー退団】#${p.squadNumber || '-'} ${p.name} が事前合意に基づき ${p.preContractDeparture.toClubName} へ移籍金£0で移籍しました。`);
+    });
+    playerClub.players = playerClub.players.filter(p => !p.preContractDeparture);
+  }
+
+  // 4. 契約残り0年のまま更新されなかった選手、または交渉決裂で流出確定した選手はフリー移籍でチームを離脱
   const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 || p.contractRefused);
   if (expiredPlayers.length > 0) {
     playerClub.players = playerClub.players.filter(p => p.contractYears > 0 && !p.contractRefused);
-    ensureValidSquadAndStarters(playerClub);
   }
+
+  // 5. 事前合意内定選手（preContractPlayers）の正式合流
+  if (Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.length > 0) {
+    const usedNums = new Set(playerClub.players.map(p => p.squadNumber).filter(Boolean));
+    gameState.preContractPlayers.forEach(p => {
+      p.squadNumber = pickAvailableSquadNumber(p.pos, usedNums);
+      usedNums.add(p.squadNumber);
+      if (p.preContract) {
+        p.wage = p.preContract.wage || p.wage;
+        p.salary = p.preContract.salary || (p.wage * 52);
+        p.contractYears = p.preContract.contractYears || 3;
+      }
+      p.preContract = null;
+      p.isStarter = false;
+      p.assignedPos = null;
+      p.slotIndex = null;
+      playerClub.players.push(p);
+      addDailyLog(`🎉【事前合意新戦力合流】内定していた ${p.pos} #${p.squadNumber} ${p.name} が来季契約に基づき正式合流しました！（契約${p.contractYears}年 / 週給${formatWage(p.wage)}）`);
+    });
+    gameState.preContractPlayers = [];
+  }
+
+  gameState.hasPreContractDepartureThisSeason = false;
+  ensureValidSquadAndStarters(playerClub);
 
   for (const club of gameState.clubs) {
     const payroll = getClubTotalPayroll(club);
@@ -9085,7 +9731,7 @@ function renderTacticalBoard() {
           isSelected ? 'selected' : ''
         ].filter(Boolean).join(' ');
 
-        const fitBadgeHtml = '';
+        const fitBadgeHtml = starter.loanStatus?.isLoan ? '<span class="pitch-node-loan" title="レンタル加入選手">LOAN</span>' : '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -9138,7 +9784,7 @@ function renderTacticalBoard() {
           isSelected ? 'selected' : ''
         ].filter(Boolean).join(' ');
 
-        const fitBadgeHtml = '';
+        const fitBadgeHtml = starter.loanStatus?.isLoan ? '<span class="pitch-node-loan" title="レンタル加入選手">LOAN</span>' : '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -9476,6 +10122,16 @@ function renderRoster() {
       demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
     }
 
+    // 22歳以下の若手に対する「武者修行（レンタル放出）」ボタン
+    let loanListingBtnHtml = '';
+    if (p.age <= 22 && !p.isStarter && (!p.loanStatus || !p.loanStatus.isLoanOut) && !p.loanStatus?.isLoan) {
+      if (p.isLoanListed) {
+        loanListingBtnHtml = `<button type="button" class="btn btn-outline btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="武者修行リストから解除" style="color:#f39c12;border-color:#f39c12;">修行解除</button>`;
+      } else {
+        loanListingBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-loan-listing" data-loan-list-id="${p.id}" title="他クラブへの1年間武者修行（レンタル放出）リストに設定（成長加速ボーナス+30%）">武者修行</button>`;
+      }
+    }
+
 
 
     let fitBadge = '';
@@ -9497,6 +10153,10 @@ function renderRoster() {
     const injuryBadge = p.injuryWeeks > 0 ? `<span class="sub-badge badge-injury">負傷:残${p.injuryWeeks}節</span>` : '';
     const refusedBadge = p.contractRefused ? `<span class="sub-badge badge-refused">流出確定</span>` : '';
     const moraleBadge = (!p.contractRefused && p.megaOfferRejected) ? `<span class="sub-badge badge-morale-down">昇給要求</span>` : '';
+    const loanInBadge = p.loanStatus?.isLoan ? '<span class="sub-badge badge-loan">LOAN</span>' : '';
+    const loanOutBadge = p.loanStatus?.isLoanOut ? `<span class="sub-badge badge-loanout">修行中(${p.loanStatus.toClubName})</span>` : '';
+    const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">修行募集</span>' : '';
+    const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
     let ovrDisplay = `<strong>${effOvr}</strong>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
@@ -9529,7 +10189,7 @@ function renderRoster() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
             ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted roster-squad-num">#${p.squadNumber || '-'}</span> <span class="player-name-text">${p.name}</span>
           </button>
-          ${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}
+          ${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
         </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
@@ -9547,6 +10207,7 @@ function renderRoster() {
         <td class="col-action">
           <div class="action-btn-group">
             ${extendBtnHtml}
+            ${loanListingBtnHtml}
             ${demoteBtnHtml}
             <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
               ${releaseBtnLabel}
@@ -9742,6 +10403,9 @@ function renderShortlist() {
     const ovr = getPlayerOverallRating(p);
     const fee = calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
+    const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
 
@@ -9771,7 +10435,7 @@ function renderShortlist() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
             ${getPlayerAvatarHtml(p, ctx.club, 'avatar-sm table-avatar')}${p.name}
           </button>
-          ${bargainBadge}${failedBadge}${offerStatusBadge}
+          ${preContractBadge}${freeBadge}${bargainBadge}${failedBadge}${offerStatusBadge}
         </td>
         <td class="col-team"><strong>${clubName}</strong></td>
         <td class="col-num">${p.age}歳</td>
@@ -9966,12 +10630,20 @@ function renderIncomingOffers() {
       actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">回答期限切れ</span>`;
     } else {
       // 通常の pending
-      deadlineBadge = `<div class="offer-deadline-badge mono">回答期限: 残り${offer.daysLeft}日</div>`;
-      actionButtons = `
-        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
-        <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
-        <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ (COUNTER)</button>
-      `;
+      if (offer.isLoanOffer) {
+        deadlineBadge = `<div class="offer-deadline-badge mono accent-green">武者修行打診（残り${offer.daysLeft}日）</div>`;
+        actionButtons = `
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">武者修行へ送り出す (承諾)</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる (拒絶)</button>
+        `;
+      } else {
+        deadlineBadge = `<div class="offer-deadline-badge mono">回答期限: 残り${offer.daysLeft}日</div>`;
+        actionButtons = `
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
+          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ (COUNTER)</button>
+        `;
+      }
     }
 
     return `
@@ -10006,12 +10678,12 @@ function renderIncomingOffers() {
 
         <div class="offer-card-finances">
           <div class="offer-finance-block">
-            <span class="offer-finance-label">提示移籍金</span>
-            <span class="offer-finance-val accent-gold mono">${formatMoney(offer.offerFee)}</span>
+            <span class="offer-finance-label">${offer.isLoanOffer ? '取引種別' : '提示移籍金'}</span>
+            <span class="offer-finance-val ${offer.isLoanOffer ? 'accent-green' : 'accent-gold'} mono">${offer.isLoanOffer ? '1年レンタル (武者修行)' : formatMoney(offer.offerFee)}</span>
           </div>
           <div class="offer-finance-block">
-            <span class="offer-finance-label">選手週給</span>
-            <span class="offer-finance-val mono">${formatWage(offer.wage)}</span>
+            <span class="offer-finance-label">${offer.isLoanOffer ? '給与負担' : '選手週給'}</span>
+            <span class="offer-finance-val mono ${offer.isLoanOffer ? 'accent-green' : ''}">${offer.isLoanOffer ? '相手100%全額負担' : formatWage(offer.wage)}</span>
           </div>
         </div>
 
@@ -10150,8 +10822,11 @@ function renderMarket() {
     const p = entry.player;
     const c = entry.club;
     const ovr = getPlayerOverallRating(p);
-    const fee = calculateTransferFee(p);
-    const isBargain = p.contractYears === 1;
+    const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
+    const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
+    const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
@@ -10180,7 +10855,7 @@ function renderMarket() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
             ${getPlayerAvatarHtml(p, c, 'avatar-sm table-avatar')}${p.name}
           </button>
-          ${bargainBadge}${myClubBadge}${failedBadge}
+          ${preContractBadge}${freeBadge}${bargainBadge}${myClubBadge}${failedBadge}
         </td>
         <td class="col-team"><strong>${c.name}</strong></td>
         <td class="col-num">${p.age}歳</td>
@@ -12927,6 +13602,13 @@ function initGame() {
     if (starterBtn) {
       e.stopPropagation();
       togglePlayerStarter(starterBtn.dataset.starterId);
+      return;
+    }
+
+    const loanListBtn = e.target.closest('.btn-loan-listing');
+    if (loanListBtn) {
+      e.stopPropagation();
+      toggleLoanListing(loanListBtn.dataset.loanListId);
       return;
     }
 
