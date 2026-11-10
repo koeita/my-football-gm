@@ -197,5 +197,15 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("candidates", self.comp_js)
         self.assertIn("Math.abs(d.dayIndex - baseIdx)", self.comp_js)
 
+    def test_unconfirmed_tournament_schedule_hidden(self):
+        """トーナメントの未決定スケジュールがカレンダー（月間・週間）に表示されないこと"""
+        # 月間カレンダーで対戦未定時の [CUP] バッジ描画（eventTagHtml += cal-cup-badge）が削除されていること
+        self.assertNotIn("eventTagHtml += `<div class=\"cal-cup-badge", self.main_js)
+        # 週間カレンダーで対戦未定時の [CUP] 開催日バッジが削除されていること
+        self.assertNotIn("[${compCode}] 開催日", self.main_js)
+        # matchInfo.oppClub がある場合のみ試合として描画・カウントされること
+        self.assertIn("d.isCupMatchDay && mInfo && mInfo.oppClub", self.main_js)
+        self.assertIn("Boolean(matchInfo && matchInfo.oppClub && !day.played)", self.main_js)
+
 if __name__ == '__main__':
     unittest.main()
