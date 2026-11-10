@@ -6804,7 +6804,7 @@ function renderNegotiationModal() {
           const reason = isStar ? '主力スター（OVR 78以上）' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
           return `
             <div class="neg-feedback-box status-warn" style="margin-bottom: 12px; font-size: 11px;">
-              ⚠️ <strong>【レンタル獲得困難】</strong> 当選手は相手クラブの「${reason}」に該当するため、相手側がレンタル放出を拒否する可能性が極めて高いです（完全移籍 BUY を推奨）。
+              <strong>【レンタル獲得困難】</strong> 主力選手のためレンタル不可です。交渉が成立しない可能性が高いため、完全移籍を推奨します。
             </div>
           `;
         }
@@ -10757,7 +10757,7 @@ function renderIncomingOffers() {
         <div class="offer-card-finances">
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '取引種別' : '提示移籍金'}</span>
-            <span class="offer-finance-val ${offer.isLoanOffer ? 'accent-green' : 'accent-gold'} mono">${offer.isLoanOffer ? '1年レンタル (レンタル)' : formatMoney(offer.offerFee)}</span>
+            <span class="offer-finance-val ${offer.isLoanOffer ? 'accent-green' : 'accent-gold'} mono">${offer.isLoanOffer ? '1年レンタル' : formatMoney(offer.offerFee)}</span>
           </div>
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '給与負担' : '選手週給'}</span>
