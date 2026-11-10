@@ -6465,15 +6465,25 @@ function triggerLoanListingOffers() {
   const loanBuyerClub = cpuClubs[randInt(0, cpuClubs.length - 1)];
   const buyerName = loanBuyerClub ? loanBuyerClub.name : '海外クラブ';
 
+  const buyerCountry = loanBuyerClub ? (loanBuyerClub.country || '国内リーグ') : '国内リーグ';
+  const ovrVal = getPlayerOverallRating(target);
+
   const loanOffer = {
     id: `loan_in_${Date.now()}_${target.id}`,
     playerId: target.id,
     playerName: target.name,
+    playerPos: target.primaryPosition || target.preferredPosition || target.pos,
+    squadNumber: target.squadNumber || 10,
+    playerAge: target.age,
+    ovr: ovrVal,
     buyerClubId: loanBuyerClub ? loanBuyerClub.id : null,
     buyerClubName: buyerName,
+    buyerClubCountry: buyerCountry,
+    offerFee: 0,
     offeredFee: 0,
     counterFee: 0,
-    offeredSalary: target.salary || (target.wage * 52),
+    wage: target.wage || 20,
+    offeredSalary: target.salary || ((target.wage || 20) * 52),
     daysLeft: 5,
     status: 'pending',
     isLoanOffer: true,
@@ -6785,6 +6795,21 @@ function renderNegotiationModal() {
     const weeklyWage = target.wage || 20;
     const coverageAmt = Math.round(weeklyWage * (session.loanCoveragePercent / 100));
     dealControlsHtml = `
+      ${(() => {
+        const ovr = getPlayerOverallRating(target);
+        const isStar = ovr >= 78;
+        const isStarter = Boolean(target.isStarter && target.age >= 23 && target.age <= 30);
+        const isLastY = Boolean(target.contractYears <= 1);
+        if (isStar || isStarter || isLastY) {
+          const reason = isStar ? '主力スター（OVR 78以上）' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
+          return `
+            <div class="neg-feedback-box status-warn" style="margin-bottom: 12px; font-size: 11px;">
+              ⚠️ <strong>【レンタル獲得困難】</strong> 当選手は相手クラブの「${reason}」に該当するため、相手側がレンタル放出を拒否する可能性が極めて高いです（完全移籍 BUY を推奨）。
+            </div>
+          `;
+        }
+        return '';
+      })()}
       <div class="neg-control-group">
         <div class="neg-control-header">
           <span class="neg-control-label">移籍金</span>
@@ -7241,8 +7266,24 @@ function submitNegotiationOffer() {
     // レンタル交渉判定
     offeredFee = 0;
     demandedFee = 0;
-    const requiredCoverage = session.demandedLoanCoverage || 75;
-    willAgree = session.loanCoveragePercent >= requiredCoverage;
+    const ovr = getPlayerOverallRating(target);
+    const isStarPlayer = ovr >= 78;
+    const isKeyRegular = Boolean(target.isStarter && target.age >= 23 && target.age <= 30);
+    const isExpiring = Boolean(target.contractYears <= 1);
+
+    if (isStarPlayer || isKeyRegular || isExpiring) {
+      // 主力・スター・契約最終年の選手は所属元クラブがレンタル放出を拒否
+      willAgree = false;
+      const rejectReason = isStarPlayer
+        ? 'チームの絶対的主力選手（OVR78以上）のため、レンタル放出は一切認められません。'
+        : (isKeyRegular
+          ? '現在レギュラー先発陣として不可欠な戦力のため、レンタル放出は認められません。'
+          : '契約最終年（残り1年以下）の選手のため、フリー流出防止の観点からレンタルは不可（完全移籍のみ）です。');
+      offerObj.rejectionReason = rejectReason;
+    } else {
+      const requiredCoverage = session.demandedLoanCoverage || 85;
+      willAgree = session.loanCoveragePercent >= requiredCoverage;
+    }
   } else if (dealType === 'pre_contract') {
     // 事前合意判定
     offeredFee = 0;
@@ -7354,9 +7395,10 @@ function updateOutgoingOffersExpiry() {
         } else {
           offer.status = 'rejected';
           hadResponseToday = true;
-          addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を拒絶しました。`);
+          const reasonMsg = offer.rejectionReason ? `（理由: ${offer.rejectionReason}）` : '';
+          addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への${offer.dealType === 'loan' ? 'レンタルオファー' : 'オファー'}を拒絶しました。${reasonMsg}`);
           if (typeof showToast === 'function') {
-            showToast(`【オファー拒絶】${offer.sellerClubName}はオファーを拒否しました`);
+            showToast(`【オファー拒絶】${offer.sellerClubName}は${offer.dealType === 'loan' ? 'レンタル' : ''}オファーを拒絶しました`);
           }
         }
       }
@@ -7974,7 +8016,7 @@ function openIncomingOfferModal() {
   if (titleEl) titleEl.textContent = `${offer.buyerClubName} からの買取オファー`;
   if (metaEl) {
     metaEl.innerHTML = `
-      <span>買い手: <strong>${offer.buyerClubName}</strong> (${offer.buyerClubCountry})</span>
+      <span>買い手: <strong>${offer.buyerClubName}</strong>${offer.buyerClubCountry ? ` (${offer.buyerClubCountry})` : ''}</span>
       <span>対象: <strong>${offer.playerName}</strong> (${offer.playerAge}歳 / OVR ${offer.ovr})</span>
       <span>現週給: <strong>${formatWage(offer.wage)}</strong></span>
     `;
@@ -10513,6 +10555,22 @@ function renderIncomingOffers() {
     }
 
     container.innerHTML = offers.map(offer => {
+      let target = null;
+      let sellerClub = null;
+      if (offer.sellerClubId) {
+        sellerClub = gameState.clubs.find(c => c.id === offer.sellerClubId);
+        if (sellerClub) target = sellerClub.players.find(p => p.id === offer.playerId);
+      }
+      if (!target) {
+        for (const c of gameState.clubs) {
+          const p = c.players.find(x => x.id === offer.playerId);
+          if (p) { target = p; sellerClub = c; break; }
+        }
+      }
+      if (!target && Array.isArray(gameState.transferMarket)) {
+        target = gameState.transferMarket.find(c => c.id === offer.playerId);
+      }
+
       // ステータスバッジ
       let statusBadge = '';
       let actionButtons = '';
@@ -10566,6 +10624,9 @@ function renderIncomingOffers() {
           </div>
 
           <div class="offer-card-player-row">
+            <button type="button" class="offer-player-avatar-wrap clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="background: none; border: none; padding: 0; cursor: pointer;">
+              ${target ? getPlayerAvatarHtml(target, sellerClub, 'avatar-md') : ''}
+            </button>
             <div class="offer-player-meta">
               <div class="offer-player-name">
                 <span class="accent-green mono">[${offer.playerPos}]</span>
@@ -11036,15 +11097,11 @@ function renderGmDuties() {
   );
   if (activeIncomingOffers.length > 0) {
     const firstOffer = activeIncomingOffers[0];
-    const typeLabel = firstOffer.isLoanOffer ? 'レンタル打診' : '買取打診';
-    const descText = firstOffer.isLoanOffer
-      ? `${firstOffer.buyerClubName} より1年間のレンタル打診（給与相手100%負担）が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「オファー」タブで承諾または拒否を選択してください。`
-      : `${firstOffer.buyerClubName} より移籍金 ${formatMoney(firstOffer.offerFee)} の打診が届いています（回答期限: 残り${firstOffer.daysLeft}日）。「オファー」タブで承諾・拒否・上乗せを検討してください。`;
     duties.push({
       level: 'recommended',
       badge: '推奨',
-      title: `${firstOffer.buyerClubName} から ${firstOffer.playerName} への${typeLabel} (${activeIncomingOffers.length}件)`,
-      desc: descText,
+      title: `移籍オファーの確認 (${activeIncomingOffers.length}件)`,
+      desc: `他クラブから移籍オファーが届いています。「オファー」タブで条件を確認し、対応を決定してください。`,
       btnText: 'オファー確認',
       action: 'goto-market-offers'
     });
