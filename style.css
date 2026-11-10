@@ -14905,14 +14905,17 @@ body {
   background: #111417;
   border: 1px solid #23282f;
   border-radius: 8px;
-  padding: 12px 14px 6px;
+  padding: 16px 16px 12px;
   overflow: hidden;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 .market-value-svg {
   width: 100%;
   height: auto;
-  max-height: 220px;
+  max-height: 400px;
+  min-height: 280px;
   display: block;
 }
 
@@ -14934,7 +14937,11 @@ body {
     padding: 5px 10px !important;
   }
   .market-value-chart-wrapper {
-    padding: 8px 6px 4px !important;
+    padding: 10px 8px 6px !important;
+  }
+  .market-value-svg {
+    max-height: 320px !important;
+    min-height: 220px !important;
   }
 }
 

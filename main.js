@@ -13727,25 +13727,25 @@ function ensurePlayerValueHistory(p, currentClubName) {
 }
 
 /**
- * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として描画（数年前〜現在）
+ * 選手の市場価値推移をインラインSVG折れ線グラフ（Area Chart）として大きく描画（数年前〜現在）
  */
 function buildPlayerMarketValueChartSvg(p, currentClubName) {
   const history = ensurePlayerValueHistory(p, currentClubName);
   if (!history || history.length === 0) {
-    return `<div class="empty-chart-msg">市場価値データがありません</div>`;
+    return `<div class="empty-chart-msg" style="padding: 40px 0; text-align: center; color: #8b949e;">市場価値データがありません</div>`;
   }
 
   const values = history.map(h => (Number.isFinite(h.value) ? h.value : 0));
   const peakVal = values.length > 0 ? Math.max(...values) : 1000;
   const safePeakVal = Number.isFinite(peakVal) && peakVal > 0 ? peakVal : 1000;
 
-  // グラフキャンバスのサイズ設計（余裕のある横幅とプロット領域）
-  const W = 540;
-  const H = 210;
-  const padL = 64;
-  const padR = 36;
-  const padT = 34;
-  const padB = 42;
+  // グラフキャンバスのサイズ設計（タブ全体を専有する大型ワイドレイアウト）
+  const W = 640;
+  const H = 340;
+  const padL = 72;
+  const padR = 44;
+  const padT = 38;
+  const padB = 46;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
@@ -13763,16 +13763,16 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
     return padT + plotH - ratio * plotH;
   };
 
-  // グリッド線（3本）
-  const gridSteps = [0.33, 0.66, 1.0];
+  // グリッド線（4段階：0.25, 0.50, 0.75, 1.0）
+  const gridSteps = [0.25, 0.50, 0.75, 1.0];
   let gridLinesSvg = '';
   gridSteps.forEach(step => {
     const valAtStep = yMin + (yMax - yMin) * step;
     const yPos = getY(valAtStep);
     const label = formatMoney(valAtStep);
     gridLinesSvg += `
-      <line x1="${padL}" y1="${yPos.toFixed(1)}" x2="${W - padR}" y2="${yPos.toFixed(1)}" stroke="#242a30" stroke-dasharray="3,3" stroke-width="1" />
-      <text x="${padL - 8}" y="${(yPos + 3.5).toFixed(1)}" fill="#6c757d" font-size="9" font-family="var(--font-mono)" text-anchor="end">${label}</text>
+      <line x1="${padL}" y1="${yPos.toFixed(1)}" x2="${W - padR}" y2="${yPos.toFixed(1)}" stroke="#22272e" stroke-dasharray="3,3" stroke-width="1" />
+      <text x="${padL - 10}" y="${(yPos + 4).toFixed(1)}" fill="#6c757d" font-size="10.5" font-family="var(--font-mono)" text-anchor="end">${label}</text>
     `;
   });
   // ベースライン（y = 0）
@@ -13811,37 +13811,37 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 
     // X軸ラベル（年度・年齢）
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 16).toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#8b949e')}" font-size="9" font-family="var(--font-mono)" font-weight="${isLast || isPeak ? '700' : '400'}" text-anchor="middle">
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + 18).toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#9ba3af')}" font-size="11" font-family="var(--font-mono)" font-weight="${isLast || isPeak ? '700' : '500'}" text-anchor="middle">
         ${pt.h.label || pt.h.shortLabel}
       </text>
     `;
 
-    // サークルとハイライト（絵文字なし）
+    // サークルとハイライト
     if (isPeak) {
       pointsSvg += `
         <!-- PEAKハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7.5" fill="rgba(241, 196, 15, 0.25)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4.5" fill="#f1c40f" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 11).toFixed(1)}" fill="#f1c40f" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="9" fill="rgba(241, 196, 15, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="#f1c40f" stroke="#14171b" stroke-width="2.5" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 13).toFixed(1)}" fill="#f1c40f" font-size="11.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
       `;
     } else if (isLast) {
       pointsSvg += `
         <!-- 現在値ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6.5" fill="rgba(46, 204, 113, 0.25)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#2ecc71" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#2ecc71" font-size="9.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="8" fill="rgba(46, 204, 113, 0.25)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="#2ecc71" stroke="#14171b" stroke-width="2.5" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 12).toFixed(1)}" fill="#2ecc71" font-size="11.5" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
       `;
     } else if (isFirst) {
       pointsSvg += `
         <!-- 初期・数年前の開始点ハイライト -->
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="rgba(56, 189, 248, 0.2)" />
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#38bdf8" font-size="8.5" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="7" fill="rgba(56, 189, 248, 0.2)" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#38bdf8" stroke="#14171b" stroke-width="2" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" fill="#38bdf8" font-size="10.5" font-family="var(--font-mono)" font-weight="700" text-anchor="middle">${formattedVal}</text>
       `;
     } else {
       pointsSvg += `
-        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3" fill="#14171b" stroke="#64748b" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 7).toFixed(1)}" fill="#94a3b8" font-size="8" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="#14171b" stroke="#94a3b8" stroke-width="2.5" />
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 9).toFixed(1)}" fill="#cbd5e1" font-size="10" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
       `;
     }
   });
@@ -13858,7 +13858,7 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
         </defs>
         ${gridLinesSvg}
         <path d="${areaPathD}" fill="url(#${gradId})" />
-        <polyline points="${polylinePoints}" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <polyline points="${polylinePoints}" fill="none" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
         ${pointsSvg}
         ${xLabelsSvg}
       </svg>
@@ -13867,112 +13867,16 @@ function buildPlayerMarketValueChartSvg(p, currentClubName) {
 }
 
 /**
- * 選手プロフィールモーダル用：市場価値推移タブのHTML構築（数年前〜現在）
+ * 選手プロフィールモーダル用：市場価値推移タブのHTML構築（グラフ単体・大型表示）
  */
 function buildPlayerMarketValueTabHtml(p, currentClubName) {
-  const history = ensurePlayerValueHistory(p, currentClubName);
-  const currentVal = calculatePlayerMarketValue(p);
-  const peakVal = Math.max(...history.map(h => (Number.isFinite(h.value) ? h.value : 0)), currentVal);
-  const firstPoint = history[0] || { value: currentVal, age: p.age };
-  const initialVal = Number.isFinite(firstPoint.value) ? firstPoint.value : currentVal;
-  const deltaFromInitial = currentVal - initialVal;
-  const deltaPercent = initialVal > 0 ? Math.round((deltaFromInitial / initialVal) * 100) : 0;
-  const isUp = deltaFromInitial >= 0;
-
-  // 選手の市場ステータス（絵文字なし）
-  const age = p.age || 24;
-  const ovr = getPlayerOverallRating(p);
-  let statusText = '安定稼働中 (STABLE)';
-  let statusBadgeClass = 'badge-stable';
-  if (age <= 21 && ovr >= 74) {
-    statusText = '若手有望株 (HOT PROSPECT)';
-    statusBadgeClass = 'badge-hot';
-  } else if (age <= 23 && deltaFromInitial > 0) {
-    statusText = '急成長中 (ON THE RISE)';
-    statusBadgeClass = 'badge-rising';
-  } else if (age >= 25 && age <= 29 && ovr >= 80) {
-    statusText = '全盛期・主力 (PRIME ASSET)';
-    statusBadgeClass = 'badge-prime';
-  } else if (age >= 32) {
-    statusText = 'ベテラン (EXPERIENCED)';
-    statusBadgeClass = 'badge-veteran';
-  }
-
   const chartSvgHtml = buildPlayerMarketValueChartSvg(p, currentClubName);
 
   return `
     <div class="profile-tab-panel hidden" data-profile-panel="market-value">
-      <div class="profile-box">
-        <div class="profile-box-header">
-          <div>
-            <span class="profile-box-title">推定市場価値の推移 (Market Value Trend)</span>
-            <div class="mono text-muted" style="font-size: 10px; margin-top: 2px;">
-              デビュー初期・数年前から現在に至るキャリア全体の市場価値推移
-            </div>
-          </div>
-          <span class="profile-status-pill mono ${statusBadgeClass}">${statusText}</span>
-        </div>
-
-        <!-- 4大メトリクス要約カード（数年前からの推移・絵文字なし） -->
-        <div class="profile-metrics-row profile-metrics-row-4col" style="margin-top: 8px;">
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">現在推定価値</span>
-            <span class="profile-metric-val mono accent-green"><strong>${formatMoney(currentVal)}</strong></span>
-          </div>
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">キャリア最高価値</span>
-            <span class="profile-metric-val mono accent-gold"><strong>${formatMoney(peakVal)}</strong></span>
-          </div>
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">数年前からの通算変動</span>
-            <span class="profile-metric-val mono ${isUp ? 'accent-green' : 'text-danger'}">
-              <strong>${isUp ? '+' : ''}${formatMoney(deltaFromInitial)} (${isUp ? '+' : ''}${deltaPercent}%)</strong>
-            </span>
-          </div>
-          <div class="profile-metric-card">
-            <span class="profile-metric-label">キャリア初期評価額</span>
-            <span class="profile-metric-val mono text-cyan"><strong>${formatMoney(initialVal)}</strong></span>
-          </div>
-        </div>
-
-        <!-- SVG折れ線グラフ -->
-        <div class="profile-chart-section" style="margin-top: 10px;">
+      <div class="profile-box profile-box-market-value" style="padding: 6px 0; background: transparent; border: none;">
+        <div class="profile-chart-section" style="margin-top: 0;">
           ${chartSvgHtml}
-        </div>
-
-        <!-- 履歴データ詳細テーブル -->
-        <div class="profile-yearly-table-wrap" style="margin-top: 10px;">
-          <table class="data-table profile-yearly-table">
-            <thead>
-              <tr>
-                <th>シーズン / 年齢</th>
-                <th class="col-num">年齢</th>
-                <th class="col-num">OVR</th>
-                <th class="col-num">推定市場価値</th>
-                <th class="col-num">区分</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${history.map((h, idx) => {
-                const isPeak = (h.value === peakVal);
-                const isCur = (idx === history.length - 1);
-                const isFirst = (idx === 0);
-                return `
-                  <tr class="${isCur ? 'profile-yearly-current-row' : ''}">
-                    <td class="mono">${h.season || h.label}</td>
-                    <td class="mono col-num">${h.age}</td>
-                    <td class="mono col-num">${h.ovr}</td>
-                    <td class="mono col-num ${isPeak ? 'accent-gold' : (isCur ? 'accent-green' : (isFirst ? 'text-cyan' : ''))}">
-                      <strong>${formatMoney(h.value)}</strong>
-                    </td>
-                    <td class="mono col-num text-muted" style="font-size: 10px;">
-                      ${isPeak ? 'キャリア最高値' : (isFirst ? 'デビュー・初期' : (isCur ? '最新' : 'キャリア推移'))}
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
