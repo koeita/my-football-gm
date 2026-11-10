@@ -3394,20 +3394,124 @@ function getCurrentCalendarDay() {
 }
 
 /**
+ * 指定日の自クラブ対戦情報（リーグ/カップ/欧州）を取得
+ */
+function getCalendarDayPlayerMatch(day) {
+  if (!day) return null;
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  if (!playerClub) return null;
+
+  // 1. 通常リーグ戦（プレミアリーグ）
+  if (day.isMatchDay && day.matchFixture) {
+    const m = day.matchFixture.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
+    if (m) {
+      const isHome = m.homeId === playerClub.id;
+      const oppClub = getClubById(isHome ? m.awayId : m.homeId);
+      const isPlayed = Boolean(m.played || day.played);
+      return {
+        type: 'league',
+        title: `第${day.matchWeek}節 公式戦`,
+        compCode: 'PL',
+        match: m,
+        isHome,
+        oppClub,
+        played: isPlayed
+      };
+    }
+  }
+
+  // 2. カップ戦 / 欧州戦
+  if (day.isCupMatchDay) {
+    // 欧州リーグフェーズ（MD1〜8）
+    if (day.cupCompType === 'euroLeaguePhase' || day.euroMd) {
+      const md = day.euroMd || 1;
+      const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
+      for (const ek of euroKeys) {
+        const comp = gameState.competitions && gameState.competitions[ek];
+        if (comp && comp.leagueSchedule && comp.leagueSchedule[md - 1]) {
+          const m = comp.leagueSchedule[md - 1].find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
+          if (m) {
+            const isHome = m.homeId === playerClub.id;
+            const oppClub = isHome ? m.awayClub : m.homeClub;
+            return {
+              type: 'euroLeague',
+              compKey: ek,
+              comp,
+              title: `${comp.name} リーグフェーズ第${md}節`,
+              compCode: comp.shortCode || 'CL',
+              match: m,
+              isHome,
+              oppClub,
+              played: Boolean(m.played || day.played)
+            };
+          }
+        }
+      }
+    }
+
+    // 欧州プレーオフ
+    if (day.cupCompType === 'euroPlayoff') {
+      const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
+      for (const ek of euroKeys) {
+        const comp = gameState.competitions && gameState.competitions[ek];
+        if (comp && comp.playoffs) {
+          const m = comp.playoffs.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
+          if (m) {
+            const isHome = m.homeId === playerClub.id;
+            const oppClub = isHome ? m.awayClub : m.homeClub;
+            return {
+              type: 'euroPlayoff',
+              compKey: ek,
+              comp,
+              title: `${comp.name} 決勝T進出プレーオフ`,
+              compCode: comp.shortCode || 'CL',
+              match: m,
+              isHome,
+              oppClub,
+              played: Boolean(m.played || day.played)
+            };
+          }
+        }
+      }
+    }
+
+    // 国内カップ戦 or 欧州決勝トーナメント
+    const compKey = day.cupCompType;
+    const comp = gameState.competitions && gameState.competitions[compKey];
+    if (comp && comp.rounds && day.cupRoundKey) {
+      const roundMatches = comp.rounds[day.cupRoundKey] || [];
+      const m = roundMatches.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
+      if (m) {
+        const isHome = m.homeId === playerClub.id;
+        const oppClub = isHome ? m.awayClub : m.homeClub;
+        return {
+          type: 'cup',
+          compKey,
+          comp,
+          title: `${comp.name} ${day.cupLabel || day.cupRoundKey}`,
+          compCode: comp.shortCode || (compKey === 'leagueCup' ? 'LGC' : 'NAT'),
+          match: m,
+          isHome,
+          oppClub,
+          played: Boolean(m.played || day.played)
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * 今日が未消化の試合日（Matchday）かどうかを判定
  */
 function isTodayMatchDayPending() {
   const day = getCurrentCalendarDay();
-  if (!day || gameState.isSeasonOver) return false;
-  if (day.isMatchDay && !day.played) return true;
-  if (day.isCupMatchDay && !day.played) {
-    const comp = gameState.competitions && gameState.competitions[day.cupCompType];
-    const roundMatches = comp && comp.rounds && comp.rounds[day.cupRoundKey];
-    const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
-    if (roundMatches && playerClub) {
-      const myMatch = roundMatches.find(m => (m.homeId === playerClub.id || m.awayId === playerClub.id) && !m.played);
-      return Boolean(myMatch);
-    }
+  if (!day || gameState.isSeasonOver || day.played) return false;
+  if (day.isMatchDay) return true;
+  if (day.isCupMatchDay) {
+    const matchInfo = getCalendarDayPlayerMatch(day);
+    if (matchInfo && !matchInfo.played) return true;
   }
   return false;
 }
@@ -3466,8 +3570,7 @@ function advanceCalendarDay(skipRender = false) {
   }
 
   // もし今日が未消化の試合日なら、先に試合を消化する必要があるため進めない
-  const currentDay = getCurrentCalendarDay();
-  if (currentDay && currentDay.isMatchDay && !currentDay.played) {
+  if (isTodayMatchDayPending()) {
     stopAdvancingCalendar();
     return true;
   }
@@ -5671,10 +5774,21 @@ function closeMatchPrecheckModal() {
 function openMatchPrecheckModal() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
   const currentDay = getCurrentCalendarDay();
-  if (!currentDay || !currentDay.isMatchDay || currentDay.played) return;
+  if (!currentDay || (!currentDay.isMatchDay && !currentDay.isCupMatchDay) || currentDay.played) return;
 
   const playerClub = getPlayerClub();
   if (!playerClub) return;
+
+  // 自クラブの対戦カードを取得
+  const matchInfo = getCalendarDayPlayerMatch(currentDay);
+  if (!matchInfo) {
+    if (currentDay.isCupMatchDay) {
+      // 自クラブの試合がないカップ戦日は自動シミュレーション
+      playCurrentCupMatchday(false);
+      return;
+    }
+    return;
+  }
 
   ensureValidSquadAndStarters(playerClub);
 
@@ -5686,23 +5800,17 @@ function openMatchPrecheckModal() {
     return;
   }
 
-  if (weekBadge) weekBadge.textContent = `第${currentDay.matchWeek}節 公式戦`;
-
-  // 対戦相手情報
-  let opponentClub = null;
-  let isHome = true;
-  if (currentDay.matchFixture) {
-    const myMatch = currentDay.matchFixture.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
-    if (myMatch) {
-      isHome = myMatch.homeId === playerClub.id;
-      const oppId = isHome ? myMatch.awayId : myMatch.homeId;
-      opponentClub = getClubById(oppId);
-    }
+  if (weekBadge) {
+    weekBadge.textContent = matchInfo.title;
   }
 
+  const isHome = matchInfo.isHome;
+  const opponentClub = matchInfo.oppClub;
   const oppName = opponentClub ? opponentClub.name : '対戦相手';
   const oppOvr = opponentClub
-    ? Math.round(opponentClub.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / 11)
+    ? (opponentClub.players && opponentClub.players.length > 0
+        ? Math.round(opponentClub.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / Math.min(11, opponentClub.players.length))
+        : (opponentClub.ovr || 75))
     : 70;
 
   const formationKey = playerClub.formation || '4-3-3';
@@ -10220,47 +10328,55 @@ function renderMatchLog() {
   const currentDay = getCurrentCalendarDay();
   const isMatchPending = isTodayMatchDayPending();
 
-  // パターン1：本日が未消化の試合日（MATCHDAY）
-  if (isMatchPending && currentDay && currentDay.matchFixture) {
-    const myMatch = currentDay.matchFixture.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
-    let myMatchHtml = '';
-    if (myMatch) {
-      const home = getClubById(myMatch.homeId);
-      const away = getClubById(myMatch.awayId);
-      const homeOvr = Math.round(home.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / 11);
-      const awayOvr = Math.round(away.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / 11);
+  // パターン1：本日が未消化の試合日（MATCHDAY / カップ戦 / 欧州戦）
+  const playerMatchInfo = isMatchPending && currentDay ? getCalendarDayPlayerMatch(currentDay) : null;
+  if (isMatchPending && currentDay && playerMatchInfo) {
+    const isHome = playerMatchInfo.isHome;
+    const oppClub = playerMatchInfo.oppClub;
+    const home = isHome ? playerClub : oppClub;
+    const away = isHome ? oppClub : playerClub;
 
-      myMatchHtml = `
-        <div class="matchday-card-preview">
-          <div class="matchday-preview-header">
-            <span class="matchday-badge-big">第${currentDay.matchWeek}節 公式戦</span>
-            <span class="mono accent-green">${currentDay.displayDate}</span>
-          </div>
-          <div class="matchday-vs-hero">
-            <div class="matchday-club-side ${home.isPlayer ? 'is-player-side' : ''}">
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
-                ${getClubEmblemSvg(home, 26, 'matchday-club-emblem')}
-                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(home)}</span>
-              </div>
-              <span class="matchday-club-ovr">OVR ${homeOvr} ${home.isPlayer ? '(自チーム)' : ''}</span>
+    const calcClubOvr = (c) => {
+      if (!c) return 70;
+      if (c.players && c.players.length > 0) {
+        return Math.round(c.players.slice(0, 11).reduce((s, p) => s + getPlayerOverallRating(p), 0) / Math.min(11, c.players.length));
+      }
+      return c.ovr || 72;
+    };
+
+    const homeOvr = calcClubOvr(home);
+    const awayOvr = calcClubOvr(away);
+
+    const myMatchHtml = `
+      <div class="matchday-card-preview">
+        <div class="matchday-preview-header">
+          <span class="matchday-badge-big">${playerMatchInfo.title}</span>
+          <span class="mono accent-green">${currentDay.displayDate}</span>
+        </div>
+        <div class="matchday-vs-hero">
+          <div class="matchday-club-side ${home.isPlayer ? 'is-player-side' : ''}">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
+              ${getClubEmblemSvg(home, 26, 'matchday-club-emblem')}
+              <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(home)}</span>
             </div>
-            <div class="matchday-vs-badge">VS</div>
-            <div class="matchday-club-side ${away.isPlayer ? 'is-player-side' : ''}">
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
-                <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(away)}</span>
-                ${getClubEmblemSvg(away, 26, 'matchday-club-emblem')}
-              </div>
-              <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
-            </div>
+            <span class="matchday-club-ovr">OVR ${homeOvr} ${home.isPlayer ? '(自チーム)' : ''}</span>
           </div>
-          <div class="matchday-action-row">
-            <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff">
-              キックオフ（第${currentDay.matchWeek}節を開始）
-            </button>
+          <div class="matchday-vs-badge">VS</div>
+          <div class="matchday-club-side ${away.isPlayer ? 'is-player-side' : ''}">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
+              <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(away)}</span>
+              ${getClubEmblemSvg(away, 26, 'matchday-club-emblem')}
+            </div>
+            <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
           </div>
         </div>
-      `;
-    }
+        <div class="matchday-action-row">
+          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff">
+            キックオフ（${playerMatchInfo.title}を開始）
+          </button>
+        </div>
+      </div>
+    `;
 
     // 業務タスク直下のMATCHDAYヒーローコンテナに本日の自チーム対戦カードを描画
     if (matchdaySection && matchdayHero) {
@@ -16962,21 +17078,20 @@ function renderMonthCalendar() {
     }
 
     if (d.isCupMatchDay) {
-      const compCode = d.cupCode || 'CUP';
+      const matchInfo = getCalendarDayPlayerMatch(d);
+      const compCode = (matchInfo ? matchInfo.compCode : d.cupCode) || 'CUP';
       const badgeClass = `badge-comp-${compCode.toLowerCase()}`;
-      const comp = gameState.competitions && gameState.competitions[d.cupCompType];
-      const roundMatches = comp && comp.rounds && comp.rounds[d.cupRoundKey];
-      const myMatch = roundMatches && roundMatches.find(m => m.homeId === playerClub.id || m.awayId === playerClub.id);
 
-      if (myMatch) {
-        const isHome = myMatch.homeId === playerClub.id;
-        const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
-        const isPlayed = myMatch.played;
+      if (matchInfo && matchInfo.oppClub) {
+        const isHome = matchInfo.isHome;
+        const oppClub = matchInfo.oppClub;
+        const myMatch = matchInfo.match;
+        const isPlayed = Boolean(d.played || (myMatch && myMatch.played));
         matchClass = `has-match ${isPlayed ? 'match-played' : 'match-pending'}`;
-        cellAttr = `role="button" tabindex="0" title="${d.cupLabel || compCode} vs ${oppClub ? oppClub.name : 'TBD'}"`;
+        cellAttr = `role="button" tabindex="0" title="${matchInfo.title} vs ${oppClub.name}"`;
 
         let scoreBadge = '';
-        if (isPlayed) {
+        if (isPlayed && myMatch && myMatch.homeScore !== null && myMatch.homeScore !== undefined) {
           const myScore = isHome ? myMatch.homeScore : myMatch.awayScore;
           const oppScore = isHome ? myMatch.awayScore : myMatch.homeScore;
           let resClass = 'badge-draw';
@@ -16984,7 +17099,7 @@ function renderMonthCalendar() {
           if (myScore > oppScore || (myScore === oppScore && myMatch.winnerId === playerClub.id)) {
             resClass = 'badge-win';
             resLabel = 'WIN';
-          } else {
+          } else if (myScore < oppScore || (myScore === oppScore && myMatch.winnerId && myMatch.winnerId !== playerClub.id)) {
             resClass = 'badge-lose';
             resLabel = 'LOSE';
           }
@@ -16993,16 +17108,16 @@ function renderMonthCalendar() {
           scoreBadge = `<div class="cal-score-badge mono" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 8.5px;">VS</div>`;
         }
 
-        const oppEmblem = oppClub && typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem') : '';
-        const oppCode = oppClub ? (oppClub.shortName || oppClub.name.slice(0, 3)) : 'TBD';
+        const oppEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(oppClub, 13, 'cal-opp-emblem') : '';
+        const oppCode = getClubShortCode(oppClub);
 
         matchInfoHtml = `
           <div class="cal-match-body">
             <div class="cal-match-header-row">
-              <span class="cal-cup-badge ${badgeClass}">${compCode}</span>
+              <span class="cal-cup-badge ${badgeClass}">[${compCode}]</span>
               <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
             </div>
-            <div class="cal-opponent-name" title="${oppClub ? oppClub.name : ''}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">
+            <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">
               ${oppEmblem}
               <span class="mono" style="font-weight:700;font-size:9.5px;">${oppCode}</span>
             </div>
@@ -17010,7 +17125,7 @@ function renderMonthCalendar() {
           </div>
         `;
       } else {
-        eventTagHtml += `<div class="cal-cup-badge ${badgeClass}" title="${d.cupLabel || compCode}">${compCode}</div>`;
+        eventTagHtml += `<div class="cal-cup-badge ${badgeClass}" title="${d.cupLabel || compCode}">[${compCode}]</div>`;
       }
     } else if (d.isMatchDay && d.matchWeek) {
       const weekIdx = d.matchWeek - 1;

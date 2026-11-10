@@ -510,51 +510,108 @@ function initEuropeanCups36() {
 function injectCupMatchesIntoCalendar() {
   if (!gameState.calendar || gameState.calendar.length === 0) return;
 
+  // プレイヤーが参加している欧州大会コード（CL, EL, ECL）の特定
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  let playerEuroCode = 'CL';
+  if (gameState.competitions && playerClub) {
+    for (const ek of ['championsCup', 'europaCup', 'conferenceCup']) {
+      const comp = gameState.competitions[ek];
+      if (comp && comp.participants && comp.participants.some(p => p.id === playerClub.id)) {
+        playerEuroCode = comp.shortCode;
+        break;
+      }
+    }
+  }
+
+  // 既存のカップ戦設定を一旦クリア
+  gameState.calendar.forEach(d => {
+    delete d.isCupMatchDay;
+    delete d.cupCompType;
+    delete d.cupRoundKey;
+    delete d.euroMd;
+    delete d.cupLabel;
+    delete d.cupCode;
+  });
+
   const scheduleMap = [
-    // リーグ杯 / ナショナル杯
-    { month: 9, dayOfWeek: 3, compType: 'leagueCup', roundKey: 'R32', label: 'リーグ杯 2回戦' },
-    { month: 10, dayOfWeek: 3, compType: 'leagueCup', roundKey: 'R16', label: 'リーグ杯 3回戦' },
-    { month: 12, dayOfWeek: 3, compType: 'leagueCup', roundKey: 'QF', label: 'リーグ杯 準々決勝' },
-    { month: 1, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'R32', label: 'ナショナル杯 2回戦' },
-    { month: 2, dayOfWeek: 3, compType: 'leagueCup', roundKey: 'FINAL', label: 'リーグ杯 決勝' },
-    { month: 3, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'R16', label: 'ナショナル杯 3回戦' },
-    { month: 4, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'QF', label: 'ナショナル杯 準々決勝' },
-    { month: 5, dayOfWeek: 3, compType: 'nationalCup', roundKey: 'FINAL', label: 'ナショナル杯 決勝' },
+    // 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ 国内カップ戦
+    // 9月: MD1 (火/木), リーグ杯2回戦 (水)
+    { month: 9, minDay: 15, maxDay: 22, preferredDays: [2, 4], compType: 'euroLeaguePhase', md: 1, label: `欧州${playerEuroCode} MD1`, code: playerEuroCode },
+    { month: 9, minDay: 23, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'リーグ杯 2回戦', code: 'LGC' },
 
-    // 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8)
-    { month: 9, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 1, label: '欧州リーグ MD1' },
-    { month: 10, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 2, label: '欧州リーグ MD2' },
-    { month: 10, dayOfWeek: 4, compType: 'euroLeaguePhase', md: 3, label: '欧州リーグ MD3' },
-    { month: 11, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 4, label: '欧州リーグ MD4' },
-    { month: 11, dayOfWeek: 4, compType: 'euroLeaguePhase', md: 5, label: '欧州リーグ MD5' },
-    { month: 12, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 6, label: '欧州リーグ MD6' },
-    { month: 1, dayOfWeek: 2, compType: 'euroLeaguePhase', md: 7, label: '欧州リーグ MD7' },
-    { month: 1, dayOfWeek: 4, compType: 'euroLeaguePhase', md: 8, label: '欧州リーグ MD8' },
+    // 10月: MD2 (火), MD3 (木), リーグ杯3回戦 (水)
+    { month: 10, minDay: 1, maxDay: 10, preferredDays: [2], compType: 'euroLeaguePhase', md: 2, label: `欧州${playerEuroCode} MD2`, code: playerEuroCode },
+    { month: 10, minDay: 18, maxDay: 25, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 3, label: `欧州${playerEuroCode} MD3`, code: playerEuroCode },
+    { month: 10, minDay: 26, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'リーグ杯 3回戦', code: 'LGC' },
 
-    // 欧州コンペ：決勝トーナメント進出プレーオフ（9〜24位）
-    { month: 2, dayOfWeek: 2, compType: 'euroPlayoff', label: '欧州PO 決勝T進出決定戦' },
+    // 11月: MD4 (火), MD5 (木)
+    { month: 11, minDay: 3, maxDay: 12, preferredDays: [2], compType: 'euroLeaguePhase', md: 4, label: `欧州${playerEuroCode} MD4`, code: playerEuroCode },
+    { month: 11, minDay: 22, maxDay: 29, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 5, label: `欧州${playerEuroCode} MD5`, code: playerEuroCode },
 
-    // 欧州コンペ：決勝トーナメント
-    { month: 3, dayOfWeek: 2, compType: 'championsCup', roundKey: 'R16', label: '欧州CL 決勝T 1回戦' },
-    { month: 4, dayOfWeek: 2, compType: 'championsCup', roundKey: 'QF', label: '欧州CL 準々決勝' },
-    { month: 5, dayOfWeek: 2, compType: 'championsCup', roundKey: 'FINAL', label: '欧州CL 決勝' }
+    // 12月: MD6 (火), リーグ杯準々決勝 (水)
+    { month: 12, minDay: 8, maxDay: 15, preferredDays: [2], compType: 'euroLeaguePhase', md: 6, label: `欧州${playerEuroCode} MD6`, code: playerEuroCode },
+    { month: 12, minDay: 16, maxDay: 23, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'リーグ杯 準々決勝', code: 'LGC' },
+
+    // 1月: ナショナル杯2回戦 (水), MD7 (火), MD8 (木)
+    { month: 1, minDay: 6, maxDay: 14, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'ナショナル杯 2回戦', code: 'NAT' },
+    { month: 1, minDay: 19, maxDay: 24, preferredDays: [2], compType: 'euroLeaguePhase', md: 7, label: `欧州${playerEuroCode} MD7`, code: playerEuroCode },
+    { month: 1, minDay: 26, maxDay: 31, preferredDays: [4, 2], compType: 'euroLeaguePhase', md: 8, label: `欧州${playerEuroCode} MD8`, code: playerEuroCode },
+
+    // 2月: 欧州PO (火), リーグ杯決勝 (水)
+    { month: 2, minDay: 10, maxDay: 18, preferredDays: [2], compType: 'euroPlayoff', label: `欧州${playerEuroCode} 決勝T進出PO`, code: playerEuroCode },
+    { month: 2, minDay: 24, maxDay: 28, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'リーグ杯 決勝', code: 'LGC' },
+
+    // 3月: 欧州決勝T R16 (火), ナショナル杯3回戦 (水)
+    { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: 'championsCup', roundKey: 'R16', label: `欧州${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
+    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'ナショナル杯 3回戦', code: 'NAT' },
+
+    // 4月: 欧州決勝T 準々決勝 (火), ナショナル杯準々決勝 (水)
+    { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: 'championsCup', roundKey: 'QF', label: `欧州${playerEuroCode} 準々決勝`, code: playerEuroCode },
+    { month: 4, minDay: 15, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'ナショナル杯 準々決勝', code: 'NAT' },
+
+    // 5月: ナショナル杯決勝 (水), 欧州決勝 (火)
+    { month: 5, minDay: 13, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'ナショナル杯 決勝', code: 'NAT' },
+    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: 'championsCup', roundKey: 'FINAL', label: `欧州${playerEuroCode} 決勝`, code: playerEuroCode }
   ];
 
   scheduleMap.forEach(sc => {
-    const day = gameState.calendar.find(d => d.month === sc.month && d.dayOfWeek === sc.dayOfWeek && !d.isMatchDay);
-    if (day) {
-      day.isCupMatchDay = true;
-      day.cupCompType = sc.compType;
-      day.cupRoundKey = sc.roundKey || null;
-      day.euroMd = sc.md || null;
-      day.cupLabel = sc.label;
+    // まず範囲内かつ希望曜日の未割当マスを探す
+    let targetDay = gameState.calendar.find(d => 
+      d.month === sc.month &&
+      d.day >= sc.minDay &&
+      d.day <= sc.maxDay &&
+      sc.preferredDays.includes(d.dayOfWeek) &&
+      !d.isMatchDay &&
+      !d.isCupMatchDay
+    );
 
-      if (sc.compType === 'euroLeaguePhase' || sc.compType === 'euroPlayoff') {
-        day.cupCode = 'EURO';
-      } else {
-        const comp = gameState.competitions && gameState.competitions[sc.compType];
-        if (comp) day.cupCode = comp.shortCode;
-      }
+    // 見つからなければ、同月内の希望曜日の未割当マスを探す
+    if (!targetDay) {
+      targetDay = gameState.calendar.find(d =>
+        d.month === sc.month &&
+        sc.preferredDays.includes(d.dayOfWeek) &&
+        !d.isMatchDay &&
+        !d.isCupMatchDay
+      );
+    }
+
+    // それでも見つからなければ、同月内の平日（火〜木: 2, 3, 4）の未割当マスを探す
+    if (!targetDay) {
+      targetDay = gameState.calendar.find(d =>
+        d.month === sc.month &&
+        [2, 3, 4].includes(d.dayOfWeek) &&
+        !d.isMatchDay &&
+        !d.isCupMatchDay
+      );
+    }
+
+    if (targetDay) {
+      targetDay.isCupMatchDay = true;
+      targetDay.cupCompType = sc.compType;
+      targetDay.cupRoundKey = sc.roundKey || null;
+      targetDay.euroMd = sc.md || null;
+      targetDay.cupLabel = sc.label;
+      targetDay.cupCode = sc.code;
     }
   });
 }

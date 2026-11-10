@@ -45,5 +45,15 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("getClubShortCode", self.comp_js)
         self.assertIn("euro-match-tile", self.comp_js)
 
+    def test_calendar_and_matchday_cup_fixes(self):
+        """カレンダーへの欧州日程注入とカップ戦試合消化ロジックの検証"""
+        self.assertIn("getCalendarDayPlayerMatch", self.main_js)
+        self.assertIn("isCupMatchDay", self.comp_js)
+        self.assertIn("euroLeaguePhase", self.comp_js)
+        # カレンダーマス描画で getClubShortCode を使用していること
+        self.assertIn("getClubShortCode(oppClub)", self.main_js)
+        # openMatchPrecheckModal がカップ戦にも対応していること
+        self.assertIn("getCalendarDayPlayerMatch(currentDay)", self.main_js)
+
 if __name__ == '__main__':
     unittest.main()
