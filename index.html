@@ -120,7 +120,13 @@
       </div>
 
       <div class="header-utility-actions">
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-return-title" title="進行状況を自動保存してタイトル画面へ戻る"><span class="btn-text-pc">タイトルへ戻る</span><span class="btn-text-mob">タイトルへ</span></button>
+        <button type="button" class="btn btn-secondary btn-header-settings" id="btn-header-settings" title="環境設定を開く（タイトル画面へ戻る、各種設定）" aria-label="設定">
+          <svg class="header-settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="btn-text-pc mono">設定</span>
+        </button>
       </div>
     </header>
 
@@ -1352,6 +1358,29 @@
               <input type="checkbox" id="setting-autosave-enabled" checked>
               <span>ENABLED</span>
             </label>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">試合演出スピード既定値</span>
+            <span class="settings-desc">試合シミュレーション時の標準再生速度</span>
+          </div>
+          <div class="settings-control-col">
+            <select id="setting-match-speed" class="settings-select mono">
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-row settings-title-return-row">
+          <div class="settings-label-col">
+            <span class="settings-label">メインメニュー</span>
+            <span class="settings-desc">現在の進行状況を自動保存してタイトル画面へ戻ります</span>
+          </div>
+          <div class="settings-control-col">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-settings-return-title">タイトル画面へ戻る</button>
+            <button type="button" class="hidden" id="btn-return-title" aria-hidden="true" tabindex="-1"></button>
           </div>
         </div>
         <div class="settings-row settings-danger-zone">

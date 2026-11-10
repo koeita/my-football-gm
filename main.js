@@ -5410,18 +5410,20 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
   matchLiveState.awayBaseTokens = [];
 
   // ホーム（左コート ➔ 右へ攻める）
+  const isHomePlayer = Boolean(homeClub.isPlayer);
+  const isAwayPlayer = Boolean(awayClub.isPlayer);
   hDef.slots.forEach((slot, idx) => {
     const p = homeStarters[idx];
     const isGk = slot.pos === 'GK';
     const baseX = isGk ? 6 : clamp(10 + ((90 - slot.y) / 75) * 36, 12, 46);
     const baseY = clamp(slot.x, 12, 88);
     const el = document.createElement('div');
-    el.className = `pitch-2d-token home-token ${isGk ? 'is-gk' : ''}`;
+    el.className = `pitch-2d-token home-token ${isHomePlayer ? 'token-player' : 'token-opponent'} ${isGk ? 'is-gk' : ''}`;
     el.style.left = `${baseX}%`;
     el.style.top = `${baseY}%`;
     el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
     tokensLayer.appendChild(el);
-    matchLiveState.homeBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+    matchLiveState.homeBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY, isPlayer: isHomePlayer });
   });
 
   // アウェイ（右コート ➔ 左へ攻める）
@@ -5431,12 +5433,12 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
     const baseX = isGk ? 94 : clamp(90 - ((90 - slot.y) / 75) * 36, 54, 88);
     const baseY = clamp(100 - slot.x, 12, 88);
     const el = document.createElement('div');
-    el.className = `pitch-2d-token away-token ${isGk ? 'is-gk' : ''}`;
+    el.className = `pitch-2d-token away-token ${isAwayPlayer ? 'token-player' : 'token-opponent'} ${isGk ? 'is-gk' : ''}`;
     el.style.left = `${baseX}%`;
     el.style.top = `${baseY}%`;
     el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
     tokensLayer.appendChild(el);
-    matchLiveState.awayBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY });
+    matchLiveState.awayBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY, isPlayer: isAwayPlayer });
   });
 
   const ballEl = document.getElementById('match-pitch-ball');
@@ -5562,16 +5564,29 @@ function showMatchPitchPopup(ev) {
   }
 
   const isGoal = ev.type === 'goal';
-  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'}`;
+  const md = matchLiveState.matchData;
+  const homeClub = md ? md.homeClub : null;
+  const awayClub = md ? md.awayClub : null;
+
+  // スーパーセーブの主役は守護神（キーパー）！
+  // シューター側がhomeならkeeperはaway、シューター側がawayならkeeperはhome
+  const keeperClub = ev.side === 'home' ? awayClub : homeClub;
+  const isPlayerSuccess = isGoal
+    ? Boolean(ev.club && ev.club.isPlayer)
+    : Boolean(keeperClub && keeperClub.isPlayer);
+
+  popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'} ${isPlayerSuccess ? 'popup-player' : 'popup-opponent'}`;
 
   const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
+  const targetClub = isGoal ? ev.club : (keeperClub || ev.club);
+  const playerPrefix = isPlayerSuccess ? '【自チーム】' : '【相手チーム】';
   const badgeText = isGoal ? `⚽ GOAL!! (${ev.minute}')` : `🧤 SUPER SAVE! (${ev.minute}')`;
   const subText = isGoal
-    ? `${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
-    : `${ev.actor ? ev.actor.name : ''} の決定機を阻止！`;
+    ? `${playerPrefix} ${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
+    : `${playerPrefix} GK ${targetPlayer ? targetPlayer.name : ''}（${targetClub ? targetClub.name : ''}）が決定機を阻止！`;
   const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
-  const avatarHtml = (targetPlayer && typeof getPlayerAvatarHtml === 'function')
-    ? getPlayerAvatarHtml(targetPlayer, ev.club, 'avatar-md', 42)
+  const avatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
+    ? getPlayerAvatarHtml(targetPlayer, targetClub, 'avatar-md', 42)
     : '';
 
   popupEl.innerHTML = `
@@ -5615,8 +5630,19 @@ function startMatchLiveTimer() {
     matchLiveState.timerId = null;
   }
 
-  // 1x: 300ms/分 (45分で約13.5秒), 2x: 150ms/分, 4x: 70ms/分
-  const baseInterval = matchLiveState.speed === 4 ? 70 : (matchLiveState.speed === 2 ? 150 : 300);
+  // 1x: 480ms/分 (じっくり観戦), 2x: 200ms/分 (テンポ良く), 4x: 75ms/分 (高速消化)
+  const baseInterval = matchLiveState.speed === 4 ? 75 : (matchLiveState.speed === 2 ? 200 : 480);
+
+  // 滑らかなCSSトランジション時間をスピード設定に連動
+  const moveDuration = Math.round(baseInterval * 0.9);
+  const pitchTokens = document.querySelectorAll('.pitch-2d-token');
+  pitchTokens.forEach(el => {
+    el.style.transition = `left ${moveDuration}ms cubic-bezier(0.25, 1, 0.5, 1), top ${moveDuration}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+  });
+  const ballEl = document.getElementById('match-pitch-ball');
+  if (ballEl) {
+    ballEl.style.transition = `left ${Math.round(moveDuration * 0.85)}ms cubic-bezier(0.22, 1, 0.36, 1), top ${Math.round(moveDuration * 0.85)}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+  }
 
   matchLiveState.timerId = setInterval(() => {
     if (matchLiveState.status !== 'FIRST_HALF' && matchLiveState.status !== 'SECOND_HALF') {
@@ -6296,6 +6322,7 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
 
   matchLiveState.minute = 0;
   matchLiveState.status = 'FIRST_HALF';
+  matchLiveState.speed = appSettings.matchSpeed || 2;
   matchLiveState.matchData = matchData;
   matchLiveState.homeScorers = homeScorers || [];
   matchLiveState.awayScorers = awayScorers || [];
@@ -6350,13 +6377,22 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
   const hTac = (TACTICS_DEFINITIONS[normalizeTacticKey(homeClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
   const aTac = (TACTICS_DEFINITIONS[normalizeTacticKey(awayClub.tactic)] || TACTICS_DEFINITIONS.possession).badge;
 
-  if (homeBox) homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
-  if (awayBox) awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
+  if (homeBox) {
+    homeBox.classList.toggle('is-player', Boolean(homeClub.isPlayer));
+    homeBox.classList.toggle('is-opponent', !homeClub.isPlayer);
+  }
+  if (awayBox) {
+    awayBox.classList.toggle('is-player', Boolean(awayClub.isPlayer));
+    awayBox.classList.toggle('is-opponent', !awayClub.isPlayer);
+  }
+  const youTagHtml = '<span class="match-live-you-tag mono">YOU</span>';
   if (homeName) {
-    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>`;
+    const playerBadge = homeClub.isPlayer ? youTagHtml : '';
+    homeName.innerHTML = `${getClubEmblemSvg(homeClub, 20, 'match-live-emblem')}<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>${playerBadge}`;
   }
   if (awayName) {
-    awayName.innerHTML = `<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
+    const playerBadge = awayClub.isPlayer ? youTagHtml : '';
+    awayName.innerHTML = `${playerBadge}<span class="match-live-team-name-text mono" style="font-weight:800; font-size:14px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>${getClubEmblemSvg(awayClub, 20, 'match-live-emblem')}`;
   }
   if (homeSub) homeSub.textContent = `${homeClub.formation || '4-3-3'} / ${hTac}`;
   if (awaySub) awaySub.textContent = `${awayClub.formation || '4-3-3'} / ${aTac}`;
@@ -6425,6 +6461,10 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
       });
     });
   }
+
+  document.querySelectorAll('#match-event-modal .btn-speed').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.speed) === matchLiveState.speed);
+  });
 
   modal.classList.remove('hidden');
   startMatchLiveTimer();
@@ -15722,7 +15762,8 @@ const SETTINGS_STORAGE_KEY = 'my_football_gm_settings_v1';
 
 const appSettings = {
   soundVolume: 70,
-  autoSaveEnabled: true
+  autoSaveEnabled: true,
+  matchSpeed: 2
 };
 
 function loadSettingsFromStorage() {
@@ -15732,6 +15773,7 @@ function loadSettingsFromStorage() {
       const parsed = JSON.parse(raw);
       if (typeof parsed.soundVolume === 'number') appSettings.soundVolume = parsed.soundVolume;
       if (typeof parsed.autoSaveEnabled === 'boolean') appSettings.autoSaveEnabled = parsed.autoSaveEnabled;
+      if (typeof parsed.matchSpeed === 'number') appSettings.matchSpeed = parsed.matchSpeed;
     }
   } catch (e) {}
 }
@@ -16050,9 +16092,11 @@ function openSettingsModal() {
   const volInput = document.getElementById('setting-sound-volume');
   const volVal = document.getElementById('setting-sound-volume-val');
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  const speedSelect = document.getElementById('setting-match-speed');
   if (volInput) volInput.value = appSettings.soundVolume;
   if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
   if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
+  if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
   if (overlay) {
     if (!overlay._hasOverlayListener) {
       overlay._hasOverlayListener = true;
@@ -16106,14 +16150,26 @@ function initMainMenuAndModals() {
     btnSettings.addEventListener('click', openSettingsModal);
   }
 
+  const btnHeaderSettings = document.getElementById('btn-header-settings');
+  if (btnHeaderSettings) {
+    btnHeaderSettings.addEventListener('click', openSettingsModal);
+  }
+
   const btnReturnTitle = document.getElementById('btn-return-title');
+  const handleReturnToTitle = () => {
+    const ok = window.confirm('現在の進行状況を自動保存してタイトル画面へ戻りますか？');
+    if (!ok) return;
+    saveSettingsToStorage();
+    closeSettingsModal();
+    saveGameToStorage(true);
+    showMainMenuScreen();
+  };
   if (btnReturnTitle) {
-    btnReturnTitle.addEventListener('click', () => {
-      const ok = window.confirm('現在の進行状況を自動保存してタイトル画面へ戻りますか？');
-      if (!ok) return;
-      saveGameToStorage(true);
-      showMainMenuScreen();
-    });
+    btnReturnTitle.addEventListener('click', handleReturnToTitle);
+  }
+  const btnSettingsReturn = document.getElementById('btn-settings-return-title');
+  if (btnSettingsReturn) {
+    btnSettingsReturn.addEventListener('click', handleReturnToTitle);
   }
 
   // Records modal close
@@ -16137,6 +16193,14 @@ function initMainMenuAndModals() {
   if (autoSaveCheck) {
     autoSaveCheck.addEventListener('change', (e) => {
       appSettings.autoSaveEnabled = !!e.target.checked;
+      saveSettingsToStorage();
+    });
+  }
+
+  const speedSelect = document.getElementById('setting-match-speed');
+  if (speedSelect) {
+    speedSelect.addEventListener('change', (e) => {
+      appSettings.matchSpeed = parseInt(e.target.value, 10) || 2;
       saveSettingsToStorage();
     });
   }
