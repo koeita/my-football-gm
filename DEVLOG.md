@@ -1,5 +1,26 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## 欧州コンペ・カップ戦のカレンダー登録・セーブ復元および試合日進行・観戦機能の完全改修 (feat-phase4-leagues-cups-and-europe)
+- **概要**:
+  - **欧州コンペ・国内カップ戦のカレンダー注入とセーブデータ永続化**:
+    - `saveGameToStorage` に `competitions` 永続化を追加し、画面リロードやセーブデータ再開時にも欧州大会データが消失しないように改修。
+    - `loadGameFromStorage` 時に大会データの整合性を確認し、未注入であれば `injectCupMatchesIntoCalendar()` を確実に自動実行してカレンダーへの欧州日程注入を保証。
+    - 欧州決勝トーナメントの日程生成において、プレイヤー参加大会キー（ECT / EPC / ECS）を正しく参照するように修正し、カレンダー上のイベントタイプに `match` を明示設定。
+  - **試合日当日の進行・キックオフ実行における致命的エラーの解消**:
+    - カップ戦・欧州コンペ当日における MATCHDAYパネル描画時、`currentDay.matchFixture` が undefined であることにより `TypeError` でクラッシュしていた問題を修正。欧州リーグフェーズおよびカップ戦の同日他カードを安全かつ美しく一覧表示。
+    - 本部MATCHDAYパネル、週間カレンダーのTODAYカード、月間カレンダーの各マス目のいずれからでも、カップ戦・欧州戦の試合前作戦確認（キックオフ）へ直感的に遷移できるように連携。
+    - 欧州戦および国内カップ戦において、リーグ戦と全く同一の2Dサッカーコートによる本格リアルタイム試合観戦モーダル（`openMatchEventModal`）が確実に起動し、観戦・スキップの両方でスムーズに消化できるように改善。
+- **変更ファイル**: `competitions.js`, `main.js`, `tests/test_phase4_targeted.py`, `DEVLOG.md`
+
+## 欧州コンペ順位表の横幅最適化（リーグ順位表との横幅・レイアウト完全統一） (feat-phase4-leagues-cups-and-europe)
+- **概要**:
+  - **欧州コンペスイス方式順位表の横幅フィット（余白・縮小の解消）**:
+    - 欧州コンペの順位表が親要素 `.comp-bracket-wrapper` の余白（`padding: 16px`）に包まれていたため、リーグ順位表よりも左右計32px狭くなり、クラブ名が不自然に省略（`...`）されていた問題を解消。
+    - 欧州順位表表示時に `.comp-bracket-wrapper.standings-view` を適用し、`padding: 0 !important;` かつ `overflow-x: hidden !important;` に設定。
+    - 欧州順位表HTMLを `.table-wrapper` で包み、リーグ順位表と全く同一のレスポンシブ固定列幅・クラブ名自動伸縮ロジックを適用。
+    - リーグ順位表（ENG-D1 / ENG-D2）と欧州順位表（ECT / EPC / ECS）が左右の端まで完全に同じ横幅で美しく揃って表示されるように統一。
+- **変更ファイル**: `competitions.js`, `main.js`, `style.css`, `tests/test_phase4_targeted.py`, `DEVLOG.md`
+
 ## 欧州他国クラブ名の漢字・直訳カラー呼称の撤廃と、欧州フットボール略称フォーマットへの命名規則統一 (feat-phase4-leagues-cups-and-europe)
 - **概要**:
   - **欧州他国クラブ（スペイン、イタリア、ドイツ、フランス）の命名規則クレンジング**:

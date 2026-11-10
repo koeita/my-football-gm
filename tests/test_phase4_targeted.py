@@ -114,6 +114,10 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn('.cup-header-banner', self.style_css)
         self.assertIn('.euro-league-header', self.style_css)
 
+        # 欧州順位表が table-wrapper に包まれ、余白（padding: 16px）を排除してリーグ順位表と横幅が完全一致していること
+        self.assertIn('.comp-bracket-wrapper.standings-view', self.style_css)
+        self.assertIn('<div class="table-wrapper">', self.comp_js)
+
     def test_european_clubs_naming_standardization(self):
         """欧州他国クラブ名の漢字・俗称が撤廃され、英字識別コード/フットボール略称に統一されていること"""
         # 1. 新名称が存在すること
@@ -158,6 +162,23 @@ class TestPhase4Targeted(unittest.TestCase):
         club_names = re.findall(r"id:\s*'[^']+',\s*name:\s*'([^']+)'", self.comp_js)
         for name in club_names:
             self.assertFalse(bool(re.search(r'[\u4e00-\u9fff]', name)), f"Club name contains kanji: {name}")
+
+    def test_euro_and_cup_calendar_and_matchday_execution(self):
+        """欧州コンペおよびカップ戦がカレンダーに安全に注入され、試合日クラッシュが防止され、セーブ復元されること"""
+        # 1. competitions がセーブ＆ロードで保持・復元されること
+        self.assertIn("competitions: gameState.competitions", self.main_js)
+        self.assertIn("!gameState.competitions || !gameState.competitions.championsCup", self.main_js)
+        self.assertIn("injectCupMatchesIntoCalendar()", self.main_js)
+
+        # 2. MATCHDAYパネルでカップ戦・欧州戦の同日他カードが安全に描画され、undefined filter でクラッシュしないこと
+        self.assertIn("else if (currentDay.isCupMatchDay)", self.main_js)
+        self.assertIn("playerMatchInfo.type === 'euroLeague'", self.main_js)
+
+        # 3. カレンダーセルに data-cal-cup-day-index が付与され、クリックでキックオフ可能であること
+        self.assertIn("data-cal-cup-day-index", self.main_js)
+
+        # 4. 週間カレンダーでクリックキックオフ（openMatchPrecheckModal）がサポートされていること
+        self.assertIn("onclick=\"openMatchPrecheckModal()\"", self.main_js)
 
 if __name__ == '__main__':
     unittest.main()

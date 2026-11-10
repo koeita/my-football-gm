@@ -513,11 +513,13 @@ function injectCupMatchesIntoCalendar() {
   // プレイヤーが参加している欧州大会コード（ECT, EPC, ECS）の特定
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   let playerEuroCode = 'ECT';
+  let playerEuroCompKey = 'championsCup';
   if (gameState.competitions && playerClub) {
     for (const ek of ['championsCup', 'europaCup', 'conferenceCup']) {
       const comp = gameState.competitions[ek];
       if (comp && comp.participants && comp.participants.some(p => p.id === playerClub.id)) {
         playerEuroCode = comp.shortCode;
+        playerEuroCompKey = ek;
         break;
       }
     }
@@ -562,16 +564,16 @@ function injectCupMatchesIntoCalendar() {
     { month: 2, minDay: 24, maxDay: 28, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
 
     // 3月: 欧州決勝T R16 (火), ナショナル・カップ3回戦 (水)
-    { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: 'championsCup', roundKey: 'R16', label: `${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
+    { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'R16', label: `${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
     { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 3回戦', code: 'N-CUP' },
 
     // 4月: 欧州決勝T 準々決勝 (火), ナショナル・カップ準々決勝 (水)
-    { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: 'championsCup', roundKey: 'QF', label: `${playerEuroCode} 準々決勝`, code: playerEuroCode },
+    { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'QF', label: `${playerEuroCode} 準々決勝`, code: playerEuroCode },
     { month: 4, minDay: 15, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
 
     // 5月: ナショナル・カップ決勝 (水), 欧州決勝 (火)
     { month: 5, minDay: 13, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' },
-    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: 'championsCup', roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
+    { month: 5, minDay: 25, maxDay: 31, preferredDays: [2, 3], compType: playerEuroCompKey, roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
   ];
 
   scheduleMap.forEach(sc => {
@@ -612,6 +614,7 @@ function injectCupMatchesIntoCalendar() {
       targetDay.euroMd = sc.md || null;
       targetDay.cupLabel = sc.label;
       targetDay.cupCode = sc.code;
+      targetDay.eventType = 'match';
     }
   });
 }
@@ -967,25 +970,27 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.participants) return '<p class="empty-state">欧州コンペデータがありません</p>';
 
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   const sorted = [...comp.participants].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
 
   let html = `
-    <table class="data-table standings-table euro-standings-table">
-      <thead>
-        <tr>
-          <th class="col-rank"><span class="th-pc">順位</span><span class="th-mob">#</span></th>
-          <th class="col-team"><span class="th-pc">クラブ名</span><span class="th-mob">チーム</span></th>
-          <th class="col-num col-played">試合</th>
-          <th class="col-num col-won">勝</th>
-          <th class="col-num col-drawn">分</th>
-          <th class="col-num col-lost"><span class="th-pc">敗</span><span class="th-mob">負</span></th>
-          <th class="col-num col-gf"><span class="th-pc">得点</span><span class="th-mob">+/-</span></th>
-          <th class="col-num col-ga">失点</th>
-          <th class="col-num col-gd"><span class="th-pc">得失点</span><span class="th-mob">差</span></th>
-          <th class="col-pts"><span class="th-pc">勝点</span><span class="th-mob">点</span></th>
-        </tr>
-      </thead>
-      <tbody>
+    <div class="table-wrapper">
+      <table class="data-table standings-table euro-standings-table">
+        <thead>
+          <tr>
+            <th class="col-rank"><span class="th-pc">順位</span><span class="th-mob">#</span></th>
+            <th class="col-team"><span class="th-pc">クラブ名</span><span class="th-mob">チーム</span></th>
+            <th class="col-num col-played">試合</th>
+            <th class="col-num col-won">勝</th>
+            <th class="col-num col-drawn">分</th>
+            <th class="col-num col-lost"><span class="th-pc">敗</span><span class="th-mob">負</span></th>
+            <th class="col-num col-gf"><span class="th-pc">得点</span><span class="th-mob">+/-</span></th>
+            <th class="col-num col-ga">失点</th>
+            <th class="col-num col-gd"><span class="th-pc">得失点</span><span class="th-mob">差</span></th>
+            <th class="col-pts"><span class="th-pc">勝点</span><span class="th-mob">点</span></th>
+          </tr>
+        </thead>
+        <tbody>
   `;
 
   sorted.forEach((c, idx) => {
@@ -1003,8 +1008,11 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
       zoneClass = 'zone-rel zone-eliminated';
     }
 
+    const isPlayer = playerClub && c.id === playerClub.id;
+    const rowClass = [isPlayer ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
+
     html += `
-      <tr class="${zoneClass}">
+      <tr class="${rowClass}">
         <td class="col-rank"><span class="${rankBadgeClass}">${rank}</span></td>
         <td class="col-team"><span class="team-cell-wrap">${emblemSvg}<span class="team-name-text">${c.name}</span></span></td>
         <td class="col-num col-played">${c.played || 0}</td>
@@ -1020,8 +1028,9 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   });
 
   html += `
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
     <div class="standings-legend">
       <div class="legend-item"><span class="legend-color-box zone-ucl-bg"></span><span class="legend-text">1-8位: ラウンド16直行</span></div>
       <div class="legend-item"><span class="legend-color-box zone-uel-bg"></span><span class="legend-text">9-24位: 決勝トーナメント進出プレーオフ</span></div>

@@ -4232,7 +4232,8 @@ function renderWeeklySchedule() {
       const oppClub = matchInfo.oppClub;
       const oppCode = getClubShortCode(oppClub);
       const compBadge = matchInfo.compCode ? `[${matchInfo.compCode}] ` : '';
-      eventHtml = `<span class="day-event-badge day-event-match">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
+      const badgeCls = matchInfo.compCode ? `badge-comp-${matchInfo.compCode.toLowerCase()}` : '';
+      eventHtml = `<span class="day-event-badge day-event-match ${badgeCls}">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
     } else if (day.isCupMatchDay) {
       const compCode = day.cupCode || 'CUP';
       eventHtml = `<span class="day-event-badge badge-comp-${compCode.toLowerCase()}">[${compCode}] 開催日</span>`;
@@ -4246,8 +4247,9 @@ function renderWeeklySchedule() {
       eventHtml = `<span class="day-event-training">戦術練習</span>`;
     }
 
+    const isClickable = isToday && isMatch;
     return `
-      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''}">
+      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''} ${isClickable ? 'is-clickable' : ''}" ${isClickable ? 'role="button" tabindex="0" onclick="openMatchPrecheckModal()"' : ''} title="${isClickable ? 'タップで作戦確認・キックオフ' : ''}">
         <div class="day-card-header">
           <span class="day-card-date">${day.month}/${day.day} (${day.dayOfWeekName})</span>
           ${isToday ? '<span class="day-card-today-badge">TODAY</span>' : ''}
@@ -10468,7 +10470,10 @@ function renderStandings() {
       });
     }
     const curDom = gameState.selectedDomesticCup || 'leagueCup';
-    if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
+    if (bracketWrapper) {
+      bracketWrapper.classList.remove('standings-view');
+      bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
+    }
     if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE TROPHY (L-CUP)' : 'NATIONAL CUP (N-CUP)';
   } else if (compView === 'europe') {
     // 欧州コンペ：全36チーム スイス方式リーグフェーズ（各8試合） ＆ 日程 ＆ 決勝トーナメント
@@ -10527,15 +10532,24 @@ function renderStandings() {
     const compName = curEuro === 'championsCup' ? 'EURO CHAMPIONS TROPHY (ECT)' : (curEuro === 'europaCup' ? 'EURO PRESTIGE CUP (EPC)' : 'EURO CONFERENCE SHIELD (ECS)');
 
     if (curTab === 'standings') {
-      if (bracketWrapper) bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
+      if (bracketWrapper) {
+        bracketWrapper.classList.add('standings-view');
+        bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
+      }
       const euroComp = gameState.competitions && gameState.competitions[curEuro];
       const mw = euroComp ? euroComp.currentMatchweek || 0 : 0;
       if (statusText) statusText.textContent = `${compName} MATCHWEEK ${mw} / 8`;
     } else if (curTab === 'schedule') {
-      if (bracketWrapper) bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
+      if (bracketWrapper) {
+        bracketWrapper.classList.remove('standings-view');
+        bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
+      }
       if (statusText) statusText.textContent = `${compName} - 対戦日程・結果`;
     } else {
-      if (bracketWrapper) bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
+      if (bracketWrapper) {
+        bracketWrapper.classList.remove('standings-view');
+        bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
+      }
       if (statusText) statusText.textContent = `${compName} - 決勝トーナメント`;
     }
   }
@@ -10706,23 +10720,65 @@ function renderMatchLog() {
 
     if (container) {
       if (panelTitle) panelTitle.textContent = '本日の同日開催カード';
-      if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 他9試合`;
 
-      const otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
-      const otherMatchesHtml = `
-        ${otherMatches.map(m => {
-          const h = getClubById(m.homeId);
-          const a = getClubById(m.awayId);
-          return `
-            <div class="match-card">
-              <div class="match-team home">${h.name}</div>
-              <div class="match-score-box">VS</div>
-              <div class="match-team away">${a.name}</div>
-            </div>
-          `;
-        }).join('')}
-      `;
-      container.innerHTML = otherMatchesHtml;
+      let otherMatches = [];
+      if (currentDay.isMatchDay && Array.isArray(currentDay.matchFixture)) {
+        if (subtitle) subtitle.textContent = `第${currentDay.matchWeek}節 他9試合`;
+        otherMatches = currentDay.matchFixture.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id));
+      } else if (currentDay.isCupMatchDay) {
+        if (playerMatchInfo && playerMatchInfo.type === 'euroLeague') {
+          const comp = playerMatchInfo.comp;
+          const md = currentDay.euroMd || (comp && comp.currentMatchweek) || 1;
+          const euroSchedule = comp && comp.leagueSchedule && comp.leagueSchedule[md - 1];
+          if (Array.isArray(euroSchedule)) {
+            otherMatches = euroSchedule.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id)).slice(0, 8);
+          }
+          if (subtitle) subtitle.textContent = `${playerMatchInfo.title} 同日他カード`;
+        } else if (playerMatchInfo && playerMatchInfo.type === 'euroPlayoff') {
+          const comp = playerMatchInfo.comp;
+          if (comp && Array.isArray(comp.playoffs)) {
+            otherMatches = comp.playoffs.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id)).slice(0, 8);
+          }
+          if (subtitle) subtitle.textContent = `${playerMatchInfo.title} 同日他カード`;
+        } else if (playerMatchInfo && playerMatchInfo.type === 'cup') {
+          const comp = playerMatchInfo.comp;
+          const rKey = currentDay.cupRoundKey;
+          const roundMatches = comp && comp.rounds && comp.rounds[rKey];
+          if (Array.isArray(roundMatches)) {
+            otherMatches = roundMatches.filter(m => !(m.homeId === playerClub.id || m.awayId === playerClub.id)).slice(0, 8);
+          }
+          if (subtitle) subtitle.textContent = `${playerMatchInfo.title} 同日他カード`;
+        } else {
+          if (subtitle) subtitle.textContent = 'カップ戦・欧州コンペ開催日';
+        }
+      }
+
+      if (otherMatches.length > 0) {
+        const otherMatchesHtml = `
+          ${otherMatches.map(m => {
+            const h = m.homeClub || getClubById(m.homeId) || { name: m.homeId };
+            const a = m.awayClub || getClubById(m.awayId) || { name: m.awayId };
+            const hName = typeof getClubShortCode === 'function' ? getClubShortCode(h) : (h.shortName || h.name);
+            const aName = typeof getClubShortCode === 'function' ? getClubShortCode(a) : (a.shortName || a.name);
+            const hEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(h, 20, 'mini-emblem') : '';
+            const aEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(a, 20, 'mini-emblem') : '';
+            return `
+              <div class="match-card">
+                <div class="match-team home" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                  <span>${hName}</span>${hEmb}
+                </div>
+                <div class="match-score-box">VS</div>
+                <div class="match-team away" style="display:flex;align-items:center;gap:4px;justify-content:flex-start;">
+                  ${aEmb}<span>${aName}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        `;
+        container.innerHTML = otherMatchesHtml;
+      } else {
+        container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">同日開催の他試合はありません。</div>';
+      }
     }
     return;
   }
@@ -15536,6 +15592,22 @@ function initGame() {
   const calGridEl = document.getElementById('calendar-days-grid');
   if (calGridEl) {
     calGridEl.addEventListener('click', (e) => {
+      const cupCell = e.target.closest('[data-cal-cup-day-index]');
+      if (cupCell) {
+        const dayIdx = parseInt(cupCell.dataset.calCupDayIndex, 10);
+        const dayObj = gameState.calendar && gameState.calendar[dayIdx];
+        if (dayObj) {
+          if (!dayObj.played && dayIdx === gameState.currentDayIndex) {
+            openMatchPrecheckModal();
+          } else {
+            const mInfo = getCalendarDayPlayerMatch(dayObj);
+            if (mInfo && mInfo.oppClub) {
+              showToast(`${mInfo.title} vs ${mInfo.oppClub.name}`, 'info');
+            }
+          }
+        }
+        return;
+      }
       const playedCell = e.target.closest('[data-cal-match-week]');
       if (playedCell) {
         const weekNum = parseInt(playedCell.dataset.calMatchWeek, 10);
@@ -15664,6 +15736,7 @@ function saveGameToStorage(force = false) {
         clubs: gameState.clubs,
         schedule: gameState.schedule,
         calendar: gameState.calendar,
+        competitions: gameState.competitions,
         currentDayIndex: gameState.currentDayIndex,
         dailyLogs: gameState.dailyLogs,
         lastWeekResults: gameState.lastWeekResults,
@@ -15731,6 +15804,16 @@ function loadGameFromStorage() {
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
+
+    // 大会データの整合性チェック＆復元
+    if (!gameState.competitions || !gameState.competitions.championsCup) {
+      if (typeof initSeasonCompetitions === 'function') {
+        initSeasonCompetitions();
+      }
+    } else if (typeof injectCupMatchesIntoCalendar === 'function') {
+      // 既存セーブデータで欧州コンペ等の日程がカレンダーに未注入であれば再注入
+      injectCupMatchesIntoCalendar();
+    }
     return true;
   } catch (e) {
     return false;
@@ -17402,7 +17485,7 @@ function renderMonthCalendar() {
         const myMatch = matchInfo.match;
         const isPlayed = Boolean(d.played || (myMatch && myMatch.played));
         matchClass = `has-match ${isPlayed ? 'match-played' : 'match-pending'}`;
-        cellAttr = `role="button" tabindex="0" title="${matchInfo.title} vs ${oppClub.name}"`;
+        cellAttr = `data-cal-cup-day-index="${d.dayIndex}" role="button" tabindex="0" title="${matchInfo.title} vs ${oppClub.name}"`;
 
         let scoreBadge = '';
         if (isPlayed && myMatch && myMatch.homeScore !== null && myMatch.homeScore !== undefined) {
