@@ -297,15 +297,46 @@ function getClubShortCode(clubOrId) {
   return 'LFC';
 }
 
+let modalLockSavedScrollY = 0;
+let modalLockContainerScrolls = [];
+
 function setBodyModalLock(locked) {
   if (locked) {
-    document.body.classList.add('modal-open');
-    document.documentElement.classList.add('modal-open');
+    if (!document.body.classList.contains('modal-open')) {
+      modalLockSavedScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      modalLockContainerScrolls = [];
+      const scrollableCandidates = document.querySelectorAll(
+        '.tab-view, .table-container, .main-scroll-container, #view-roster, #view-market, #view-team, #view-office'
+      );
+      scrollableCandidates.forEach(el => {
+        if (el && el.scrollTop > 0) {
+          modalLockContainerScrolls.push({ el, top: el.scrollTop });
+        }
+      });
+      document.body.classList.add('modal-open');
+      document.documentElement.classList.add('modal-open');
+    }
   } else {
     const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
     if (openModals.length === 0) {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
+      const restore = () => {
+        if (typeof modalLockSavedScrollY === 'number') {
+          window.scrollTo(0, modalLockSavedScrollY);
+          if (document.documentElement) document.documentElement.scrollTop = modalLockSavedScrollY;
+          if (document.body) document.body.scrollTop = modalLockSavedScrollY;
+        }
+        modalLockContainerScrolls.forEach(({ el, top }) => {
+          if (el && el.scrollTop !== top) {
+            el.scrollTop = top;
+          }
+        });
+      };
+      restore();
+      requestAnimationFrame(restore);
+      setTimeout(restore, 20);
+      setTimeout(restore, 60);
     }
   }
 }
@@ -11859,7 +11890,19 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     curSeasonStr
   };
 }
+let lastProfileOpenScrollY = 0;
+let lastProfileOpenContainerScrolls = [];
+
 function openPlayerProfileModal(playerId) {
+  // プロフィールを開く直前のスクロール位置（画面全体＆主要ビュー）を保存
+  lastProfileOpenScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  lastProfileOpenContainerScrolls = [];
+  document.querySelectorAll('.tab-view, .table-container, .main-scroll-container, #view-roster, #view-market, #view-team, #view-office').forEach(el => {
+    if (el && el.scrollTop > 0) {
+      lastProfileOpenContainerScrolls.push({ el, top: el.scrollTop });
+    }
+  });
+
   const ctx = findPlayerWithContextById(playerId);
   if (!ctx) return;
 
@@ -11992,9 +12035,10 @@ function openPlayerProfileModal(playerId) {
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
   const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs);
 
-  // ポジション特訓・適性強化セクション（イーフト仕様：自クラブ選手向け）
+  // ポジション特訓・適性強化セクション（イーフト仕様：自クラブ選手のみに表示）
   let trainingSectionHtml = '';
-  if (!isMarket && !isCandidate && playerClub && primaryPos !== 'GK') {
+  const isMyClubPlayer = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
+  if (isMyClubPlayer && !isCandidate && primaryPos !== 'GK') {
     const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primaryPos];
     if (!majors.includes(primaryPos)) majors.push(primaryPos);
     const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
@@ -12457,6 +12501,26 @@ function closePlayerProfileModal() {
 
   if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.profileModalPlayerId = null;
+
+  // モーダルを閉じた後、直前のスクロール位置（選手一覧や市場の閲覧位置）を確実に復元
+  const savedY = lastProfileOpenScrollY;
+  const savedContainers = [...lastProfileOpenContainerScrolls];
+  const restoreScrollPos = () => {
+    if (typeof savedY === 'number') {
+      window.scrollTo(0, savedY);
+      if (document.documentElement) document.documentElement.scrollTop = savedY;
+      if (document.body) document.body.scrollTop = savedY;
+    }
+    savedContainers.forEach(({ el, top }) => {
+      if (el && el.scrollTop !== top) {
+        el.scrollTop = top;
+      }
+    });
+  };
+  restoreScrollPos();
+  requestAnimationFrame(restoreScrollPos);
+  setTimeout(restoreScrollPos, 20);
+  setTimeout(restoreScrollPos, 60);
 }
 
 let introClubFilter = 'all';

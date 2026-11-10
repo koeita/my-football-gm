@@ -4350,11 +4350,11 @@ body {
 }
 
 
-/* モーダル表示中の背景スクロール完全抑止 ＆ 下部ナビゲーションバーの完全隠蔽 */
+/* モーダル表示中の背景スクロール完全抑止 ＆ 下部ナビゲーションバーの完全隠蔽
+   ※ height: 100% を指定するとドキュメント高さが強制圧縮されスクロール位置が0に破棄されるため、overflow: hidden のみで安全に抑止 */
 html.modal-open,
 body.modal-open {
   overflow: hidden !important;
-  height: 100% !important;
   touch-action: none !important;
   -webkit-overflow-scrolling: auto !important;
 }
