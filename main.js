@@ -1814,6 +1814,39 @@ function cancelPlayerPositionTraining(playerId) {
 }
 
 /**
+ * 選手の疲労度（0〜100、0=万全・疲労なし、100=限界疲労）を取得
+ */
+function getPlayerFatigue(player) {
+  if (!player) return 0;
+  return typeof player.fatigue === 'number' ? clamp(Math.round(player.fatigue), 0, 100) : 0;
+}
+
+/**
+ * 選手の疲労度に応じたステータス（ラベル・レベル・色・CSSクラス）を取得
+ */
+function getPlayerFatigueStatus(fatigueVal) {
+  const val = typeof fatigueVal === 'number' ? clamp(Math.round(fatigueVal), 0, 100) : 0;
+  if (val <= 30) {
+    return { val, label: '万全', level: 'good', color: '#2ecc71', badgeClass: 'fatigue-good' };
+  } else if (val <= 60) {
+    return { val, label: '普通', level: 'normal', color: '#38bdf8', badgeClass: 'fatigue-normal' };
+  } else if (val <= 80) {
+    return { val, label: '疲労', level: 'tired', color: '#f39c12', badgeClass: 'fatigue-tired' };
+  } else {
+    return { val, label: '限界', level: 'exhausted', color: '#e74c3c', badgeClass: 'fatigue-exhausted' };
+  }
+}
+
+/**
+ * ロスター表・リスト等で表示する疲労度セルHTMLを生成（数値0〜100とカラー警告）
+ */
+function formatFatigueCellHtml(player) {
+  const ftg = getPlayerFatigue(player);
+  const st = getPlayerFatigueStatus(ftg);
+  return `<span class="fatigue-chip ${st.badgeClass}" title="蓄積疲労度: ${ftg}/100 (${st.label})">${ftg}</span>`;
+}
+
+/**
  * 指定スロット（slotPos）に対する選手の厳格なポジション適性判定と補正係数を返す
  * 1. 【本適性 (100%発揮)】: 配置スロットが選手の mainPositions に含まれる場合のみ ➜ 実効OVR 100% (factor: 1.0)
  * 2. 【薄適性 (96%発揮)】: 配置スロットが選手の subPositions に含まれる場合のみ ➜ 実効OVR 96% (factor: 0.96)
@@ -1930,6 +1963,14 @@ function getEffectivePlayerRating(p) {
     factor *= 0.75;
   }
 
+  // 疲労度ペナルティ（60超で微減、80超で明確にパフォーマンス低下）
+  const ftg = typeof p.fatigue === 'number' ? p.fatigue : 0;
+  if (ftg > 80) {
+    factor *= 0.90;
+  } else if (ftg > 60) {
+    factor *= 0.96;
+  }
+
   return clamp(Math.round(baseOvr * factor), 1, 99);
 }
 
@@ -1946,6 +1987,13 @@ function getEffectivePlayerRatingForSlot(p, slotPos) {
   }
   if (p.injuryWeeks && p.injuryWeeks > 0) {
     factor *= 0.75;
+  }
+
+  const ftg = typeof p.fatigue === 'number' ? p.fatigue : 0;
+  if (ftg > 80) {
+    factor *= 0.90;
+  } else if (ftg > 60) {
+    factor *= 0.96;
   }
 
   return clamp(Math.round(baseOvr * factor), 1, 99);
@@ -2599,6 +2647,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     atk,
     def,
     sta,
+    fatigue: 0,
     wage,
     salary,
     contractYears,
@@ -2680,6 +2729,7 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     atk,
     def,
     sta,
+    fatigue: 0,
     wage,
     salary: wage * 52,
     contractYears: 3,
@@ -3632,9 +3682,16 @@ function advanceCalendarDay(skipRender = false) {
     return true;
   }
 
-  // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ ポジション特訓進行）
+  // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ 疲労度自然回復 ＆ ポジション特訓進行）
   for (const club of gameState.clubs) {
     for (const p of club.players) {
+      // 疲労度の自然回復（1日あたり -4、0まで回復）
+      if (typeof p.fatigue === 'number' && p.fatigue > 0) {
+        p.fatigue = Math.max(0, p.fatigue - 4);
+      } else if (p.fatigue == null) {
+        p.fatigue = 0;
+      }
+
       if (p.injuryDays && p.injuryDays > 0) {
         p.injuryDays -= 1;
         p.injuryWeeks = Math.ceil(p.injuryDays / 7);
@@ -3847,16 +3904,48 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore) 
 /**
  * 試合出場選手の疲労・スタミナ消費および特訓進行
  */
-function applyPostMatchPlayerFatigue(club) {
+function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = []) {
   if (!club || !club.players) return;
-  const starters = club.players.filter(p => p.isStarter);
+  const starters = playedStarters || club.players.filter(p => p.isStarter);
+  const subIds = new Set((playedSubs || []).map(p => p.id));
+  const starterIds = new Set(starters.map(p => p.id));
+
+  // 戦術・指導陣による疲労倍率
+  const tKey = normalizeTacticKey(club.tactic);
+  const tacticMult = tKey === 'gegenpress' ? 1.25 : (tKey === 'counter' ? 0.85 : 1.0);
+  const coaching = typeof getClubCoachingEffects === 'function' ? getClubCoachingEffects(club) : { staDrainMult: 1.0 };
+  const drainMult = tacticMult * (coaching.staDrainMult || 1.0);
+
+  // スタメン（フル出場）
   starters.forEach(p => {
     p.appearances = (p.appearances || 0) + 1;
     if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
     p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
-    p.sta = Math.max(20, (p.sta || 100) - Math.floor(Math.random() * 8 + 12));
+
+    // 疲労度蓄積（13〜17 × 倍率）
+    const fatigueDelta = Math.round(randInt(13, 17) * drainMult);
+    p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
+
     if (club.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
       p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
+    }
+  });
+
+  // 途中交代出場選手
+  (playedSubs || []).forEach(p => {
+    p.appearances = (p.appearances || 0) + 1;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
+    const fatigueDelta = Math.round(randInt(6, 10) * drainMult);
+    p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
+  });
+
+  // 不出場控え選手（軽微な自然回復）
+  club.players.forEach(p => {
+    if (!starterIds.has(p.id) && !subIds.has(p.id)) {
+      if (typeof p.fatigue === 'number' && p.fatigue > 0) {
+        p.fatigue = Math.max(0, p.fatigue - 2);
+      }
     }
   });
 }
@@ -3919,6 +4008,12 @@ function playCurrentCupMatchday(skipAnimation = false) {
     // 選手出場・疲労反映
     applyPostMatchPlayerFatigue(playerClub);
     const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+    const cupRatings = calculateAndAssignMatchRatings(
+      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
+      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
+      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
+      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    );
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -3937,6 +4032,9 @@ function playCurrentCupMatchday(skipAnimation = false) {
       awayClub: isHome ? oppClub : playerClub,
       homeScore,
       awayScore,
+      momPlayer: cupRatings.momPlayer,
+      momClub: cupRatings.momClub,
+      momRating: cupRatings.momRating,
       homePossession: simRes.homePossession || (userWon ? 54 : 46),
       awayPossession: 100 - (simRes.homePossession || (userWon ? 54 : 46)),
       homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
@@ -3996,6 +4094,12 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
     applyPostMatchPlayerFatigue(playerClub);
     const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+    const poRatings = calculateAndAssignMatchRatings(
+      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
+      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
+      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
+      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    );
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -4015,6 +4119,9 @@ function playCurrentCupMatchday(skipAnimation = false) {
       awayClub: isHome ? oppClub : playerClub,
       homeScore,
       awayScore,
+      momPlayer: poRatings.momPlayer,
+      momClub: poRatings.momClub,
+      momRating: poRatings.momRating,
       homePossession: simRes.homePossession || (userWon ? 53 : 47),
       awayPossession: 100 - (simRes.homePossession || (userWon ? 53 : 47)),
       homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
@@ -4087,6 +4194,12 @@ function playCurrentCupMatchday(skipAnimation = false) {
   finalizeCupMatch(compType, roundKey, myMatch, userWon, homeScore, awayScore, simRes.pkHome, simRes.pkAway);
   applyPostMatchPlayerFatigue(playerClub);
   const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
+  const cupFinalRatings = calculateAndAssignMatchRatings(
+    isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
+    ensureClubStartersForMatch(isHome ? playerClub : oppClub),
+    ensureClubStartersForMatch(isHome ? oppClub : playerClub),
+    [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+  );
 
   currentDay.played = true;
 
@@ -4123,6 +4236,9 @@ function playCurrentCupMatchday(skipAnimation = false) {
     awayClub: isHome ? oppClub : playerClub,
     homeScore,
     awayScore,
+    momPlayer: cupFinalRatings.momPlayer,
+    momClub: cupFinalRatings.momClub,
+    momRating: cupFinalRatings.momRating,
     homePossession: simRes.homePossession || (userWon ? 52 : 48),
     awayPossession: 100 - (simRes.homePossession || (userWon ? 52 : 48)),
     homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
@@ -4661,6 +4777,104 @@ function simulateMatch(homeClub, awayClub) {
 }
 
 /**
+ * 試合出場選手の評価点を一括算出・付与し、MOM（最優秀選手）を選定する共通ロジック
+ * - 基準ベース: 6.7（平均6.9〜7.0への是正）
+ * - 勝敗補正: 勝 +0.4, 分 0.0, 負 -0.3
+ * - 攻守貢献: 1ゴール +0.8, 1アシスト +0.5
+ * - クリーンシート: GK/DF +0.5
+ * - 大量失点: GK/DF 3失点 -0.3, 4失点以上 -0.5
+ * - 適性・疲労: 薄適性 -0.1, 不適性 -0.3, 疲労度80超 -0.2
+ * - 出場全選手から最高評価の選手を MOM に決定
+ */
+function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awayStarters, homeSubs = [], awaySubs = [], homeScore = 0, awayScore = 0, allMatchGoals = []) {
+  const isHomeWin = homeScore > awayScore;
+  const isDraw = homeScore === awayScore;
+  const isAwayWin = homeScore < awayScore;
+
+  const assignGroup = (club, starters, subs, scored, conceded, isWin, isDraw) => {
+    starters.forEach(p => {
+      let r = 6.7;
+      if (isWin) r += 0.4;
+      else if (isDraw) r += 0.0;
+      else r -= 0.3;
+
+      const role = POS_ROLE_GROUP[p.assignedPos || p.pos];
+      if (conceded === 0 && (role === 'GK' || role === 'DF')) {
+        r += 0.5;
+      } else if (conceded >= 4 && (role === 'GK' || role === 'DF')) {
+        r -= 0.5;
+      } else if (conceded === 3 && (role === 'GK' || role === 'DF')) {
+        r -= 0.3;
+      }
+
+      const goalsInMatch = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === p.id).length;
+      r += goalsInMatch * 0.8;
+
+      const assistsInMatch = (allMatchGoals || []).filter(s => s && s.assister && s.assister.id === p.id).length;
+      r += assistsInMatch * 0.5;
+
+      if (p.assignedPos) {
+        const fitInfo = getPositionFitInfo(p, p.assignedPos);
+        if (fitInfo.type === 'sub') r -= 0.1;
+        else if (fitInfo.type === 'out') r -= 0.3;
+      }
+
+      const ftg = typeof p.fatigue === 'number' ? p.fatigue : 0;
+      if (ftg >= 80) r -= 0.2;
+
+      r += randInt(-2, 2) * 0.1;
+      r = clamp(r, 5.2, 9.8);
+      p.lastMatchRating = Number(r.toFixed(1));
+      p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+    });
+
+    (subs || []).forEach(p => {
+      let r = 6.6;
+      if (isWin) r += 0.2;
+      else if (!isDraw) r -= 0.2;
+
+      const goalsInMatch = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === p.id).length;
+      r += goalsInMatch * 0.8;
+      const assistsInMatch = (allMatchGoals || []).filter(s => s && s.assister && s.assister.id === p.id).length;
+      r += assistsInMatch * 0.5;
+
+      r += randInt(-1, 1) * 0.1;
+      r = clamp(r, 5.4, 9.5);
+      p.lastMatchRating = Number(r.toFixed(1));
+      p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+    });
+  };
+
+  assignGroup(homeClub, homeStarters, homeSubs, homeScore, awayScore, isHomeWin, isDraw);
+  assignGroup(awayClub, awayStarters, awaySubs, awayScore, homeScore, isAwayWin, isDraw);
+
+  // 全出場選手から MOM（Man of the Match）を選出
+  const allEntries = [];
+  homeStarters.forEach(p => allEntries.push({ p, club: homeClub, isWinner: isHomeWin }));
+  awayStarters.forEach(p => allEntries.push({ p, club: awayClub, isWinner: isAwayWin }));
+  (homeSubs || []).forEach(p => allEntries.push({ p, club: homeClub, isWinner: isHomeWin }));
+  (awaySubs || []).forEach(p => allEntries.push({ p, club: awayClub, isWinner: isAwayWin }));
+
+  allEntries.sort((a, b) => {
+    const ratDiff = (b.p.lastMatchRating || 6.7) - (a.p.lastMatchRating || 6.7);
+    if (Math.abs(ratDiff) > 0.01) return ratDiff;
+    if (a.isWinner !== b.isWinner) return b.isWinner ? 1 : -1;
+    return (b.p.goals || 0) - (a.p.goals || 0);
+  });
+
+  const momEntry = allEntries[0];
+  allEntries.forEach(entry => {
+    entry.p.isMOM = Boolean(momEntry && entry.p.id === momEntry.p.id);
+  });
+
+  return {
+    momPlayer: momEntry ? momEntry.p : null,
+    momClub: momEntry ? momEntry.club : homeClub,
+    momRating: momEntry ? (momEntry.p.lastMatchRating || 7.5).toFixed(1) : '7.5'
+  };
+}
+
+/**
  * 試合から得点者を抽出し、今季＆キャリア通算スタッツを更新する
  */
 function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore) {
@@ -4817,36 +5031,14 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
   const allMatchGoals = homeScorers.concat(awayScorers);
 
-  const assignRatings = (starters, scored, conceded, isWin, isDraw) => {
-    starters.forEach(p => {
-      let r = 6.2;
-      if (isWin) r += 0.6;
-      else if (isDraw) r += 0.1;
-      else r -= 0.3;
-
-      const role = POS_ROLE_GROUP[p.assignedPos || p.pos];
-      if (conceded === 0 && (role === 'GK' || role === 'DF')) {
-        r += 0.5;
-      }
-
-      const goalsInMatch = allMatchGoals.filter(s => s.scorer.id === p.id).length;
-      r += goalsInMatch * 0.8;
-
-      const assistsInMatch = allMatchGoals.filter(s => s.assister && s.assister.id === p.id).length;
-      r += assistsInMatch * 0.5;
-
-      if (p.assignedPos) {
-        const fitInfo = getPositionFitInfo(p, p.assignedPos);
-        if (fitInfo.type === 'sub') r -= 0.1;
-        else if (fitInfo.type === 'out') r -= 0.4;
-      }
-
-      r += randInt(-2, 2) * 0.1;
-      r = clamp(r, 5.0, 9.5);
-      p.lastMatchRating = Number(r.toFixed(1));
-      p.totalRating += r;
-    });
-  };
+  // 評価点算出（基準6.7・平均約7.0・勝敗/攻守貢献/完封/MOM選出）
+  const ratingRes = calculateAndAssignMatchRatings(
+    homeClub, awayClub,
+    homeStarters, awayStarters,
+    matchLiveState.homeSubs || [], matchLiveState.awaySubs || [],
+    homeScore, awayScore,
+    allMatchGoals
+  );
 
   // 守備陣・GKのクリーンシート（CS: 完封数）加算
   const DEFENDER_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'];
@@ -4881,36 +5073,15 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const isDraw = homeScore === awayScore;
   const isAwayWin = homeScore < awayScore;
 
-  assignRatings(homeStarters, homeScore, awayScore, isHomeWin, isDraw);
-  assignRatings(awayStarters, awayScore, homeScore, isAwayWin, isDraw);
-
   // 監督現場信頼度の更新（GM現場介入ペナルティ＆勝敗連動）
   updateManagerTrustAfterMatch(homeClub, isHomeWin, isDraw);
   updateManagerTrustAfterMatch(awayClub, isAwayWin, isDraw);
 
-  // 戦術スタイル別の試合後スタミナ消耗（ゲーゲンプレスは1.3倍消耗、ダイレクトカウンターは省エネ）
-  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
-  const baseFatigueProb = 0.20 * (1 - (trainingLv - 1) * 0.18);
+  // 試合出場に伴う疲労度（0〜100数値）蓄積（戦術・コーチング効果連動）
+  applyPostMatchPlayerFatigue(homeClub, homeStarters, matchLiveState.homeSubs || []);
+  applyPostMatchPlayerFatigue(awayClub, awayStarters, matchLiveState.awaySubs || []);
 
-  const applyPostMatchStaminaDrain = (club, startersList) => {
-    const tKey = normalizeTacticKey(club.tactic);
-    const mult = tKey === 'gegenpress' ? 1.30 : (tKey === 'counter' ? 0.65 : (tKey === 'parkthebus' ? 0.85 : 1.00));
-    const coaching = getClubCoachingEffects(club);
-    const prob = (club.isPlayer ? Math.max(0.05, baseFatigueProb) : 0.20) * mult * coaching.staDrainMult;
-    if (tKey === 'gegenpress' && Math.random() < prob) {
-      startersList.forEach(p => {
-        p.sta = Math.max(30, p.sta - 1);
-        if (p.attributes && typeof p.attributes.stamina === 'number') {
-          p.attributes.stamina = Math.max(30, p.attributes.stamina - 1);
-        }
-      });
-    }
-  };
-
-  applyPostMatchStaminaDrain(homeClub, homeStarters);
-  applyPostMatchStaminaDrain(awayClub, awayStarters);
-
-  return { homeScorers, awayScorers };
+  return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
 }
 
 /**
@@ -5779,6 +5950,83 @@ function resumeSecondHalfMatch() {
  */
 
 /**
+ * マッチサマリー用：両チーム全出場選手の詳細採点一覧HTMLを構築
+ */
+function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
+  const homeStarters = ensureClubStartersForMatch(homeClub);
+  const awayStarters = ensureClubStartersForMatch(awayClub);
+  const homeSubs = (typeof matchLiveState !== 'undefined' && matchLiveState.homeSubs) ? matchLiveState.homeSubs : [];
+  const awaySubs = (typeof matchLiveState !== 'undefined' && matchLiveState.awaySubs) ? matchLiveState.awaySubs : [];
+  const homeScorers = md.homeScorers || [];
+  const awayScorers = md.awayScorers || [];
+
+  const renderClubList = (club, starters, subs, scorers, isHome) => {
+    const all = starters.map(p => ({ p, isSub: false })).concat(subs.map(p => ({ p, isSub: true })));
+    const rowsHtml = all.map(({ p, isSub }) => {
+      const pos = p.assignedPos || p.pos || 'MF';
+      const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
+      const numRat = Number(rat);
+
+      let ratClass = 'summary-rat-mid';
+      if (p.isMOM || numRat >= 8.2) ratClass = 'summary-rat-mom';
+      else if (numRat >= 7.0) ratClass = 'summary-rat-high';
+      else if (numRat < 6.0) ratClass = 'summary-rat-low';
+
+      const goalsCount = scorers.filter(s => s && s.scorer && s.scorer.id === p.id).length;
+      const assistsCount = scorers.filter(s => s && s.assister && s.assister.id === p.id).length;
+
+      let eventBadges = '';
+      if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">⚽${goalsCount > 1 ? goalsCount : ''}</span>`;
+      if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">🅰️${assistsCount > 1 ? assistsCount : ''}</span>`;
+
+      const momBadge = p.isMOM ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
+      const subBadge = isSub ? '<span class="rating-sub-tag">SUB</span>' : '';
+
+      return `
+        <div class="summary-rating-row ${p.isMOM ? 'is-mom-row' : ''}">
+          <div class="rating-row-player">
+            <span class="rating-pos-tag pos-${pos}">${pos}</span>
+            <span class="rating-squad-num mono">#${p.squadNumber || '-'}</span>
+            <span class="rating-player-name text-truncate">${p.name}</span>
+            ${subBadge}
+            ${eventBadges}
+          </div>
+          <div class="rating-row-score">
+            ${momBadge}
+            <span class="summary-rating-pill mono ${ratClass}">${rat}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const avgRat = (all.reduce((s, x) => s + (x.p.lastMatchRating || 6.7), 0) / Math.max(1, all.length)).toFixed(1);
+
+    return `
+      <div class="summary-team-ratings-panel ${club.isPlayer ? 'is-player' : ''}">
+        <div class="summary-team-ratings-title">
+          <div class="team-title-left">
+            ${getClubEmblemSvg(club, 20, 'team-ratings-emblem')}
+            <span class="team-title-code mono">${getClubShortCode(club)}</span>
+            <span class="team-title-side mono">${isHome ? 'HOME' : 'AWAY'}${club.isPlayer ? ' (YOU)' : ''}</span>
+          </div>
+          <span class="team-title-avg mono">平均採点: <strong class="accent-green">${avgRat}</strong></span>
+        </div>
+        <div class="summary-team-ratings-list">
+          ${rowsHtml}
+        </div>
+      </div>
+    `;
+  };
+
+  return `
+    <div class="summary-ratings-grid">
+      ${renderClubList(homeClub, homeStarters, homeSubs, homeScorers, true)}
+      ${renderClubList(awayClub, awayStarters, awaySubs, awayScorers, false)}
+    </div>
+  `;
+}
+
+/**
  * 公式戦マッチサマリーのHTML文字列を構築（試合直後 ＆ カレンダー振り返り共通）
  * @param {Object} md 試合結果データオブジェクト
  */
@@ -5867,124 +6115,143 @@ function buildMatchSummaryHtml(md) {
     }
   }
 
+  const ratingsHtml = buildSummaryPlayerRatingsHtml(homeClub, awayClub, md);
+
   return `
-    <div class="summary-grid-layout">
-      <!-- 左列：スコアボード ＆ スタッツ比較 -->
-      <div class="summary-col-left">
-        <!-- スコア＆得点者ボード -->
-        <div class="summary-hero-box">
-          <div class="summary-score-row">
-            <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
-              <div class="summary-club-header-wrap">
-                ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
-                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
-              </div>
-              <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
+    <div class="summary-wrapper">
+      <!-- 最上部：スコア＆得点者ボード（共通表示） -->
+      <div class="summary-hero-box">
+        <div class="summary-score-row">
+          <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+            <div class="summary-club-header-wrap">
+              ${getClubEmblemSvg(homeClub, 24, 'summary-club-emblem')}
+              <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
             </div>
-            <div class="summary-score-center">
-              <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
-              <span class="summary-result-pill res-${resType}">${resLabel}</span>
-            </div>
-            <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
-              <div class="summary-club-header-wrap">
-                <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
-                ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
-              </div>
-              <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
-            </div>
+            <span class="mono summary-club-role">HOME ${homeClub.isPlayer ? '(自チーム)' : ''}</span>
           </div>
-          <div class="summary-scorers-grid">
-            <div class="summary-scorers-col home">${homeScorersHtml}</div>
-            <div class="summary-scorers-col away">${awayScorersHtml}</div>
+          <div class="summary-score-center">
+            <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
+            <span class="summary-result-pill res-${resType}">${resLabel}</span>
+          </div>
+          <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+            <div class="summary-club-header-wrap">
+              <span class="summary-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
+              ${getClubEmblemSvg(awayClub, 24, 'summary-club-emblem')}
+            </div>
+            <span class="mono summary-club-role">AWAY ${awayClub.isPlayer ? '(自チーム)' : ''}</span>
           </div>
         </div>
+        <div class="summary-scorers-grid">
+          <div class="summary-scorers-col home">${homeScorersHtml}</div>
+          <div class="summary-scorers-col away">${awayScorersHtml}</div>
+        </div>
+      </div>
 
-        <!-- チームスタッツ比較 -->
-        <div class="summary-section-card summary-stats-card">
-          <div class="summary-section-title">▼ チームスタッツ比較</div>
-          <div class="stat-compare-row">
-            <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homePossession}%</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率 (POSSESSION)</span>
-              <span style="color:#60a5fa;">${awayPossession}%</span>
-            </div>
-            <div class="stat-compare-bar-track">
-              <div class="stat-bar-home" style="width:${homePossession}%;"></div>
-              <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
+      <!-- サマリー内タブ切り替えピル（スタッツ ⇄ 選手採点） -->
+      <div class="summary-subnav-bar">
+        <button type="button" class="summary-subnav-btn active" data-subnav="stats">
+          📊 チームスタッツ・経過
+        </button>
+        <button type="button" class="summary-subnav-btn" data-subnav="ratings">
+          ⭐ 全選手評価点一覧
+        </button>
+      </div>
+
+      <!-- タブ1：チームスタッツ ＆ ハイライト ＆ GM収支 -->
+      <div class="summary-tab-pane" id="summary-tab-stats">
+        <div class="summary-grid-layout">
+          <!-- 左列：チームスタッツ比較 -->
+          <div class="summary-col-left">
+            <div class="summary-section-card summary-stats-card">
+              <div class="summary-section-title">▼ チームスタッツ比較</div>
+              <div class="stat-compare-row">
+                <div class="stat-compare-labels mono">
+                  <span style="color:#2ecc71;">${homePossession}%</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率 (POSSESSION)</span>
+                  <span style="color:#60a5fa;">${awayPossession}%</span>
+                </div>
+                <div class="stat-compare-bar-track">
+                  <div class="stat-bar-home" style="width:${homePossession}%;"></div>
+                  <div class="stat-bar-away" style="width:${awayPossession}%;"></div>
+                </div>
+              </div>
+              <div class="stat-compare-row">
+                <div class="stat-compare-labels mono">
+                  <span style="color:#2ecc71;">${homeShots}本 (${homeOnTarget})</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">シュート / 枠内 (SHOTS / ON TARGET)</span>
+                  <span style="color:#60a5fa;">${awayShots}本 (${awayOnTarget})</span>
+                </div>
+                <div class="stat-compare-bar-track">
+                  <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
+                  <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
+                </div>
+              </div>
+              <div class="stat-compare-row">
+                <div class="stat-compare-labels mono">
+                  <span style="color:#2ecc71;">${homeXg.toFixed(2)}</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">ゴール期待値 (xG)</span>
+                  <span style="color:#60a5fa;">${awayXg.toFixed(2)}</span>
+                </div>
+                <div class="stat-compare-bar-track">
+                  <div class="stat-bar-home" style="width:${homeXgPct}%;"></div>
+                  <div class="stat-bar-away" style="width:${awayXgPct}%;"></div>
+                </div>
+              </div>
+              <div class="stat-compare-row">
+                <div class="stat-compare-labels mono">
+                  <span style="color:#2ecc71;">${homePasses}本 [${homePassAccuracy}%]</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">パス数 / 成功率 (PASSES / ACCURACY)</span>
+                  <span style="color:#60a5fa;">${awayPasses}本 [${awayPassAccuracy}%]</span>
+                </div>
+                <div class="stat-compare-bar-track">
+                  <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>
+                  <div class="stat-bar-away" style="width:${awayPassesPct}%;"></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="stat-compare-row">
-            <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homeShots}本 (${homeOnTarget})</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">シュート / 枠内 (SHOTS / ON TARGET)</span>
-              <span style="color:#60a5fa;">${awayShots}本 (${awayOnTarget})</span>
+
+          <!-- 右列：ハイライト ＆ GM収支・MOM -->
+          <div class="summary-col-right">
+            <div class="summary-section-card summary-highlights-card">
+              <div class="summary-section-title">▼ マッチハイライト</div>
+              <div class="summary-highlights-list">
+                ${highlightsHtml}
+              </div>
             </div>
-            <div class="stat-compare-bar-track">
-              <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
-              <div class="stat-bar-away" style="width:${awayShotsPct}%;"></div>
-            </div>
-          </div>
-          <div class="stat-compare-row">
-            <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homeXg.toFixed(2)}</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">ゴール期待値 (xG)</span>
-              <span style="color:#60a5fa;">${awayXg.toFixed(2)}</span>
-            </div>
-            <div class="stat-compare-bar-track">
-              <div class="stat-bar-home" style="width:${homeXgPct}%;"></div>
-              <div class="stat-bar-away" style="width:${awayXgPct}%;"></div>
-            </div>
-          </div>
-          <div class="stat-compare-row">
-            <div class="stat-compare-labels mono">
-              <span style="color:#2ecc71;">${homePasses}本 [${homePassAccuracy}%]</span>
-              <span style="color:var(--text-muted);font-size:9.5px;">パス数 / 成功率 (PASSES / ACCURACY)</span>
-              <span style="color:#60a5fa;">${awayPasses}本 [${awayPassAccuracy}%]</span>
-            </div>
-            <div class="stat-compare-bar-track">
-              <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>
-              <div class="stat-bar-away" style="width:${awayPassesPct}%;"></div>
+
+            <div class="summary-section-card summary-gm-card">
+              <div class="summary-section-title">▼ GM収支＆MOM</div>
+              <div class="summary-gm-grid">
+                <div class="summary-gm-metric">
+                  <span class="gm-metric-label">${revenueTypeLabel}</span>
+                  <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
+                </div>
+                <div class="summary-gm-metric">
+                  <span class="gm-metric-label">サポーター (${playerClub.supporters.toLocaleString()}人)</span>
+                  <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+                </div>
+              </div>
+              ${momPlayer ? `
+                <div class="summary-mom-box">
+                  <div class="mom-left">
+                    ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-sm', 32) : ''}
+                    <div class="mom-info">
+                      <span class="mom-tag">★ MAN OF THE MATCH</span>
+                      <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
+                    </div>
+                  </div>
+                  <span class="mom-rating-badge">Rating ${momRating}</span>
+                </div>
+              ` : ''}
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 右列：ハイライト ＆ GM収支・MOM -->
-      <div class="summary-col-right">
-        <!-- マッチハイライト -->
-        <div class="summary-section-card summary-highlights-card">
-          <div class="summary-section-title">▼ マッチハイライト</div>
-          <div class="summary-highlights-list">
-            ${highlightsHtml}
-          </div>
-        </div>
-
-        <!-- GMマッチデイ収支＆MOM -->
-        <div class="summary-section-card summary-gm-card">
-          <div class="summary-section-title">▼ GM収支＆MOM</div>
-          <div class="summary-gm-grid">
-            <div class="summary-gm-metric">
-              <span class="gm-metric-label">${revenueTypeLabel}</span>
-              <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
-            </div>
-            <div class="summary-gm-metric">
-              <span class="gm-metric-label">サポーター (${playerClub.supporters.toLocaleString()}人)</span>
-              <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
-            </div>
-          </div>
-          ${momPlayer ? `
-            <div class="summary-mom-box">
-              <div class="mom-left">
-                ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-sm', 32) : ''}
-                <div class="mom-info">
-                  <span class="mom-tag">★ MAN OF THE MATCH</span>
-                  <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
-                </div>
-              </div>
-              <span class="mom-rating-badge">Rating ${momRating}</span>
-            </div>
-          ` : ''}
-        </div>
+      <!-- タブ2：全選手評価点一覧 -->
+      <div class="summary-tab-pane hidden" id="summary-tab-ratings">
+        ${ratingsHtml}
       </div>
     </div>
   `;
@@ -6077,6 +6344,19 @@ function transitionToMatchSummary() {
   const momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
 
   summaryBody.innerHTML = buildMatchSummaryHtml(md);
+
+  // サマリー内タブ切り替え（スタッツ ⇄ 選手採点）のイベントバインド
+  const tabBtns = summaryBody.querySelectorAll('.summary-subnav-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.subnav;
+      tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+      const statsView = summaryBody.querySelector('#summary-tab-stats');
+      const ratingsView = summaryBody.querySelector('#summary-tab-ratings');
+      if (statsView) statsView.classList.toggle('hidden', target !== 'stats');
+      if (ratingsView) ratingsView.classList.toggle('hidden', target !== 'ratings');
+    });
+  });
 
   if (typeof renderAvatarCanvases === 'function') {
     renderAvatarCanvases(summaryBody);
@@ -6189,6 +6469,8 @@ function openMatchPrecheckModal() {
     else if (fitInfo.type === 'semi') fitBadge = '<span class="precheck-tag" style="background:rgba(241,196,15,0.18);color:#f1c40f;font-size:9px;">△ 近接</span>';
     else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">✕ 不適</span>';
 
+    const ftgVal = getPlayerFatigue(p);
+    const ftgSt = getPlayerFatigueStatus(ftgVal);
     const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
 
     startersRowsHtml += `
@@ -6198,6 +6480,7 @@ function openMatchPrecheckModal() {
         <span class="precheck-name">${p.name} ${fitBadge}</span>
         <span class="precheck-ovr mono">${effOvr}</span>
         <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
+        <span class="precheck-ftg mono" style="color:${ftgSt.color};">疲労:${ftgVal}</span>
       </div>
     `;
   });
@@ -11074,6 +11357,7 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
+                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11153,6 +11437,7 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
+                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11204,6 +11489,7 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
+                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(bp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(bp)}/100">疲労:${getPlayerFatigue(bp)}</span>
                 ${fitBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
@@ -11276,6 +11562,7 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
+                <span class="pitch-node-ftg mono ${getPlayerFatigueStatus(rp.fatigue).badgeClass}" title="疲労度: ${getPlayerFatigue(rp)}/100">疲労:${getPlayerFatigue(rp)}</span>
                 ${injuryBadgeHtml}
               </div>
             </div>
@@ -11468,6 +11755,7 @@ function renderRoster() {
         <td class="col-num">${p.atk}${atkDiff}</td>
         <td class="col-num">${p.def}${defDiff}</td>
         <td class="col-num">${p.sta}${staDiff}</td>
+        <td class="col-num">${formatFatigueCellHtml(p)}</td>
         <td class="col-num ${contractClass}">${contractText}</td>
         <td class="col-num mono" title="年間総給与: ${formatMoney(p.salary)}">
           <strong>${formatWage(p.wage || Math.round(p.salary / 52))}</strong><br>
@@ -13182,11 +13470,15 @@ function openPlayerProfileModal(playerId) {
         <span class="profile-bio-chip mono" style="background:rgba(241,196,15,0.18);color:var(--accent-gold);border-color:rgba(241,196,15,0.4);">将来性: ${starStr}</span>
       `;
     }
+    const pFtgVal = getPlayerFatigue(p);
+    const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
+
     bioRowEl.innerHTML = `
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
       <span class="profile-bio-chip">${footBadgeStr}</span>
+      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};border-color:rgba(255,255,255,0.15);">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
       ${youthBadgeHtml}
     `;
   }
@@ -13505,6 +13797,10 @@ function openPlayerProfileModal(playerId) {
             <div class="profile-fit-row">
               <span class="text-muted">コンディション</span>
               <span class="mono ${conditionClass}"><strong>${conditionText}</strong></span>
+            </div>
+            <div class="profile-fit-row">
+              <span class="text-muted">蓄積疲労度</span>
+              <span class="mono"><strong style="color:${pFtgStatus.color};">${pFtgVal} / 100 (${pFtgStatus.label})</strong></span>
             </div>
             <div class="profile-fit-row profile-scout-comment-row">
               <span class="text-muted">スカウト評価</span>
@@ -15899,6 +16195,23 @@ function loadGameFromStorage() {
     } else if (typeof injectCupMatchesIntoCalendar === 'function') {
       // 既存セーブデータで欧州コンペ等の日程がカレンダーに未注入であれば再注入
       injectCupMatchesIntoCalendar();
+    }
+
+    // 全所属選手およびユースの疲労度・評価点データ互換性補完
+    if (Array.isArray(gameState.clubs)) {
+      gameState.clubs.forEach(c => {
+        if (Array.isArray(c.players)) {
+          c.players.forEach(p => {
+            if (typeof p.fatigue !== 'number') p.fatigue = 0;
+            if (p.lastMatchRating == null) p.lastMatchRating = 6.7;
+          });
+        }
+        if (Array.isArray(c.youthSquad)) {
+          c.youthSquad.forEach(yp => {
+            if (typeof yp.fatigue !== 'number') yp.fatigue = 0;
+          });
+        }
+      });
     }
     return true;
   } catch (e) {
