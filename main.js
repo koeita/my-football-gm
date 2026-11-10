@@ -1272,13 +1272,23 @@ function getGrowthCurveLabel(curve) {
  * 選手のメイン適性とサブ適性を合わせた表記文字列を返す（例: "CF / WG", "CB (SB)"）
  */
 function formatPlayerPositionsText(p, style = 'slash') {
+  ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
-  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
-  if (subs.length === 0) return primary;
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? [...p.mainPositions]
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? [...p.majorPositions] : [primary]);
+  if (!mains.includes(primary)) mains.unshift(primary);
+  const mainStr = mains.join('・');
+
+  const subs = Array.isArray(p.subPositions)
+    ? p.subPositions.filter(s => !mains.includes(s))
+    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !mains.includes(s)) : []);
+
+  if (subs.length === 0) return mainStr;
   if (style === 'paren') {
-    return `${primary} (${subs.join('/')})`;
+    return `${mainStr} (${subs.join('/')})`;
   }
-  return `${primary} / ${subs.join('・')}`;
+  return `${mainStr} / ${subs.join('・')}`;
 }
 
 /**
@@ -1287,9 +1297,13 @@ function formatPlayerPositionsText(p, style = 'slash') {
 function formatPlayerPositionsHtml(p) {
   ensurePlayerProficiencies(p);
   const primary = p.primaryPosition || p.preferredPosition || p.pos;
-  const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primary];
-  if (!majors.includes(primary)) majors.push(primary);
-  const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
+  const majors = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? [...p.mainPositions]
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? [...p.majorPositions] : [primary]);
+  if (!majors.includes(primary)) majors.unshift(primary);
+  const subs = Array.isArray(p.subPositions)
+    ? p.subPositions.filter(s => !majors.includes(s))
+    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !majors.includes(s)) : []);
 
   const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join(' ');
   if (subs.length === 0) {
@@ -12152,20 +12166,9 @@ function openPlayerProfileModal(playerId) {
           <!-- 右：適性ポジション図 ＆ トレーニング -->
           <div class="profile-box">
             <div class="profile-box-header">
-              <span class="profile-box-title">POSITIONS</span>
+              <span class="profile-box-title">適性ポジション</span>
             </div>
             ${buildPlayerPitchProficiencyHtml(p)}
-            <div class="profile-pos-fit-list" style="margin-top: 6px;">
-              <div class="profile-fit-row">
-                <span class="text-muted"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;margin-right:4px;"></span>本適性</span>
-                <span class="mono text-accent-green"><strong>${(p.mainPositions || [primaryPos]).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ')}</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-right:4px;"></span>薄適性</span>
-                <span class="mono text-cyan"><strong>${(p.subPositions || []).length > 0 ? (p.subPositions || []).map(s => `<span class="pos-tag pos-${s}" style="margin-left:2px;">${s === 'LB' ? 'LB/LWB' : (s === 'RB' ? 'RB/RWB' : s)}</span>`).join(' ') : 'なし'}</strong></span>
-              </div>
-              ${currentSlotBanner}
-            </div>
 
             ${trainingSectionHtml}
 
