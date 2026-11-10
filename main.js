@@ -455,42 +455,52 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
 
   if (shape === 'circle') {
     clipShape = `<circle cx="50" cy="50" r="44"/>`;
-    borderElement = `<circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85"/>`;
+    borderElement = `
+      <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95"/>
+      <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="1.5"/>
+    `;
   } else if (shape === 'diamond') {
     shapePath = 'M 50 8 L 92 50 L 50 92 L 8 50 Z';
     clipShape = `<path d="${shapePath}"/>`;
-    borderElement = `<path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85" stroke-linejoin="round"/>`;
+    borderElement = `
+      <path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.95" stroke-linejoin="round"/>
+      <path d="M 50 14 L 86 50 L 50 86 L 14 50 Z" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="1.5" stroke-linejoin="round"/>
+    `;
   } else {
     // デフォルト: shield
     shapePath = 'M 14 12 L 86 12 L 86 52 C 86 76, 50 94, 50 94 C 50 94, 14 76, 14 52 Z';
+    const innerShieldPath = 'M 18 16 L 82 16 L 82 50 C 82 72, 50 88, 50 88 C 50 88, 18 72, 18 50 Z';
     clipShape = `<path d="${shapePath}"/>`;
-    borderElement = `<path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85" stroke-linejoin="round"/>`;
+    borderElement = `
+      <path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.95" stroke-linejoin="round"/>
+      <path d="${innerShieldPath}" fill="none" stroke="rgba(0, 0, 0, 0.4)" stroke-width="1.5" stroke-linejoin="round"/>
+    `;
   }
 
-  // 内部幾何学パターン
+  // 内部幾何学パターン（エンブレム全面に鮮やかに展開）
   let patternElements = '';
   if (pattern === 'stripes') {
     patternElements = `
-      <rect x="27" y="0" width="15" height="100" fill="${secondaryColor}" opacity="0.9"/>
-      <rect x="58" y="0" width="15" height="100" fill="${secondaryColor}" opacity="0.9"/>
+      <rect x="24" y="0" width="16" height="100" fill="${secondaryColor}" opacity="0.95"/>
+      <rect x="60" y="0" width="16" height="100" fill="${secondaryColor}" opacity="0.95"/>
     `;
   } else if (pattern === 'diagonal') {
     patternElements = `
-      <polygon points="0,0 38,0 100,62 100,100" fill="${secondaryColor}" opacity="0.9"/>
-      <polygon points="0,62 0,100 38,100" fill="${secondaryColor}" opacity="0.9"/>
+      <polygon points="0,0 42,0 100,58 100,100" fill="${secondaryColor}" opacity="0.95"/>
+      <polygon points="0,58 0,100 42,100" fill="${secondaryColor}" opacity="0.95"/>
     `;
   } else if (pattern === 'chevron') {
     patternElements = `
-      <path d="M 0 35 L 50 65 L 100 35 L 100 55 L 50 85 L 0 55 Z" fill="${secondaryColor}" opacity="0.9"/>
+      <path d="M 0 35 L 50 65 L 100 35 L 100 55 L 50 85 L 0 55 Z" fill="${secondaryColor}" opacity="0.95"/>
     `;
   } else if (pattern === 'split') {
     patternElements = `
-      <rect x="50" y="0" width="50" height="100" fill="${secondaryColor}" opacity="0.9"/>
+      <rect x="50" y="0" width="50" height="100" fill="${secondaryColor}" opacity="0.95"/>
     `;
   } else {
     // solid（単色）：アクセントの同心ライン
     patternElements = `
-      <circle cx="50" cy="50" r="36" fill="none" stroke="${secondaryColor}" stroke-width="2" opacity="0.4"/>
+      <circle cx="50" cy="50" r="32" fill="none" stroke="${secondaryColor}" stroke-width="2.5" opacity="0.45"/>
     `;
   }
 
@@ -501,16 +511,15 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
           ${clipShape}
         </clipPath>
       </defs>
-      <!-- 背景メイン色 -->
+      <!-- 背景メイン色 ＆ 全面幾何学パターン -->
       <g clip-path="url(#${uid})">
         <rect x="0" y="0" width="100" height="100" fill="${primaryColor}"/>
         ${patternElements}
       </g>
-      <!-- 外枠境界線 -->
+      <!-- 外枠二重線（ディテール強化） -->
       ${borderElement}
-      <!-- 中央シンボル（イニシャル） -->
-      <circle cx="50" cy="52" r="21" fill="rgba(15, 23, 42, 0.85)" stroke="#ffffff" stroke-width="2" stroke-opacity="0.8"/>
-      <text x="50" y="53" font-family="'Roboto Mono', 'Arial Black', sans-serif" font-weight="900" font-size="22" text-anchor="middle" dominant-baseline="central" fill="#ffffff">${symbol}</text>
+      <!-- 中央シンボル（黒丸を撤去し、輪郭付きテキストで背景パターンと調和） -->
+      <text x="50" y="55" font-family="'Roboto Mono', 'Arial Black', sans-serif" font-weight="900" font-size="34" text-anchor="middle" dominant-baseline="central" fill="#ffffff" stroke="rgba(0, 0, 0, 0.85)" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">${symbol}</text>
     </svg>
   `.trim();
 }
