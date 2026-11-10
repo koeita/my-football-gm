@@ -429,18 +429,30 @@
         </div>
       </div>
 
-      <!-- サブタブ3：個人スタッツ（得点ランキング等） -->
+      <!-- サブタブ3：個人スタッツ（ランキング・リーグ個人記録） -->
       <div class="team-subview hidden" id="team-subview-stats" role="tabpanel">
-        <div class="panel">
+        <!-- スタッツカテゴリー切り替えナビゲーションバー -->
+        <div class="stats-category-nav-bar" id="stats-category-nav-bar" role="tablist" aria-label="個人スタッツカテゴリー">
+          <button type="button" class="stats-cat-btn active" data-stats-cat="goals">得点</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="assists">アシスト</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="ratings">平均評価点</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="cleansheets">クリーンシート</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="moms">MOM</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="appearances">出場記録</button>
+          <button type="button" class="stats-cat-btn" data-stats-cat="cards">警告・退場</button>
+        </div>
+
+        <div class="panel stats-ranking-panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">得点ランキング</h2>
+              <h2 class="panel-title" id="stats-panel-title">リーグ得点ランキング</h2>
+              <span class="panel-desc" id="stats-panel-desc">イングランド・ディビジョン1 個人スタッツ</span>
             </div>
-            <span class="panel-subtitle mono">TOP 10</span>
+            <span class="panel-subtitle mono" id="stats-panel-subtitle">TOP 10</span>
           </div>
           <div class="table-wrapper">
-            <table class="data-table top-scorers-table">
-              <thead>
+            <table class="data-table top-scorers-table stats-ranking-table">
+              <thead id="stats-ranking-thead">
                 <tr>
                   <th class="col-rank">順位</th>
                   <th class="col-pos">POS</th>
@@ -1182,11 +1194,12 @@
         <button type="button" class="btn-modal-close mono" id="btn-close-profile-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
 
-      <!-- 選手カード 4タブ切り替えバー（能力 / 今季成績 / 年別成績 / 経歴） -->
+      <!-- 選手カード 5タブ切り替えバー（能力 / 今季成績 / 年別成績 / 市場価値推移 / 経歴） -->
       <div class="profile-subnav-bar" id="profile-subnav-bar" role="tablist" aria-label="選手カード情報タブ">
         <button type="button" class="profile-tab-btn active" data-profile-tab="ability" role="tab" aria-selected="true">能力</button>
         <button type="button" class="profile-tab-btn" data-profile-tab="season" role="tab" aria-selected="false">今季成績</button>
         <button type="button" class="profile-tab-btn" data-profile-tab="yearly" role="tab" aria-selected="false">年別成績</button>
+        <button type="button" class="profile-tab-btn" data-profile-tab="market-value" role="tab" aria-selected="false">市場価値</button>
         <button type="button" class="profile-tab-btn" data-profile-tab="career" role="tab" aria-selected="false">経歴</button>
       </div>
 
