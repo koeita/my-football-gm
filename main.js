@@ -4206,7 +4206,7 @@ function renderWeeklySchedule() {
     } else if (daysUntilMatch === 0) {
       hintEl.innerHTML = `${congestionPrefix}本日 Matchday（${nextMatchTitle}）`;
     } else if (daysUntilMatch !== null) {
-      hintEl.innerHTML = `${congestionPrefix}次の試合（${nextMatchTitle}）まで あと${daysUntilMatch}日`;
+      hintEl.innerHTML = `${congestionPrefix}次戦（${nextMatchTitle}）まで ${daysUntilMatch}日`;
     } else {
       hintEl.innerHTML = `${congestionPrefix}全日程消化完了`;
     }
@@ -12233,7 +12233,7 @@ function renderGmDuties() {
       level: 'critical',
       badge: '重要',
       title: `第${nextWeek}節 ${opponentText}`,
-      desc: 'スタメンと戦術を確認し、今節の試合シミュレーションを実行します。',
+      desc: 'スタメンと戦術陣形を確認し、キックオフへ進みます。',
       btnText: '作戦確認',
       action: 'goto-pitch'
     };
@@ -12249,8 +12249,8 @@ function renderGmDuties() {
     duties.push({
       level: 'recommended',
       badge: '推奨',
-      title: `移籍オファーの確認 (${activeIncomingOffers.length}件)`,
-      desc: `他クラブから移籍オファーが届いています。「オファー」タブで条件を確認し、対応を決定してください。`,
+      title: `移籍オファー (${activeIncomingOffers.length}件)`,
+      desc: '他クラブからの獲得打診。条件を精査して受諾・交渉・拒否を選択。',
       btnText: 'オファー確認',
       action: 'goto-market-offers'
     });
@@ -12269,7 +12269,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `負傷者交代（${injuredStarters.length}名）`,
-      desc: `${injuredStarters[0].name} らが負傷中です。控え選手との交代を推奨します。`,
+      desc: `${injuredStarters[0].name} らが負傷離脱中。控え選手と交代してください。`,
       btnText: '作戦ボードへ',
       action: 'goto-pitch'
     };
@@ -12279,7 +12279,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `契約更新（${urgentExpiring.length}名）`,
-      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らが契約更新時期を迎えています。`,
+      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らの契約満了が迫っています。`,
       btnText: '契約一覧へ',
       action: 'goto-roster-table'
     };
@@ -12288,7 +12288,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `適性外配置の調整（${outOfPosStarters.length}枠）`,
-      desc: `${outOfPosStarters[0].name} が適性外枠に配置されています。陣形調整を推奨します。`,
+      desc: `${outOfPosStarters[0].name} が不適性ポジションです。配置を調整してください。`,
       btnText: '作戦ボードへ',
       action: 'goto-pitch'
     };
@@ -12307,7 +12307,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: '戦術・状態確認',
-      desc: 'スタメン全員が適性枠かつ健康です。対戦相手に応じた微調整を行えます。',
+      desc: 'スタメン全員が適性枠かつ健康です。次戦に向けた微調整を行えます。',
       btnText: '作戦ボード確認',
       action: 'goto-pitch'
     };
@@ -12330,8 +12330,8 @@ function renderGmDuties() {
     optionalDuty = {
       level: 'optional',
       badge: '任意',
-      title: `ユース昇格検討（${youthSquad.length}名在籍）`,
-      desc: `アカデミーの若手有望株をトップ登録枠（空きあり）に昇格可能です。`,
+      title: `ユース昇格（${youthSquad.length}名在籍）`,
+      desc: 'アカデミー有望株をトップチームへ昇格登録できます。',
       btnText: 'ユース一覧へ',
       action: 'goto-youth'
     };
@@ -12340,7 +12340,7 @@ function renderGmDuties() {
       level: 'optional',
       badge: '任意',
       title: '施設投資の検討',
-      desc: `予算（${formatMoney(playerClub.funds)}）でスタジアム等の施設改修が可能です。`,
+      desc: `クラブ資金を活用し、スタジアムや育成施設の改修が可能です。`,
       btnText: '施設投資へ',
       action: 'goto-facilities'
     };
@@ -12350,7 +12350,7 @@ function renderGmDuties() {
       level: 'optional',
       badge: '任意',
       title: '移籍市場スカウト',
-      desc: '移籍市場から契約残り1年の割安選手や若手有望株を獲得交渉できます。',
+      desc: '移籍リストから即戦力や若手有望株をスカウトできます。',
       btnText: '移籍市場へ',
       action: 'goto-market'
     };
