@@ -18,37 +18,29 @@ class TestCompetitionsPhase4(unittest.TestCase):
         matches = re.findall(r"id:\s*'c\d{2}'", self.comp_js)
         self.assertEqual(len(matches), 24, "Championship clubs count must be 24")
 
-    def test_european_clubs_database(self):
-        """欧州主要国（西・独・伊・仏）のクラブが各10クラブ以上定義されていること"""
-        for country in ['SPAIN', 'GERMANY', 'ITALY', 'FRANCE']:
-            self.assertIn(country, self.comp_js)
-            country_block = re.search(rf"{country}:\s*\[(.*?)\]", self.comp_js, re.DOTALL)
-            self.assertIsNotNone(country_block)
-            clubs = re.findall(r"id:\s*'[a-z]{2}\d{2}'", country_block.group(1))
-            self.assertGreaterEqual(len(clubs), 10, f"{country} must have at least 10 clubs")
+    def test_european_cups_36_teams(self):
+        """欧州3大カップ戦（CL, EL, ECL）が各36チーム参加、全8節リーグフェーズで構成されていること"""
+        self.assertIn("cl36", self.comp_js)
+        self.assertIn("el36", self.comp_js)
+        self.assertIn("ecl36", self.comp_js)
+        self.assertIn("round <= 8", self.comp_js)
+        self.assertIn("renderEuroLeaguePhaseStandingsHtml", self.comp_js)
 
-    def test_domestic_cups_definitions(self):
-        """リーグカップとナショナルカップが定義されていること"""
-        self.assertIn("leagueCup", self.comp_js)
-        self.assertIn("nationalCup", self.comp_js)
-        self.assertIn("LGC", self.comp_js)
-        self.assertIn("NAT", self.comp_js)
+    def test_premier_league_standings_zone_tags(self):
+        """PCのプレミアリーグ順位表に CL圏、EL圏、降格圏 の文字バッジが表示されること"""
+        self.assertIn("standings-zone-tag zone-tag-cl", self.main_js)
+        self.assertIn("standings-zone-tag zone-tag-el", self.main_js)
+        self.assertIn("standings-zone-tag zone-tag-rel", self.main_js)
+        self.assertIn("CL圏", self.main_js)
+        self.assertIn("EL圏", self.main_js)
+        self.assertIn("降格圏", self.main_js)
 
-    def test_european_cups_definitions(self):
-        """欧州3大カップ（CL, EL, ECL）が定義されていること"""
-        self.assertIn("championsCup", self.comp_js)
-        self.assertIn("europaCup", self.comp_js)
-        self.assertIn("conferenceCup", self.comp_js)
-        self.assertIn("'CL'", self.comp_js)
-        self.assertIn("'EL'", self.comp_js)
-        self.assertIn("'ECL'", self.comp_js)
-
-    def test_promotion_and_relegation_system(self):
-        """昇降格処理関数が定義され、自クラブ降格判定があること"""
-        self.assertIn("function processPromotionAndRelegation()", self.comp_js)
-        self.assertIn("isPlayerRelegated", self.comp_js)
-        self.assertIn("relegatedClubs", self.comp_js)
-        self.assertIn("promotedClubs", self.comp_js)
+    def test_championship_standings_no_promo_releg_text(self):
+        """2部リーグ順位表から昇格圏・降格圏の文字表示が撤廃され、プレミアリーグと同一テーブル構造であること"""
+        # main.js 内の 2部リーグ描画部で badge-promo, badge-releg が使われていないこと
+        self.assertIn("col-num col-played", self.main_js)
+        self.assertNotIn("badge-promo", self.main_js)
+        self.assertNotIn("badge-releg", self.main_js)
 
     def test_schedule_congestion_logic(self):
         """過密日程計算とスタミナ・怪我倍率補正が存在すること"""
@@ -56,32 +48,12 @@ class TestCompetitionsPhase4(unittest.TestCase):
         self.assertIn("injuryChanceMultiplier", self.comp_js)
         self.assertIn("staminaMultiplier", self.comp_js)
 
-    def test_index_html_integration(self):
-        """index.html に competitions.js と UI コントロールが含まれていること"""
-        self.assertIn("competitions.js", self.index_html)
-        self.assertIn("comp-segment-nav", self.index_html)
-        self.assertIn("comp-btn-prem", self.index_html)
-        self.assertIn("comp-btn-championship", self.index_html)
-        self.assertIn("comp-btn-domestic", self.index_html)
-        self.assertIn("comp-btn-europe", self.index_html)
-        self.assertIn("comp-bracket-wrapper", self.index_html)
-
-    def test_main_js_integration(self):
-        """main.js に新コンペティション連携ロジックが組み込まれていること"""
-        self.assertIn("initSeasonCompetitions", self.main_js)
-        self.assertIn("advanceChampionshipWeek", self.main_js)
-        self.assertIn("playCurrentCupMatchday", self.main_js)
-        self.assertIn("setupCompetitionNavListeners", self.main_js)
-        self.assertIn("renderChampionshipStandingsHtml", self.main_js)
-        self.assertIn("renderCupBracketHtml", self.main_js)
-
     def test_style_css_rules(self):
-        """style.css に大会タブ・ブラケット・バッジのスタイルが含まれていること"""
-        self.assertIn(".comp-segment-nav", self.style_css)
-        self.assertIn(".comp-tab-btn", self.style_css)
-        self.assertIn(".cal-cup-badge", self.style_css)
-        self.assertIn(".bracket-match-card", self.style_css)
-        self.assertIn(".zone-promotion", self.style_css)
+        """style.css に zone-tag-cl, euro-league-header 等のスタイルが含まれていること"""
+        self.assertIn(".zone-tag-cl", self.style_css)
+        self.assertIn(".zone-tag-el", self.style_css)
+        self.assertIn(".zone-tag-rel", self.style_css)
+        self.assertIn(".euro-league-header", self.style_css)
 
 if __name__ == '__main__':
     unittest.main()

@@ -13684,3 +13684,128 @@ button.hidden,
 .bracket-team-row.match-winner .bracket-team-score {
   color: #00F0FF;
 }
+
+/* ==========================================================================
+   順位表ゾーンバッジ（PC表示）：CL圏、EL圏、降格圏
+   ========================================================================== */
+.standings-zone-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  vertical-align: middle;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
+
+.zone-tag-cl {
+  background: rgba(0, 240, 255, 0.15) !important;
+  color: #00F0FF !important;
+  border: 1px solid rgba(0, 240, 255, 0.4) !important;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.2);
+}
+
+.zone-tag-el {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #FCD34D !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.zone-tag-rel {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #F87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+/* PC環境では col-rank を広げてタグが見やすく収まるようにする */
+@media (min-width: 769px) {
+  .standings-table th.col-rank,
+  .standings-table td.col-rank {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    text-align: left !important;
+    padding-left: 8px !important;
+  }
+}
+
+/* モバイル環境では文字バッジを非表示（左端のカラーバーのみ表示） */
+@media (max-width: 768px) {
+  .standings-zone-tag {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   欧州コンペ：全36チーム リーグフェーズ用スタイル
+   ========================================================================== */
+.euro-league-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.75);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  margin-bottom: 8px;
+  border-radius: 6px;
+}
+
+.euro-league-badge-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.euro-badge-code {
+  background: #00F0FF;
+  color: #0B0E14;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.euro-badge-name {
+  color: #F8FAFC;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.euro-md-status {
+  font-size: 11px;
+  color: #38BDF8;
+  font-weight: 700;
+}
+
+/* フェーズ切り替えトグル（リーグフェーズ / 決勝トーナメント） */
+.euro-phase-toggle {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.euro-phase-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94A3B8;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.euro-phase-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+.euro-phase-btn.active {
+  background: #00F0FF;
+  border-color: #00F0FF;
+  color: #0B0E14;
+  font-weight: 700;
+}
