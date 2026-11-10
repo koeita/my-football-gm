@@ -114,5 +114,50 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn('.cup-header-banner', self.style_css)
         self.assertIn('.euro-league-header', self.style_css)
 
+    def test_european_clubs_naming_standardization(self):
+        """欧州他国クラブ名の漢字・俗称が撤廃され、英字識別コード/フットボール略称に統一されていること"""
+        # 1. 新名称が存在すること
+        self.assertIn("エスパニョール・B", self.comp_js)
+        self.assertIn("バジャドリード・V", self.comp_js)
+        self.assertIn("アラベス・D", self.comp_js)
+        self.assertIn("レガネス・CD", self.comp_js)
+        self.assertIn("ボーフム・V", self.comp_js)
+        self.assertIn("キール・H", self.comp_js)
+        self.assertIn("ウニオン・B", self.comp_js)
+        self.assertIn("ハイデンハイム・FC", self.comp_js)
+        self.assertIn("ザンクトパウリ・FC", self.comp_js)
+        self.assertIn("サンテティエンヌ・AS", self.comp_js)
+        self.assertIn("アンジェ・SCO", self.comp_js)
+        self.assertIn("オセール・AJ", self.comp_js)
+        self.assertIn("ル・アーヴル・AC", self.comp_js)
+        self.assertIn("コモ・C", self.comp_js)
+        self.assertIn("レッチェ・US", self.comp_js)
+        self.assertIn("エンポリ・FC", self.comp_js)
+        self.assertIn("ヴェネツィア・FC", self.comp_js)
+        self.assertIn("パルマ・FC", self.comp_js)
+        self.assertIn("ハダースフィールド・T", self.comp_js)
+
+        # 2. 旧漢字・直訳カラー呼称が存在しないこと
+        self.assertNotIn("青白", self.comp_js)
+        self.assertNotIn("紫", self.comp_js)
+        self.assertNotIn("キュウリ", self.comp_js)
+        self.assertNotIn("十字軍", self.comp_js)
+        self.assertNotIn("ラーゴ", self.comp_js)
+        self.assertNotIn("サレント", self.comp_js)
+        self.assertNotIn("トスカーナ", self.comp_js)
+        self.assertNotIn("ラグーナ", self.comp_js)
+        self.assertNotIn("鉄鋼", self.comp_js)
+        self.assertNotIn("赤青", self.comp_js)
+        self.assertNotIn("海賊", self.comp_js)
+        self.assertNotIn("ホルシュタイン", self.comp_js)
+        self.assertNotIn("白青", self.comp_js)
+        self.assertNotIn("水色", self.comp_js)
+        self.assertNotIn("黒白", self.comp_js)
+
+        # 3. 全クラブ定義のnameに漢字が含まれていないこと
+        club_names = re.findall(r"id:\s*'[^']+',\s*name:\s*'([^']+)'", self.comp_js)
+        for name in club_names:
+            self.assertFalse(bool(re.search(r'[\u4e00-\u9fff]', name)), f"Club name contains kanji: {name}")
+
 if __name__ == '__main__':
     unittest.main()

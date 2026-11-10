@@ -403,6 +403,18 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
     clubId = clubOrNameOrId.id || '';
     clubName = clubOrNameOrId.name || '';
     emblemConf = clubOrNameOrId.emblem || (clubId ? CLUB_EMBLEM_MAP[clubId] : null);
+    if (!emblemConf && clubOrNameOrId.primaryColor) {
+      const rawPat = (clubOrNameOrId.pattern || 'stripes').replace(/-vertical|-horizontal|-diagonal/g, '');
+      const validPat = ['stripes', 'diagonal', 'chevron', 'solid', 'split'].includes(rawPat) ? rawPat : 'stripes';
+      const sym = (clubOrNameOrId.initial || clubOrNameOrId.shortName || clubName || 'FC').charAt(0).toUpperCase();
+      emblemConf = {
+        shape: clubOrNameOrId.shape || 'shield',
+        primaryColor: clubOrNameOrId.primaryColor,
+        secondaryColor: clubOrNameOrId.secondaryColor || '#ffffff',
+        pattern: validPat,
+        symbol: sym
+      };
+    }
   } else if (typeof clubOrNameOrId === 'string') {
     if (CLUB_EMBLEM_MAP[clubOrNameOrId]) {
       clubId = clubOrNameOrId;
@@ -410,11 +422,25 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
     } else {
       clubName = clubOrNameOrId;
       // クラブ名から検索
-      const matchedClub = (Array.isArray(gameState.clubs) && gameState.clubs.find(c => c.name === clubName || clubName.includes(c.name)))
-        || CLUB_DEFINITIONS.find(c => c.name === clubName || clubName.includes(c.name));
+      const allBigFive = typeof getAllBigFiveClubs === 'function' ? getAllBigFiveClubs() : [];
+      const matchedClub = (Array.isArray(gameState.clubs) && gameState.clubs.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name)))
+        || CLUB_DEFINITIONS.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name))
+        || allBigFive.find(c => c.name === clubName || c.id === clubName);
       if (matchedClub) {
         clubId = matchedClub.id;
         emblemConf = matchedClub.emblem || CLUB_EMBLEM_MAP[clubId];
+        if (!emblemConf && matchedClub.primaryColor) {
+          const rawPat = (matchedClub.pattern || 'stripes').replace(/-vertical|-horizontal|-diagonal/g, '');
+          const validPat = ['stripes', 'diagonal', 'chevron', 'solid', 'split'].includes(rawPat) ? rawPat : 'stripes';
+          const sym = (matchedClub.initial || matchedClub.shortName || matchedClub.name || 'FC').charAt(0).toUpperCase();
+          emblemConf = {
+            shape: matchedClub.shape || 'shield',
+            primaryColor: matchedClub.primaryColor,
+            secondaryColor: matchedClub.secondaryColor || '#ffffff',
+            pattern: validPat,
+            symbol: sym
+          };
+        }
       }
     }
   }
