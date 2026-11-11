@@ -8887,6 +8887,18 @@ function renderNegotiationModal() {
     `;
   }
 
+  const safeBudgetVal = getSafeTransferBudget(playerClub);
+  const commonBudgetRowsHtml = `
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">現在資金 / 登録枠</span>
+      <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">実質移籍予算 (安全枠)</span>
+      <span class="neg-demand-val ${safeBudgetVal < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(safeBudgetVal)}</span>
+    </div>
+  `;
+
   // 要求パネルの表示
   let demandRowsHtml = '';
   if (isRenewal) {
@@ -8907,6 +8919,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">代理人の要求期間</span>
         <span class="neg-demand-val">${session.demandedYears}年契約</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'loan') {
     demandRowsHtml = `
@@ -8926,6 +8939,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">所属元クラブ</span>
         <span class="neg-demand-val">${sellerClub ? sellerClub.name : '相手クラブ'}</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'pre_contract') {
     demandRowsHtml = `
@@ -8945,6 +8959,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">移籍金負担</span>
         <span class="neg-demand-val accent-green">£0 (フリー移籍)</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'free_agent') {
     demandRowsHtml = `
@@ -8960,6 +8975,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">移籍金負担</span>
         <span class="neg-demand-val accent-green">£0 (即時加入可能)</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else {
     demandRowsHtml = `
@@ -8975,27 +8991,24 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">希望期間</span>
         <span class="neg-demand-val">${session.demandedYears}年契約</span>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">現在資金 / 登録枠</span>
-        <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
-      </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">実質移籍予算 (安全枠)</span>
-        <span class="neg-demand-val ${getSafeTransferBudget(playerClub) < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(getSafeTransferBudget(playerClub))}</span>
-      </div>
+      ${commonBudgetRowsHtml}
     `;
   }
 
-  const buildNegCashflowWarningHtml = () => {
+  const getNegCashflowWarningState = () => {
     const safeBgt = getSafeTransferBudget(playerClub);
     if (isRenewal) {
       const curAnnual = target.salary || ((target.wage || 15) * 52);
       const addWeekly = Math.max(0, Math.round(((session.offeredSalary || curAnnual) - curAnnual) / 52));
       const estReserveImpact = addWeekly * 20;
       if (estReserveImpact > 0 && (safeBgt - estReserveImpact) < 0) {
-        return `<div class="neg-cashflow-warning" id="neg-cashflow-warning-box">キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。</div>`;
+        return {
+          visible: true,
+          isCritical: false,
+          text: `キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。`
+        };
       }
-      return `<div class="neg-cashflow-warning hidden" id="neg-cashflow-warning-box"></div>`;
+      return { visible: false, isCritical: false, text: '' };
     }
     const dType = session.dealType || 'buy';
     const feeCost = dType === 'buy' ? (session.offeredFee || 0) : 0;
@@ -9009,14 +9022,23 @@ function renderNegotiationModal() {
     }
     const totalImpact = feeCost + (weeklyAdd * 12);
     if (dType === 'buy' && feeCost > playerClub.funds) {
-      return `<div class="neg-cashflow-warning is-critical" id="neg-cashflow-warning-box">資金不足：提示移籍金（${formatMoney(feeCost)}）が現在資金（${formatMoney(playerClub.funds)}）を超えています。</div>`;
+      return {
+        visible: true,
+        isCritical: true,
+        text: `資金不足：提示移籍金（${formatMoney(feeCost)}）が現在資金（${formatMoney(playerClub.funds)}）を超えています。`
+      };
     }
     if (dType !== 'pre_contract' && totalImpact > safeBgt) {
-      return `<div class="neg-cashflow-warning" id="neg-cashflow-warning-box">破産予防アラート：移籍金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。</div>`;
+      return {
+        visible: true,
+        isCritical: false,
+        text: `破産予防アラート：移籍金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。`
+      };
     }
-    return `<div class="neg-cashflow-warning hidden" id="neg-cashflow-warning-box"></div>`;
+    return { visible: false, isCritical: false, text: '' };
   };
 
+  const initWarn = getNegCashflowWarningState();
   const bodyEl = document.getElementById('neg-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
@@ -9025,7 +9047,7 @@ function renderNegotiationModal() {
       <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
         ${session.statusMessage}
       </div>
-      <div id="neg-cashflow-warning-mount">${buildNegCashflowWarningHtml()}</div>
+      <div class="neg-cashflow-warning ${initWarn.isCritical ? 'is-critical' : ''} ${initWarn.visible ? '' : 'hidden'}" id="neg-cashflow-warning-box">${initWarn.text}</div>
 
       <div class="neg-grid">
         <!-- 左：相手側（代理人・所属クラブ）の要求条件 -->
@@ -9052,10 +9074,12 @@ function renderNegotiationModal() {
     `;
 
     const refreshCashflowWarning = () => {
-      const mountEl = bodyEl.querySelector('#neg-cashflow-warning-mount');
-      if (mountEl) {
-        mountEl.innerHTML = buildNegCashflowWarningHtml();
-      }
+      const warnBox = bodyEl.querySelector('#neg-cashflow-warning-box');
+      if (!warnBox) return;
+      const st = getNegCashflowWarningState();
+      warnBox.textContent = st.text;
+      warnBox.classList.toggle('hidden', !st.visible);
+      warnBox.classList.toggle('is-critical', Boolean(st.isCritical));
     };
     bodyEl.addEventListener('input', () => {
       setTimeout(refreshCashflowWarning, 0);
@@ -11297,7 +11321,7 @@ function renderHeader() {
   const safeBudget = getSafeTransferBudget(playerClub);
   const safeBudgetEl = document.getElementById('header-safe-budget');
   if (safeBudgetEl) {
-    safeBudgetEl.textContent = `安全枠 ${formatMoney(safeBudget)}`;
+    safeBudgetEl.textContent = `安全 ${formatMoney(safeBudget)}`;
     safeBudgetEl.classList.remove('is-tight', 'is-danger');
     if (safeBudget < 0) {
       safeBudgetEl.classList.add('is-danger');
@@ -11306,7 +11330,11 @@ function renderHeader() {
     }
   }
 
-  document.getElementById('header-payroll').textContent = `${formatWage(weeklyPayroll)} (${formatMoney(payroll)}/年)`;
+  const payrollEl = document.getElementById('header-payroll');
+  if (payrollEl) {
+    payrollEl.textContent = `${formatWage(weeklyPayroll)}`;
+    payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
+  }
   document.getElementById('header-squad-size').textContent = `SQUAD: ${squadCount}名`;
   document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
 
@@ -12023,8 +12051,8 @@ function renderMatchLog() {
           </div>
         </div>
         <div class="matchday-action-row matchday-action-dual">
-          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff">
-            観戦キックオフ（${playerMatchInfo.title}）
+          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff" title="${playerMatchInfo.title}の作戦確認・観戦を開始">
+            観戦キックオフ ▶
           </button>
           <button type="button" class="btn btn-secondary mono" id="btn-panel-quick-result" title="作戦確認・2D試合経過を省略して即座に結果サマリーを表示">
             クイック結果 ▶|
@@ -13454,8 +13482,8 @@ function renderMarket() {
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
     const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
     const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
-    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
-    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
+    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
+    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
     const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
@@ -17940,12 +17968,14 @@ function openSettingsModal() {
   const volInput = document.getElementById('setting-sound-volume');
   const volVal = document.getElementById('setting-sound-volume-val');
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  const autoSaveLabel = document.getElementById('setting-autosave-label');
   const speedSelect = document.getElementById('setting-match-speed');
   const autoHtCheck = document.getElementById('setting-auto-halftime');
   const autoHtLabel = document.getElementById('setting-auto-halftime-label');
   if (volInput) volInput.value = appSettings.soundVolume;
   if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
   if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
+  if (autoSaveLabel) autoSaveLabel.textContent = appSettings.autoSaveEnabled ? 'ENABLED' : 'OFF';
   if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
   if (autoHtCheck) autoHtCheck.checked = Boolean(appSettings.autoHalftimeResume);
   if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
@@ -18042,9 +18072,11 @@ function initMainMenuAndModals() {
   }
 
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  const autoSaveLabel = document.getElementById('setting-autosave-label');
   if (autoSaveCheck) {
     autoSaveCheck.addEventListener('change', (e) => {
       appSettings.autoSaveEnabled = !!e.target.checked;
+      if (autoSaveLabel) autoSaveLabel.textContent = appSettings.autoSaveEnabled ? 'ENABLED' : 'OFF';
       saveSettingsToStorage();
     });
   }

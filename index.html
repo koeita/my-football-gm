@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261112_0100">
+  <link rel="stylesheet" href="style.css?v=20261112_0200">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -103,11 +103,13 @@
         </div>
         <div class="metric-box">
           <span class="metric-label">CLUB FUNDS</span>
-          <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
-          <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全予算 £40.0M</span>
+          <div class="metric-value-inline-row">
+            <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
+            <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全 £40.0M</span>
+          </div>
         </div>
         <div class="metric-box">
-          <span class="metric-label" id="header-payroll-label">WEEKLY / ANNUAL PAYROLL</span>
+          <span class="metric-label" id="header-payroll-label">WEEKLY PAYROLL</span>
           <span class="metric-value mono" id="header-payroll">£0</span>
         </div>
         <div class="metric-box">
@@ -1383,7 +1385,7 @@
           <div class="settings-control-col">
             <label class="settings-toggle-label mono">
               <input type="checkbox" id="setting-autosave-enabled" checked>
-              <span>ENABLED</span>
+              <span id="setting-autosave-label">ENABLED</span>
             </label>
           </div>
         </div>
@@ -1681,8 +1683,8 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261112_0100"></script>
-  <script src="competitions.js?v=20261112_0100"></script>
-  <script src="main.js?v=20261112_0100"></script>
+  <script src="avatar.js?v=20261112_0200"></script>
+  <script src="competitions.js?v=20261112_0200"></script>
+  <script src="main.js?v=20261112_0200"></script>
 </body>
 </html>

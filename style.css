@@ -14982,28 +14982,70 @@ body {
    Priority A: クイック試合結果導線・ダイレクト移籍交渉・週給キャッシュフロー可視化
    =========================================================================== */
 
-/* ヘッダー内 実質可処分移籍予算（安全枠）サブ表示 */
+/* ヘッダー内 実質可処分移籍予算（安全枠）：2行高さを崩さず横並びピル表示 */
+.metric-value-inline-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .metric-sub-value {
-  display: block;
+  display: inline-block;
   font-size: 10px;
+  font-weight: 700;
   line-height: 1.2;
-  margin-top: 2px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(46, 204, 113, 0.14);
+  border: 1px solid rgba(46, 204, 113, 0.32);
   color: var(--accent-green);
   white-space: nowrap;
 }
 .metric-sub-value.is-tight {
   color: #f39c12;
+  background: rgba(243, 156, 18, 0.14);
+  border-color: rgba(243, 156, 18, 0.35);
 }
 .metric-sub-value.is-danger {
   color: var(--danger-red);
+  background: rgba(231, 76, 60, 0.16);
+  border-color: rgba(231, 76, 60, 0.4);
+}
+
+@media (min-width: 769px) and (max-width: 1380px) {
+  .status-metrics {
+    gap: 10px;
+  }
+}
+
+/* 環境設定トグル：ON/OFF 状態に応じた明確な色分け */
+.settings-toggle-label {
+  color: #8b949e;
+}
+.settings-toggle-label input:checked + span {
+  color: #2ecc71;
+  font-weight: 700;
+}
+.settings-toggle-label input:not(:checked) + span {
+  color: #8b949e;
+  font-weight: 500;
 }
 
 /* オフィス画面 MATCHDAY パネル：観戦キックオフ ＆ クイック結果 2並列ボタン */
 .matchday-action-row.matchday-action-dual {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   gap: 8px;
   align-items: stretch;
+  width: 100%;
+}
+
+.matchday-action-row.matchday-action-dual > button {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #btn-panel-quick-result {
@@ -15053,7 +15095,18 @@ body {
   border-color: #38bdf8 !important;
 }
 
-/* 移籍市場一覧：ダイレクト交渉ボタン ＋ コンパクト候補ブックマーク */
+/* 移籍市場フィルターバー（PC伸縮最適化）＆ ダイレクト交渉ボタン */
+@media (min-width: 769px) {
+  .market-filter-bar .filter-search-wrap {
+    flex: 1 1 180px;
+    min-width: 150px;
+  }
+  .market-filter-bar .market-search-input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 .market-action-group {
   display: inline-flex;
   align-items: center;
@@ -15079,7 +15132,7 @@ body {
 
 /* 交渉モーダル内：実質移籍予算・キャッシュフロー警告バー */
 .neg-cashflow-warning {
-  margin-top: 8px;
+  margin: 0;
   padding: 8px 10px;
   border-radius: 6px;
   font-size: 11.5px;
@@ -15092,6 +15145,51 @@ body {
   background: rgba(231, 76, 60, 0.16);
   border-color: rgba(231, 76, 60, 0.5);
   color: #f87171;
+}
+
+@media (max-width: 768px) {
+  /* モバイル1行ステータスバー（高さ18px）では安全枠ピルを非表示にして文字切れを防止 */
+  .metric-value-inline-row {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+  #header-safe-budget {
+    display: none !important;
+  }
+
+  /* 移籍市場フィルター：5項目対応（[LEAGUE | CLUB], [POS | SORT], [SEARCH全幅] の整然3段） */
+  .market-filter-bar .filter-group:nth-child(4) {
+    grid-column: span 1 !important;
+  }
+  .market-filter-bar .filter-group.filter-search-wrap {
+    grid-column: 1 / -1 !important;
+  }
+  .market-filter-bar .market-search-input {
+    width: 100% !important;
+    height: 30px !important;
+    font-size: 11px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 移籍市場・獲得ターゲット上部の4バッジ/3バッジを整然とした均等グリッドに収容 */
+  #market-pos-summary {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+  #market-subview-shortlist .team-power-badges {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  /* モバイル選手名セルの重複カテゴリーバッジを抑制して行高肥大化を防止 */
+  .market-table .badge-cat-tier {
+    display: none !important;
+  }
 }
 
 @media (max-width: 680px) {

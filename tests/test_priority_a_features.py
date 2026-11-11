@@ -69,8 +69,12 @@ class TestPriorityAUxMarketEconomy(unittest.TestCase):
         self.assertNotIn('club.funds = (club.funds || 0) - payroll;', self.main_js)
         # ヘッダー・ショートリスト・市場・交渉モーダルに実質移籍予算（安全枠）と破産予防アラートが存在すること
         self.assertIn('id="header-safe-budget"', self.html)
+        self.assertIn('class="metric-value-inline-row"', self.html)
         self.assertIn('id="shortlist-summary-safe-budget"', self.html)
         self.assertIn('neg-cashflow-warning', self.main_js)
+        self.assertNotIn('id="neg-cashflow-warning-mount"', self.main_js)
+        self.assertIn('.market-filter-bar .filter-group.filter-search-wrap', self.css)
+        self.assertIn('.matchday-action-row.matchday-action-dual > button', self.css)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 
 
