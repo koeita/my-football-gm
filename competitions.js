@@ -160,12 +160,18 @@ function getAllBigFiveClubs() {
 // ==========================================
 function simQuickMatch(homeClub, awayClub) {
   const getPower = (c) => {
-    if (c.basePower) return c.basePower;
+    if (c && Array.isArray(c.players) && c.players.length >= 11 && typeof getPlayerOverallRating === 'function') {
+      const starters = c.players.filter(p => p.isStarter && !p.isRetired);
+      const lineup = starters.length >= 11 ? starters.slice(0, 11) : c.players.slice(0, 11);
+      const avgOvr = Math.round(lineup.reduce((sum, p) => sum + getPlayerOverallRating(p), 0) / lineup.length);
+      if (avgOvr > 0) return avgOvr;
+    }
+    if (c && c.basePower) return c.basePower;
     if (typeof calcClubOvr === 'function') {
       const ovr = calcClubOvr(c);
       if (ovr > 0) return ovr;
     }
-    if (c.targetRank) return 85 - (c.targetRank * 1.5);
+    if (c && c.targetRank) return 85 - (c.targetRank * 1.5);
     return 75;
   };
 
@@ -1164,13 +1170,23 @@ function checkScheduleCongestion() {
 function ensurePlayableClubStructure(club) {
   if (!club) return club;
   const usedNames = new Set((club.players || []).map(p => p.name));
-  const power = typeof club.basePower === 'number' ? club.basePower : 71;
+  // CHAMPIONSHIP_CLUBS_DEFINITIONS の basePower (65〜74) はチームOVRスケールのため、
+  // createSquad 用の内部生成基準値 (51〜60) に変換して1部下位より明確に下の現実的2部水準にする
+  const rawTeamOvr = typeof club.basePower === 'number' ? club.basePower : 68;
+  const isD2DefinitionScale = String(club.id || '').startsWith('c') || rawTeamOvr >= 64;
+  const squadGenPower = isD2DefinitionScale
+    ? Math.max(50, Math.min(60, rawTeamOvr - 14))
+    : Math.max(50, Math.min(60, rawTeamOvr));
+  const maxAllowedD2Ovr = rawTeamOvr >= 72 ? 76 : (rawTeamOvr >= 69 ? 74 : 72);
 
   if (!Array.isArray(club.players) || club.players.length < 11) {
     if (typeof createSquad === 'function') {
-      club.players = createSquad(power, usedNames);
+      club.players = createSquad(squadGenPower, usedNames);
     } else if (typeof ALL_POSITIONS !== 'undefined' && typeof createPlayer === 'function') {
-      club.players = ALL_POSITIONS.map(pos => createPlayer(pos, power, false, usedNames));
+      club.players = ALL_POSITIONS.map(pos => createPlayer(pos, squadGenPower, false, usedNames));
+    }
+    if (Array.isArray(club.players) && typeof capGeneratedPlayerOvr === 'function') {
+      club.players.forEach(p => capGeneratedPlayerOvr(p, maxAllowedD2Ovr));
     }
   }
   if (!Array.isArray(club.youthSquad) && typeof createYouthSquad === 'function') {
@@ -1195,6 +1211,87 @@ function ensurePlayableClubStructure(club) {
   return club;
 }
 
+// セーブ容量圧縮：competitions 内の重複クラブ参照から巨大な players / youthSquad 等を除外して軽量クローンを返す
+function dehydrateCompetitionsForSave(comps) {
+  if (!comps || typeof comps !== 'object') return comps;
+
+  const slimClub = (c) => {
+    if (!c || typeof c !== 'object') return c;
+    return {
+      id: c.id,
+      name: c.name,
+      shortName: c.shortName,
+      shortCode: c.shortCode,
+      city: c.city,
+      country: c.country,
+      primaryColor: c.primaryColor,
+      secondaryColor: c.secondaryColor,
+      pattern: c.pattern,
+      shape: c.shape,
+      emblem: c.emblem,
+      basePower: c.basePower,
+      isPlayer: Boolean(c.isPlayer),
+      avgOvr: c.avgOvr,
+      played: c.played || 0,
+      won: c.won || 0,
+      drawn: c.drawn || 0,
+      lost: c.lost || 0,
+      gf: c.gf || 0,
+      ga: c.ga || 0,
+      gd: c.gd || 0,
+      pts: c.pts || 0
+    };
+  };
+
+  const slimMatch = (m) => {
+    if (!m || typeof m !== 'object') return m;
+    return {
+      ...m,
+      homeClub: slimClub(m.homeClub),
+      awayClub: slimClub(m.awayClub),
+      winnerClub: slimClub(m.winnerClub)
+    };
+  };
+
+  const result = {};
+  for (const [key, comp] of Object.entries(comps)) {
+    if (!comp || typeof comp !== 'object') {
+      result[key] = comp;
+      continue;
+    }
+    // 2部リーグ正本（championship.clubs）は選手データをそのまま保持する
+    if (key === 'championship') {
+      result[key] = comp;
+      continue;
+    }
+    const copy = { ...comp };
+    if (Array.isArray(comp.participants)) {
+      copy.participants = comp.participants.map(slimClub);
+    }
+    if (Array.isArray(comp.matches)) {
+      copy.matches = comp.matches.map(slimMatch);
+    }
+    if (Array.isArray(comp.leagueSchedule)) {
+      copy.leagueSchedule = comp.leagueSchedule.map(md => Array.isArray(md) ? md.map(slimMatch) : md);
+    }
+    if (Array.isArray(comp.playoffs)) {
+      copy.playoffs = comp.playoffs.map(slimMatch);
+    }
+    if (comp.rounds && typeof comp.rounds === 'object') {
+      const newRounds = {};
+      for (const [rKey, arr] of Object.entries(comp.rounds)) {
+        newRounds[rKey] = Array.isArray(arr) ? arr.map(slimMatch) : arr;
+      }
+      copy.rounds = newRounds;
+    }
+    if (comp.winner) {
+      copy.winner = slimClub(comp.winner);
+    }
+    result[key] = copy;
+  }
+  return result;
+}
+
 // セーブデータ読み込み後に competitions 内のクラブ参照を正本へ再結合する
 function rehydrateCompetitionsClubRefs() {
   if (!gameState || !gameState.competitions) return;
@@ -1217,6 +1314,11 @@ function rehydrateCompetitionsClubRefs() {
   ['leagueCup', 'nationalCup', 'championsCup', 'europaCup', 'conferenceCup'].forEach(k => {
     const comp = gameState.competitions[k];
     if (!comp) return;
+    if (Array.isArray(comp.leagueSchedule)) {
+      comp.leagueSchedule.forEach(md => {
+        if (Array.isArray(md)) md.forEach(relinkMatch);
+      });
+    }
     if (Array.isArray(comp.playoffs)) comp.playoffs.forEach(relinkMatch);
     if (comp.rounds && typeof comp.rounds === 'object') {
       Object.values(comp.rounds).forEach(arr => {
