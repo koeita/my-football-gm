@@ -14978,4 +14978,142 @@ body {
   }
 }
 
+/* ===========================================================================
+   Priority A: クイック試合結果導線・ダイレクト移籍交渉・週給キャッシュフロー可視化
+   =========================================================================== */
+
+/* ヘッダー内 実質可処分移籍予算（安全枠）サブ表示 */
+.metric-sub-value {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  margin-top: 2px;
+  color: var(--accent-green);
+  white-space: nowrap;
+}
+.metric-sub-value.is-tight {
+  color: #f39c12;
+}
+.metric-sub-value.is-danger {
+  color: var(--danger-red);
+}
+
+/* オフィス画面 MATCHDAY パネル：観戦キックオフ ＆ クイック結果 2並列ボタン */
+.matchday-action-row.matchday-action-dual {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 8px;
+  align-items: stretch;
+}
+
+#btn-panel-quick-result {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  background: linear-gradient(180deg, #252c35 0%, #1a2027 100%);
+  color: #f8fafc;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+#btn-panel-quick-result:hover {
+  transform: translateY(-1px);
+  border-color: #38bdf8;
+  background: linear-gradient(180deg, #2c3540 0%, #202730 100%);
+}
+#btn-panel-quick-result:active {
+  transform: translateY(1px);
+}
+
+/* 作戦最終確認モーダル：3ボタンフッター（編成変更 / クイック結果 / 観戦キックオフ） */
+.precheck-modal-footer {
+  grid-template-columns: 0.95fr 1fr 1.25fr;
+}
+
+.btn-precheck-quick {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+  white-space: nowrap;
+}
+.btn-precheck-quick:hover {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: #38bdf8 !important;
+}
+
+/* 移籍市場一覧：ダイレクト交渉ボタン ＋ コンパクト候補ブックマーク */
+.market-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.btn-market-direct-offer {
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+}
+
+.btn-shortlist-icon {
+  min-width: 28px;
+  padding: 4px 6px !important;
+  font-size: 12px !important;
+  line-height: 1;
+  border-radius: 5px;
+}
+
+/* 交渉モーダル内：実質移籍予算・キャッシュフロー警告バー */
+.neg-cashflow-warning {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  background: rgba(243, 156, 18, 0.14);
+  border: 1px solid rgba(243, 156, 18, 0.45);
+  color: #fbbf24;
+}
+.neg-cashflow-warning.is-critical {
+  background: rgba(231, 76, 60, 0.16);
+  border-color: rgba(231, 76, 60, 0.5);
+  color: #f87171;
+}
+
+@media (max-width: 680px) {
+  .matchday-action-row.matchday-action-dual {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  #btn-panel-kickoff,
+  #btn-panel-quick-result {
+    font-size: 12.5px;
+    padding: 10px 8px;
+    min-height: 44px;
+  }
+  .precheck-modal-footer {
+    grid-template-columns: 1fr 1fr;
+  }
+  .precheck-modal-footer #btn-precheck-goto-roster {
+    grid-column: 1 / -1;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+}
+
+
 

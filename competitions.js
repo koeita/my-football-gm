@@ -128,6 +128,21 @@ const FRANCE_CLUBS_DEFINITIONS = [
 
 // 五大リーグ全120クラブまとめ
 // ENG 1部(20) + ENG 2部(24) + ESP(20) + ITA(20) + GER(18) + FRA(18) = 120クラブ
+function getEuropeanMajorClubDefinitions() {
+  return [
+    ...SPAIN_CLUBS_DEFINITIONS,
+    ...ITALY_CLUBS_DEFINITIONS,
+    ...GERMANY_CLUBS_DEFINITIONS,
+    ...FRANCE_CLUBS_DEFINITIONS
+  ];
+}
+
+function findEuropeanClubDefinitionById(clubId) {
+  if (!clubId) return null;
+  const allEuro = getEuropeanMajorClubDefinitions();
+  return allEuro.find(c => c.id === clubId) || null;
+}
+
 function getAllBigFiveClubs() {
   const p1Clubs = (typeof CLUB_DEFINITIONS !== 'undefined') ? CLUB_DEFINITIONS : (gameState.clubs || []);
   return [
@@ -328,17 +343,20 @@ function initChampionshipLeague() {
     gameState.competitions.championship = {
       name: 'イングランド・セカンドディビジョン',
       shortName: 'ENG-D2',
-      clubs: CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => ({
-        ...c,
-        played: 0,
-        won: 0,
-        drawn: 0,
-        lost: 0,
-        gf: 0,
-        ga: 0,
-        gd: 0,
-        pts: 0
-      }))
+      clubs: CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => {
+        const clubObj = {
+          ...c,
+          played: 0,
+          won: 0,
+          drawn: 0,
+          lost: 0,
+          gf: 0,
+          ga: 0,
+          gd: 0,
+          pts: 0
+        };
+        return ensurePlayableClubStructure(clubObj);
+      })
     };
   } else {
     gameState.competitions.championship.clubs.forEach(c => {
@@ -350,6 +368,7 @@ function initChampionshipLeague() {
       c.ga = 0;
       c.gd = 0;
       c.pts = 0;
+      ensurePlayableClubStructure(c);
     });
   }
 }

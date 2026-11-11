@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261109_0215">
+  <link rel="stylesheet" href="style.css?v=20261112_0100">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -104,9 +104,10 @@
         <div class="metric-box">
           <span class="metric-label">CLUB FUNDS</span>
           <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
+          <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全予算 £40.0M</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">ANNUAL PAYROLL</span>
+          <span class="metric-label" id="header-payroll-label">WEEKLY / ANNUAL PAYROLL</span>
           <span class="metric-value mono" id="header-payroll">£0</span>
         </div>
         <div class="metric-box">
@@ -855,6 +856,17 @@
           <!-- 移籍市場フィルターバー -->
           <div class="market-filter-bar">
             <div class="filter-group">
+              <label class="filter-label mono">LEAGUE:</label>
+              <select id="market-filter-category" class="market-select mono">
+                <option value="ALL">全カテゴリー</option>
+                <option value="ENG_D1">イングランド1部 (ENG-D1)</option>
+                <option value="ENG_D2">イングランド2部 (ENG-D2)</option>
+                <option value="EUROPE">欧州主要クラブ (リスト)</option>
+                <option value="FREE_AGENT">無所属 (フリー)</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
               <label class="filter-label mono">CLUB:</label>
               <select id="market-filter-club" class="market-select mono">
                 <option value="ALL">全クラブ</option>
@@ -909,7 +921,7 @@
                   <th class="col-num">市場価値</th>
                   <th class="col-num">週給</th>
                   <th class="col-num">契約残</th>
-                  <th class="col-action">ターゲット登録</th>
+                  <th class="col-action">交渉 / 候補</th>
                 </tr>
               </thead>
               <tbody id="market-tbody">
@@ -929,7 +941,8 @@
             </div>
             <div class="team-power-badges">
               <span class="power-badge">登録件数 <strong class="mono" id="shortlist-summary-count">0件</strong></span>
-              <span class="power-badge">獲得可能予算 <strong class="mono accent-gold" id="shortlist-summary-funds">£0.0M</strong></span>
+              <span class="power-badge">現在資金 <strong class="mono accent-gold" id="shortlist-summary-funds">£0.0M</strong></span>
+              <span class="power-badge" title="今後の週給運転資金を確保した上で安全に使える実質移籍予算">実質移籍予算 <strong class="mono accent-green" id="shortlist-summary-safe-budget">£0.0M</strong></span>
             </div>
           </div>
           <div class="table-wrapper">
@@ -1387,6 +1400,18 @@
             </select>
           </div>
         </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">ハーフタイム自動進行</span>
+            <span class="settings-desc">ONにすると前半45分終了時に一時停止せず自動で後半を開始します</span>
+          </div>
+          <div class="settings-control-col">
+            <label class="settings-toggle-label mono">
+              <input type="checkbox" id="setting-auto-halftime">
+              <span id="setting-auto-halftime-label">OFF</span>
+            </label>
+          </div>
+        </div>
         <div class="settings-row settings-title-return-row">
           <div class="settings-label-col">
             <span class="settings-label">メインメニュー</span>
@@ -1495,8 +1520,11 @@
         <button type="button" class="btn btn-secondary btn-precheck-edit" id="btn-precheck-goto-roster">
           作戦・編成を変更
         </button>
+        <button type="button" class="btn btn-secondary btn-precheck-quick" id="btn-precheck-quick-result" title="2D試合経過を省略して即座に結果サマリーへ進みます">
+          クイック結果 ▶|
+        </button>
         <button type="button" class="btn btn-primary btn-kickoff-pulse btn-precheck-start" id="btn-precheck-start-match">
-          試合開始 ▶
+          観戦キックオフ ▶
         </button>
       </div>
     </div>
@@ -1653,8 +1681,8 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261111_0400"></script>
-  <script src="competitions.js?v=20261111_0400"></script>
-  <script src="main.js?v=20261111_0400"></script>
+  <script src="avatar.js?v=20261112_0100"></script>
+  <script src="competitions.js?v=20261112_0100"></script>
+  <script src="main.js?v=20261112_0100"></script>
 </body>
 </html>
