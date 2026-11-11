@@ -779,7 +779,11 @@ function getPlayerAvatarHtml(player, club = null, extraClass = 'avatar-sm', canv
   if (!player) return '';
   try {
     if (player.id !== undefined && player.id !== null) {
-      PLAYER_AVATAR_LOOKUP.set(String(player.id), { player, club });
+      const pidKey = String(player.id);
+      if (!PLAYER_AVATAR_LOOKUP.has(pidKey) && PLAYER_AVATAR_LOOKUP.size >= PLAYER_AVATAR_CACHE_LIMIT) {
+        PLAYER_AVATAR_LOOKUP.delete(PLAYER_AVATAR_LOOKUP.keys().next().value);
+      }
+      PLAYER_AVATAR_LOOKUP.set(pidKey, { player, club });
     }
     const url = getPlayerAvatarDataUrl(player, club, canvasSize);
     const bgStyle = url ? ` style="background-image:url('${url}');background-size:100% 100%;"` : '';
