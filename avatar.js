@@ -251,6 +251,17 @@ function findAvatarClubForPlayer(player) {
       }
     }
   }
+  if (player.sellerClub && typeof player.sellerClub === 'object') {
+    return player.sellerClub;
+  }
+  if (player.euroClubId && typeof findEuropeanClubDefinitionById === 'function') {
+    const euroDef = findEuropeanClubDefinitionById(player.euroClubId);
+    if (euroDef) return euroDef;
+  }
+  if (player.clubId && typeof findEuropeanClubDefinitionById === 'function') {
+    const euroDef = findEuropeanClubDefinitionById(player.clubId);
+    if (euroDef) return euroDef;
+  }
   return null;
 }
 

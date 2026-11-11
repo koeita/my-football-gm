@@ -1432,6 +1432,7 @@ const gameState = {
   isGameOver: false,
   isSimulating: false,
   consecutiveDeficitSeasons: 0,
+  paidPayrollWeeks: 0,          // 今季支払い済みの週次給与回数（0〜52週）
   lastSeasonStandingsOrder: null,
   lastSeasonCupWinners: null,
   activeTab: 'office',
@@ -1446,6 +1447,7 @@ const gameState = {
   lastWeekResults: [],
   lastMatchTicker: null,
   transferMarket: [],
+  euroTransferList: [],         // 欧州主要クラブ（ESP/ITA/GER/FRA）の移籍リストアップ選手
   youthCandidates: [],
   facilities: {
     stadium: 1,
@@ -1473,6 +1475,7 @@ const gameState = {
   matchHistory: [],              // 自クラブのシーズン全公式戦サマリー履歴
   marketSubtab: 'market',        // 移籍タブ内サブタブ ('market' | 'shortlist' | 'offers')
   marketFilter: {                // グローバル移籍市場の絞り込み状態
+    category: 'ALL',
     clubId: 'ALL',
     position: 'ALL',
     sortKey: 'ovr-desc',
@@ -2813,14 +2816,15 @@ function createSquad(basePower, usedNames) {
 }
 
 /**
- * 移籍市場候補選手（6〜8名＋スカウト網Lv補正）を生成
+ * 移籍市場候補選手（無所属フリー選手 ＆ 欧州主要クラブ移籍リストアップ選手）を生成
  */
 function generateTransferMarket() {
   const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
   const count = randInt(6, 8) + (scoutingLv - 1) * 2;
   const usedNames = new Set();
-  for (const club of gameState.clubs) {
-    for (const p of club.players) {
+  const managedList = typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []);
+  for (const club of managedList) {
+    for (const p of (club.players || [])) {
       usedNames.add(p.name);
       if (p.fullName) usedNames.add(p.fullName);
     }
@@ -2831,32 +2835,23 @@ function generateTransferMarket() {
       }
     }
   }
+  if (Array.isArray(gameState.preContractPlayers)) {
+    for (const preP of gameState.preContractPlayers) {
+      if (preP && preP.name) usedNames.add(preP.name);
+    }
+  }
 
   const usedMarketNums = new Set();
   const candidates = [];
   const minPower = 60 + (scoutingLv - 1) * 2;
   const maxPower = Math.min(88, 79 + (scoutingLv - 1) * 2);
 
-  for (let i = 0; i < count; i++) {
+  // 完全フリー選手（無所属 / Free Agents）：市場に常時6〜10名流通させる
+  const freeCount = count + 2;
+  for (let f = 0; f < freeCount; f++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-    const basePower = randInt(minPower, maxPower);
-    const player = createPlayer(pos, basePower, false, usedNames, [18, 31]);
-    player.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
-    // 市場候補のうち少なくとも2名は契約残り1年（格安）にする
-    if (i < 2) {
-      player.contractYears = 1;
-    } else {
-      player.contractYears = randInt(1, 4);
-    }
-    player.transferFee = calculateTransferFee(player);
-    candidates.push(player);
-  }
-
-  // 完全フリー選手（無所属 / Free Agents）を2名追加生成
-  for (let f = 0; f < 2; f++) {
-    const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-    const basePower = randInt(minPower - 2, maxPower);
-    const freePlayer = createPlayer(pos, basePower, false, usedNames, [20, 32]);
+    const basePower = randInt(Math.max(58, minPower - 2), maxPower);
+    const freePlayer = createPlayer(pos, basePower, false, usedNames, [19, 33]);
     freePlayer.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
     freePlayer.isFreeAgent = true;
     freePlayer.contractYears = 0;
@@ -2868,6 +2863,107 @@ function generateTransferMarket() {
 
   candidates.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
   gameState.transferMarket = candidates;
+
+  // 欧州主要クラブ（ESP / ITA / GER / FRA）からのリストアップ選手を生成（28〜48名、スカウト網Lv連動）
+  generateEuropeanTransferList(usedNames, scoutingLv);
+}
+
+/**
+ * 欧州4大リーグ（スペイン・イタリア・ドイツ・フランス）主要クラブの移籍リストアップ選手を生成
+ */
+function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) {
+  if (typeof getEuropeanMajorClubDefinitions !== 'function') {
+    gameState.euroTransferList = [];
+    return;
+  }
+  const euroClubs = getEuropeanMajorClubDefinitions();
+  if (!Array.isArray(euroClubs) || euroClubs.length === 0) {
+    gameState.euroTransferList = [];
+    return;
+  }
+
+  const usedNames = existingUsedNames instanceof Set ? existingUsedNames : new Set();
+  const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
+  const preservedPreContracts = (gameState.euroTransferList || []).filter(p => p && (p.preContract || preContractIds.has(p.id)));
+  preservedPreContracts.forEach(p => {
+    usedNames.add(p.name);
+    if (p.fullName) usedNames.add(p.fullName);
+  });
+
+  const targetCount = 28 + (Math.max(1, scoutingLv) - 1) * 5;
+  const maxAllowedPower = Math.min(90, 82 + (Math.max(1, scoutingLv) - 1) * 2);
+  const eligibleClubs = euroClubs.filter(c => (c.basePower || 75) <= maxAllowedPower + 4);
+  const poolClubs = eligibleClubs.length > 0 ? eligibleClubs : euroClubs;
+
+  const euroList = [...preservedPreContracts];
+  for (let i = 0; i < targetCount; i++) {
+    const clubDef = poolClubs[randInt(0, poolClubs.length - 1)];
+    const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
+    const rawPower = clamp((clubDef.basePower || 76) + randInt(-4, 3), 64, maxAllowedPower);
+    const p = createPlayer(pos, rawPower, false, usedNames, [18, 32]);
+    p.squadNumber = randInt(2, 30);
+    p.contractYears = (i % 4 === 0) ? 1 : randInt(1, 4);
+    p.isFreeAgent = false;
+    p.isEuroListed = true;
+    p.euroClubId = clubDef.id;
+    p.clubId = clubDef.id;
+    p.transferFee = calculateTransferFee(p);
+    euroList.push(p);
+  }
+
+  euroList.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+  gameState.euroTransferList = euroList;
+}
+
+/**
+ * 移籍交渉・オファー処理用：1部・2部・欧州主要クラブリスト・無所属市場から対象選手と所属元クラブを一元検索
+ */
+function findTransferTargetWithSeller(playerId) {
+  if (!playerId) return null;
+
+  const d1Clubs = Array.isArray(gameState.clubs) ? gameState.clubs : [];
+  for (const c of d1Clubs) {
+    const p = (c.players || []).find(x => x.id === playerId);
+    if (p) {
+      return { player: p, sellerClub: c, category: 'ENG_D1', isFreeAgent: false, isEuroListed: false };
+    }
+  }
+
+  const d2Clubs = (gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || [];
+  for (const c of d2Clubs) {
+    const p = (c.players || []).find(x => x.id === playerId);
+    if (p) {
+      return { player: p, sellerClub: c, category: 'ENG_D2', isFreeAgent: false, isEuroListed: false };
+    }
+  }
+
+  if (Array.isArray(gameState.euroTransferList)) {
+    const euroP = gameState.euroTransferList.find(x => x && x.id === playerId);
+    if (euroP) {
+      const euroDef = (typeof findEuropeanClubDefinitionById === 'function')
+        ? findEuropeanClubDefinitionById(euroP.euroClubId || euroP.clubId)
+        : null;
+      const virtualClub = euroDef
+        ? { ...euroDef, shortCode: euroDef.shortName, isPlayer: false, isEuroVirtual: true }
+        : { id: euroP.euroClubId || 'euro_club', name: '欧州クラブ', shortName: 'EUR', shortCode: 'EUR', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isPlayer: false, isEuroVirtual: true };
+      return { player: euroP, sellerClub: virtualClub, category: 'EUROPE', isFreeAgent: false, isEuroListed: true };
+    }
+  }
+
+  if (Array.isArray(gameState.transferMarket)) {
+    const mktP = gameState.transferMarket.find(x => x && x.id === playerId);
+    if (mktP) {
+      return {
+        player: mktP,
+        sellerClub: null,
+        category: 'FREE_AGENT',
+        isFreeAgent: Boolean(mktP.isFreeAgent || mktP.contractYears === 0),
+        isEuroListed: false
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -3350,6 +3446,52 @@ function getClubTotalPayroll(club) {
 }
 
 /**
+ * クラブの週次総人件費（単位：£1K / 週）を計算（選手週給 ＋ 監督週給 ＋ コーチ週給）
+ */
+function getClubWeeklyPayroll(club) {
+  if (!club) return 0;
+  const annual = getClubTotalPayroll(club);
+  return Math.max(0, Math.round(annual / 52));
+}
+
+/**
+ * 意図せぬ債務超過（破産）を防ぐための「実質可処分移籍予算（Safe Transfer Budget）」（単位：£1K）を算出
+ * 今季残り週（オフシーズンは来季52週）の未払人件費と、確実に見込めるリーグ戦マッチデイ・放映権収入および開幕前運転資金バッファを考慮
+ */
+function getSafeTransferBudget(club) {
+  if (!club) return 0;
+  const funds = typeof club.funds === 'number' ? club.funds : 0;
+  const weeklyPayroll = getClubWeeklyPayroll(club);
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const stadiumMult = club.isPlayer ? (1 + (stadiumLv - 1) * 0.15) : 1.0;
+  const estHomeGate = Math.round(((club.supporters || 14000) * 0.085) * stadiumMult);
+  const estAwayTv = 1600;
+
+  if (gameState.isSeasonOver) {
+    const totalMatches = isPlayerInSecondDivision() ? 46 : 38;
+    const halfMatches = Math.floor(totalMatches / 2);
+    const estNextLeagueRev = halfMatches * estHomeGate + halfMatches * estAwayTv;
+    const nextAnnualPayroll = weeklyPayroll * 52;
+    const netSeasonBurn = Math.max(0, nextAnnualPayroll - estNextLeagueRev);
+    const preseasonBuffer = weeklyPayroll * 7; // 7月〜8月開幕までの無収入期間バッファ
+    const requiredReserve = Math.max(weeklyPayroll * 8, netSeasonBurn + preseasonBuffer);
+    return Math.round(funds - requiredReserve);
+  }
+
+  const paidWeeks = clamp(gameState.paidPayrollWeeks || 0, 0, 52);
+  const remWeeks = Math.max(0, 52 - paidWeeks);
+  const totalWeeks = gameState.totalWeeks || (isPlayerInSecondDivision() ? 46 : 38);
+  const remMatches = Math.max(0, totalWeeks - (gameState.currentWeek || 0));
+  const remHome = Math.floor(remMatches / 2);
+  const remAway = remMatches - remHome;
+  const estRemLeagueRev = remHome * estHomeGate + remAway * estAwayTv;
+  const preseasonWeeksAhead = (gameState.currentWeek || 0) === 0 ? Math.min(remWeeks, 6) : 2;
+  const netRemBurn = Math.max(0, (weeklyPayroll * remWeeks) - estRemLeagueRev);
+  const requiredReserve = Math.max(weeklyPayroll * Math.min(remWeeks, 6), netRemBurn + (weeklyPayroll * preseasonWeeksAhead));
+  return Math.round(funds - requiredReserve);
+}
+
+/**
  * 20チームの2回戦総当たり（全38節・各節10試合）のスケジュールを生成
  */
 function generateSeasonSchedule(clubs) {
@@ -3813,6 +3955,23 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
+  // 毎週日曜（dayOfWeek === 0）に週次人件費（選手・監督・コーチ週給合計、年間最大52回）を自動引き落とし
+  if (nextDay.dayOfWeek === 0 && (gameState.paidPayrollWeeks || 0) < 52) {
+    gameState.paidPayrollWeeks = (gameState.paidPayrollWeeks || 0) + 1;
+    const pClub = getPlayerClub();
+    let playerPaidWeekly = 0;
+    for (const club of getAllManagedLeagueClubs()) {
+      const weeklyCost = getClubWeeklyPayroll(club);
+      club.funds = (club.funds || 0) - weeklyCost;
+      if (pClub && club.id === pClub.id) {
+        playerPaidWeekly = weeklyCost;
+      }
+    }
+    if (pClub && playerPaidWeekly > 0) {
+      addDailyLog(`【週次給与決済 (${gameState.paidPayrollWeeks}/52週)】選手・指導陣の週給合計 -${formatMoney(playerPaidWeekly)} を支払いました（現在資金: ${formatMoney(pClub.funds)}）`);
+    }
+  }
+
   // 月初（月替わり時）に全選手の市場価値推移（valueHistory）を最新状況で更新
   if (nextDay.day === 1) {
     for (const club of getAllManagedLeagueClubs()) {
@@ -4068,7 +4227,7 @@ function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = [
 /**
  * 本日のカップ戦（ミッドウィーク / 欧州戦）の試合を消化する（2Dピッチ観戦対応）
  */
-function playCurrentCupMatchday(skipAnimation = false) {
+function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
 
   const currentDay = getCurrentCalendarDay();
@@ -4195,7 +4354,7 @@ function playCurrentCupMatchday(skipAnimation = false) {
     // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
       renderAll();
-    });
+    }, { quickSummary });
     return;
   }
 
@@ -4302,7 +4461,7 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
       renderAll();
-    });
+    }, { quickSummary });
     return;
   }
 
@@ -4397,7 +4556,7 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
       renderAll();
-    });
+    }, { quickSummary });
     return;
   }
 
@@ -4514,7 +4673,7 @@ function playCurrentCupMatchday(skipAnimation = false) {
 
   openMatchEventModal(matchData, homeScorers, awayScorers, () => {
     renderAll();
-  });
+  }, { quickSummary });
 }
 
 function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userDraw, mode = 'domestic') {
@@ -4586,7 +4745,7 @@ function advanceFirstDivisionBackgroundWeek() {
     processMatchScorersAndRatings(m, h, a, res.homeScore, res.awayScore);
   }
 }
-function playCurrentMatchday(skipAnimation = false) {
+function playCurrentMatchday(skipAnimation = false, quickSummary = false) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
 
   const currentDay = getCurrentCalendarDay();
@@ -4597,7 +4756,7 @@ function playCurrentMatchday(skipAnimation = false) {
 
   // カップ戦の消化
   if (currentDay.isCupMatchDay && !currentDay.played) {
-    playCurrentCupMatchday(skipAnimation);
+    playCurrentCupMatchday(skipAnimation, quickSummary);
     return;
   }
 
@@ -4607,7 +4766,7 @@ function playCurrentMatchday(skipAnimation = false) {
   }
 
   // 試合シミュレーションを実行
-  playNextMatchweek(skipAnimation);
+  playNextMatchweek(skipAnimation, quickSummary);
 
   // 当日オブジェクトを消化済みに更新
   currentDay.played = true;
@@ -5529,7 +5688,18 @@ function advanceInjuryRecovery() {
 /**
  * 1節分（10試合）を進行する
  */
-function playNextMatchweek(skipAnimation = false) {
+function playQuickMatchResult() {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
+  if (!isTodayMatchDayPending()) return;
+  const playerClub = getPlayerClub();
+  if (playerClub) {
+    ensureValidSquadAndStarters(playerClub);
+  }
+  closeMatchPrecheckModal();
+  playCurrentMatchday(false, true);
+}
+
+function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.currentWeek >= gameState.totalWeeks) {
     return;
   }
@@ -5698,7 +5868,7 @@ function playNextMatchweek(skipAnimation = false) {
         checkPostMatchEvents();
       }
       renderAll();
-    });
+    }, { quickSummary });
   } else {
     if (isFinalWeek) {
       processSeasonEnd(false);
@@ -6228,11 +6398,17 @@ function startMatchLiveTimer() {
       }
     }
 
-    // ★ 前半45分到達時：ハーフタイムで必ず一時停止！
+    // ★ 前半45分到達時：環境設定「ハーフタイム自動進行」がONなら自動で後半開始、OFFなら一時停止
     if (min === 45 && matchLiveState.status === 'FIRST_HALF') {
       clearInterval(matchLiveState.timerId);
       matchLiveState.timerId = null;
       matchLiveState.status = 'HALFTIME';
+
+      if (appSettings.autoHalftimeResume) {
+        appendLiveCommentary(`45'`, '前半終了！ハーフタイム自動進行によりそのまま後半へ入ります。', 'ev-period');
+        resumeSecondHalfMatch();
+        return;
+      }
 
       const periodEl = document.getElementById('match-live-period');
       if (periodEl) periodEl.textContent = 'HALF TIME';
@@ -6975,11 +7151,17 @@ function openMatchPrecheckModal() {
       switchTab('roster');
     };
   }
+  const btnQuickResult = document.getElementById('btn-precheck-quick-result');
+  if (btnQuickResult) {
+    btnQuickResult.onclick = () => {
+      playQuickMatchResult();
+    };
+  }
   const btnStartMatch = document.getElementById('btn-precheck-start-match');
   if (btnStartMatch) {
     btnStartMatch.onclick = () => {
       closeMatchPrecheckModal();
-      playCurrentMatchday(false);
+      playCurrentMatchday(false, false);
     };
   }
 
@@ -6991,7 +7173,7 @@ function openMatchPrecheckModal() {
 /**
  * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
  */
-function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
+function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, options = {}) {
   clearMatchLiveTimers();
   gameState.isSimulating = true;
 
@@ -7145,7 +7327,11 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete) {
   });
 
   modal.classList.remove('hidden');
-  startMatchLiveTimer();
+  if (options && options.quickSummary) {
+    transitionToMatchSummary();
+  } else {
+    startMatchLiveTimer();
+  }
 }
 
 /**
@@ -7852,6 +8038,20 @@ function processSeasonEnd(isSkipped = false) {
     });
   }
 
+  // 今季残りのオフシーズン週分（52週 - 支払済週数）の週次人件費をシーズン末決算と同時に精算完了する
+  const remPayrollWeeks = Math.max(0, 52 - (gameState.paidPayrollWeeks || 0));
+  let playerResidualPayroll = 0;
+  if (remPayrollWeeks > 0) {
+    for (const club of getAllManagedLeagueClubs()) {
+      const residualCost = getClubWeeklyPayroll(club) * remPayrollWeeks;
+      club.funds = (club.funds || 0) - residualCost;
+      if (club.isPlayer) {
+        playerResidualPayroll = residualCost;
+      }
+    }
+  }
+  gameState.paidPayrollWeeks = 52;
+
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
@@ -7960,6 +8160,8 @@ function processSeasonEnd(isSkipped = false) {
     prize: playerPrize,
     sponsorIncome: playerSponsorIncome,
     totalIncome: playerPrize + playerSponsorIncome + targetBonus,
+    offseasonPayrollSettled: playerResidualPayroll,
+    remPayrollWeeks,
     retirementLogs: playerRetirementLogs,
     agingLogs: playerAgingLogs
   };
@@ -8272,21 +8474,9 @@ function openTransferNegotiationModal(candidateId) {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  let target = null;
-  let sellerClub = null;
-  for (const c of getAllManagedLeagueClubs()) {
-    const p = (c.players || []).find(x => x.id === candidateId);
-    if (p) {
-      target = p;
-      sellerClub = c;
-      break;
-    }
-  }
-
-  if (!target) {
-    target = gameState.transferMarket.find(c => c.id === candidateId);
-    sellerClub = null;
-  }
+  const resolved = findTransferTargetWithSeller(candidateId);
+  const target = resolved ? resolved.player : null;
+  const sellerClub = resolved ? resolved.sellerClub : null;
 
   if (!target || (sellerClub && sellerClub.isPlayer)) return;
 
@@ -8366,16 +8556,10 @@ function renderNegotiationModal() {
   if (isRenewal) {
     target = playerClub.players.find(p => p.id === session.playerId) || null;
   } else {
-    for (const c of gameState.clubs) {
-      const p = c.players.find(x => x.id === session.playerId);
-      if (p) {
-        target = p;
-        sellerClub = c;
-        break;
-      }
-    }
-    if (!target) {
-      target = gameState.transferMarket.find(c => c.id === session.playerId) || null;
+    const resolved = findTransferTargetWithSeller(session.playerId);
+    if (resolved) {
+      target = resolved.player;
+      sellerClub = resolved.sellerClub;
     }
   }
 
@@ -8703,6 +8887,18 @@ function renderNegotiationModal() {
     `;
   }
 
+  const safeBudgetVal = getSafeTransferBudget(playerClub);
+  const commonBudgetRowsHtml = `
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">現在資金 / 登録枠</span>
+      <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+    </div>
+    <div class="neg-demand-row">
+      <span class="neg-demand-label">実質移籍予算 (安全枠)</span>
+      <span class="neg-demand-val ${safeBudgetVal < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(safeBudgetVal)}</span>
+    </div>
+  `;
+
   // 要求パネルの表示
   let demandRowsHtml = '';
   if (isRenewal) {
@@ -8723,6 +8919,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">代理人の要求期間</span>
         <span class="neg-demand-val">${session.demandedYears}年契約</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'loan') {
     demandRowsHtml = `
@@ -8742,6 +8939,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">所属元クラブ</span>
         <span class="neg-demand-val">${sellerClub ? sellerClub.name : '相手クラブ'}</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'pre_contract') {
     demandRowsHtml = `
@@ -8761,6 +8959,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">移籍金負担</span>
         <span class="neg-demand-val accent-green">£0 (フリー移籍)</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'free_agent') {
     demandRowsHtml = `
@@ -8776,6 +8975,7 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">移籍金負担</span>
         <span class="neg-demand-val accent-green">£0 (即時加入可能)</span>
       </div>
+      ${commonBudgetRowsHtml}
     `;
   } else {
     demandRowsHtml = `
@@ -8791,13 +8991,54 @@ function renderNegotiationModal() {
         <span class="neg-demand-label">希望期間</span>
         <span class="neg-demand-val">${session.demandedYears}年契約</span>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">当クラブ予算 / 枠</span>
-        <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
-      </div>
+      ${commonBudgetRowsHtml}
     `;
   }
 
+  const getNegCashflowWarningState = () => {
+    const safeBgt = getSafeTransferBudget(playerClub);
+    if (isRenewal) {
+      const curAnnual = target.salary || ((target.wage || 15) * 52);
+      const addWeekly = Math.max(0, Math.round(((session.offeredSalary || curAnnual) - curAnnual) / 52));
+      const estReserveImpact = addWeekly * 20;
+      if (estReserveImpact > 0 && (safeBgt - estReserveImpact) < 0) {
+        return {
+          visible: true,
+          isCritical: false,
+          text: `キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。`
+        };
+      }
+      return { visible: false, isCritical: false, text: '' };
+    }
+    const dType = session.dealType || 'buy';
+    const feeCost = dType === 'buy' ? (session.offeredFee || 0) : 0;
+    let weeklyAdd = 0;
+    if (dType === 'loan') {
+      weeklyAdd = Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100));
+    } else if (dType === 'pre_contract') {
+      weeklyAdd = 0;
+    } else {
+      weeklyAdd = session.offeredWage || Math.round((session.offeredSalary || 0) / 52) || 20;
+    }
+    const totalImpact = feeCost + (weeklyAdd * 12);
+    if (dType === 'buy' && feeCost > playerClub.funds) {
+      return {
+        visible: true,
+        isCritical: true,
+        text: `資金不足：提示移籍金（${formatMoney(feeCost)}）が現在資金（${formatMoney(playerClub.funds)}）を超えています。`
+      };
+    }
+    if (dType !== 'pre_contract' && totalImpact > safeBgt) {
+      return {
+        visible: true,
+        isCritical: false,
+        text: `破産予防アラート：移籍金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。`
+      };
+    }
+    return { visible: false, isCritical: false, text: '' };
+  };
+
+  const initWarn = getNegCashflowWarningState();
   const bodyEl = document.getElementById('neg-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
@@ -8806,6 +9047,7 @@ function renderNegotiationModal() {
       <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
         ${session.statusMessage}
       </div>
+      <div class="neg-cashflow-warning ${initWarn.isCritical ? 'is-critical' : ''} ${initWarn.visible ? '' : 'hidden'}" id="neg-cashflow-warning-box">${initWarn.text}</div>
 
       <div class="neg-grid">
         <!-- 左：相手側（代理人・所属クラブ）の要求条件 -->
@@ -8830,6 +9072,18 @@ function renderNegotiationModal() {
         </div>
       </div>
     `;
+
+    const refreshCashflowWarning = () => {
+      const warnBox = bodyEl.querySelector('#neg-cashflow-warning-box');
+      if (!warnBox) return;
+      const st = getNegCashflowWarningState();
+      warnBox.textContent = st.text;
+      warnBox.classList.toggle('hidden', !st.visible);
+      warnBox.classList.toggle('is-critical', Boolean(st.isCritical));
+    };
+    bodyEl.addEventListener('input', () => {
+      setTimeout(refreshCashflowWarning, 0);
+    });
 
     // 取引種別タブのイベント登録
     bodyEl.querySelectorAll('.btn-dealtype').forEach(btn => {
@@ -8906,6 +9160,7 @@ function submitNegotiationOffer() {
       const prevYears = target.contractYears || 0;
       const newContractYears = Math.min(5, prevYears + session.offeredYears);
       target.salary = session.offeredSalary;
+      target.wage = Math.max(5, Math.round(session.offeredSalary / 52));
       target.contractYears = newContractYears;
       target.renewalFailCount = 0;
       target.demandedSalary = null;
@@ -8947,20 +9202,9 @@ function submitNegotiationOffer() {
   }
 
   // 移籍市場獲得交渉モード（mode === 'transfer'）
-  let target = null;
-  let sellerClub = null;
-  for (const c of gameState.clubs) {
-    const p = c.players.find(x => x.id === session.playerId);
-    if (p) {
-      target = p;
-      sellerClub = c;
-      break;
-    }
-  }
-  if (!target) {
-    target = gameState.transferMarket.find(c => c.id === session.playerId);
-    sellerClub = null;
-  }
+  const resolved = findTransferTargetWithSeller(session.playerId);
+  const target = resolved ? resolved.player : null;
+  const sellerClub = resolved ? resolved.sellerClub : null;
   if (!target) return;
 
   if (session.dealType !== 'pre_contract' && playerClub.players.length >= MAX_SQUAD_SIZE) {
@@ -9181,28 +9425,12 @@ function completeOutgoingTransferSigning(offerId) {
     return;
   }
 
-  // 対象選手を相手クラブまたは市場から取得（1部・2部両対応）
-  let target = null;
-  let sellerClub = null;
-  if (offer.sellerClubId) {
-    sellerClub = getClubById(offer.sellerClubId);
-    if (sellerClub && Array.isArray(sellerClub.players)) {
-      target = sellerClub.players.find(p => p.id === offer.playerId);
-    }
-  }
-  if (!target) {
-    for (const c of getAllManagedLeagueClubs()) {
-      const p = (c.players || []).find(x => x.id === offer.playerId);
-      if (p) {
-        target = p;
-        sellerClub = c;
-        break;
-      }
-    }
-  }
-  if (!target) {
-    target = gameState.transferMarket.find(c => c.id === offer.playerId);
-    sellerClub = null;
+  // 対象選手を相手クラブ・欧州リスト・無所属市場から一元取得
+  const resolved = findTransferTargetWithSeller(offer.playerId);
+  let target = resolved ? resolved.player : null;
+  let sellerClub = resolved ? resolved.sellerClub : null;
+  if (!sellerClub && offer.sellerClubId) {
+    sellerClub = getClubById(offer.sellerClubId) || (typeof findEuropeanClubDefinitionById === 'function' ? findEuropeanClubDefinitionById(offer.sellerClubId) : null);
   }
 
   if (!target) {
@@ -9244,27 +9472,38 @@ function completeOutgoingTransferSigning(offerId) {
   }
 
   // レンタル・完全移籍・無所属獲得の処理
+  const cleanupMarketPools = (pid) => {
+    if (Array.isArray(gameState.transferMarket)) {
+      gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== pid);
+    }
+    if (Array.isArray(gameState.euroTransferList)) {
+      gameState.euroTransferList = gameState.euroTransferList.filter(p => p.id !== pid);
+    }
+  };
+
   if (dealType === 'buy') {
     playerClub.funds -= offer.offeredFee;
-    if (sellerClub) {
-      sellerClub.funds += offer.offeredFee;
+    if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
+      sellerClub.funds = (sellerClub.funds || 0) + offer.offeredFee;
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
       ensureValidSquadAndStarters(sellerClub);
-    } else {
-      gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
     }
+    cleanupMarketPools(target.id);
+    target.isEuroListed = false;
+    target.euroClubId = null;
+    target.clubId = playerClub.id;
     target.wage = offer.offeredWage;
     target.salary = offer.offeredWage * 52;
     target.contractYears = offer.offeredYears;
     target.loanStatus = null;
   } else if (dealType === 'loan') {
     // レンタル加入
-    if (sellerClub) {
+    if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
       ensureValidSquadAndStarters(sellerClub);
-    } else {
-      gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
     }
+    cleanupMarketPools(target.id);
+    target.isEuroListed = false;
     const weeklyWage = target.wage || 20;
     const origYears = Math.max(1, target.contractYears || 2);
     const coveragePercent = offer.loanCoveragePercent || 100;
@@ -9275,6 +9514,7 @@ function completeOutgoingTransferSigning(offerId) {
       isLoan: true,
       fromClubId: sellerClub ? sellerClub.id : null,
       fromClubName: sellerClub ? sellerClub.name : '相手クラブ',
+      isFromEuroClub: Boolean(sellerClub && sellerClub.isEuroVirtual),
       returnYear: (gameState.season || 1) + 1,
       wageCoverage: coveragePercent,
       originalWage: weeklyWage,
@@ -9282,7 +9522,10 @@ function completeOutgoingTransferSigning(offerId) {
     };
   } else if (dealType === 'free_agent') {
     // 無所属獲得
-    gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== target.id);
+    cleanupMarketPools(target.id);
+    target.isEuroListed = false;
+    target.euroClubId = null;
+    target.clubId = playerClub.id;
     target.wage = offer.offeredWage;
     target.salary = offer.offeredWage * 52;
     target.contractYears = offer.offeredYears;
@@ -10664,7 +10907,13 @@ function startNextSeason() {
       if (Array.isArray(gameState.transferMarket)) {
         gameState.transferMarket = gameState.transferMarket.filter(x => x.id !== p.id);
       }
+      if (Array.isArray(gameState.euroTransferList)) {
+        gameState.euroTransferList = gameState.euroTransferList.filter(x => x.id !== p.id);
+      }
 
+      p.isEuroListed = false;
+      p.euroClubId = null;
+      p.clubId = playerClub.id;
       p.squadNumber = pickAvailableSquadNumber(p.pos, usedNums);
       usedNums.add(p.squadNumber);
       if (p.preContract) {
@@ -10688,11 +10937,7 @@ function startNextSeason() {
   gameState.hasPreContractDepartureThisSeason = false;
   ensureValidSquadAndStarters(playerClub);
 
-  for (const club of getAllManagedLeagueClubs()) {
-    const payroll = getClubTotalPayroll(club);
-    club.funds = (club.funds || 0) - payroll;
-  }
-
+  // 人件費は毎週日曜の週次引き落とし＋シーズン末残週精算で支払い済みのため、新シーズン開幕時の一括引き落としは行わない
   if (playerClub.funds < 0) {
     gameState.consecutiveDeficitSeasons += 1;
     if (gameState.consecutiveDeficitSeasons >= 2) {
@@ -10704,6 +10949,7 @@ function startNextSeason() {
     gameState.consecutiveDeficitSeasons = 0;
   }
 
+  gameState.paidPayrollWeeks = 0;
   gameState.season += 1;
   gameState.currentWeek = 0;
   gameState.isSeasonOver = false;
@@ -11071,22 +11317,42 @@ function renderHeader() {
     fundsEl.classList.add('accent-gold');
   }
 
-  document.getElementById('header-payroll').textContent = formatMoney(payroll);
+  const weeklyPayroll = getClubWeeklyPayroll(playerClub);
+  const safeBudget = getSafeTransferBudget(playerClub);
+  const safeBudgetEl = document.getElementById('header-safe-budget');
+  if (safeBudgetEl) {
+    safeBudgetEl.textContent = `安全 ${formatMoney(safeBudget)}`;
+    safeBudgetEl.classList.remove('is-tight', 'is-danger');
+    if (safeBudget < 0) {
+      safeBudgetEl.classList.add('is-danger');
+    } else if (safeBudget < 5000) {
+      safeBudgetEl.classList.add('is-tight');
+    }
+  }
+
+  const payrollEl = document.getElementById('header-payroll');
+  if (payrollEl) {
+    payrollEl.textContent = `${formatWage(weeklyPayroll)}`;
+    payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
+  }
   document.getElementById('header-squad-size').textContent = `SQUAD: ${squadCount}名`;
   document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
 
   document.getElementById('tab-badge-roster').textContent = `${squadCount}名`;
 
-  // 移籍市場バッジ：受信オファーがある場合は赤色強調「〇件打診」、通常時は全登録選手数
+  // 移籍市場バッジ：受信オファーがある場合は赤色強調「〇件打診」、通常時は全流通選手数
   const marketBadge = document.getElementById('tab-badge-market');
   if (marketBadge) {
-    const offersCount = (gameState.incomingOffers || []).length;
+    const offersCount = (gameState.incomingOffers || []).filter(o => (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)).length;
     if (offersCount > 0) {
       marketBadge.textContent = `${offersCount}件打診`;
       marketBadge.classList.add('badge-offer-incoming');
       marketBadge.classList.remove('badge-highlight');
     } else {
-      const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+      const managedCount = getAllManagedLeagueClubs().reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
+      const euroCount = Array.isArray(gameState.euroTransferList) ? gameState.euroTransferList.length : 0;
+      const freeCount = Array.isArray(gameState.transferMarket) ? gameState.transferMarket.length : 0;
+      const totalMarketPlayers = managedCount + euroCount + freeCount;
       marketBadge.textContent = `${totalMarketPlayers}名`;
       marketBadge.classList.remove('badge-offer-incoming');
       if (gameState.isSeasonOver || (currentDay && currentDay.windowOpen)) {
@@ -11108,8 +11374,8 @@ function renderHeader() {
   } else if (playerClub.funds < 0) {
     financeBadge.textContent = '債務超過';
     financeBadge.classList.add('status-danger');
-  } else if (playerClub.funds < payroll * 1.2) {
-    financeBadge.textContent = '警告';
+  } else if (safeBudget < 0) {
+    financeBadge.textContent = '予算超過注意';
     financeBadge.classList.add('status-warning');
   } else {
     financeBadge.textContent = '健全';
@@ -11223,7 +11489,8 @@ function renderSeasonSettlement() {
   const s = gameState.lastSettlement;
   const playerClub = getPlayerClub();
   const currentPayroll = getClubTotalPayroll(playerClub);
-  const projectedBalance = playerClub.funds - currentPayroll;
+  const weeklyPayroll = getClubWeeklyPayroll(playerClub);
+  const safeBudget = getSafeTransferBudget(playerClub);
 
   const targetStatusText = s.targetAchieved
     ? `目標（${s.targetLabel}）達成！理事会ボーナス +${formatMoney(s.targetBonus)}`
@@ -11232,14 +11499,19 @@ function renderSeasonSettlement() {
   document.getElementById('summary-headline').textContent =
     `${s.season}年目シーズン終了・決算報告（最終順位：第${s.rank}位 ／ ${targetStatusText}）`;
 
+  const settledNote = s.offseasonPayrollSettled > 0
+    ? ` ／ オフ残週給与精算(${s.remPayrollWeeks || 0}週分) -${formatMoney(s.offseasonPayrollSettled)}`
+    : '';
   document.getElementById('summary-reward-text').textContent =
-    `収入加算：順位賞金 +${formatMoney(s.prize)} ／ 年間スポンサー・放映権 +${formatMoney(s.sponsorIncome)}${s.targetBonus > 0 ? ` ／ 目標達成ボーナス +${formatMoney(s.targetBonus)}` : ''}（計 +${formatMoney(s.totalIncome)}）`;
+    `収入加算：順位賞金 +${formatMoney(s.prize)} ／ 年間スポンサー・放映権 +${formatMoney(s.sponsorIncome)}${s.targetBonus > 0 ? ` ／ 目標達成ボーナス +${formatMoney(s.targetBonus)}` : ''}（計 +${formatMoney(s.totalIncome)}）${settledNote}`;
 
   const projEl = document.getElementById('summary-payroll-projection');
-  const deficitWarning = projectedBalance < 0 ? ' 【警告：このまま開幕すると債務超過になります】' : '';
+  const deficitWarning = playerClub.funds < 0
+    ? ' 【警告：現在債務超過です。選手売却・放出で黒字化してから開幕してください】'
+    : (safeBudget < 0 ? ' 【注意：週給規模が試合収入見込みを上回っています。過剰補強に注意】' : '');
   projEl.textContent =
-    `現在資金：${formatMoney(playerClub.funds)} ／ 翌シーズン年俸合計（開幕時支払）：-${formatMoney(currentPayroll)} ➜ 開幕時予想残高：${formatMoney(projectedBalance)}${deficitWarning}`;
-  projEl.className = projectedBalance < 0 ? 'mono text-danger' : 'mono accent-green';
+    `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） ➜ 実質補強可能予算（安全枠）：${formatMoney(safeBudget)}${deficitWarning}`;
+  projEl.className = (playerClub.funds < 0 || safeBudget < 0) ? 'mono text-danger' : 'mono accent-green';
 
   const expiringPlayers = playerClub.players.filter(p => p.contractYears <= 0);
   const contractWarnEl = document.getElementById('summary-contract-warning');
@@ -11778,9 +12050,12 @@ function renderMatchLog() {
             <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
           </div>
         </div>
-        <div class="matchday-action-row">
-          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff">
-            キックオフ（${playerMatchInfo.title}を開始）
+        <div class="matchday-action-row matchday-action-dual">
+          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff" title="${playerMatchInfo.title}の作戦確認・観戦を開始">
+            観戦キックオフ ▶
+          </button>
+          <button type="button" class="btn btn-secondary mono" id="btn-panel-quick-result" title="作戦確認・2D試合経過を省略して即座に結果サマリーを表示">
+            クイック結果 ▶|
           </button>
         </div>
       </div>
@@ -11791,10 +12066,14 @@ function renderMatchLog() {
       matchdaySection.classList.remove('hidden');
       matchdayHero.innerHTML = myMatchHtml;
 
-      // MATCHDAY内のキックオフボタンのイベントバインド（試合前に作戦最終確認を開く）
+      // MATCHDAY内のキックオフ＆クイック結果ボタンのイベントバインド
       const panelKickoffBtn = document.getElementById('btn-panel-kickoff');
       if (panelKickoffBtn) {
         panelKickoffBtn.addEventListener('click', () => openMatchPrecheckModal());
+      }
+      const panelQuickBtn = document.getElementById('btn-panel-quick-result');
+      if (panelQuickBtn) {
+        panelQuickBtn.addEventListener('click', () => playQuickMatchResult());
       }
     }
 
@@ -12653,6 +12932,13 @@ function updateMarketBadges() {
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const summaryFunds = document.getElementById('shortlist-summary-funds');
   if (summaryFunds && playerClub) summaryFunds.textContent = formatMoney(playerClub.funds);
+  const summarySafeBudget = document.getElementById('shortlist-summary-safe-budget');
+  if (summarySafeBudget && playerClub) {
+    const safeVal = getSafeTransferBudget(playerClub);
+    summarySafeBudget.textContent = formatMoney(safeVal);
+    summarySafeBudget.classList.toggle('text-danger', safeVal < 0);
+    summarySafeBudget.classList.toggle('accent-green', safeVal >= 0);
+  }
 
   const offersSummaryCount = document.getElementById('offers-summary-count');
   if (offersSummaryCount) offersSummaryCount.textContent = `${totalActiveOffers}件`;
@@ -13014,75 +13300,114 @@ function renderMarket() {
   if (!playerClub) return;
 
   const squadCount = playerClub.players.length;
-  const isFull = squadCount >= MAX_SQUAD_SIZE;
+  const mf = gameState.marketFilter;
+  if (!mf.category) mf.category = 'ALL';
 
-  const managedClubs = getAllManagedLeagueClubs();
+  const d1Clubs = Array.isArray(gameState.clubs) ? gameState.clubs : [];
+  const d2Clubs = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
+    ? gameState.competitions.championship.clubs
+    : [];
 
-  // クラブ選択プルダウンのオプション生成（初回またはクラブ数変更時）
-  const clubSelect = document.getElementById('market-filter-club');
-  if (clubSelect && clubSelect.options.length !== managedClubs.length + 2) {
-    clubSelect.innerHTML = `
-      <option value="ALL">全クラブ・無所属</option>
-      <option value="FREE_AGENT">無所属・市場リスト</option>
-      ${managedClubs.map(c => `
-        <option value="${c.id}">${c.name}${c.isPlayer ? ' (自チーム)' : ''}</option>
-      `).join('')}
-    `;
-    clubSelect.value = gameState.marketFilter.clubId || 'ALL';
+  const catSelect = document.getElementById('market-filter-category');
+  if (catSelect && catSelect.value !== mf.category) {
+    catSelect.value = mf.category;
   }
 
-  // 全管理クラブ所属選手 ＋ 無所属・市場リスト選手を集約
+  const euroClubMap = new Map();
+  if (Array.isArray(gameState.euroTransferList)) {
+    for (const p of gameState.euroTransferList) {
+      if (!p) continue;
+      const cid = p.euroClubId || p.clubId;
+      if (cid && !euroClubMap.has(cid)) {
+        const euroDef = (typeof findEuropeanClubDefinitionById === 'function') ? findEuropeanClubDefinitionById(cid) : null;
+        if (euroDef) {
+          euroClubMap.set(cid, { ...euroDef, shortCode: euroDef.shortName, isPlayer: false, isEuroVirtual: true });
+        }
+      }
+    }
+  }
+  const activeEuroClubs = Array.from(euroClubMap.values());
+
+  const clubSelect = document.getElementById('market-filter-club');
+  if (clubSelect) {
+    let clubOptionsHtml = `<option value="ALL">全クラブ・無所属</option>`;
+    if (mf.category === 'ALL' || mf.category === 'FREE_AGENT') {
+      clubOptionsHtml += `<option value="FREE_AGENT">無所属 (Free Agent)</option>`;
+    }
+    if (mf.category === 'ALL' || mf.category === 'ENG_D1') {
+      clubOptionsHtml += `<optgroup label="イングランド1部 (ENG-D1)">` +
+        d1Clubs.map(c => `<option value="${c.id}">${c.name}${c.isPlayer ? ' (自チーム)' : ''}</option>`).join('') +
+        `</optgroup>`;
+    }
+    if ((mf.category === 'ALL' || mf.category === 'ENG_D2') && d2Clubs.length > 0) {
+      clubOptionsHtml += `<optgroup label="イングランド2部 (ENG-D2)">` +
+        d2Clubs.map(c => `<option value="${c.id}">${c.name}${c.isPlayer ? ' (自チーム)' : ''}</option>`).join('') +
+        `</optgroup>`;
+    }
+    if ((mf.category === 'ALL' || mf.category === 'EUROPE') && activeEuroClubs.length > 0) {
+      clubOptionsHtml += `<optgroup label="欧州主要クラブ (リストアップ)">` +
+        activeEuroClubs.map(c => `<option value="${c.id}">[${c.country}] ${c.name}</option>`).join('') +
+        `</optgroup>`;
+    }
+    const cacheKey = `${mf.category}_${d1Clubs.length}_${d2Clubs.length}_${activeEuroClubs.length}`;
+    if (clubSelect.dataset.optionsCacheKey !== cacheKey) {
+      clubSelect.innerHTML = clubOptionsHtml;
+      clubSelect.dataset.optionsCacheKey = cacheKey;
+    }
+    const hasSelectedOption = Array.from(clubSelect.options).some(opt => opt.value === mf.clubId);
+    if (!hasSelectedOption) mf.clubId = 'ALL';
+    clubSelect.value = mf.clubId || 'ALL';
+  }
+
+  // 1部 ＋ 2部 ＋ 欧州主要クラブリスト ＋ 無所属フリー選手を一元集約
   const allEntries = [];
   const seenIds = new Set();
-  for (const c of managedClubs) {
+  for (const c of d1Clubs) {
     for (const p of (c.players || [])) {
+      if (!p || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
-      allEntries.push({
-        player: p,
-        club: c,
-        isMyClub: Boolean(c.isPlayer)
-      });
+      allEntries.push({ player: p, club: c, category: 'ENG_D1', isMyClub: Boolean(c.isPlayer) });
+    }
+  }
+  for (const c of d2Clubs) {
+    for (const p of (c.players || [])) {
+      if (!p || seenIds.has(p.id)) continue;
+      seenIds.add(p.id);
+      allEntries.push({ player: p, club: c, category: 'ENG_D2', isMyClub: Boolean(c.isPlayer) });
+    }
+  }
+  if (Array.isArray(gameState.euroTransferList)) {
+    const fallbackEuroStub = { id: 'euro_club', name: '欧州クラブ', shortName: 'EUR', shortCode: 'EUR', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isEuroVirtual: true };
+    for (const p of gameState.euroTransferList) {
+      if (!p || seenIds.has(p.id)) continue;
+      seenIds.add(p.id);
+      const eClub = euroClubMap.get(p.euroClubId || p.clubId) || fallbackEuroStub;
+      allEntries.push({ player: p, club: eClub, category: 'EUROPE', isMyClub: false });
     }
   }
   if (Array.isArray(gameState.transferMarket)) {
-    const freeClubStub = { id: 'FREE_AGENT', name: '無所属 (Free Agent)', shortName: 'FA', primaryColor: '#475569', secondaryColor: '#e2e8f0' };
+    const freeClubStub = { id: 'FREE_AGENT', name: '無所属 (Free Agent)', shortName: 'FA', shortCode: 'FA', primaryColor: '#475569', secondaryColor: '#e2e8f0' };
     for (const p of gameState.transferMarket) {
       if (!p || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
-      allEntries.push({
-        player: p,
-        club: freeClubStub,
-        isMyClub: false
-      });
+      allEntries.push({ player: p, club: freeClubStub, category: 'FREE_AGENT', isMyClub: false });
     }
   }
 
-  // フィルター適用
-  const mf = gameState.marketFilter;
   let filtered = allEntries.filter(entry => {
     const p = entry.player;
     const c = entry.club;
-
-    // クラブ絞り込み
-    if (mf.clubId !== 'ALL' && c.id !== mf.clubId) {
-      return false;
-    }
-
-    // ポジション絞り込み
+    if (mf.category && mf.category !== 'ALL' && entry.category !== mf.category) return false;
+    if (mf.clubId && mf.clubId !== 'ALL' && c.id !== mf.clubId) return false;
     if (mf.position !== 'ALL') {
       const matchPrimary = p.pos === mf.position || p.primaryPosition === mf.position;
       const matchSecondary = Array.isArray(p.secondaryPositions) && p.secondaryPositions.includes(mf.position);
       if (!matchPrimary && !matchSecondary) return false;
     }
-
-    // 検索ワード絞り込み
     if (mf.searchQuery && mf.searchQuery.trim().length > 0) {
       const query = mf.searchQuery.trim().toLowerCase();
-      const matchName = p.name.toLowerCase().includes(query);
-      const matchClub = c.name.toLowerCase().includes(query);
-      if (!matchName && !matchClub) return false;
+      if (!p.name.toLowerCase().includes(query) && !c.name.toLowerCase().includes(query)) return false;
     }
-
     return true;
   });
 
@@ -13092,8 +13417,8 @@ function renderMarket() {
     const pB = b.player;
     const ovrA = getPlayerOverallRating(pA);
     const ovrB = getPlayerOverallRating(pB);
-    const feeA = calculateTransferFee(pA);
-    const feeB = calculateTransferFee(pB);
+    const feeA = pA.isFreeAgent ? 0 : calculateTransferFee(pA);
+    const feeB = pB.isFreeAgent ? 0 : calculateTransferFee(pB);
 
     const sortKey = mf.sortKey || mf.sort || 'ovr-desc';
     switch (sortKey) {
@@ -13122,13 +13447,16 @@ function renderMarket() {
     }
   });
 
-  // サマリーバーの更新
+  // サマリーバーの更新（現在資金 ＋ 実質移籍予算を併記）
+  const safeBudget = getSafeTransferBudget(playerClub);
+  const safeColorCls = safeBudget < 0 ? 'text-danger' : 'accent-green';
   const summaryEl = document.getElementById('market-pos-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <span class="power-badge">対象選手 <strong class="mono">${filtered.length}名</strong></span>
-      <span class="power-badge">トップ登録枠 <strong class="mono">${squadCount} / ${MAX_SQUAD_SIZE}名</strong></span>
-      <span class="power-badge">移籍予算 <strong class="mono accent-gold">${formatMoney(playerClub.funds)}</strong></span>
+      <span class="power-badge">登録枠 <strong class="mono">${squadCount}/${MAX_SQUAD_SIZE}名</strong></span>
+      <span class="power-badge">現在資金 <strong class="mono accent-gold">${formatMoney(playerClub.funds)}</strong></span>
+      <span class="power-badge" title="今後の週給運転資金を確保した上で安全に使える実質移籍予算">実質移籍予算 <strong class="mono ${safeColorCls}">${formatMoney(safeBudget)}</strong></span>
     `;
   }
 
@@ -13138,7 +13466,7 @@ function renderMarket() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" class="empty-log-message" style="text-align: center; padding: 24px;">
+        <td colspan="10" class="empty-log-message" style="text-align: center; padding: 24px;">
           条件に合致する選手が見つかりませんでした。フィルターを変更してください。
         </td>
       </tr>
@@ -13146,34 +13474,45 @@ function renderMarket() {
     return;
   }
 
-  tbody.innerHTML = filtered.slice(0, 100).map(entry => {
+  const outgoingList = gameState.outgoingOffers || [];
+  tbody.innerHTML = filtered.slice(0, 120).map(entry => {
     const p = entry.player;
     const c = entry.club;
     const ovr = getPlayerOverallRating(p);
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
     const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
     const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
+    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
+    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
     const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
-    const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71;">自クラブ所属</span>' : '';
+    const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
     const footBadge = formatFootBadge(p);
 
     let actionBtnHtml = '';
     if (entry.isMyClub) {
-      actionBtnHtml = `
-        <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('roster');" title="自クラブの編成一覧へ移動">
-          所属管理
-        </button>
-      `;
+      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('roster');" title="自クラブの編成一覧へ移動">所属管理</button>`;
     } else {
       const inShortlist = isInShortlist(p.id);
-      actionBtnHtml = `
-        <button type="button" class="btn btn-sm btn-shortlist-toggle ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? 'ターゲットリストから解除' : '獲得ターゲットリストに追加'}">
-          ${inShortlist ? '✓ 登録済' : '＋ SHORTLIST'}
-        </button>
-      `;
+      const activeOutOffer = outgoingList.find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
+      let directOfferBtn = '';
+      if (isPreContracted) {
+        directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity:0.65;padding:3px 8px;font-size:11px;">来季内定</button>`;
+      } else if (activeOutOffer) {
+        if (activeOutOffer.status === 'agreed') {
+          directOfferBtn = `<button type="button" class="btn btn-sm btn-offer-accept" data-goto-offers="outgoing" style="font-weight:700;padding:3px 8px;font-size:11px;">契約確定へ</button>`;
+        } else if (activeOutOffer.status === 'cpu_counter') {
+          directOfferBtn = `<button type="button" class="btn btn-sm" data-goto-offers="outgoing" style="background:#f39c12;color:#0d1117;font-weight:700;padding:3px 8px;font-size:11px;">回答確認</button>`;
+        } else {
+          directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity:0.65;padding:3px 8px;font-size:11px;">回答待(${activeOutOffer.pendingDays || 1}日)</button>`;
+        }
+      } else {
+        directOfferBtn = `<button type="button" class="btn btn-primary btn-sm btn-market-direct-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} title="直接オファー・交渉を開く">交渉</button>`;
+      }
+      const shortlistBtn = `<button type="button" class="btn btn-sm btn-shortlist-toggle btn-shortlist-icon ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? '獲得ターゲット解除' : '獲得ターゲットに追加'}">${inShortlist ? '★' : '☆'}</button>`;
+      actionBtnHtml = `<div class="market-action-group">${directOfferBtn}${shortlistBtn}</div>`;
     }
 
     return `
@@ -13183,7 +13522,7 @@ function renderMarket() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="スカウティングレポートを表示">
             ${getPlayerAvatarHtml(p, c, 'avatar-sm table-avatar')}${p.name}
           </button>
-          ${preContractBadge}${freeBadge}${bargainBadge}${myClubBadge}${failedBadge}
+          ${preContractBadge}${freeBadge}${euroBadge}${d2Badge}${bargainBadge}${myClubBadge}${failedBadge}
         </td>
         <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
@@ -13191,7 +13530,7 @@ function renderMarket() {
         <td class="col-num accent-green"><strong>${ovr}</strong></td>
         <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
         <td class="col-num mono">${formatWage(p.wage)}</td>
-        <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
+        <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
         <td class="col-action">
           ${actionBtnHtml}
         </td>
@@ -13715,9 +14054,29 @@ function findPlayerWithContextById(playerId) {
       }
     }
   }
+  if (Array.isArray(gameState.euroTransferList)) {
+    const euroFound = gameState.euroTransferList.find(p => p && p.id === playerId);
+    if (euroFound) {
+      const euroDef = (typeof findEuropeanClubDefinitionById === 'function')
+        ? findEuropeanClubDefinitionById(euroFound.euroClubId || euroFound.clubId)
+        : null;
+      const virtualClub = euroDef
+        ? { ...euroDef, shortCode: euroDef.shortName, isPlayer: false, isEuroVirtual: true }
+        : { id: 'euro_club', name: '欧州主要クラブ', shortName: 'EUR', shortCode: 'EUR', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isEuroVirtual: true };
+      return {
+        player: euroFound,
+        club: virtualClub,
+        clubName: virtualClub.name,
+        isMarket: true,
+        isPlayerClub: false,
+        isYouth: false
+      };
+    }
+  }
   const marketFound = gameState.transferMarket.find(p => p.id === playerId);
   if (marketFound) {
-    return { player: marketFound, club: null, clubName: '移籍市場リスト（フリー/獲得可能）', isMarket: true, isPlayerClub: false };
+    const freeClubStub = { id: 'FREE_AGENT', name: '無所属 (Free Agent)', shortName: 'FA', shortCode: 'FA', primaryColor: '#475569', secondaryColor: '#e2e8f0' };
+    return { player: marketFound, club: freeClubStub, clubName: '無所属 (Free Agent)', isMarket: true, isPlayerClub: false, isYouth: false };
   }
   const youthFound = (gameState.youthCandidates || []).find(p => p.id === playerId);
   if (youthFound) {
@@ -14786,6 +15145,22 @@ function openPlayerProfileModal(playerId) {
               <span class="profile-metric-val accent-green">${formatMoney(estMarketValue)}</span>
             </div>
           </div>
+          ${!isMyClubPlayer && !isCandidate ? `
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+              <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
+                ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉・オファーを提示する'}
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
+                ${isInShortlist(p.id) ? '★ 候補登録済' : '☆ 候補に追加'}
+              </button>
+            </div>
+          ` : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
+            <div style="margin-top: 10px;">
+              <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
+                ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
+              </button>
+            </div>
+          ` : '')}
         `}
       </div>
 
@@ -14995,6 +15370,31 @@ function openPlayerProfileModal(playerId) {
         }
       });
     });
+
+    // プロフィール画面からのダイレクト移籍交渉・契約延長・候補トグル
+    const btnDirectOffer = bodyEl.querySelector('[data-profile-direct-offer]');
+    if (btnDirectOffer) {
+      btnDirectOffer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openTransferNegotiationModal(btnDirectOffer.dataset.profileDirectOffer);
+      });
+    }
+    const btnDirectRenewal = bodyEl.querySelector('[data-profile-direct-renewal]');
+    if (btnDirectRenewal) {
+      btnDirectRenewal.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openContractNegotiationModal(btnDirectRenewal.dataset.profileDirectRenewal);
+      });
+    }
+    const btnProfileSl = bodyEl.querySelector('[data-profile-shortlist-toggle]');
+    if (btnProfileSl) {
+      btnProfileSl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pid = btnProfileSl.dataset.profileShortlistToggle;
+        toggleShortlist(pid);
+        btnProfileSl.textContent = isInShortlist(pid) ? '★ 候補登録済' : '☆ 候補に追加';
+      });
+    }
   }
 
   // デフォルトで「能力」タブを選択状態にする
@@ -15267,6 +15667,12 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.isGameOver = false;
   gameState.isSimulating = false;
   gameState.consecutiveDeficitSeasons = 0;
+  gameState.paidPayrollWeeks = 0;
+  gameState.competitions = null;
+  gameState.d1BackgroundSchedule = null;
+  gameState.lastSeasonStandingsOrder = null;
+  gameState.lastSeasonCupWinners = null;
+  gameState.lastPromotionRelegation = null;
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
   gameState.rosterSubtab = 'board';
@@ -15294,10 +15700,14 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.pendingMegaOffer = null;
   gameState.incomingTransferOffer = null;
   gameState.incomingOffers = [];
+  gameState.outgoingOffers = [];
   gameState.targetShortlist = [];
+  gameState.preContractPlayers = [];
   gameState.transferMarket = [];
+  gameState.euroTransferList = [];
   gameState.youthCandidates = [];
   gameState.marketFilter = {
+    category: 'ALL',
     clubId: 'ALL',
     position: 'ALL',
     sortKey: 'ovr-desc',
@@ -16361,8 +16771,21 @@ function initGame() {
     });
   }
 
-  // 移籍市場テーブル内 クリックイベント（詳細＆ショートリストトグル）
+  // 移籍市場テーブル内 クリックイベント（ダイレクト交渉・送信オファー遷移・詳細・ショートリストトグル）
   document.getElementById('market-tbody').addEventListener('click', (e) => {
+    const gotoOffersBtn = e.target.closest('[data-goto-offers]');
+    if (gotoOffersBtn) {
+      e.stopPropagation();
+      switchMarketSubtab('offers');
+      switchOffersTab(gotoOffersBtn.dataset.gotoOffers || 'outgoing');
+      return;
+    }
+    const formalBtn = e.target.closest('[data-formal-offer-id]');
+    if (formalBtn) {
+      e.stopPropagation();
+      openTransferNegotiationModal(formalBtn.dataset.formalOfferId);
+      return;
+    }
     const slBtn = e.target.closest('[data-shortlist-toggle]');
     if (slBtn) {
       e.stopPropagation();
@@ -16576,10 +16999,20 @@ function initGame() {
   }
 
   // グローバル移籍市場のフィルター＆ソートイベント
+  const marketFilterCategory = document.getElementById('market-filter-category');
   const marketFilterClub = document.getElementById('market-filter-club');
   const marketFilterPos = document.getElementById('market-filter-pos');
   const marketFilterSort = document.getElementById('market-filter-sort');
   const marketFilterSearch = document.getElementById('market-filter-search');
+
+  if (marketFilterCategory) {
+    marketFilterCategory.addEventListener('change', (e) => {
+      gameState.marketFilter.category = e.target.value;
+      gameState.marketFilter.clubId = 'ALL';
+      gameState.marketFilter.club = 'ALL';
+      renderMarket();
+    });
+  }
 
   if (marketFilterClub) {
     marketFilterClub.addEventListener('change', (e) => {
@@ -16621,7 +17054,7 @@ function initGame() {
       let nextSort = null;
       if (txt.includes('OVR')) {
         nextSort = gameState.marketFilter.sortKey === 'ovr-desc' ? 'ovr-asc' : 'ovr-desc';
-      } else if (txt.includes('移籍金')) {
+      } else if (txt.includes('移籍金') || txt.includes('市場価値')) {
         nextSort = gameState.marketFilter.sortKey === 'fee-desc' ? 'fee-asc' : 'fee-desc';
       } else if (txt.includes('週給')) {
         nextSort = gameState.marketFilter.sortKey === 'wage-desc' ? 'wage-asc' : 'wage-desc';
@@ -17133,7 +17566,8 @@ const SETTINGS_STORAGE_KEY = 'my_football_gm_settings_v1';
 const appSettings = {
   soundVolume: 70,
   autoSaveEnabled: true,
-  matchSpeed: 2
+  matchSpeed: 2,
+  autoHalftimeResume: false
 };
 
 function loadSettingsFromStorage() {
@@ -17144,6 +17578,7 @@ function loadSettingsFromStorage() {
       if (typeof parsed.soundVolume === 'number') appSettings.soundVolume = parsed.soundVolume;
       if (typeof parsed.autoSaveEnabled === 'boolean') appSettings.autoSaveEnabled = parsed.autoSaveEnabled;
       if (typeof parsed.matchSpeed === 'number') appSettings.matchSpeed = parsed.matchSpeed;
+      if (typeof parsed.autoHalftimeResume === 'boolean') appSettings.autoHalftimeResume = parsed.autoHalftimeResume;
     }
   } catch (e) {}
 }
@@ -17173,6 +17608,7 @@ function saveGameToStorage(force = false) {
         isSeasonOver: gameState.isSeasonOver,
         isGameOver: gameState.isGameOver,
         consecutiveDeficitSeasons: gameState.consecutiveDeficitSeasons,
+        paidPayrollWeeks: gameState.paidPayrollWeeks || 0,
         lastSeasonStandingsOrder: gameState.lastSeasonStandingsOrder || null,
         lastSeasonCupWinners: gameState.lastSeasonCupWinners || null,
         lastPromotionRelegation: gameState.lastPromotionRelegation || null,
@@ -17195,6 +17631,7 @@ function saveGameToStorage(force = false) {
         lastMatchTicker: gameState.lastMatchTicker,
         matchHistory: gameState.matchHistory || [],
         transferMarket: gameState.transferMarket,
+        euroTransferList: gameState.euroTransferList || [],
         youthCandidates: gameState.youthCandidates,
         freeManagers: gameState.freeManagers || [],
         freeCoaches: gameState.freeCoaches || null,
@@ -17209,7 +17646,8 @@ function saveGameToStorage(force = false) {
         incomingTransferOffer: gameState.incomingTransferOffer || null,
         pendingMegaOffer: gameState.pendingMegaOffer || null,
         facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
-        marketSubtab: gameState.marketSubtab || 'market'
+        marketSubtab: gameState.marketSubtab || 'market',
+        marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' }
       }
     };
     localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
@@ -17264,6 +17702,23 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.preContractPlayers)) gameState.preContractPlayers = [];
     if (!Array.isArray(gameState.matchHistory)) gameState.matchHistory = [];
     if (!Array.isArray(gameState.freeManagers)) gameState.freeManagers = [];
+    if (!gameState.marketFilter) {
+      gameState.marketFilter = { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' };
+    } else if (!gameState.marketFilter.category) {
+      gameState.marketFilter.category = 'ALL';
+    }
+    if (typeof state.paidPayrollWeeks !== 'number') {
+      if (gameState.isSeasonOver) {
+        gameState.paidPayrollWeeks = 52;
+      } else if (Array.isArray(gameState.calendar)) {
+        const elapsedSundays = gameState.calendar
+          .slice(0, Math.max(0, (gameState.currentDayIndex || 0) + 1))
+          .filter(d => d && d.dayOfWeek === 0).length;
+        gameState.paidPayrollWeeks = clamp(elapsedSundays, 0, 52);
+      } else {
+        gameState.paidPayrollWeeks = 0;
+      }
+    }
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
@@ -17296,6 +17751,15 @@ function loadGameFromStorage() {
       if (!hasAnyCupDay && typeof injectCupMatchesIntoCalendar === 'function') {
         injectCupMatchesIntoCalendar();
       }
+      // 2部クラブに選手配列が未生成の旧セーブ互換補完
+      const d2Clubs = gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs;
+      if (Array.isArray(d2Clubs) && typeof ensurePlayableClubStructure === 'function') {
+        d2Clubs.forEach(c => ensurePlayableClubStructure(c));
+      }
+    }
+    if (!Array.isArray(gameState.euroTransferList) || gameState.euroTransferList.length === 0) {
+      const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+      generateEuropeanTransferList(null, sLv);
     }
 
     // 全所属選手およびユースの疲労度・評価点データ互換性補完（1部・2部両方）
@@ -17504,11 +17968,17 @@ function openSettingsModal() {
   const volInput = document.getElementById('setting-sound-volume');
   const volVal = document.getElementById('setting-sound-volume-val');
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  const autoSaveLabel = document.getElementById('setting-autosave-label');
   const speedSelect = document.getElementById('setting-match-speed');
+  const autoHtCheck = document.getElementById('setting-auto-halftime');
+  const autoHtLabel = document.getElementById('setting-auto-halftime-label');
   if (volInput) volInput.value = appSettings.soundVolume;
   if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
   if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
+  if (autoSaveLabel) autoSaveLabel.textContent = appSettings.autoSaveEnabled ? 'ENABLED' : 'OFF';
   if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
+  if (autoHtCheck) autoHtCheck.checked = Boolean(appSettings.autoHalftimeResume);
+  if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
   if (overlay) {
     if (!overlay._hasOverlayListener) {
       overlay._hasOverlayListener = true;
@@ -17602,9 +18072,11 @@ function initMainMenuAndModals() {
   }
 
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
+  const autoSaveLabel = document.getElementById('setting-autosave-label');
   if (autoSaveCheck) {
     autoSaveCheck.addEventListener('change', (e) => {
       appSettings.autoSaveEnabled = !!e.target.checked;
+      if (autoSaveLabel) autoSaveLabel.textContent = appSettings.autoSaveEnabled ? 'ENABLED' : 'OFF';
       saveSettingsToStorage();
     });
   }
@@ -17613,6 +18085,16 @@ function initMainMenuAndModals() {
   if (speedSelect) {
     speedSelect.addEventListener('change', (e) => {
       appSettings.matchSpeed = parseInt(e.target.value, 10) || 2;
+      saveSettingsToStorage();
+    });
+  }
+
+  const autoHtCheck = document.getElementById('setting-auto-halftime');
+  const autoHtLabel = document.getElementById('setting-auto-halftime-label');
+  if (autoHtCheck) {
+    autoHtCheck.addEventListener('change', (e) => {
+      appSettings.autoHalftimeResume = !!e.target.checked;
+      if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
       saveSettingsToStorage();
     });
   }
