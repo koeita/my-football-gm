@@ -13368,13 +13368,14 @@ function findPlayerWithContextById(playerId) {
   for (const club of gameState.clubs) {
     const found = club.players.find(p => p.id === playerId);
     if (found) {
-      return { player: found, clubName: club.name, isMarket: false, isPlayerClub: club.isPlayer, isYouth: false };
+      return { player: found, club, clubName: club.name, isMarket: false, isPlayerClub: club.isPlayer, isYouth: false };
     }
     if (club.youthSquad) {
       const youthFound = club.youthSquad.find(p => p.id === playerId);
       if (youthFound) {
         return {
           player: youthFound,
+          club,
           clubName: `${club.name} U-21ユース`,
           isMarket: false,
           isPlayerClub: club.isPlayer,
@@ -13385,13 +13386,14 @@ function findPlayerWithContextById(playerId) {
   }
   const marketFound = gameState.transferMarket.find(p => p.id === playerId);
   if (marketFound) {
-    return { player: marketFound, clubName: '移籍市場リスト（フリー/獲得可能）', isMarket: true, isPlayerClub: false };
+    return { player: marketFound, club: null, clubName: '移籍市場リスト（フリー/獲得可能）', isMarket: true, isPlayerClub: false };
   }
   const youthFound = (gameState.youthCandidates || []).find(p => p.id === playerId);
   if (youthFound) {
     const playerClub = getPlayerClub();
     return {
       player: youthFound,
+      club: playerClub || null,
       clubName: `${playerClub ? playerClub.name : 'クラブ'} ユースアカデミー（昇格候補）`,
       isMarket: false,
       isPlayerClub: true
