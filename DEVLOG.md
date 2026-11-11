@@ -1,5 +1,17 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## avatar.jsの衣装・クラブカラー解決仕上げ ＆ 全単体テストスイート整合性クリーンアップ (feat-avatar-pixel-refactor)
+- **概要**:
+  - **1. 監督スーツ・コーチジャージおよび2部・欧州他国クラブのユニフォーム色反映**:
+    - `getAvatarKitColors()` を拡張し、監督・コーチ描画時の `kitColors` 配列指定、イングランド1部20クラブ（`CLUB_KIT_COLORS`）に加え、2部リーグ24クラブ・欧州4大リーグ76クラブ・プレシーズン招待クラブの `primaryColor` / `secondaryColor`（および `emblem` カラー）がユニフォーム襟元と背景アンビエントライトへ正確に反映されるよう改修。
+    - `findAvatarClubForPlayer()` を拡張し、1部クラブだけでなく2部・プレシーズン親善杯（WCT）・欧州3大カップ（ECT/EPC/ECS）所属選手のクラブも自動解決するよう対応。
+    - 監督（`isManager`）描画時には、Vネックユニフォームではなくダークスーツのラペル・白ワイシャツ・深紅ネクタイの専用襟元ピクセルを描画し、ロール別のキャッシュキー分離（`player` / `manager` / `coach`）を導入。
+    - `main.js` の `findPlayerWithContextById()` の戻り値に `club` オブジェクトを追加し、獲得ターゲットリストや選手プロフィールでのクラブ参照整合性を向上。
+  - **2. 全単体テストスイート（67件）の現行仕様への統一と網羅実行対応**:
+    - `tests/test_competitions.py` に残っていた旧大会略称（`cl36` / `CL圏` 等）のアサーションを、現行の架空大会名称（`ECT` / `EPC` / `ECS` 36チーム制）および左端カラーライン＋下部凡例仕様へ更新。
+    - `tests/test_unit_core.py` に16-bitアバターのクラブカラー・スタッフ衣装解決に関する検証を追加し、`tests/run_tests.py --all` 実行時に `tests/test_*.py` 全モジュールを一括検証できるよう強化。
+- **変更ファイル**: `avatar.js`, `main.js`, `index.html`, `tests/test_competitions.py`, `tests/test_unit_core.py`, `tests/run_tests.py`, `DEVLOG.md`
+
 ## avatar.jsの刷新：16-bitピクセルアート調の立体的な円形バストアップ・ドット絵生成ロジックの導入 (feat-avatar-pixel-refactor)
 - **概要**:
   - **16-bitレトロモダンな高品質ピクセルポートレート（円形バストアップ）の全面導入**:

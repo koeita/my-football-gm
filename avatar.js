@@ -225,17 +225,64 @@ function ensurePlayerAvatarData(player) {
 // 所属クラブ・ユニフォームカラー解決
 // ---------------------------------------------------------------------------
 function findAvatarClubForPlayer(player) {
-  if (typeof gameState === 'undefined' || !gameState || !Array.isArray(gameState.clubs)) return null;
-  for (const c of gameState.clubs) {
-    if ((c.players || []).some(p => p.id === player.id)) return c;
-    if ((c.youthSquad || []).some(p => p.id === player.id)) return c;
+  if (!player || typeof gameState === 'undefined' || !gameState) return null;
+  if (Array.isArray(gameState.clubs)) {
+    for (const c of gameState.clubs) {
+      if ((c.players || []).some(p => p.id === player.id)) return c;
+      if ((c.youthSquad || []).some(p => p.id === player.id)) return c;
+      if (player.clubId && c.id === player.clubId) return c;
+    }
+  }
+  const comps = gameState.competitions;
+  if (comps) {
+    const pools = [
+      comps.championship && comps.championship.clubs,
+      comps.preseasonCup && comps.preseasonCup.participants,
+      comps.championsCup && comps.championsCup.participants,
+      comps.europaCup && comps.europaCup.participants,
+      comps.conferenceCup && comps.conferenceCup.participants
+    ];
+    for (const pool of pools) {
+      if (!Array.isArray(pool)) continue;
+      for (const c of pool) {
+        if (!c) continue;
+        if ((c.players || []).some(p => p.id === player.id)) return c;
+        if (player.clubId && c.id === player.clubId) return c;
+      }
+    }
   }
   return null;
 }
 
 function getAvatarKitColors(player, club) {
+  if (Array.isArray(club) && club.length >= 2) {
+    return [club[0], club[1]];
+  }
+  if (club && Array.isArray(club.kitColors) && club.kitColors.length >= 2) {
+    return [club.kitColors[0], club.kitColors[1]];
+  }
+  if (player && player.isManager) {
+    return ['#222a35', '#ffffff'];
+  }
+  if (player && player.isCoach) {
+    return getCoachKitColors(player.category);
+  }
+
   const resolvedClub = club || findAvatarClubForPlayer(player);
-  if (resolvedClub && CLUB_KIT_COLORS[resolvedClub.id]) return CLUB_KIT_COLORS[resolvedClub.id];
+  if (resolvedClub) {
+    if (Array.isArray(resolvedClub.kitColors) && resolvedClub.kitColors.length >= 2) {
+      return [resolvedClub.kitColors[0], resolvedClub.kitColors[1]];
+    }
+    if (resolvedClub.id && CLUB_KIT_COLORS[resolvedClub.id]) {
+      return CLUB_KIT_COLORS[resolvedClub.id];
+    }
+    if (resolvedClub.primaryColor) {
+      return [resolvedClub.primaryColor, resolvedClub.secondaryColor || '#ffffff'];
+    }
+    if (resolvedClub.emblem && resolvedClub.emblem.primaryColor) {
+      return [resolvedClub.emblem.primaryColor, resolvedClub.emblem.secondaryColor || '#ffffff'];
+    }
+  }
   return AVATAR_DEFAULT_KIT;
 }
 
@@ -246,7 +293,7 @@ function getAvatarKitColors(player, club) {
  * 32x32 グリッドへ円形バストアップのドット絵を描画
  * @param {CanvasRenderingContext2D} ctx 既に scale 済みのコンテキスト
  */
-function drawPixelAvatarOnContext(ctx, genes, age, kit) {
+function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
   const set = (c) => { ctx.fillStyle = c; };
 
@@ -336,24 +383,41 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit) {
   px(3, 30, 26, 2);
   px(22, 27, 7, 4); // 右半身の陰影
 
-  // 襟元（Collar）ストライプ
-  set(kitAccent);
-  // 首元のVネックまたはリブカラー
-  px(11, 25, 2, 1); px(19, 25, 2, 1);
-  px(12, 26, 2, 1); px(18, 26, 2, 1);
-  px(13, 27, 2, 1); px(17, 27, 2, 1);
-  px(15, 28, 2, 1); // Vの先端
+  if (roleType === 'manager') {
+    // 監督専用：ダークスーツのラペル・白ワイシャツ・ネクタイ
+    set('#f8fafc');
+    px(13, 25, 6, 3);
+    px(14, 28, 4, 4);
+    // ラペル（襟の折り返し陰影）
+    set(shadeHex(kitMain, 18));
+    px(11, 25, 2, 2); px(19, 25, 2, 2);
+    px(12, 27, 2, 2); px(18, 27, 2, 2);
+    px(13, 29, 1, 3); px(18, 29, 1, 3);
+    // ネクタイ（深紅）
+    set('#991b1b');
+    px(15, 26, 2, 1);
+    set('#b91c1c');
+    px(15, 27, 2, 5);
+  } else {
+    // 襟元（Collar）ストライプ
+    set(kitAccent);
+    // 首元のVネックまたはリブカラー
+    px(11, 25, 2, 1); px(19, 25, 2, 1);
+    px(12, 26, 2, 1); px(18, 26, 2, 1);
+    px(13, 27, 2, 1); px(17, 27, 2, 1);
+    px(15, 28, 2, 1); // Vの先端
 
-  // 襟元中央の隙間（首元の影肌）
-  set(skin.shadow);
-  px(14, 25, 4, 1);
-  px(14, 26, 4, 1);
-  px(15, 27, 2, 1);
+    // 襟元中央の隙間（首元の影肌）
+    set(skin.shadow);
+    px(14, 25, 4, 1);
+    px(14, 26, 4, 1);
+    px(15, 27, 2, 1);
 
-  // 肩・袖のアクセントストライプ（4〜5px）
-  set(kitAccent);
-  px(5, 28, 2, 4);
-  px(25, 28, 2, 4);
+    // 肩・袖のアクセントストライプ（4〜5px）
+    set(kitAccent);
+    px(5, 28, 2, 4);
+    px(25, 28, 2, 4);
+  }
 
   // 5. 【耳】
   // 左耳 (X=8〜9, Y=13〜16) / 右耳 (X=22〜23, Y=13〜16)
@@ -616,16 +680,22 @@ const PLAYER_AVATAR_CACHE_LIMIT = 1500;
 const PLAYER_AVATAR_LOOKUP = new Map();
 let sharedAvatarCanvas = null;
 
-function getAvatarCacheKey(genes, kit, age) {
+function resolveAvatarRoleType(player) {
+  if (player && player.isManager) return 'manager';
+  if (player && player.isCoach) return 'coach';
+  return 'player';
+}
+
+function getAvatarCacheKey(genes, kit, age, roleType = 'player') {
   const ageBand = age >= 34 ? 'g' : age >= 31 ? 's' : age >= 28 ? 'm' : 'y';
   return [
     genes.skinColor, genes.hairStyle, genes.hairColor, genes.facialHair,
-    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand
+    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand, roleType
   ].join('|');
 }
 
-function getOrCreateMasterAvatarCanvas(genes, age, kit) {
-  const key = getAvatarCacheKey(genes, kit, age);
+function getOrCreateMasterAvatarCanvas(genes, age, kit, roleType = 'player') {
+  const key = getAvatarCacheKey(genes, kit, age, roleType);
   const cached = PLAYER_AVATAR_CANVAS_CACHE.get(key);
   if (cached) return cached;
 
@@ -635,7 +705,7 @@ function getOrCreateMasterAvatarCanvas(genes, age, kit) {
   master.height = 32;
   const mctx = master.getContext('2d');
   mctx.imageSmoothingEnabled = false;
-  drawPixelAvatarOnContext(mctx, genes, age, kit);
+  drawPixelAvatarOnContext(mctx, genes, age, kit, roleType);
 
   if (PLAYER_AVATAR_CANVAS_CACHE.size >= PLAYER_AVATAR_CACHE_LIMIT) {
     PLAYER_AVATAR_CANVAS_CACHE.delete(PLAYER_AVATAR_CANVAS_CACHE.keys().next().value);
@@ -656,19 +726,20 @@ function generatePlayerAvatar(player, canvas, club = null) {
   const kit = getAvatarKitColors(player, club);
   genes.jerseyColor = kit[0];
   const age = player.age || 25;
+  const roleType = resolveAvatarRoleType(player);
 
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
 
-  const master = getOrCreateMasterAvatarCanvas(genes, age, kit);
+  const master = getOrCreateMasterAvatarCanvas(genes, age, kit, roleType);
   if (master) {
     ctx.drawImage(master, 0, 0, canvas.width, canvas.height);
   } else {
     const scale = canvas.width / 32;
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    drawPixelAvatarOnContext(ctx, genes, age, kit);
+    drawPixelAvatarOnContext(ctx, genes, age, kit, roleType);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 }
@@ -677,7 +748,8 @@ function getPlayerAvatarDataUrl(player, club = null, pixelSize = 48) {
   const genes = ensurePlayerAvatarData(player);
   const kit = getAvatarKitColors(player, club);
   const age = player.age || 25;
-  const key = `${getAvatarCacheKey(genes, kit, age)}|${pixelSize}`;
+  const roleType = resolveAvatarRoleType(player);
+  const key = `${getAvatarCacheKey(genes, kit, age, roleType)}|${pixelSize}`;
 
   const cached = PLAYER_AVATAR_CACHE.get(key);
   if (cached) return cached;
@@ -754,7 +826,7 @@ function generateManagerAvatar(manager, targetCanvas = null, canvasSize = 48) {
 function getManagerAvatarHtml(manager, extraClass = 'avatar-sm', canvasSize = 48) {
   if (!manager) return '';
   const suitKit = ['#222a35', '#ffffff'];
-  return getPlayerAvatarHtml({ ...manager, id: `mgr_${manager.name || 'x'}` }, { kitColors: suitKit }, extraClass, canvasSize);
+  return getPlayerAvatarHtml({ ...manager, id: manager.id || `mgr_${manager.name || 'x'}`, isManager: true }, { kitColors: suitKit }, extraClass, canvasSize);
 }
 
 /**
@@ -788,5 +860,5 @@ function generateCoachAvatar(coach, targetCanvas = null, canvasSize = 48) {
 function getCoachAvatarHtml(coach, extraClass = 'avatar-sm', canvasSize = 48) {
   if (!coach) return '';
   const kit = getCoachKitColors(coach.category);
-  return getPlayerAvatarHtml({ ...coach, id: coach.id || `coach_${coach.name || 'x'}` }, { kitColors: kit }, extraClass, canvasSize);
+  return getPlayerAvatarHtml({ ...coach, id: coach.id || `coach_${coach.name || 'x'}`, isCoach: true }, { kitColors: kit }, extraClass, canvasSize);
 }

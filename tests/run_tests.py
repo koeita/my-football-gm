@@ -67,9 +67,14 @@ def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
-    # コア単体テスト
-    from tests import test_unit_core
-    suite.addTests(loader.loadTestsFromModule(test_unit_core))
+    if args.all:
+        # 全テストモードでは tests/ 配下の test_*.py を網羅実行
+        discovered = loader.discover(start_dir=os.path.join(ROOT_DIR, 'tests'), pattern='test_*.py', top_level_dir=ROOT_DIR)
+        suite.addTests(discovered)
+    else:
+        # コア単体テスト（高速差分チェック用）
+        from tests import test_unit_core
+        suite.addTests(loader.loadTestsFromModule(test_unit_core))
 
     # テストの実行
     runner = unittest.TextTestRunner(verbosity=2)
