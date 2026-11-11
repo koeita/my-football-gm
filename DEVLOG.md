@@ -1,5 +1,26 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## Priority S：ゲーム進行・経済・セーブ整合性に関わる6大致命的バグの一括修正 (fix-priority-s-critical-bugs)
+- **概要**:
+  - **1. 自クラブ2部（ENG-D2）降格時のプレイアブル2部完全対応 ＆ クラブ誤参照解消**:
+    - `getPlayerClub()` / `getClubById()` / `isPlayerInSecondDivision()` / `getAllManagedLeagueClubs()` を整備し、自クラブが2部へ降格した際も1部首位クラブを誤参照せず自クラブを一貫して指揮できるよう修正。
+    - 2部所属時は24クラブ全46節スケジュール＆ミッドウィーク拡張カレンダーを自動生成し、裏で1部全38節も自動進行（`advanceFirstDivisionBackgroundWeek`）。2部順位賞金テーブル（`PRIZE_MONEY_TABLE_D2`）、3位以内での1部復帰演出、および1年復帰厳命未達時のGM解任判定まで一貫して実装。あわせて昇格クラブの選手生成時に `basePower` へ文字列IDが渡っていた型バグも修正（`ensurePlayableClubStructure`）。
+  - **2. 全カップ戦（国内2大会・欧州3大会）への「準決勝（SF）」日程追加 ＆ トーナメント進行正常化**:
+    - `euroScheduleList` および `domesticCupScheduleList`（`L-CUP` / `N-CUP`）に欠落していた `roundKey: 'SF'`（準決勝）を追加し、ラウンド間の時系列順序を保証。
+    - 自クラブ敗退後や他欧州カップ戦でもCPU同士の次ラウンド生成・優勝クラブ決定まで自動進行するよう `advanceCupBracketIfRoundComplete` を導入。また `finalizeCupMatch` でアウェイ勝利時に敗者側が勝ち上がり扱いになっていた勝者反転バグおよび欧州MD8・PO完了タイミングの不整合を修正。
+  - **3. ボスマン事前合意（`pre_contract`）の二重所属防止 ＆ レンタル移籍ルール整合化**:
+    - 事前合意締結済み選手をCPUクラブがオフシーズンに勝手に再契約しないようガードし、新シーズン合流時に元クラブおよび市場リストから確実に除去して同一選手の二重所属を根絶。
+    - レンタル放出中（`isLoanOut`）の選手を自クラブの年間人件費（`getClubTotalPayroll`）およびスタメン・控え自動編成から除外。レンタル加入（`isLoan`）選手の不正な契約延長を禁止し、満了時は元の週給・残契約年数を復元して所属元クラブへ返却するよう修正。また `gameState.transferMarket` のフリー選手も市場一覧に表示・獲得可能に統合。
+  - **4. 欧州コンペ（ECT / EPC / ECS）出場権の前季最終順位・国内カップ覇者連動**:
+    - 勝点リセット前のシーズン終了時点（`processSeasonEnd`）で1部最終順位（`lastSeasonStandingsOrder`）と各大会覇者（`lastSeasonCupWinners`）を保存し、翌季の `selectEuropeanCompetitionEntries()` で前季順位および `N-CUP` / `L-CUP` / 欧州杯優勝枠の繰り下げスライドが重複なく正確に反映されるよう改修。
+  - **5. セーブ＆ロードの保存項目網羅 ＆ クラブ参照の再水和（Rehydration）**:
+    - `saveGameToStorage` に欠落していた `preContractPlayers`、`freeManagers`、`freeCoaches`、`matchHistory`、`playerDivision`、`lastSeasonStandingsOrder`、`lastSeasonCupWinners` 等を追加。
+    - `loadGameFromStorage` で `rehydrateCompetitionsClubRefs()` を実行して `JSON.parse` 後のクラブ参照分断を解消し、進行中セーブのカップ日程を毎回リセット上書きしていた不具合を修正。
+  - **6. カップ戦賞金・マッチデイ収入・WCTサポーター増加の実資産反映**:
+    - カップ戦・欧州戦優勝賞金の加算先を架空の `gameState.budget` から `playerClub.funds` へ修正。
+    - 欧州リーグフェーズ・PO・国内外ノックアウト戦の入場料収入（スタジアム施設倍率込み）・放映権料・サポーター増減を `applyCupMatchFinancialsAndSupporters` で実資産へ反映し、プレシーズン杯（WCT）のサポーター増加も `fanCount` から `playerClub.supporters` へ修正。あわせて `avatar.js` の `PLAYER_AVATAR_LOOKUP` にもキャッシュ上限ガードを追加。
+- **変更ファイル**: `competitions.js`, `main.js`, `avatar.js`, `index.html`, `tests/test_priority_s_fixes.py`, `DEVLOG.md`
+
 ## avatar.jsの衣装・クラブカラー解決仕上げ ＆ 全単体テストスイート整合性クリーンアップ (feat-avatar-pixel-refactor)
 - **概要**:
   - **1. 監督スーツ・コーチジャージおよび2部・欧州他国クラブのユニフォーム色反映**:

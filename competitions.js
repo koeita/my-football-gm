@@ -468,49 +468,97 @@ function initDomesticCups() {
 // ==========================================
 
 /**
- * 欧州全120クラブから上位成績・カップ結果に基づきCL(36), EL(36), ECL(36)の計108枠へ自動エントリー
+ * 欧州全120クラブから前季順位・カップ結果に基づきECT(36), EPC(36), ECS(36)の計108枠へ自動エントリー
  */
 function selectEuropeanCompetitionEntries() {
-  const premClubs = [...(gameState.clubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0));
-  const p2Clubs = [...((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS)].sort((a, b) => (b.pts || 0) - (a.pts || 0));
+  const savedOrder = Array.isArray(gameState.lastSeasonStandingsOrder) ? gameState.lastSeasonStandingsOrder : null;
+  const rankMap = new Map();
+  if (savedOrder && savedOrder.length > 0) {
+    savedOrder.forEach((id, idx) => rankMap.set(id, idx));
+  }
+
+  const premClubs = [...(gameState.clubs || [])].sort((a, b) => {
+    if (rankMap.size > 0) {
+      const rA = rankMap.has(a.id) ? rankMap.get(a.id) : 99;
+      const rB = rankMap.has(b.id) ? rankMap.get(b.id) : 99;
+      if (rA !== rB) return rA - rB;
+    }
+    const ptsDiff = (b.pts || 0) - (a.pts || 0);
+    if (ptsDiff !== 0) return ptsDiff;
+    const gdDiff = (b.gd || 0) - (a.gd || 0);
+    if (gdDiff !== 0) return gdDiff;
+    return (a.targetRank || 10) - (b.targetRank || 10);
+  });
+
+  const p2Clubs = [...((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS)]
+    .sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.basePower || 70) - (a.basePower || 70));
   const espClubs = [...SPAIN_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const itaClubs = [...ITALY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const gerClubs = [...GERMANY_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
   const fraClubs = [...FRANCE_CLUBS_DEFINITIONS].sort((a, b) => b.basePower - a.basePower);
 
-  // 1. CL (36クラブ): 欧州最高峰
-  // ENG 1〜4位 (4) + ESP 1〜8位 (8) + ITA 1〜8位 (8) + GER 1〜8位 (8) + FRA 1〜8位 (8) = 36クラブ
+  const cupWinners = gameState.lastSeasonCupWinners || {};
+  const allEngClubs = [...premClubs, ...p2Clubs];
+  const findEngClub = (id) => id ? allEngClubs.find(c => c.id === id) : null;
+
+  const usedIds = new Set();
+  const takeUnique = (list, count) => {
+    const out = [];
+    for (const c of list) {
+      if (out.length >= count) break;
+      if (c && !usedIds.has(c.id)) {
+        usedIds.add(c.id);
+        out.push(c);
+      }
+    }
+    return out;
+  };
+
+  // 1. ECT (36クラブ): ENG 4枠（前季ECT/EPC覇者が英クラブなら優先枠、残りはリーグ上位順）+ 4大リーグ上位各8枠
+  const engClPriority = [
+    findEngClub(cupWinners.championsCupId),
+    findEngClub(cupWinners.europaCupId),
+    ...premClubs
+  ].filter(Boolean);
   const clEntries = [
-    ...premClubs.slice(0, 4),
-    ...espClubs.slice(0, 8),
-    ...itaClubs.slice(0, 8),
-    ...gerClubs.slice(0, 8),
-    ...fraClubs.slice(0, 8)
+    ...takeUnique(engClPriority, 4),
+    ...takeUnique(espClubs, 8),
+    ...takeUnique(itaClubs, 8),
+    ...takeUnique(gerClubs, 8),
+    ...takeUnique(fraClubs, 8)
   ];
 
-  // 2. EL (36クラブ): 欧州強豪
-  // ENG 5〜8位 (4: FA杯枠含む) + ESP 9〜16位 (8) + ITA 9〜16位 (8) + GER 9〜16位 (8) + FRA 9〜16位 (8) = 36クラブ
+  // 2. EPC (36クラブ): ENG 4枠（N-CUP優勝クラブ優先＋リーグ上位からの繰り下げスライド）+ 4大リーグ9〜16位各8枠
+  const natWinner = findEngClub(cupWinners.nationalCupId);
+  const engElPriority = [
+    ...(natWinner && !usedIds.has(natWinner.id) ? [natWinner] : []),
+    ...premClubs
+  ];
   const elEntries = [
-    ...premClubs.slice(4, 8),
-    ...espClubs.slice(8, 16),
-    ...itaClubs.slice(8, 16),
-    ...gerClubs.slice(8, 16),
-    ...fraClubs.slice(8, 16)
+    ...takeUnique(engElPriority, 4),
+    ...takeUnique(espClubs.slice(8), 8),
+    ...takeUnique(itaClubs.slice(8), 8),
+    ...takeUnique(gerClubs.slice(8), 8),
+    ...takeUnique(fraClubs.slice(8), 8)
   ];
 
-  // 3. ECL (36クラブ): 欧州実力派
-  // ENG 9〜16位 (8: リーグ杯枠含む) + ESP 17〜20位 (4) + ITA 17〜20位 (4) + GER 17〜18位 (2) + FRA 17〜18位 (2) + ENG 17〜18位 (2) + ENG 2部上位14 (14) = 36クラブ
+  // 3. ECS (36クラブ): ENG（L-CUP優勝クラブ優先＋1部残枠＋2部上位で計24枠）+ 4大リーグ残枠計12枠 = 36クラブ
+  const lgcWinner = findEngClub(cupWinners.leagueCupId);
+  const engEclPriority = [
+    ...(lgcWinner && !usedIds.has(lgcWinner.id) ? [lgcWinner] : []),
+    ...premClubs.slice(0, 18),
+    ...p2Clubs
+  ];
+  const foreignEcl = [
+    ...takeUnique(espClubs.slice(16), 4),
+    ...takeUnique(itaClubs.slice(16), 4),
+    ...takeUnique(gerClubs.slice(16), 2),
+    ...takeUnique(fraClubs.slice(16), 2)
+  ];
   const eclEntries = [
-    ...premClubs.slice(8, 16),
-    ...espClubs.slice(16, 20),
-    ...itaClubs.slice(16, 20),
-    ...gerClubs.slice(16, 18),
-    ...fraClubs.slice(16, 18),
-    ...premClubs.slice(16, 18),
-    ...p2Clubs.slice(0, 14)
+    ...takeUnique(engEclPriority, 36 - foreignEcl.length),
+    ...foreignEcl
   ];
-
-  // 残り12クラブ（ENG 1部19〜20位の2クラブ ＋ ENG 2部15〜24位の10クラブ）は国内専念
 
   return { clEntries, elEntries, eclEntries };
 }
@@ -659,7 +707,7 @@ function injectCupMatchesIntoCalendar() {
     }
   });
 
-  // 1. 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ PO ＆ 決勝T（最優先固定）
+  // 1. 欧州コンペ：全8試合スイス方式リーグフェーズ (MD1〜MD8) ＆ PO ＆ 決勝T（R16 / QF / SF / FINAL）
   const euroScheduleList = [
     { month: 9, minDay: 15, maxDay: 22, preferredDays: [2], compType: 'euroLeaguePhase', md: 1, label: `${playerEuroCode} MD1`, code: playerEuroCode },
     { month: 10, minDay: 1, maxDay: 10, preferredDays: [2], compType: 'euroLeaguePhase', md: 2, label: `${playerEuroCode} MD2`, code: playerEuroCode },
@@ -672,12 +720,15 @@ function injectCupMatchesIntoCalendar() {
     { month: 2, minDay: 10, maxDay: 18, preferredDays: [2], compType: 'euroPlayoff', label: `${playerEuroCode} 決勝T進出PO`, code: playerEuroCode },
     { month: 3, minDay: 3, maxDay: 11, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'R16', label: `${playerEuroCode} 決勝T 1回戦`, code: playerEuroCode },
     { month: 4, minDay: 7, maxDay: 14, preferredDays: [2], compType: playerEuroCompKey, roundKey: 'QF', label: `${playerEuroCode} 準々決勝`, code: playerEuroCode },
+    { month: 5, minDay: 1, maxDay: 9, preferredDays: [2, 3], compType: playerEuroCompKey, roundKey: 'SF', label: `${playerEuroCode} 準決勝`, code: playerEuroCode },
     { month: 5, minDay: 24, maxDay: 31, preferredDays: [2, 3], compType: playerEuroCompKey, roundKey: 'FINAL', label: `${playerEuroCode} 決勝`, code: playerEuroCode }
   ];
 
-  // 欧州コンペの日程を最優先固定で割り振り
+  // 欧州コンペの日程を最優先固定で割り振り（時系列順序を保証）
+  let lastEuroDayIdx = -1;
   euroScheduleList.forEach(sc => {
     let targetDay = gameState.calendar.find(d => 
+      d.dayIndex > lastEuroDayIdx &&
       d.month === sc.month &&
       d.day >= sc.minDay &&
       d.day <= sc.maxDay &&
@@ -688,6 +739,7 @@ function injectCupMatchesIntoCalendar() {
 
     if (!targetDay) {
       targetDay = gameState.calendar.find(d =>
+        d.dayIndex > lastEuroDayIdx &&
         d.month === sc.month &&
         sc.preferredDays.includes(d.dayOfWeek) &&
         !d.isMatchDay &&
@@ -697,6 +749,7 @@ function injectCupMatchesIntoCalendar() {
 
     if (!targetDay) {
       targetDay = gameState.calendar.find(d =>
+        d.dayIndex > lastEuroDayIdx &&
         d.month === sc.month &&
         [2, 3, 4].includes(d.dayOfWeek) &&
         !d.isMatchDay &&
@@ -712,6 +765,7 @@ function injectCupMatchesIntoCalendar() {
       targetDay.cupLabel = sc.label;
       targetDay.cupCode = sc.code;
       targetDay.eventType = 'match';
+      lastEuroDayIdx = targetDay.dayIndex;
     }
   });
 
@@ -720,8 +774,9 @@ function injectCupMatchesIntoCalendar() {
   const getCalendarWeekIndex = (dayIndex) => Math.floor((dayIndex + 2) / 7);
 
   // 指定日が国内カップ戦のスロットとして有効（最低中2日・週上限スロット制限を満たす）か検査
-  const isCupSlotValid = (d) => {
+  const isCupSlotValid = (d, minAfterDayIdx = -1) => {
     if (!d || d.isMatchDay || d.isCupMatchDay) return false;
+    if (d.dayIndex <= minAfterDayIdx) return false;
     // プレシーズン（8/15以前）またはシーズン終了期（オフシーズン）除外
     if (d.dayIndex < 45 || d.dayIndex >= 340) return false;
     // 平日ミッドウィーク（火曜: 2 または 水曜: 3）であること
@@ -750,58 +805,63 @@ function injectCupMatchesIntoCalendar() {
   };
 
   const domesticCupScheduleList = [
-    // 9月: リーグ・トロフィー1回戦 (水)
+    // リーグ・トロフィー (L-CUP: R32 -> R16 -> QF -> SF -> FINAL)
     { month: 9, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'leagueCup', roundKey: 'R32', label: 'L-CUP 1回戦', code: 'L-CUP' },
-    // 10月: リーグ・トロフィー2回戦 (水)
     { month: 10, minDay: 25, maxDay: 31, preferredDays: [3], compType: 'leagueCup', roundKey: 'R16', label: 'L-CUP 2回戦', code: 'L-CUP' },
-    // 12月: リーグ・トロフィー準々決勝 (水)
     { month: 12, minDay: 16, maxDay: 24, preferredDays: [3], compType: 'leagueCup', roundKey: 'QF', label: 'L-CUP 準々決勝', code: 'L-CUP' },
-    // 1月: ナショナル・カップ1回戦 (水)
+    { month: 1, minDay: 13, maxDay: 22, preferredDays: [2, 3], compType: 'leagueCup', roundKey: 'SF', label: 'L-CUP 準決勝', code: 'L-CUP' },
+    { month: 2, minDay: 22, maxDay: 28, preferredDays: [2, 3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
+    // ナショナル・カップ (N-CUP: R32 -> R16 -> QF -> SF -> FINAL)
     { month: 1, minDay: 5, maxDay: 12, preferredDays: [3], compType: 'nationalCup', roundKey: 'R32', label: 'N-CUP 1回戦', code: 'N-CUP' },
-    // 2月: リーグ・トロフィー決勝 (水)
-    { month: 2, minDay: 3, maxDay: 12, preferredDays: [3], compType: 'leagueCup', roundKey: 'FINAL', label: 'L-CUP 決勝', code: 'L-CUP' },
-    // 3月: ナショナル・カップ2回戦 (水)
-    { month: 3, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 2回戦', code: 'N-CUP' },
-    // 4月: ナショナル・カップ準々決勝 (水)
-    { month: 4, minDay: 22, maxDay: 30, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
-    // 5月: ナショナル・カップ決勝 (水)
-    { month: 5, minDay: 10, maxDay: 18, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' }
+    { month: 2, minDay: 3, maxDay: 12, preferredDays: [3], compType: 'nationalCup', roundKey: 'R16', label: 'N-CUP 2回戦', code: 'N-CUP' },
+    { month: 3, minDay: 12, maxDay: 22, preferredDays: [3], compType: 'nationalCup', roundKey: 'QF', label: 'N-CUP 準々決勝', code: 'N-CUP' },
+    { month: 4, minDay: 14, maxDay: 23, preferredDays: [2, 3], compType: 'nationalCup', roundKey: 'SF', label: 'N-CUP 準決勝', code: 'N-CUP' },
+    { month: 5, minDay: 12, maxDay: 20, preferredDays: [3], compType: 'nationalCup', roundKey: 'FINAL', label: 'N-CUP 決勝', code: 'N-CUP' }
   ];
 
+  const lastDomesticDayByComp = { leagueCup: -1, nationalCup: -1 };
   domesticCupScheduleList.forEach(sc => {
-    // まず希望月・指定範囲内で有効スロットを検索
+    const minAfter = lastDomesticDayByComp[sc.compType] ?? -1;
+
     let targetDay = gameState.calendar.find(d => 
       d.month === sc.month &&
       d.day >= sc.minDay &&
       d.day <= sc.maxDay &&
       sc.preferredDays.includes(d.dayOfWeek) &&
-      isCupSlotValid(d)
+      isCupSlotValid(d, minAfter)
     );
 
-    // 見つからなければ、同月内の希望曜日の有効スロットを検索
     if (!targetDay) {
       targetDay = gameState.calendar.find(d =>
         d.month === sc.month &&
         sc.preferredDays.includes(d.dayOfWeek) &&
-        isCupSlotValid(d)
+        isCupSlotValid(d, minAfter)
       );
     }
 
-    // 重複・過密発生時：欧州戦のない前後の空きミッドウィーク（火・水）へ自動スライド
     if (!targetDay) {
-      // 基準位置（希望月・範囲の中央付近）
       const baseDay = gameState.calendar.find(d => d.month === sc.month && d.day >= sc.minDay && d.day <= sc.maxDay) || gameState.calendar[120];
       const baseIdx = baseDay ? baseDay.dayIndex : 120;
 
-      // カレンダー全域から有効な空きミッドウィークを距離順でソート
       const candidates = gameState.calendar
-        .filter(d => isCupSlotValid(d))
+        .filter(d => isCupSlotValid(d, minAfter))
         .map(d => ({ day: d, dist: Math.abs(d.dayIndex - baseIdx) }))
         .sort((a, b) => a.dist - b.dist);
 
       if (candidates.length > 0) {
         targetDay = candidates[0].day;
       }
+    }
+
+    if (!targetDay) {
+      targetDay = gameState.calendar.find(d =>
+        d.dayIndex > minAfter &&
+        d.dayIndex >= 45 &&
+        d.dayIndex < 345 &&
+        !d.isMatchDay &&
+        !d.isCupMatchDay &&
+        [2, 3, 4].includes(d.dayOfWeek)
+      );
     }
 
     if (targetDay) {
@@ -812,6 +872,7 @@ function injectCupMatchesIntoCalendar() {
       targetDay.cupLabel = sc.label;
       targetDay.cupCode = sc.code;
       targetDay.eventType = 'match';
+      lastDomesticDayByComp[sc.compType] = targetDay.dayIndex;
     }
   });
 }
@@ -879,8 +940,8 @@ function advanceEuroLeaguePhase(md) {
       }
     });
 
-    // 第8節終了時：1〜8位がR16進出、9〜24位がプレーオフ進出
-    if (md === 8) {
+    // 第8節の全試合消化完了時：1〜8位がR16進出、9〜24位がプレーオフ進出
+    if (md === 8 && roundMatches.every(m => m.played)) {
       finalizeEuroLeaguePhaseToKnockout(comp);
     }
   });
@@ -890,7 +951,7 @@ function advanceEuroLeaguePhase(md) {
 
 // 8節終了時：1〜8位ストレート進出、9〜24位プレーオフ（PO）生成
 function finalizeEuroLeaguePhaseToKnockout(comp) {
-  if (comp.phase !== 'LEAGUE') return;
+  if (!comp || comp.phase !== 'LEAGUE') return;
   comp.phase = 'PLAYOFF';
 
   const sorted = [...comp.participants].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
@@ -899,6 +960,18 @@ function finalizeEuroLeaguePhaseToKnockout(comp) {
 
   comp.top8Direct = top8;
   comp.playoffs = generateKnockoutRound(playoffClubs);
+}
+
+function finalizeEuroPlayoffToR16(comp) {
+  if (!comp || !Array.isArray(comp.playoffs) || comp.playoffs.length === 0) return;
+  if (comp.phase === 'KNOCKOUT' && comp.rounds && comp.rounds.R16 && comp.rounds.R16.length > 0) return;
+  if (!comp.playoffs.every(m => m.played)) return;
+
+  const poWinners = comp.playoffs.map(m => m.winnerClub || (m.winnerId === m.homeId ? m.homeClub : m.awayClub)).filter(Boolean);
+  if (poWinners.length >= 8 && comp.top8Direct) {
+    comp.phase = 'KNOCKOUT';
+    comp.rounds.R16 = generateKnockoutRound([...comp.top8Direct, ...poWinners]);
+  }
 }
 
 // プレーオフ（9〜24位）の進行
@@ -932,24 +1005,52 @@ function advanceEuroPlayoffRound() {
       }
     });
 
-    // プレーオフ勝者8チーム + トップ8 = 16チームでR16構築
-    const poWinners = comp.playoffs.map(m => m.winnerClub).filter(Boolean);
-    if (poWinners.length >= 8 && comp.top8Direct) {
-      comp.phase = 'KNOCKOUT';
-      comp.rounds.R16 = generateKnockoutRound([...comp.top8Direct, ...poWinners]);
-    }
+    finalizeEuroPlayoffToR16(comp);
   });
 
   return { playerMatch, playerComp };
 }
 
-// 国内カップ戦の進行
-function processCupMatchDay(compType, roundKey) {
+const ROUND_NEXT_KEYS = {
+  R32: 'R16',
+  R16: 'QF',
+  QF: 'SF',
+  SF: 'FINAL'
+};
+
+function advanceCupBracketIfRoundComplete(comp, roundKey) {
+  if (!comp || !comp.rounds || !Array.isArray(comp.rounds[roundKey])) return;
+  const matches = comp.rounds[roundKey];
+  if (matches.length === 0 || !matches.every(m => m.played)) return;
+
+  const winners = matches.map(m => m.winnerClub || (m.winnerId === m.homeId ? m.homeClub : m.awayClub)).filter(Boolean);
+  const nextKey = ROUND_NEXT_KEYS[roundKey];
+  if (nextKey) {
+    if (!comp.rounds[nextKey] || comp.rounds[nextKey].length === 0) {
+      comp.rounds[nextKey] = generateKnockoutRound(winners);
+      comp.currentRoundKey = nextKey;
+    }
+  } else if (roundKey === 'FINAL' && winners[0]) {
+    comp.winner = winners[0];
+  }
+}
+
+// 国内カップ戦・欧州決勝Tの進行
+function processCupMatchDay(compType, roundKey, skipSiblingEuro = false) {
+  const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
+  if (!skipSiblingEuro && euroKeys.includes(compType)) {
+    euroKeys.forEach(otherKey => {
+      if (otherKey !== compType) {
+        processCupMatchDay(otherKey, roundKey, true);
+      }
+    });
+  }
+
   const comp = gameState.competitions && gameState.competitions[compType];
   if (!comp || !comp.rounds || !comp.rounds[roundKey]) return null;
 
   const matches = comp.rounds[roundKey];
-  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : gameState.clubs.find(c => c.isPlayer);
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   const pId = playerClub ? playerClub.id : null;
 
   let playerMatch = null;
@@ -961,8 +1062,8 @@ function processCupMatchDay(compType, roundKey) {
       return;
     }
 
-    const isHomePlayer = (m.homeId === pId);
-    const isAwayPlayer = (m.awayId === pId);
+    const isHomePlayer = Boolean(pId && m.homeId === pId);
+    const isAwayPlayer = Boolean(pId && m.awayId === pId);
 
     if (isHomePlayer || isAwayPlayer) {
       playerMatch = m;
@@ -979,42 +1080,39 @@ function processCupMatchDay(compType, roundKey) {
     }
   });
 
+  if (!playerMatch) {
+    advanceCupBracketIfRoundComplete(comp, roundKey);
+  }
+
   return { comp, matches, playerMatch, winners };
 }
 
-const ROUND_NEXT_KEYS = {
-  R32: 'R16',
-  R16: 'QF',
-  QF: 'SF',
-  SF: 'FINAL'
-};
-
 function finalizeCupMatch(compType, roundKey, match, userWon, homeScore, awayScore, pkHome = null, pkAway = null) {
   const comp = gameState.competitions && gameState.competitions[compType];
-  if (!comp) return;
+  if (!comp || !match) return;
+
+  const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  const isPlayerHome = pClub ? (match.homeId === pClub.id) : true;
+  const homeWon = isPlayerHome ? Boolean(userWon) : !userWon;
 
   match.homeScore = homeScore;
   match.awayScore = awayScore;
   match.pkHome = pkHome;
   match.pkAway = pkAway;
   match.played = true;
-  match.winnerId = userWon ? match.homeId : match.awayId;
-  match.winnerClub = userWon ? match.homeClub : match.awayClub;
+  match.winnerId = homeWon ? match.homeId : match.awayId;
+  match.winnerClub = homeWon
+    ? (pClub && isPlayerHome ? pClub : match.homeClub)
+    : (pClub && !isPlayerHome ? pClub : match.awayClub);
 
-  const matches = comp.rounds[roundKey];
-  const winners = matches.map(m => m.winnerClub).filter(Boolean);
+  advanceCupBracketIfRoundComplete(comp, roundKey);
 
-  const nextKey = ROUND_NEXT_KEYS[roundKey];
-  if (nextKey) {
-    if (!comp.rounds[nextKey] || comp.rounds[nextKey].length === 0) {
-      comp.rounds[nextKey] = generateKnockoutRound(winners);
-    }
-  } else if (roundKey === 'FINAL') {
+  if (roundKey === 'FINAL') {
     comp.winner = match.winnerClub;
-    if (userWon) {
-      gameState.budget = (gameState.budget || 0) + comp.prizeMoney;
+    if (userWon && pClub) {
+      pClub.funds = (pClub.funds || 0) + (comp.prizeMoney || 0);
       if (typeof addDailyLog === 'function') {
-        addDailyLog(`🏆【祝！${comp.name} 優勝】賞金 £${(comp.prizeMoney / 1000).toFixed(1)}M を獲得しました！`);
+        addDailyLog(`🏆【祝！${comp.name} 優勝】賞金 £${((comp.prizeMoney || 0) / 1000).toFixed(1)}M をクラブ資金に獲得しました！`);
       }
     }
   }
@@ -1043,6 +1141,80 @@ function checkScheduleCongestion() {
   };
 }
 
+// 2部・昇格クラブにフル機能（20名スカッド・監督・コーチ・資金・サポーター）を保証するヘルパー
+function ensurePlayableClubStructure(club) {
+  if (!club) return club;
+  const usedNames = new Set((club.players || []).map(p => p.name));
+  const power = typeof club.basePower === 'number' ? club.basePower : 71;
+
+  if (!Array.isArray(club.players) || club.players.length < 11) {
+    if (typeof createSquad === 'function') {
+      club.players = createSquad(power, usedNames);
+    } else if (typeof ALL_POSITIONS !== 'undefined' && typeof createPlayer === 'function') {
+      club.players = ALL_POSITIONS.map(pos => createPlayer(pos, power, false, usedNames));
+    }
+  }
+  if (!Array.isArray(club.youthSquad) && typeof createYouthSquad === 'function') {
+    club.youthSquad = createYouthSquad(usedNames);
+  }
+  if (typeof club.funds !== 'number') club.funds = 18000;
+  if (typeof club.supporters !== 'number') club.supporters = 14000;
+  if (!club.formation) club.formation = '4-3-3';
+  if (!club.tactic) club.tactic = 'counter';
+  if (!club.manager && typeof MANAGERS_DATABASE !== 'undefined' && typeof createManager === 'function') {
+    club.manager = createManager(MANAGERS_DATABASE[0], club.id, usedNames);
+  }
+  if (!club.coaches && typeof createInitialCoaches === 'function') {
+    club.coaches = createInitialCoaches(Boolean(club.isPlayer));
+  }
+  if (typeof ensureValidSquadAndStarters === 'function') {
+    ensureValidSquadAndStarters(club);
+  }
+  if (!club.isPlayer && typeof autoSelectStarters === 'function') {
+    autoSelectStarters(club);
+  }
+  return club;
+}
+
+// セーブデータ読み込み後に competitions 内のクラブ参照を正本へ再結合する
+function rehydrateCompetitionsClubRefs() {
+  if (!gameState || !gameState.competitions) return;
+  const clubMap = new Map();
+  if (Array.isArray(gameState.clubs)) {
+    gameState.clubs.forEach(c => { if (c && c.id) clubMap.set(c.id, c); });
+  }
+  const d2Clubs = gameState.competitions.championship && gameState.competitions.championship.clubs;
+  if (Array.isArray(d2Clubs)) {
+    d2Clubs.forEach(c => { if (c && c.id) clubMap.set(c.id, c); });
+  }
+
+  const relinkMatch = (m) => {
+    if (!m) return;
+    if (m.homeId && clubMap.has(m.homeId)) m.homeClub = clubMap.get(m.homeId);
+    if (m.awayId && clubMap.has(m.awayId)) m.awayClub = clubMap.get(m.awayId);
+    if (m.winnerId && clubMap.has(m.winnerId)) m.winnerClub = clubMap.get(m.winnerId);
+  };
+
+  ['leagueCup', 'nationalCup', 'championsCup', 'europaCup', 'conferenceCup'].forEach(k => {
+    const comp = gameState.competitions[k];
+    if (!comp) return;
+    if (Array.isArray(comp.playoffs)) comp.playoffs.forEach(relinkMatch);
+    if (comp.rounds && typeof comp.rounds === 'object') {
+      Object.values(comp.rounds).forEach(arr => {
+        if (Array.isArray(arr)) arr.forEach(relinkMatch);
+      });
+    }
+    if (comp.winner && comp.winner.id && clubMap.has(comp.winner.id)) {
+      comp.winner = clubMap.get(comp.winner.id);
+    }
+  });
+
+  const pre = gameState.competitions.preseasonCup;
+  if (pre && Array.isArray(pre.matches)) {
+    pre.matches.forEach(relinkMatch);
+  }
+}
+
 // 昇降格処理
 function processPromotionAndRelegation() {
   const p1Sorted = typeof getSortedStandings === 'function' ? getSortedStandings() : [...gameState.clubs].sort((a,b) => (b.pts||0) - (a.pts||0));
@@ -1053,24 +1225,20 @@ function processPromotionAndRelegation() {
   const promotedClubs = p2Sorted.slice(0, 3);
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : gameState.clubs.find(c => c.isPlayer);
-  const isPlayerRelegated = relegatedClubs.some(c => c.id === playerClub.id);
+  const isPlayerRelegated = Boolean(playerClub && relegatedClubs.some(c => c.id === playerClub.id));
+  const isPlayerPromoted = Boolean(playerClub && promotedClubs.some(c => c.id === playerClub.id));
 
   const relegatedIds = new Set(relegatedClubs.map(c => c.id));
   const newP1Clubs = p1Sorted.filter(c => !relegatedIds.has(c.id));
 
   promotedClubs.forEach(pc => {
-    if (!pc.players || pc.players.length === 0) {
-      if (typeof ALL_POSITIONS !== 'undefined' && typeof createPlayer === 'function') {
-        const usedNames = new Set();
-        pc.players = ALL_POSITIONS.map(pos => createPlayer(pos, pc.id, usedNames));
-        if (typeof ensureValidSquadAndStarters === 'function') {
-          ensureValidSquadAndStarters(pc);
-        }
-      }
-    }
+    ensurePlayableClubStructure(pc);
     pc.tier = 'PROMOTED';
     pc.targetRank = 17;
     pc.targetLabel = '17位以内（残留）';
+    if (pc.isPlayer) {
+      pc.mustPromoteImmediate = false;
+    }
     newP1Clubs.push(pc);
   });
 
@@ -1078,20 +1246,39 @@ function processPromotionAndRelegation() {
   const newP2Clubs = p2Sorted.filter(c => !promotedIds.has(c.id));
   relegatedClubs.forEach(rc => {
     rc.tier = 'RELEGATED';
-    rc.targetRank = 1;
-    rc.targetLabel = '1年での1部復帰';
+    rc.targetRank = 3;
+    rc.targetLabel = '3位以内（1年でのD1昇格）';
+    if (rc.isPlayer) {
+      rc.mustPromoteImmediate = true;
+    }
     newP2Clubs.push(rc);
   });
 
+  const playerNowInD2 = newP2Clubs.some(c => c.isPlayer);
+  gameState.playerDivision = playerNowInD2 ? 'd2' : 'd1';
+  gameState.selectedLeagueDivision = gameState.playerDivision;
+
+  if (playerNowInD2) {
+    newP2Clubs.forEach(c => ensurePlayableClubStructure(c));
+  }
+
   gameState.clubs = newP1Clubs;
   if (!gameState.competitions) gameState.competitions = {};
-  if (!gameState.competitions.championship) gameState.competitions.championship = {};
-  gameState.competitions.championship.clubs = newP2Clubs;
+  if (!gameState.competitions.championship) {
+    gameState.competitions.championship = {
+      name: 'イングランド・セカンドディビジョン',
+      shortName: 'ENG-D2',
+      clubs: newP2Clubs
+    };
+  } else {
+    gameState.competitions.championship.clubs = newP2Clubs;
+  }
 
   const result = {
     relegated: relegatedClubs.map(c => c.name),
     promoted: promotedClubs.map(c => c.name),
-    isPlayerRelegated
+    isPlayerRelegated,
+    isPlayerPromoted
   };
 
   gameState.lastPromotionRelegation = result;
@@ -1133,7 +1320,7 @@ function renderChampionshipStandingsHtml() {
     const rankBadgeClass = rank === 1 ? 'rank-badge rank-1' : 'rank-badge';
     const gdSign = c.gd > 0 ? `+${c.gd}` : `${c.gd || 0}`;
     const emblemSvg = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(c, 20, 'standings-emblem') : '';
-    const zoneClass = rank <= 3 ? 'zone-ucl' : (rank >= 22 ? 'zone-rel' : '');
+    const zoneClass = [c.isPlayer ? 'row-player-club' : '', rank <= 3 ? 'zone-ucl' : (rank >= 22 ? 'zone-rel' : '')].filter(Boolean).join(' ');
 
     html += `
       <tr class="${zoneClass}">
@@ -1368,8 +1555,12 @@ window.simKnockoutMatch = simKnockoutMatch;
 window.initSeasonCompetitions = initSeasonCompetitions;
 window.advanceChampionshipWeek = advanceChampionshipWeek;
 window.advanceEuroLeaguePhase = advanceEuroLeaguePhase;
+window.finalizeEuroLeaguePhaseToKnockout = finalizeEuroLeaguePhaseToKnockout;
 window.advanceEuroPlayoffRound = advanceEuroPlayoffRound;
+window.finalizeEuroPlayoffToR16 = finalizeEuroPlayoffToR16;
 window.processPromotionAndRelegation = processPromotionAndRelegation;
+window.ensurePlayableClubStructure = ensurePlayableClubStructure;
+window.rehydrateCompetitionsClubRefs = rehydrateCompetitionsClubRefs;
 window.injectCupMatchesIntoCalendar = injectCupMatchesIntoCalendar;
 window.processCupMatchDay = processCupMatchDay;
 window.finalizeCupMatch = finalizeCupMatch;
