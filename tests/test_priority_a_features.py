@@ -56,6 +56,11 @@ class TestPriorityAUxMarketEconomy(unittest.TestCase):
         self.assertIn('euroTransferList: gameState.euroTransferList || []', self.main_js)
         # 欧州リストアップ選手のアバターユニフォーム色解決
         self.assertIn('player.euroClubId', self.avatar_js)
+        # 1部＞2部の現実的OVRピラミッド保証（2部basePowerスケール変換・OVR上限キャップ・既存セーブ補正）
+        self.assertIn('function capGeneratedPlayerOvr(player, maxOvr)', self.main_js)
+        self.assertIn('rawTeamOvr - 14', self.comp_js)
+        self.assertIn('function dehydrateCompetitionsForSave(comps)', self.comp_js)
+        self.assertIn('d2PowerCalibratedV1', self.main_js)
 
     def test_7_weekly_payroll_deduction_and_safe_transfer_budget(self):
         """項目7: 毎週日曜の週次人件費引き落とし・シーズン末残週精算・開幕一括引き落とし廃止・実質移籍予算の明示"""

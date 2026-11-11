@@ -557,7 +557,7 @@ const CLUB_DEFINITIONS = [
     name: 'マンチェスター・B',
     tier: 'MEGA RICH',
     desc: '潤沢なオイルマネーと世界屈指の戦力を誇る現王者',
-    basePower: 72,
+    basePower: 76,
     initialFunds: 140000, // £140.0M
     supporters: 21500,
     targetRank: 1,
@@ -571,7 +571,7 @@ const CLUB_DEFINITIONS = [
     name: 'マンチェスター・R',
     tier: 'TRADITIONAL',
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
-    basePower: 70,
+    basePower: 74,
     initialFunds: 125000, // £125.0M
     supporters: 22000,
     targetRank: 3,
@@ -585,7 +585,7 @@ const CLUB_DEFINITIONS = [
     name: 'リバプール・B',
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
-    basePower: 71,
+    basePower: 75,
     initialFunds: 115000, // £115.0M
     supporters: 21000,
     targetRank: 2,
@@ -599,7 +599,7 @@ const CLUB_DEFINITIONS = [
     name: 'ノースロンドン・A',
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
-    basePower: 70,
+    basePower: 74,
     initialFunds: 105000, // £105.0M
     supporters: 20000,
     targetRank: 3,
@@ -613,7 +613,7 @@ const CLUB_DEFINITIONS = [
     name: 'ロンドン・FC',
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
-    basePower: 68,
+    basePower: 72,
     initialFunds: 98000, // £98.0M
     supporters: 19000,
     targetRank: 4,
@@ -627,7 +627,7 @@ const CLUB_DEFINITIONS = [
     name: 'ノースロンドン・W',
     tier: 'BIG CLUB',
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
-    basePower: 68,
+    basePower: 71,
     initialFunds: 88000, // £88.0M
     supporters: 18500,
     targetRank: 5,
@@ -641,7 +641,7 @@ const CLUB_DEFINITIONS = [
     name: 'ニューカッスル・U',
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
-    basePower: 67,
+    basePower: 70,
     initialFunds: 82000, // £82.0M
     supporters: 18000,
     targetRank: 6,
@@ -655,7 +655,7 @@ const CLUB_DEFINITIONS = [
     name: 'アストン・V',
     tier: 'CHALLENGER',
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
-    basePower: 66,
+    basePower: 69,
     initialFunds: 68000, // £68.0M
     supporters: 16800,
     targetRank: 6,
@@ -669,7 +669,7 @@ const CLUB_DEFINITIONS = [
     name: 'ブライトン・G',
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
-    basePower: 65,
+    basePower: 67,
     initialFunds: 58000, // £58.0M
     supporters: 15000,
     targetRank: 8,
@@ -683,7 +683,7 @@ const CLUB_DEFINITIONS = [
     name: 'イーストロンドン・H',
     tier: 'MID TABLE',
     desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
-    basePower: 64,
+    basePower: 66,
     initialFunds: 60000, // £60.0M
     supporters: 16500,
     targetRank: 9,
@@ -697,7 +697,7 @@ const CLUB_DEFINITIONS = [
     name: 'サウスロンドン・P',
     tier: 'MID TABLE',
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
-    basePower: 63,
+    basePower: 65,
     initialFunds: 52000, // £52.0M
     supporters: 14500,
     targetRank: 10,
@@ -711,7 +711,7 @@ const CLUB_DEFINITIONS = [
     name: 'ウェストロンドン・C',
     tier: 'MID TABLE',
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
-    basePower: 63,
+    basePower: 65,
     initialFunds: 48000, // £48.0M
     supporters: 14000,
     targetRank: 12,
@@ -725,7 +725,7 @@ const CLUB_DEFINITIONS = [
     name: 'ウェストロンドン・B',
     tier: 'MONEYBALL',
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
-    basePower: 62,
+    basePower: 64,
     initialFunds: 45000, // £45.0M
     supporters: 13200,
     targetRank: 13,
@@ -739,7 +739,7 @@ const CLUB_DEFINITIONS = [
     name: 'ミッドランズ・W',
     tier: 'MID TABLE',
     desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
-    basePower: 62,
+    basePower: 64,
     initialFunds: 46000, // £46.0M
     supporters: 13800,
     targetRank: 13,
@@ -753,7 +753,7 @@ const CLUB_DEFINITIONS = [
     name: 'マージーサイド・B',
     tier: 'TRADITIONAL',
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
-    basePower: 62,
+    basePower: 63,
     initialFunds: 45000, // £45.0M
     supporters: 15200,
     targetRank: 14,
@@ -767,7 +767,7 @@ const CLUB_DEFINITIONS = [
     name: 'サウスコースト・C',
     tier: 'CHALLENGER',
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
-    basePower: 61,
+    basePower: 63,
     initialFunds: 42000, // £42.0M
     supporters: 12500,
     targetRank: 15,
@@ -781,7 +781,7 @@ const CLUB_DEFINITIONS = [
     name: 'ノッティンガム・R',
     tier: 'HISTORIC',
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
-    basePower: 61,
+    basePower: 62,
     initialFunds: 40000, // £40.0M
     supporters: 13500,
     targetRank: 16,
@@ -795,7 +795,7 @@ const CLUB_DEFINITIONS = [
     name: 'レスター・F',
     tier: 'MIRACLE',
     desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
-    basePower: 60,
+    basePower: 61,
     initialFunds: 38000, // £38.0M
     supporters: 13200,
     targetRank: 17,
@@ -809,7 +809,7 @@ const CLUB_DEFINITIONS = [
     name: 'サウサンプトン・S',
     tier: 'ACADEMY',
     desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
-    basePower: 59,
+    basePower: 60,
     initialFunds: 35000, // £35.0M
     supporters: 12200,
     targetRank: 17,
@@ -823,7 +823,7 @@ const CLUB_DEFINITIONS = [
     name: 'イプスウィッチ・T',
     tier: 'PROMOTED',
     desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
-    basePower: 58,
+    basePower: 59,
     initialFunds: 32000, // £32.0M
     supporters: 11500,
     targetRank: 17,
@@ -2816,6 +2816,44 @@ function createSquad(basePower, usedNames) {
 }
 
 /**
+ * 初期生成された2部選手・フリー選手・市場リスト選手のOVRを指定上限以内に比率維持で丸め、給与・市場価値を再計算する
+ */
+function capGeneratedPlayerOvr(player, maxOvr) {
+  if (!player || typeof getPlayerOverallRating !== 'function') return player;
+  const curOvr = getPlayerOverallRating(player);
+  if (curOvr <= maxOvr) return player;
+
+  const ratio = maxOvr / Math.max(1, curOvr);
+  player.atk = clamp(Math.round(player.atk * ratio), 10, 99);
+  player.def = clamp(Math.round(player.def * ratio), 10, 99);
+  player.sta = clamp(Math.round(player.sta * ratio), 20, 99);
+  let guard = 0;
+  while (getPlayerOverallRating(player) > maxOvr && guard < 20) {
+    guard++;
+    if (player.atk >= player.def) player.atk = Math.max(10, player.atk - 1);
+    else player.def = Math.max(10, player.def - 1);
+  }
+
+  const pos = player.primaryPosition || player.preferredPosition || player.pos;
+  player.attributes = getPlayerFiveAttributes({
+    primaryPosition: pos,
+    atk: player.atk,
+    def: player.def,
+    sta: player.sta,
+    traits: player.traits || []
+  });
+  player.wage = calculatePlayerWage(pos, player.atk, player.def, player.sta, player.age);
+  player.salary = player.wage * 52;
+  if (!player.isFreeAgent) {
+    player.transferFee = calculateTransferFee(player);
+  } else {
+    player.transferFee = 0;
+  }
+  player.valueHistory = null;
+  return player;
+}
+
+/**
  * 移籍市場候補選手（無所属フリー選手 ＆ 欧州主要クラブ移籍リストアップ選手）を生成
  */
 function generateTransferMarket() {
@@ -2843,19 +2881,21 @@ function generateTransferMarket() {
 
   const usedMarketNums = new Set();
   const candidates = [];
-  const minPower = 60 + (scoutingLv - 1) * 2;
-  const maxPower = Math.min(88, 79 + (scoutingLv - 1) * 2);
+  // 無所属フリー選手は現実的に OVR 60〜72 中心（掘り出し物でも最大 73〜76）とする
+  const freeMinGen = 56 + Math.min(3, scoutingLv - 1);
+  const freeMaxGen = 63 + Math.min(4, scoutingLv - 1);
+  const freeMaxOvrCap = 73 + Math.min(3, scoutingLv - 1);
 
-  // 完全フリー選手（無所属 / Free Agents）：市場に常時6〜10名流通させる
   const freeCount = count + 2;
   for (let f = 0; f < freeCount; f++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-    const basePower = randInt(Math.max(58, minPower - 2), maxPower);
-    const freePlayer = createPlayer(pos, basePower, false, usedNames, [19, 33]);
+    const basePower = randInt(freeMinGen, freeMaxGen);
+    const freePlayer = createPlayer(pos, basePower, false, usedNames, [20, 34]);
     freePlayer.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
     freePlayer.isFreeAgent = true;
     freePlayer.contractYears = 0;
     freePlayer.transferFee = 0;
+    capGeneratedPlayerOvr(freePlayer, freeMaxOvrCap);
     freePlayer.salary = calculatePlayerSalary(freePlayer.pos, freePlayer.atk, freePlayer.def, freePlayer.sta, freePlayer.age);
     freePlayer.wage = Math.max(5, Math.round(freePlayer.salary / 52));
     candidates.push(freePlayer);
@@ -2890,23 +2930,27 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     if (p.fullName) usedNames.add(p.fullName);
   });
 
-  const targetCount = 28 + (Math.max(1, scoutingLv) - 1) * 5;
-  const maxAllowedPower = Math.min(90, 82 + (Math.max(1, scoutingLv) - 1) * 2);
-  const eligibleClubs = euroClubs.filter(c => (c.basePower || 75) <= maxAllowedPower + 4);
-  const poolClubs = eligibleClubs.length > 0 ? eligibleClubs : euroClubs;
+  const sLv = Math.max(1, scoutingLv);
+  const targetCount = 28 + (sLv - 1) * 5;
+  // 欧州定義クラブの basePower (69〜86) はチームOVRスケールのため、createPlayer 内部基準 (-10) に変換
+  const maxGenPower = Math.min(77, 71 + (sLv - 1) * 2);
+  const maxEuroOvrCap = Math.min(88, 83 + (sLv - 1) * 2);
 
   const euroList = [...preservedPreContracts];
   for (let i = 0; i < targetCount; i++) {
-    const clubDef = poolClubs[randInt(0, poolClubs.length - 1)];
+    const clubDef = euroClubs[randInt(0, euroClubs.length - 1)];
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-    const rawPower = clamp((clubDef.basePower || 76) + randInt(-4, 3), 64, maxAllowedPower);
-    const p = createPlayer(pos, rawPower, false, usedNames, [18, 32]);
+    const clubTeamOvr = clubDef.basePower || 76;
+    const rawGenPower = clamp(clubTeamOvr - 10 + randInt(-2, 2), 58, maxGenPower);
+    const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 81 : 77));
+    const p = createPlayer(pos, rawGenPower, i < 8, usedNames, [18, 32]);
     p.squadNumber = randInt(2, 30);
     p.contractYears = (i % 4 === 0) ? 1 : randInt(1, 4);
     p.isFreeAgent = false;
     p.isEuroListed = true;
     p.euroClubId = clubDef.id;
     p.clubId = clubDef.id;
+    capGeneratedPlayerOvr(p, clubOvrCap);
     p.transferFee = calculateTransferFee(p);
     euroList.push(p);
   }
@@ -15466,13 +15510,13 @@ let introClubFilter = 'all';
 function matchesClubFilter(clubDef, filter) {
   if (filter === 'all') return true;
   if (filter === 'big') {
-    return clubDef.basePower >= 67 || ['MEGA RICH', 'TRADITIONAL', 'CONTENDER', 'BIG CLUB', 'AMBITIOUS'].includes(clubDef.tier);
+    return clubDef.basePower >= 70 || ['MEGA RICH', 'TRADITIONAL', 'CONTENDER', 'BIG CLUB', 'AMBITIOUS'].includes(clubDef.tier);
   }
   if (filter === 'mid') {
-    return (clubDef.basePower >= 62 && clubDef.basePower <= 66) || ['RISING FORCE', 'CHALLENGER', 'SMART SCOUT', 'MID TABLE', 'MONEYBALL'].includes(clubDef.tier);
+    return (clubDef.basePower >= 64 && clubDef.basePower <= 69) || ['RISING FORCE', 'CHALLENGER', 'SMART SCOUT', 'MID TABLE', 'MONEYBALL'].includes(clubDef.tier);
   }
   if (filter === 'challenger') {
-    return clubDef.basePower <= 61 || ['HISTORIC', 'MIRACLE', 'ACADEMY', 'PROMOTED'].includes(clubDef.tier);
+    return clubDef.basePower <= 63 || ['HISTORIC', 'MIRACLE', 'ACADEMY', 'PROMOTED'].includes(clubDef.tier);
   }
   return true;
 }
@@ -15673,6 +15717,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastSeasonStandingsOrder = null;
   gameState.lastSeasonCupWinners = null;
   gameState.lastPromotionRelegation = null;
+  gameState.d2PowerCalibratedV1 = true;
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
   gameState.rosterSubtab = 'board';
@@ -17609,6 +17654,7 @@ function saveGameToStorage(force = false) {
         isGameOver: gameState.isGameOver,
         consecutiveDeficitSeasons: gameState.consecutiveDeficitSeasons,
         paidPayrollWeeks: gameState.paidPayrollWeeks || 0,
+        d2PowerCalibratedV1: Boolean(gameState.d2PowerCalibratedV1),
         lastSeasonStandingsOrder: gameState.lastSeasonStandingsOrder || null,
         lastSeasonCupWinners: gameState.lastSeasonCupWinners || null,
         lastPromotionRelegation: gameState.lastPromotionRelegation || null,
@@ -17650,6 +17696,16 @@ function saveGameToStorage(force = false) {
         marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' }
       }
     };
+    if (typeof dehydrateCompetitionsForSave === 'function') {
+      payload.state.competitions = dehydrateCompetitionsForSave(gameState.competitions);
+    }
+    const slimMatchList = (arr) => (arr || []).map(r => ({
+      ...r,
+      homeClub: r.homeClub ? { id: r.homeClub.id, name: r.homeClub.name, shortCode: r.homeClub.shortCode, isPlayer: r.homeClub.isPlayer, primaryColor: r.homeClub.primaryColor, secondaryColor: r.homeClub.secondaryColor, emblem: r.homeClub.emblem } : null,
+      awayClub: r.awayClub ? { id: r.awayClub.id, name: r.awayClub.name, shortCode: r.awayClub.shortCode, isPlayer: r.awayClub.isPlayer, primaryColor: r.awayClub.primaryColor, secondaryColor: r.awayClub.secondaryColor, emblem: r.awayClub.emblem } : null
+    }));
+    payload.state.lastWeekResults = slimMatchList(gameState.lastWeekResults);
+    payload.state.matchHistory = slimMatchList(gameState.matchHistory);
     localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
     updateCareerRecordsFromCurrentState();
     return true;
@@ -17760,6 +17816,46 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.euroTransferList) || gameState.euroTransferList.length === 0) {
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
       generateEuropeanTransferList(null, sLv);
+    }
+
+    // 旧スケール（basePower未変換）で生成された既存セーブデータの2部CPU選手・市場選手のOVR適正化マイグレーション
+    if (!state.d2PowerCalibratedV1) {
+      const d2ClubsForCal = gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs;
+      if (Array.isArray(d2ClubsForCal)) {
+        d2ClubsForCal.forEach(c => {
+          if (!c || c.isPlayer || c.tier === 'RELEGATED' || !Array.isArray(c.players)) return;
+          const rawTeamOvr = typeof c.basePower === 'number' ? c.basePower : 68;
+          const maxCap = rawTeamOvr >= 72 ? 76 : (rawTeamOvr >= 69 ? 74 : 72);
+          c.players.forEach(p => {
+            if (!p || p.isRetired) return;
+            p.atk = clamp(p.atk - 14, 12, 99);
+            p.def = clamp(p.def - 14, 12, 99);
+            p.sta = clamp(p.sta - 12, 25, 99);
+            capGeneratedPlayerOvr(p, maxCap);
+          });
+          if (typeof autoSelectStarters === 'function') {
+            autoSelectStarters(c);
+          }
+        });
+      }
+      const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+      if (Array.isArray(gameState.transferMarket)) {
+        const fCap = 73 + Math.min(3, sLv - 1);
+        gameState.transferMarket.forEach(fp => {
+          if (fp) capGeneratedPlayerOvr(fp, fCap);
+        });
+      }
+      if (Array.isArray(gameState.euroTransferList)) {
+        const maxEuroCap = Math.min(88, 83 + (sLv - 1) * 2);
+        gameState.euroTransferList.forEach(ep => {
+          if (!ep) return;
+          const eDef = (typeof findEuropeanClubDefinitionById === 'function') ? findEuropeanClubDefinitionById(ep.euroClubId || ep.clubId) : null;
+          const cOvr = eDef && eDef.basePower ? eDef.basePower : 76;
+          const eCap = Math.min(maxEuroCap, cOvr >= 83 ? maxEuroCap : (cOvr >= 78 ? 80 : 76));
+          capGeneratedPlayerOvr(ep, eCap);
+        });
+      }
+      gameState.d2PowerCalibratedV1 = true;
     }
 
     // 全所属選手およびユースの疲労度・評価点データ互換性補完（1部・2部両方）
