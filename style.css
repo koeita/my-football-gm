@@ -15213,5 +15213,74 @@ body {
   }
 }
 
+/* ===========================================================================
+   Priority B: 監督采配一任トグル・戦術浸透度タグ・モバイル作戦ボード1行維持
+   =========================================================================== */
+.btn-manager-delegation {
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.btn-manager-delegation:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #f8fafc;
+}
+.btn-manager-delegation.is-active {
+  background: rgba(46, 204, 113, 0.2) !important;
+  border-color: rgba(46, 204, 113, 0.65) !important;
+  color: #2ecc71 !important;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+}
+
+.mgr-tag.warn {
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.45);
+  color: #f39c12;
+}
+
+.precheck-delegation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.precheck-delegation-status {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  /* モバイル作戦ボード：上部サブタブと重複する「作戦ボード」見出しを隠して1行34px高を厳守 */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel .panel-title {
+    display: none !important;
+  }
+  .tactical-header-titles {
+    gap: 5px !important;
+  }
+  #btn-auto-optimal-lineup,
+  .btn-manager-delegation {
+    padding: 4px 8px !important;
+    font-size: 10.5px !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+}
+
+
 
 

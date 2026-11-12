@@ -77,6 +77,7 @@ function createManager(def, clubId = null, usedNames = null) {
     preferredFormation: def.preferredFormation || '4-3-3',
     preferredTactic: def.preferredTactic || 'possession',
     trust: typeof def.trust === 'number' ? def.trust : 80,
+    interventionStreak: 0,
     weeklyWage: def.weeklyWage || 80,
     contractYears: typeof def.contractYears === 'number' ? def.contractYears : 3,
     bio: def.bio || '現代的な戦術眼と指導力でチームを牽引する指揮官。',
@@ -231,7 +232,7 @@ function getClubCoachingEffects(club) {
 }
 
 /**
- * 試合終了時の監督信頼度（Trust）更新および現場介入ペナルティ
+ * 試合終了時の監督信頼度（Trust）更新および現場介入トレードオフ
  */
 function updateManagerTrustAfterMatch(club, won, drawn) {
   if (!club || !club.manager) return;
@@ -239,20 +240,157 @@ function updateManagerTrustAfterMatch(club, won, drawn) {
   const isFormMatch = club.formation === mgr.preferredFormation;
   const isTacticMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
   const isIntervention = !isFormMatch || !isTacticMatch;
+  const isDelegated = Boolean(club.isPlayer && gameState.managerDelegationEnabled && !isIntervention);
 
   let delta = 0;
-  if (won) {
-    // 勝利時: 介入して勝った場合は現場も納得(+1)、得意スタイルなら信頼UP(+3)
-    delta = isIntervention ? 1 : 3;
-  } else if (drawn) {
-    // 引き分け: 介入時は不満微増(-1)、得意スタイル時は+1
-    delta = isIntervention ? -1 : 1;
+  if (isDelegated) {
+    mgr.interventionStreak = 0;
+    delta = won ? 4 : (drawn ? 2 : -1);
+  } else if (!isIntervention) {
+    mgr.interventionStreak = 0;
+    delta = won ? 3 : (drawn ? 1 : -1);
   } else {
-    // 敗北時: GMの介入で負けた場合は現場から強い不満(-3)、得意スタイル敗北は-1
-    delta = isIntervention ? -3 : -1;
+    mgr.interventionStreak = (mgr.interventionStreak || 0) + 1;
+    const streakPenalty = mgr.interventionStreak >= 3 ? 2 : (mgr.interventionStreak >= 2 ? 1 : 0);
+    if (won) {
+      delta = 1;
+    } else if (drawn) {
+      delta = -1 - Math.min(1, streakPenalty);
+    } else {
+      delta = -3 - streakPenalty;
+    }
+    if (club.isPlayer && !won && mgr.interventionStreak >= 2 && typeof addDailyLog === 'function') {
+      addDailyLog(`【現場との軋轢】${mgr.name}監督がフロント主導の戦術指定（得意哲学と相違）に対する不満を漏らしています。`);
+    }
   }
 
   mgr.trust = Math.max(0, Math.min(100, (mgr.trust ?? 80) + delta));
+  if (club.isPlayer && mgr.trust <= 10 && !gameState.isSeasonOver) {
+    gameState.pendingManagerCrisis = true;
+  }
+}
+
+/**
+ * 監督への「采配一任（戦術同期＋毎試合疲労ローテーション）」ON/OFF切り替え
+ */
+function toggleManagerDelegation(forceValue = null) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (!playerClub.manager) {
+    gameState.managerDelegationEnabled = false;
+    if (typeof showToast === 'function') {
+      showToast('現在監督が空席のため、采配一任は利用できません', 'warn');
+    }
+    syncManagerDelegationButtonUI();
+    return;
+  }
+
+  const nextState = typeof forceValue === 'boolean' ? forceValue : !gameState.managerDelegationEnabled;
+  gameState.managerDelegationEnabled = nextState;
+
+  if (nextState) {
+    applyManagerPreMatchDelegation(playerClub, true);
+    if (typeof showToast === 'function') {
+      showToast(`${playerClub.manager.name}監督に采配を一任しました（得意戦術同期＆毎節疲労ローテーション）`, 'success');
+    }
+  } else {
+    if (typeof showToast === 'function') {
+      showToast('GM手動指揮モードへ切り替えました（陣形・戦術・起用を自由に指定可能）', 'info');
+    }
+  }
+
+  syncManagerDelegationButtonUI();
+  renderAll();
+}
+
+function syncManagerDelegationButtonUI() {
+  const isOn = Boolean(gameState.managerDelegationEnabled);
+  const btn = document.getElementById('btn-toggle-manager-delegation');
+  if (btn) {
+    btn.textContent = isOn ? '監督一任: ON' : '監督一任: OFF';
+    btn.classList.toggle('is-active', isOn);
+  }
+}
+
+/**
+ * 監督一任モードがONの際、監督の得意陣形・戦術へ同期し、疲労・負傷を考慮したローテーション11人を選出する
+ */
+function applyManagerPreMatchDelegation(club, syncPhilosophy = true) {
+  if (!club || !club.manager) return;
+  const mgr = club.manager;
+  if (syncPhilosophy) {
+    if (mgr.preferredFormation && FORMATIONS[mgr.preferredFormation]) {
+      club.formation = mgr.preferredFormation;
+    }
+    if (mgr.preferredTactic) {
+      club.tactic = normalizeTacticKey(mgr.preferredTactic);
+    }
+  }
+  optimizeClubStarters(club);
+}
+
+/**
+ * GMが手動で陣形・戦術・選手交代を行った際、一任モードからGM介入モードへ自動移行する
+ */
+function notifyGmManualIntervention(reasonLabel = '') {
+  if (!gameState.managerDelegationEnabled) return;
+  gameState.managerDelegationEnabled = false;
+  syncManagerDelegationButtonUI();
+  if (typeof showToast === 'function') {
+    showToast(`手動変更${reasonLabel ? `（${reasonLabel}）` : ''}により「監督一任」を解除し、GM介入モードへ移行しました`, 'info');
+  }
+}
+
+/**
+ * 信頼崩壊（trust <= 10）時の監督進退伺い・緊急会談イベント
+ */
+function checkAndShowManagerTrustCrisis() {
+  if (!gameState.pendingManagerCrisis || gameState.isGameOver || gameState.isSeasonOver) return false;
+  gameState.pendingManagerCrisis = false;
+  const club = getPlayerClub();
+  if (!club || !club.manager || (club.manager.trust ?? 80) > 15) return false;
+
+  const mgr = club.manager;
+  const tacName = getManagerTacticLabel(mgr.preferredTactic);
+  showGmModal({
+    category: 'TECHNICAL STAFF / EMERGENCY MEETING',
+    title: `【緊急会談】${mgr.name}監督からの進退伺い`,
+    description: `フロントによる継続的な戦術・起用への現場介入と成績不振を受け、${mgr.name}監督との信頼関係が限界に達しています。「自身の哲学（${mgr.preferredFormation} / ${tacName}）で現場を任せてもらえないなら、双方合意のもと退任したい」と申し出ています。`,
+    detailHtml: `現在の監督信頼度: <strong class="text-danger">${mgr.trust}%</strong> ／ 得意哲学: <strong>${mgr.preferredFormation}・${tacName}</strong>`,
+    actions: [
+      {
+        label: '現場の裁量を尊重し、采配一任で和解する',
+        className: 'btn btn-primary',
+        onClick: () => {
+          mgr.trust = 45;
+          mgr.interventionStreak = 0;
+          gameState.managerDelegationEnabled = true;
+          applyManagerPreMatchDelegation(club, true);
+          addDailyLog(`【緊急会談・和解】${mgr.name}監督に現場采配を一任することで合意し、信頼関係が修復に向かいました。`);
+          renderAll();
+        }
+      },
+      {
+        label: '双方合意で契約解除（違約金£0で退任）',
+        className: 'btn btn-danger',
+        onClick: () => {
+          const oldName = mgr.name;
+          if (Array.isArray(gameState.freeManagers)) {
+            mgr.trust = 75;
+            mgr.interventionStreak = 0;
+            gameState.freeManagers.push(mgr);
+          }
+          club.manager = null;
+          gameState.managerDelegationEnabled = false;
+          addDailyLog(`【双方合意退任】戦術方針の相違により、${oldName}監督が違約金なしで退任しました。「監督・指導陣」タブから後任を招聘してください。`);
+          renderAll();
+        }
+      }
+    ]
+  });
+  return true;
 }
 
 
@@ -1088,36 +1226,36 @@ const TACTICS_DEFINITIONS = {
     name: 'ポゼッション（ショートパス主導）',
     badge: 'POSSESSION',
     aim: 'ボール支配率を高めてじっくり相手を崩す。',
-    effect: '中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。',
-    desc: '【ポゼッション（Possession / ショートパス主導）】狙い：ボール支配率を高めてじっくり相手を崩す。 ／ 効果：中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。'
+    effect: '中盤の配球力と技術が高いほど主導権を握りやすく、安定した試合運びで格下相手の取りこぼしを防ぐ。',
+    desc: '【ポゼッション（Possession / ショートパス主導）】狙い：ボール支配率を高めてじっくり相手を崩す。 ／ 特徴：中盤の配球力と技術が高いほど主導権を握りやすく、安定した試合運びで格下相手の取りこぼしを防ぐ。'
   },
   gegenpress: {
     name: 'ゲーゲンプレス（前線奪取速攻）',
     badge: 'GEGENPRESS',
     aim: '敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。',
-    effect: 'シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。',
-    desc: '【ゲーゲンプレス（Gegenpress / 前線奪取速攻）】狙い：敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。 ／ 効果：シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。'
+    effect: '前線からの連動プレスで多くの決定機を創出するが、終盤の消耗が激しく、試合終盤の失点や負傷リスクが高まる。',
+    desc: '【ゲーゲンプレス（Gegenpress / 前線奪取速攻）】狙い：敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。 ／ 特徴：前線からの連動プレスで多くの決定機を創出するが、終盤の消耗が激しく、試合終盤の失点や負傷リスクが高まる。'
   },
   counter: {
     name: 'ダイレクトカウンター（堅守ロング速攻）',
     badge: 'DIRECT COUNTER',
     aim: '自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。',
-    effect: 'スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。',
-    desc: '【ダイレクトカウンター（Direct Counter / 堅守ロング速攻）】狙い：自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。 ／ 効果：スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。'
+    effect: '俊足を誇るアタッカーが輝く堅守速攻。強豪相手にも一撃で勝機を見出せ、90分を通じた体力消耗も抑えられる。',
+    desc: '【ダイレクトカウンター（Direct Counter / 堅守ロング速攻）】狙い：自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。 ／ 特徴：俊足を誇るアタッカーが輝く堅守速攻。強豪相手にも一撃で勝機を見出せ、90分を通じた体力消耗も抑えられる。'
   },
   wingplay: {
     name: 'ワイドアタック（サイドアタック）',
     badge: 'WING PLAY',
     aim: '両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。',
-    effect: 'サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。',
-    desc: '【ワイドアタック（Wing Play / サイドアタック）】狙い：両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。 ／ 効果：サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。'
+    effect: 'ウイングとサイドバックの突破力・クロス精度が鍵を握り、中央を固める相手の守備ブロックを外からこじ開ける。',
+    desc: '【ワイドアタック（Wing Play / サイドアタック）】狙い：両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。 ／ 特徴：ウイングとサイドバックの突破力・クロス精度が鍵を握り、中央を固める相手の守備ブロックを外からこじ開ける。'
   },
   parkthebus: {
     name: 'ウルトラディフェンス（徹底堅守）',
     badge: 'PARK THE BUS',
     aim: '11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。',
-    effect: '失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。',
-    desc: '【ウルトラディフェンス（Park the Bus / 徹底堅守）】狙い：11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。 ／ 効果：失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。'
+    effect: 'ゴール前に強固な守備ブロックを築いて失点を極限まで抑えるが、攻撃の手数は大きく制限される。リード死守や強豪相手の勝点1狙いに有効。',
+    desc: '【ウルトラディフェンス（Park the Bus / 徹底堅守）】狙い：11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。 ／ 特徴：ゴール前に強固な守備ブロックを築いて失点を極限まで抑えるが、攻撃の手数は大きく制限される。リード死守や強豪相手の勝点1狙いに有効。'
   }
 };
 
@@ -1387,9 +1525,12 @@ const FACILITY_DEFINITIONS = {
     maxLevel: 5,
     // Lv.1->2: £10M, Lv.2->3: £15M, Lv.3->4: £22M, Lv.4->5: £30M
     costs: [0, 10000, 15000, 22000, 30000],
-    desc: '観客席の増設とホスピタリティエリアの拡充を行い、ホーム開催時の入場料・グッズ売上を1レベルごとに+15%永続向上させます。',
-    getEffectText: (lv) => `ホーム戦収入 +${(lv - 1) * 15}%（基準比 ${100 + (lv - 1) * 15}%）`,
-    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `ホーム戦収入 +${lv * 15}% / サポーター +1,200人`
+    desc: '観客席の増設とVIPホスピタリティ設備の拡充を行い、ホーム開催時の興行収入・グッズ収益と地域のサポーター基盤を持続的に拡大します。',
+    getEffectText: (lv) => {
+      const tiers = ['クラブ標準スタンド', '中規模拡張アリーナ', '近代型スタジアム', '国際A級ビッグスタジアム', '世界最高峰メガスタジアム'];
+      return tiers[Math.min(4, Math.max(0, (lv || 1) - 1))];
+    },
+    getNextEffectText: (lv) => lv >= 5 ? '最高水準のスタジアム設備に到達済' : '収容規模拡大・ホーム興行増収 ＆ 新規ファン獲得'
   },
   training: {
     id: 'training',
@@ -1400,9 +1541,12 @@ const FACILITY_DEFINITIONS = {
     maxLevel: 5,
     // Lv.1->2: £8M, Lv.2->3: £13M, Lv.3->4: £19M, Lv.4->5: £25M
     costs: [0, 8000, 13000, 19000, 25000],
-    desc: '最新鋭のフィジカル機器とスポーツ医療設備を導入し、シーズン終了時の若手成長率UPおよび試合時のスタミナ消耗・負傷発生率を軽減します。',
-    getEffectText: (lv) => `若手成長率 +${(lv - 1) * 20}% / 疲労・負傷率 -${(lv - 1) * 18}%`,
-    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `若手成長率 +${lv * 20}% / 疲労・負傷率 -${lv * 18}%`
+    desc: '最新鋭のコンディショニング機器とスポーツ医科学ラボを導入し、若手選手の年間成長スピード向上と連戦時のコンディション維持・負傷予防を実現します。',
+    getEffectText: (lv) => {
+      const tiers = ['基本練習グラウンド', '強化フィジカル設備', '先進スポーツ医科学棟', 'エリート育成コンプレックス', '世界最高峰パフォーマンスラボ'];
+      return tiers[Math.min(4, Math.max(0, (lv || 1) - 1))];
+    },
+    getNextEffectText: (lv) => lv >= 5 ? '最高水準の育成・医療体制に到達済' : '若手育成効率の向上 ＆ 蓄積疲労・負傷リスク軽減'
   },
   scouting: {
     id: 'scouting',
@@ -1413,9 +1557,12 @@ const FACILITY_DEFINITIONS = {
     maxLevel: 5,
     // Lv.1->2: £5M, Lv.2->3: £10M, Lv.3->4: £15M, Lv.4->5: £20M
     costs: [0, 5000, 10000, 15000, 20000],
-    desc: '欧州全土・南米・アジアに専属スカウトを派遣し、移籍市場に登場する有望選手の人数と能力上限（OVR）、ユース発掘精度を引き上げます。',
-    getEffectText: (lv) => `移籍市場リスト +${(lv - 1) * 2}名 / 候補能力上限 +${(lv - 1) * 2} OVR`,
-    getNextEffectText: (lv) => lv >= 5 ? '最大拡張レベル達成済' : `移籍市場候補 +${lv * 2}名 / 候補能力上限 +${lv * 2} OVR`
+    desc: '欧州主要国・南米・アジア各地に専属スカウト網を張り巡らせ、移籍リストに上がる実力派ターゲットの幅とアカデミー発掘精度を引き上げます。',
+    getEffectText: (lv) => {
+      const tiers = ['国内中心ネットワーク', '近隣諸国スカウト派遣', '欧州主要リーグ常駐網', '大陸横断エリート情報網', '全世界リアルタイム発掘網'];
+      return tiers[Math.min(4, Math.max(0, (lv || 1) - 1))];
+    },
+    getNextEffectText: (lv) => lv >= 5 ? '最高水準のスカウト網に到達済' : '欧州・各国リストアップ枠の拡大 ＆ 一流銘柄の発掘解禁'
   }
 };
 
@@ -1433,6 +1580,8 @@ const gameState = {
   isSimulating: false,
   consecutiveDeficitSeasons: 0,
   paidPayrollWeeks: 0,          // 今季支払い済みの週次給与回数（0〜52週）
+  managerDelegationEnabled: false, // 監督への采配一任（戦術同期＋疲労ローテーション）
+  pendingManagerCrisis: false,
   lastSeasonStandingsOrder: null,
   lastSeasonCupWinners: null,
   activeTab: 'office',
@@ -1863,10 +2012,10 @@ function formatFatigueCellHtml(player) {
 
 /**
  * 指定スロット（slotPos）に対する選手の厳格なポジション適性判定と補正係数を返す
- * 1. 【本適性 (100%発揮)】: 配置スロットが選手の mainPositions に含まれる場合のみ ➜ 実効OVR 100% (factor: 1.0)
- * 2. 【薄適性 (96%発揮)】: 配置スロットが選手の subPositions に含まれる場合のみ ➜ 実効OVR 96% (factor: 0.96)
- * 3. 【適性なし・近接ポジション (85%発揮・ペナルティ)】: 同系列だが未習得の場合 ➜ 実効OVR 85% (factor: 0.85)
- * 4. 【完全不適性 (70%発揮・重度ペナルティ)】: 全く異なるポジション系列 ➜ 実効OVR 70% (factor: 0.70)
+ * 1. 【本適性】: 配置スロットが選手の mainPositions に含まれる場合 ➜ factor: 1.0
+ * 2. 【サブ適性】: 配置スロットが選手の subPositions に含まれる場合 ➜ factor: 0.92
+ * 3. 【適性なし・近接ポジション】: 同系列だが未習得の場合 ➜ factor: 0.85
+ * 4. 【完全不適性】: 全く異なるポジション系列 ➜ factor: 0.70
  * ※ tests/test_unit_core.py 後方互換用文字列: factor: 0.92, factor: 0.8
  */
 function getPositionFitInfo(p, slotPos) {
@@ -1889,9 +2038,9 @@ function getPositionFitInfo(p, slotPos) {
     return { type: 'main', factor: 1.0, label: '本適性' };
   }
 
-  // 2. 薄適性（96%発揮）
+  // 2. サブ適性（実装値 0.92 に統一）
   if (normSubs.includes(normSlot)) {
-    return { type: 'sub', factor: 0.96, label: '薄適性' };
+    return { type: 'sub', factor: 0.92, label: 'サブ適性' };
   }
 
   // 3. 近接ポジション判定（同系列グループ内だが未習得）
@@ -3285,10 +3434,13 @@ function calculateSlotPlayerScore(player, slotPos) {
   ensurePlayerProficiencies(player);
   let score = 0;
 
-  // 1. 負傷ペナルティ（負傷者は極力スタメンから除外）
+  // 1. 負傷およびレンタル放出除外ペナルティ
   const isInjured = (player.injuryWeeks > 0) || (player.injuryDays > 0);
   if (isInjured) {
     score -= 2000;
+  }
+  if (player.loanStatus && player.loanStatus.isLoanOut) {
+    score -= 8000;
   }
 
   // 2. GKとフィールドプレイヤーの明確な分離
@@ -3313,16 +3465,27 @@ function calculateSlotPlayerScore(player, slotPos) {
   score += effOvr;
 
   if (fitInfo.type === 'main') {
-    score += 25; // 本適性を強力に優遇（100%発揮）
+    score += 25; // 本職適性を優遇
   } else if (fitInfo.type === 'sub') {
-    score += 8;  // 薄適性（96%発揮）
-  } else if (fitInfo.type === 'adjacent') {
+    score += 8;  // サブ適性（factor: 0.92）
+  } else if (fitInfo.type === 'semi' || fitInfo.type === 'adjacent') {
     score -= 25; // 同系列未習得（ペナルティ）
   } else {
     score -= 60; // 完全不適性（大幅ペナルティ）
   }
 
-  // 4. スタミナによる微調整
+  // 4. 蓄積疲労度を考慮したローテーション補正 ＆ 基礎スタミナ微調整
+  const ftg = typeof player.fatigue === 'number' ? player.fatigue : 0;
+  if (ftg >= 80) {
+    score -= 28; // 限界・負傷危険域の選手は確実に休養させる
+  } else if (ftg >= 64) {
+    score -= 14; // 疲労が溜まっている主力を控えの実力者とターンオーバー
+  } else if (ftg >= 50) {
+    score -= 5;
+  } else if (ftg <= 18) {
+    score += 3;  // フレッシュな選手を優遇
+  }
+
   if (player.sta) {
     score += (player.sta - 70) * 0.05;
   }
@@ -3986,10 +4149,10 @@ function advanceCalendarDay(skipRender = false) {
           if (mode === 'major') {
             if (!p.mainPositions.includes(tPos)) p.mainPositions.push(tPos);
             p.subPositions = p.subPositions.filter(pos => pos !== tPos);
-            addDailyLog(`🎉【本適性昇格完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の本適性（100%発揮）を完全習得しました！`);
+            addDailyLog(`【適性習得報告】コーチ陣より、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしたとの報告が上がりました。`);
           } else {
             if (!p.subPositions.includes(tPos)) p.subPositions.push(tPos);
-            addDailyLog(`🎉【薄適性習得完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の薄適性（96%発揮）を習得しました！`);
+            addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} がトレーニングを通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして実戦起用可能な水準に達しました。`);
           }
           p.majorPositions = p.mainPositions;
           p.secondaryPositions = p.subPositions;
@@ -4279,6 +4442,10 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
   const playerClub = getPlayerClub();
   if (!playerClub) return;
+
+  if (gameState.managerDelegationEnabled) {
+    applyManagerPreMatchDelegation(playerClub, true);
+  }
 
   // 0. プレシーズン親善杯（ワールド・チャレンジ・トロフィー）の場合
   if (currentDay.cupCompType === 'preseasonCup') {
@@ -4747,6 +4914,7 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
 
   playerClub.funds = (playerClub.funds || 0) + matchIncome + awayBroadcastingFee;
   playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + playerSupportersDelta);
+  updateManagerTrustAfterMatch(playerClub, Boolean(userWon), Boolean(userDraw));
 
   return { matchIncome, awayBroadcastingFee, playerSupportersDelta };
 }
@@ -4807,6 +4975,11 @@ function playCurrentMatchday(skipAnimation = false, quickSummary = false) {
   if (!currentDay.isMatchDay || currentDay.played) {
     startAdvancingToNextMatch();
     return;
+  }
+
+  const pClubForMatch = getPlayerClub();
+  if (gameState.managerDelegationEnabled && pClubForMatch) {
+    applyManagerPreMatchDelegation(pClubForMatch, true);
   }
 
   // 試合シミュレーションを実行
@@ -5058,21 +5231,24 @@ function getTeamStarterStats(club) {
     avgSta = Math.min(99, Math.round(rawAvgSta + 3));
   }
 
-  // 監督（ヘッドコーチ）哲学一致ボーナス
+  // 監督（ヘッドコーチ）哲学一致・現場信頼度による戦術浸透度補正
   let managerBonusOvr = 0;
   if (club.manager) {
+    const mgrTrust = club.manager.trust ?? 80;
     if (club.formation === club.manager.preferredFormation) {
       managerBonusOvr += 1;
     }
     if (normalizeTacticKey(club.tactic) === normalizeTacticKey(club.manager.preferredTactic)) {
       managerBonusOvr += 1;
     }
-    // 現場信頼度40%未満で組織力効果半減
-    if ((club.manager.trust ?? 80) < 40) {
-      managerBonusOvr = Math.floor(managerBonusOvr * 0.5);
-    }
-    if (managerBonusOvr > 0) {
-      const buff = 1.0 + (managerBonusOvr * 0.02); // 1.02 (+2%) or 1.04 (+4%)
+    if (mgrTrust < 40) {
+      // 現場との軋轢（信頼度40%未満）時は戦術浸透効果が消失し、ロッカールーム動揺で攻守連携が低下
+      managerBonusOvr = 0;
+      totalAtk *= 0.97;
+      totalDef *= 0.97;
+    } else if (managerBonusOvr > 0) {
+      const highTrustExtra = (mgrTrust >= 80 && managerBonusOvr === 2) ? 0.01 : 0;
+      const buff = 1.0 + (managerBonusOvr * 0.02) + highTrustExtra;
       totalAtk *= buff;
       totalDef *= buff;
     }
@@ -5432,10 +5608,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
         if (mode === 'major') {
           if (!p.majorPositions.includes(tPos)) p.majorPositions.push(tPos);
           p.secondaryPositions = p.secondaryPositions.filter(pos => pos !== tPos);
-          addDailyLog(`🎉【本適性昇格完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の本適性（100%発揮）を完全習得しました！`);
+          addDailyLog(`【適性習得報告】実戦経験を経て、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしました。`);
         } else {
           if (!p.secondaryPositions.includes(tPos)) p.secondaryPositions.push(tPos);
-          addDailyLog(`🎉【薄適性習得完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の薄適性（92%発揮）を習得しました！`);
+          addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} が実戦を通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして起用可能な水準に達しました。`);
         }
         p.positionTraining = null;
       }
@@ -5463,10 +5639,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
         if (mode === 'major') {
           if (!p.majorPositions.includes(tPos)) p.majorPositions.push(tPos);
           p.secondaryPositions = p.secondaryPositions.filter(pos => pos !== tPos);
-          addDailyLog(`🎉【本適性昇格完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の本適性（100%発揮）を完全習得しました！`);
+          addDailyLog(`【適性習得報告】実戦経験を経て、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしました。`);
         } else {
           if (!p.secondaryPositions.includes(tPos)) p.secondaryPositions.push(tPos);
-          addDailyLog(`🎉【薄適性習得完了】#${p.squadNumber || '-'} ${p.name} が [${tPos}] の薄適性（92%発揮）を習得しました！`);
+          addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} が実戦を通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして起用可能な水準に達しました。`);
         }
         p.positionTraining = null;
       }
@@ -5737,7 +5913,11 @@ function playQuickMatchResult() {
   if (!isTodayMatchDayPending()) return;
   const playerClub = getPlayerClub();
   if (playerClub) {
-    ensureValidSquadAndStarters(playerClub);
+    if (gameState.managerDelegationEnabled) {
+      applyManagerPreMatchDelegation(playerClub, true);
+    } else {
+      ensureValidSquadAndStarters(playerClub);
+    }
   }
   closeMatchPrecheckModal();
   playCurrentMatchday(false, true);
@@ -7030,7 +7210,11 @@ function openMatchPrecheckModal() {
     return;
   }
 
-  ensureValidSquadAndStarters(playerClub);
+  if (gameState.managerDelegationEnabled) {
+    applyManagerPreMatchDelegation(playerClub, true);
+  } else {
+    ensureValidSquadAndStarters(playerClub);
+  }
 
   const modal = document.getElementById('match-precheck-modal');
   const body = document.getElementById('precheck-modal-body');
@@ -7151,6 +7335,12 @@ function openMatchPrecheckModal() {
             <span class="mono" style="color:var(--text-muted);font-size:10px;">方針:</span>
             <span>${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}</span>
           </div>
+          <div class="precheck-delegation-row">
+            <span class="precheck-delegation-status mono">${gameState.managerDelegationEnabled ? '指揮: 監督に采配一任中（疲労ローテ適用済）' : '指揮: GM手動設定モード'}</span>
+            <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px;">
+              ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
+            </button>
+          </div>
           <div class="precheck-power-metrics">
             <div class="power-metric-box">
               <span class="mono power-lbl">攻撃力</span>
@@ -7187,6 +7377,13 @@ function openMatchPrecheckModal() {
   const btnClose = document.getElementById('btn-close-precheck-modal');
   if (btnClose) {
     btnClose.onclick = closeMatchPrecheckModal;
+  }
+  const btnPrecheckDelegation = document.getElementById('btn-precheck-toggle-delegation');
+  if (btnPrecheckDelegation) {
+    btnPrecheckDelegation.onclick = () => {
+      toggleManagerDelegation();
+      openMatchPrecheckModal();
+    };
   }
   const btnGotoRoster = document.getElementById('btn-precheck-goto-roster');
   if (btnGotoRoster) {
@@ -7416,6 +7613,9 @@ function skipToSeasonEnd() {
  * 試合後のランダムGMイベントおよび欧州メガクラブ強奪オファー判定
  */
 function checkPostMatchEvents() {
+  if (typeof checkAndShowManagerTrustCrisis === 'function' && checkAndShowManagerTrustCrisis()) {
+    return;
+  }
   // 第19節（前半戦終了・冬の移籍ウインドウ）は欧州メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
   if (gameState.currentWeek === Math.floor(gameState.totalWeeks / 2)) {
     triggerMegaOfferEvent(true);
@@ -7783,8 +7983,7 @@ function closeInfoPopup() {
 function showFacilityInfoPopup(facilityKey) {
   const def = FACILITY_DEFINITIONS[facilityKey];
   if (!def) return;
-  const playerClub = getPlayerClub();
-  const lv = (playerClub && playerClub.facilities && playerClub.facilities[facilityKey]) || 1;
+  const lv = (gameState.facilities && gameState.facilities[facilityKey]) || 1;
   const isMax = lv >= def.maxLevel;
   const nextCost = isMax ? 0 : def.costs[lv];
   const curEffect = typeof def.getEffectText === 'function' ? def.getEffectText(lv) : '';
@@ -10620,6 +10819,9 @@ function setTeamTactic(tacticKey) {
   const playerClub = getPlayerClub();
   if (!playerClub || !TACTICS_DEFINITIONS[normalizedKey]) return;
 
+  if (playerClub.tactic !== normalizedKey) {
+    notifyGmManualIntervention('戦術指定');
+  }
   playerClub.tactic = normalizedKey;
 
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
@@ -10647,6 +10849,9 @@ function setClubFormation(formationKey) {
   const playerClub = getPlayerClub();
   if (!playerClub || !FORMATIONS[formationKey]) return;
 
+  if (playerClub.formation !== formationKey) {
+    notifyGmManualIntervention('陣形変更');
+  }
   playerClub.formation = formationKey;
   gameState.selectedSlotIndex = null;
   gameState.selectedPlayerId = null;
@@ -10676,6 +10881,7 @@ function swapStarterSlots(slotIndexA, slotIndexB) {
   const starterB = playerClub.players.find(p => p.isStarter && p.slotIndex === slotIndexB);
 
   if (starterA && starterB) {
+    notifyGmManualIntervention('配置変更');
     starterA.slotIndex = slotIndexB;
     starterA.assignedPos = slotDefB.pos;
     starterB.slotIndex = slotIndexA;
@@ -10716,6 +10922,7 @@ function handlePitchNodeClick(slotIndex) {
   const prevStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === prevSlotIndex);
 
   if (prevStarter && clickedStarter && prevSlotDef) {
+    notifyGmManualIntervention('配置変更');
     prevStarter.slotIndex = slotIndex;
     prevStarter.assignedPos = slotDef.pos;
     clickedStarter.slotIndex = prevSlotIndex;
@@ -10778,6 +10985,7 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
     benchPlayer.isBench = false;
     benchPlayer.slotIndex = resolvedSlotIdx;
     benchPlayer.assignedPos = slotDef.pos;
+    notifyGmManualIntervention('選手起用');
 
     gameState.selectedSlotIndex = null;
     gameState.selectedPlayerId = null;
@@ -10814,6 +11022,7 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
     swapPartner.assignedPos = oldSlot;
   }
   target.assignedPos = newSlotPos;
+  notifyGmManualIntervention('配置変更');
 
   renderRoster();
 }
@@ -10830,6 +11039,7 @@ function togglePlayerStarter(playerId) {
 
   const starters = playerClub.players.filter(p => p.isStarter);
   const bench = playerClub.players.filter(p => !p.isStarter);
+  notifyGmManualIntervention('選手起用');
 
   if (target.isStarter) {
     if (bench.length === 0) return;
@@ -11042,6 +11252,10 @@ function startNextSeason() {
         avgRating: prevAvg,
         ovr: getPlayerOverallRating(p)
       });
+      // CPUクラブ所属選手の古い年度履歴は直近3シーズン分に圧縮し長期プレイ時のセーブ肥大化を防止（通算成績 careerStats は完全保持）
+      if (!club.isPlayer && p.seasonHistory.length > 3) {
+        p.seasonHistory = p.seasonHistory.slice(-3);
+      }
       p.appearances = 0;
       p.goals = 0;
       p.assists = 0;
@@ -11123,18 +11337,23 @@ function switchTab(tabName) {
     }
   }
 
-  // 編成タブ・移籍タブに切り替えた場合はサブタブの属性と表示状態を適用
+  // 編成タブ・移籍タブに切り替えた場合はサブタブの属性と表示状態を適用（dirtyなタブのみオンデマンド描画）
+  renderHeader();
   if (tabName === 'roster') {
-    switchRosterSubtab(gameState.rosterSubtab || 'board');
+    switchRosterSubtab(gameState.rosterSubtab || 'board', dirtyViews.roster);
+    dirtyViews.roster = false;
   } else if (tabName === 'market') {
-    switchMarketSubtab(gameState.marketSubtab || 'market');
+    switchMarketSubtab(gameState.marketSubtab || 'market', dirtyViews.market);
+    dirtyViews.market = false;
   } else if (tabName === 'facilities') {
-    switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment');
+    switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment', dirtyViews.facilities);
+    dirtyViews.facilities = false;
   } else if (tabName === 'team') {
-    switchTeamSubtab(gameState.teamSubtab || 'standings');
+    switchTeamSubtab(gameState.teamSubtab || 'standings', dirtyViews.team);
+    dirtyViews.team = false;
+  } else {
+    renderActiveTabView(false);
   }
-
-  renderAll();
 
   // 2. 切り替え先タブの前回スクロール位置を復元（未スクロール時は 0: 最上部）
   const targetScrollY = tabScrollPositions[tabName] || 0;
@@ -11157,7 +11376,7 @@ function switchTab(tabName) {
 /**
  * 編成画面内のサブタブ切り替え（作戦ボード / 選手一覧 / 戦術）
  */
-function switchRosterSubtab(subtabKey) {
+function switchRosterSubtab(subtabKey, shouldRender = true) {
   if (!subtabKey) subtabKey = 'board';
   gameState.rosterSubtab = subtabKey;
 
@@ -11193,10 +11412,14 @@ function switchRosterSubtab(subtabKey) {
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
-    renderTacticalBoard();
-  } else if (subtabKey === 'players') {
+    if (shouldRender) {
+      if (typeof syncManagerDelegationButtonUI === 'function') syncManagerDelegationButtonUI();
+      renderTacticalManagerBanner();
+      renderTacticalBoard();
+    }
+  } else if (shouldRender && subtabKey === 'players') {
     renderRoster();
-  } else if (subtabKey === 'tactics') {
+  } else if (shouldRender && subtabKey === 'tactics') {
     renderTacticsOverview();
   }
 }
@@ -11282,36 +11505,91 @@ function handleRosterClick(playerId) {
 }
 
 /**
- * 画面全体の描画更新
+ * Dirty Flag 方式によるアクティブタブ限定レンダリング管理
+ */
+const dirtyViews = {
+  office: true,
+  team: true,
+  roster: true,
+  market: true,
+  facilities: true
+};
+
+function markAllViewsDirty() {
+  dirtyViews.office = true;
+  dirtyViews.team = true;
+  dirtyViews.roster = true;
+  dirtyViews.market = true;
+  dirtyViews.facilities = true;
+}
+
+function renderActiveTabView(force = false) {
+  const active = gameState.activeTab || 'office';
+  if (!force && !dirtyViews[active]) return;
+  dirtyViews[active] = false;
+
+  if (active === 'office') {
+    renderWeeklySchedule();
+    renderGmDuties();
+    renderMatchLog();
+  } else if (active === 'team') {
+    if (gameState.teamSubtab === 'schedule') {
+      renderScheduleView();
+    } else if (gameState.teamSubtab === 'stats') {
+      renderTopScorers();
+    } else {
+      renderStandings();
+    }
+  } else if (active === 'roster') {
+    if (typeof syncManagerDelegationButtonUI === 'function') syncManagerDelegationButtonUI();
+    const rSub = gameState.rosterSubtab || 'board';
+    if (rSub === 'board') {
+      renderTacticalManagerBanner();
+      renderTacticalBoard();
+    } else if (rSub === 'tactics') {
+      renderTacticalManagerBanner();
+      renderTacticsOverview();
+    } else {
+      renderRoster();
+    }
+  } else if (active === 'market') {
+    if (gameState.marketSubtab === 'shortlist') {
+      renderShortlist();
+    } else if (gameState.marketSubtab === 'offers') {
+      renderIncomingOffers();
+    } else {
+      renderMarket();
+    }
+  } else if (active === 'facilities') {
+    const fSub = gameState.facilitiesSubtab || 'investment';
+    if (fSub === 'staff') {
+      renderManagerManagementPanel();
+      renderCoachingStaffPanel();
+    } else if (fSub === 'youth') {
+      renderYouthSquad();
+      renderFacilitiesAndYouth();
+    } else {
+      renderFacilitiesAndYouth();
+    }
+  }
+}
+
+/**
+ * 画面全体の描画更新（Dirty Flag方式：常時表示ヘッダー＋現在アクティブなタブのみDOM更新し、デバウンス遅延保存）
  */
 function renderAll() {
   if (!gameState.clubs || gameState.clubs.length === 0) return;
   renderHeader();
-  renderWeeklySchedule();
   renderFinancialAlert();
-  renderGmDuties();
   renderSeasonSettlement();
-  if (gameState.teamSubtab === 'schedule') {
-    renderScheduleView();
-  } else if (gameState.teamSubtab === 'stats') {
-    renderTopScorers();
-  } else {
-    renderStandings();
-  }
-  renderMatchLog();
-  renderRoster();
-  renderYouthSquad();
   updateMarketBadges();
-  if (gameState.marketSubtab === 'shortlist') {
-    renderShortlist();
-  } else if (gameState.marketSubtab === 'offers') {
-    renderIncomingOffers();
-  } else {
-    renderMarket();
+  if (typeof syncManagerDelegationButtonUI === 'function') {
+    syncManagerDelegationButtonUI();
   }
-  renderFacilitiesAndYouth();
-  if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') {
-    saveGameToStorage(false);
+  markAllViewsDirty();
+  renderActiveTabView(true);
+  if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') {
+    scheduleAutoSave(400);
   }
 }
 
@@ -12858,7 +13136,7 @@ function isInShortlist(playerId) {
 /**
  * 移籍タブ内のサブタブ切り替え ('market' | 'shortlist' | 'offers')
  */
-function switchMarketSubtab(subtabKey) {
+function switchMarketSubtab(subtabKey, shouldRender = true) {
   gameState.marketSubtab = subtabKey;
   const viewMarket = document.getElementById('view-market');
   if (viewMarket) {
@@ -12887,6 +13165,7 @@ function switchMarketSubtab(subtabKey) {
     }
   });
 
+  if (!shouldRender) return;
   if (subtabKey === 'market') renderMarket();
   else if (subtabKey === 'shortlist') renderShortlist();
   else if (subtabKey === 'offers') renderIncomingOffers();
@@ -12895,7 +13174,7 @@ function switchMarketSubtab(subtabKey) {
 /**
  * 経営画面内のサブタブ切り替え（施設投資 / 監督・指導陣 / ユースチーム）
  */
-function switchFacilitiesSubtab(subtabKey) {
+function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   if (!subtabKey) subtabKey = 'investment';
   gameState.facilitiesSubtab = subtabKey;
   const viewFacilities = document.getElementById('view-facilities');
@@ -12925,6 +13204,7 @@ function switchFacilitiesSubtab(subtabKey) {
     }
   });
 
+  if (!shouldRender) return;
   if (subtabKey === 'investment') {
     renderFacilitiesAndYouth();
   } else if (subtabKey === 'staff') {
@@ -13745,6 +14025,8 @@ function renderGmDuties() {
   const urgentExpiring = expiringPlayers.filter(p => p.contractYears <= 1 || p.megaOfferRejected);
   const outOfPosStarters = starters.filter(p => getPositionFitInfo(p, p.assignedPos || p.pos).type === 'out');
 
+  const lowTrustManager = playerClub.manager && (playerClub.manager.trust ?? 80) < 40 ? playerClub.manager : null;
+
   let recommendedDuty = null;
   if (injuredStarters.length > 0) {
     recommendedDuty = {
@@ -13752,6 +14034,15 @@ function renderGmDuties() {
       badge: '推奨',
       title: `負傷者交代（${injuredStarters.length}名）`,
       desc: `${injuredStarters[0].name} らが負傷離脱中。控え選手と交代してください。`,
+      btnText: '作戦ボードへ',
+      action: 'goto-pitch'
+    };
+  } else if (lowTrustManager) {
+    recommendedDuty = {
+      level: 'recommended',
+      badge: '要注意',
+      title: `監督との戦術的軋轢（信頼度 ${lowTrustManager.trust}%）`,
+      desc: `${lowTrustManager.name}監督との信頼関係が悪化し、チームの連携が低下しています。采配一任への切り替えまたは監督人事の見直しを検討してください。`,
       btnText: '作戦ボードへ',
       action: 'goto-pitch'
     };
@@ -13909,8 +14200,8 @@ function renderFacilitiesAndYouth() {
 
   const stadiumBonusEl = document.getElementById('facilities-stadium-bonus');
   if (stadiumBonusEl) {
-    const bonusPct = ((f.stadium || 1) - 1) * 15;
-    stadiumBonusEl.textContent = `+${bonusPct}% (Lv.${f.stadium || 1})`;
+    const sLv = f.stadium || 1;
+    stadiumBonusEl.textContent = `Lv.${sLv}（${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)}）`;
   }
 
   const feedbackBanner = document.getElementById('facility-feedback-banner');
@@ -14938,14 +15229,15 @@ function openPlayerProfileModal(playerId) {
     const fitInfo = getPositionFitInfo(p, p.assignedPos);
     let fitColorClass = 'accent-green';
     let fitSymbol = '◎ ';
-    if (fitInfo.type === 'sub') { fitColorClass = 'text-cyan'; fitSymbol = '◯ '; }
-    else if (fitInfo.type === 'semi') { fitColorClass = 'text-warning'; fitSymbol = '△ '; }
-    else if (fitInfo.type === 'out') { fitColorClass = 'text-danger'; fitSymbol = '✕ '; }
+    let fitSlotNote = '本職として機能';
+    if (fitInfo.type === 'sub') { fitColorClass = 'text-cyan'; fitSymbol = '◯ '; fitSlotNote = 'サブ適性で対応'; }
+    else if (fitInfo.type === 'semi') { fitColorClass = 'text-warning'; fitSymbol = '△ '; fitSlotNote = '不慣れな配置'; }
+    else if (fitInfo.type === 'out') { fitColorClass = 'text-danger'; fitSymbol = '✕ '; fitSlotNote = '適性外の配置'; }
 
     currentSlotBanner = `
       <div class="profile-fit-row" style="margin-top: 4px; border-color: rgba(46, 204, 113, 0.4);">
         <span class="text-muted">現在の配置スロット: <strong class="mono">${p.assignedPos}</strong></span>
-        <span class="mono ${fitColorClass}"><strong>${fitSymbol}${fitInfo.label} (実効OVR ${effOvr})</strong></span>
+        <span class="mono ${fitColorClass}"><strong>${fitSymbol}${fitSlotNote}</strong></span>
       </div>
     `;
   }
@@ -15253,7 +15545,7 @@ function openPlayerProfileModal(playerId) {
               <span class="profile-metric-val mono">${appRate}%</span>
             </div>
             <div class="profile-metric-card">
-              <span class="profile-metric-label">実効OVR</span>
+              <span class="profile-metric-label">出場時評価</span>
               <span class="profile-metric-val mono accent-green">OVR ${effOvr}</span>
             </div>
           </div>
@@ -15718,6 +16010,10 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastSeasonCupWinners = null;
   gameState.lastPromotionRelegation = null;
   gameState.d2PowerCalibratedV1 = true;
+  gameState.managerDelegationEnabled = false;
+  gameState.pendingManagerCrisis = false;
+  markAllViewsDirty();
+  syncManagerDelegationButtonUI();
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
   gameState.rosterSubtab = 'board';
@@ -16549,11 +16845,17 @@ function initGame() {
     });
   }
 
-  // おまかせ最適編成ボタン
+  // おまかせ最適編成ボタン ＆ 監督采配一任トグル
   const btnAutoOptimal = document.getElementById('btn-auto-optimal-lineup');
   if (btnAutoOptimal) {
     btnAutoOptimal.addEventListener('click', () => {
       applyAutoOptimalLineup();
+    });
+  }
+  const btnToggleDelegation = document.getElementById('btn-toggle-manager-delegation');
+  if (btnToggleDelegation) {
+    btnToggleDelegation.addEventListener('click', () => {
+      toggleManagerDelegation();
     });
   }
 
@@ -17634,7 +17936,47 @@ function saveSettingsToStorage() {
   } catch (e) {}
 }
 
+let autoSaveDebounceTimer = null;
+
+function scheduleAutoSave(delayMs = 400) {
+  if (!appSettings.autoSaveEnabled) return;
+  if (autoSaveDebounceTimer) {
+    clearTimeout(autoSaveDebounceTimer);
+  }
+  autoSaveDebounceTimer = setTimeout(() => {
+    autoSaveDebounceTimer = null;
+    saveGameToStorage(false);
+  }, delayMs);
+}
+
+function flushPendingAutoSave() {
+  if (autoSaveDebounceTimer) {
+    clearTimeout(autoSaveDebounceTimer);
+    autoSaveDebounceTimer = null;
+    if (gameState.hasStartedOnce) {
+      saveGameToStorage(false);
+    }
+  }
+}
+
+if (typeof window !== 'undefined' && !window.__autoSaveUnloadBound) {
+  window.__autoSaveUnloadBound = true;
+  window.addEventListener('pagehide', flushPendingAutoSave);
+  window.addEventListener('beforeunload', flushPendingAutoSave);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingAutoSave();
+      }
+    });
+  }
+}
+
 function saveGameToStorage(force = false) {
+  if (autoSaveDebounceTimer) {
+    clearTimeout(autoSaveDebounceTimer);
+    autoSaveDebounceTimer = null;
+  }
   if (!force && !appSettings.autoSaveEnabled) return false;
   if (!gameState.clubs || gameState.clubs.length === 0) return false;
   try {
@@ -17654,6 +17996,7 @@ function saveGameToStorage(force = false) {
         isGameOver: gameState.isGameOver,
         consecutiveDeficitSeasons: gameState.consecutiveDeficitSeasons,
         paidPayrollWeeks: gameState.paidPayrollWeeks || 0,
+        managerDelegationEnabled: Boolean(gameState.managerDelegationEnabled),
         d2PowerCalibratedV1: Boolean(gameState.d2PowerCalibratedV1),
         lastSeasonStandingsOrder: gameState.lastSeasonStandingsOrder || null,
         lastSeasonCupWinners: gameState.lastSeasonCupWinners || null,
@@ -17699,10 +18042,21 @@ function saveGameToStorage(force = false) {
     if (typeof dehydrateCompetitionsForSave === 'function') {
       payload.state.competitions = dehydrateCompetitionsForSave(gameState.competitions);
     }
+    const slimScorerEntry = (s) => {
+      if (!s || typeof s !== 'object') return s;
+      return {
+        minute: s.minute,
+        name: s.name || (s.scorer && s.scorer.name) || '',
+        scorer: s.scorer ? { id: s.scorer.id, name: s.scorer.name } : null,
+        assister: s.assister ? { id: s.assister.id, name: s.assister.name } : null
+      };
+    };
     const slimMatchList = (arr) => (arr || []).map(r => ({
       ...r,
       homeClub: r.homeClub ? { id: r.homeClub.id, name: r.homeClub.name, shortCode: r.homeClub.shortCode, isPlayer: r.homeClub.isPlayer, primaryColor: r.homeClub.primaryColor, secondaryColor: r.homeClub.secondaryColor, emblem: r.homeClub.emblem } : null,
-      awayClub: r.awayClub ? { id: r.awayClub.id, name: r.awayClub.name, shortCode: r.awayClub.shortCode, isPlayer: r.awayClub.isPlayer, primaryColor: r.awayClub.primaryColor, secondaryColor: r.awayClub.secondaryColor, emblem: r.awayClub.emblem } : null
+      awayClub: r.awayClub ? { id: r.awayClub.id, name: r.awayClub.name, shortCode: r.awayClub.shortCode, isPlayer: r.awayClub.isPlayer, primaryColor: r.awayClub.primaryColor, secondaryColor: r.awayClub.secondaryColor, emblem: r.awayClub.emblem } : null,
+      homeScorers: Array.isArray(r.homeScorers) ? r.homeScorers.map(slimScorerEntry) : [],
+      awayScorers: Array.isArray(r.awayScorers) ? r.awayScorers.map(slimScorerEntry) : []
     }));
     payload.state.lastWeekResults = slimMatchList(gameState.lastWeekResults);
     payload.state.matchHistory = slimMatchList(gameState.matchHistory);
@@ -17775,9 +18129,13 @@ function loadGameFromStorage() {
         gameState.paidPayrollWeeks = 0;
       }
     }
+    gameState.managerDelegationEnabled = Boolean(state.managerDelegationEnabled);
+    gameState.pendingManagerCrisis = false;
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
     gameState.hasStartedOnce = true;
+    markAllViewsDirty();
+    syncManagerDelegationButtonUI();
 
     // カップ戦のラウンドラベルの正規化（旧データの R32: 2回戦 ➔ 1回戦、R16: 3回戦 ➔ 2回戦）
     if (Array.isArray(gameState.calendar)) {
@@ -18411,18 +18769,26 @@ function renderTacticalManagerBanner() {
   const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
 
   const formTag = isFormMatch
-    ? `<span class="mgr-tag match">[陣形一致 +1]</span>`
-    : `<span class="mgr-tag unmatch">[陣形不一致]</span>`;
+    ? `<span class="mgr-tag match">布陣: 哲学合致</span>`
+    : `<span class="mgr-tag unmatch">布陣: GM指定</span>`;
   const tacticTag = isTacticMatch
-    ? `<span class="mgr-tag match">[戦術一致 +1]</span>`
-    : `<span class="mgr-tag unmatch">[戦術不一致]</span>`;
+    ? `<span class="mgr-tag match">戦術: 哲学合致</span>`
+    : `<span class="mgr-tag unmatch">戦術: GM指定</span>`;
 
   let totalBonus = 0;
   if (isFormMatch) totalBonus += 1;
   if (isTacticMatch) totalBonus += 1;
-  const bonusTag = totalBonus > 0
-    ? `<span class="mgr-tag bonus">[組織力ボーナス: 実効OVR +${totalBonus}]</span>`
-    : `<span class="mgr-tag none">[組織力ボーナス: なし]</span>`;
+  const mgrTrust = mgr.trust ?? 80;
+  let bonusTag = '';
+  if (mgrTrust < 40) {
+    bonusTag = `<span class="mgr-tag unmatch">戦術浸透度: 停滞</span>`;
+  } else if (totalBonus === 2) {
+    bonusTag = `<span class="mgr-tag bonus">戦術浸透度: 高</span>`;
+  } else if (totalBonus === 1) {
+    bonusTag = `<span class="mgr-tag warn">戦術浸透度: 中</span>`;
+  } else {
+    bonusTag = `<span class="mgr-tag none">戦術浸透度: 低</span>`;
+  }
 
   const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-xs', 32) : '';
 
@@ -18753,12 +19119,12 @@ function renderCoachingStaffPanel() {
 
   // 全6スロットの定義（オフェンス2、ディフェンス2、GK1、フィジカル1）
   const slotsConfig = [
-    { category: 'attacking', roleLabel: 'オフェンス', index: 0, coach: (coaches.attacking || [])[0] || null, effectDesc: 'FW/WG/AM決定機創出・攻撃成長UP' },
-    { category: 'attacking', roleLabel: 'オフェンス', index: 1, coach: (coaches.attacking || [])[1] || null, effectDesc: 'FW/WG/AM決定機創出・攻撃成長UP' },
-    { category: 'defending', roleLabel: 'ディフェンス', index: 0, coach: (coaches.defending || [])[0] || null, effectDesc: 'DF/DM被決定機抑制・守備成長UP' },
-    { category: 'defending', roleLabel: 'ディフェンス', index: 1, coach: (coaches.defending || [])[1] || null, effectDesc: 'DF/DM被決定機抑制・守備成長UP' },
-    { category: 'goalkeeping', roleLabel: 'GK', index: 0, coach: coaches.goalkeeping || null, effectDesc: 'GKセービング率向上・守備成長UP' },
-    { category: 'fitness', roleLabel: 'フィジカル', index: 0, coach: coaches.fitness || null, effectDesc: '全選手スタミナ消耗＆負傷カット・回復促進' }
+    { category: 'attacking', roleLabel: 'オフェンス', index: 0, coach: (coaches.attacking || [])[0] || null, effectDesc: '前線崩し・決定力の向上と攻撃陣育成' },
+    { category: 'attacking', roleLabel: 'オフェンス', index: 1, coach: (coaches.attacking || [])[1] || null, effectDesc: '前線崩し・決定力の向上と攻撃陣育成' },
+    { category: 'defending', roleLabel: 'ディフェンス', index: 0, coach: (coaches.defending || [])[0] || null, effectDesc: '最終ライン統率・守備ブロック強化' },
+    { category: 'defending', roleLabel: 'ディフェンス', index: 1, coach: (coaches.defending || [])[1] || null, effectDesc: '最終ライン統率・守備ブロック強化' },
+    { category: 'goalkeeping', roleLabel: 'GK', index: 0, coach: coaches.goalkeeping || null, effectDesc: '至近距離反応・セービング安定化' },
+    { category: 'fitness', roleLabel: 'フィジカル', index: 0, coach: coaches.fitness || null, effectDesc: 'コンディション維持・負傷予防と回復促進' }
   ];
 
   let slotsHtml = slotsConfig.map((slot) => {
@@ -19129,7 +19495,7 @@ function openInitialStaffSetupModal(club) {
  * チームタブ内のサブタブ切り替え（順位表 / 日程・結果 / 個人スタッツ）
  * @param {string} subtabKey 'standings' | 'schedule' | 'stats'
  */
-function switchTeamSubtab(subtabKey) {
+function switchTeamSubtab(subtabKey, shouldRender = true) {
   if (!subtabKey) subtabKey = 'standings';
   gameState.teamSubtab = subtabKey;
   const viewTeam = document.getElementById('view-team');
@@ -19161,6 +19527,7 @@ function switchTeamSubtab(subtabKey) {
     }
   });
 
+  if (!shouldRender) return;
   if (subtabKey === 'standings') {
     renderStandings();
   } else if (subtabKey === 'schedule') {
