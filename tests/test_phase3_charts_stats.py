@@ -8,8 +8,11 @@ class TestPhase3ChartsAndStats(unittest.TestCase):
     def setUp(self):
         with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
             self.html = f.read()
+        with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
+            models_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
-            self.js = f.read()
+            main_js = f.read()
+        self.js = models_js + '\n' + main_js
         with open(os.path.join(ROOT_DIR, 'style.css'), 'r', encoding='utf-8') as f:
             self.css = f.read()
 
