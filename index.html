@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261112_0300">
+  <link rel="stylesheet" href="style.css?v=20261112_0400">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -490,7 +490,8 @@
           <div class="panel-header tactical-panel-header">
             <div class="tactical-header-titles">
               <h2 class="panel-title">作戦ボード</h2>
-              <button type="button" class="btn btn-auto-optimal mono" id="btn-auto-optimal-lineup" title="選択中のフォーメーションで実効戦力が最大化するベストメンバーを自動選出">おまかせ最適編成</button>
+              <button type="button" class="btn btn-auto-optimal mono" id="btn-auto-optimal-lineup" title="現在の陣形で疲労・適性を考慮したベストメンバーを1回自動選出">おまかせ最適編成</button>
+              <button type="button" class="btn btn-manager-delegation mono" id="btn-toggle-manager-delegation" title="ONにすると監督の得意陣形・戦術へ同期し、毎試合の疲労ローテーションも監督に一任します">監督一任: OFF</button>
             </div>
             <div class="formation-selector-wrap">
               <span class="formation-selector-label mono">陣形:</span>
@@ -675,7 +676,7 @@
                   </div>
                   <div class="tactic-mini-tags">
                     <span class="tactic-mini-tag tag-gold">快足速攻</span>
-                    <span class="tactic-mini-tag tag-pos">省エネ</span>
+                    <span class="tactic-mini-tag tag-pos">体力温存</span>
                   </div>
                 </button>
                 <button type="button" class="btn btn-tactic" data-tactic="wingplay" title="ワイドアタック">
@@ -718,14 +719,14 @@
                       <p class="tactics-field-val">ボール支配率を高めてじっくり相手守備陣を崩す。</p>
                     </div>
                     <div class="tactics-detail-row">
-                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
-                      <p class="tactics-field-val">中盤（CM/DM）のパス・OVRが高いほど支配率UP＆失点リスクDOWN。格下相手に取りこぼしにくい。</p>
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 特徴</span>
+                      <p class="tactics-field-val">中盤の配球力と技術が高いほど主導権を握りやすく、安定した試合運びで格下相手の取りこぼしを防ぐ。</p>
                     </div>
                   </div>
                   <div class="tactics-tags-row">
-                    <span class="tactic-tag tag-pos">中盤・パス重視</span>
-                    <span class="tactic-tag tag-pos">失点リスク低減</span>
-                    <span class="tactic-tag tag-pos">対格下勝率安定</span>
+                    <span class="tactic-tag tag-pos">中盤の配球・技術重視</span>
+                    <span class="tactic-tag tag-pos">守備リスク低減</span>
+                    <span class="tactic-tag tag-pos">対格下の安定感</span>
                   </div>
                 </div>
 
@@ -743,14 +744,14 @@
                       <p class="tactics-field-val">敵陣深くから激しく奪い、敵ゴール前で一気に仕留める。</p>
                     </div>
                     <div class="tactics-detail-row">
-                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
-                      <p class="tactics-field-val">シュート数・決定機が大幅UPするが、チーム全体のスタミナ消費が1.3倍になり、終盤の失点や負傷率が微増。</p>
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 特徴</span>
+                      <p class="tactics-field-val">前線からの連動プレスで多くの決定機を創出するが、終盤の消耗が激しく、試合終盤の失点や負傷リスクが高まる。</p>
                     </div>
                   </div>
                   <div class="tactics-tags-row">
                     <span class="tactic-tag tag-red">前線即時奪取</span>
-                    <span class="tactic-tag tag-red">決定機・シュート大幅UP</span>
-                    <span class="tactic-tag tag-warn">スタミナ消費1.3倍（終盤注意）</span>
+                    <span class="tactic-tag tag-red">決定機創出</span>
+                    <span class="tactic-tag tag-warn">終盤の消耗が激しい</span>
                   </div>
                 </div>
 
@@ -768,14 +769,14 @@
                       <p class="tactics-field-val">自陣に引き込んで守り、奪ったら前線の快足FWへ一撃ロングボール。</p>
                     </div>
                     <div class="tactics-detail-row">
-                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
-                      <p class="tactics-field-val">スピード（Pace）の高いFWがいると得点力UP。格上（強豪）に対して金星を挙げやすく、スタミナ消費は省エネ。</p>
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 特徴</span>
+                      <p class="tactics-field-val">俊足を誇るアタッカーが輝く堅守速攻。強豪相手にも一撃で勝機を見出せ、90分を通じた体力消耗も抑えられる。</p>
                     </div>
                   </div>
                   <div class="tactics-tags-row">
-                    <span class="tactic-tag tag-gold">快足FW活用</span>
+                    <span class="tactic-tag tag-gold">俊足アタッカー活用</span>
                     <span class="tactic-tag tag-gold">対強豪ジャイアントキリング</span>
-                    <span class="tactic-tag tag-pos">省エネ（スタミナ温存）</span>
+                    <span class="tactic-tag tag-pos">体力温存・省消耗</span>
                   </div>
                 </div>
 
@@ -793,14 +794,14 @@
                       <p class="tactics-field-val">両翼（WG/SB/WB）の突破とクロスで中央密集を外から崩す。</p>
                     </div>
                     <div class="tactics-detail-row">
-                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
-                      <p class="tactics-field-val">サイドポジションの総合値が攻撃力に強く反映。相手の5バックや中央守備を攻略しやすい。</p>
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 特徴</span>
+                      <p class="tactics-field-val">ウイングとサイドバックの突破力・クロス精度が鍵を握り、中央を固める相手の守備ブロックを外からこじ開ける。</p>
                     </div>
                   </div>
                   <div class="tactics-tags-row">
                     <span class="tactic-tag tag-cyan">両翼ドリブル突破＆クロス</span>
-                    <span class="tactic-tag tag-cyan">相手5バック攻略</span>
-                    <span class="tactic-tag tag-pos">WG・SB能力依存</span>
+                    <span class="tactic-tag tag-cyan">中央密集ブロック攻略</span>
+                    <span class="tactic-tag tag-pos">両翼の質が鍵</span>
                   </div>
                 </div>
 
@@ -818,14 +819,14 @@
                       <p class="tactics-field-val">11人全員が自陣バイタルエリアを埋めてゴール前に鍵をかける。</p>
                     </div>
                     <div class="tactics-detail-row">
-                      <span class="tactics-field-label"><span class="icon">⚡</span> 効果</span>
-                      <p class="tactics-field-val">失点率を大幅にカットするが、自チームの得点期待値もほぼゼロに。リード維持や強豪相手の引き分け（勝点1）狙いに有効。</p>
+                      <span class="tactics-field-label"><span class="icon">⚡</span> 特徴</span>
+                      <p class="tactics-field-val">ゴール前に強固な守備ブロックを築いて失点を極限まで抑えるが、攻撃の手数は大きく制限される。リード死守や強豪相手の勝点1狙いに有効。</p>
                     </div>
                   </div>
                   <div class="tactics-tags-row">
                     <span class="tactic-tag tag-purple">ゴール前要塞化</span>
                     <span class="tactic-tag tag-purple">失点激減（リード死守）</span>
-                    <span class="tactic-tag tag-warn">得点期待値低（勝点1狙い）</span>
+                    <span class="tactic-tag tag-warn">攻撃制限（勝点1・逃げ切り狙い）</span>
                   </div>
                 </div>
               </div>
@@ -1015,7 +1016,7 @@
             </div>
             <div class="team-power-badges">
               <span class="power-badge">資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
-              <span class="power-badge">ホーム収入 <strong class="mono accent-green" id="facilities-stadium-bonus">+0%</strong></span>
+              <span class="power-badge">ホーム増収効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
             </div>
           </div>
           <div class="panel-body">
@@ -1683,8 +1684,8 @@
     </div>
   </div>
 
-  <script src="avatar.js?v=20261112_0300"></script>
-  <script src="competitions.js?v=20261112_0300"></script>
-  <script src="main.js?v=20261112_0300"></script>
+  <script src="avatar.js?v=20261112_0400"></script>
+  <script src="competitions.js?v=20261112_0400"></script>
+  <script src="main.js?v=20261112_0400"></script>
 </body>
 </html>
