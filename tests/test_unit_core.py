@@ -8,12 +8,14 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
     """プロジェクトの静的整合性・構文チェック（実行時間: 約0.02秒）"""
 
     def setUp(self):
+        self.data_js_path = os.path.join(ROOT_DIR, 'data.js')
         self.main_js_path = os.path.join(ROOT_DIR, 'main.js')
         self.avatar_js_path = os.path.join(ROOT_DIR, 'avatar.js')
         self.style_css_path = os.path.join(ROOT_DIR, 'style.css')
         self.index_html_path = os.path.join(ROOT_DIR, 'index.html')
 
     def test_files_exist(self):
+        self.assertTrue(os.path.exists(self.data_js_path), "data.js exists")
         self.assertTrue(os.path.exists(self.main_js_path), "main.js exists")
         self.assertTrue(os.path.exists(self.avatar_js_path), "avatar.js exists")
         self.assertTrue(os.path.exists(self.style_css_path), "style.css exists")
@@ -111,11 +113,14 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         """メインメニュー（タイトル画面）およびセーブデータ連動画面遷移のDOM・関数・CSSが定義されていること"""
         with open(self.index_html_path, 'r', encoding='utf-8') as f:
             html = f.read()
+        with open(self.data_js_path, 'r', encoding='utf-8') as f:
+            data_js = f.read()
         with open(self.main_js_path, 'r', encoding='utf-8') as f:
             js = f.read()
         with open(self.style_css_path, 'r', encoding='utf-8') as f:
             css = f.read()
 
+        self.assertEqual(data_js.count('{'), data_js.count('}'), "data.js braces must be balanced")
         self.assertEqual(js.count('{'), js.count('}'), "main.js braces must be balanced")
         self.assertEqual(css.count('{'), css.count('}'), "style.css braces must be balanced")
         for dom_id in [
@@ -133,8 +138,11 @@ class TestGameLogicUnits(unittest.TestCase):
     """ゲームコアロジックの単体テスト（実行時間: 約0.05秒）"""
 
     def setUp(self):
+        with open(os.path.join(ROOT_DIR, 'data.js'), 'r', encoding='utf-8') as f:
+            self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
-            self.js_code = f.read()
+            self.main_js = f.read()
+        self.js_code = self.data_js + '\n' + self.main_js
 
     def test_formation_definitions(self):
         """全8フォーメーションが定義され、それぞれ11スロット（GK含む）持つこと"""

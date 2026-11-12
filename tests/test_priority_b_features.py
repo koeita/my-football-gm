@@ -7,8 +7,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class TestPriorityBDelegationPerfUnslop(unittest.TestCase):
     def setUp(self):
+        with open(os.path.join(ROOT_DIR, 'data.js'), 'r', encoding='utf-8') as f:
+            self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             self.main_js = f.read()
+        self.all_js = self.data_js + '\n' + self.main_js
         with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
             self.html = f.read()
         with open(os.path.join(ROOT_DIR, 'style.css'), 'r', encoding='utf-8') as f:
@@ -41,15 +44,15 @@ class TestPriorityBDelegationPerfUnslop(unittest.TestCase):
 
     def test_10_ui_meta_labels_replaced_with_worldbuilding_text(self):
         """項目10: UIメタ表記（組織力ボーナス: 実効OVR / スタミナ消費1.3倍 / 96%発揮）が世界観テキストに置換されていること"""
-        self.assertNotIn('[組織力ボーナス: 実効OVR', self.main_js)
+        self.assertNotIn('[組織力ボーナス: 実効OVR', self.all_js)
         self.assertNotIn('スタミナ消費1.3倍', self.html)
-        self.assertNotIn('スタミナ消費が1.3倍', self.main_js)
-        self.assertNotIn('薄適性（96%発揮）', self.main_js)
-        self.assertNotIn('薄適性（92%発揮）', self.main_js)
+        self.assertNotIn('スタミナ消費が1.3倍', self.all_js)
+        self.assertNotIn('薄適性（96%発揮）', self.all_js)
+        self.assertNotIn('薄適性（92%発揮）', self.all_js)
         # 新しい世界観表現とサブ適性係数 0.92 の整合確認
         self.assertIn('戦術浸透度: 高', self.main_js)
         self.assertIn('終盤の消耗が激しい', self.html)
-        self.assertIn('終盤の消耗が激し', self.main_js)
+        self.assertIn('終盤の消耗が激し', self.data_js)
         self.assertIn("return { type: 'sub', factor: 0.92, label: 'サブ適性' };", self.main_js)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 

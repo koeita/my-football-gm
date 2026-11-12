@@ -8,6 +8,8 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class TestPrioritySCriticalBugFixes(unittest.TestCase):
     def setUp(self):
+        with open(os.path.join(ROOT_DIR, 'data.js'), 'r', encoding='utf-8') as f:
+            self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             self.main_js = f.read()
         with open(os.path.join(ROOT_DIR, 'competitions.js'), 'r', encoding='utf-8') as f:
@@ -21,7 +23,7 @@ class TestPrioritySCriticalBugFixes(unittest.TestCase):
         self.assertIn('function getActivePlayerLeagueClubs()', self.main_js)
         self.assertIn('function getAllManagedLeagueClubs()', self.main_js)
         self.assertIn('function ensurePlayableClubStructure(club)', self.comp_js)
-        self.assertIn('PRIZE_MONEY_TABLE_D2', self.main_js)
+        self.assertIn('PRIZE_MONEY_TABLE_D2', self.data_js)
         self.assertIn('gameState.totalWeeks = inD2 ? 46 : 38;', self.main_js)
         self.assertIn('mustPromoteImmediate', self.comp_js)
         self.assertIn('isPlayerPromoted', self.comp_js)

@@ -1,10 +1,16 @@
+import os
 import unittest
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class TestPhase1(unittest.TestCase):
     def setUp(self):
-        with open('main.js', 'r', encoding='utf-8') as f:
-            self.js = f.read()
-        with open('index.html', 'r', encoding='utf-8') as f:
+        with open(os.path.join(ROOT_DIR, 'data.js'), 'r', encoding='utf-8') as f:
+            data_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
+            main_js = f.read()
+        self.js = data_js + '\n' + main_js
+        with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
             self.html = f.read()
 
     def test_squad_size_relaxed(self):
