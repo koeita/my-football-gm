@@ -246,8 +246,8 @@ function initSeasonCompetitions() {
     if (!gameState.competitions) {
       gameState.competitions = {};
     }
-    initPreseasonCup();
     initChampionshipLeague();
+    initPreseasonCup();
     initDomesticCups();
     initEuropeanCups36();
     injectCupMatchesIntoCalendar();
@@ -264,34 +264,47 @@ function initPreseasonCup() {
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   if (!playerClub) return;
 
-  // 招待候補クラブプール（欧州メガクラブおよび英2部強豪）
-  const candidates = [
-    { id: 'pre_madrid', name: 'マドリード・ブランコ', shortName: 'MBL', country: 'ESP', primaryColor: '#FFFFFF', secondaryColor: '#41748D', basePower: 86 },
-    { id: 'pre_bayern', name: 'バイエルン・ロート', shortName: 'BRO', city: 'ミュンヘン', country: 'GER', primaryColor: '#DC052D', secondaryColor: '#0066B2', basePower: 86 },
-    { id: 'pre_milan', name: 'ミラノ・ネラッズーリ', shortName: 'MNE', city: 'ミラノ', country: 'ITA', primaryColor: '#0066B2', secondaryColor: '#000000', basePower: 85 },
-    { id: 'pre_paris', name: 'パリ・メトロポリタン', shortName: 'PME', city: 'パリ', country: 'FRA', primaryColor: '#002B49', secondaryColor: '#DA291C', basePower: 84 },
-    { id: 'pre_leeds', name: 'リーズ・U', shortName: 'LEU', city: 'リーズ', country: 'ENG', primaryColor: '#FFCD00', secondaryColor: '#1D428A', basePower: 74 },
-    { id: 'pre_sheff', name: 'シェフィールド・S', shortName: 'SHS', city: 'シェフィールド', country: 'ENG', primaryColor: '#0053A0', secondaryColor: '#FFFFFF', basePower: 73 }
-  ];
+  // 招待候補クラブプール（正規定義の欧州メガクラブ4チーム ＋ 正規ロスターを持つ英2部上位2チーム）
+  const euroTargetIds = ['es01', 'de01', 'it01', 'fr01'];
+  const euroCandidates = euroTargetIds
+    .map(id => findEuropeanClubDefinitionById(id))
+    .filter(Boolean);
+
+  const d2Pool = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
+    ? gameState.competitions.championship.clubs
+    : CHAMPIONSHIP_CLUBS_DEFINITIONS;
+  const domesticCandidates = d2Pool
+    .filter(c => c && c.id !== playerClub.id && !c.isPlayer)
+    .sort((a, b) => (b.basePower || 70) - (a.basePower || 70))
+    .slice(0, 2);
+
+  const candidates = [...euroCandidates, ...domesticCandidates];
 
   // シャッフルして3チームを選出
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
-  const invitedClubs = shuffled.slice(0, 3);
+  const invitedRaw = shuffled.slice(0, 3);
+  const invitedClubs = invitedRaw.map(c => (Array.isArray(c.players) && c.players.length >= 11) ? c : ({
+    ...c,
+    isPlayer: false,
+    avgOvr: c.basePower || 78
+  }));
 
   const participants = [
     {
       id: playerClub.id,
       name: playerClub.name,
-      shortName: playerClub.shortCode || 'LON',
+      shortName: playerClub.shortCode || playerClub.shortName || 'LON',
+      shortCode: playerClub.shortCode || playerClub.shortName || 'LON',
       country: 'ENG',
+      primaryColor: playerClub.primaryColor,
+      secondaryColor: playerClub.secondaryColor,
+      pattern: playerClub.pattern,
+      shape: playerClub.shape,
+      emblem: playerClub.emblem,
       isPlayer: true,
       avgOvr: playerClub.avgOvr || 78
     },
-    ...invitedClubs.map(c => ({
-      ...c,
-      isPlayer: false,
-      avgOvr: c.basePower || 78
-    }))
+    ...invitedClubs
   ];
 
   // プレイヤーの3試合対戦カード（Match 1, Match 2, Match 3）＋ 同節招待クラブ同士の裏カード
@@ -301,6 +314,8 @@ function initPreseasonCup() {
       roundName: 'グループ第1戦',
       homeId: playerClub.id,
       awayId: invitedClubs[0].id,
+      otherHomeId: invitedClubs[1].id,
+      otherAwayId: invitedClubs[2].id,
       homeClub: participants[0],
       awayClub: invitedClubs[0],
       otherHomeClub: invitedClubs[1],
@@ -314,6 +329,8 @@ function initPreseasonCup() {
       roundName: 'グループ第2戦',
       homeId: invitedClubs[1].id,
       awayId: playerClub.id,
+      otherHomeId: invitedClubs[0].id,
+      otherAwayId: invitedClubs[2].id,
       homeClub: invitedClubs[1],
       awayClub: participants[0],
       otherHomeClub: invitedClubs[0],
@@ -327,6 +344,8 @@ function initPreseasonCup() {
       roundName: 'トロフィー決定戦',
       homeId: playerClub.id,
       awayId: invitedClubs[2].id,
+      otherHomeId: invitedClubs[0].id,
+      otherAwayId: invitedClubs[1].id,
       homeClub: participants[0],
       awayClub: invitedClubs[2],
       otherHomeClub: invitedClubs[0],
@@ -1332,6 +1351,10 @@ function rehydrateCompetitionsClubRefs() {
     if (m.homeId && clubMap.has(m.homeId)) m.homeClub = clubMap.get(m.homeId);
     if (m.awayId && clubMap.has(m.awayId)) m.awayClub = clubMap.get(m.awayId);
     if (m.winnerId && clubMap.has(m.winnerId)) m.winnerClub = clubMap.get(m.winnerId);
+    const oHomeId = m.otherHomeId || (m.otherHomeClub && m.otherHomeClub.id);
+    const oAwayId = m.otherAwayId || (m.otherAwayClub && m.otherAwayClub.id);
+    if (oHomeId && clubMap.has(oHomeId)) m.otherHomeClub = clubMap.get(oHomeId);
+    if (oAwayId && clubMap.has(oAwayId)) m.otherAwayClub = clubMap.get(oAwayId);
   };
 
   ['leagueCup', 'nationalCup', 'championsCup', 'europaCup', 'conferenceCup'].forEach(k => {

@@ -4502,6 +4502,8 @@ function recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStar
       bucket[pid] = {
         id: pid,
         name: p.name,
+        fullName: p.fullName || p.name,
+        nationality: p.nationality || null,
         pos: p.primaryPosition || p.preferredPosition || p.pos || 'MF',
         squadNumber: p.squadNumber || null,
         clubId: club ? club.id : null,
@@ -4521,6 +4523,8 @@ function recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStar
       bucket[pid].clubName = club.name;
       bucket[pid].isPlayerClub = Boolean(club.isPlayer);
       bucket[pid].name = p.name || bucket[pid].name;
+      if (p.fullName) bucket[pid].fullName = p.fullName;
+      if (p.nationality) bucket[pid].nationality = p.nationality;
     }
     return bucket[pid];
   };
@@ -6417,12 +6421,102 @@ function clearMatchLiveTimers() {
 }
 
 /**
+ * クラブの国コード等から NATIONALITY_NAME_DATABASE の国籍キーへ解決
+ */
+function resolveClubCountryToNationality(countryCode, clubId = '') {
+  const code = String(countryCode || '').toUpperCase();
+  const map = {
+    ENG: 'England',
+    ESP: 'Spain',
+    GER: 'Germany',
+    ITA: 'Italy',
+    FRA: 'France',
+    NED: 'Netherlands',
+    POR: 'Portugal',
+    BEL: 'Belgium',
+    BRA: 'Brazil',
+    ARG: 'Argentina',
+    CRO: 'Croatia',
+    JPN: 'Japan'
+  };
+  if (map[code]) return map[code];
+  const cid = String(clubId || '').toLowerCase();
+  if (cid.startsWith('es') || cid.includes('madrid')) return 'Spain';
+  if (cid.startsWith('de') || cid.includes('bayern')) return 'Germany';
+  if (cid.startsWith('it') || cid.includes('milan')) return 'Italy';
+  if (cid.startsWith('fr') || cid.includes('paris')) return 'France';
+  return 'England';
+}
+
+/**
+ * シード値に基づき NATIONALITY_NAME_DATABASE から決定論的にアルファベット選手名を生成
+ */
+function generateDeterministicAlphabetPlayerIdentity(seedBase, slotIdx, homeNationality, usedNames = null) {
+  const natList = (typeof NATIONALITIES !== 'undefined' && Array.isArray(NATIONALITIES) && NATIONALITIES.length > 0)
+    ? NATIONALITIES
+    : Object.keys(NATIONALITY_NAME_DATABASE);
+  const isHomeNat = (slotIdx % 3 !== 2);
+  const rawNat = isHomeNat
+    ? homeNationality
+    : natList[(seedBase + slotIdx * 11) % natList.length];
+  const natKey = NATIONALITY_NAME_DATABASE[rawNat] ? rawNat : 'England';
+  const natData = NATIONALITY_NAME_DATABASE[natKey] || NATIONALITY_NAME_DATABASE.England;
+  const firstPool = natData.firstNames;
+  const lastPool = natData.lastNames;
+
+  for (let attempt = 0; attempt < lastPool.length; attempt++) {
+    const fIdx = (seedBase + slotIdx * 7 + attempt * 3) % firstPool.length;
+    const lIdx = (seedBase + slotIdx * 13 + attempt * 5) % lastPool.length;
+    const firstName = firstPool[fIdx];
+    const lastName = lastPool[lIdx];
+    const displayName = `${firstName.charAt(0)}. ${lastName}`;
+    const fullName = `${firstName} ${lastName}`;
+    if (!usedNames || (!usedNames.has(displayName) && !usedNames.has(fullName))) {
+      if (usedNames) {
+        usedNames.add(displayName);
+        usedNames.add(fullName);
+      }
+      return { displayName, fullName, nationality: natKey };
+    }
+  }
+
+  const fallbackFirst = firstPool[(seedBase + slotIdx) % firstPool.length];
+  const fallbackLast = lastPool[(seedBase + slotIdx * 3) % lastPool.length];
+  return {
+    displayName: `${fallbackFirst.charAt(0)}. ${fallbackLast}`,
+    fullName: `${fallbackFirst} ${fallbackLast}`,
+    nationality: natKey
+  };
+}
+
+/**
  * 試合相手クラブ（他国クラブや2部クラブなど）のスタメン配列を保証
  */
 function ensureClubStartersForMatch(club) {
   if (!club) return [];
-  const managedRef = (club.id && typeof getClubById === 'function') ? getClubById(club.id) : null;
+  const legacyPreIdMap = { pre_leeds: 'c02', pre_sheff: 'c01' };
+  const lookupId = legacyPreIdMap[club.id] || club.id;
+  const managedRef = (lookupId && typeof getClubById === 'function') ? getClubById(lookupId) : null;
   const targetClub = (managedRef && Array.isArray(managedRef.players) && managedRef.players.length >= 11) ? managedRef : club;
+
+  const seedBase = String(targetClub.id || targetClub.name || 'club').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 7);
+  const homeNat = resolveClubCountryToNationality(targetClub.country, targetClub.id);
+
+  // 旧データのカタカナ仮想選手名が残っている場合はアルファベット名へ自動変換
+  if (Array.isArray(targetClub.players) && targetClub.players.some(p => p && /[\u30A0-\u30FF]/.test(p.name || ''))) {
+    const usedFixNames = new Set();
+    targetClub.players.forEach((p, idx) => {
+      if (p && !/[\u30A0-\u30FF]/.test(p.name || '')) {
+        usedFixNames.add(p.name);
+        if (p.fullName) usedFixNames.add(p.fullName);
+      } else if (p) {
+        const ident = generateDeterministicAlphabetPlayerIdentity(seedBase, idx, homeNat, usedFixNames);
+        p.name = ident.displayName;
+        p.fullName = ident.fullName;
+        p.nationality = p.nationality || ident.nationality;
+      }
+    });
+  }
 
   if (targetClub.players && targetClub.players.length >= 11) {
     if (typeof ensureValidSquadAndStarters === 'function' && targetClub.isPlayer) {
@@ -6440,17 +6534,18 @@ function ensureClubStartersForMatch(club) {
   if (!targetClub.players || targetClub.players.length === 0) {
     const baseP = targetClub.basePower || targetClub.ovr || 74;
     const positions = ['GK', 'LB', 'CB', 'CB', 'RB', 'DM', 'CM', 'AM', 'LW', 'CF', 'RW'];
-    const euroFirsts = ['L.', 'M.', 'J.', 'A.', 'F.', 'R.', 'D.', 'K.', 'S.', 'N.', 'V.', 'E.'];
-    const euroLasts = [
-      'モレノ', 'ロッシ', 'シュミット', 'デュボワ', 'ガルシア', 'コンテ', 'ベルガー', 'ロペス',
-      'コスタ', 'ミュラー', 'ローラン', 'ナバロ', 'フェラーリ', 'ベッカー', 'マルタン', 'シルバ',
-      'リッツォ', 'クラウス', 'ルソー', 'オルテガ', 'ビアンキ', 'ヴェーバー', 'ペレス', 'ブラン'
-    ];
-    const seedBase = String(targetClub.id || targetClub.name || 'club').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 7);
+    const defaultSquadNumbers = [1, 3, 4, 5, 2, 6, 8, 10, 11, 9, 7];
+    const canonicalEuroIdMap = { pre_madrid: 'es01', pre_bayern: 'de01', pre_milan: 'it01', pre_paris: 'fr01' };
+    const euroLookupId = canonicalEuroIdMap[targetClub.id] || targetClub.id;
     const affiliatedEuro = Array.isArray(gameState.euroTransferList)
-      ? gameState.euroTransferList.filter(ep => ep && (ep.euroClubId === targetClub.id || ep.clubId === targetClub.id))
+      ? gameState.euroTransferList.filter(ep => ep && (ep.euroClubId === euroLookupId || ep.clubId === euroLookupId))
       : [];
     const usedEuroIds = new Set();
+    const usedNames = new Set();
+    affiliatedEuro.forEach(ep => {
+      if (ep && ep.name) usedNames.add(ep.name);
+      if (ep && ep.fullName) usedNames.add(ep.fullName);
+    });
 
     targetClub.players = positions.map((pos, idx) => {
       const matchEp = affiliatedEuro.find(ep => !usedEuroIds.has(ep.id) && (ep.pos === pos || POS_ROLE_GROUP[ep.pos] === POS_ROLE_GROUP[pos]));
@@ -6459,14 +6554,21 @@ function ensureClubStartersForMatch(club) {
         if (!matchEp.assignedPos) matchEp.assignedPos = pos;
         return matchEp;
       }
-      const fName = euroFirsts[(seedBase + idx * 3) % euroFirsts.length];
-      const lName = euroLasts[(seedBase + idx * 5) % euroLasts.length];
+      const ident = generateDeterministicAlphabetPlayerIdentity(seedBase, idx, homeNat, usedNames);
       const offset = ((seedBase + idx * 7) % 7) - 3;
+      const age = 21 + ((seedBase + idx * 5) % 11);
+      const preferredFoot = (pos === 'LB' || pos === 'LW') ? 'Left' : (((seedBase + idx) % 5 === 0) ? 'Left' : 'Right');
       return {
         id: `${targetClub.id}_p${idx + 1}`,
-        name: `${fName} ${lName}`,
-        squadNumber: idx + 1,
+        name: ident.displayName,
+        fullName: ident.fullName,
+        nationality: ident.nationality,
+        age,
+        preferredFoot,
+        squadNumber: defaultSquadNumbers[idx] || (idx + 1),
         pos: pos,
+        primaryPosition: pos,
+        secondaryPositions: [],
         assignedPos: pos,
         atk: Math.round(baseP + offset),
         def: Math.round(baseP - offset),
@@ -14887,6 +14989,8 @@ function findPlayerWithContextById(playerId) {
         const vPlayer = {
           id: entry.id,
           name: entry.name,
+          fullName: entry.fullName || entry.name,
+          nationality: entry.nationality || resolveClubCountryToNationality(vClub.country, vClub.id),
           pos: entry.pos || 'MF',
           primaryPosition: entry.pos || 'MF',
           secondaryPositions: [],
@@ -18696,6 +18800,48 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.euroTransferList) || gameState.euroTransferList.length === 0) {
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
       generateEuropeanTransferList(null, sLv);
+    }
+
+    // 既存セーブデータの大会別スタッツ・消化済み試合記録に残存する旧カタカナ仮想選手名をアルファベット名へ自動変換
+    if (gameState.competitionStats && typeof gameState.competitionStats === 'object') {
+      for (const bucket of Object.values(gameState.competitionStats)) {
+        if (!bucket || typeof bucket !== 'object') continue;
+        for (const [pid, entry] of Object.entries(bucket)) {
+          if (entry && /[\u30A0-\u30FF]/.test(entry.name || '')) {
+            const cId = entry.clubId || String(pid).replace(/_p\d+$/, '');
+            const slotMatch = String(pid).match(/_p(\d+)$/);
+            const slotIdx = slotMatch ? Math.max(0, parseInt(slotMatch[1], 10) - 1) : 0;
+            const seedBase = String(cId || 'club').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 7);
+            const homeNat = resolveClubCountryToNationality('', cId);
+            const ident = generateDeterministicAlphabetPlayerIdentity(seedBase, slotIdx, homeNat, null);
+            entry.name = ident.displayName;
+            entry.fullName = ident.fullName;
+            entry.nationality = entry.nationality || ident.nationality;
+          }
+        }
+      }
+    }
+    if (Array.isArray(gameState.calendar)) {
+      gameState.calendar.forEach(d => {
+        if (d && d.matchResult && Array.isArray(d.matchResult.scorers)) {
+          d.matchResult.scorers.forEach((sc, idx) => {
+            ['scorer', 'assister'].forEach(roleKey => {
+              const pObj = sc && sc[roleKey];
+              if (pObj && /[\u30A0-\u30FF]/.test(pObj.name || '')) {
+                const cId = String(pObj.id || '').replace(/_p\d+$/, '') || (d.matchResult.oppClub && d.matchResult.oppClub.id) || 'club';
+                const slotMatch = String(pObj.id || '').match(/_p(\d+)$/);
+                const slotIdx = slotMatch ? Math.max(0, parseInt(slotMatch[1], 10) - 1) : idx;
+                const seedBase = String(cId).split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 7);
+                const homeNat = resolveClubCountryToNationality(d.matchResult.oppClub && d.matchResult.oppClub.country, cId);
+                const ident = generateDeterministicAlphabetPlayerIdentity(seedBase, slotIdx, homeNat, null);
+                pObj.name = ident.displayName;
+                pObj.fullName = ident.fullName;
+                pObj.nationality = pObj.nationality || ident.nationality;
+              }
+            });
+          });
+        }
+      });
     }
 
     // 旧スケール（basePower未変換）で生成された既存セーブデータの2部CPU選手・市場選手のOVR適正化マイグレーション
