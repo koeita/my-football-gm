@@ -45,5 +45,24 @@ class TestPhase4Preseason(unittest.TestCase):
         # プレシーズンでも openMatchEventModal で試合経過演出が見れること
         self.assertIn("openMatchEventModal(matchData, homeScorers, awayScorers", self.js)
 
+    def test_preseason_and_virtual_opponent_players_use_alphabet_names(self):
+        """プレシーズンおよび他国クラブの仮想相手選手がカタカナではなくアルファベット名（NATIONALITY_NAME_DATABASE）で生成されること"""
+        # 旧カタカナ姓配列（euroLasts）が撤去されていること
+        self.assertNotIn("const euroLasts =", self.js)
+        for katakana_surname in ['モレノ', 'ロッシ', 'シュミット', 'デュボワ', 'フェラーリ']:
+            self.assertNotIn(f"'{katakana_surname}'", self.js)
+
+        # アルファベット名生成ヘルパーと国籍解決ヘルパーが使用されていること
+        self.assertIn("function resolveClubCountryToNationality(", self.js)
+        self.assertIn("function generateDeterministicAlphabetPlayerIdentity(", self.js)
+
+        # プレシーズン招待クラブが独自 pre_* ID ではなく正規クラブ定義を参照し、2部初期化の後に実行されること
+        for legacy_pre_id in ['pre_madrid', 'pre_bayern', 'pre_milan', 'pre_paris', 'pre_leeds', 'pre_sheff']:
+            self.assertNotIn(f"id: '{legacy_pre_id}'", self.comp_js)
+        init_idx = self.comp_js.index("function initSeasonCompetitions()")
+        init_end = self.comp_js.index("function initPreseasonCup()", init_idx)
+        init_block = self.comp_js[init_idx:init_end]
+        self.assertLess(init_block.index("initChampionshipLeague();"), init_block.index("initPreseasonCup();"))
+
 if __name__ == '__main__':
     unittest.main()
