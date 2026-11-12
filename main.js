@@ -1618,6 +1618,11 @@ const gameState = {
   preContractPlayers: [],        // 来季事前合意（内定）選手リスト           // 獲得ターゲットリスト（SHORTLIST）
   facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
   teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
+  competitionStats: {},          // 大会別個人スタッツ集計マップ (d1, d2, leagueCup, nationalCup, championsCup, europaCup, conferenceCup, preseasonCup)
+  statsCompView: 'league',       // 個人スタッツ大会グループ ('league' | 'domestic' | 'europe' | 'preseason')
+  statsLeagueDivision: null,     // 個人スタッツ選択ディビジョン ('d1' | 'd2')
+  statsDomesticCup: 'leagueCup', // 個人スタッツ選択国内カップ ('leagueCup' | 'nationalCup')
+  statsEuroCup: null,            // 個人スタッツ選択欧州カップ ('championsCup' | 'europaCup' | 'conferenceCup')
   scheduleViewMode: 'calendar',  // 日程・結果表示モード ('calendar' | 'list')
   calendarViewYear: 2026,        // 月間カレンダー表示年
   calendarViewMonth: 8,          // 月間カレンダー表示月
@@ -4333,12 +4338,96 @@ function stopAdvancingCalendar() {
 }
 
 /**
- * 本日のMatchday（試合日）の試合を消化する
+ * クイック試合・カップ戦用のシュート数＆枠内シュート数を整合性保証付きで算出（必ず スコア <= 枠内 <= 総シュート）
  */
+function buildQuickMatchShotStats(homeScore, awayScore, simRes = null) {
+  const rawHShots = (simRes && typeof simRes.homeShots === 'number')
+    ? simRes.homeShots
+    : (homeScore * 3 + Math.floor(Math.random() * 5 + 3));
+  const rawAShots = (simRes && typeof simRes.awayShots === 'number')
+    ? simRes.awayShots
+    : (awayScore * 3 + Math.floor(Math.random() * 5 + 3));
+
+  const homeShots = Math.max(homeScore, rawHShots);
+  const awayShots = Math.max(awayScore, rawAShots);
+
+  const rawHOnTarget = (simRes && typeof simRes.homeOnTarget === 'number')
+    ? simRes.homeOnTarget
+    : Math.round(homeShots * 0.45);
+  const rawAOnTarget = (simRes && typeof simRes.awayOnTarget === 'number')
+    ? simRes.awayOnTarget
+    : Math.round(awayShots * 0.45);
+
+  const homeOnTarget = Math.max(homeScore, Math.min(homeShots, rawHOnTarget));
+  const awayOnTarget = Math.max(awayScore, Math.min(awayShots, rawAOnTarget));
+
+  return { homeShots, awayShots, homeOnTarget, awayOnTarget };
+}
+
 /**
- * カップ戦・欧州戦用のスコアラー自動選定
+ * 大会別個人スタッツ（gameState.competitionStats[compKey]）を取得・初期化
  */
-function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore) {
+function ensureCompetitionStatsBucket(compKey) {
+  if (!compKey) return null;
+  if (!gameState.competitionStats || typeof gameState.competitionStats !== 'object') {
+    gameState.competitionStats = {};
+  }
+  if (!gameState.competitionStats[compKey] || typeof gameState.competitionStats[compKey] !== 'object') {
+    gameState.competitionStats[compKey] = {};
+  }
+  return gameState.competitionStats[compKey];
+}
+
+/**
+ * 公式戦出場数（+1）および自クラブ選手のポジション特訓進捗（+15%・習得判定）を一括反映
+ */
+function applyOfficialAppearancesAndTraining(club, starters = [], playedSubs = [], options = {}) {
+  const { recordOfficial = true, applyTraining = true } = options;
+  if (!club) return;
+
+  const advancePosTraining = (p) => {
+    if (!applyTraining || !club.isPlayer || !p || !p.positionTraining || !p.positionTraining.active || !p.positionTraining.targetPos) return;
+    p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
+    if (p.positionTraining.progress >= 100) {
+      const tPos = p.positionTraining.targetPos;
+      const mode = p.positionTraining.mode || 'sub';
+      if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
+      if (!Array.isArray(p.majorPositions)) {
+        const pri = p.primaryPosition || p.preferredPosition || p.pos;
+        p.majorPositions = [pri];
+      }
+      if (mode === 'major') {
+        if (!p.majorPositions.includes(tPos)) p.majorPositions.push(tPos);
+        p.secondaryPositions = p.secondaryPositions.filter(pos => pos !== tPos);
+        addDailyLog(`【適性習得報告】実戦経験を経て、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしました。`);
+      } else {
+        if (!p.secondaryPositions.includes(tPos)) p.secondaryPositions.push(tPos);
+        addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} が実戦を通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして起用可能な水準に達しました。`);
+      }
+      p.positionTraining = null;
+    }
+  };
+
+  const bumpApps = (p) => {
+    if (!recordOfficial || !p) return;
+    p.appearances = (p.appearances || 0) + 1;
+    if (typeof p.assists !== 'number') p.assists = 0;
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
+    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
+  };
+
+  (starters || []).forEach(p => {
+    bumpApps(p);
+    advancePosTraining(p);
+  });
+  (playedSubs || []).forEach(p => bumpApps(p));
+}
+/**
+ * カップ戦・欧州戦・2部背景進行用のスコアラー＆アシスター自動選定
+ */
+function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, options = {}) {
+  const { recordOfficial = true } = options;
   const homeStarters = ensureClubStartersForMatch(homeClub);
   const awayStarters = ensureClubStartersForMatch(awayClub);
 
@@ -4348,28 +4437,45 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore) 
     return pool[Math.floor(Math.random() * pool.length)] || starters[0];
   };
 
+  const pickAssister = (starters, scorer) => {
+    if (Math.random() > 0.72) return null;
+    const cands = starters.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
+    if (cands.length === 0) return null;
+    const mfWg = cands.filter(p => ['AM', 'CM', 'LM', 'RM', 'DM', 'LW', 'RW', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
+    const pool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
+    return pool[Math.floor(Math.random() * pool.length)] || null;
+  };
+
+  const applyGoalAndAssist = (p, assister) => {
+    if (!recordOfficial) return;
+    if (p) {
+      p.goals = (p.goals || 0) + 1;
+      if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: 0, assists: p.assists || 0 };
+      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+    }
+    if (assister) {
+      assister.assists = (assister.assists || 0) + 1;
+      if (!assister.careerStats) assister.careerStats = { appearances: assister.appearances || 0, goals: assister.goals || 0, assists: 0 };
+      assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+    }
+  };
+
   const homeScorers = [];
   for (let i = 0; i < homeScore; i++) {
     const p = pickScorer(homeStarters);
+    const assister = pickAssister(homeStarters, p);
     const minute = Math.floor(Math.random() * 88) + 2;
-    if (homeClub.isPlayer && p) {
-      p.goals = (p.goals || 0) + 1;
-      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
-    }
-    homeScorers.push({ minute, scorer: p, name: p.name });
+    applyGoalAndAssist(p, assister);
+    if (p) homeScorers.push({ minute, scorer: p, assister, name: p.name });
   }
 
   const awayScorers = [];
   for (let i = 0; i < awayScore; i++) {
     const p = pickScorer(awayStarters);
+    const assister = pickAssister(awayStarters, p);
     const minute = Math.floor(Math.random() * 88) + 2;
-    if (awayClub.isPlayer && p) {
-      p.goals = (p.goals || 0) + 1;
-      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
-    }
-    awayScorers.push({ minute, scorer: p, name: p.name });
+    applyGoalAndAssist(p, assister);
+    if (p) awayScorers.push({ minute, scorer: p, assister, name: p.name });
   }
 
   homeScorers.sort((a, b) => a.minute - b.minute);
@@ -4378,50 +4484,193 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore) 
 }
 
 /**
- * 試合出場選手の疲労・スタミナ消費および特訓進行
+ * 1試合分の選手スタッツを指定大会（compKey）の個人スタッツ台帳へ記録する
+ */
+function recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStarters, awayStarters, homeSubs, awaySubs, homeScore, awayScore, homeScorers, awayScorers, ratingRes, cardsMap = null) {
+  const bucket = ensureCompetitionStatsBucket(compKey);
+  if (!bucket) return;
+
+  const DEFENDER_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'];
+  const isDefOrGk = (p) => {
+    const pos = p.assignedPos || p.primaryPosition || p.preferredPosition || p.pos;
+    return DEFENDER_POSITIONS.includes(pos) || POS_ROLE_GROUP[pos] === 'GK' || POS_ROLE_GROUP[pos] === 'DF';
+  };
+
+  const getOrCreateEntry = (p, club) => {
+    const pid = p.id;
+    if (!bucket[pid]) {
+      bucket[pid] = {
+        id: pid,
+        name: p.name,
+        pos: p.primaryPosition || p.preferredPosition || p.pos || 'MF',
+        squadNumber: p.squadNumber || null,
+        clubId: club ? club.id : null,
+        clubName: club ? club.name : '不明',
+        isPlayerClub: Boolean(club && club.isPlayer),
+        apps: 0,
+        goals: 0,
+        assists: 0,
+        totalRating: 0,
+        cleanSheets: 0,
+        momCount: 0,
+        yellowCards: 0,
+        redCards: 0
+      };
+    } else if (club) {
+      bucket[pid].clubId = club.id;
+      bucket[pid].clubName = club.name;
+      bucket[pid].isPlayerClub = Boolean(club.isPlayer);
+      bucket[pid].name = p.name || bucket[pid].name;
+    }
+    return bucket[pid];
+  };
+
+  const recordSide = (club, starters, subs, conceded, scorers) => {
+    const allPlayed = [...(starters || []).map(p => ({ p, isStarter: true })), ...(subs || []).map(p => ({ p, isStarter: false }))];
+    allPlayed.forEach(({ p, isStarter }) => {
+      if (!p || !p.id) return;
+      const entry = getOrCreateEntry(p, club);
+      entry.apps += 1;
+      const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating : (isStarter ? 6.7 : 6.6);
+      entry.totalRating = Number((entry.totalRating + rat).toFixed(2));
+      if (isStarter && conceded === 0 && isDefOrGk(p)) entry.cleanSheets += 1;
+      if (ratingRes && ratingRes.momPlayer && ratingRes.momPlayer.id === p.id) entry.momCount += 1;
+      if (cardsMap && cardsMap[p.id]) {
+        entry.yellowCards += cardsMap[p.id].yellow || 0;
+        entry.redCards += cardsMap[p.id].red || 0;
+      }
+    });
+    (scorers || []).forEach(s => {
+      if (s && s.scorer && s.scorer.id) getOrCreateEntry(s.scorer, club).goals += 1;
+      if (s && s.assister && s.assister.id) getOrCreateEntry(s.assister, club).assists += 1;
+    });
+  };
+
+  recordSide(homeClub, homeStarters, homeSubs, awayScore, homeScorers);
+  recordSide(awayClub, awayStarters, awaySubs, homeScore, awayScorers);
+}
+
+/**
+ * クイックシミュレーション試合の選手個人スタッツ一括算出＆大会記録
+ */
+function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, homeScore, awayScore, options = {}) {
+  const { recordOfficial = true, applyTraining = false } = options;
+  if (!homeClub || !awayClub) {
+    return { homeScorers: [], awayScorers: [], momPlayer: null, momClub: homeClub, momRating: '7.5' };
+  }
+
+  const homeStarters = ensureClubStartersForMatch(homeClub);
+  const awayStarters = ensureClubStartersForMatch(awayClub);
+
+  applyOfficialAppearancesAndTraining(homeClub, homeStarters, [], { recordOfficial, applyTraining });
+  applyOfficialAppearancesAndTraining(awayClub, awayStarters, [], { recordOfficial, applyTraining });
+
+  const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial });
+  const ratingRes = calculateAndAssignMatchRatings(
+    homeClub, awayClub,
+    homeStarters, awayStarters,
+    [], [],
+    homeScore, awayScore,
+    homeScorers.concat(awayScorers),
+    { recordOfficial }
+  );
+
+  const DEFENDER_POSITIONS = ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'];
+  const isDefOrGk = (p) => {
+    const pos = p.assignedPos || p.primaryPosition || p.preferredPosition || p.pos;
+    return DEFENDER_POSITIONS.includes(pos) || POS_ROLE_GROUP[pos] === 'GK' || POS_ROLE_GROUP[pos] === 'DF';
+  };
+  if (recordOfficial) {
+    if (awayScore === 0) {
+      homeStarters.forEach(p => {
+        if (isDefOrGk(p)) {
+          p.cleanSheets = (p.cleanSheets || 0) + 1;
+          if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: p.goals || 0, assists: p.assists || 0, cleanSheets: 0 };
+          p.careerStats.cleanSheets = (p.careerStats.cleanSheets || 0) + 1;
+        }
+      });
+    }
+    if (homeScore === 0) {
+      awayStarters.forEach(p => {
+        if (isDefOrGk(p)) {
+          p.cleanSheets = (p.cleanSheets || 0) + 1;
+          if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: p.goals || 0, assists: p.assists || 0, cleanSheets: 0 };
+          p.careerStats.cleanSheets = (p.careerStats.cleanSheets || 0) + 1;
+        }
+      });
+    }
+  }
+
+  const cardsMap = {};
+  const simQuickCards = (starters) => {
+    const cardWeights = [48, 36, 13, 3];
+    const numYellow = typeof avatarWeightedPick === 'function' ? avatarWeightedPick(cardWeights, Math.random) : randInt(0, 1);
+    const nonGk = starters.filter(p => (p.assignedPos || p.pos) !== 'GK');
+    const pool = nonGk.length > 0 ? nonGk : starters;
+    for (let c = 0; c < numYellow; c++) {
+      const target = pool[randInt(0, pool.length - 1)];
+      if (target && target.id) {
+        if (!cardsMap[target.id]) cardsMap[target.id] = { yellow: 0, red: 0 };
+        cardsMap[target.id].yellow += 1;
+        if (recordOfficial) {
+          target.yellowCards = (target.yellowCards || 0) + 1;
+          if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
+          target.careerStats.yellowCards = (target.careerStats.yellowCards || 0) + 1;
+        }
+      }
+    }
+    if (Math.random() < 0.02) {
+      const target = pool[randInt(0, pool.length - 1)];
+      if (target && target.id) {
+        if (!cardsMap[target.id]) cardsMap[target.id] = { yellow: 0, red: 0 };
+        cardsMap[target.id].red += 1;
+        if (recordOfficial) {
+          target.redCards = (target.redCards || 0) + 1;
+          if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
+          target.careerStats.redCards = (target.careerStats.redCards || 0) + 1;
+        }
+      }
+    }
+  };
+  simQuickCards(homeStarters);
+  simQuickCards(awayStarters);
+
+  if (compKey) {
+    recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStarters, awayStarters, [], [], homeScore, awayScore, homeScorers, awayScorers, ratingRes, cardsMap);
+  }
+
+  return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
+}
+window.simulateAndRecordQuickMatchPlayerStats = simulateAndRecordQuickMatchPlayerStats;
+
+/**
+ * 試合出場選手の疲労蓄積および不出場控え選手の軽微回復（出場数加算は重複防止のため分離）
  */
 function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = []) {
   if (!club || !club.players) return;
-  const starters = playedStarters || club.players.filter(p => p.isStarter);
+  const starters = playedStarters || club.players.filter(p => p.isStarter && !p.isRetired);
   const subIds = new Set((playedSubs || []).map(p => p.id));
   const starterIds = new Set(starters.map(p => p.id));
 
-  // 戦術・指導陣による疲労倍率
   const tKey = normalizeTacticKey(club.tactic);
   const tacticMult = tKey === 'gegenpress' ? 1.25 : (tKey === 'counter' ? 0.85 : 1.0);
   const coaching = typeof getClubCoachingEffects === 'function' ? getClubCoachingEffects(club) : { staDrainMult: 1.0 };
 
-  // プレシーズン親善試合の場合は疲労蓄積半減（親善試合仕様）
   const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
   const isPreseasonMatch = Boolean(curDay && (curDay.cupCompType === 'preseasonCup' || curDay.preseasonRound));
   const preseasonMult = isPreseasonMatch ? 0.5 : 1.0;
   const drainMult = tacticMult * (coaching.staDrainMult || 1.0) * preseasonMult;
 
-  // スタメン（フル出場）
   starters.forEach(p => {
-    p.appearances = (p.appearances || 0) + 1;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
-
-    // 疲労度蓄積（13〜17 × 倍率）
     const fatigueDelta = Math.round(randInt(13, 17) * drainMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
-
-    if (club.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
-      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
-    }
   });
 
-  // 途中交代出場選手
   (playedSubs || []).forEach(p => {
-    p.appearances = (p.appearances || 0) + 1;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
     const fatigueDelta = Math.round(randInt(6, 10) * drainMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
   });
 
-  // 不出場控え選手（軽微な自然回復）
   club.players.forEach(p => {
     if (!starterIds.has(p.id) && !subIds.has(p.id)) {
       if (typeof p.fatigue === 'number' && p.fatigue > 0) {
@@ -4461,25 +4710,43 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
     const isHome = myMatch.homeId === playerClub.id;
     const oppClub = isHome ? myMatch.awayClub : myMatch.homeClub;
+    const matchHomeClub = isHome ? playerClub : oppClub;
+    const matchAwayClub = isHome ? oppClub : playerClub;
     ensureClubStartersForMatch(playerClub);
     ensureClubStartersForMatch(oppClub);
 
-    const simRes = simQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub);
+    const simRes = simQuickMatch(matchHomeClub, matchAwayClub);
     const homeScore = simRes.homeScore;
     const awayScore = simRes.awayScore;
     myMatch.homeScore = homeScore;
     myMatch.awayScore = awayScore;
     myMatch.played = true;
 
-    // 選手出場・疲労反映（プレシーズンは疲労半減）
-    applyPostMatchPlayerFatigue(playerClub);
-    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
-    const cupRatings = calculateAndAssignMatchRatings(
-      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
-      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
-      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
-      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    // 同ラウンドの招待クラブ同士の裏カードもシミュレートし、WCT全4クラブの個人スタッツを公平に記録
+    if (myMatch.otherHomeClub && myMatch.otherAwayClub) {
+      const otherRes = simQuickMatch(myMatch.otherHomeClub, myMatch.otherAwayClub);
+      simulateAndRecordQuickMatchPlayerStats(
+        'preseasonCup',
+        myMatch.otherHomeClub,
+        myMatch.otherAwayClub,
+        otherRes.homeScore,
+        otherRes.awayScore,
+        { recordOfficial: false, applyTraining: false }
+      );
+    }
+
+    // プレシーズン親善試合：公式戦通算成績には加算せず、WCT大会スタッツ・特訓進捗・疲労半減のみ反映
+    const cupRatings = simulateAndRecordQuickMatchPlayerStats(
+      'preseasonCup',
+      matchHomeClub,
+      matchAwayClub,
+      homeScore,
+      awayScore,
+      { recordOfficial: false, applyTraining: true }
     );
+    const homeScorers = cupRatings.homeScorers;
+    const awayScorers = cupRatings.awayScorers;
+    applyPostMatchPlayerFatigue(playerClub);
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -4511,10 +4778,12 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
     const finalBonusText = (roundNum === 3 && userWon) ? ' 🏆 WCTトロフィー獲得！' : '';
-    addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
-    if (typeof showToast === 'function') {
-      showToast(`WCT ${myMatch.roundName}：${resText}！ 賞金+${formatMoney(prize)}獲得！`, userWon ? 'success' : 'info');
-    }
+    const emitPreseasonPostMatchLogAndToast = () => {
+      addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
+      if (typeof showToast === 'function') {
+        showToast(`WCT ${myMatch.roundName}：${resText}！ 賞金+${formatMoney(prize)}獲得！`, userWon ? 'success' : 'info');
+      }
+    };
 
     currentDay.played = true;
     currentDay.matchResult = {
@@ -4526,14 +4795,15 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       scorers: homeScorers.concat(awayScorers)
     };
 
+    const shotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: roundNum,
       compTitle: `WCT ${myMatch.roundName}`,
       compCode: 'WCT',
       isPreseason: true,
       userWon,
-      homeClub: isHome ? playerClub : oppClub,
-      awayClub: isHome ? oppClub : playerClub,
+      homeClub: matchHomeClub,
+      awayClub: matchAwayClub,
       homeScore,
       awayScore,
       momPlayer: cupRatings.momPlayer,
@@ -4541,10 +4811,10 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       momRating: cupRatings.momRating,
       homePossession: simRes.homePossession || (userWon ? 54 : 46),
       awayPossession: 100 - (simRes.homePossession || (userWon ? 54 : 46)),
-      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
-      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeShots: shotStats.homeShots,
+      awayShots: shotStats.awayShots,
+      homeOnTarget: shotStats.homeOnTarget,
+      awayOnTarget: shotStats.awayOnTarget,
       homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
       awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
       isPlayerHome: isHome,
@@ -4558,12 +4828,14 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     };
 
     if (skipAnimation) {
+      emitPreseasonPostMatchLogAndToast();
       renderAll();
       return;
     }
 
-    // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示
+    // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示（トースト通知は試合終了後に表示）
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      emitPreseasonPostMatchLogAndToast();
       renderAll();
     }, { quickSummary });
     return;
@@ -4615,15 +4887,21 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       finalizeEuroLeaguePhaseToKnockout(comp);
     }
 
-    // 選手出場・疲労反映
-    applyPostMatchPlayerFatigue(playerClub);
-    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
-    const cupRatings = calculateAndAssignMatchRatings(
-      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
-      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
-      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
-      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    // 選手出場・疲労・大会別個人スタッツ反映
+    const euroCompKey = ['championsCup', 'europaCup', 'conferenceCup'].find(
+      k => gameState.competitions && gameState.competitions[k] === comp
+    ) || 'championsCup';
+    const cupRatings = simulateAndRecordQuickMatchPlayerStats(
+      euroCompKey,
+      isHome ? playerClub : oppClub,
+      isHome ? oppClub : playerClub,
+      homeScore,
+      awayScore,
+      { recordOfficial: true, applyTraining: true }
     );
+    const homeScorers = cupRatings.homeScorers;
+    const awayScorers = cupRatings.awayScorers;
+    applyPostMatchPlayerFatigue(playerClub);
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -4633,6 +4911,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const euroFin = applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userDraw, 'euroLeague');
     addDailyLog(`【${comp.name} 第${euroMd}節】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}`);
 
+    const euroShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: euroMd,
       compTitle: `${comp.name} リーグフェーズ第${euroMd}節`,
@@ -4648,10 +4927,10 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       momRating: cupRatings.momRating,
       homePossession: simRes.homePossession || (userWon ? 54 : 46),
       awayPossession: 100 - (simRes.homePossession || (userWon ? 54 : 46)),
-      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
-      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeShots: euroShotStats.homeShots,
+      awayShots: euroShotStats.awayShots,
+      homeOnTarget: euroShotStats.homeOnTarget,
+      awayOnTarget: euroShotStats.awayOnTarget,
       homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
       awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
       isPlayerHome: isHome,
@@ -4710,14 +4989,20 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       finalizeEuroPlayoffToR16(comp);
     }
 
-    applyPostMatchPlayerFatigue(playerClub);
-    const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
-    const poRatings = calculateAndAssignMatchRatings(
-      isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
-      ensureClubStartersForMatch(isHome ? playerClub : oppClub),
-      ensureClubStartersForMatch(isHome ? oppClub : playerClub),
-      [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+    const poEuroCompKey = ['championsCup', 'europaCup', 'conferenceCup'].find(
+      k => gameState.competitions && gameState.competitions[k] === comp
+    ) || 'championsCup';
+    const poRatings = simulateAndRecordQuickMatchPlayerStats(
+      poEuroCompKey,
+      isHome ? playerClub : oppClub,
+      isHome ? oppClub : playerClub,
+      homeScore,
+      awayScore,
+      { recordOfficial: true, applyTraining: true }
     );
+    const homeScorers = poRatings.homeScorers;
+    const awayScorers = poRatings.awayScorers;
+    applyPostMatchPlayerFatigue(playerClub);
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -4726,6 +5011,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const poFin = applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, false, 'euroPlayoff');
     addDailyLog(`【${comp.name} PO】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resText}`);
 
+    const poShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: 'PO',
       compTitle: `${comp.name} 決勝T進出プレーオフ`,
@@ -4743,10 +5029,10 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       momRating: poRatings.momRating,
       homePossession: simRes.homePossession || (userWon ? 53 : 47),
       awayPossession: 100 - (simRes.homePossession || (userWon ? 53 : 47)),
-      homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
-      homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
-      awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+      homeShots: poShotStats.homeShots,
+      awayShots: poShotStats.awayShots,
+      homeOnTarget: poShotStats.homeOnTarget,
+      awayOnTarget: poShotStats.awayOnTarget,
       homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
       awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
       isPlayerHome: isHome,
@@ -4811,14 +5097,17 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   const userWon = isHome ? (simRes.winnerId === playerClub.id) : (simRes.winnerId === playerClub.id);
 
   finalizeCupMatch(compType, roundKey, myMatch, userWon, homeScore, awayScore, simRes.pkHome, simRes.pkAway);
-  applyPostMatchPlayerFatigue(playerClub);
-  const { homeScorers, awayScorers } = generateScorersForQuickMatch(isHome ? playerClub : oppClub, isHome ? oppClub : playerClub, homeScore, awayScore);
-  const cupFinalRatings = calculateAndAssignMatchRatings(
-    isHome ? playerClub : oppClub, isHome ? oppClub : playerClub,
-    ensureClubStartersForMatch(isHome ? playerClub : oppClub),
-    ensureClubStartersForMatch(isHome ? oppClub : playerClub),
-    [], [], homeScore, awayScore, homeScorers.concat(awayScorers)
+  const cupFinalRatings = simulateAndRecordQuickMatchPlayerStats(
+    compType,
+    isHome ? playerClub : oppClub,
+    isHome ? oppClub : playerClub,
+    homeScore,
+    awayScore,
+    { recordOfficial: true, applyTraining: true }
   );
+  const homeScorers = cupFinalRatings.homeScorers;
+  const awayScorers = cupFinalRatings.awayScorers;
+  applyPostMatchPlayerFatigue(playerClub);
 
   currentDay.played = true;
 
@@ -4845,6 +5134,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   const koFin = applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, false, isEuroKo ? 'euroPlayoff' : 'domestic');
   addDailyLog(`【${comp.name} ${cupRoundTitle}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore}${pkText} で${resultText}`);
 
+  const koShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
   const matchData = {
     week: roundKey,
     compTitle: `${comp.name} ${cupRoundTitle}`,
@@ -4862,10 +5152,10 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     momRating: cupFinalRatings.momRating,
     homePossession: simRes.homePossession || (userWon ? 52 : 48),
     awayPossession: 100 - (simRes.homePossession || (userWon ? 52 : 48)),
-    homeShots: simRes.homeShots || (homeScore * 3 + Math.floor(Math.random() * 5 + 3)),
-    awayShots: simRes.awayShots || (awayScore * 3 + Math.floor(Math.random() * 5 + 3)),
-    homeOnTarget: Math.max(homeScore, Math.round((simRes.homeShots || 8) * 0.45)),
-    awayOnTarget: Math.max(awayScore, Math.round((simRes.awayShots || 8) * 0.45)),
+    homeShots: koShotStats.homeShots,
+    awayShots: koShotStats.awayShots,
+    homeOnTarget: koShotStats.homeOnTarget,
+    awayOnTarget: koShotStats.awayOnTarget,
     homeXg: Number((homeScore * 0.75 + 0.35).toFixed(2)),
     awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
     isPlayerHome: isHome,
@@ -4954,7 +5244,7 @@ function advanceFirstDivisionBackgroundWeek() {
     if (res.homeScore > res.awayScore) { h.won++; h.pts += 3; a.lost++; }
     else if (res.homeScore < res.awayScore) { a.won++; a.pts += 3; h.lost++; }
     else { h.drawn++; a.drawn++; h.pts += 1; a.pts += 1; }
-    processMatchScorersAndRatings(m, h, a, res.homeScore, res.awayScore);
+    processMatchScorersAndRatings(m, h, a, res.homeScore, res.awayScore, 'd1');
   }
 }
 function playCurrentMatchday(skipAnimation = false, quickSummary = false) {
@@ -5485,7 +5775,8 @@ function simulateMatch(homeClub, awayClub) {
  * - 適性・疲労: 薄適性 -0.1, 不適性 -0.3, 疲労度80超 -0.2
  * - 出場全選手から最高評価の選手を MOM に決定
  */
-function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awayStarters, homeSubs = [], awaySubs = [], homeScore = 0, awayScore = 0, allMatchGoals = []) {
+function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awayStarters, homeSubs = [], awaySubs = [], homeScore = 0, awayScore = 0, allMatchGoals = [], options = {}) {
+  const { recordOfficial = true } = options;
   const isHomeWin = homeScore > awayScore;
   const isDraw = homeScore === awayScore;
   const isAwayWin = homeScore < awayScore;
@@ -5524,7 +5815,9 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
       r += randInt(-2, 2) * 0.1;
       r = clamp(r, 5.2, 9.8);
       p.lastMatchRating = Number(r.toFixed(1));
-      p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+      if (recordOfficial) {
+        p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+      }
     });
 
     (subs || []).forEach(p => {
@@ -5540,7 +5833,9 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
       r += randInt(-1, 1) * 0.1;
       r = clamp(r, 5.4, 9.5);
       p.lastMatchRating = Number(r.toFixed(1));
-      p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+      if (recordOfficial) {
+        p.totalRating = (p.totalRating || 0) + p.lastMatchRating;
+      }
     });
   };
 
@@ -5558,6 +5853,9 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
     const ratDiff = (b.p.lastMatchRating || 6.7) - (a.p.lastMatchRating || 6.7);
     if (Math.abs(ratDiff) > 0.01) return ratDiff;
     if (a.isWinner !== b.isWinner) return b.isWinner ? 1 : -1;
+    const goalsA = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === a.p.id).length;
+    const goalsB = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === b.p.id).length;
+    if (goalsB !== goalsA) return goalsB - goalsA;
     return (b.p.goals || 0) - (a.p.goals || 0);
   });
 
@@ -5565,7 +5863,7 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
   allEntries.forEach(entry => {
     const isMom = Boolean(momEntry && entry.p.id === momEntry.p.id);
     entry.p.isMOM = isMom;
-    if (isMom) {
+    if (isMom && recordOfficial) {
       entry.p.momCount = (entry.p.momCount || 0) + 1;
       if (!entry.p.careerStats) entry.p.careerStats = { appearances: entry.p.appearances || 0, goals: entry.p.goals || 0, assists: entry.p.assists || 0 };
       entry.p.careerStats.momCount = (entry.p.careerStats.momCount || 0) + 1;
@@ -5582,72 +5880,12 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
 /**
  * 試合から得点者を抽出し、今季＆キャリア通算スタッツを更新する
  */
-function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore) {
+function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore, compKey = null) {
   const homeStarters = homeClub.players.filter(p => p.isStarter && !p.isRetired);
   const awayStarters = awayClub.players.filter(p => p.isStarter && !p.isRetired);
 
-  homeStarters.forEach(p => {
-    p.appearances += 1;
-    if (typeof p.assists !== 'number') p.assists = 0;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-    if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
-    p.careerStats.appearances += 1;
-
-    // ポジション特訓の実戦出場ボーナス（+15%）
-    if (homeClub.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
-      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
-      if (p.positionTraining.progress >= 100) {
-        const tPos = p.positionTraining.targetPos;
-        const mode = p.positionTraining.mode || 'sub';
-        if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
-        if (!Array.isArray(p.majorPositions)) {
-          const pri = p.primaryPosition || p.preferredPosition || p.pos;
-          p.majorPositions = [pri];
-        }
-
-        if (mode === 'major') {
-          if (!p.majorPositions.includes(tPos)) p.majorPositions.push(tPos);
-          p.secondaryPositions = p.secondaryPositions.filter(pos => pos !== tPos);
-          addDailyLog(`【適性習得報告】実戦経験を経て、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしました。`);
-        } else {
-          if (!p.secondaryPositions.includes(tPos)) p.secondaryPositions.push(tPos);
-          addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} が実戦を通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして起用可能な水準に達しました。`);
-        }
-        p.positionTraining = null;
-      }
-    }
-  });
-  awayStarters.forEach(p => {
-    p.appearances += 1;
-    if (typeof p.assists !== 'number') p.assists = 0;
-    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-    if (typeof p.careerStats.assists !== 'number') p.careerStats.assists = 0;
-    p.careerStats.appearances += 1;
-
-    // ポジション特訓の実戦出場ボーナス（+15%）
-    if (awayClub.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
-      p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + 15);
-      if (p.positionTraining.progress >= 100) {
-        const tPos = p.positionTraining.targetPos;
-        const mode = p.positionTraining.mode || 'sub';
-        if (!Array.isArray(p.secondaryPositions)) p.secondaryPositions = [];
-        if (!Array.isArray(p.majorPositions)) {
-          const pri = p.primaryPosition || p.preferredPosition || p.pos;
-          p.majorPositions = [pri];
-        }
-
-        if (mode === 'major') {
-          if (!p.majorPositions.includes(tPos)) p.majorPositions.push(tPos);
-          p.secondaryPositions = p.secondaryPositions.filter(pos => pos !== tPos);
-          addDailyLog(`【適性習得報告】実戦経験を経て、#${p.squadNumber || '-'} ${p.name} が [${tPos}] を本職水準で完全にモノにしました。`);
-        } else {
-          if (!p.secondaryPositions.includes(tPos)) p.secondaryPositions.push(tPos);
-          addDailyLog(`【適性習得報告】#${p.squadNumber || '-'} ${p.name} が実戦を通じて [${tPos}] でのプレー感覚を掴み、サブポジションとして起用可能な水準に達しました。`);
-        }
-        p.positionTraining = null;
-      }
-    }
-  });
+  applyOfficialAppearancesAndTraining(homeClub, homeStarters, [], { recordOfficial: true, applyTraining: true });
+  applyOfficialAppearancesAndTraining(awayClub, awayStarters, [], { recordOfficial: true, applyTraining: true });
 
   const getScorer = (starters, rawTactic) => {
     const tactic = normalizeTacticKey(rawTactic);
@@ -5740,9 +5978,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const ratingRes = calculateAndAssignMatchRatings(
     homeClub, awayClub,
     homeStarters, awayStarters,
-    matchLiveState.homeSubs || [], matchLiveState.awaySubs || [],
+    [], [],
     homeScore, awayScore,
-    allMatchGoals
+    allMatchGoals,
+    { recordOfficial: true }
   );
 
   // 守備陣・GKのクリーンシート（CS: 完封数）加算
@@ -5775,6 +6014,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   }
 
   // 警告（イエロー）・退場（レッド）カードの記録シミュレーション
+  const cardsMap = {};
   const simulateCardsForSquad = (starters) => {
     const cardWeights = [45, 38, 14, 3];
     const numYellow = typeof avatarWeightedPick === 'function' ? avatarWeightedPick(cardWeights, Math.random) : randInt(0, 1);
@@ -5783,6 +6023,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     for (let c = 0; c < numYellow; c++) {
       const target = pool[randInt(0, pool.length - 1)];
       if (target) {
+        if (target.id) {
+          if (!cardsMap[target.id]) cardsMap[target.id] = { yellow: 0, red: 0 };
+          cardsMap[target.id].yellow += 1;
+        }
         target.yellowCards = (target.yellowCards || 0) + 1;
         if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
         target.careerStats.yellowCards = (target.careerStats.yellowCards || 0) + 1;
@@ -5791,6 +6035,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     if (Math.random() < 0.025) {
       const target = pool[randInt(0, pool.length - 1)];
       if (target) {
+        if (target.id) {
+          if (!cardsMap[target.id]) cardsMap[target.id] = { yellow: 0, red: 0 };
+          cardsMap[target.id].red += 1;
+        }
         target.redCards = (target.redCards || 0) + 1;
         if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
         target.careerStats.redCards = (target.careerStats.redCards || 0) + 1;
@@ -5799,6 +6047,22 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   };
   simulateCardsForSquad(homeStarters);
   simulateCardsForSquad(awayStarters);
+
+  const resolvedLeagueKey = compKey || (
+    (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs)
+      && gameState.competitions.championship.clubs.some(c => c && c.id === homeClub.id))
+      ? 'd2'
+      : 'd1'
+  );
+  recordCompetitionPlayerMatchStats(
+    resolvedLeagueKey,
+    homeClub, awayClub,
+    homeStarters, awayStarters,
+    [], [],
+    homeScore, awayScore,
+    homeScorers, awayScorers,
+    ratingRes, cardsMap
+  );
 
   const isHomeWin = homeScore > awayScore;
   const isDraw = homeScore === awayScore;
@@ -5809,8 +6073,8 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   updateManagerTrustAfterMatch(awayClub, isAwayWin, isDraw);
 
   // 試合出場に伴う疲労度（0〜100数値）蓄積（戦術・コーチング効果連動）
-  applyPostMatchPlayerFatigue(homeClub, homeStarters, matchLiveState.homeSubs || []);
-  applyPostMatchPlayerFatigue(awayClub, awayStarters, matchLiveState.awaySubs || []);
+  applyPostMatchPlayerFatigue(homeClub, homeStarters, []);
+  applyPostMatchPlayerFatigue(awayClub, awayStarters, []);
 
   return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
 }
@@ -6017,7 +6281,13 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;
     const awaySupportersDelta = awayClub.supporters - prevAwaySupporters;
 
-    const { homeScorers, awayScorers } = processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore);
+    const leagueCompKey = isPlayerInSecondDivision() ? 'd2' : 'd1';
+    const { homeScorers, awayScorers, momPlayer, momClub, momRating } = processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore, leagueCompKey);
+    match.homeScorers = homeScorers;
+    match.awayScorers = awayScorers;
+    match.momPlayer = momPlayer;
+    match.momClub = momClub;
+    match.momRating = momRating;
 
     const matchObj = {
       week: weekIndex + 1,
@@ -6025,6 +6295,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
       awayClub,
       homeScore,
       awayScore,
+      momPlayer,
+      momClub,
+      momRating,
       homePossession,
       awayPossession,
       homeShots,
@@ -6148,41 +6421,66 @@ function clearMatchLiveTimers() {
  */
 function ensureClubStartersForMatch(club) {
   if (!club) return [];
-  if (club.players && club.players.length >= 11) {
-    if (typeof ensureValidSquadAndStarters === 'function' && club.isPlayer) {
-      ensureValidSquadAndStarters(club);
+  const managedRef = (club.id && typeof getClubById === 'function') ? getClubById(club.id) : null;
+  const targetClub = (managedRef && Array.isArray(managedRef.players) && managedRef.players.length >= 11) ? managedRef : club;
+
+  if (targetClub.players && targetClub.players.length >= 11) {
+    if (typeof ensureValidSquadAndStarters === 'function' && targetClub.isPlayer) {
+      ensureValidSquadAndStarters(targetClub);
     }
     // スタメン11名を厳格に抽出
-    const starters = club.players.filter(p => p.isStarter && !p.isRetired);
+    const starters = targetClub.players.filter(p => p.isStarter && !p.isRetired);
     if (starters.length === 11) return starters;
     if (starters.length > 0 && starters.length <= 11) {
-      const remaining = club.players.filter(p => !starters.some(s => s.id === p.id) && !p.isRetired);
+      const remaining = targetClub.players.filter(p => !starters.some(s => s.id === p.id) && !p.isRetired);
       return starters.concat(remaining.slice(0, 11 - starters.length));
     }
-    return club.players.slice(0, 11);
+    return targetClub.players.slice(0, 11);
   }
-  if (!club.players || club.players.length === 0) {
-    const baseP = club.basePower || club.ovr || 74;
+  if (!targetClub.players || targetClub.players.length === 0) {
+    const baseP = targetClub.basePower || targetClub.ovr || 74;
     const positions = ['GK', 'LB', 'CB', 'CB', 'RB', 'DM', 'CM', 'AM', 'LW', 'CF', 'RW'];
-    const cCode = getClubShortCode(club);
-    club.players = positions.map((pos, idx) => ({
-      id: `${club.id}_p${idx + 1}`,
-      name: `${cCode} #${idx + 1}`,
-      squadNumber: idx + 1,
-      pos: pos,
-      assignedPos: pos,
-      atk: Math.round(baseP + (Math.random() * 6 - 3)),
-      def: Math.round(baseP + (Math.random() * 6 - 3)),
-      sta: 100,
-      isStarter: true,
-      slotIndex: idx,
-      appearances: 0,
-      goals: 0,
-      assists: 0,
-      lastMatchRating: 6.5
-    }));
+    const euroFirsts = ['L.', 'M.', 'J.', 'A.', 'F.', 'R.', 'D.', 'K.', 'S.', 'N.', 'V.', 'E.'];
+    const euroLasts = [
+      'モレノ', 'ロッシ', 'シュミット', 'デュボワ', 'ガルシア', 'コンテ', 'ベルガー', 'ロペス',
+      'コスタ', 'ミュラー', 'ローラン', 'ナバロ', 'フェラーリ', 'ベッカー', 'マルタン', 'シルバ',
+      'リッツォ', 'クラウス', 'ルソー', 'オルテガ', 'ビアンキ', 'ヴェーバー', 'ペレス', 'ブラン'
+    ];
+    const seedBase = String(targetClub.id || targetClub.name || 'club').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 7);
+    const affiliatedEuro = Array.isArray(gameState.euroTransferList)
+      ? gameState.euroTransferList.filter(ep => ep && (ep.euroClubId === targetClub.id || ep.clubId === targetClub.id))
+      : [];
+    const usedEuroIds = new Set();
+
+    targetClub.players = positions.map((pos, idx) => {
+      const matchEp = affiliatedEuro.find(ep => !usedEuroIds.has(ep.id) && (ep.pos === pos || POS_ROLE_GROUP[ep.pos] === POS_ROLE_GROUP[pos]));
+      if (matchEp) {
+        usedEuroIds.add(matchEp.id);
+        if (!matchEp.assignedPos) matchEp.assignedPos = pos;
+        return matchEp;
+      }
+      const fName = euroFirsts[(seedBase + idx * 3) % euroFirsts.length];
+      const lName = euroLasts[(seedBase + idx * 5) % euroLasts.length];
+      const offset = ((seedBase + idx * 7) % 7) - 3;
+      return {
+        id: `${targetClub.id}_p${idx + 1}`,
+        name: `${fName} ${lName}`,
+        squadNumber: idx + 1,
+        pos: pos,
+        assignedPos: pos,
+        atk: Math.round(baseP + offset),
+        def: Math.round(baseP - offset),
+        sta: 90,
+        isStarter: true,
+        slotIndex: idx,
+        appearances: 0,
+        goals: 0,
+        assists: 0,
+        lastMatchRating: 6.7
+      };
+    });
   }
-  return club.players.slice(0, 11);
+  return targetClub.players.slice(0, 11);
 }
 
 /**
@@ -6754,8 +7052,11 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
       const numRat = Number(rat);
 
+      const explicitMomId = (md && md.momPlayer && md.momPlayer.id) ? md.momPlayer.id : null;
+      const isMomPlayer = explicitMomId ? (p.id === explicitMomId) : Boolean(p.isMOM);
+
       let ratClass = 'summary-rat-mid';
-      if (p.isMOM || numRat >= 8.2) ratClass = 'summary-rat-mom';
+      if (isMomPlayer || numRat >= 8.2) ratClass = 'summary-rat-mom';
       else if (numRat >= 7.0) ratClass = 'summary-rat-high';
       else if (numRat < 6.0) ratClass = 'summary-rat-low';
 
@@ -6766,11 +7067,11 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">⚽${goalsCount > 1 ? goalsCount : ''}</span>`;
       if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">🅰️${assistsCount > 1 ? assistsCount : ''}</span>`;
 
-      const momBadge = p.isMOM ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
+      const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
       const subBadge = isSub ? '<span class="rating-sub-tag">SUB</span>' : '';
 
       return `
-        <div class="summary-rating-row ${p.isMOM ? 'is-mom-row' : ''}">
+        <div class="summary-rating-row ${isMomPlayer ? 'is-mom-row' : ''}">
           <div class="rating-row-player">
             <span class="rating-pos-tag pos-${pos}">${pos}</span>
             <span class="rating-squad-num mono">#${p.squadNumber || '-'}</span>
@@ -6842,18 +7143,22 @@ function buildMatchSummaryHtml(md) {
     ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
     : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
 
-  // 枠内シュート数・xG・パス数の取得または算出
-  const homeOnTarget = typeof md.homeOnTarget === 'number' ? md.homeOnTarget : Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
-  const awayOnTarget = typeof md.awayOnTarget === 'number' ? md.awayOnTarget : Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
-  const homeXg = typeof md.homeXg === 'number' ? md.homeXg : Number((homeScore * 0.72 + homeShots * 0.08).toFixed(2));
-  const awayXg = typeof md.awayXg === 'number' ? md.awayXg : Number((awayScore * 0.72 + awayShots * 0.08).toFixed(2));
+  // 枠内シュート数・xG・パス数の取得または算出（必ず スコア <= 枠内シュート <= 総シュート数 を保証）
+  const safeHomeShots = Math.max(homeScore, typeof homeShots === 'number' ? homeShots : homeScore);
+  const safeAwayShots = Math.max(awayScore, typeof awayShots === 'number' ? awayShots : awayScore);
+  const rawHomeOnTarget = typeof md.homeOnTarget === 'number' ? md.homeOnTarget : Math.round(safeHomeShots * 0.48);
+  const rawAwayOnTarget = typeof md.awayOnTarget === 'number' ? md.awayOnTarget : Math.round(safeAwayShots * 0.48);
+  const homeOnTarget = Math.max(homeScore, Math.min(safeHomeShots, rawHomeOnTarget));
+  const awayOnTarget = Math.max(awayScore, Math.min(safeAwayShots, rawAwayOnTarget));
+  const homeXg = typeof md.homeXg === 'number' ? md.homeXg : Number((homeScore * 0.72 + safeHomeShots * 0.08).toFixed(2));
+  const awayXg = typeof md.awayXg === 'number' ? md.awayXg : Number((awayScore * 0.72 + safeAwayShots * 0.08).toFixed(2));
   const homePasses = typeof md.homePasses === 'number' ? md.homePasses : Math.round(840 * (homePossession / 100));
   const awayPasses = typeof md.awayPasses === 'number' ? md.awayPasses : Math.round(840 * (awayPossession / 100));
   const homePassAccuracy = typeof md.homePassAccuracy === 'number' ? md.homePassAccuracy : 82;
   const awayPassAccuracy = typeof md.awayPassAccuracy === 'number' ? md.awayPassAccuracy : 78;
 
-  const totalShots = Math.max(1, homeShots + awayShots);
-  const homeShotsPct = Math.round((homeShots / totalShots) * 100);
+  const totalShots = Math.max(1, safeHomeShots + safeAwayShots);
+  const homeShotsPct = Math.round((safeHomeShots / totalShots) * 100);
   const awayShotsPct = 100 - homeShotsPct;
 
   const totalXg = Math.max(0.1, homeXg + awayXg);
@@ -6886,20 +7191,68 @@ function buildMatchSummaryHtml(md) {
   const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';
   const playerClub = getPlayerClub() || (isPlayerHome ? homeClub : awayClub);
 
-  // MOM（最優秀選手）選出
+  // MOM（最優秀選手）選出（全選手評価点一覧の王冠と完全同期）
   let momPlayer = md.momPlayer;
   let momClub = md.momClub || homeClub;
-  let momRating = md.momRating || '7.5';
-  if (!momPlayer && homeClub.players && awayClub.players) {
-    const allStarters = homeClub.players.slice(0, 11).map(p => ({ p, club: homeClub }))
-      .concat(awayClub.players.slice(0, 11).map(p => ({ p, club: awayClub })));
-    allStarters.sort((a, b) => (b.p.lastMatchRating || 6.5) - (a.p.lastMatchRating || 6.5));
-    const momEntry = allStarters[0];
-    if (momEntry) {
-      momPlayer = momEntry.p;
-      momClub = momEntry.club;
-      momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
+  let momRating = md.momRating || null;
+
+  if (momPlayer && momPlayer.id) {
+    const fullHome = (homeClub && Array.isArray(homeClub.players)) ? homeClub.players.find(p => p.id === momPlayer.id) : null;
+    const fullAway = (awayClub && Array.isArray(awayClub.players)) ? awayClub.players.find(p => p.id === momPlayer.id) : null;
+    if (fullHome) {
+      momPlayer = fullHome;
+      momClub = homeClub;
+    } else if (fullAway) {
+      momPlayer = fullAway;
+      momClub = awayClub;
     }
+  }
+
+  if (!momPlayer && homeClub && awayClub) {
+    const hStarters = ensureClubStartersForMatch(homeClub);
+    const aStarters = ensureClubStartersForMatch(awayClub);
+    const hSubs = (typeof matchLiveState !== 'undefined' && Array.isArray(matchLiveState.homeSubs)) ? matchLiveState.homeSubs : [];
+    const aSubs = (typeof matchLiveState !== 'undefined' && Array.isArray(matchLiveState.awaySubs)) ? matchLiveState.awaySubs : [];
+    const isHomeWin = homeScore > awayScore;
+    const isAwayWin = awayScore > homeScore;
+    const allGoals = homeScorers.concat(awayScorers);
+
+    const allPlayed = [
+      ...hStarters.map(p => ({ p, club: homeClub, isWinner: isHomeWin })),
+      ...aStarters.map(p => ({ p, club: awayClub, isWinner: isAwayWin })),
+      ...hSubs.map(p => ({ p, club: homeClub, isWinner: isHomeWin })),
+      ...aSubs.map(p => ({ p, club: awayClub, isWinner: isAwayWin }))
+    ];
+
+    const flaggedMom = allPlayed.find(x => x.p && x.p.isMOM);
+    if (flaggedMom) {
+      momPlayer = flaggedMom.p;
+      momClub = flaggedMom.club;
+    } else if (allPlayed.length > 0) {
+      allPlayed.sort((a, b) => {
+        const ratDiff = (b.p.lastMatchRating || 6.7) - (a.p.lastMatchRating || 6.7);
+        if (Math.abs(ratDiff) > 0.01) return ratDiff;
+        if (a.isWinner !== b.isWinner) return b.isWinner ? 1 : -1;
+        const gA = allGoals.filter(s => s && s.scorer && s.scorer.id === a.p.id).length;
+        const gB = allGoals.filter(s => s && s.scorer && s.scorer.id === b.p.id).length;
+        if (gB !== gA) return gB - gA;
+        return (b.p.goals || 0) - (a.p.goals || 0);
+      });
+      momPlayer = allPlayed[0].p;
+      momClub = allPlayed[0].club;
+    }
+    if (momPlayer) {
+      md.momPlayer = momPlayer;
+      md.momClub = momClub;
+      momRating = (typeof momPlayer.lastMatchRating === 'number') ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
+      md.momRating = momRating;
+    }
+  }
+  if (!momRating) {
+    momRating = (momPlayer && typeof momPlayer.lastMatchRating === 'number')
+      ? momPlayer.lastMatchRating.toFixed(1)
+      : '7.5';
+    md.momRating = momRating;
   }
 
   const ratingsHtml = buildSummaryPlayerRatingsHtml(homeClub, awayClub, md);
@@ -6966,9 +7319,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span style="color:#2ecc71;">${homeShots}本 (${homeOnTarget})</span>
+                  <span style="color:#2ecc71;">${safeHomeShots}本 (${homeOnTarget})</span>
                   <span style="color:var(--text-muted);font-size:9.5px;">シュート / 枠内 (SHOTS / ON TARGET)</span>
-                  <span style="color:#60a5fa;">${awayShots}本 (${awayOnTarget})</span>
+                  <span style="color:#60a5fa;">${safeAwayShots}本 (${awayOnTarget})</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
@@ -7069,74 +7422,9 @@ function transitionToMatchSummary() {
   if (!summaryBody || !matchLiveState.matchData) return;
 
   const md = matchLiveState.matchData;
-  const { homeClub, awayClub, homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots, isPlayerHome, matchIncome, awayBroadcastingFee, playerSupportersDelta } = md;
-  const homeScorers = matchLiveState.homeScorers || [];
-  const awayScorers = matchLiveState.awayScorers || [];
-
-  const myScore = isPlayerHome ? homeScore : awayScore;
-  const oppScore = isPlayerHome ? awayScore : homeScore;
-  const resType = myScore > oppScore ? 'win' : (myScore < oppScore ? 'lose' : 'draw');
-  let resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
-  if (md.isKnockout) {
-    const userWon = Boolean(md.userWon);
-    const pkInfo = (md.pkHome != null && md.pkAway != null) ? ` (PK ${md.pkHome}-${md.pkAway})` : '';
-    resLabel = userWon ? `WIN! 勝利・次進出${pkInfo}` : `LOSE 惜敗・敗退${pkInfo}`;
-  } else if (md.isEuroLeague) {
-    resLabel = myScore > oppScore ? 'WIN! 勝利 (+3pt)' : (myScore < oppScore ? 'LOSE 敗戦 (+0pt)' : 'DRAW 引分 (+1pt)');
+  if (!md.highlights && Array.isArray(matchLiveState.allHighlights) && matchLiveState.allHighlights.length > 0) {
+    md.highlights = matchLiveState.allHighlights.slice(0, 3);
   }
-
-  const homeScorersHtml = homeScorers.length > 0
-    ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
-    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
-
-  const awayScorersHtml = awayScorers.length > 0
-    ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer.name}</div>`).join('')
-    : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
-
-  // 枠内シュート数・xG・パス数の取得または算出
-  const homeOnTarget = typeof md.homeOnTarget === 'number' ? md.homeOnTarget : Math.max(homeScore, Math.min(homeShots, Math.round(homeShots * 0.48)));
-  const awayOnTarget = typeof md.awayOnTarget === 'number' ? md.awayOnTarget : Math.max(awayScore, Math.min(awayShots, Math.round(awayShots * 0.48)));
-  const homeXg = typeof md.homeXg === 'number' ? md.homeXg : Number((homeScore * 0.72 + homeShots * 0.08).toFixed(2));
-  const awayXg = typeof md.awayXg === 'number' ? md.awayXg : Number((awayScore * 0.72 + awayShots * 0.08).toFixed(2));
-  const homePasses = typeof md.homePasses === 'number' ? md.homePasses : Math.round(840 * (homePossession / 100));
-  const awayPasses = typeof md.awayPasses === 'number' ? md.awayPasses : Math.round(840 * (awayPossession / 100));
-  const homePassAccuracy = typeof md.homePassAccuracy === 'number' ? md.homePassAccuracy : 82;
-  const awayPassAccuracy = typeof md.awayPassAccuracy === 'number' ? md.awayPassAccuracy : 78;
-
-  const totalShots = Math.max(1, homeShots + awayShots);
-  const homeShotsPct = Math.round((homeShots / totalShots) * 100);
-  const awayShotsPct = 100 - homeShotsPct;
-
-  const totalXg = Math.max(0.1, homeXg + awayXg);
-  const homeXgPct = Math.round((homeXg / totalXg) * 100);
-  const awayXgPct = 100 - homeXgPct;
-
-  const totalPasses = Math.max(1, homePasses + awayPasses);
-  const homePassesPct = Math.round((homePasses / totalPasses) * 100);
-  const awayPassesPct = 100 - homePassesPct;
-
-  // ハイライト一覧（最大3件に絞りスクロールなしで収容）
-  const highlights = matchLiveState.allHighlights.slice(0, 3);
-  const highlightsHtml = highlights.length > 0
-    ? highlights.map(h => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:26px;">[${h.minute}']</span><span>${h.text}</span></div>`).join('')
-    : `<div class="summary-highlight-item" style="color:var(--text-muted);">両チーム堅い守備で決定機を許さずタイムアップ。</div>`;
-
-  // GM収支＆サポーター増減
-  const revenueAmount = isPlayerHome ? matchIncome : (awayBroadcastingFee || 1600);
-  const revenueTypeLabel = isPlayerHome ? '入場料・グッズ' : '放映権分配金';
-  const supDelta = typeof playerSupportersDelta === 'number' ? playerSupportersDelta : 0;
-  const supSign = supDelta >= 0 ? '+' : '';
-  const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';
-  const playerClub = isPlayerHome ? homeClub : awayClub;
-
-  // MOM（最優秀選手）選出
-  const allStarters = homeClub.players.slice(0, 11).map(p => ({ p, club: homeClub }))
-    .concat(awayClub.players.slice(0, 11).map(p => ({ p, club: awayClub })));
-  allStarters.sort((a, b) => (b.p.lastMatchRating || 6.5) - (a.p.lastMatchRating || 6.5));
-  const momEntry = allStarters[0];
-  const momPlayer = momEntry ? momEntry.p : null;
-  const momClub = momEntry ? momEntry.club : homeClub;
-  const momRating = momPlayer && momPlayer.lastMatchRating ? momPlayer.lastMatchRating.toFixed(1) : '7.5';
 
   summaryBody.innerHTML = buildMatchSummaryHtml(md);
 
@@ -11209,6 +11497,7 @@ function startNextSeason() {
   gameState.isSeasonOver = false;
   gameState.lastWeekResults = [];
   gameState.matchHistory = [];
+  gameState.competitionStats = {};
   const initialDay = getCurrentCalendarDay();
   if (initialDay) {
     gameState.calendarViewYear = initialDay.year;
@@ -11260,6 +11549,10 @@ function startNextSeason() {
       p.goals = 0;
       p.assists = 0;
       p.totalRating = 0;
+      p.cleanSheets = 0;
+      p.momCount = 0;
+      p.yellowCards = 0;
+      p.redCards = 0;
       p.injuryWeeks = 0;
       p.injuryDays = 0;
       p.lastDiff = null;
@@ -12198,11 +12491,120 @@ const LEAGUE_STATS_CATEGORIES = {
 };
 
 /**
- * リーグ個人スタッツ（選択されたカテゴリー）の描画
+ * 個人スタッツの選択中大会キーと表示ラベルを解決し、大会サブナビUIを描画する
  */
+function resolveStatsCompetitionAndRenderNav() {
+  const compGroup = gameState.statsCompView || 'league';
+  const segNav = document.getElementById('stats-comp-segment-nav');
+  if (segNav) {
+    segNav.querySelectorAll('.comp-tab-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.statsComp === compGroup);
+    });
+  }
+
+  const subnavRow = document.getElementById('stats-comp-subnav-row');
+  const playerClub = getPlayerClub();
+  let compKey = 'd1';
+  let compShortLabel = 'ENG-D1';
+  let compFullLabel = 'イングランド・ディビジョン1';
+
+  if (compGroup === 'league') {
+    const defaultDiv = isPlayerInSecondDivision() ? 'd2' : 'd1';
+    const curDiv = gameState.statsLeagueDivision || defaultDiv;
+    compKey = curDiv;
+    compShortLabel = curDiv === 'd2' ? 'ENG-D2' : 'ENG-D1';
+    compFullLabel = curDiv === 'd2' ? 'イングランド・セカンドディビジョン' : 'イングランド・ディビジョン1';
+    if (subnavRow) {
+      subnavRow.classList.remove('hidden');
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">ディビジョン:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curDiv === 'd1' ? 'active' : ''}" data-stats-div="d1">ファースト (ENG-D1)</button>
+            <button type="button" class="comp-sub-btn mono ${curDiv === 'd2' ? 'active' : ''}" data-stats-div="d2">セカンド (ENG-D2)</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('[data-stats-div]').forEach(b => {
+        b.onclick = () => {
+          gameState.statsLeagueDivision = b.dataset.statsDiv;
+          renderLeagueStats(currentLeagueStatsCategory);
+        };
+      });
+    }
+  } else if (compGroup === 'domestic') {
+    const curDom = gameState.statsDomesticCup || 'leagueCup';
+    compKey = curDom;
+    compShortLabel = curDom === 'nationalCup' ? 'N-CUP' : 'L-CUP';
+    compFullLabel = curDom === 'nationalCup' ? 'ナショナル・カップ (N-CUP)' : 'リーグ・トロフィー (L-CUP)';
+    if (subnavRow) {
+      subnavRow.classList.remove('hidden');
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curDom === 'leagueCup' ? 'active' : ''}" data-stats-dom="leagueCup">リーグ・トロフィー (L-CUP)</button>
+            <button type="button" class="comp-sub-btn mono ${curDom === 'nationalCup' ? 'active' : ''}" data-stats-dom="nationalCup">ナショナル・カップ (N-CUP)</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('[data-stats-dom]').forEach(b => {
+        b.onclick = () => {
+          gameState.statsDomesticCup = b.dataset.statsDom;
+          renderLeagueStats(currentLeagueStatsCategory);
+        };
+      });
+    }
+  } else if (compGroup === 'europe') {
+    if (!gameState.statsEuroCup && playerClub && gameState.competitions) {
+      for (const ek of ['championsCup', 'europaCup', 'conferenceCup']) {
+        const ec = gameState.competitions[ek];
+        if (ec && Array.isArray(ec.participants) && ec.participants.some(c => c.id === playerClub.id)) {
+          gameState.statsEuroCup = ek;
+          break;
+        }
+      }
+    }
+    const curEuro = gameState.statsEuroCup || 'championsCup';
+    compKey = curEuro;
+    compShortLabel = curEuro === 'europaCup' ? 'EPC' : (curEuro === 'conferenceCup' ? 'ECS' : 'ECT');
+    compFullLabel = curEuro === 'europaCup'
+      ? 'ユーロ・プレステージ・カップ (EPC)'
+      : (curEuro === 'conferenceCup' ? 'ユーロ・カンファレンス・シールド (ECS)' : 'ユーロ・チャンピオンズ・トロフィー (ECT)');
+    if (subnavRow) {
+      subnavRow.classList.remove('hidden');
+      subnavRow.innerHTML = `
+        <div class="comp-subnav-group">
+          <span class="comp-subnav-label mono">欧州大会:</span>
+          <div class="comp-subnav-btns">
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'championsCup' ? 'active' : ''}" data-stats-euro="championsCup">ECT</button>
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'europaCup' ? 'active' : ''}" data-stats-euro="europaCup">EPC</button>
+            <button type="button" class="comp-sub-btn mono ${curEuro === 'conferenceCup' ? 'active' : ''}" data-stats-euro="conferenceCup">ECS</button>
+          </div>
+        </div>
+      `;
+      subnavRow.querySelectorAll('[data-stats-euro]').forEach(b => {
+        b.onclick = () => {
+          gameState.statsEuroCup = b.dataset.statsEuro;
+          renderLeagueStats(currentLeagueStatsCategory);
+        };
+      });
+    }
+  } else {
+    compKey = 'preseasonCup';
+    compShortLabel = 'WCT';
+    compFullLabel = 'ワールド・チャレンジ・トロフィー (WCT / プレシーズン)';
+    if (subnavRow) {
+      subnavRow.classList.add('hidden');
+      subnavRow.innerHTML = '';
+    }
+  }
+
+  return { compKey, compGroup, compShortLabel, compFullLabel };
+}
 function renderLeagueStats(catKey = 'goals') {
   currentLeagueStatsCategory = catKey;
   const config = LEAGUE_STATS_CATEGORIES[catKey] || LEAGUE_STATS_CATEGORIES.goals;
+  const { compKey, compShortLabel, compFullLabel } = resolveStatsCompetitionAndRenderNav();
 
   const titleEl = document.getElementById('stats-panel-title');
   const descEl = document.getElementById('stats-panel-desc');
@@ -12210,11 +12612,11 @@ function renderLeagueStats(catKey = 'goals') {
   const theadEl = document.getElementById('stats-ranking-thead');
   const tbody = document.getElementById('top-scorers-tbody');
 
-  if (titleEl) titleEl.textContent = config.title;
-  if (descEl) descEl.textContent = config.desc;
-  if (subtitleEl) subtitleEl.textContent = 'TOP 10';
+  const baseTitleSuffix = config.title.replace(/^リーグ/, '');
+  if (titleEl) titleEl.textContent = `${compShortLabel} ${baseTitleSuffix}`;
+  if (descEl) descEl.textContent = `${compFullLabel} ｜ ${config.desc.replace(/^イングランド・ディビジョン1\s*/, '')}`;
+  if (subtitleEl) subtitleEl.textContent = `${compShortLabel} TOP 10`;
 
-  // ナビゲーションバーのactiveクラス切り替え
   const navBar = document.getElementById('stats-category-nav-bar');
   if (navBar) {
     navBar.querySelectorAll('.stats-cat-btn').forEach(btn => {
@@ -12222,7 +12624,6 @@ function renderLeagueStats(catKey = 'goals') {
     });
   }
 
-  // テーブルヘッダー列の更新
   if (theadEl) {
     theadEl.innerHTML = `
       <tr>
@@ -12239,24 +12640,67 @@ function renderLeagueStats(catKey = 'goals') {
 
   if (!tbody) return;
 
+  const bucket = (gameState.competitionStats && gameState.competitionStats[compKey]) ? gameState.competitionStats[compKey] : {};
+  const bucketEntries = Object.values(bucket);
   const allPlayers = [];
-  for (const club of gameState.clubs) {
-    for (const p of club.players) {
-      if (p.isRetired) continue;
-      if (config.filter && !config.filter(p)) continue;
 
-      const apps = p.appearances || 0;
-      const avgRating = apps > 0 ? (p.totalRating / apps).toFixed(1) : '-';
-      const score = config.getScore(p, apps);
+  if (bucketEntries.length > 0) {
+    const maxAppsInComp = bucketEntries.reduce((mx, e) => Math.max(mx, e.apps || 0), 0);
+    const minAppsForRating = maxAppsInComp >= 2 ? 2 : 1;
+
+    for (const entry of bucketEntries) {
+      if (!entry || !entry.id) continue;
+      const ctx = findPlayerWithContextById(entry.id);
+      const baseP = ctx ? ctx.player : null;
+      if (baseP && baseP.isRetired) continue;
+
+      const compViewPlayer = {
+        ...(baseP || {}),
+        id: entry.id,
+        name: (baseP && baseP.name) || entry.name || '選手',
+        pos: (baseP && baseP.pos) || entry.pos || 'MF',
+        primaryPosition: (baseP && baseP.primaryPosition) || entry.pos || 'MF',
+        squadNumber: (baseP && baseP.squadNumber) || entry.squadNumber || 10,
+        appearances: entry.apps || 0,
+        goals: entry.goals || 0,
+        assists: entry.assists || 0,
+        totalRating: entry.totalRating || 0,
+        cleanSheets: entry.cleanSheets || 0,
+        momCount: entry.momCount || 0,
+        yellowCards: entry.yellowCards || 0,
+        redCards: entry.redCards || 0,
+        fatigue: baseP ? baseP.fatigue : 0
+      };
+
+      if (config.filter && !config.filter(compViewPlayer)) continue;
+      const apps = compViewPlayer.appearances;
+      const avgRating = apps > 0 ? (compViewPlayer.totalRating / apps).toFixed(1) : '-';
+      const score = catKey === 'ratings'
+        ? (apps >= minAppsForRating ? (compViewPlayer.totalRating / apps) : 0)
+        : config.getScore(compViewPlayer, apps);
 
       allPlayers.push({
-        player: p,
-        clubName: club.name,
-        isPlayerClub: club.isPlayer,
+        player: compViewPlayer,
+        clubName: (ctx && !ctx.isMarket && ctx.clubName) ? ctx.clubName : (entry.clubName || '所属クラブ'),
+        isPlayerClub: Boolean((ctx && ctx.isPlayerClub) || entry.isPlayerClub),
         apps,
         avgRating,
         score
       });
+    }
+  } else if (compKey === 'd1' || compKey === 'd2') {
+    const targetClubs = compKey === 'd2'
+      ? ((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || [])
+      : (gameState.clubs || []);
+    if (targetClubs.some(c => c && (c.played || 0) > 0)) {
+      for (const club of targetClubs) {
+        for (const p of (club.players || [])) {
+          if (p.isRetired || (config.filter && !config.filter(p))) continue;
+          const apps = p.appearances || 0;
+          const avgRating = apps > 0 ? (p.totalRating / apps).toFixed(1) : '-';
+          allPlayers.push({ player: p, clubName: club.name, isPlayerClub: club.isPlayer, apps, avgRating, score: config.getScore(p, apps) });
+        }
+      }
     }
   }
 
@@ -12272,9 +12716,10 @@ function renderLeagueStats(catKey = 'goals') {
   const hasData = top10.length > 0 && top10[0].score > 0;
 
   if (!hasData) {
+    const matchKind = compKey === 'preseasonCup' ? 'プレシーズン親善杯 (WCT)' : `${compFullLabel}の試合`;
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty-log-message">まだ${config.mainColHeader}の記録がありません。公式戦が進行するとランキングがリアルタイム集計されます。</td>
+        <td colspan="7" class="empty-log-message">まだ${compShortLabel}における${config.mainColHeader}の記録がありません。${matchKind}が進行するとリアルタイム集計されます。</td>
       </tr>
     `;
     return;
@@ -12883,7 +13328,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-pos">${rp.pos}</span>
                 <span class="pitch-node-ovr">OVR ${ovrVal}</span>
               </div>
-              <div class="pitch-node-name-btn">
+              <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text">#${rp.squadNumber || '-'} ${rp.name}</span>
               </div>
               <div class="pitch-node-meta">
@@ -14423,6 +14868,56 @@ function findPlayerWithContextById(playerId) {
       isMarket: false,
       isPlayerClub: true
     };
+  }
+  if (gameState.competitionStats && typeof gameState.competitionStats === 'object') {
+    for (const bucket of Object.values(gameState.competitionStats)) {
+      if (bucket && bucket[playerId]) {
+        const entry = bucket[playerId];
+        const euroDef = (typeof findEuropeanClubDefinitionById === 'function' && entry.clubId)
+          ? findEuropeanClubDefinitionById(entry.clubId)
+          : null;
+        const preClub = (gameState.competitions && gameState.competitions.preseasonCup && Array.isArray(gameState.competitions.preseasonCup.participants))
+          ? gameState.competitions.preseasonCup.participants.find(c => c && c.id === entry.clubId)
+          : null;
+        const refDef = euroDef || preClub;
+        const basePow = (refDef && refDef.basePower) || 78;
+        const vClub = refDef
+          ? { ...refDef, shortCode: refDef.shortName || refDef.shortCode || 'EUR', isPlayer: false, isEuroVirtual: true }
+          : { id: entry.clubId || 'ext_club', name: entry.clubName || '海外クラブ', shortName: 'EXT', shortCode: 'EXT', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isPlayer: false, isEuroVirtual: true };
+        const vPlayer = {
+          id: entry.id,
+          name: entry.name,
+          pos: entry.pos || 'MF',
+          primaryPosition: entry.pos || 'MF',
+          secondaryPositions: [],
+          squadNumber: entry.squadNumber || 10,
+          age: 25,
+          atk: basePow,
+          def: basePow - 4,
+          sta: 85,
+          salary: 3500,
+          wage: 68,
+          contractYears: 3,
+          appearances: entry.apps || 0,
+          goals: entry.goals || 0,
+          assists: entry.assists || 0,
+          totalRating: entry.totalRating || 0,
+          cleanSheets: entry.cleanSheets || 0,
+          momCount: entry.momCount || 0,
+          yellowCards: entry.yellowCards || 0,
+          redCards: entry.redCards || 0,
+          fatigue: 0
+        };
+        return {
+          player: vPlayer,
+          club: vClub,
+          clubName: vClub.name,
+          isMarket: false,
+          isPlayerClub: false,
+          isYouth: false
+        };
+      }
+    }
   }
   return null;
 }
@@ -16021,6 +16516,11 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.marketSubtab = 'market';
   gameState.lastWeekResults = [];
   gameState.matchHistory = [];
+  gameState.competitionStats = {};
+  gameState.statsCompView = 'league';
+  gameState.statsLeagueDivision = null;
+  gameState.statsDomesticCup = 'leagueCup';
+  gameState.statsEuroCup = null;
   const initialDay = getCurrentCalendarDay();
   if (initialDay) {
     gameState.calendarViewYear = initialDay.year;
@@ -16371,7 +16871,7 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
-    benchListEl = document.getElementById('pitch-bench-list');
+    benchListEl = (benchItem && benchItem.closest('.pitch-bench-list')) || document.getElementById('pitch-bench-list');
     if (dragSource.type === 'bench' && benchListEl) {
       isBenchScrolling = false;
       benchScrollStartX = e.clientX;
@@ -17004,10 +17504,10 @@ function initGame() {
     });
   }
 
-  // 控え選手リスト：クリック時は詳細プロフィール表示（交代はドラッグ＆ドロップのみ）
-  const pitchBenchList = document.getElementById('pitch-bench-list');
-  if (pitchBenchList) {
-    pitchBenchList.addEventListener('click', (e) => {
+  // 控え選手リスト ＆ ベンチ外選手リスト：クリック時は詳細プロフィール表示（交代はドラッグ＆ドロップのみ）
+  const bindBenchOrReservesProfileClick = (listEl) => {
+    if (!listEl) return;
+    listEl.addEventListener('click', (e) => {
       if (justFinishedDragging) {
         e.stopPropagation();
         return;
@@ -17018,7 +17518,9 @@ function initGame() {
         openPlayerProfileModal(itemEl.dataset.playerId);
       }
     });
-  }
+  };
+  bindBenchOrReservesProfileClick(document.getElementById('pitch-bench-list'));
+  bindBenchOrReservesProfileClick(document.getElementById('pitch-reserves-list'));
 
   document.getElementById('tactics-btn-group').addEventListener('click', (e) => {
     const infoBtn = e.target.closest('[data-tactic-info]');
@@ -17427,6 +17929,17 @@ function initGame() {
         e.stopPropagation();
         openPlayerProfileModal(profileBtn.dataset.profileId);
       }
+    });
+  }
+
+  // 個人スタッツ（大会切り替え：リーグ / 国内カップ / 欧州コンペ / プレシーズン）
+  const statsCompNav = document.getElementById('stats-comp-segment-nav');
+  if (statsCompNav) {
+    statsCompNav.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-stats-comp]');
+      if (!btn || !btn.dataset.statsComp) return;
+      gameState.statsCompView = btn.dataset.statsComp;
+      renderLeagueStats(currentLeagueStatsCategory);
     });
   }
 
@@ -18010,6 +18523,11 @@ function saveGameToStorage(force = false) {
         selectedDomesticCup: gameState.selectedDomesticCup || 'leagueCup',
         selectedEuropeanCup: gameState.selectedEuropeanCup || 'championsCup',
         euroViewMode: gameState.euroViewMode || 'standings',
+        competitionStats: gameState.competitionStats || {},
+        statsCompView: gameState.statsCompView || 'league',
+        statsLeagueDivision: gameState.statsLeagueDivision || null,
+        statsDomesticCup: gameState.statsDomesticCup || 'leagueCup',
+        statsEuroCup: gameState.statsEuroCup || null,
         clubs: gameState.clubs,
         schedule: gameState.schedule,
         calendar: gameState.calendar,
@@ -18055,6 +18573,8 @@ function saveGameToStorage(force = false) {
       ...r,
       homeClub: r.homeClub ? { id: r.homeClub.id, name: r.homeClub.name, shortCode: r.homeClub.shortCode, isPlayer: r.homeClub.isPlayer, primaryColor: r.homeClub.primaryColor, secondaryColor: r.homeClub.secondaryColor, emblem: r.homeClub.emblem } : null,
       awayClub: r.awayClub ? { id: r.awayClub.id, name: r.awayClub.name, shortCode: r.awayClub.shortCode, isPlayer: r.awayClub.isPlayer, primaryColor: r.awayClub.primaryColor, secondaryColor: r.awayClub.secondaryColor, emblem: r.awayClub.emblem } : null,
+      momPlayer: r.momPlayer ? { id: r.momPlayer.id, name: r.momPlayer.name, squadNumber: r.momPlayer.squadNumber, pos: r.momPlayer.pos, assignedPos: r.momPlayer.assignedPos } : null,
+      momClub: r.momClub ? { id: r.momClub.id, name: r.momClub.name, shortCode: r.momClub.shortCode, isPlayer: r.momClub.isPlayer, primaryColor: r.momClub.primaryColor, secondaryColor: r.momClub.secondaryColor, emblem: r.momClub.emblem } : null,
       homeScorers: Array.isArray(r.homeScorers) ? r.homeScorers.map(slimScorerEntry) : [],
       awayScorers: Array.isArray(r.awayScorers) ? r.awayScorers.map(slimScorerEntry) : []
     }));
@@ -18111,6 +18631,8 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.targetShortlist)) gameState.targetShortlist = [];
     if (!Array.isArray(gameState.preContractPlayers)) gameState.preContractPlayers = [];
     if (!Array.isArray(gameState.matchHistory)) gameState.matchHistory = [];
+    if (!gameState.competitionStats || typeof gameState.competitionStats !== 'object') gameState.competitionStats = {};
+    if (!gameState.statsCompView) gameState.statsCompView = 'league';
     if (!Array.isArray(gameState.freeManagers)) gameState.freeManagers = [];
     if (!gameState.marketFilter) {
       gameState.marketFilter = { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' };
@@ -19687,18 +20209,23 @@ function openPastMatchSummaryModal(weekNum) {
     if (rawMatch && (rawMatch.played || rawMatch.homeScore !== null)) {
       const homeClub = getClubById(rawMatch.homeId);
       const awayClub = getClubById(rawMatch.awayId);
+      const fallbackHShots = Math.max(rawMatch.homeScore || 0, rawMatch.homeShots || 10);
+      const fallbackAShots = Math.max(rawMatch.awayScore || 0, rawMatch.awayShots || 10);
       matchData = {
         week: weekNum,
         homeClub,
         awayClub,
         homeScore: rawMatch.homeScore,
         awayScore: rawMatch.awayScore,
+        momPlayer: rawMatch.momPlayer || null,
+        momClub: rawMatch.momClub || homeClub,
+        momRating: rawMatch.momRating || null,
         homePossession: rawMatch.homePossession || 50,
         awayPossession: rawMatch.awayPossession || 50,
-        homeShots: rawMatch.homeShots || 10,
-        awayShots: rawMatch.awayShots || 10,
-        homeOnTarget: rawMatch.homeOnTarget || Math.round((rawMatch.homeShots || 10) * 0.45),
-        awayOnTarget: rawMatch.awayOnTarget || Math.round((rawMatch.awayShots || 10) * 0.45),
+        homeShots: fallbackHShots,
+        awayShots: fallbackAShots,
+        homeOnTarget: Math.max(rawMatch.homeScore || 0, Math.min(fallbackHShots, rawMatch.homeOnTarget != null ? rawMatch.homeOnTarget : Math.round(fallbackHShots * 0.45))),
+        awayOnTarget: Math.max(rawMatch.awayScore || 0, Math.min(fallbackAShots, rawMatch.awayOnTarget != null ? rawMatch.awayOnTarget : Math.round(fallbackAShots * 0.45))),
         homeXg: rawMatch.homeXg || Number((rawMatch.homeScore * 0.72 + 0.4).toFixed(2)),
         awayXg: rawMatch.awayXg || Number((rawMatch.awayScore * 0.72 + 0.4).toFixed(2)),
         homePasses: rawMatch.homePasses || 480,
@@ -19729,6 +20256,18 @@ function openPastMatchSummaryModal(weekNum) {
 
   // 試合直後のサマリーと完全に同一のHTMLを出力
   body.innerHTML = buildMatchSummaryHtml(matchData);
+
+  const tabBtns = body.querySelectorAll('.summary-subnav-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.subnav;
+      tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+      const statsView = body.querySelector('#summary-tab-stats');
+      const ratingsView = body.querySelector('#summary-tab-ratings');
+      if (statsView) statsView.classList.toggle('hidden', target !== 'stats');
+      if (ratingsView) ratingsView.classList.toggle('hidden', target !== 'ratings');
+    });
+  });
 
   if (typeof renderAvatarCanvases === 'function') {
     renderAvatarCanvases(body);

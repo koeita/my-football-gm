@@ -294,7 +294,7 @@ function initPreseasonCup() {
     }))
   ];
 
-  // プレイヤーの3試合対戦カード（Match 1, Match 2, Match 3）
+  // プレイヤーの3試合対戦カード（Match 1, Match 2, Match 3）＋ 同節招待クラブ同士の裏カード
   const matches = [
     {
       round: 1,
@@ -303,6 +303,8 @@ function initPreseasonCup() {
       awayId: invitedClubs[0].id,
       homeClub: participants[0],
       awayClub: invitedClubs[0],
+      otherHomeClub: invitedClubs[1],
+      otherAwayClub: invitedClubs[2],
       played: false,
       homeScore: null,
       awayScore: null
@@ -314,6 +316,8 @@ function initPreseasonCup() {
       awayId: playerClub.id,
       homeClub: invitedClubs[1],
       awayClub: participants[0],
+      otherHomeClub: invitedClubs[0],
+      otherAwayClub: invitedClubs[2],
       played: false,
       homeScore: null,
       awayScore: null
@@ -325,6 +329,8 @@ function initPreseasonCup() {
       awayId: invitedClubs[2].id,
       homeClub: participants[0],
       awayClub: invitedClubs[2],
+      otherHomeClub: invitedClubs[0],
+      otherAwayClub: invitedClubs[1],
       played: false,
       homeScore: null,
       awayScore: null
@@ -415,6 +421,10 @@ function advanceChampionshipWeek() {
       a.drawn++;
       h.pts += 1;
       a.pts += 1;
+    }
+
+    if (typeof simulateAndRecordQuickMatchPlayerStats === 'function') {
+      simulateAndRecordQuickMatchPlayerStats('d2', h, a, res.homeScore, res.awayScore, { recordOfficial: true });
     }
   }
 }
@@ -962,6 +972,10 @@ function advanceEuroLeaguePhase(md) {
             a.pts += 1;
           }
         }
+
+        if (typeof simulateAndRecordQuickMatchPlayerStats === 'function') {
+          simulateAndRecordQuickMatchPlayerStats(ek, m.homeClub, m.awayClub, res.homeScore, res.awayScore, { recordOfficial: true });
+        }
       }
     });
 
@@ -1027,6 +1041,9 @@ function advanceEuroPlayoffRound() {
         m.winnerId = res.winnerId;
         m.winnerClub = res.winnerClub;
         m.played = true;
+        if (typeof simulateAndRecordQuickMatchPlayerStats === 'function') {
+          simulateAndRecordQuickMatchPlayerStats(ek, m.homeClub, m.awayClub, res.homeScore, res.awayScore, { recordOfficial: true });
+        }
       }
     });
 
@@ -1102,6 +1119,9 @@ function processCupMatchDay(compType, roundKey, skipSiblingEuro = false) {
       m.winnerClub = res.winnerClub;
       m.played = true;
       winners.push(res.winnerClub);
+      if (typeof simulateAndRecordQuickMatchPlayerStats === 'function') {
+        simulateAndRecordQuickMatchPlayerStats(compType, m.homeClub, m.awayClub, res.homeScore, res.awayScore, { recordOfficial: true });
+      }
     }
   });
 
@@ -1245,12 +1265,15 @@ function dehydrateCompetitionsForSave(comps) {
 
   const slimMatch = (m) => {
     if (!m || typeof m !== 'object') return m;
-    return {
+    const out = {
       ...m,
       homeClub: slimClub(m.homeClub),
       awayClub: slimClub(m.awayClub),
       winnerClub: slimClub(m.winnerClub)
     };
+    if (m.otherHomeClub) out.otherHomeClub = slimClub(m.otherHomeClub);
+    if (m.otherAwayClub) out.otherAwayClub = slimClub(m.otherAwayClub);
+    return out;
   };
 
   const result = {};
