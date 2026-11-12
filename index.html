@@ -432,7 +432,7 @@
         </div>
       </div>
 
-      <!-- サブタブ3：個人スタッツ（ランキング・リーグ個人記録） -->
+      <!-- サブタブ3：個人スタッツ（大会別ランキング・個人記録） -->
       <div class="team-subview hidden" id="team-subview-stats" role="tabpanel">
         <!-- スタッツカテゴリー切り替えナビゲーションバー -->
         <div class="stats-category-nav-bar" id="stats-category-nav-bar" role="tablist" aria-label="個人スタッツカテゴリー">
@@ -452,6 +452,17 @@
               <span class="panel-desc" id="stats-panel-desc">イングランド・ディビジョン1 個人スタッツ</span>
             </div>
             <span class="panel-subtitle mono" id="stats-panel-subtitle">TOP 10</span>
+          </div>
+          <!-- 個人スタッツ：大会切り替えセグメントコントロール -->
+          <div class="comp-segment-nav" id="stats-comp-segment-nav" role="tablist" aria-label="個人スタッツ大会切り替え">
+            <button type="button" class="comp-tab-btn active mono" data-stats-comp="league" id="stats-comp-btn-league">リーグ</button>
+            <button type="button" class="comp-tab-btn mono" data-stats-comp="domestic" id="stats-comp-btn-domestic">国内カップ</button>
+            <button type="button" class="comp-tab-btn mono" data-stats-comp="europe" id="stats-comp-btn-europe">欧州コンペ</button>
+            <button type="button" class="comp-tab-btn mono" data-stats-comp="preseason" id="stats-comp-btn-preseason">プレシーズン</button>
+          </div>
+          <!-- 大会サブセレクタ（ディビジョン・各カップ選択） -->
+          <div class="comp-subnav-row" id="stats-comp-subnav-row">
+            <!-- JSで動的生成 -->
           </div>
           <div class="table-wrapper">
             <table class="data-table top-scorers-table stats-ranking-table">

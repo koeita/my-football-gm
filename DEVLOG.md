@@ -1,5 +1,27 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## バグ修正＆大会別個人スタッツ集計機能の実装 (fix-match-stats-and-comp-rankings)
+- **概要**:
+  - **1. 枠内シュート数が総シュート数を上回る不具合の修正**:
+    - プレシーズン、欧州リーグフェーズ、欧州PO、国内/欧州決勝トーナメントの全クイック試合シミュレーションにおいて、先に総シュート数（`homeShots` / `awayShots`）を確定させてから枠内シュートを算出する `buildQuickMatchShotStats` を実装。
+    - マッチサマリー（`buildMatchSummaryHtml`）および過去試合サマリーモーダル（`openPastMatchSummaryModal`）でも `Math.max(score, Math.min(shots, onTarget))` によるクランプ処理を施し、`得点 <= 枠内シュート <= 総シュート数` を絶対保証。
+  - **2. 評価点1位（王冠）の選手がMOMにならない不具合の修正**:
+    - リーグ戦（`playNextMatchweek`）で `processMatchScorersAndRatings` が返したMOM情報（`momPlayer`, `momClub`, `momRating`）を `match`・`matchObj`（およびセーブデータ）に確実に保持。
+    - サマリー表示（`buildMatchSummaryHtml`）のフォールバック選出で配列先頭11人固定の `players.slice(0, 11)` を撤廃し、スタメン（11人目以降の選手含む）および途中交代出場選手の中から `isMOM: true`（王冠獲得選手）を最優先で取得、同点タイブレーク条件（勝敗・ゴール数）も完全一致させて表示の不整合を解消。
+  - **3. 作戦ボードのディフェンス（DF）ポジション表記の青色化**:
+    - `style.css` の `.pitch-node.pos-group-DF .pitch-node-pos` を `var(--text-main)` からロスター一覧と統一されたスカイブルー（`#38bdf8`）へ変更し、ピッチ上スタメン・控え・ベンチ外の全DFカードで視認性を統一。
+  - **4. ベンチ外選手のプロフィールモーダル表示対応**:
+    - `#pitch-reserves-list` に `#pitch-bench-list` と同一仕様のクリックイベント処理（`bindBenchOrReservesProfileClick`）を適用し、ベンチ外選手カードのタップで詳細プロフィールモーダル（`openPlayerProfileModal`）が開くよう修正。あわせてモバイル横スクロール時のコンテナ取得も動的参照化。
+  - **5. プレシーズンマッチ開始前の結果ネタバレトースト非表示化**:
+    - `playCurrentCupMatchday` のプレシーズン親善杯（WCT）において、2Dピッチ観戦モーダル（`openMatchEventModal`）起動前に即座に発火していた結果トースト（`showToast`）および日報ログ追加を、試合演出終了後のコールバック内（およびアニメーションスキップ時）へ移動。
+  - **6. 1試合消化で出場数が2増える不具合の修正 ＆ 大会別個人スタッツ閲覧・集計の実装**:
+    - `processMatchScorersAndRatings` と `applyPostMatchPlayerFatigue` で重複していた `p.appearances`（および `careerStats.appearances`、ポジション特訓 `+15%`）の加算を `applyOfficialAppearancesAndTraining` へ一元化し、1試合あたり確実に `+1` 試合増加するよう修正（新シーズン開始時の各カード・完封・MOM数リセットも追加）。
+    - チームタブの「個人スタッツ」画面上部に大会切り替えセグメント（リーグ / 国内カップ / 欧州コンペ / プレシーズン）およびサブセレクタを新設。
+    - リーグ（ENG-D1 / ENG-D2）、国内カップ（L-CUP / N-CUP）、欧州コンペ（ECT / EPC / ECS）、プレシーズン（WCT）の全大会で7大カテゴリー（得点・アシスト・平均評価点・クリーンシート・MOM・出場記録・警告/退場）を個別に集計・閲覧可能に刷新。
+    - 自クラブの試合だけでなく、2部リーグ・国内カップ・欧州戦・プレシーズン裏カードのCPU同士の対戦も各大会台帳（`gameState.competitionStats`、セーブ＆ロード対応）へ記録されるよう連携。プレシーズン親善試合はWCT専用スタッツのみに反映し、公式戦通算成績と完全分離。
+- **変更ファイル**: `index.html`, `main.js`, `competitions.js`, `style.css`, `tests/test_bugfixes_and_comp_stats.py`, `DEVLOG.md`
+
+
 ## Priority B：GMリアリティの深化・Dirty Flag描画高速化・UIメタ表記の洗練 (feat-priority-b-delegation-perf-unslop)
 - **概要**:
   - **8. 監督への「采配一任（オート編成）」と「GM現場介入（信頼度トレードオフ）」の導入**:
