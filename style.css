@@ -14633,13 +14633,13 @@ body {
   background: #14171a;
   border: 1px solid #282e35;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto;
+  overflow-y: auto;
 }
 .summary-team-ratings-panel.is-player {
   border-color: rgba(46, 204, 113, 0.35);
@@ -14676,10 +14676,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 4px;
+  flex: none;
+  overflow: visible;
+  padding-right: 2px;
 }
 
 .summary-rating-row {
@@ -14784,21 +14783,31 @@ body {
   color: #e74c3c;
   border: 1px solid rgba(231, 76, 60, 0.35);
 }
+.summary-rat-none {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  font-size: 10px;
+  font-weight: 600;
+}
 
 @media (max-width: 768px) {
   .summary-ratings-grid {
     display: flex !important;
     flex-direction: column !important;
-    gap: 6px !important;
-    overflow-y: auto !important;
+    gap: 8px !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .summary-team-ratings-panel {
-    max-height: 220px !important;
-    padding: 6px 8px !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 8px 10px !important;
   }
   .summary-rating-row {
-    padding: 3px 6px !important;
-    font-size: 10.5px !important;
+    padding: 5px 8px !important;
+    font-size: 11px !important;
   }
 }
 

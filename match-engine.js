@@ -202,8 +202,10 @@ function recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStar
       if (!p || !p.id) return;
       const entry = getOrCreateEntry(p, club);
       entry.apps += 1;
-      const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating : (isStarter ? 6.7 : 6.6);
-      entry.totalRating = Number((entry.totalRating + rat).toFixed(2));
+      if (p.lastMatchRating !== null) {
+        const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating : (isStarter ? 6.7 : 6.6);
+        entry.totalRating = Number((entry.totalRating + rat).toFixed(2));
+      }
       if (isStarter && conceded === 0 && isDefOrGk(p)) entry.cleanSheets += 1;
       if (ratingRes && ratingRes.momPlayer && ratingRes.momPlayer.id === p.id) entry.momCount += 1;
       if (cardsMap && cardsMap[p.id]) {
@@ -1454,13 +1456,20 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
     (subs || []).forEach(p => {
       const inMin = typeof p.lastMatchSubMinute === 'number' ? p.lastMatchSubMinute : 68;
       const playedMins = Math.max(1, 90 - inMin);
+      const goalsInMatch = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === p.id).length;
+      const assistsInMatch = (allMatchGoals || []).filter(s => s && s.assister && s.assister.id === p.id).length;
+
+      // 極端に出場時間が短い場合（15分未満かつ得点・アシストなし）は評価なし
+      if (playedMins < 15 && goalsInMatch === 0 && assistsInMatch === 0) {
+        p.lastMatchRating = null;
+        return;
+      }
+
       let r = playedMins >= 30 ? 6.6 : (playedMins >= 15 ? 6.4 : 6.2);
       if (isWin) r += playedMins >= 25 ? 0.3 : 0.2;
       else if (!isDraw) r -= playedMins >= 25 ? 0.2 : 0.1;
 
-      const goalsInMatch = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === p.id).length;
       r += goalsInMatch * 0.9;
-      const assistsInMatch = (allMatchGoals || []).filter(s => s && s.assister && s.assister.id === p.id).length;
       r += assistsInMatch * 0.5;
 
       r += randInt(-1, 1) * 0.1;
@@ -1475,12 +1484,12 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
   assignGroup(homeClub, homeStarters, homeSubs, homeScore, awayScore, isHomeWin, isDraw);
   assignGroup(awayClub, awayStarters, awaySubs, awayScore, homeScore, isAwayWin, isDraw);
 
-  // 全出場選手から MOM（Man of the Match）を選出
+  // 全出場選手から MOM（Man of the Match）を選出（評価あり選手のみ対象）
   const allEntries = [];
   homeStarters.forEach(p => allEntries.push({ p, club: homeClub, isWinner: isHomeWin }));
   awayStarters.forEach(p => allEntries.push({ p, club: awayClub, isWinner: isAwayWin }));
-  (homeSubs || []).forEach(p => allEntries.push({ p, club: homeClub, isWinner: isHomeWin }));
-  (awaySubs || []).forEach(p => allEntries.push({ p, club: awayClub, isWinner: isAwayWin }));
+  (homeSubs || []).forEach(p => { if (typeof p.lastMatchRating === 'number') allEntries.push({ p, club: homeClub, isWinner: isHomeWin }); });
+  (awaySubs || []).forEach(p => { if (typeof p.lastMatchRating === 'number') allEntries.push({ p, club: awayClub, isWinner: isAwayWin }); });
 
   allEntries.sort((a, b) => {
     const ratDiff = (b.p.lastMatchRating || 6.7) - (a.p.lastMatchRating || 6.7);
@@ -3011,26 +3020,28 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
     const buildRowHtml = ({ p, isSub, inMinute }) => {
       const pos = p.assignedPos || p.pos || 'MF';
-      const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
-      const numRat = Number(rat);
-
-      const explicitMomId = (md && md.momPlayer && md.momPlayer.id) ? md.momPlayer.id : null;
-      const isMomPlayer = explicitMomId ? (p.id === explicitMomId) : Boolean(p.isMOM);
-
-      let ratClass = 'summary-rat-mid';
-      if (isMomPlayer || numRat >= 8.2) ratClass = 'summary-rat-mom';
-      else if (numRat >= 7.0) ratClass = 'summary-rat-high';
-      else if (numRat < 6.0) ratClass = 'summary-rat-low';
-
+      const playedMins = isSub ? Math.max(1, 90 - (inMinute || 68)) : 90;
       const goalsCount = scorers.filter(s => s && s.scorer && s.scorer.id === p.id).length;
       const assistsCount = scorers.filter(s => s && s.assister && s.assister.id === p.id).length;
+      const isNoRating = (p.lastMatchRating === null) || (isSub && playedMins < 15 && goalsCount === 0 && assistsCount === 0 && typeof p.lastMatchRating !== 'number');
+      const hasNumRating = !isNoRating && typeof p.lastMatchRating === 'number';
+      const rat = isNoRating ? '評価なし' : (hasNumRating ? p.lastMatchRating.toFixed(1) : '6.7');
+      const numRat = isNoRating ? 0 : Number(rat);
+
+      const explicitMomId = (md && md.momPlayer && md.momPlayer.id) ? md.momPlayer.id : null;
+      const isMomPlayer = !isNoRating && (explicitMomId ? (p.id === explicitMomId) : Boolean(p.isMOM));
+
+      let ratClass = 'summary-rat-mid';
+      if (isNoRating) ratClass = 'summary-rat-none';
+      else if (isMomPlayer || numRat >= 8.2) ratClass = 'summary-rat-mom';
+      else if (numRat >= 7.0) ratClass = 'summary-rat-high';
+      else if (numRat < 6.0) ratClass = 'summary-rat-low';
 
       let eventBadges = '';
       if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">⚽${goalsCount > 1 ? goalsCount : ''}</span>`;
       if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">🅰️${assistsCount > 1 ? assistsCount : ''}</span>`;
 
       const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
-      const playedMins = isSub ? Math.max(1, 90 - (inMinute || 68)) : 90;
       const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">IN ${inMinute || 68}' (${playedMins}分)</span>` : '';
 
       return `
@@ -3055,8 +3066,8 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       ? filteredSubs.map(se => buildRowHtml({ p: se.p, isSub: true, inMinute: se.inMinute })).join('')
       : '<div class="summary-rating-empty text-muted mono">途中交代出場なし</div>';
 
-    const all = sortedStarters.map(p => ({ p })).concat(filteredSubs.map(se => ({ p: se.p })));
-    const avgRat = (all.reduce((s, x) => s + (x.p.lastMatchRating || 6.7), 0) / Math.max(1, all.length)).toFixed(1);
+    const ratedPlayers = sortedStarters.concat(filteredSubs.map(se => se.p)).filter(p => typeof p.lastMatchRating === 'number');
+    const avgRat = (ratedPlayers.reduce((s, p) => s + p.lastMatchRating, 0) / Math.max(1, ratedPlayers.length)).toFixed(1);
     const sideKey = isHome ? 'home' : 'away';
     const isHidden = sideKey !== defaultTeam;
 
