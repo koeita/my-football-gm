@@ -3687,25 +3687,25 @@ function openMatchPrecheckModal() {
           </div>
         </div>
 
-        <!-- 自チーム・相手チーム作戦比較（2カラム階層） -->
+        <!-- 自チーム・相手チーム作戦比較（左：自チーム / 右：相手チーム） -->
         <div class="precheck-tactics-bar">
-          <div class="ui-kv-list">
-            <div class="ui-kv-row">
-              <div class="ui-kv-label accent-cyan-bar">自陣形・戦術</div>
-              <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:10px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0;">
+              <div class="mono" style="display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;">
                 <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
-                <strong class="accent-green">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
-                <span class="accent-gold" style="font-size:11px;">${tacticDef.badge}</span>
+                <strong class="accent-green" style="font-size:12.5px;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
               </div>
+              <span class="accent-gold mono" style="font-size:10.5px;">${tacticDef.badge}</span>
             </div>
-            <div class="ui-kv-row">
-              <div class="ui-kv-label">相手陣形・戦術</div>
-              <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
+            <div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:2px; min-width:0;">
+              <div class="mono" style="display:flex; align-items:baseline; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
                 <strong style="color:#38bdf8; font-size:14px;">${oppFormationKey}</strong>
-                <strong style="color:#e2e8f0;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
-                <span class="accent-gold" style="font-size:11px;">${oppTacticDef.badge}</span>
+                <strong style="color:#e2e8f0; font-size:12.5px;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
               </div>
+              <span class="accent-gold mono" style="font-size:10.5px;">${oppTacticDef.badge}</span>
             </div>
+          </div>
+          <div class="ui-kv-list">
             <div class="ui-kv-row">
               <div class="ui-kv-label accent-gold-bar">采配委任</div>
               <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
