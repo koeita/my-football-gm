@@ -75,6 +75,9 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('POT: ${potRank}', self.main_js)
         self.assertIn("const ypPot = yp.potential || yp.potentialGrade || 'B';", self.main_js)
         self.assertNotIn('potentialMin}-${p.potentialMax', self.main_js)
+        self.assertIn('function releaseYouthPlayer(', self.main_js)
+        self.assertIn('btn-release-youth', self.main_js)
+        self.assertIn('btn-modal-release-youth', self.main_js)
         self.assertNotIn('col-youth-atk', self.html)
         self.assertNotIn('col-youth-def', self.html)
 
