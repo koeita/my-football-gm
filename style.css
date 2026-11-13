@@ -15734,3 +15734,236 @@ body {
 .staff-stat-chip.stat-rank-S { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.12); }
 .staff-stat-chip.stat-rank-A { border-color: rgba(46, 204, 113, 0.40); background: rgba(46, 204, 113, 0.10); }
 .staff-stat-chip.stat-rank-B { border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.08); }
+
+
+/* ==========================================================================
+   フラット・プロスポーツアプリ風 UI 刷新（枠線ネスト解消・余白と区切り線主体）
+   ========================================================================== */
+
+/* 1. 共通フラットリスト行（候補リスト・指導陣・オファー・発掘レポート） */
+.staff-candidate-card,
+.initial-coach-choice,
+.manager-candidate-card,
+.coach-candidate-card,
+.coach-slot-card,
+.youth-report-card,
+.youth-scout-task-row,
+.incoming-offer-card-item {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 12px 10px !important;
+  margin: 0 !important;
+  transform: none !important;
+  transition: background-color 0.15s ease, border-left-color 0.15s ease !important;
+}
+
+.staff-candidate-card:last-child,
+.initial-coach-choice:last-child,
+.manager-candidate-card:last-child,
+.coach-candidate-card:last-child,
+.coach-slot-card:last-child,
+.youth-report-card:last-child,
+.youth-scout-task-row:last-child,
+.incoming-offer-card-item:last-child {
+  border-bottom: none !important;
+}
+
+.staff-candidate-card:hover,
+.initial-coach-choice:hover,
+.manager-candidate-card:hover,
+.coach-candidate-card:hover,
+.coach-slot-card.occupied:hover,
+.incoming-offer-card-item:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  transform: none !important;
+}
+
+.staff-candidate-card.selected,
+.initial-coach-choice.selected {
+  background: rgba(46, 204, 113, 0.08) !important;
+  border-left: 3px solid var(--accent-green, #2ecc71) !important;
+  box-shadow: none !important;
+}
+
+.coach-slot-card.vacant {
+  background: rgba(255, 255, 255, 0.015) !important;
+  border-left: 3px dashed rgba(255, 255, 255, 0.18) !important;
+}
+
+/* 指導陣・オファー・レポートのグリッドを区切り線リストに整理 */
+.youth-reports-grid,
+.incoming-offers-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+/* 2. 四角い枠線バッジ・チップの廃止 -> クリーンなインラインテキスト整列 */
+.staff-specialty-tag {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.staff-stats-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px 14px !important;
+  margin-top: 6px !important;
+}
+
+.staff-stat-chip {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 11px !important;
+  color: #8b949e !important;
+  white-space: nowrap !important;
+}
+.staff-stat-chip strong {
+  margin-left: 3px !important;
+  font-weight: 800 !important;
+}
+
+.power-badge {
+  background: none !important;
+  border: none !important;
+  padding: 2px 0 !important;
+  border-radius: 0 !important;
+  font-size: 11px !important;
+  color: #8b949e !important;
+  white-space: nowrap !important;
+}
+.power-badge strong {
+  margin-left: 3px !important;
+  white-space: nowrap !important;
+}
+
+.team-power-badges {
+  gap: 6px 14px !important;
+}
+
+.mgr-tag {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+/* 3. 選手プロフィール内の多重枠線解消 */
+.profile-bio-chip {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 11.5px !important;
+  color: #cbd5e1 !important;
+}
+.profile-bio-row {
+  gap: 4px 12px !important;
+}
+
+.profile-box {
+  background: rgba(255, 255, 255, 0.015) !important;
+  border: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  padding: 12px 4px !important;
+}
+
+.profile-metric-card {
+  background: none !important;
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 0 !important;
+  padding: 4px 8px !important;
+}
+.profile-metric-card:last-child {
+  border-right: none !important;
+}
+
+.profile-trait-tag {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 2px 7px !important;
+}
+
+/* 4. 経営タブ・業務タスク・施設カードのフラット化 */
+.gm-task-card {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left: 3px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 0 !important;
+}
+.board-psr-card {
+  background: transparent !important;
+  border: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  padding: 10px 4px !important;
+}
+
+/* 5. スマホ幅 (375px) での金額・給与・期間表記の折り返し完全防止 */
+.flat-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.flat-row-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.flat-row-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.flat-row-wage,
+.wage-nowrap {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  font-variant-numeric: tabular-nums;
+}
+.flat-row-meta {
+  font-size: 11.5px;
+  color: #8b949e;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.flat-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 2px;
+}
+.flat-notice-line {
+  font-size: 11.5px;
+  color: #cbd5e1;
+  padding: 8px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 6px;
+}
