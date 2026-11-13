@@ -9399,6 +9399,31 @@ function openPlayerProfileModal(playerId) {
     </tr>
   `).join('');
 
+  const yearlyFotmobHtml = [...allRowsData].reverse().map(r => {
+    const ratNum = parseFloat(r.avgRating);
+    const ratCls = Number.isNaN(ratNum) ? 'rat-none' : (ratNum >= 7.0 ? 'rat-high' : 'rat-mid');
+    const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 16, 'fotmob-yearly-emblem') : '';
+    return `
+      <div class="fotmob-yearly-row ${r.isCurrent ? 'is-current' : ''}">
+        <div class="fotmob-yearly-top">
+          <div class="fotmob-yearly-club-wrap">
+            ${clubEmblem}
+            <span class="fotmob-yearly-season mono">${r.seasonYear}</span>
+            <span class="fotmob-yearly-club">${r.clubName}</span>
+            <span class="fotmob-yearly-age mono">${r.age}歳</span>
+          </div>
+          <span class="fotmob-rating-pill mono ${ratCls}">${r.avgRating}</span>
+        </div>
+        <div class="fotmob-yearly-metrics mono">
+          <span>出場<strong>${r.appearances}</strong></span>
+          <span>得点<strong class="${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</strong></span>
+          <span>アシスト<strong class="${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</strong></span>
+          <span>OVR<strong class="${getOvrTierClass(r.ovr)}" style="background:none;">${r.ovr}</strong></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   const timelineHtml = careerEvents.map(ev => `
     <div class="profile-timeline-item ${ev.badge === 'CURRENT' ? 'is-current' : ''}">
       <div class="profile-timeline-dot"></div>
@@ -9604,6 +9629,13 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box-header">
             <span class="profile-box-title">年度別成績</span>
             <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}G / ${totalAssistsSum}A</span>
+          </div>
+          <div class="profile-yearly-fotmob-list">
+            ${yearlyFotmobHtml}
+            <div class="fotmob-yearly-total mono">
+              <span>通算 (${totalAppsSum}試合)</span>
+              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <strong class="accent-gold">${careerAvgRating}</strong></span>
+            </div>
           </div>
           <div class="profile-yearly-table-wrap">
             <table class="data-table profile-yearly-table">
