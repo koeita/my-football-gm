@@ -232,7 +232,14 @@ const gameState = {
     position: 'ALL',
     sortKey: 'ovr-desc',
     searchQuery: ''
-  }
+  },
+  scoutingIntel: {},
+  activeScoutAssignments: [],
+  installments: [],
+  sellOnRights: [],
+  intlBreakState: null,
+  pendingBoardCrisis: false,
+  pendingDeadlineOffer: false
 };
 
 
@@ -719,9 +726,12 @@ function advanceCalendarDay(skipRender = false) {
     return true;
   }
 
-  // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ 疲労度自然回復 ＆ ポジション特訓進行）
+  // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ 疲労度自然回復 ＆ 適応日数減 ＆ ポジション特訓進行）
   for (const club of getAllManagedLeagueClubs()) {
     for (const p of (club.players || [])) {
+      if (typeof p.adaptationDays === 'number' && p.adaptationDays > 0) {
+        p.adaptationDays = Math.max(0, p.adaptationDays - 1);
+      }
       // 疲労度の自然回復（1日あたり -4、0まで回復）
       if (typeof p.fatigue === 'number' && p.fatigue > 0) {
         p.fatigue = Math.max(0, p.fatigue - 4);
@@ -788,6 +798,9 @@ function advanceCalendarDay(skipRender = false) {
   }
 
   // 月初（月替わり時）に全選手の市場価値推移（valueHistory）を最新状況で更新
+  if (typeof advanceScoutingProgressDaily === 'function') {
+    advanceScoutingProgressDaily();
+  }
   if (nextDay.day === 1) {
     for (const club of getAllManagedLeagueClubs()) {
       for (const p of (club.players || [])) {
@@ -879,6 +892,25 @@ function advanceCalendarDay(skipRender = false) {
     // 送信オファーの回答が返ってきた場合は確実にカレンダー進行を停止
     stopAdvancingCalendar();
     eventTriggered = true;
+  }
+
+  // 代表ウィークイベント＆デッドラインデイ通知＆理事会解任判定
+  if (typeof processInternationalBreakEvent === 'function') {
+    if (processInternationalBreakEvent(nextDay)) {
+      eventTriggered = true;
+    }
+  }
+  if (nextDay.isTransferDeadline && !gameState.pendingDeadlineOffer) {
+    gameState.pendingDeadlineOffer = true;
+    addDailyLog('⏰【デッドラインデイ】本日は移籍市場最終日！駆け込みオファーや交渉が活発化しています。');
+    eventTriggered = true;
+  } else if (!nextDay.isTransferDeadline) {
+    gameState.pendingDeadlineOffer = false;
+  }
+  if (gameState.pendingBoardCrisis && !gameState.isGameOver) {
+    stopAdvancingCalendar();
+    if (typeof openBoardCrisisModal === 'function') openBoardCrisisModal();
+    return true;
   }
 
   if (isNextDayMatch || eventTriggered) {
@@ -1609,6 +1641,10 @@ function processSeasonEnd(isSkipped = false) {
   }
   gameState.paidPayrollWeeks = 52;
 
+  if (typeof processSeasonEndFinanceAndPSR === 'function') {
+    processSeasonEndFinanceAndPSR(sortedD1, sortedD2);
+  }
+
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
@@ -2025,11 +2061,23 @@ function triggerPreContractDepartures() {
   return true;
 }
 
+function isTransferWindowCurrentlyOpen() {
+  const day = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  if (!day) return true;
+  return Boolean(day.windowOpen);
+}
+
 function openTransferNegotiationModal(candidateId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
   if (!playerClub) return;
+  if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(playerClub);
+
+  if (playerClub.psrSanction && playerClub.psrSanction.transferBanWindows > 0) {
+    showToast('PSR（財政規律）違反による補強禁止処分中のため、新規選手の獲得交渉は行えません。', 'error');
+    return;
+  }
 
   const resolved = findTransferTargetWithSeller(candidateId);
   const target = resolved ? resolved.player : null;
@@ -2037,30 +2085,43 @@ function openTransferNegotiationModal(candidateId) {
 
   if (!target || (sellerClub && sellerClub.isPlayer)) return;
 
-  closePlayerProfileModal();
-
   const isFreeAgent = Boolean(target.isFreeAgent || (!sellerClub && target.contractYears === 0));
   const isPreContract = !isFreeAgent && isPreContractEligible(target);
+  const windowOpen = isTransferWindowCurrentlyOpen();
+
+  if (!windowOpen && !isPreContract && !isFreeAgent) {
+    showToast('現在は移籍ウィンドウ期間外（夏:7〜8月 / 冬:1月）のため、獲得交渉を行えません。', 'warning');
+    return;
+  }
+
+  closePlayerProfileModal();
 
   // 取引種別（dealType）の初期決定
   let dealType = 'buy';
   if (isFreeAgent) {
     dealType = 'free_agent';
+  } else if (!windowOpen && isPreContract) {
+    dealType = 'pre_contract';
   }
 
   const baseOvr = getPlayerOverallRating(target);
+  const rep = playerClub.reputation || 4000;
+  const repBlocked = (baseOvr >= 85 && rep < 5800) || (baseOvr >= 82 && rep < 4200);
   const demandedFee = isFreeAgent ? 0 : calculateTransferFee(target);
   const demandedWage = Math.max(5, Math.round((target.wage || 20) * (isFreeAgent ? 1.05 : 1.15)));
   const demandedSalary = demandedWage * 52;
   const demandedYears = clamp(target.contractYears >= 3 ? 3 : 4, 1, 5);
   const failCount = target.transferFailCount || 0;
-  const isRefused = Boolean(target.negotiationFailed);
+  const isRefused = Boolean(target.negotiationFailed) || repBlocked;
 
   const clubName = isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ');
   let statusType = 'info';
   let statusMessage = `${clubName}は移籍金 ${formatMoney(demandedFee)}、${target.name} 本人は週給 ${formatWage(demandedWage)}（年俸 ${formatMoney(demandedSalary)} ／ ${demandedYears}年契約）を希望しています。`;
 
-  if (isRefused) {
+  if (repBlocked) {
+    statusType = 'error';
+    statusMessage = `【クラブの格・実績不足】${target.name}（OVR ${baseOvr}）は「欧州トップレベルの舞台や格上のクラブでのプレーを望んでいる」として、交渉のテーブルに着くことを拒否しました。`;
+  } else if (isRefused) {
     statusType = 'error';
     statusMessage = `【移籍交渉決裂済】2回連続で合意に至らなかったため、${clubName}および代理人は今ウィンドウでの交渉を打ち切りました。`;
   } else if (failCount === 1) {
@@ -2084,6 +2145,12 @@ function openTransferNegotiationModal(candidateId) {
     demandedSalary,
     demandedYears,
     demandedFee,
+    // 契約条項・分割払い・レンタル買取OP
+    squadStatus: baseOvr >= 78 ? 'key' : 'first_team',
+    releaseClause: null,
+    installmentYears: 1,
+    sellOnPct: 0,
+    buyOptionFee: null,
     // レンタル用設定
     loanCoveragePercent: 100, // 提示週給負担率 (50%〜100%)
     demandedLoanCoverage: target.age <= 22 ? 70 : 90, // 要求週給負担率
@@ -2301,11 +2368,20 @@ function renderNegotiationModal() {
 
       <div class="neg-control-group">
         <div class="neg-control-header">
-          <span class="neg-control-label">レンタル期間</span>
-          <span class="mono accent-green"><strong>1シーズン（今季終了まで）</strong></span>
+          <span class="neg-control-label">レンタル期間 & 買取オプション</span>
+          <span class="mono accent-green"><strong>1シーズン</strong></span>
         </div>
-        <div class="text-muted" style="font-size: 11px;">
-          シーズン終了時に元クラブへ自動復帰します。
+        <div class="neg-clauses-grid" style="margin-top:6px;">
+          <label class="neg-clause-item">
+            <span>買取OP額</span>
+            <select id="neg-buy-option-select" class="role-select" ${session.completed ? 'disabled' : ''}>
+              <option value="0" ${!session.buyOptionFee ? 'selected' : ''}>設定なし</option>
+              <option value="${Math.round(calculateTransferFee(target) * 0.9)}" ${session.buyOptionFee ? 'selected' : ''}>あり (${formatMoney(Math.round(calculateTransferFee(target) * 0.9))})</option>
+            </select>
+          </label>
+        </div>
+        <div class="text-muted" style="font-size: 11px; margin-top:4px;">
+          シーズン終了時に元クラブへ自動復帰（買取OP設定時は優先買取権）
         </div>
       </div>
     `;
@@ -2439,6 +2515,46 @@ function renderNegotiationModal() {
         </div>
         <div class="neg-years-group" id="neg-years-group">
           ${yearsButtonsHtml}
+        </div>
+      </div>
+
+      <div class="neg-control-group">
+        <div class="neg-control-header">
+          <span class="neg-control-label">支払方法・契約条項</span>
+          <span class="mono text-cyan" style="font-size:11px;">分割/条項で交渉力UP</span>
+        </div>
+        <div class="neg-clauses-grid">
+          <label class="neg-clause-item">
+            <span>移籍金支払</span>
+            <select id="neg-installment-select" class="role-select" ${session.completed ? 'disabled' : ''}>
+              <option value="1" ${(session.installmentYears || 1) === 1 ? 'selected' : ''}>一括払い</option>
+              <option value="2" ${session.installmentYears === 2 ? 'selected' : ''}>2年分割</option>
+              <option value="3" ${session.installmentYears === 3 ? 'selected' : ''}>3年分割</option>
+            </select>
+          </label>
+          <label class="neg-clause-item">
+            <span>売却歩合</span>
+            <select id="neg-sellon-select" class="role-select" ${session.completed ? 'disabled' : ''}>
+              <option value="0" ${(session.sellOnPct || 0) === 0 ? 'selected' : ''}>なし (0%)</option>
+              <option value="10" ${session.sellOnPct === 10 ? 'selected' : ''}>10%付与</option>
+              <option value="20" ${session.sellOnPct === 20 ? 'selected' : ''}>20%付与</option>
+            </select>
+          </label>
+          <label class="neg-clause-item">
+            <span>約束序列</span>
+            <select id="neg-status-select" class="role-select" ${session.completed ? 'disabled' : ''}>
+              <option value="key" ${session.squadStatus === 'key' ? 'selected' : ''}>絶対的主力</option>
+              <option value="first_team" ${(session.squadStatus || 'first_team') === 'first_team' ? 'selected' : ''}>レギュラー</option>
+              <option value="rotation" ${session.squadStatus === 'rotation' ? 'selected' : ''}>ローテーション</option>
+            </select>
+          </label>
+          <label class="neg-clause-item">
+            <span>契約解除金</span>
+            <select id="neg-clause-select" class="role-select" ${session.completed ? 'disabled' : ''}>
+              <option value="0" ${!session.releaseClause ? 'selected' : ''}>設定なし</option>
+              <option value="${Math.round(session.demandedFee * 1.5)}" ${session.releaseClause ? 'selected' : ''}>${formatMoney(Math.round(session.demandedFee * 1.5))}</option>
+            </select>
+          </label>
         </div>
       </div>
     `;
@@ -2852,6 +2968,11 @@ function submitNegotiationOffer() {
     offeredYears: session.offeredYears,
     demandedFee: demandedFee,
     demandedWage: demandedWage,
+    installmentYears: session.installmentYears || 1,
+    sellOnPct: session.sellOnPct || 0,
+    squadStatus: session.squadStatus || 'first_team',
+    releaseClause: session.releaseClause || null,
+    buyOptionFee: session.buyOptionFee || null,
     willAgree: willAgree,
     status: 'pending',
     pendingDays: 5,
@@ -3039,7 +3160,29 @@ function completeOutgoingTransferSigning(offerId) {
   };
 
   if (dealType === 'buy') {
-    playerClub.funds -= offer.offeredFee;
+    const instYears = offer.installmentYears || 1;
+    const upfrontFee = instYears > 1 ? Math.round(offer.offeredFee / instYears) : offer.offeredFee;
+    playerClub.funds -= upfrontFee;
+    if (instYears > 1) {
+      if (!Array.isArray(gameState.installments)) gameState.installments = [];
+      gameState.installments.push({
+        id: `inst_${Date.now()}_${target.id}`,
+        direction: 'out',
+        counterClubId: sellerClub ? sellerClub.id : 'EXT',
+        playerName: target.name,
+        amountPerSeason: Math.round((offer.offeredFee - upfrontFee) / (instYears - 1)),
+        remainingSeasons: instYears - 1
+      });
+    }
+    if ((offer.sellOnPct || 0) > 0 && sellerClub) {
+      if (!Array.isArray(gameState.sellOnRights)) gameState.sellOnRights = [];
+      gameState.sellOnRights.push({
+        playerId: target.id,
+        playerName: target.name,
+        beneficiaryClubId: sellerClub.id,
+        pct: offer.sellOnPct
+      });
+    }
     if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
       sellerClub.funds = (sellerClub.funds || 0) + offer.offeredFee;
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
@@ -3053,6 +3196,15 @@ function completeOutgoingTransferSigning(offerId) {
     target.salary = offer.offeredWage * 52;
     target.contractYears = offer.offeredYears;
     target.loanStatus = null;
+    target.squadStatus = offer.squadStatus || 'first_team';
+    target.adaptationDays = 35;
+    target.morale = 82;
+    target.contractClauses = {
+      releaseClause: offer.releaseClause || null,
+      appearanceBonus: Math.max(1, Math.round(target.wage * 0.1)),
+      goalBonus: Math.max(1, Math.round(target.wage * 0.15)),
+      sellOnPct: offer.sellOnPct || 0
+    };
   } else if (dealType === 'loan') {
     // レンタル加入
     if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
@@ -3065,6 +3217,14 @@ function completeOutgoingTransferSigning(offerId) {
     const origYears = Math.max(1, target.contractYears || 2);
     const coveragePercent = offer.loanCoveragePercent || 100;
     target.wage = Math.max(5, Math.round(weeklyWage * (coveragePercent / 100)));
+    target.adaptationDays = 25;
+    target.loanTerms = {
+      parentClubId: sellerClub ? sellerClub.id : 'EXT',
+      buyOptionFee: offer.buyOptionFee || null,
+      buyObligation: false,
+      originalWage: weeklyWage,
+      originalContractYears: origYears
+    };
     target.salary = target.wage * 52;
     target.contractYears = 1;
     target.loanStatus = {
@@ -4548,7 +4708,9 @@ function startNextSeason() {
     club.gf = 0;
     club.ga = 0;
     club.gd = 0;
-    club.pts = 0;
+    club.pts = (club.psrSanction && club.psrSanction.pointsDeductedThisSeason > 0)
+      ? -club.psrSanction.pointsDeductedThisSeason
+      : 0;
     for (const p of (club.players || [])) {
       if (!Array.isArray(p.seasonHistory)) {
         ensurePlayerHistoryAndCareer(p, club.name);
@@ -4579,6 +4741,7 @@ function startNextSeason() {
       p.momCount = 0;
       p.yellowCards = 0;
       p.redCards = 0;
+      p.compYellowAccum = { league: 0, domesticCup: 0, euroCup: 0 };
       p.injuryWeeks = 0;
       p.injuryDays = 0;
       p.lastDiff = null;
@@ -6084,6 +6247,9 @@ function renderTacticalBoard() {
         ].filter(Boolean).join(' ');
 
         const fitBadgeHtml = starter.loanStatus?.isLoan ? '<span class="pitch-node-loan" title="レンタル加入選手">LOAN</span>' : '';
+        const capBadgeHtml = (playerClub.roles && playerClub.roles.captainId === starter.id) ? '<span class="pitch-node-cap" title="チームキャプテン">©</span>' : '';
+        const isSusp = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(starter, 'league');
+        const suspBadgeHtml = isSusp ? '<span class="pitch-node-susp" title="累積警告/退場により出場停止">停</span>' : '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -6107,7 +6273,9 @@ function renderTacticalBoard() {
             </div>
             <div class="pitch-node-meta">
               <span class="pitch-node-pref">${posDisplay}</span>
+              ${capBadgeHtml}
               ${fitBadgeHtml}
+              ${suspBadgeHtml}
               ${injuryBadgeHtml}
             </div>
           </div>
@@ -7270,16 +7438,19 @@ function renderMarket() {
   }
 
   const outgoingList = gameState.outgoingOffers || [];
+  const activeScouts = gameState.activeScoutAssignments || [];
   tbody.innerHTML = filtered.slice(0, 120).map(entry => {
     const p = entry.player;
     const c = entry.club;
-    const ovr = getPlayerOverallRating(p);
+    const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
+    const isScoutingNow = activeScouts.find(a => a.playerId === p.id);
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
     const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
     const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
     const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
     const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
     const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
+    const feeDisplay = p.isFreeAgent ? formatMoney(0) : (scoutView.feeKnown ? formatMoney(fee) : `~${formatMoney(Math.round(fee * 0.9 / 100) * 100)}`);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid #2ecc71;">自クラブ所属</span>' : '';
@@ -7306,8 +7477,16 @@ function renderMarket() {
       } else {
         directOfferBtn = `<button type="button" class="btn btn-primary btn-sm btn-market-direct-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} title="直接オファー・交渉を開く">交渉</button>`;
       }
+      let scoutBtn = '';
+      if (!scoutView.isScouted) {
+        if (isScoutingNow) {
+          scoutBtn = `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="opacity:0.75;padding:3px 6px;font-size:10px;">調査中(${isScoutingNow.daysRemaining}日)</button>`;
+        } else {
+          scoutBtn = `<button type="button" class="btn btn-secondary btn-sm btn-scout-dispatch mono" data-scout-player-id="${p.id}" style="padding:3px 6px;font-size:10px;" title="スカウトを派遣して能力・契約条件を解明">調査</button>`;
+        }
+      }
       const shortlistBtn = `<button type="button" class="btn btn-sm btn-shortlist-toggle btn-shortlist-icon ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? '獲得ターゲット解除' : '獲得ターゲットに追加'}">${inShortlist ? '★' : '☆'}</button>`;
-      actionBtnHtml = `<div class="market-action-group">${directOfferBtn}${shortlistBtn}</div>`;
+      actionBtnHtml = `<div class="market-action-group">${scoutBtn}${directOfferBtn}${shortlistBtn}</div>`;
     }
 
     return `
@@ -7322,9 +7501,9 @@ function renderMarket() {
         <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
-        <td class="col-num accent-green"><strong>${ovr}</strong></td>
-        <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
-        <td class="col-num mono">${formatWage(p.wage)}</td>
+        <td class="col-num ${scoutView.isScouted ? 'accent-green' : 'text-cyan'}"><strong>${scoutView.ovrDisplay}</strong></td>
+        <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
+        <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
         <td class="col-action">
           ${actionBtnHtml}
@@ -7742,6 +7921,10 @@ function renderFacilitiesAndYouth() {
         </div>
       `;
     }).join('');
+  }
+
+  if (typeof renderBoardPsrSponsorPanel === 'function') {
+    renderBoardPsrSponsorPanel(playerClub);
   }
 
   // ユースアカデミー（若手昇格候補2名）描画
@@ -9583,6 +9766,13 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     sortKey: 'ovr-desc',
     searchQuery: ''
   };
+  gameState.scoutingIntel = {};
+  gameState.activeScoutAssignments = [];
+  gameState.installments = [];
+  gameState.sellOnRights = [];
+  gameState.intlBreakState = null;
+  gameState.pendingBoardCrisis = false;
+  gameState.pendingDeadlineOffer = false;
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
   const assignedManagers = [];
@@ -9662,6 +9852,9 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.calendar = generateSeasonCalendar(2025 + gameState.season, gameState.schedule);
   if (typeof initSeasonCompetitions === 'function') {
     initSeasonCompetitions();
+  }
+  if (typeof ensureClubRealismFields === 'function') {
+    getAllManagedLeagueClubs().forEach(c => ensureClubRealismFields(c));
   }
   gameState.currentDayIndex = 0;
   gameState.isAdvancingCalendar = false;
@@ -10658,6 +10851,20 @@ function initGame() {
       switchOffersTab(gotoOffersBtn.dataset.gotoOffers || 'outgoing');
       return;
     }
+    const scoutBtn = e.target.closest('[data-scout-player-id]');
+    if (scoutBtn) {
+      e.stopPropagation();
+      const pid = scoutBtn.dataset.scoutPlayerId;
+      const res = typeof assignScoutToPlayer === 'function' ? assignScoutToPlayer(pid) : { ok: false };
+      if (res.ok) {
+        showToast(`スカウトを派遣しました（調査完了まで約${res.totalDays}日）`, 'info');
+        renderMarket();
+        scheduleAutoSave();
+      } else if (res.reason === 'slots_full') {
+        showToast(`スカウト派遣枠が上限（${res.maxSlots}名）に達しています。スカウト網Lvを上げると枠が増えます。`, 'warning');
+      }
+      return;
+    }
     const formalBtn = e.target.closest('[data-formal-offer-id]');
     if (formalBtn) {
       e.stopPropagation();
@@ -11127,6 +11334,18 @@ function initGame() {
         if (numInput && e.target !== numInput) numInput.value = val;
         if (disp) disp.textContent = formatMoney(val);
       }
+
+      if (e.target.id === 'neg-installment-select') session.installmentYears = parseInt(e.target.value, 10) || 1;
+      if (e.target.id === 'neg-sellon-select') session.sellOnPct = parseInt(e.target.value, 10) || 0;
+      if (e.target.id === 'neg-status-select') session.squadStatus = e.target.value || 'first_team';
+      if (e.target.id === 'neg-clause-select') {
+        const cv = parseInt(e.target.value, 10) || 0;
+        session.releaseClause = cv > 0 ? cv : null;
+      }
+      if (e.target.id === 'neg-buy-option-select') {
+        const bv = parseInt(e.target.value, 10) || 0;
+        session.buyOptionFee = bv > 0 ? bv : null;
+      }
     });
 
     negModalBody.addEventListener('click', (e) => {
@@ -11521,6 +11740,77 @@ function renderTacticalManagerBanner() {
       </div>
     </div>
   `;
+
+  if (typeof renderTacticalRolesAndChemBar === 'function') {
+    renderTacticalRolesAndChemBar(club);
+  }
+}
+
+/**
+ * 作戦ボードの役割指定・自動交代方針・ケミストリー＆戦術習熟度バーを描画
+ */
+function renderTacticalRolesAndChemBar(club) {
+  const bar = document.getElementById('tactical-roles-chem-bar');
+  if (!bar || !club) return;
+  if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(club);
+  if (typeof calculateClubChemistryAndFamiliarity === 'function') calculateClubChemistryAndFamiliarity(club);
+
+  const activePlayers = (club.players || [])
+    .filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut))
+    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+
+  const roles = club.roles || {};
+  const buildPlayerOpts = (selectedId) => activePlayers.map(p =>
+    `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>#${p.squadNumber || '-'} ${p.name} (${p.primaryPosition || p.pos})</option>`
+  ).join('');
+
+  const subPolicyDefs = typeof SUB_POLICY_DEFINITIONS !== 'undefined' ? SUB_POLICY_DEFINITIONS : {};
+  const subOpts = Object.values(subPolicyDefs).map(sp =>
+    `<option value="${sp.id}" ${(club.subPolicy || 'balanced') === sp.id ? 'selected' : ''}>${sp.label}</option>`
+  ).join('');
+
+  const chem = club.teamChemistry ?? 75;
+  const fam = club.tacticalFamiliarity ?? 75;
+
+  bar.innerHTML = `
+    <div class="roles-chem-metrics mono">
+      <div class="chem-pill" title="選手モラルと新加入適応度から算出されるチーム連携度">
+        <span>チーム連携:</span>
+        <strong class="${chem >= 80 ? 'accent-green' : (chem >= 60 ? 'accent-gold' : 'text-danger')}">${chem}%</strong>
+      </div>
+      <div class="chem-pill" title="現在の陣形・戦術への習熟度">
+        <span>戦術習熟:</span>
+        <strong class="${fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger')}">${fam}%</strong>
+      </div>
+    </div>
+    <div class="roles-chem-selectors">
+      <label class="role-select-item">
+        <span class="mono">主将(C)</span>
+        <select id="select-role-captain" class="role-select">${buildPlayerOpts(roles.captainId)}</select>
+      </label>
+      <label class="role-select-item">
+        <span class="mono">PK</span>
+        <select id="select-role-pk" class="role-select">${buildPlayerOpts(roles.pkKickerId)}</select>
+      </label>
+      <label class="role-select-item">
+        <span class="mono">FK/CK</span>
+        <select id="select-role-setpiece" class="role-select">${buildPlayerOpts(roles.setPieceKickerId)}</select>
+      </label>
+      <label class="role-select-item">
+        <span class="mono">交代方針</span>
+        <select id="select-sub-policy" class="role-select">${subOpts}</select>
+      </label>
+    </div>
+  `;
+
+  const bindSel = (id, onChange) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', (e) => onChange(e.target.value));
+  };
+  bindSel('select-role-captain', (v) => { club.roles.captainId = v; renderTacticalBoard(); scheduleAutoSave(); });
+  bindSel('select-role-pk', (v) => { club.roles.pkKickerId = v; scheduleAutoSave(); });
+  bindSel('select-role-setpiece', (v) => { club.roles.setPieceKickerId = v; scheduleAutoSave(); });
+  bindSel('select-sub-policy', (v) => { club.subPolicy = v; scheduleAutoSave(); });
 }
 
 /**
@@ -12870,6 +13160,38 @@ function openPendingMatchPreview(weekNum) {
   const maxOvr = starters.length > 0 ? Math.max(...starters.map(p => p.calculatedOvr || 0)) : 0;
   const avgOvr = starters.length > 0 ? Math.round(starters.reduce((acc, p) => acc + p.calculatedOvr, 0) / starters.length) : (oppClub.avgOvr || 75);
 
+  // 直近5試合のフォームと平均得失点集計
+  const recentForm = [];
+  let recentGf = 0;
+  let recentGa = 0;
+  if (Array.isArray(gameState.schedule)) {
+    for (let w = gameState.schedule.length - 1; w >= 0 && recentForm.length < 5; w--) {
+      const m = (gameState.schedule[w] || []).find(x => x && x.played && (x.homeId === oppClub.id || x.awayId === oppClub.id));
+      if (!m) continue;
+      const isOppH = m.homeId === oppClub.id;
+      const gf = isOppH ? (m.homeScore || 0) : (m.awayScore || 0);
+      const ga = isOppH ? (m.awayScore || 0) : (m.homeScore || 0);
+      recentGf += gf;
+      recentGa += ga;
+      recentForm.unshift(gf > ga ? 'W' : (gf === ga ? 'D' : 'L'));
+    }
+  }
+  const formBadgesHtml = recentForm.length > 0
+    ? recentForm.map(r => `<span class="form-badge form-${r.toLowerCase()}">${r}</span>`).join('')
+    : '<span class="text-muted mono" style="font-size:11px;">直近データなし</span>';
+  const avgGfText = recentForm.length > 0 ? (recentGf / recentForm.length).toFixed(1) : '-';
+  const avgGaText = recentForm.length > 0 ? (recentGa / recentForm.length).toFixed(1) : '-';
+
+  // 戦術相性アドバイス
+  const myTac = normalizeTacticKey(playerClub.tactic);
+  const oppTac = normalizeTacticKey(tacticKey);
+  let adviceText = 'バランスの取れた布陣です。コンディションと連携度を重視して臨みましょう。';
+  if (oppTac === 'gegenpress') adviceText = '相手はハイプレスで消耗が激しい戦術です。カウンターや終盤の交代カードが有効です。';
+  else if (oppTac === 'possession') adviceText = '相手は中盤の支配に長けています。ゲーゲンプレスやダイレクトカウンターで隙を突くのが効果的です。';
+  else if (oppTac === 'parkthebus') adviceText = '相手は中央を固める徹底堅守です。ワイドアタックやセットプレーからの打開を狙いましょう。';
+  else if (oppTac === 'counter') adviceText = '相手の鋭いカウンターに警戒が必要です。ポゼッションで主導権を握り被カウンター機会を減らしましょう。';
+  else if (oppTac === 'wingplay') adviceText = '両翼からのクロス攻撃が主軸です。SBの守備力とCBの空中戦が鍵になります。';
+
   const squadRowsHtml = starters.map((p) => {
     const isKey = p.calculatedOvr === maxOvr;
     const pos = p.primaryPosition || p.assignedPos || p.pos || 'MF';
@@ -12939,6 +13261,18 @@ function openPendingMatchPreview(weekNum) {
       </div>
     </div>
 
+    <!-- 直近フォーム＆戦術アナリスト所見 -->
+    <div class="scout-analysis-panel">
+      <div class="scout-form-row">
+        <span class="scout-metric-label">直近5戦フォーム:</span>
+        <div class="scout-form-badges">${formBadgesHtml}</div>
+        <span class="mono" style="font-size:11px; color:var(--text-muted); margin-left:auto;">平均得点 ${avgGfText} / 平均失点 ${avgGaText}</span>
+      </div>
+      <div class="scout-advice-box">
+        <strong class="mono accent-green">[分析班メモ]</strong> ${adviceText}
+      </div>
+    </div>
+
     <!-- 相手チーム想定スタメン（スカッド一覧11名） -->
     <div class="scout-squad-panel">
       <div class="scout-panel-header">
@@ -12973,4 +13307,230 @@ function closePendingMatchPreviewModal() {
     modal.classList.add('hidden');
     setBodyModalLock(false);
   }
+}
+
+// ==========================================================================
+// 経営・スポンサー・PSR・理事会解任再スタート・代表ウィーク
+// ==========================================================================
+
+function renderBoardPsrSponsorPanel(club) {
+  const panel = document.getElementById('board-psr-sponsor-panel');
+  if (!panel || !club) return;
+  if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(club);
+
+  const sp = club.sponsor || { name: '未契約', baseAnnual: 0, clBonus: 0, titleBonus: 0, yearsRemaining: 0 };
+  const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { total3YrNet: 0, isBreach: false, pointsDeduction: 0 };
+  const conf = club.boardConfidence ?? 75;
+  const targetRank = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
+  const sanctionText = (club.psrSanction && club.psrSanction.transferBanWindows > 0)
+    ? `<span class="text-danger mono" style="font-weight:700;">補強禁止処分中 (残${club.psrSanction.transferBanWindows}窓)</span>`
+    : `<span class="accent-green mono">健全</span>`;
+
+  panel.innerHTML = `
+    <div class="board-psr-grid">
+      <div class="board-psr-card">
+        <div class="board-psr-title mono">SPONSORSHIP / 胸スポンサー</div>
+        <div class="board-psr-main">${sp.name}</div>
+        <div class="board-psr-sub mono">年額: <strong class="accent-gold">${formatMoney(sp.baseAnnual)}</strong> (残${sp.yearsRemaining}年)</div>
+        <div class="board-psr-sub mono">CLボーナス: +${formatMoney(sp.clBonus)} / 優勝: +${formatMoney(sp.titleBonus)}</div>
+      </div>
+      <div class="board-psr-card">
+        <div class="board-psr-title mono">PSR / 3年累積財務規律</div>
+        <div class="board-psr-main mono ${psr.isBreach ? 'text-danger' : 'accent-green'}">${formatMoney(psr.total3YrNet)}</div>
+        <div class="board-psr-sub mono">許容赤字上限: ${formatMoney(typeof PSR_MAX_3YR_DEFICIT !== 'undefined' ? PSR_MAX_3YR_DEFICIT : -35000)}</div>
+        <div class="board-psr-sub">状態: ${sanctionText}</div>
+      </div>
+      <div class="board-psr-card">
+        <div class="board-psr-title mono">BOARD / 理事会信頼度 & クラブ格</div>
+        <div class="board-psr-main mono ${conf >= 60 ? 'accent-green' : (conf >= 35 ? 'accent-gold' : 'text-danger')}">${conf}%</div>
+        <div class="board-psr-sub mono">今季目標順位: ${targetRank}位以内</div>
+        <div class="board-psr-sub mono">クラブ格(Rep): ${club.reputation || 4000}</div>
+      </div>
+    </div>
+  `;
+}
+
+function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
+  if (Array.isArray(gameState.installments) && gameState.installments.length > 0) {
+    const playerClub = getPlayerClub();
+    const remainInst = [];
+    for (const inst of gameState.installments) {
+      if (!inst || inst.remainingSeasons <= 0) continue;
+      if (playerClub) {
+        if (inst.direction === 'out') playerClub.funds -= inst.amountPerSeason;
+        else playerClub.funds += inst.amountPerSeason;
+      }
+      inst.remainingSeasons -= 1;
+      if (inst.remainingSeasons > 0) remainInst.push(inst);
+    }
+    gameState.installments = remainInst;
+  }
+
+  const allClubs = getAllManagedLeagueClubs();
+  for (const club of allClubs) {
+    if (!club) continue;
+    if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(club);
+    const sp = club.sponsor;
+    let spRev = 0;
+    if (sp) {
+      spRev = sp.baseAnnual || 3000;
+      const d1Idx = sortedD1.findIndex(c => c.id === club.id);
+      if (d1Idx === 0) spRev += (sp.titleBonus || 0);
+      if (d1Idx >= 0 && d1Idx < 4) spRev += (sp.clBonus || 0);
+      club.funds = (club.funds || 0) + spRev;
+      sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
+      if (sp.yearsRemaining === 0) {
+        club.sponsor = null;
+        ensureClubRealismFields(club);
+      }
+    }
+
+    const annualPayroll = typeof getClubTotalPayroll === 'function' ? getClubTotalPayroll(club) : 10000;
+    const estMatchRev = Math.round((club.supporters || 14000) * 0.085 * 19 + 1600 * 19 + spRev);
+    const netProfit = estMatchRev - annualPayroll;
+    if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
+    club.psrHistory.push({
+      season: gameState.season || 1,
+      revenue: estMatchRev,
+      expenses: annualPayroll,
+      netProfit
+    });
+    if (club.psrHistory.length > 3) club.psrHistory = club.psrHistory.slice(-3);
+
+    const psrEval = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { isBreach: false, pointsDeduction: 0 };
+    if (psrEval.isBreach) {
+      club.psrSanction = {
+        transferBanWindows: 1,
+        pointsDeductedThisSeason: psrEval.pointsDeduction
+      };
+      if (club.isPlayer && typeof addDailyLog === 'function') {
+        addDailyLog(`⚠️【PSR違反処分】過去3季の累積赤字が上限を超過したため、来季開幕時勝点-${psrEval.pointsDeduction}pt ＆ 次ウィンドウ補強禁止が科されました！`);
+      }
+    } else if (club.psrSanction && club.psrSanction.transferBanWindows > 0) {
+      club.psrSanction.transferBanWindows = Math.max(0, club.psrSanction.transferBanWindows - 1);
+      club.psrSanction.pointsDeductedThisSeason = 0;
+    }
+  }
+}
+
+function processInternationalBreakEvent(day) {
+  if (!day) return false;
+  const m = day.month;
+  const d = day.day;
+  const isBreakStart = (m === 9 && d === 4) || (m === 10 && d === 9) || (m === 11 && d === 13) || (m === 3 && d === 19);
+  const isBreakEnd = (m === 9 && d === 8) || (m === 10 && d === 13) || (m === 11 && d === 17) || (m === 3 && d === 24);
+  const playerClub = getPlayerClub();
+  if (!playerClub) return false;
+
+  if (isBreakStart) {
+    const called = [];
+    for (const club of getAllManagedLeagueClubs()) {
+      for (const p of (club.players || [])) {
+        if (!p || p.isRetired || (p.injuryDays || 0) > 0) continue;
+        const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 70;
+        const natBase = (typeof NATIONAL_TEAM_STRENGTHS !== 'undefined' && NATIONAL_TEAM_STRENGTHS[p.nationality]) || 79;
+        if (ovr >= natBase - 4) {
+          p.onIntlDuty = true;
+          if (club.isPlayer) called.push(p.name);
+        }
+      }
+    }
+    if (called.length > 0 && typeof addDailyLog === 'function') {
+      addDailyLog(`🌍【代表ウィーク突入】自クラブから ${called.slice(0, 5).join(', ')}${called.length > 5 ? ` 他${called.length - 5}名` : ''} が各国代表に招集されました。`);
+    }
+    return called.length > 0;
+  }
+
+  if (isBreakEnd) {
+    const returned = [];
+    const injuredNames = [];
+    for (const club of getAllManagedLeagueClubs()) {
+      for (const p of (club.players || [])) {
+        if (p && p.onIntlDuty) {
+          p.onIntlDuty = false;
+          p.fatigue = clamp((p.fatigue || 0) + randInt(12, 22), 0, 100);
+          if (Math.random() < 0.04) {
+            p.injuryDays = randInt(5, 14);
+            p.injuryWeeks = Math.ceil(p.injuryDays / 7);
+            if (club.isPlayer) injuredNames.push(`${p.name}(全治${p.injuryDays}日)`);
+          }
+          if (club.isPlayer) returned.push(p.name);
+        }
+      }
+    }
+    if (returned.length > 0 && typeof addDailyLog === 'function') {
+      addDailyLog(`✈️【代表ウィーク終了】代表組 ${returned.length}名がクラブへ帰還しました。${injuredNames.length > 0 ? `負傷帰還: ${injuredNames.join(', ')}` : '全員無事に合流しています。'}`);
+    }
+    return returned.length > 0;
+  }
+  return false;
+}
+
+function openBoardCrisisModal() {
+  const modal = document.getElementById('board-crisis-modal');
+  const body = document.getElementById('board-crisis-body');
+  if (!modal || !body) return;
+  const playerClub = getPlayerClub();
+  const d2Clubs = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
+    ? gameState.competitions.championship.clubs.slice(0, 3)
+    : [];
+
+  const offerBtns = d2Clubs.map(c => `
+    <button type="button" class="btn btn-primary btn-sm mono" data-restart-club-id="${c.id}" style="width:100%; margin-bottom:8px; justify-content:space-between; display:flex;">
+      <span>${c.name} (ENG-D2)</span>
+      <span>GM就任へ ➔</span>
+    </button>
+  `).join('');
+
+  body.innerHTML = `
+    <p style="margin-bottom: 14px; line-height: 1.6;">
+      理事会からの信頼度が限界値を下回り（<strong>${playerClub ? playerClub.boardConfidence : 0}%</strong>）、${playerClub ? playerClub.name : '現クラブ'} のGM解任が決定しました。<br />
+      新天地（2部クラブ）から届いている再建オファーを受けてキャリアを続行するか、ここで引退するかを選択してください。
+    </p>
+    <div style="margin-bottom: 14px;">
+      ${offerBtns}
+    </div>
+    <button type="button" class="btn btn-danger btn-sm mono" id="btn-board-crisis-retire" style="width:100%;">
+      キャリア終了（ゲームオーバー）
+    </button>
+  `;
+
+  body.querySelectorAll('[data-restart-club-id]').forEach(btn => {
+    btn.addEventListener('click', () => handleBoardRelegationRestart(btn.dataset.restartClubId));
+  });
+  const retireBtn = document.getElementById('btn-board-crisis-retire');
+  if (retireBtn) {
+    retireBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      setBodyModalLock(false);
+      gameState.isGameOver = true;
+      gameState.pendingBoardCrisis = false;
+      renderAll();
+    });
+  }
+
+  modal.classList.remove('hidden');
+  setBodyModalLock(true);
+}
+
+function handleBoardRelegationRestart(newClubId) {
+  const modal = document.getElementById('board-crisis-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    setBodyModalLock(false);
+  }
+  const allClubs = getAllManagedLeagueClubs();
+  const nextClub = allClubs.find(c => c && c.id === newClubId);
+  if (!nextClub) return;
+
+  allClubs.forEach(c => { if (c) c.isPlayer = (c.id === nextClub.id); });
+  gameState.selectedClubId = nextClub.id;
+  gameState.playerDivision = (nextClub.division === 'd2' || nextClub.tier === 'D2') ? 'd2' : 'd1';
+  nextClub.boardConfidence = 75;
+  gameState.pendingBoardCrisis = false;
+  addDailyLog(`🔄【新天地就任】${nextClub.name} の新GMに就任し、クラブ再建の指揮を執ることになりました！`);
+  showToast(`${nextClub.name} のGMに就任しました！`, 'info');
+  markAllViewsDirty();
+  renderAll();
+  scheduleAutoSave();
 }

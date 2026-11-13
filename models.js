@@ -1312,7 +1312,17 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     goals: 0,
     assists: 0,
     totalRating: 0,
-    lastDiff: null
+    lastDiff: null,
+    squadStatus: isStarter ? ((basePower >= 75) ? 'key' : 'first_team') : (age <= 21 ? 'prospect' : 'rotation'),
+    morale: 75,
+    unhappyReason: null,
+    transferRequested: false,
+    adaptationDays: 0,
+    suspensionMatches: { league: 0, domesticCup: 0, euroCup: 0 },
+    compYellowAccum: { league: 0, domesticCup: 0, euroCup: 0 },
+    contractClauses: { releaseClause: null, appearanceBonus: 0, goalBonus: 0, sellOnPct: 0 },
+    loanTerms: null,
+    onIntlDuty: false
   };
 }
 
@@ -1395,7 +1405,17 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     goals: 0,
     assists: 0,
     totalRating: 0,
-    lastDiff: null
+    lastDiff: null,
+    squadStatus: 'prospect',
+    morale: 80,
+    unhappyReason: null,
+    transferRequested: false,
+    adaptationDays: 0,
+    suspensionMatches: { league: 0, domesticCup: 0, euroCup: 0 },
+    compYellowAccum: { league: 0, domesticCup: 0, euroCup: 0 },
+    contractClauses: { releaseClause: null, appearanceBonus: 0, goalBonus: 0, sellOnPct: 0 },
+    loanTerms: null,
+    onIntlDuty: false
   };
 }
 
@@ -1898,14 +1918,20 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 /**
  * スロットと選手の最適マッチング用スコア計算
  */
-function calculateSlotPlayerScore(player, slotPos) {
+function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
   ensurePlayerProficiencies(player);
   let score = 0;
 
-  // 1. 負傷およびレンタル放出除外ペナルティ
+  // 1. 負傷・出場停止・代表招集・レンタル放出除外ペナルティ
   const isInjured = (player.injuryWeeks > 0) || (player.injuryDays > 0);
   if (isInjured) {
     score -= 2000;
+  }
+  if (typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(player, compCategory)) {
+    score -= 8000;
+  }
+  if (player.onIntlDuty) {
+    score -= 8000;
   }
   if (player.loanStatus && player.loanStatus.isLoanOut) {
     score -= 8000;
@@ -2315,4 +2341,342 @@ function shouldPlayerRetire(player) {
   if (player.growthCurve === 'early') baseProb += 0.12;
 
   return Math.random() < baseProb;
+}
+
+// ==========================================================================
+// 8. リアルシミュレーション拡張ドメインロジック（規律・霧スカウト・連携・PSR・心理・理事会）
+// ==========================================================================
+
+/**
+ * 選手オブジェクトのリアリティ拡張フィールドを後方互換補完
+ */
+function ensurePlayerRealismFields(player, isStarterHint = false) {
+  if (!player) return;
+  if (!player.squadStatus) {
+    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : 70;
+    if (player.isYouth || player.age <= 20) player.squadStatus = 'prospect';
+    else if (isStarterHint || player.isStarter) player.squadStatus = ovr >= 77 ? 'key' : 'first_team';
+    else player.squadStatus = 'rotation';
+  }
+  if (typeof player.morale !== 'number') player.morale = 75;
+  if (player.unhappyReason === undefined) player.unhappyReason = null;
+  if (typeof player.transferRequested !== 'boolean') player.transferRequested = false;
+  if (typeof player.adaptationDays !== 'number') player.adaptationDays = 0;
+  if (!player.suspensionMatches || typeof player.suspensionMatches !== 'object') {
+    player.suspensionMatches = { league: 0, domesticCup: 0, euroCup: 0 };
+  }
+  if (!player.compYellowAccum || typeof player.compYellowAccum !== 'object') {
+    player.compYellowAccum = { league: 0, domesticCup: 0, euroCup: 0 };
+  }
+  if (!player.contractClauses || typeof player.contractClauses !== 'object') {
+    player.contractClauses = { releaseClause: null, appearanceBonus: 0, goalBonus: 0, sellOnPct: 0 };
+  }
+  if (player.loanTerms === undefined) player.loanTerms = null;
+  if (typeof player.onIntlDuty !== 'boolean') player.onIntlDuty = false;
+}
+
+/**
+ * クラブオブジェクトのリアリティ拡張フィールドを後方互換補完
+ */
+function ensureClubRealismFields(club) {
+  if (!club) return;
+  if (typeof club.reputation !== 'number') {
+    const bp = typeof club.basePower === 'number' ? club.basePower : 70;
+    const isD2 = club.division === 'd2' || club.tier === 'D2';
+    club.reputation = clamp(Math.round((bp - 50) * 180 + (isD2 ? 1200 : 2800)), 1200, 9500);
+  }
+  if (typeof club.tacticalFamiliarity !== 'number') club.tacticalFamiliarity = 75;
+  if (typeof club.teamChemistry !== 'number') club.teamChemistry = 75;
+  if (!club.subPolicy) club.subPolicy = 'balanced';
+  if (!club.roles || typeof club.roles !== 'object') {
+    club.roles = { captainId: null, pkKickerId: null, setPieceKickerId: null };
+  }
+  if (!club.sponsor) {
+    const rep = club.reputation || 4000;
+    const templates = typeof SPONSOR_TEMPLATES !== 'undefined' ? SPONSOR_TEMPLATES : [];
+    const matched = templates.find(s => rep >= s.minReputation) || templates[templates.length - 1];
+    if (matched) {
+      club.sponsor = {
+        name: matched.name,
+        baseAnnual: matched.baseAnnual,
+        clBonus: matched.clBonus,
+        titleBonus: matched.titleBonus,
+        relegationPenaltyPct: matched.relegationPenaltyPct,
+        yearsRemaining: randInt(2, 3)
+      };
+    }
+  }
+  if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
+  if (!club.psrSanction || typeof club.psrSanction !== 'object') {
+    club.psrSanction = { transferBanWindows: 0, pointsDeductedThisSeason: 0 };
+  }
+  if (typeof club.boardConfidence !== 'number') club.boardConfidence = 75;
+  if (!club.boardExpectations || typeof club.boardExpectations !== 'object') {
+    club.boardExpectations = {
+      targetRank: club.targetRank || 10,
+      youthMinutesTarget: 5,
+      stylePhilosophy: club.defaultTactic || club.tactic || 'possession'
+    };
+  }
+  if (Array.isArray(club.players)) {
+    club.players.forEach((p, idx) => ensurePlayerRealismFields(p, idx < 11));
+  }
+  autoAssignClubRoles(club);
+}
+
+function isPlayerSuspendedForComp(player, compCategory = 'league') {
+  if (!player || !player.suspensionMatches) return false;
+  const cat = compCategory === 'preseason' ? null : compCategory;
+  if (!cat) return false;
+  return (player.suspensionMatches[cat] || 0) > 0;
+}
+
+function resolveDisciplineCategory(compKey) {
+  if (!compKey || compKey === 'd1' || compKey === 'd2' || compKey === 'league') return 'league';
+  if (compKey === 'leagueCup' || compKey === 'nationalCup' || compKey === 'domesticCup') return 'domesticCup';
+  if (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup' || compKey === 'euroCup') return 'euroCup';
+  return 'preseason';
+}
+
+function autoAssignClubRoles(club) {
+  if (!club || !Array.isArray(club.players) || club.players.length === 0) return;
+  if (!club.roles) club.roles = { captainId: null, pkKickerId: null, setPieceKickerId: null };
+  const active = club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  if (active.length === 0) return;
+  const hasId = (id) => id && active.some(p => p.id === id);
+
+  if (!hasId(club.roles.captainId)) {
+    const cap = [...active].sort((a, b) => ((b.age >= 25 ? 10 : 0) + getPlayerOverallRating(b)) - ((a.age >= 25 ? 10 : 0) + getPlayerOverallRating(a)))[0];
+    club.roles.captainId = cap ? cap.id : null;
+  }
+  if (!hasId(club.roles.pkKickerId)) {
+    const pk = [...active].filter(p => (p.primaryPosition || p.pos) !== 'GK').sort((a, b) => (b.atk || 50) - (a.atk || 50))[0] || active[0];
+    club.roles.pkKickerId = pk ? pk.id : null;
+  }
+  if (!hasId(club.roles.setPieceKickerId)) {
+    const sp = [...active].filter(p => (p.primaryPosition || p.pos) !== 'GK').sort((a, b) => {
+      const sa = (a.atk || 50) + (['AM', 'CM', 'LW', 'RW', 'LM', 'RM'].includes(a.primaryPosition || a.pos) ? 8 : 0);
+      const sb = (b.atk || 50) + (['AM', 'CM', 'LW', 'RW', 'LM', 'RM'].includes(b.primaryPosition || b.pos) ? 8 : 0);
+      return sb - sa;
+    })[0] || active[0];
+    club.roles.setPieceKickerId = sp ? sp.id : null;
+  }
+}
+
+/**
+ * 霧（Fog of War）を適用した選手表示データを返す
+ */
+function getPlayerScoutedView(player, isPlayerClub = false) {
+  if (!player) return null;
+  const trueOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : 70;
+  if (isPlayerClub) {
+    return {
+      isScouted: true,
+      scoutLevel: 2,
+      ovrDisplay: `${trueOvr}`,
+      ovrMin: trueOvr,
+      ovrMax: trueOvr,
+      atkDisplay: `${player.atk}`,
+      defDisplay: `${player.def}`,
+      staDisplay: `${player.sta}`,
+      curveDisplay: typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準',
+      feeKnown: true
+    };
+  }
+  const intel = (typeof gameState !== 'undefined' && gameState.scoutingIntel && gameState.scoutingIntel[player.id])
+    ? gameState.scoutingIntel[player.id]
+    : { progress: 0, level: 0 };
+  const lv = intel.level || 0;
+  if (lv >= 2) {
+    return {
+      isScouted: true,
+      scoutLevel: 2,
+      ovrDisplay: `${trueOvr}`,
+      ovrMin: trueOvr,
+      ovrMax: trueOvr,
+      atkDisplay: `${player.atk}`,
+      defDisplay: `${player.def}`,
+      staDisplay: `${player.sta}`,
+      curveDisplay: typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準',
+      feeKnown: true
+    };
+  }
+  const hash = String(player.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 13, 0);
+  const spread = lv === 1 ? 2 : 5;
+  const shift = (hash % (spread + 1)) - Math.floor(spread / 2);
+  const minOvr = clamp(trueOvr - spread + shift, 45, trueOvr);
+  const maxOvr = clamp(Math.max(minOvr + (lv === 1 ? 2 : 4), trueOvr + spread + shift), trueOvr, 99);
+  const atkMin = clamp((player.atk || 60) - spread * 2, 20, 99);
+  const atkMax = clamp((player.atk || 60) + spread * 2, 20, 99);
+  const defMin = clamp((player.def || 60) - spread * 2, 20, 99);
+  const defMax = clamp((player.def || 60) + spread * 2, 20, 99);
+  const staMin = clamp((player.sta || 60) - spread * 2, 20, 99);
+  const staMax = clamp((player.sta || 60) + spread * 2, 20, 99);
+  return {
+    isScouted: false,
+    scoutLevel: lv,
+    ovrDisplay: `${minOvr}〜${maxOvr}`,
+    ovrMin: minOvr,
+    ovrMax: maxOvr,
+    atkDisplay: lv === 1 ? `${atkMin}〜${atkMax}` : '??',
+    defDisplay: lv === 1 ? `${defMin}〜${defMax}` : '??',
+    staDisplay: lv === 1 ? `${staMin}〜${staMax}` : '??',
+    curveDisplay: lv === 1 ? (typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準') : '未判明',
+    feeKnown: lv >= 1
+  };
+}
+
+function assignScoutToPlayer(playerId) {
+  if (!playerId || typeof gameState === 'undefined') return { ok: false, reason: 'invalid' };
+  if (!gameState.scoutingIntel) gameState.scoutingIntel = {};
+  if (!Array.isArray(gameState.activeScoutAssignments)) gameState.activeScoutAssignments = [];
+  const existingIntel = gameState.scoutingIntel[playerId];
+  if (existingIntel && existingIntel.level >= 2) {
+    return { ok: false, reason: 'already_complete' };
+  }
+  if (gameState.activeScoutAssignments.some(a => a.playerId === playerId)) {
+    return { ok: false, reason: 'already_assigned' };
+  }
+  const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  const maxSlots = 2 + (sLv - 1) * 2;
+  if (gameState.activeScoutAssignments.length >= maxSlots) {
+    return { ok: false, reason: 'slots_full', maxSlots };
+  }
+  const totalDays = Math.max(3, 8 - sLv);
+  gameState.activeScoutAssignments.push({ playerId, daysRemaining: totalDays, totalDays });
+  if (!gameState.scoutingIntel[playerId]) {
+    gameState.scoutingIntel[playerId] = { progress: 0, level: 0, discoveredAtDay: null };
+  }
+  return { ok: true, totalDays };
+}
+
+function advanceScoutingProgressDaily() {
+  if (typeof gameState === 'undefined' || !Array.isArray(gameState.activeScoutAssignments) || gameState.activeScoutAssignments.length === 0) return;
+  if (!gameState.scoutingIntel) gameState.scoutingIntel = {};
+  const remaining = [];
+  for (const task of gameState.activeScoutAssignments) {
+    task.daysRemaining = Math.max(0, (task.daysRemaining || 1) - 1);
+    const doneRatio = 1 - (task.daysRemaining / Math.max(1, task.totalDays || 5));
+    const intel = gameState.scoutingIntel[task.playerId] || { progress: 0, level: 0, discoveredAtDay: null };
+    intel.progress = Math.round(doneRatio * 100);
+    if (doneRatio >= 0.5 && intel.level < 1) intel.level = 1;
+    if (task.daysRemaining <= 0) {
+      intel.level = 2;
+      intel.progress = 100;
+      intel.discoveredAtDay = gameState.currentDayIndex || 0;
+      gameState.scoutingIntel[task.playerId] = intel;
+      if (typeof findTransferTargetWithSeller === 'function' && typeof addDailyLog === 'function') {
+        const res = findTransferTargetWithSeller(task.playerId);
+        const pName = res && res.player ? res.player.name : task.playerId;
+        addDailyLog(`【スカウト報告】${pName} の詳細調査が完了し、全能力・成長曲線・契約条件が判明しました。`);
+      }
+    } else {
+      gameState.scoutingIntel[task.playerId] = intel;
+      remaining.push(task);
+    }
+  }
+  gameState.activeScoutAssignments = remaining;
+}
+
+/**
+ * クラブのチームケミストリー＆戦術習熟度を算出・同期する
+ */
+function calculateClubChemistryAndFamiliarity(club) {
+  if (!club) return { chemistry: 75, familiarity: 75 };
+  const starters = (club.players || []).filter(p => p && p.isStarter && !p.isRetired);
+  if (starters.length === 0) return { chemistry: 75, familiarity: 75 };
+
+  const avgMorale = starters.reduce((acc, p) => acc + (typeof p.morale === 'number' ? p.morale : 75), 0) / starters.length;
+  const adaptingCount = starters.filter(p => (p.adaptationDays || 0) > 0).length;
+  const mgr = club.manager;
+  const isPhilMatch = mgr && club.formation === mgr.preferredFormation && normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
+
+  const chem = clamp(Math.round(68 + (avgMorale - 70) * 0.35 - adaptingCount * 4), 35, 99);
+  const fam = clamp(Math.round((club.tacticalFamiliarity || 72) + (isPhilMatch ? 2 : 0)), 40, 99);
+  club.teamChemistry = chem;
+  club.tacticalFamiliarity = fam;
+  return { chemistry: chem, familiarity: fam };
+}
+
+/**
+ * 試合後の選手モラル・序列不満・キャプテン仲裁を更新
+ */
+function updatePlayerMoraleAndStatuses(club, starters = [], playedSubs = [], won = false, drawn = false) {
+  if (!club || !Array.isArray(club.players)) return;
+  const playedIds = new Set([...starters, ...playedSubs].filter(Boolean).map(p => p.id));
+  const captain = club.roles && club.roles.captainId ? club.players.find(p => p.id === club.roles.captainId) : null;
+  const captainLeadership = captain ? (captain.age >= 26 ? 1.2 : 0.8) : 0.5;
+
+  for (const p of club.players) {
+    if (!p || p.isRetired || (p.loanStatus && p.loanStatus.isLoanOut)) continue;
+    ensurePlayerRealismFields(p);
+    if ((p.injuryDays || 0) > 0 || (p.injuryWeeks || 0) > 0) continue;
+
+    const didPlay = playedIds.has(p.id);
+    let delta = won ? 2 : (drawn ? 0 : -2);
+
+    if (didPlay) {
+      delta += 2;
+      if (p.unhappyReason === 'playing_time' && p.morale >= 55) {
+        p.unhappyReason = null;
+        p.transferRequested = false;
+      }
+    } else {
+      if (p.squadStatus === 'key') delta -= 6;
+      else if (p.squadStatus === 'first_team') delta -= 4;
+      else if (p.squadStatus === 'rotation') delta -= 1;
+    }
+
+    if (delta < 0 && captainLeadership >= 1.0 && Math.random() < 0.35) {
+      delta = Math.min(0, delta + 2);
+    }
+
+    p.morale = clamp((p.morale || 75) + delta, 10, 100);
+    if (p.morale <= 35 && !didPlay && (p.squadStatus === 'key' || p.squadStatus === 'first_team')) {
+      p.unhappyReason = 'playing_time';
+      if (p.morale <= 22 && !p.transferRequested) {
+        p.transferRequested = true;
+        if (club.isPlayer && typeof addDailyLog === 'function') {
+          addDailyLog(`【ロッカー不満】#${p.squadNumber || '-'} ${p.name} が出場機会の少なさに不満を募らせ、移籍志願を申し出ました！`);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * 3年累積赤字に基づくPSR（収益性と持続可能性に関する規則）評価
+ */
+function evaluateClubPSR(club) {
+  if (!club || !Array.isArray(club.psrHistory)) return { total3YrNet: 0, isBreach: false, pointsDeduction: 0 };
+  const recent3 = club.psrHistory.slice(-3);
+  const total3YrNet = recent3.reduce((acc, row) => acc + (row.netProfit || 0), 0);
+  const limit = typeof PSR_MAX_3YR_DEFICIT === 'number' ? PSR_MAX_3YR_DEFICIT : -35000;
+  const isBreach = total3YrNet < limit;
+  const pointsDeduction = isBreach ? (total3YrNet < limit - 15000 ? 10 : 6) : 0;
+  return { total3YrNet, isBreach, pointsDeduction };
+}
+
+/**
+ * 試合後の理事会（ボード）信頼度更新
+ */
+function updateBoardConfidenceAfterMatch(club, compCategory, won, drawn) {
+  if (!club) return;
+  ensureClubRealismFields(club);
+  let delta = won ? 2 : (drawn ? 0 : -2);
+  if (compCategory === 'league' && typeof getSortedStandings === 'function') {
+    const table = (club.division === 'd2' && gameState.competitions && gameState.competitions.championship)
+      ? [...gameState.competitions.championship.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0))
+      : getSortedStandings();
+    const rank = table.findIndex(c => c.id === club.id) + 1;
+    const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
+    if (rank > 0) {
+      if (rank <= target) delta += 1;
+      else if (rank >= target + 5) delta -= 2;
+    }
+  }
+  club.boardConfidence = clamp((club.boardConfidence || 75) + delta, 0, 100);
+  if (club.isPlayer && club.boardConfidence <= 10 && !gameState.isSeasonOver && !gameState.isGameOver) {
+    gameState.pendingBoardCrisis = true;
+  }
 }

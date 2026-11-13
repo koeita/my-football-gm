@@ -144,7 +144,14 @@ function saveGameToStorage(force = false) {
         pendingMegaOffer: gameState.pendingMegaOffer || null,
         facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
         marketSubtab: gameState.marketSubtab || 'market',
-        marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' }
+        marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' },
+        scoutingIntel: gameState.scoutingIntel || {},
+        activeScoutAssignments: gameState.activeScoutAssignments || [],
+        installments: gameState.installments || [],
+        sellOnRights: gameState.sellOnRights || [],
+        intlBreakState: gameState.intlBreakState || null,
+        pendingBoardCrisis: Boolean(gameState.pendingBoardCrisis),
+        pendingDeadlineOffer: Boolean(gameState.pendingDeadlineOffer)
       }
     };
     if (typeof dehydrateCompetitionsForSave === 'function') {
@@ -398,8 +405,11 @@ function loadGameFromStorage() {
       gameState.d2PowerCalibratedV1 = true;
     }
 
-    // 全所属選手およびユースの疲労度・評価点データ互換性補完（1部・2部両方）
+    // 全所属選手およびユースの疲労度・評価点・リアリティデータ互換性補完（1部・2部両方）
     getAllManagedLeagueClubs().forEach(c => {
+      if (typeof ensureClubRealismFields === 'function') {
+        ensureClubRealismFields(c);
+      }
       if (Array.isArray(c.players)) {
         c.players.forEach(p => {
           if (typeof p.fatigue !== 'number') p.fatigue = 0;
@@ -412,6 +422,13 @@ function loadGameFromStorage() {
         });
       }
     });
+    if (!gameState.scoutingIntel || typeof gameState.scoutingIntel !== 'object') gameState.scoutingIntel = {};
+    if (!Array.isArray(gameState.activeScoutAssignments)) gameState.activeScoutAssignments = [];
+    if (!Array.isArray(gameState.installments)) gameState.installments = [];
+    if (!Array.isArray(gameState.sellOnRights)) gameState.sellOnRights = [];
+    if (gameState.intlBreakState === undefined) gameState.intlBreakState = null;
+    gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
+    gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);
     return true;
   } catch (e) {
     return false;

@@ -15281,6 +15281,155 @@ body {
   }
 }
 
+/* ==========================================
+   リアルシミュレーション拡張 UI スタイル
+   ========================================== */
+.tactical-roles-chem-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+.roles-chem-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+}
+.chem-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.roles-chem-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.role-select-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.role-select {
+  background: #161b22;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  max-width: 135px;
+}
+.pitch-node-cap {
+  background: #f1c40f;
+  color: #0d1117;
+  font-weight: 800;
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.pitch-node-susp {
+  background: #e74c3c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.neg-clauses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.neg-clause-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.board-psr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.board-psr-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.board-psr-title {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.board-psr-main {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.board-psr-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.scout-analysis-panel {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+.scout-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.scout-form-badges {
+  display: inline-flex;
+  gap: 4px;
+}
+.form-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: 'Roboto Mono', monospace;
+}
+.form-w { background: rgba(46, 204, 113, 0.22); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.45); }
+.form-d { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid rgba(241, 196, 15, 0.4); }
+.form-l { background: rgba(231, 76, 60, 0.22); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.45); }
+.scout-advice-box {
+  font-size: 11.5px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+@media (max-width: 768px) {
+  .board-psr-grid { grid-template-columns: 1fr; }
+  .neg-clauses-grid { grid-template-columns: 1fr; }
+}
+
 
 
 

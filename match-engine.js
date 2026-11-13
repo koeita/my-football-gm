@@ -230,17 +230,37 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
     return { homeScorers: [], awayScorers: [], momPlayer: null, momClub: homeClub, momRating: '7.5' };
   }
 
+  const compCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compKey || 'd1') : 'league';
+  const preSuspendedIds = new Set();
+  if (recordOfficial) {
+    [homeClub, awayClub].forEach(c => {
+      if (c && Array.isArray(c.players)) {
+        c.players.forEach(p => {
+          if (typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)) {
+            preSuspendedIds.add(p.id);
+          }
+        });
+      }
+    });
+  }
+
   const homeStarters = ensureClubStartersForMatch(homeClub);
   const awayStarters = ensureClubStartersForMatch(awayClub);
+  const homeBench = (homeClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+  const awayBench = (awayClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+  const homeSubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(homeClub, homeStarters, homeBench, 62, homeScore - awayScore, homeClub.subPolicy, 0) : { subsIn: [] };
+  const awaySubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(awayClub, awayStarters, awayBench, 62, awayScore - homeScore, awayClub.subPolicy, 0) : { subsIn: [] };
+  const homeSubs = homeSubRes.subsIn || [];
+  const awaySubs = awaySubRes.subsIn || [];
 
-  applyOfficialAppearancesAndTraining(homeClub, homeStarters, [], { recordOfficial, applyTraining });
-  applyOfficialAppearancesAndTraining(awayClub, awayStarters, [], { recordOfficial, applyTraining });
+  applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial, applyTraining });
+  applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial, applyTraining });
 
   const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial });
   const ratingRes = calculateAndAssignMatchRatings(
     homeClub, awayClub,
     homeStarters, awayStarters,
-    [], [],
+    homeSubs, awaySubs,
     homeScore, awayScore,
     homeScorers.concat(awayScorers),
     { recordOfficial }
@@ -306,8 +326,12 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
   simQuickCards(homeStarters);
   simQuickCards(awayStarters);
 
+  if (recordOfficial && typeof applyPostMatchDiscipline === 'function') {
+    applyPostMatchDiscipline(compCat, homeClub, awayClub, [...homeStarters, ...homeSubs], [...awayStarters, ...awaySubs], cardsMap, preSuspendedIds);
+  }
+
   if (compKey) {
-    recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStarters, awayStarters, [], [], homeScore, awayScore, homeScorers, awayScorers, ratingRes, cardsMap);
+    recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStarters, awayStarters, homeSubs, awaySubs, homeScore, awayScore, homeScorers, awayScorers, ratingRes, cardsMap);
   }
 
   return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
@@ -1276,6 +1300,39 @@ function simulateMatch(homeClub, awayClub) {
     rawAwayLambda *= 0.26;
   }
 
+  // --- チームケミストリー・戦術習熟度・役割（キャプテン・セットプレー）補正 ---
+  const hChem = typeof homeClub.teamChemistry === 'number' ? homeClub.teamChemistry : 75;
+  const aChem = typeof awayClub.teamChemistry === 'number' ? awayClub.teamChemistry : 75;
+  const hFam = typeof homeClub.tacticalFamiliarity === 'number' ? homeClub.tacticalFamiliarity : 75;
+  const aFam = typeof awayClub.tacticalFamiliarity === 'number' ? awayClub.tacticalFamiliarity : 75;
+  rawHomeLambda *= clamp(0.92 + ((hChem + hFam) / 200) * 0.14, 0.90, 1.08);
+  rawAwayLambda *= clamp(0.92 + ((aChem + aFam) / 200) * 0.14, 0.90, 1.08);
+
+  if (homeClub.roles && homeClub.roles.setPieceKickerId) {
+    const sp = (homeClub.players || []).find(p => p.id === homeClub.roles.setPieceKickerId);
+    if (sp && sp.isStarter) rawHomeLambda *= (1 + clamp(((sp.atk || 70) - 65) / 400, 0, 0.08));
+  }
+  if (awayClub.roles && awayClub.roles.setPieceKickerId) {
+    const sp = (awayClub.players || []).find(p => p.id === awayClub.roles.setPieceKickerId);
+    if (sp && sp.isStarter) rawAwayLambda *= (1 + clamp(((sp.atk || 70) - 65) / 400, 0, 0.08));
+  }
+
+  // --- 試合中レッドカード（10人戦の数的不利シミュレーション） ---
+  const homeRedCard = Math.random() < 0.025;
+  const awayRedCard = Math.random() < 0.025;
+  const homeRedMinute = homeRedCard ? randInt(18, 78) : null;
+  const awayRedMinute = awayRedCard ? randInt(18, 78) : null;
+  if (homeRedCard) {
+    const remainRatio = Math.max(0.15, (90 - homeRedMinute) / 90);
+    rawHomeLambda *= (1 - 0.35 * remainRatio);
+    rawAwayLambda *= (1 + 0.28 * remainRatio);
+  }
+  if (awayRedCard) {
+    const remainRatio = Math.max(0.15, (90 - awayRedMinute) / 90);
+    rawAwayLambda *= (1 - 0.35 * remainRatio);
+    rawHomeLambda *= (1 + 0.28 * remainRatio);
+  }
+
   const homeLambda = clamp(rawHomeLambda, 0.08, 4.4);
   const awayLambda = clamp(rawAwayLambda, 0.08, 4.2);
 
@@ -1331,7 +1388,11 @@ function simulateMatch(homeClub, awayClub) {
     homeTactic: hTactic,
     awayTactic: aTactic,
     homeFormation: hForm,
-    awayFormation: aForm
+    awayFormation: aForm,
+    homeRedCard,
+    awayRedCard,
+    homeRedMinute,
+    awayRedMinute
   };
 }
 
@@ -1448,14 +1509,143 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
 }
 
 /**
+ * 試合中の自動選手交代（最大5人枠・交代方針対応）を実行
+ */
+function executeAutoSubstitutions(club, starters, bench, matchMinute = 68, scoreDiff = 0, subPolicy = null, alreadySubbedCount = 0) {
+  if (!club || !Array.isArray(starters) || !Array.isArray(bench)) return { subsIn: [], subEvents: [] };
+  const maxSubs = 5;
+  const remainSlots = Math.max(0, maxSubs - (alreadySubbedCount || 0));
+  if (remainSlots <= 0 || bench.length === 0) return { subsIn: [], subEvents: [] };
+
+  const policy = subPolicy || club.subPolicy || 'balanced';
+  const availBench = bench.filter(p => p && !p.isRetired && !(p.injuryDays > 0 || p.injuryWeeks > 0) && !(p.loanStatus && p.loanStatus.isLoanOut) && !p.onIntlDuty && (p.primaryPosition || p.pos) !== 'GK');
+  if (availBench.length === 0) return { subsIn: [], subEvents: [] };
+
+  let desiredCount = 3;
+  if (policy === 'fatigue') desiredCount = 4;
+  else if (policy === 'defensive_lead' && scoreDiff > 0) desiredCount = 4;
+  else if (policy === 'attack_chase' && scoreDiff <= 0) desiredCount = 4;
+  if (Math.random() < 0.35) desiredCount = Math.min(5, desiredCount + 1);
+  desiredCount = Math.min(remainSlots, desiredCount, availBench.length);
+
+  const outCandidates = starters
+    .filter(p => p && (p.assignedPos || p.pos) !== 'GK')
+    .sort((a, b) => {
+      const ftgDiff = (b.fatigue || 0) - (a.fatigue || 0);
+      if (policy === 'fatigue') return ftgDiff;
+      const roleA = POS_ROLE_GROUP[a.assignedPos || a.pos] || 'MF';
+      const roleB = POS_ROLE_GROUP[b.assignedPos || b.pos] || 'MF';
+      if (policy === 'defensive_lead' && scoreDiff > 0) {
+        return (roleB === 'FW' ? 20 : 0) - (roleA === 'FW' ? 20 : 0) + ftgDiff * 0.5;
+      }
+      if (policy === 'attack_chase' && scoreDiff <= 0) {
+        return (roleB === 'DF' ? 20 : 0) - (roleA === 'DF' ? 20 : 0) + ftgDiff * 0.5;
+      }
+      return ftgDiff + ((a.sta || 70) - (b.sta || 70)) * 0.3;
+    });
+
+  const subsIn = [];
+  const subEvents = [];
+  const usedBenchIds = new Set();
+
+  for (let i = 0; i < desiredCount; i++) {
+    const outP = outCandidates[i];
+    if (!outP) break;
+    const outRole = POS_ROLE_GROUP[outP.assignedPos || outP.pos] || 'MF';
+    let targetRole = outRole;
+    if (policy === 'defensive_lead' && scoreDiff > 0 && i === 0) targetRole = 'DF';
+    if (policy === 'attack_chase' && scoreDiff <= 0 && i === 0) targetRole = 'FW';
+
+    const pool = availBench.filter(b => !usedBenchIds.has(b.id));
+    if (pool.length === 0) break;
+    const roleMatches = pool.filter(b => (POS_ROLE_GROUP[b.primaryPosition || b.pos] || 'MF') === targetRole);
+    const pickPool = roleMatches.length > 0 ? roleMatches : pool;
+    pickPool.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+    const inP = pickPool[0];
+    if (!inP) break;
+
+    usedBenchIds.add(inP.id);
+    subsIn.push(inP);
+    const min = clamp((matchMinute || 65) + i * 5 + randInt(0, 4), 55, 89);
+    subEvents.push({ minute: min, clubId: club.id, outPlayer: outP, inPlayer: inP });
+  }
+  return { subsIn, subEvents };
+}
+
+/**
+ * 試合後の累積警告・退場ルール適用（出場停止の付与と消化）
+ */
+function applyPostMatchDiscipline(compCategory, homeClub, awayClub, homePlayed, awayPlayed, cardsMap, preSuspendedIds = null) {
+  if (!compCategory || compCategory === 'preseason') return;
+  const decrementClub = (club) => {
+    if (!club || !Array.isArray(club.players)) return;
+    for (const p of club.players) {
+      if (preSuspendedIds && preSuspendedIds.has(p.id) && p.suspensionMatches && p.suspensionMatches[compCategory] > 0) {
+        p.suspensionMatches[compCategory] = Math.max(0, p.suspensionMatches[compCategory] - 1);
+      }
+    }
+  };
+  decrementClub(homeClub);
+  decrementClub(awayClub);
+
+  const applyForClub = (club, playedList) => {
+    if (!club || !Array.isArray(playedList)) return;
+    for (const p of playedList) {
+      if (!p || !p.id) continue;
+      if (typeof ensurePlayerRealismFields === 'function') ensurePlayerRealismFields(p);
+      const cardInfo = cardsMap && cardsMap[p.id];
+      if (!cardInfo) continue;
+
+      if (cardInfo.yellow > 0) {
+        p.compYellowAccum[compCategory] = (p.compYellowAccum[compCategory] || 0) + cardInfo.yellow;
+        const threshold = compCategory === 'league' ? 5 : 2;
+        if (p.compYellowAccum[compCategory] % threshold === 0) {
+          p.suspensionMatches[compCategory] = (p.suspensionMatches[compCategory] || 0) + 1;
+          if (club.isPlayer && typeof addDailyLog === 'function') {
+            addDailyLog(`【出場停止】#${p.squadNumber || '-'} ${p.name} が累積警告により次節の公式戦を出場停止となります。`);
+          }
+        }
+      }
+      if (cardInfo.red > 0) {
+        p.suspensionMatches[compCategory] = (p.suspensionMatches[compCategory] || 0) + 1;
+        if (club.isPlayer && typeof addDailyLog === 'function') {
+          addDailyLog(`【退場処分】#${p.squadNumber || '-'} ${p.name} がレッドカードにより次節出場停止となりました。`);
+        }
+      }
+    }
+  };
+  applyForClub(homeClub, homePlayed);
+  applyForClub(awayClub, awayPlayed);
+}
+
+/**
  * 試合から得点者を抽出し、今季＆キャリア通算スタッツを更新する
  */
 function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awayScore, compKey = null) {
+  const compCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compKey || 'd1') : 'league';
+  const preSuspendedIds = new Set();
+  [homeClub, awayClub].forEach(c => {
+    if (c && Array.isArray(c.players)) {
+      c.players.forEach(p => {
+        if (typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)) {
+          preSuspendedIds.add(p.id);
+        }
+      });
+    }
+  });
+
   const homeStarters = homeClub.players.filter(p => p.isStarter && !p.isRetired);
   const awayStarters = awayClub.players.filter(p => p.isStarter && !p.isRetired);
+  const homeBench = homeClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+  const awayBench = awayClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
 
-  applyOfficialAppearancesAndTraining(homeClub, homeStarters, [], { recordOfficial: true, applyTraining: true });
-  applyOfficialAppearancesAndTraining(awayClub, awayStarters, [], { recordOfficial: true, applyTraining: true });
+  const homeSubRes = executeAutoSubstitutions(homeClub, homeStarters, homeBench, 62, homeScore - awayScore, homeClub.subPolicy, 0);
+  const awaySubRes = executeAutoSubstitutions(awayClub, awayStarters, awayBench, 62, awayScore - homeScore, awayClub.subPolicy, 0);
+  const homeSubs = homeSubRes.subsIn || [];
+  const awaySubs = awaySubRes.subsIn || [];
+
+  applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial: true, applyTraining: true });
+  applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial: true, applyTraining: true });
 
   const getScorer = (starters, rawTactic) => {
     const tactic = normalizeTacticKey(rawTactic);
@@ -1548,7 +1738,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const ratingRes = calculateAndAssignMatchRatings(
     homeClub, awayClub,
     homeStarters, awayStarters,
-    [], [],
+    homeSubs, awaySubs,
     homeScore, awayScore,
     allMatchGoals,
     { recordOfficial: true }
@@ -1585,7 +1775,8 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
   // 警告（イエロー）・退場（レッド）カードの記録シミュレーション
   const cardsMap = {};
-  const simulateCardsForSquad = (starters) => {
+  const redCardEvents = [];
+  const simulateCardsForSquad = (starters, club, forcedRed = false, forcedRedMinute = null) => {
     const cardWeights = [45, 38, 14, 3];
     const numYellow = typeof avatarWeightedPick === 'function' ? avatarWeightedPick(cardWeights, Math.random) : randInt(0, 1);
     const nonGk = starters.filter(p => (p.assignedPos || p.pos) !== 'GK');
@@ -1602,7 +1793,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
         target.careerStats.yellowCards = (target.careerStats.yellowCards || 0) + 1;
       }
     }
-    if (Math.random() < 0.025) {
+    if (forcedRed || (!match && Math.random() < 0.025)) {
       const target = pool[randInt(0, pool.length - 1)];
       if (target) {
         if (target.id) {
@@ -1612,11 +1803,25 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
         target.redCards = (target.redCards || 0) + 1;
         if (!target.careerStats) target.careerStats = { appearances: target.appearances || 0, goals: target.goals || 0, assists: target.assists || 0 };
         target.careerStats.redCards = (target.careerStats.redCards || 0) + 1;
+        redCardEvents.push({
+          minute: forcedRedMinute || randInt(22, 82),
+          clubId: club.id,
+          player: target
+        });
       }
     }
   };
-  simulateCardsForSquad(homeStarters);
-  simulateCardsForSquad(awayStarters);
+  simulateCardsForSquad(homeStarters, homeClub, Boolean(match && match.homeRedCard), match && match.homeRedMinute);
+  simulateCardsForSquad(awayStarters, awayClub, Boolean(match && match.awayRedCard), match && match.awayRedMinute);
+  if (match) {
+    match.redCardEvents = redCardEvents;
+    match.homeSubEvents = homeSubRes.subEvents || [];
+    match.awaySubEvents = awaySubRes.subEvents || [];
+  }
+
+  if (typeof applyPostMatchDiscipline === 'function') {
+    applyPostMatchDiscipline(compCat, homeClub, awayClub, [...homeStarters, ...homeSubs], [...awayStarters, ...awaySubs], cardsMap, preSuspendedIds);
+  }
 
   const resolvedLeagueKey = compKey || (
     (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs)
@@ -1628,7 +1833,7 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     resolvedLeagueKey,
     homeClub, awayClub,
     homeStarters, awayStarters,
-    [], [],
+    homeSubs, awaySubs,
     homeScore, awayScore,
     homeScorers, awayScorers,
     ratingRes, cardsMap
@@ -1642,11 +1847,33 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   updateManagerTrustAfterMatch(homeClub, isHomeWin, isDraw);
   updateManagerTrustAfterMatch(awayClub, isAwayWin, isDraw);
 
-  // 試合出場に伴う疲労度（0〜100数値）蓄積（戦術・コーチング効果連動）
-  applyPostMatchPlayerFatigue(homeClub, homeStarters, []);
-  applyPostMatchPlayerFatigue(awayClub, awayStarters, []);
+  if (typeof updatePlayerMoraleAndStatuses === 'function') {
+    updatePlayerMoraleAndStatuses(homeClub, homeStarters, homeSubs, isHomeWin, isDraw);
+    updatePlayerMoraleAndStatuses(awayClub, awayStarters, awaySubs, isAwayWin, isDraw);
+  }
+  if (typeof updateBoardConfidenceAfterMatch === 'function') {
+    updateBoardConfidenceAfterMatch(homeClub, compCat, isHomeWin, isDraw);
+    updateBoardConfidenceAfterMatch(awayClub, compCat, isAwayWin, isDraw);
+  }
+  if (typeof calculateClubChemistryAndFamiliarity === 'function') {
+    calculateClubChemistryAndFamiliarity(homeClub);
+    calculateClubChemistryAndFamiliarity(awayClub);
+  }
 
-  return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
+  // 試合出場に伴う疲労度（0〜100数値）蓄積（戦術・コーチング効果連動）
+  applyPostMatchPlayerFatigue(homeClub, homeStarters, homeSubs);
+  applyPostMatchPlayerFatigue(awayClub, awayStarters, awaySubs);
+
+  return {
+    homeScorers,
+    awayScorers,
+    momPlayer: ratingRes.momPlayer,
+    momClub: ratingRes.momClub,
+    momRating: ratingRes.momRating,
+    homeSubEvents: homeSubRes.subEvents || [],
+    awaySubEvents: awaySubRes.subEvents || [],
+    redCardEvents
+  };
 }
 
 /**
@@ -1781,11 +2008,20 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     const homeClub = getClubById(match.homeId);
     const awayClub = getClubById(match.awayId);
 
+    if (typeof optimizeClubStarters === 'function') {
+      if (!homeClub.isPlayer) optimizeClubStarters(homeClub);
+      if (!awayClub.isPlayer) optimizeClubStarters(awayClub);
+    }
+
     const simResult = simulateMatch(homeClub, awayClub);
     const {
       homeScore, awayScore, homePossession, awayPossession, homeShots, awayShots,
       homeOnTarget, awayOnTarget, homeXg, awayXg, homePasses, awayPasses, homePassAccuracy, awayPassAccuracy
     } = simResult;
+    match.homeRedCard = Boolean(simResult.homeRedCard);
+    match.awayRedCard = Boolean(simResult.awayRedCard);
+    match.homeRedMinute = simResult.homeRedMinute || null;
+    match.awayRedMinute = simResult.awayRedMinute || null;
     match.homeScore = homeScore;
     match.awayScore = awayScore;
     match.homePossession = homePossession;
@@ -1868,6 +2104,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
       momPlayer,
       momClub,
       momRating,
+      homeSubEvents: match.homeSubEvents || [],
+      awaySubEvents: match.awaySubEvents || [],
+      redCardEvents: match.redCardEvents || [],
       homePossession,
       awayPossession,
       homeShots,
@@ -2271,6 +2510,43 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
     byMinute[min] = ev;
     if (isSave) subHighlights.push(ev);
   }
+
+  // 2.5 退場（レッドカード）および自動選手交代イベントをタイムラインへ配置
+  const redEvs = Array.isArray(matchData.redCardEvents) ? matchData.redCardEvents : [];
+  redEvs.forEach(rc => {
+    if (!rc || !rc.player) return;
+    const min = getFreeMinute(rc.minute || 55, (rc.minute || 55) <= 45);
+    const isHome = rc.clubId === homeClub.id;
+    const cName = isHome ? homeClub.name : awayClub.name;
+    const ev = {
+      minute: min,
+      type: 'red',
+      side: isHome ? 'home' : 'away',
+      club: isHome ? homeClub : awayClub,
+      actor: rc.player,
+      text: `🟥 RED CARD!! ${cName} ${fmtNum(rc.player)}${rc.player.name} が一発退場！残りを10人で戦う厳しい展開！`
+    };
+    byMinute[min] = ev;
+    highlights.push(ev);
+  });
+
+  const allSubs = [
+    ...(Array.isArray(matchData.homeSubEvents) ? matchData.homeSubEvents.map(s => ({ ...s, side: 'home', club: homeClub })) : []),
+    ...(Array.isArray(matchData.awaySubEvents) ? matchData.awaySubEvents.map(s => ({ ...s, side: 'away', club: awayClub })) : [])
+  ];
+  allSubs.forEach(sub => {
+    if (!sub || !sub.inPlayer || !sub.outPlayer) return;
+    const min = getFreeMinute(sub.minute || 68, false);
+    const ev = {
+      minute: min,
+      type: 'sub',
+      side: sub.side,
+      club: sub.club,
+      actor: sub.inPlayer,
+      text: `🔄 選手交代 [${sub.club.name}] OUT ${fmtNum(sub.outPlayer)}${sub.outPlayer.name} ➔ IN ${fmtNum(sub.inPlayer)}${sub.inPlayer.name}`
+    };
+    byMinute[min] = ev;
+  });
 
   // ゴールを最優先しつつ最大4件のハイライトを時系列順に構成
   for (const sh of subHighlights) {
