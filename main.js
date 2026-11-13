@@ -12740,17 +12740,9 @@ function openPastMatchSummaryModal(weekNum) {
   // 試合直後のサマリーと完全に同一のHTMLを出力
   body.innerHTML = buildMatchSummaryHtml(matchData);
 
-  const tabBtns = body.querySelectorAll('.summary-subnav-btn');
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.subnav;
-      tabBtns.forEach(b => b.classList.toggle('active', b === btn));
-      const statsView = body.querySelector('#summary-tab-stats');
-      const ratingsView = body.querySelector('#summary-tab-ratings');
-      if (statsView) statsView.classList.toggle('hidden', target !== 'stats');
-      if (ratingsView) ratingsView.classList.toggle('hidden', target !== 'ratings');
-    });
-  });
+  if (typeof bindSummarySubnavEvents === 'function') {
+    bindSummarySubnavEvents(body);
+  }
 
   if (typeof renderAvatarCanvases === 'function') {
     renderAvatarCanvases(body);

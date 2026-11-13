@@ -3008,8 +3008,8 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
     const starterIds = new Set(sortedStarters.map(p => p.id));
     const filteredSubs = (subEntries || []).filter(se => se.p && !starterIds.has(se.p.id));
-    const all = sortedStarters.map(p => ({ p, isSub: false, inMinute: 0 })).concat(filteredSubs.map(se => ({ p: se.p, isSub: true, inMinute: se.inMinute })));
-    const rowsHtml = all.map(({ p, isSub, inMinute }) => {
+
+    const buildRowHtml = ({ p, isSub, inMinute }) => {
       const pos = p.assignedPos || p.pos || 'MF';
       const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
       const numRat = Number(rat);
@@ -3031,7 +3031,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
       const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
       const playedMins = isSub ? Math.max(1, 90 - (inMinute || 68)) : 90;
-      const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">SUB ${inMinute || 68}'(${playedMins}分)</span>` : '';
+      const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">IN ${inMinute || 68}' (${playedMins}分)</span>` : '';
 
       return `
         <div class="summary-rating-row ${isMomPlayer ? 'is-mom-row' : ''}">
@@ -3048,12 +3048,20 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
           </div>
         </div>
       `;
-    }).join('');
+    };
 
+    const starterRowsHtml = sortedStarters.map(p => buildRowHtml({ p, isSub: false, inMinute: 0 })).join('');
+    const subRowsHtml = filteredSubs.length > 0
+      ? filteredSubs.map(se => buildRowHtml({ p: se.p, isSub: true, inMinute: se.inMinute })).join('')
+      : '<div class="summary-rating-empty text-muted mono">途中交代出場なし</div>';
+
+    const all = sortedStarters.map(p => ({ p })).concat(filteredSubs.map(se => ({ p: se.p })));
     const avgRat = (all.reduce((s, x) => s + (x.p.lastMatchRating || 6.7), 0) / Math.max(1, all.length)).toFixed(1);
+    const sideKey = isHome ? 'home' : 'away';
+    const isHidden = sideKey !== defaultTeam;
 
     return `
-      <div class="summary-team-ratings-panel ${club.isPlayer ? 'is-player' : ''}">
+      <div class="summary-team-ratings-panel ${club.isPlayer ? 'is-player' : ''} ${isHidden ? 'hidden' : ''}" data-ratings-panel="${sideKey}">
         <div class="summary-team-ratings-title">
           <div class="team-title-left">
             ${getClubEmblemSvg(club, 20, 'team-ratings-emblem')}
@@ -3062,15 +3070,32 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
           </div>
           <span class="team-title-avg mono">平均採点: <strong class="accent-green">${avgRat}</strong></span>
         </div>
+        <div class="summary-ratings-group-label mono">▼ スターティングメンバー (${sortedStarters.length}名)</div>
         <div class="summary-team-ratings-list">
-          ${rowsHtml}
+          ${starterRowsHtml}
+        </div>
+        <div class="summary-ratings-group-label mono" style="margin-top: 10px;">▼ 控え・途中交代出場 (${filteredSubs.length}名)</div>
+        <div class="summary-team-ratings-list">
+          ${subRowsHtml}
         </div>
       </div>
     `;
   };
 
+  const defaultTeam = (awayClub && awayClub.isPlayer && !(homeClub && homeClub.isPlayer)) ? 'away' : 'home';
+
   return `
-    <div class="summary-ratings-grid">
+    <div class="summary-ratings-team-tabs">
+      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'home' ? 'active' : ''}" data-ratings-team="home">
+        ${getClubEmblemSvg(homeClub, 16)}
+        <span class="mono">${getClubShortCode(homeClub)} (HOME)${homeClub.isPlayer ? ' ★' : ''}</span>
+      </button>
+      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'away' ? 'active' : ''}" data-ratings-team="away">
+        ${getClubEmblemSvg(awayClub, 16)}
+        <span class="mono">${getClubShortCode(awayClub)} (AWAY)${awayClub.isPlayer ? ' ★' : ''}</span>
+      </button>
+    </div>
+    <div class="summary-ratings-grid" style="grid-template-columns: 1fr;">
       ${renderClubList(homeClub, homeStarters, homeSubEntries, homeScorers, true)}
       ${renderClubList(awayClub, awayStarters, awaySubEntries, awayScorers, false)}
     </div>
@@ -3391,22 +3416,37 @@ function transitionToMatchSummary() {
 
   summaryBody.innerHTML = buildMatchSummaryHtml(md);
 
-  // サマリー内タブ切り替え（スタッツ ⇄ 選手採点）のイベントバインド
-  const tabBtns = summaryBody.querySelectorAll('.summary-subnav-btn');
+  bindSummarySubnavEvents(summaryBody);
+
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(summaryBody);
+  }
+}
+
+function bindSummarySubnavEvents(container) {
+  if (!container) return;
+  const tabBtns = container.querySelectorAll('.summary-subnav-btn');
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.subnav;
       tabBtns.forEach(b => b.classList.toggle('active', b === btn));
-      const statsView = summaryBody.querySelector('#summary-tab-stats');
-      const ratingsView = summaryBody.querySelector('#summary-tab-ratings');
+      const statsView = container.querySelector('#summary-tab-stats');
+      const ratingsView = container.querySelector('#summary-tab-ratings');
       if (statsView) statsView.classList.toggle('hidden', target !== 'stats');
       if (ratingsView) ratingsView.classList.toggle('hidden', target !== 'ratings');
     });
   });
 
-  if (typeof renderAvatarCanvases === 'function') {
-    renderAvatarCanvases(summaryBody);
-  }
+  const teamBtns = container.querySelectorAll('.summary-team-tab-btn');
+  teamBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTeam = btn.dataset.ratingsTeam;
+      teamBtns.forEach(b => b.classList.toggle('active', b === btn));
+      container.querySelectorAll('.summary-team-ratings-panel[data-ratings-panel]').forEach(panel => {
+        panel.classList.toggle('hidden', panel.dataset.ratingsPanel !== targetTeam);
+      });
+    });
+  });
 }
 
 /**

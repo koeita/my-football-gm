@@ -15443,6 +15443,44 @@ body {
   color: #ef4444;
   font-weight: 700;
 }
+.summary-ratings-team-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.summary-team-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.summary-team-tab-btn.active {
+  background: rgba(46, 204, 113, 0.16);
+  border-color: rgba(46, 204, 113, 0.5);
+  color: var(--accent-green);
+}
+.summary-ratings-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+.summary-rating-empty {
+  padding: 8px 4px;
+  font-size: 11px;
+  text-align: center;
+}
 
 
 
