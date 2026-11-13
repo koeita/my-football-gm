@@ -12380,16 +12380,18 @@ function openManagerHireModal() {
                   <div style="flex:1; min-width:0;">
                     <div class="flat-row-title" style="font-size:14.5px; line-height:1.25;">${cand.name}</div>
                     <div class="flat-row-meta mono" style="margin-top:2px;">
-                      ${cand.nationality} · ${cand.age}歳 · <strong class="accent-gold">£${cand.weeklyWage}k/週</strong>${eff.minReputation > 0 ? ` · Rep ${eff.minReputation}` : ''}
+                      ${cand.nationality} · ${cand.age}歳
                     </div>
                   </div>
                   <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 6px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">
                     ${repBlocked ? `要Rep ${eff.minReputation}` : (currentMgr ? '交代' : '招聘')}
                   </button>
                 </div>
-                <div class="flat-row-meta mono" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div class="flat-row-meta mono" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px;">
                   <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
-                  <span><strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong></span>
+                  <strong class="accent-gold wage-nowrap">£${cand.weeklyWage}k/週</strong>
+                  ${eff.minReputation > 0 ? `<span class="wage-nowrap" style="color:#cbd5e1;">Rep ${eff.minReputation}</span>` : ''}
+                  <span class="wage-nowrap"><strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong></span>
                 </div>
                 <div class="staff-stats-chips" style="margin-top:0;">
                   <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
