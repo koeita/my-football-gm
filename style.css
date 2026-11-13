@@ -16193,18 +16193,40 @@ body {
   }
 }
 
+.profile-avatar-col {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
 .profile-avatar-col .profile-header-ovr-box {
-  width: 100%;
+  width: auto;
+  min-width: 38px;
   box-sizing: border-box;
-  margin-top: 4px;
-  padding: 4px 6px;
+  margin-top: -12px;
+  position: relative;
+  z-index: 2;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #14181d;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
 }
 .profile-avatar-col .profile-header-ovr-val {
-  font-size: 24px;
+  font-size: 16px;
+  line-height: 1.15;
 }
+.profile-ovr-badge.ovr-tier-elite { color: #f59e0b; }
+.profile-ovr-badge.ovr-tier-high  { color: #2ecc71; }
+.profile-ovr-badge.ovr-tier-mid   { color: #38bdf8; }
+.profile-ovr-badge.ovr-tier-low   { color: #cbd5e1; }
 @media (max-width: 768px) {
+  .profile-avatar-col .profile-header-ovr-box {
+    margin-top: -10px;
+    padding: 1px 8px;
+  }
   .profile-avatar-col .profile-header-ovr-val {
-    font-size: 20px;
+    font-size: 14px;
   }
 }
 
