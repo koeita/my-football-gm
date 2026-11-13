@@ -4135,10 +4135,6 @@ function upgradeFacility(facilityKey) {
 
   if (facilityKey === 'stadium') {
     playerClub.supporters += 1200;
-    const bonusPct = (nextLv - 1) * 15;
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡張しました（投資額: ${formatMoney(cost)} / ホーム興行収入 +${bonusPct}%・サポーター +1,200人）`;
-  } else if (facilityKey === 'training') {
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ強化しました（投資額: ${formatMoney(cost)} / 若手成長率UP・負傷率およびスタミナ消耗軽減）`;
   } else if (facilityKey === 'scouting') {
     // スカウト網強化時は即座に新規候補を2名追加リストアップ
     const usedNames = new Set();
@@ -4154,13 +4150,10 @@ function upgradeFacility(facilityKey) {
       const baseTarget = clamp(randInt(64 + scoutingBonusOvr, 74 + scoutingBonusOvr), 58, 86);
       const age = randInt(19, 28);
       const candidate = createPlayer(pos, baseTarget, false, usedNames, [age, age]);
-      const ovr = getPlayerOverallRating(candidate);
-      const isExpiring = candidate.contractYears === 1;
       candidate.transferFee = calculateTransferFee(candidate);
       gameState.transferMarket.push(candidate);
     }
     gameState.transferMarket.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡大しました（投資額: ${formatMoney(cost)} / 移籍市場に高OVR候補2名を即時追加リストアップ）`;
   }
 
   renderAll();
@@ -7870,12 +7863,8 @@ function renderFacilitiesAndYouth() {
 
   const feedbackBanner = document.getElementById('facility-feedback-banner');
   if (feedbackBanner) {
-    if (gameState.facilityFeedback) {
-      feedbackBanner.textContent = gameState.facilityFeedback;
-      feedbackBanner.classList.remove('hidden');
-    } else {
-      feedbackBanner.classList.add('hidden');
-    }
+    feedbackBanner.textContent = '';
+    feedbackBanner.classList.add('hidden');
   }
 
   const facilitiesGrid = document.getElementById('facilities-grid');
@@ -7890,7 +7879,7 @@ function renderFacilitiesAndYouth() {
 
       let pipsHtml = '';
       for (let i = 1; i <= def.maxLevel; i++) {
-        pipsHtml += `<span class="facility-pip ${i <= lv ? 'active' : ''}"></span>`;
+        pipsHtml += `<span class="facility-pip ${i <= lv ? 'pip-active active' : ''}"></span>`;
       }
 
       let btnLabel = isMax ? 'MAX達成' : `Lv.${lv + 1} 改修（${formatMoney(nextCost)}）`;
@@ -7902,13 +7891,13 @@ function renderFacilitiesAndYouth() {
       const nextEffect = typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大レベル' : '効果増大');
 
       return `
-        <div class="facility-card">
+        <div class="facility-card ${isMax ? 'facility-maxed' : ''}">
           <div class="facility-card-header">
             <div class="facility-header-left">
               <h3 class="facility-name">${def.name}</h3>
               <button type="button" class="btn-facility-info" data-facility-info="${key}" title="詳細を表示" aria-label="詳細解説">ⓘ</button>
             </div>
-            <span class="facility-level-badge">Lv.${lv}/${def.maxLevel}</span>
+            <span class="facility-lv-badge facility-level-badge">Lv.${lv}/${def.maxLevel}</span>
           </div>
 
           <div class="facility-pips-row">
@@ -13337,7 +13326,7 @@ function renderBoardPsrSponsorPanel(club) {
         <div class="board-psr-title mono">SPONSORSHIP / 胸スポンサー</div>
         <div class="board-psr-main">${sp.name}</div>
         <div class="board-psr-sub mono">年額: <strong class="accent-gold">${formatMoney(sp.baseAnnual)}</strong> (残${sp.yearsRemaining}年)</div>
-        <div class="board-psr-sub mono">CLボーナス: +${formatMoney(sp.clBonus)} / 優勝: +${formatMoney(sp.titleBonus)}</div>
+        <div class="board-psr-sub mono">ECTボーナス: +${formatMoney(sp.clBonus)} / 優勝: +${formatMoney(sp.titleBonus)}</div>
       </div>
       <div class="board-psr-card">
         <div class="board-psr-title mono">PSR / 3年累積財務規律</div>
@@ -13371,6 +13360,24 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     gameState.installments = remainInst;
   }
 
+  const ectQualifiedIds = new Set();
+  if (typeof selectEuropeanCompetitionEntries === 'function') {
+    const entries = selectEuropeanCompetitionEntries();
+    if (entries && Array.isArray(entries.clEntries)) {
+      for (const ec of entries.clEntries) {
+        if (ec && ec.id) ectQualifiedIds.add(ec.id);
+      }
+    }
+  } else {
+    const cupWinners = gameState.lastSeasonCupWinners || {};
+    if (cupWinners.championsCupId) ectQualifiedIds.add(cupWinners.championsCupId);
+    if (cupWinners.europaCupId) ectQualifiedIds.add(cupWinners.europaCupId);
+    for (const c of (sortedD1 || [])) {
+      if (ectQualifiedIds.size >= 4) break;
+      if (c && c.id) ectQualifiedIds.add(c.id);
+    }
+  }
+
   const allClubs = getAllManagedLeagueClubs();
   for (const club of allClubs) {
     if (!club) continue;
@@ -13381,7 +13388,7 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
       spRev = sp.baseAnnual || 3000;
       const d1Idx = sortedD1.findIndex(c => c.id === club.id);
       if (d1Idx === 0) spRev += (sp.titleBonus || 0);
-      if (d1Idx >= 0 && d1Idx < 4) spRev += (sp.clBonus || 0);
+      if (ectQualifiedIds.has(club.id)) spRev += (sp.clBonus || 0);
       club.funds = (club.funds || 0) + spRev;
       sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
       if (sp.yearsRemaining === 0) {
