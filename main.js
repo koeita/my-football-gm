@@ -7630,6 +7630,9 @@ function renderYouthSquad() {
 
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
+    const pot = y.potential || y.potentialGrade || 'B';
+    const potClass = pot === 'S' ? 'stat-rank-S' : (pot === 'A' ? 'stat-rank-A' : (pot === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
+    const growthLabel = typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(y.growthCurve || y.growthType) : '標準';
     const canPromoteBtn = canPromote ? `
       <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
         昇格
@@ -7646,8 +7649,8 @@ function renderYouthSquad() {
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>
         <td class="col-num col-youth-ovr accent-green"><strong>${ovr}</strong></td>
-        <td class="col-num col-youth-atk">${y.atk}</td>
-        <td class="col-num col-youth-def">${y.def}</td>
+        <td class="col-num col-youth-pot"><span class="mono font-bold ${potClass}">${pot}</span></td>
+        <td class="col-num col-youth-growth"><span class="mono" style="font-size:11px;">${growthLabel}</span></td>
         <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
           ${canPromoteBtn}
@@ -7671,18 +7674,24 @@ function renderYouthScoutingPanel() {
   const canDispatch = activeTasks.length < maxSlots && !gameState.isGameOver && !gameState.isSimulating;
 
   const regionOptionsHtml = regions.map(r =>
-    `<option value="${r.id}">${r.name} (${r.days}日 / ${formatMoney(r.cost)})</option>`
+    `<option value="${r.id}">${r.name} (基本 ${formatMoney(r.cost)}〜)</option>`
   ).join('');
 
   const tasksHtml = activeTasks.length === 0
-    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">現在派遣中のユーススカウトはありません。</div>`
+    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">現在派遣中のユーススカウトはありません。数ヶ月単位で派遣すると毎月レポートが届きます。</div>`
     : activeTasks.map(t => {
         const pct = Math.max(5, Math.min(100, Math.round(((t.totalDays - t.daysRemaining) / Math.max(1, t.totalDays)) * 100)));
+        const nextRep = typeof t.daysUntilNextReport === 'number' ? t.daysUntilNextReport : 30;
+        const repCnt = t.reportsDelivered || 0;
         return `
           <div class="youth-scout-task-row">
-            <div style="display:flex; justify-content:space-between; font-size:11px;" class="mono">
-              <span>🔍 <strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole}]</span>
-              <span class="accent-gold">残り ${t.daysRemaining}日</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; flex-wrap:wrap;" class="mono">
+              <span>🔍 <strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="accent-green">次回報告: ${nextRep}日後 (報告済:${repCnt}回)</span>
+                <span class="accent-gold">残${t.daysRemaining}日</span>
+                <button type="button" class="btn btn-secondary btn-sm mono btn-recall-youth-scout" data-task-id="${t.id}" style="padding:1px 6px; font-size:10px;">帰還</button>
+              </div>
             </div>
             <div class="youth-scout-progress-track"><div class="youth-scout-progress-fill" style="width:${pct}%"></div></div>
           </div>
@@ -7746,7 +7755,7 @@ function renderYouthScoutingPanel() {
     <div class="panel-body">
       <div class="youth-scout-controls">
         <div>
-          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣地域（コスト・期間・発掘傾向）</label>
+          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣地域（発掘傾向）</label>
           <select id="youth-scout-region-select" class="settings-select" style="width:100%;">${regionOptionsHtml}</select>
         </div>
         <div>
@@ -7759,32 +7768,66 @@ function renderYouthScoutingPanel() {
             <option value="GK">GK</option>
           </select>
         </div>
+        <div>
+          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣期間（毎月報告）</label>
+          <select id="youth-scout-duration-select" class="settings-select" style="width:100%;">
+            <option value="3">3ヶ月 (90日 / 計3回)</option>
+            <option value="6">6ヶ月 (180日 / 計6回)</option>
+            <option value="9">9ヶ月 (270日 / 計9回)</option>
+          </select>
+        </div>
         <button type="button" class="btn btn-primary mono" id="btn-dispatch-youth-scout" ${canDispatch ? '' : 'disabled'}>
           スカウト派遣
         </button>
       </div>
+      <div class="mono text-muted" id="youth-scout-cost-preview" style="font-size:10.5px; margin-top:6px;"></div>
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
         ${tasksHtml}
       </div>
       <div style="margin-top:12px;">
-        <div class="mono text-muted" style="font-size:11px; font-weight:700;">発掘済み選手レポート（最大8名）</div>
+        <div class="mono text-muted" style="font-size:11px; font-weight:700;">発掘済み定期レポート（最大12名）</div>
         ${reportsHtml}
       </div>
     </div>
   `;
+
+  const regSelEl = document.getElementById('youth-scout-region-select');
+  const durSelEl = document.getElementById('youth-scout-duration-select');
+  const previewEl = document.getElementById('youth-scout-cost-preview');
+  const updateCostPreview = () => {
+    if (!previewEl || !regSelEl || !durSelEl) return;
+    const regObj = (typeof YOUTH_SCOUT_REGIONS !== 'undefined' && YOUTH_SCOUT_REGIONS[regSelEl.value]) || null;
+    const months = parseInt(durSelEl.value, 10) || 3;
+    const cost = typeof getYouthScoutMissionCost === 'function' ? getYouthScoutMissionCost(regObj, months) : 400;
+    previewEl.textContent = `派遣費用: ${formatMoney(cost)} ／ 30日ごとに定期レポートが届きます（${regObj ? regObj.desc : ''}）`;
+  };
+  if (regSelEl) regSelEl.addEventListener('change', updateCostPreview);
+  if (durSelEl) durSelEl.addEventListener('change', updateCostPreview);
+  updateCostPreview();
 
   const dispatchBtn = document.getElementById('btn-dispatch-youth-scout');
   if (dispatchBtn) {
     dispatchBtn.addEventListener('click', () => {
       const regSel = document.getElementById('youth-scout-region-select');
       const roleSel = document.getElementById('youth-scout-role-select');
-      const res = dispatchYouthScout(regSel ? regSel.value : 'england', roleSel ? roleSel.value : 'ANY');
+      const durSel = document.getElementById('youth-scout-duration-select');
+      const months = durSel ? parseInt(durSel.value, 10) : 3;
+      const res = dispatchYouthScout(regSel ? regSel.value : 'england', roleSel ? roleSel.value : 'ANY', months);
       if (!res.ok && typeof showToast === 'function') {
         showToast(res.reason || 'スカウトを派遣できませんでした', 'warn');
       }
       renderAll();
     });
   }
+
+  container.querySelectorAll('.btn-recall-youth-scout').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (typeof recallYouthScout === 'function') {
+        recallYouthScout(e.currentTarget.dataset.taskId);
+        renderAll();
+      }
+    });
+  });
 
   container.querySelectorAll('.btn-sign-youth-report').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -9059,17 +9102,8 @@ function openPlayerProfileModal(playerId) {
   const playerClub = getPlayerClub();
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
 
-  // ユース選手の将来予測OVR（ポテンシャル）生成・維持
-  if (isYouth) {
-    if (!p.potentialMin || !p.potentialMax) {
-      const potBase = Math.max(baseOvr + (p.age <= 18 ? 10 : 7), p.potentialRating || 78);
-      p.potentialMin = clamp(potBase, 75, 90);
-      p.potentialMax = clamp(p.potentialMin + 5, p.potentialMin, 95);
-    }
-  }
-
-  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
-  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
+  const growthLabel = getGrowthCurveLabel(p.growthCurve || p.growthType);
+  const growthClass = `growth-${p.growthCurve || p.growthType || 'standard'}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
@@ -9144,10 +9178,10 @@ function openPlayerProfileModal(playerId) {
     const footBadgeStr = formatFootBadge(p);
     let youthBadgeHtml = '';
     if (isYouth) {
-      const starStr = p.potentialMax >= 88 ? '★★★★★' : (p.potentialMax >= 84 ? '★★★★☆' : '★★★☆☆');
+      const potRank = p.potential || p.potentialGrade || 'B';
+      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
       youthBadgeHtml = `
-        <span class="profile-bio-chip mono" style="background:rgba(46,204,113,0.2);color:var(--accent-green);border-color:var(--accent-green);font-weight:700;">POT: ${p.potentialMin}-${p.potentialMax}</span>
-        <span class="profile-bio-chip mono" style="background:rgba(241,196,15,0.18);color:var(--accent-gold);border-color:rgba(241,196,15,0.4);">将来性: ${starStr}</span>
+        <span class="profile-bio-chip mono ${potRankClass}" style="border-color:currentColor;font-weight:700;">POT: ${potRank}</span>
       `;
     }
 

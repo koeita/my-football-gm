@@ -3126,7 +3126,15 @@ function createYouthScoutProspect(regionDef, targetRole = 'ANY') {
   return prospect;
 }
 
-function dispatchYouthScout(regionId, targetRole = 'ANY') {
+function getYouthScoutMissionCost(region, durationMonths = 3) {
+  if (!region) return 400;
+  const base = region.cost || 400;
+  const months = [3, 6, 9].includes(Number(durationMonths)) ? Number(durationMonths) : 3;
+  const mult = months === 9 ? 2.5 : (months === 6 ? 1.8 : 1.0);
+  return Math.round((base * mult) / 10) * 10;
+}
+
+function dispatchYouthScout(regionId, targetRole = 'ANY', durationMonths = 3) {
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   if (!playerClub) return { ok: false, reason: 'クラブが見つかりません' };
   const regions = typeof YOUTH_SCOUT_REGIONS !== 'undefined' ? YOUTH_SCOUT_REGIONS : {};
@@ -3138,25 +3146,44 @@ function dispatchYouthScout(regionId, targetRole = 'ANY') {
   if (gameState.activeYouthScouts.length >= maxSlots) {
     return { ok: false, reason: `派遣枠の上限（${maxSlots}枠）に達しています` };
   }
-  if ((playerClub.funds || 0) < region.cost) {
-    return { ok: false, reason: `資金不足です（必要費用: ${formatMoney(region.cost)}）` };
+  const months = [3, 6, 9].includes(Number(durationMonths)) ? Number(durationMonths) : 3;
+  const totalCost = getYouthScoutMissionCost(region, months);
+  if ((playerClub.funds || 0) < totalCost) {
+    return { ok: false, reason: `資金不足です（必要費用: ${formatMoney(totalCost)}）` };
   }
 
-  playerClub.funds -= region.cost;
+  const totalDays = months * 30;
+  const reportInterval = 30;
+  playerClub.funds -= totalCost;
   gameState.activeYouthScouts.push({
     id: 'yscout_' + Math.random().toString(36).substr(2, 8),
     regionId: region.id,
     regionName: region.name,
     targetRole: targetRole || 'ANY',
-    daysRemaining: region.days,
-    totalDays: region.days,
-    cost: region.cost
+    durationMonths: months,
+    totalDays,
+    daysRemaining: totalDays,
+    reportInterval,
+    daysUntilNextReport: reportInterval,
+    reportsDelivered: 0,
+    cost: totalCost
   });
 
   if (typeof addDailyLog === 'function') {
-    addDailyLog(`【ユーススカウト派遣】${region.name}へ ${targetRole === 'ANY' ? '全ポジション' : targetRole} 担当スカウトを派遣しました（期間: ${region.days}日 / 費用: -${formatMoney(region.cost)}）。`);
+    addDailyLog(`【ユーススカウト派遣】${region.name}へ ${targetRole === 'ANY' ? '全ポジション' : targetRole} 担当スカウトを${months}ヶ月間派遣しました（毎月定期レポート送付 / 費用: -${formatMoney(totalCost)}）。`);
   }
   return { ok: true };
+}
+
+function recallYouthScout(taskId) {
+  if (!Array.isArray(gameState.activeYouthScouts)) return false;
+  const idx = gameState.activeYouthScouts.findIndex(t => t && t.id === taskId);
+  if (idx === -1) return false;
+  const [removed] = gameState.activeYouthScouts.splice(idx, 1);
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【ユーススカウト帰還】${removed.regionName}のスカウトを呼び戻しました。`);
+  }
+  return true;
 }
 
 function advanceYouthScoutingDaily() {
@@ -3167,25 +3194,34 @@ function advanceYouthScoutingDaily() {
 
   for (const task of gameState.activeYouthScouts) {
     if (!task) continue;
+    const interval = task.reportInterval || 30;
     task.daysRemaining = Math.max(0, (task.daysRemaining || 1) - 1);
-    if (task.daysRemaining === 0) {
+    task.daysUntilNextReport = Math.max(0, (typeof task.daysUntilNextReport === 'number' ? task.daysUntilNextReport : interval) - 1);
+
+    if (task.daysUntilNextReport === 0 || task.daysRemaining === 0) {
       const reg = regions[task.regionId] || { name: task.regionName || '国内', homeProb: 0.8, nationalities: ['England'], potentialBonus: 0 };
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
       const foundCount = (sLv >= 3 && Math.random() < 0.45) ? 2 : 1;
       const foundNames = [];
       for (let i = 0; i < foundCount; i++) {
-        if (gameState.youthScoutReports.length >= 8) gameState.youthScoutReports.shift();
+        if (gameState.youthScoutReports.length >= 12) gameState.youthScoutReports.shift();
         const prospect = createYouthScoutProspect(reg, task.targetRole);
         gameState.youthScoutReports.push(prospect);
         foundNames.push(`${prospect.pos} ${prospect.name} (${prospect.age}歳/POT:${prospect.potential})`);
       }
+      task.reportsDelivered = (task.reportsDelivered || 0) + 1;
+      task.daysUntilNextReport = interval;
+
       if (typeof addDailyLog === 'function') {
-        addDailyLog(`【ユース発掘報告】${reg.name}のスカウトが帰還し、${foundNames.join('・')} を発掘しました！`);
+        const suffix = task.daysRemaining === 0 ? '（任期満了・帰還）' : `（定期報告 #${task.reportsDelivered}）`;
+        addDailyLog(`【ユース定期スカウト報告】${reg.name}からレポートが届き、${foundNames.join('・')} を発掘しました！${suffix}`);
       }
       if (typeof showToast === 'function') {
-        showToast(`ユース発掘完了（${reg.name}）：${foundNames[0]}`, 'success');
+        showToast(`ユーススカウト報告（${reg.name}）：${foundNames[0]}`, 'success');
       }
-    } else {
+    }
+
+    if (task.daysRemaining > 0) {
       remaining.push(task);
     }
   }

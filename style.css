@@ -6933,21 +6933,20 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     white-space: nowrap !important;
   }
 
-  /* 攻撃・守備・週給もモバイルで美しく表示 */
-  .youth-squad-table .col-youth-atk {
+  /* ポテンシャル・将来性・週給をモバイルでも見やすく表示 */
+  .youth-squad-table .col-youth-pot {
     display: table-cell !important;
-    width: 24px !important;
+    width: 28px !important;
     text-align: center !important;
-    font-size: 10px !important;
+    font-size: 10.5px !important;
     white-space: nowrap !important;
-    color: var(--text-muted, #8b949e) !important;
   }
 
-  .youth-squad-table .col-youth-def {
+  .youth-squad-table .col-youth-growth {
     display: table-cell !important;
-    width: 24px !important;
+    width: 34px !important;
     text-align: center !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     white-space: nowrap !important;
     color: var(--text-muted, #8b949e) !important;
   }
@@ -15665,7 +15664,7 @@ body {
 
 .youth-scout-controls {
   display: grid;
-  grid-template-columns: 1.4fr 1fr auto;
+  grid-template-columns: 1.3fr 1fr 1.1fr auto;
   gap: 8px;
   align-items: end;
 }

@@ -61,10 +61,20 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('function promoteYouthScoutReportDirectly(', self.models_js)
         self.assertIn('id="youth-scouting-panel"', self.html)
         self.assertIn('function renderYouthScoutingPanel(', self.main_js)
+        self.assertIn('function getYouthScoutMissionCost(', self.models_js)
+        self.assertIn('daysUntilNextReport', self.models_js)
+        self.assertIn('youth-scout-duration-select', self.main_js)
+        self.assertIn('function recallYouthScout(', self.models_js)
         self.assertIn('activeYouthScouts:', self.storage_js)
         self.assertIn('youthScoutReports:', self.storage_js)
         self.assertIn('ensureManagerRankAndStats(c.manager)', self.storage_js)
         self.assertIn('.staff-stat-chip.stat-rank-S', self.css)
+        self.assertIn('col-youth-pot', self.html)
+        self.assertIn('col-youth-growth', self.html)
+        self.assertIn('成長型', self.html)
+        self.assertIn('POT: ${potRank}', self.main_js)
+        self.assertNotIn('col-youth-atk', self.html)
+        self.assertNotIn('col-youth-def', self.html)
 
 
 if __name__ == '__main__':
