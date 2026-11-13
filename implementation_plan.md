@@ -1,3 +1,24 @@
+# Implementation Plan (監督数増加＆ランク・ステータス導入 ＆ ユーススカウト発掘)
+
+## [Overview]
+1. **監督数の大幅増加（24名→52名）＆ランク制度（S / A / B / C）導入**: `MANAGERS_DATABASE` を52名へ拡張し、S/A/B/Cランクに応じた必要クラブ格・週給・試合バフ・成長ボーナスを差別化する。
+2. **監督・コーチの複数ステータス導入によるバリエーション強化**:
+   - 監督に4能力（`tactics` / `motivation` / `development` / `discipline`）と特性ラベルを導入。
+   - コーチに3能力（`coaching` / `youthDev` / `analysis`）と特性ラベルを導入し、`COACHES_DATABASE` 全4部門を各6〜7名へ拡充。
+3. **ユーススカウト派遣と選手発掘システム**: 「経営」→「ユースチーム」タブ内にスカウト派遣UI・日次進捗・発掘レポート（ユース入団／直接昇格／見送り）を実装する。
+
+## [Files]
+1. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/data.js`
+2. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/models.js`
+3. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/match-engine.js`
+4. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/main.js`
+5. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/index.html`
+6. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/style.css`
+7. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/storage.js`
+8. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/tests/test_managers_and_youth_scouting.py`
+
+---
+
 # Implementation Plan (ゲームバランス検証・修正)
 
 ## [Overview]

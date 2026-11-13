@@ -130,6 +130,8 @@ function saveGameToStorage(force = false) {
         transferMarket: gameState.transferMarket,
         euroTransferList: gameState.euroTransferList || [],
         youthCandidates: gameState.youthCandidates,
+        activeYouthScouts: gameState.activeYouthScouts || [],
+        youthScoutReports: gameState.youthScoutReports || [],
         freeManagers: gameState.freeManagers || [],
         freeCoaches: gameState.freeCoaches || null,
         facilities: gameState.facilities,
@@ -410,6 +412,15 @@ function loadGameFromStorage() {
       if (typeof ensureClubRealismFields === 'function') {
         ensureClubRealismFields(c);
       }
+      if (c.manager && typeof ensureManagerRankAndStats === 'function') {
+        ensureManagerRankAndStats(c.manager);
+      }
+      if (c.coaches && typeof ensureCoachStats === 'function') {
+        (c.coaches.attacking || []).forEach(co => ensureCoachStats(co));
+        (c.coaches.defending || []).forEach(co => ensureCoachStats(co));
+        if (c.coaches.goalkeeping) ensureCoachStats(c.coaches.goalkeeping);
+        if (c.coaches.fitness) ensureCoachStats(c.coaches.fitness);
+      }
       if (Array.isArray(c.players)) {
         c.players.forEach(p => {
           if (typeof p.fatigue !== 'number') p.fatigue = 0;
@@ -426,6 +437,9 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.activeScoutAssignments)) gameState.activeScoutAssignments = [];
     if (!Array.isArray(gameState.installments)) gameState.installments = [];
     if (!Array.isArray(gameState.sellOnRights)) gameState.sellOnRights = [];
+    if (!Array.isArray(gameState.activeYouthScouts)) gameState.activeYouthScouts = [];
+    if (!Array.isArray(gameState.youthScoutReports)) gameState.youthScoutReports = [];
+    (gameState.freeManagers || []).forEach(m => { if (typeof ensureManagerRankAndStats === 'function') ensureManagerRankAndStats(m); });
     if (gameState.intlBreakState === undefined) gameState.intlBreakState = null;
     gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
     gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);

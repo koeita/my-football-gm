@@ -29,63 +29,111 @@ function getManagerTacticLabel(key) {
 // 監督（ヘッドコーチ）＆ 指導陣マスターデータベース
 // ==========================================================================
 
+const MANAGER_RANK_DEFINITIONS = {
+  S: { label: 'S', title: '世界的名将', minReputation: 6200, buffPerMatch: 0.032, highTrustBonus: 0.015, youthGrowthBonus: 0.25, allGrowthBonus: 0.20, badgeColor: '#f59e0b' },
+  A: { label: 'A', title: '一流指揮官', minReputation: 4500, buffPerMatch: 0.024, highTrustBonus: 0.010, youthGrowthBonus: 0.15, allGrowthBonus: 0.10, badgeColor: '#2ecc71' },
+  B: { label: 'B', title: '実力派', minReputation: 0, buffPerMatch: 0.016, highTrustBonus: 0.008, youthGrowthBonus: 0.10, allGrowthBonus: 0.0, badgeColor: '#38bdf8' },
+  C: { label: 'C', title: '育成・新鋭', minReputation: 0, buffPerMatch: 0.010, highTrustBonus: 0.005, youthGrowthBonus: 0.30, allGrowthBonus: 0.0, badgeColor: '#94a3b8' }
+};
+
 const MANAGERS_DATABASE = [
-  { nationality: 'Spain', age: 53, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 110, bio: '精密なポジショナルプレーと圧倒的ポゼッションを信奉する名将。' },
-  { nationality: 'Germany', age: 57, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 105, bio: '電光石火のハイプレスと情熱的なメンタリティで圧倒する闘将。' },
-  { nationality: 'Spain', age: 42, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密なビルドアップと可変戦術で若手を統率する若き理論派。' },
-  { nationality: 'Portugal', age: 39, preferredFormation: '3-4-3', preferredTactic: 'counter', weeklyWage: 85, bio: '3バックからのダイナミックな攻守転換で旋風を巻き起こす気鋭。' },
-  { nationality: 'Italy', age: 65, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 115, bio: '選手の個性を引き出す柔軟性と数々の栄冠を誇る歴戦の長老。' },
-  { nationality: 'Argentina', age: 54, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 100, bio: '堅固な4-4ブロックと不屈の闘志で相手を封殺する守備の達人。' },
-  { nationality: 'Italy', age: 55, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 95, bio: '徹底した戦術規律と強烈なインテンシティで勝点をもぎ取る仕事人。' },
-  { nationality: 'Spain', age: 52, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 85, bio: '対戦相手の弱点を徹底分析し勝負所で強さを発揮するカップ戦マイスター。' },
-  { nationality: 'England', age: 47, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 75, bio: '運動量とアグレッシブなプレッシングでチームの一体感を高める。' },
-  { nationality: 'England', age: 59, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 80, bio: '超ハイラインと超攻撃的スタイルを貫く攻撃サッカーの信念者。' },
-  { nationality: 'Italy', age: 44, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 80, bio: '後方からのパス回しとサイドのアイソレーションを重んじる新世代。' },
-  { nationality: 'Portugal', age: 47, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 65, bio: 'サイドアタックと中盤のバランスに優れた堅実な手腕。' },
-  { nationality: 'Germany', age: 50, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 70, bio: '統率された3バックと鋭利なショートカウンターを得意とする実力者。' },
-  { nationality: 'Germany', age: 51, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 90, bio: '緻密な構造論と的確な戦術采配で勝利を導く理論派。' },
-  { nationality: 'Portugal', age: 61, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 95, bio: '冷徹な守備組織とリアリズムで数々のタイトルを獲得したカリスマ。' },
-  { nationality: 'Italy', age: 45, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 75, bio: '自陣深くで誘い出し一気にスペースを攻略するパスサッカーの信奉者。' },
-  { nationality: 'Italy', age: 66, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 80, bio: 'ピッチ全域のマンツーマンと怒涛の波状攻撃を繰り出す超攻撃派。' },
-  { nationality: 'England', age: 52, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 60, bio: 'ボール保持と洗練されたパスワークで主導権を握る正統派。' },
-  { nationality: 'England', age: 53, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 55, bio: '肉弾戦と魂のディフェンス、直接的なロングボールで耐え抜く武闘派。' },
-  { nationality: 'Portugal', age: 50, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 60, bio: '強固な守備ブロックと一撃必殺のカウンターに特化した守備の職人。' },
-  // フリー監督プール用候補
-  { nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 95, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
-  { nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 100, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
-  { nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 85, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' },
-  { nationality: 'France', age: 52, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 120, bio: '王者の風格と卓越した人心掌握術でビッグマッチを制する歴戦の勝者。' }
+  // --- Sランク（8名：世界的名将） ---
+  { rank: 'S', focus: 'tactics', nationality: 'Spain', age: 53, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 135, bio: '精密なポジショナルプレーと圧倒的ポゼッションを信奉する名将。' },
+  { rank: 'S', focus: 'motivation', nationality: 'Germany', age: 57, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 130, bio: '電光石火のハイプレスと情熱的なメンタリティで圧倒する闘将。' },
+  { rank: 'S', focus: 'motivation', nationality: 'Italy', age: 65, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 125, bio: '選手の個性を引き出す柔軟性と数々の栄冠を誇る歴戦の長老。' },
+  { rank: 'S', focus: 'tactics', nationality: 'France', age: 52, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 128, bio: '王者の風格と卓越した戦術眼でビッグマッチを制する歴戦の勝者。' },
+  { rank: 'S', focus: 'discipline', nationality: 'Argentina', age: 54, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 120, bio: '堅固な4-4ブロックと不屈の闘志で相手を封殺する守備の達人。' },
+  { rank: 'S', focus: 'tactics', nationality: 'Spain', age: 54, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 118, bio: '妥協なきポゼッションと高強度トレーニングで支配を極める名将。' },
+  { rank: 'S', focus: 'discipline', nationality: 'Italy', age: 55, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 115, bio: '徹底した戦術規律と強烈なインテンシティで勝点をもぎ取る仕事人。' },
+  { rank: 'S', focus: 'tactics', nationality: 'Germany', age: 59, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 112, bio: '縦への推進力と徹底したゲーゲンプレスを叩き込む強豪指揮官。' },
+
+  // --- Aランク（14名：一流指揮官） ---
+  { rank: 'A', focus: 'tactics', nationality: 'Spain', age: 42, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 96, bio: '緻密なビルドアップと可変戦術で若手を統率する若き理論派。' },
+  { rank: 'A', focus: 'development', nationality: 'Portugal', age: 39, preferredFormation: '3-4-3', preferredTactic: 'counter', weeklyWage: 92, bio: '3バックからのダイナミックな攻守転換で旋風を巻き起こす気鋭。' },
+  { rank: 'A', focus: 'tactics', nationality: 'Spain', age: 52, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 90, bio: '対戦相手の弱点を徹底分析し勝負所で強さを発揮するカップ戦マイスター。' },
+  { rank: 'A', focus: 'tactics', nationality: 'Germany', age: 51, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 94, bio: '緻密な構造論と的確な戦術采配で勝利を導く理論派。' },
+  { rank: 'A', focus: 'motivation', nationality: 'Portugal', age: 61, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 98, bio: '冷徹な守備組織とリアリズムで数々のタイトルを獲得したカリスマ。' },
+  { rank: 'A', focus: 'discipline', nationality: 'Italy', age: 57, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 88, bio: '勝負どころを見極める「鼻差の勝利」の哲学を持つ勝負師。' },
+  { rank: 'A', focus: 'development', nationality: 'England', age: 59, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 84, bio: '超ハイラインと超攻撃的スタイルを貫く攻撃サッカーの信念者。' },
+  { rank: 'A', focus: 'tactics', nationality: 'Italy', age: 44, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 84, bio: '後方からのパス回しとサイドのアイソレーションを重んじる新世代。' },
+  { rank: 'A', focus: 'motivation', nationality: 'Italy', age: 66, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 85, bio: 'ピッチ全域のマンツーマンと怒涛の波状攻撃を繰り出す超攻撃派。' },
+  { rank: 'A', focus: 'development', nationality: 'Netherlands', age: 48, preferredFormation: '4-1-2-3', preferredTactic: 'gegenpress', weeklyWage: 88, bio: '高い位置での連動プレスと若手の抜擢で躍進を遂げるオランダ人指揮官。' },
+  { rank: 'A', focus: 'tactics', nationality: 'France', age: 49, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 86, bio: '両翼の爆発的スピードを最大限に引き出すサイドアタックの達人。' },
+  { rank: 'A', focus: 'discipline', nationality: 'Croatia', age: 53, preferredFormation: '4-3-1-2', preferredTactic: 'counter', weeklyWage: 82, bio: '中盤の密度と勝負強いリアクションサッカーを極めた知将。' },
+  { rank: 'A', focus: 'motivation', nationality: 'Argentina', age: 47, preferredFormation: '3-4-3', preferredTactic: 'wingplay', weeklyWage: 85, bio: '情熱的なサイド攻撃と選手との強い信頼関係でチームを牽引する。' },
+  { rank: 'A', focus: 'development', nationality: 'Spain', age: 44, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 80, bio: '技術と戦術知性を重視し、下部組織出身者を主力へと育て上げる。' },
+
+  // --- Bランク（18名：実力派） ---
+  { rank: 'B', focus: 'motivation', nationality: 'England', age: 47, preferredFormation: '4-3-3', preferredTactic: 'gegenpress', weeklyWage: 72, bio: '運動量とアグレッシブなプレッシングでチームの一体感を高める。' },
+  { rank: 'B', focus: 'tactics', nationality: 'Italy', age: 45, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 74, bio: '自陣深くで誘い出し一気にスペースを攻略するパスサッカーの信奉者。' },
+  { rank: 'B', focus: 'discipline', nationality: 'Germany', age: 50, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 70, bio: '統率された3バックと鋭利なショートカウンターを得意とする実力者。' },
+  { rank: 'B', focus: 'tactics', nationality: 'Portugal', age: 47, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 65, bio: 'サイドアタックと中盤のバランスに優れた堅実な手腕。' },
+  { rank: 'B', focus: 'development', nationality: 'England', age: 52, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 62, bio: 'ボール保持と洗練されたパスワークで主導権を握る正統派。' },
+  { rank: 'B', focus: 'discipline', nationality: 'Portugal', age: 50, preferredFormation: '5-3-2', preferredTactic: 'counter', weeklyWage: 62, bio: '強固な守備ブロックと一撃必殺のカウンターに特化した守備の職人。' },
+  { rank: 'B', focus: 'motivation', nationality: 'England', age: 53, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 58, bio: '肉弾戦と魂のディフェンス、直接的なロングボールで耐え抜く武闘派。' },
+  { rank: 'B', focus: 'tactics', nationality: 'Denmark', age: 46, preferredFormation: '3-5-2', preferredTactic: 'wingplay', weeklyWage: 64, bio: 'ウイングバックの上下動を軸にデータ分析を駆使するモダン指揮官。' },
+  { rank: 'B', focus: 'discipline', nationality: 'Italy', age: 52, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 66, bio: 'ペナルティエリアを完全に封鎖する鉄壁の守備戦術を徹底する。' },
+  { rank: 'B', focus: 'development', nationality: 'Belgium', age: 43, preferredFormation: '4-2-3-1', preferredTactic: 'possession', weeklyWage: 60, bio: '若手アタッカーの才能を開花させる柔軟な攻撃戦術が持ち味。' },
+  { rank: 'B', focus: 'tactics', nationality: 'Netherlands', age: 51, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 68, bio: '伝統的なウイングプレーとハイプレスを融合させた攻撃的スタイル。' },
+  { rank: 'B', focus: 'motivation', nationality: 'France', age: 48, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 63, bio: '2トップの連係と強固な4バックで堅実に勝点を積み上げる。' },
+  { rank: 'B', focus: 'discipline', nationality: 'Spain', age: 49, preferredFormation: '4-3-1-2', preferredTactic: 'possession', weeklyWage: 67, bio: '中盤ダイヤモンドで中央を支配し、規律あるプレスバックを課す。' },
+  { rank: 'B', focus: 'development', nationality: 'Germany', age: 41, preferredFormation: '3-4-3', preferredTactic: 'gegenpress', weeklyWage: 65, bio: '若手主体のスカッドに圧倒的な走力と連動性を植え付ける。' },
+  { rank: 'B', focus: 'motivation', nationality: 'Brazil', age: 50, preferredFormation: '4-1-2-3', preferredTactic: 'wingplay', weeklyWage: 69, bio: '自由な発想とサイドからの個人技突破を奨励する攻撃的指揮官。' },
+  { rank: 'B', focus: 'discipline', nationality: 'England', age: 56, preferredFormation: '4-4-2', preferredTactic: 'parkthebus', weeklyWage: 56, bio: '残留争いの経験豊富な堅守のスペシャリスト。セットプレーに強い。' },
+  { rank: 'B', focus: 'tactics', nationality: 'Portugal', age: 44, preferredFormation: '3-5-2', preferredTactic: 'counter', weeklyWage: 61, bio: '緻密なブロック守備からの縦に速いカウンターで格上を食う。' },
+  { rank: 'B', focus: 'development', nationality: 'Japan', age: 46, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 58, bio: '組織的な連動プレスと勤勉なハードワークでチーム力を底上げする。' },
+
+  // --- Cランク（12名：育成・新鋭・下位リーグ派） ---
+  { rank: 'C', focus: 'development', nationality: 'England', age: 36, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 44, bio: 'アカデミー指導から昇格した気鋭の若手育成スペシャリスト。' },
+  { rank: 'C', focus: 'motivation', nationality: 'England', age: 49, preferredFormation: '4-4-2', preferredTactic: 'counter', weeklyWage: 40, bio: '下部リーグで実績を積んだ熱血漢。一体感とハードワークが武器。' },
+  { rank: 'C', focus: 'discipline', nationality: 'England', age: 54, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 38, bio: '徹底した守備意識とリアリズムで格上相手から勝点1を奪い取る。' },
+  { rank: 'C', focus: 'development', nationality: 'Spain', age: 37, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 46, bio: '若手のテクニックとパスワークを伸ばすことに長けた理論派。' },
+  { rank: 'C', focus: 'tactics', nationality: 'Germany', age: 38, preferredFormation: '4-2-3-1', preferredTactic: 'gegenpress', weeklyWage: 45, bio: 'データ分析とハイテンポなプレッシングを志向する新世代監督。' },
+  { rank: 'C', focus: 'motivation', nationality: 'Portugal', age: 40, preferredFormation: '3-4-3', preferredTactic: 'wingplay', weeklyWage: 42, bio: 'サイドからの積極的な仕掛けでサポーターを沸かせる若き野心家。' },
+  { rank: 'C', focus: 'discipline', nationality: 'Italy', age: 48, preferredFormation: '4-3-1-2', preferredTactic: 'counter', weeklyWage: 41, bio: '堅実な守備組織と集中力を切らさない規律指導に定評がある。' },
+  { rank: 'C', focus: 'development', nationality: 'Netherlands', age: 39, preferredFormation: '4-3-3', preferredTactic: 'wingplay', weeklyWage: 43, bio: '両翼の若手ウインガーを育成し攻撃的サッカーを展開する。' },
+  { rank: 'C', focus: 'motivation', nationality: 'France', age: 43, preferredFormation: '4-2-3-1', preferredTactic: 'counter', weeklyWage: 39, bio: '選手のメンタルケアに優れ、苦境でもロッカールームをまとめる。' },
+  { rank: 'C', focus: 'discipline', nationality: 'Argentina', age: 45, preferredFormation: '5-3-2', preferredTactic: 'parkthebus', weeklyWage: 36, bio: '球際の激しさと粘り強い守備ブロックで泥臭く勝利を目指す。' },
+  { rank: 'C', focus: 'development', nationality: 'Belgium', age: 37, preferredFormation: '3-5-2', preferredTactic: 'possession', weeklyWage: 42, bio: 'ユーティリティ選手の育成と可変システムに挑む研究熱心な監督。' },
+  { rank: 'C', focus: 'tactics', nationality: 'Denmark', age: 42, preferredFormation: '4-4-2', preferredTactic: 'wingplay', weeklyWage: 35, bio: 'シンプルなサイドアタックとクロス攻撃で手堅く戦う実務派。' }
 ];
 
 /**
- * 指導陣（COACHING STAFF）データベース（全4専門カテゴリ / 全6枠体制・完全架空名ベース）
+ * 指導陣（COACHING STAFF）データベース（全4専門カテゴリ / 各6〜7名・複数ステータス傾向付き）
  */
 const COACHES_DATABASE = {
   attacking: [
-    { nationality: 'Netherlands', age: 54, rank: 'A', weeklyWage: 35, bio: 'ファーストタッチとフィニッシュの極意を叩き込むストライカー指導の専門家。' },
-    { nationality: 'France', age: 48, rank: 'A', weeklyWage: 32, bio: 'ボックス内での駆け引きとゴール嗅覚を伝授する点取り屋コーチ。' },
-    { nationality: 'Italy', age: 58, rank: 'B', weeklyWage: 24, bio: '狭いスペースでのテクニックとラストパスの精度を高める理論派。' },
-    { nationality: 'England', age: 51, rank: 'B', weeklyWage: 22, bio: '冷静な決定力と勝負所での強さを教え込むシュートコーチ。' },
-    { nationality: 'Germany', age: 51, rank: 'C', weeklyWage: 14, bio: '実戦的なポジショニングと献身的なプレスを指導する。' },
-    { nationality: 'Belgium', age: 43, rank: 'C', weeklyWage: 12, bio: 'ドリブルでの局面打開と前線への展開を支援する若手育成型。' }
+    { nationality: 'Netherlands', age: 54, rank: 'A', focus: 'coaching', weeklyWage: 35, bio: 'ファーストタッチとフィニッシュの極意を叩き込むストライカー指導の専門家。' },
+    { nationality: 'France', age: 48, rank: 'A', focus: 'youthDev', weeklyWage: 33, bio: 'ボックス内での駆け引きと若手FWの得点感覚を開花させる育成派。' },
+    { nationality: 'Spain', age: 46, rank: 'A', focus: 'analysis', weeklyWage: 32, bio: '相手の守備ブロックを解剖し攻撃パターンを仕込む戦術分析コーチ。' },
+    { nationality: 'Italy', age: 58, rank: 'B', focus: 'analysis', weeklyWage: 24, bio: '狭いスペースでのテクニックとラストパスの精度を高める理論派。' },
+    { nationality: 'England', age: 51, rank: 'B', focus: 'coaching', weeklyWage: 23, bio: '冷静な決定力と勝負所での強さを教え込むシュートコーチ。' },
+    { nationality: 'Germany', age: 51, rank: 'C', focus: 'coaching', weeklyWage: 14, bio: '実戦的なポジショニングと献身的なプレスを指導する。' },
+    { nationality: 'Belgium', age: 43, rank: 'C', focus: 'youthDev', weeklyWage: 13, bio: 'ドリブルでの局面打開と前線への展開を支援する若手育成型。' }
   ],
   defending: [
-    { nationality: 'Netherlands', age: 52, rank: 'A', weeklyWage: 34, bio: '圧倒的な対人強度と威圧感で最終ラインに鉄壁の統率力を注入。' },
-    { nationality: 'Italy', age: 51, rank: 'A', weeklyWage: 35, bio: '緻密なポジショニングとインターセプトの先読みを徹底指導。' },
-    { nationality: 'England', age: 50, rank: 'B', weeklyWage: 23, bio: '屈強な空中戦とフィジカルコンタクトで相手FWを封殺する。' },
-    { nationality: 'France', age: 56, rank: 'B', weeklyWage: 25, bio: 'CBとDMの両対応、強固なブロック構築のスペシャリスト。' },
-    { nationality: 'Spain', age: 44, rank: 'B', weeklyWage: 22, bio: '粘り強いマンマークと狡猾なラインコントロールを叩き込む。' },
-    { nationality: 'Portugal', age: 45, rank: 'C', weeklyWage: 13, bio: 'サイドバックのポジショニングとカバーリングを基本から指導。' }
+    { nationality: 'Netherlands', age: 52, rank: 'A', focus: 'coaching', weeklyWage: 34, bio: '圧倒的な対人強度と威圧感で最終ラインに鉄壁の統率力を注入。' },
+    { nationality: 'Italy', age: 51, rank: 'A', focus: 'analysis', weeklyWage: 35, bio: '緻密なポジショニングとインターセプトの先読みを徹底指導。' },
+    { nationality: 'England', age: 50, rank: 'B', focus: 'coaching', weeklyWage: 23, bio: '屈強な空中戦とフィジカルコンタクトで相手FWを封殺する。' },
+    { nationality: 'France', age: 56, rank: 'B', focus: 'youthDev', weeklyWage: 25, bio: 'CBとDMの両対応、若手DFの基礎体格と対人技術を引き上げる。' },
+    { nationality: 'Spain', age: 44, rank: 'B', focus: 'analysis', weeklyWage: 22, bio: '粘り強いマンマークと狡猾なラインコントロールを叩き込む。' },
+    { nationality: 'Portugal', age: 45, rank: 'C', focus: 'youthDev', weeklyWage: 13, bio: 'サイドバックのポジショニングとカバーリングを基本から指導。' }
   ],
   goalkeeping: [
-    { nationality: 'Denmark', age: 58, rank: 'A', weeklyWage: 30, bio: '強烈なキャプテンシーと至近距離セーブでゴールマウスを死守。' },
-    { nationality: 'Germany', age: 55, rank: 'B', weeklyWage: 20, bio: '広大な守備範囲と飛び出し、正確なフィードを磨き上げる。' },
-    { nationality: 'Italy', age: 51, rank: 'C', weeklyWage: 12, bio: '確実なキャッチングと安定したセービング技術を実直に指導。' }
+    { nationality: 'Denmark', age: 58, rank: 'A', focus: 'coaching', weeklyWage: 30, bio: '強烈なキャプテンシーと至近距離セーブでゴールマウスを死守。' },
+    { nationality: 'Spain', age: 49, rank: 'A', focus: 'analysis', weeklyWage: 29, bio: 'PKキッカー分析とビルドアップ時の正確な配球を指導する現代派。' },
+    { nationality: 'Germany', age: 55, rank: 'B', focus: 'coaching', weeklyWage: 21, bio: '広大な守備範囲と飛び出し、正確なフィードを磨き上げる。' },
+    { nationality: 'England', age: 46, rank: 'B', focus: 'youthDev', weeklyWage: 20, bio: '若手GKのステップワークとハイボール処理を丁寧に育成する。' },
+    { nationality: 'Italy', age: 51, rank: 'C', focus: 'coaching', weeklyWage: 12, bio: '確実なキャッチングと安定したセービング技術を実直に指導。' },
+    { nationality: 'Netherlands', age: 42, rank: 'C', focus: 'youthDev', weeklyWage: 13, bio: 'アカデミー出身GKの足元技術と反射神経を伸ばす育成重視型。' }
   ],
   fitness: [
-    { nationality: 'Italy', age: 58, rank: 'A', weeklyWage: 28, bio: '欧州最先端の運動生理学に基づき、怪我予防と90分の運動量を実現。' },
-    { nationality: 'France', age: 54, rank: 'B', weeklyWage: 18, bio: '強度の高い持久走と筋力アップで強靭な肉体を作り上げる。' },
-    { nationality: 'England', age: 47, rank: 'C', weeklyWage: 11, bio: '試合後の迅速な疲労回復と柔軟性維持を専門とするフィジカル派。' }
+    { nationality: 'Italy', age: 58, rank: 'A', focus: 'coaching', weeklyWage: 28, bio: '欧州最先端の運動生理学に基づき、怪我予防と90分の運動量を実現。' },
+    { nationality: 'Germany', age: 47, rank: 'A', focus: 'analysis', weeklyWage: 27, bio: 'GPSデータと心拍負荷を解析し、連戦時の疲労管理を最適化する。' },
+    { nationality: 'France', age: 54, rank: 'B', focus: 'coaching', weeklyWage: 19, bio: '強度の高い持久走と筋力アップで強靭な肉体を作り上げる。' },
+    { nationality: 'Spain', age: 43, rank: 'B', focus: 'youthDev', weeklyWage: 18, bio: '成長期選手の身体バランスを整え、怪我に強い体質へ導く。' },
+    { nationality: 'England', age: 47, rank: 'C', focus: 'coaching', weeklyWage: 11, bio: '試合後の迅速な疲労回復と柔軟性維持を専門とするフィジカル派。' },
+    { nationality: 'Brazil', age: 40, rank: 'C', focus: 'youthDev', weeklyWage: 12, bio: '敏捷性と爆発的なスプリント力を引き出す若手向けコンディショニング。' }
   ]
 };
 
@@ -1372,6 +1420,60 @@ const COUNTRY_CODE_TO_NATIONALITY = {
   JPN: 'Japan',
   BRA: 'Brazil',
   ARG: 'Argentina'
+};
+
+// ユーススカウト派遣先地域定義
+const YOUTH_SCOUT_REGIONS = {
+  england: {
+    id: 'england',
+    name: 'イングランド国内',
+    cost: 400,
+    days: 14,
+    nationalities: ['England'],
+    homeProb: 0.90,
+    potentialBonus: 0,
+    desc: 'HG枠の確保に最適。コストが安く短期間で堅実な国内有望株を発掘。'
+  },
+  uk_ireland: {
+    id: 'uk_ireland',
+    name: '英国・アイルランド',
+    cost: 500,
+    days: 16,
+    nationalities: ['England', 'Croatia'],
+    homeProb: 0.72,
+    potentialBonus: 1,
+    desc: '闘志とフィジカルに優れた英国圏の原石をバランス良く発掘。'
+  },
+  iberia: {
+    id: 'iberia',
+    name: 'イベリア半島 (ESP/POR)',
+    cost: 850,
+    days: 21,
+    nationalities: ['Spain', 'Portugal'],
+    homeProb: 0.15,
+    potentialBonus: 2,
+    desc: '技術と戦術眼に優れた技巧派MF/WGの発掘率が高い。'
+  },
+  central_europe: {
+    id: 'central_europe',
+    name: '中欧 (GER/FRA/NED)',
+    cost: 900,
+    days: 21,
+    nationalities: ['Germany', 'France', 'Netherlands', 'Belgium'],
+    homeProb: 0.10,
+    potentialBonus: 2,
+    desc: '欧州主要育成国から完成度の高い万能タレントを発掘。'
+  },
+  south_america: {
+    id: 'south_america',
+    name: '南米 (BRA/ARG)',
+    cost: 1200,
+    days: 28,
+    nationalities: ['Brazil', 'Argentina', 'Uruguay', 'Colombia'],
+    homeProb: 0.05,
+    potentialBonus: 4,
+    desc: '費用と日数は掛かるが、最高ランク（S/A）の天才アタッカー発掘率が最も高い。'
+  }
 };
 
 
