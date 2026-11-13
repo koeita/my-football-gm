@@ -7674,18 +7674,24 @@ function renderYouthScoutingPanel() {
   const canDispatch = activeTasks.length < maxSlots && !gameState.isGameOver && !gameState.isSimulating;
 
   const regionOptionsHtml = regions.map(r =>
-    `<option value="${r.id}">${r.name} (${r.days}日 / ${formatMoney(r.cost)})</option>`
+    `<option value="${r.id}">${r.name} (基本 ${formatMoney(r.cost)}〜)</option>`
   ).join('');
 
   const tasksHtml = activeTasks.length === 0
-    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">現在派遣中のユーススカウトはありません。</div>`
+    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">現在派遣中のユーススカウトはありません。数ヶ月単位で派遣すると毎月レポートが届きます。</div>`
     : activeTasks.map(t => {
         const pct = Math.max(5, Math.min(100, Math.round(((t.totalDays - t.daysRemaining) / Math.max(1, t.totalDays)) * 100)));
+        const nextRep = typeof t.daysUntilNextReport === 'number' ? t.daysUntilNextReport : 30;
+        const repCnt = t.reportsDelivered || 0;
         return `
           <div class="youth-scout-task-row">
-            <div style="display:flex; justify-content:space-between; font-size:11px;" class="mono">
-              <span>🔍 <strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole}]</span>
-              <span class="accent-gold">残り ${t.daysRemaining}日</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; flex-wrap:wrap;" class="mono">
+              <span>🔍 <strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="accent-green">次回報告: ${nextRep}日後 (報告済:${repCnt}回)</span>
+                <span class="accent-gold">残${t.daysRemaining}日</span>
+                <button type="button" class="btn btn-secondary btn-sm mono btn-recall-youth-scout" data-task-id="${t.id}" style="padding:1px 6px; font-size:10px;">帰還</button>
+              </div>
             </div>
             <div class="youth-scout-progress-track"><div class="youth-scout-progress-fill" style="width:${pct}%"></div></div>
           </div>
@@ -7749,7 +7755,7 @@ function renderYouthScoutingPanel() {
     <div class="panel-body">
       <div class="youth-scout-controls">
         <div>
-          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣地域（コスト・期間・発掘傾向）</label>
+          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣地域（発掘傾向）</label>
           <select id="youth-scout-region-select" class="settings-select" style="width:100%;">${regionOptionsHtml}</select>
         </div>
         <div>
@@ -7762,32 +7768,66 @@ function renderYouthScoutingPanel() {
             <option value="GK">GK</option>
           </select>
         </div>
+        <div>
+          <label class="mono text-muted" style="font-size:10.5px; display:block; margin-bottom:4px;">派遣期間（毎月報告）</label>
+          <select id="youth-scout-duration-select" class="settings-select" style="width:100%;">
+            <option value="3">3ヶ月 (90日 / 計3回)</option>
+            <option value="6">6ヶ月 (180日 / 計6回)</option>
+            <option value="9">9ヶ月 (270日 / 計9回)</option>
+          </select>
+        </div>
         <button type="button" class="btn btn-primary mono" id="btn-dispatch-youth-scout" ${canDispatch ? '' : 'disabled'}>
           スカウト派遣
         </button>
       </div>
+      <div class="mono text-muted" id="youth-scout-cost-preview" style="font-size:10.5px; margin-top:6px;"></div>
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
         ${tasksHtml}
       </div>
       <div style="margin-top:12px;">
-        <div class="mono text-muted" style="font-size:11px; font-weight:700;">発掘済み選手レポート（最大8名）</div>
+        <div class="mono text-muted" style="font-size:11px; font-weight:700;">発掘済み定期レポート（最大12名）</div>
         ${reportsHtml}
       </div>
     </div>
   `;
+
+  const regSelEl = document.getElementById('youth-scout-region-select');
+  const durSelEl = document.getElementById('youth-scout-duration-select');
+  const previewEl = document.getElementById('youth-scout-cost-preview');
+  const updateCostPreview = () => {
+    if (!previewEl || !regSelEl || !durSelEl) return;
+    const regObj = (typeof YOUTH_SCOUT_REGIONS !== 'undefined' && YOUTH_SCOUT_REGIONS[regSelEl.value]) || null;
+    const months = parseInt(durSelEl.value, 10) || 3;
+    const cost = typeof getYouthScoutMissionCost === 'function' ? getYouthScoutMissionCost(regObj, months) : 400;
+    previewEl.textContent = `派遣費用: ${formatMoney(cost)} ／ 30日ごとに定期レポートが届きます（${regObj ? regObj.desc : ''}）`;
+  };
+  if (regSelEl) regSelEl.addEventListener('change', updateCostPreview);
+  if (durSelEl) durSelEl.addEventListener('change', updateCostPreview);
+  updateCostPreview();
 
   const dispatchBtn = document.getElementById('btn-dispatch-youth-scout');
   if (dispatchBtn) {
     dispatchBtn.addEventListener('click', () => {
       const regSel = document.getElementById('youth-scout-region-select');
       const roleSel = document.getElementById('youth-scout-role-select');
-      const res = dispatchYouthScout(regSel ? regSel.value : 'england', roleSel ? roleSel.value : 'ANY');
+      const durSel = document.getElementById('youth-scout-duration-select');
+      const months = durSel ? parseInt(durSel.value, 10) : 3;
+      const res = dispatchYouthScout(regSel ? regSel.value : 'england', roleSel ? roleSel.value : 'ANY', months);
       if (!res.ok && typeof showToast === 'function') {
         showToast(res.reason || 'スカウトを派遣できませんでした', 'warn');
       }
       renderAll();
     });
   }
+
+  container.querySelectorAll('.btn-recall-youth-scout').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (typeof recallYouthScout === 'function') {
+        recallYouthScout(e.currentTarget.dataset.taskId);
+        renderAll();
+      }
+    });
+  });
 
   container.querySelectorAll('.btn-sign-youth-report').forEach(btn => {
     btn.addEventListener('click', (e) => {
