@@ -7,15 +7,18 @@ class TestPhase2RatingsAndFatigue(unittest.TestCase):
     def setUpClass(cls):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         cls.models_js_path = os.path.join(base_dir, 'models.js')
+        cls.match_js_path = os.path.join(base_dir, 'match-engine.js')
         cls.main_js_path = os.path.join(base_dir, 'main.js')
         cls.index_html_path = os.path.join(base_dir, 'index.html')
         cls.style_css_path = os.path.join(base_dir, 'style.css')
 
         with open(cls.models_js_path, 'r', encoding='utf-8') as f:
             models_js = f.read()
+        with open(cls.match_js_path, 'r', encoding='utf-8') as f:
+            match_js = f.read()
         with open(cls.main_js_path, 'r', encoding='utf-8') as f:
             main_js = f.read()
-        cls.main_js = models_js + '\n' + main_js
+        cls.main_js = models_js + '\n' + match_js + '\n' + main_js
         with open(cls.index_html_path, 'r', encoding='utf-8') as f:
             cls.index_html = f.read()
         with open(cls.style_css_path, 'r', encoding='utf-8') as f:
