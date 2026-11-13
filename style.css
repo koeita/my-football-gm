@@ -15977,11 +15977,43 @@ body {
 .profile-header-ovr-label { font-size: 9px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
 .profile-header-ovr-val { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
 @media (max-width: 768px) {
-  .pitch-node-ovr { font-size: 10.5px !important; font-weight: 900 !important; line-height: 1.1 !important; }
+  .pitch-node-top {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  .pitch-node-ovr {
+    font-size: 9.5px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    letter-spacing: -0.03em !important;
+    flex-shrink: 0 !important;
+  }
   .ovr-cell-badge { font-size: 12.5px; padding: 2px 5px; }
   .profile-header-right-actions { padding-right: 52px; }
   .profile-header-ovr-box { padding: 3px 8px; }
   .profile-header-ovr-val { font-size: 18px; }
+
+  /* モバイル年別成績テーブルのつめつめ解消：ゆとりのあるパディング＆横スクロール対応 */
+  .profile-yearly-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .profile-yearly-table {
+    min-width: 440px !important;
+    width: 100% !important;
+  }
+  .profile-yearly-table th,
+  .profile-yearly-table td {
+    padding: 8px 8px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    width: auto !important;
+  }
+  .profile-yearly-table .col-yearly-club {
+    max-width: 120px !important;
+  }
 }
 .staff-stats-chips {
   display: flex !important;
