@@ -10,9 +10,11 @@ class TestPriorityAUxMarketEconomy(unittest.TestCase):
     def setUp(self):
         with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
             models_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'storage.js'), 'r', encoding='utf-8') as f:
+            storage_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             main_js = f.read()
-        self.main_js = models_js + '\n' + main_js
+        self.main_js = models_js + '\n' + storage_js + '\n' + main_js
         with open(os.path.join(ROOT_DIR, 'competitions.js'), 'r', encoding='utf-8') as f:
             self.comp_js = f.read()
         with open(os.path.join(ROOT_DIR, 'avatar.js'), 'r', encoding='utf-8') as f:

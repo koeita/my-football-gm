@@ -12,9 +12,11 @@ class TestPrioritySCriticalBugFixes(unittest.TestCase):
             self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
             self.models_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'storage.js'), 'r', encoding='utf-8') as f:
+            self.storage_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             raw_main = f.read()
-        self.main_js = self.models_js + '\n' + raw_main
+        self.main_js = self.models_js + '\n' + self.storage_js + '\n' + raw_main
         with open(os.path.join(ROOT_DIR, 'competitions.js'), 'r', encoding='utf-8') as f:
             self.comp_js = f.read()
         with open(os.path.join(ROOT_DIR, 'avatar.js'), 'r', encoding='utf-8') as f:

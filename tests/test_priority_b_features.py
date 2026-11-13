@@ -11,9 +11,11 @@ class TestPriorityBDelegationPerfUnslop(unittest.TestCase):
             self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
             self.models_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'storage.js'), 'r', encoding='utf-8') as f:
+            self.storage_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             self.raw_main_js = f.read()
-        self.main_js = self.models_js + '\n' + self.raw_main_js
+        self.main_js = self.models_js + '\n' + self.storage_js + '\n' + self.raw_main_js
         self.all_js = self.data_js + '\n' + self.main_js
         with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
             self.html = f.read()
