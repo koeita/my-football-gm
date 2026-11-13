@@ -73,6 +73,14 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('function optimizeClubBench(', self.models_js)
         self.assertIn('optimizeClubBench(club);', self.models_js)
 
+    def test_7_non_league_matches_apply_sub_events_and_sub_fatigue(self):
+        """リーグ以外の試合（WCT・欧州戦・国内カップ）でも交代イベントと途中出場疲労が反映されること"""
+        self.assertIn('homeSubEvents: homeSubRes.subEvents || [],', self.match_js)
+        self.assertIn('homeSubEvents: cupRatings.homeSubEvents || [],', self.match_js)
+        self.assertIn('homeSubEvents: poRatings.homeSubEvents || [],', self.match_js)
+        self.assertIn('homeSubEvents: cupFinalRatings.homeSubEvents || [],', self.match_js)
+        self.assertIn('isHome ? cupFinalRatings.homeSubs : cupFinalRatings.awaySubs', self.match_js)
+
 
 if __name__ == '__main__':
     unittest.main()

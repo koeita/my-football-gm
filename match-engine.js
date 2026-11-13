@@ -250,8 +250,14 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
   const awayStarters = ensureClubStartersForMatch(awayClub);
   const homeBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(homeClub) : 9;
   const awayBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(awayClub) : 9;
-  const homeBench = (homeClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, homeBenchLimit);
-  const awayBench = (awayClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, awayBenchLimit);
+  const getBenchForQuick = (c, limit) => {
+    const elig = (c.players || []).filter(p => !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+    const benchSet = elig.filter(p => p.isBench !== false);
+    const reserveSet = elig.filter(p => p.isBench === false);
+    return benchSet.concat(reserveSet).slice(0, limit);
+  };
+  const homeBench = getBenchForQuick(homeClub, homeBenchLimit);
+  const awayBench = getBenchForQuick(awayClub, awayBenchLimit);
   const homeSubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(homeClub, homeStarters, homeBench, 62, homeScore - awayScore, homeClub.subPolicy, 0) : { subsIn: [] };
   const awaySubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(awayClub, awayStarters, awayBench, 62, awayScore - homeScore, awayClub.subPolicy, 0) : { subsIn: [] };
   const homeSubs = homeSubRes.subsIn || [];
@@ -338,7 +344,19 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
     recordCompetitionPlayerMatchStats(compKey, homeClub, awayClub, homeStarters, awayStarters, homeSubs, awaySubs, homeScore, awayScore, homeScorers, awayScorers, ratingRes, cardsMap);
   }
 
-  return { homeScorers, awayScorers, momPlayer: ratingRes.momPlayer, momClub: ratingRes.momClub, momRating: ratingRes.momRating };
+  return {
+    homeScorers,
+    awayScorers,
+    homeStarters,
+    awayStarters,
+    homeSubs,
+    awaySubs,
+    homeSubEvents: homeSubRes.subEvents || [],
+    awaySubEvents: awaySubRes.subEvents || [],
+    momPlayer: ratingRes.momPlayer,
+    momClub: ratingRes.momClub,
+    momRating: ratingRes.momRating
+  };
 }
 window.simulateAndRecordQuickMatchPlayerStats = simulateAndRecordQuickMatchPlayerStats;
 
@@ -447,7 +465,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     );
     const homeScorers = cupRatings.homeScorers;
     const awayScorers = cupRatings.awayScorers;
-    applyPostMatchPlayerFatigue(playerClub);
+    applyPostMatchPlayerFatigue(
+      playerClub,
+      isHome ? cupRatings.homeStarters : cupRatings.awayStarters,
+      isHome ? cupRatings.homeSubs : cupRatings.awaySubs
+    );
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -522,6 +544,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       isPlayerMatch: true,
       matchIncome: prize,
       playerSupportersDelta: fanGain,
+      homeSubEvents: cupRatings.homeSubEvents || [],
+      awaySubEvents: cupRatings.awaySubEvents || [],
       homeScorers,
       awayScorers,
       prizeText: `+${formatMoney(prize)}`,
@@ -602,7 +626,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     );
     const homeScorers = cupRatings.homeScorers;
     const awayScorers = cupRatings.awayScorers;
-    applyPostMatchPlayerFatigue(playerClub);
+    applyPostMatchPlayerFatigue(
+      playerClub,
+      isHome ? cupRatings.homeStarters : cupRatings.awayStarters,
+      isHome ? cupRatings.homeSubs : cupRatings.awaySubs
+    );
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -638,6 +666,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       isPlayerMatch: true,
       matchIncome: euroFin.matchIncome,
       awayBroadcastingFee: euroFin.awayBroadcastingFee,
+      homeSubEvents: cupRatings.homeSubEvents || [],
+      awaySubEvents: cupRatings.awaySubEvents || [],
       playerSupportersDelta: euroFin.playerSupportersDelta,
       homeScorers,
       awayScorers
@@ -703,7 +733,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     );
     const homeScorers = poRatings.homeScorers;
     const awayScorers = poRatings.awayScorers;
-    applyPostMatchPlayerFatigue(playerClub);
+    applyPostMatchPlayerFatigue(
+      playerClub,
+      isHome ? poRatings.homeStarters : poRatings.awayStarters,
+      isHome ? poRatings.homeSubs : poRatings.awaySubs
+    );
 
     const myScore = isHome ? homeScore : awayScore;
     const oppScore = isHome ? awayScore : homeScore;
@@ -740,6 +774,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       isPlayerMatch: true,
       matchIncome: poFin.matchIncome,
       awayBroadcastingFee: poFin.awayBroadcastingFee,
+      homeSubEvents: poRatings.homeSubEvents || [],
+      awaySubEvents: poRatings.awaySubEvents || [],
       playerSupportersDelta: poFin.playerSupportersDelta,
       homeScorers,
       awayScorers
@@ -808,7 +844,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   );
   const homeScorers = cupFinalRatings.homeScorers;
   const awayScorers = cupFinalRatings.awayScorers;
-  applyPostMatchPlayerFatigue(playerClub);
+  applyPostMatchPlayerFatigue(
+    playerClub,
+    isHome ? cupFinalRatings.homeStarters : cupFinalRatings.awayStarters,
+    isHome ? cupFinalRatings.homeSubs : cupFinalRatings.awaySubs
+  );
 
   currentDay.played = true;
 
@@ -863,6 +903,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     isPlayerMatch: true,
     matchIncome: koFin.matchIncome,
     awayBroadcastingFee: koFin.awayBroadcastingFee,
+    homeSubEvents: cupFinalRatings.homeSubEvents || [],
+    awaySubEvents: cupFinalRatings.awaySubEvents || [],
     playerSupportersDelta: koFin.playerSupportersDelta,
     homeScorers,
     awayScorers
