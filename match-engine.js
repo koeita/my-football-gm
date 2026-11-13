@@ -3613,16 +3613,15 @@ function openMatchPrecheckModal() {
   const tacticKey = normalizeTacticKey(playerClub.tactic);
   const tacticDef = TACTICS_DEFINITIONS[tacticKey] || TACTICS_DEFINITIONS.possession;
 
+  const oppFormationKey = (opponentClub && opponentClub.formation) || '4-3-3';
+  const oppTacticKey = normalizeTacticKey(opponentClub && opponentClub.tactic);
+  const oppTacticDef = TACTICS_DEFINITIONS[oppTacticKey] || TACTICS_DEFINITIONS.possession;
+
   // 自チームスタメン情報
   const starters = playerClub.players.filter(p => p.isStarter);
   const homeAvgOvr = starters.length > 0
     ? Math.round(starters.reduce((s, p) => s + getPlayerOverallRating(p), 0) / starters.length)
     : 70;
-  const homeTotalAtk = starters.reduce((s, p) => s + (p.atk || 0), 0);
-  const homeTotalDef = starters.reduce((s, p) => s + (p.def || 0), 0);
-  const homeAvgSta = starters.length > 0
-    ? Math.round(starters.reduce((s, p) => s + (p.sta || 100), 0) / starters.length)
-    : 100;
 
   // 各スロットの選手行
   let startersRowsHtml = '';
@@ -3688,11 +3687,11 @@ function openMatchPrecheckModal() {
           </div>
         </div>
 
-        <!-- 自チーム作戦・戦力設定（2カラム階層 ＋ 3連数値プレート） -->
+        <!-- 自チーム・相手チーム作戦比較（2カラム階層） -->
         <div class="precheck-tactics-bar">
           <div class="ui-kv-list">
             <div class="ui-kv-row">
-              <div class="ui-kv-label accent-cyan-bar">陣形・戦術</div>
+              <div class="ui-kv-label accent-cyan-bar">自陣形・戦術</div>
               <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
                 <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
                 <strong class="accent-green">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
@@ -3700,9 +3699,11 @@ function openMatchPrecheckModal() {
               </div>
             </div>
             <div class="ui-kv-row">
-              <div class="ui-kv-label">戦術方針</div>
-              <div class="ui-kv-content" style="font-size:12px; color:#cbd5e1; line-height:1.4;">
-                ${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}
+              <div class="ui-kv-label">相手陣形・戦術</div>
+              <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
+                <strong style="color:#38bdf8; font-size:14px;">${oppFormationKey}</strong>
+                <strong style="color:#e2e8f0;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
+                <span class="accent-gold" style="font-size:11px;">${oppTacticDef.badge}</span>
               </div>
             </div>
             <div class="ui-kv-row">
@@ -3722,20 +3723,6 @@ function openMatchPrecheckModal() {
             }
             return '';
           })()}
-          <div class="ui-plate-grid" style="margin-top: 8px;">
-            <div class="ui-stat-plate is-highlight">
-              <span class="ui-plate-label">総攻撃力</span>
-              <span class="ui-plate-val accent-green">${homeTotalAtk}</span>
-            </div>
-            <div class="ui-stat-plate">
-              <span class="ui-plate-label">総守備力</span>
-              <span class="ui-plate-val" style="color:#38bdf8;">${homeTotalDef}</span>
-            </div>
-            <div class="ui-stat-plate is-gold">
-              <span class="ui-plate-label">平均ST</span>
-              <span class="ui-plate-val accent-gold">${homeAvgSta}%</span>
-            </div>
-          </div>
         </div>
       </div>
 
