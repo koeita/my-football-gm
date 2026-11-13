@@ -10850,6 +10850,10 @@ button.hidden,
   justify-content: center;
   flex-shrink: 0;
 }
+.manager-avatar-wrap .player-avatar {
+  width: 100% !important;
+  height: 100% !important;
+}
 
 .manager-banner-info {
   display: flex;
@@ -10954,6 +10958,10 @@ button.hidden,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+.manager-current-avatar .player-avatar {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .manager-current-info {
@@ -11243,6 +11251,10 @@ button.hidden,
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.coach-avatar-wrap .player-avatar {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .coach-info {
