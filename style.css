@@ -15967,3 +15967,46 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   margin-bottom: 6px;
 }
+
+.ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; font-weight: 900; line-height: 1; padding: 3px 7px; border-radius: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ovr-tier-elite { color: #f59e0b; background: rgba(245, 158, 11, 0.16); }
+.ovr-tier-high  { color: #2ecc71; background: rgba(46, 204, 113, 0.14); }
+.ovr-tier-mid   { color: #38bdf8; background: rgba(56, 189, 248, 0.13); }
+.ovr-tier-low   { color: #cbd5e1; background: rgba(148, 163, 184, 0.12); }
+.profile-header-ovr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; padding: 4px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
+.profile-header-ovr-label { font-size: 9px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
+.profile-header-ovr-val { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+@media (max-width: 768px) {
+  .pitch-node-ovr { font-size: 10.5px !important; font-weight: 900 !important; line-height: 1.1 !important; }
+  .ovr-cell-badge { font-size: 12.5px; padding: 2px 5px; }
+  .profile-header-right-actions { padding-right: 52px; }
+  .profile-header-ovr-box { padding: 3px 8px; }
+  .profile-header-ovr-val { font-size: 18px; }
+}
+.staff-stats-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px 18px !important;
+  margin-top: 8px !important;
+}
+.staff-stat-chip {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 44px !important;
+  gap: 3px !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  color: #8b949e !important;
+  text-align: center !important;
+}
+.staff-stat-chip strong {
+  display: block !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  margin: 0 !important;
+  letter-spacing: 0.02em !important;
+}
