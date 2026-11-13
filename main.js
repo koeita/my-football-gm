@@ -3964,6 +3964,27 @@ function closeIncomingOfferModal() {
 /**
  * 常設U-21ユースチームの選手をトップチームへプロ契約昇格させる
  */
+function releaseYouthPlayer(youthId) {
+  const playerClub = getPlayerClub();
+  if (!playerClub || !Array.isArray(playerClub.youthSquad)) return false;
+  const idx = playerClub.youthSquad.findIndex(y => y.id === youthId);
+  if (idx === -1) return false;
+  const target = playerClub.youthSquad[idx];
+  if (!window.confirm(`${target.pos} ${target.name}（${target.age}歳 / POT:${target.potential || target.potentialGrade || 'B'}）をユースチームから放出（退団）させますか？`)) {
+    return false;
+  }
+  playerClub.youthSquad.splice(idx, 1);
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【ユース放出】${target.pos} ${target.name}（${target.age}歳）をユースチームから放出しました。`);
+  }
+  if (typeof showToast === 'function') {
+    showToast(`${target.name} をユースチームから放出しました`, 'info');
+  }
+  renderAll();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave();
+  return true;
+}
+
 function promoteYouthPlayer(youthId) {
   const playerClub = getPlayerClub();
   if (!playerClub) return false;
@@ -7656,7 +7677,12 @@ function renderYouthSquad() {
         <td class="col-num col-youth-growth"><span class="mono" style="font-size:11px;">${growthLabel}</span></td>
         <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
-          ${canPromoteBtn}
+          <div class="youth-action-group" style="display:flex; gap:4px; justify-content:center;">
+            ${canPromoteBtn}
+            <button type="button" class="btn btn-secondary btn-sm btn-release-youth" data-release-id="${y.id}" title="ユースチームから放出" ${!gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
+              放出
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -9431,9 +9457,12 @@ function openPlayerProfileModal(playerId) {
                 <span class="profile-metric-val mono">3年</span>
               </div>
             </div>
-            <div style="margin-top: 10px;">
-              <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="width: 100%; font-weight: 700; padding: 10px 14px;">
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+              <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 10px 14px;">
                 トップチームへプロ契約昇格する
+              </button>
+              <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 10px 14px;">
+                放出
               </button>
             </div>
           </div>
@@ -9658,7 +9687,7 @@ function openPlayerProfileModal(playerId) {
       });
     }
 
-    // ユース選手のトップ昇格ボタンイベント
+    // ユース選手のトップ昇格・放出ボタンイベント
     const btnPromoteModal = bodyEl.querySelector(`.btn-modal-promote-youth[data-youth-id="${p.id}"]`);
     if (btnPromoteModal) {
       btnPromoteModal.addEventListener('click', () => {
@@ -9666,6 +9695,14 @@ function openPlayerProfileModal(playerId) {
         if (!ok) return;
         const success = promoteYouthPlayer(p.id);
         if (success) {
+          closePlayerProfileModal();
+        }
+      });
+    }
+    const btnReleaseModal = bodyEl.querySelector(`.btn-modal-release-youth[data-youth-id="${p.id}"]`);
+    if (btnReleaseModal) {
+      btnReleaseModal.addEventListener('click', () => {
+        if (releaseYouthPlayer(p.id)) {
           closePlayerProfileModal();
         }
       });
@@ -11316,6 +11353,12 @@ function initGame() {
           promoteYouthPlayer(youthId);
           return;
         }
+      }
+      const releaseBtn = e.target.closest('.btn-release-youth');
+      if (releaseBtn && releaseBtn.dataset.releaseId) {
+        e.stopPropagation();
+        releaseYouthPlayer(releaseBtn.dataset.releaseId);
+        return;
       }
       const profileBtn = e.target.closest('[data-profile-id]');
       if (profileBtn) {

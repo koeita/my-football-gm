@@ -1181,6 +1181,11 @@ body {
   white-space: nowrap;
 }
 
+.youth-squad-table .col-action {
+  width: 130px;
+  text-align: center;
+}
+
 .col-num,
 .col-pts {
   text-align: right;
@@ -6961,18 +6966,26 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .youth-squad-table .col-action {
-    width: 48px !important;
+    width: 72px !important;
     text-align: center !important;
     padding: 2px 2px !important;
+  }
+
+  .youth-squad-table .col-action .youth-action-group {
+    display: flex !important;
+    gap: 3px !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 
   .youth-squad-table .col-action .btn {
     min-height: 22px !important;
     height: 22px !important;
-    padding: 0 4px !important;
-    font-size: 10px !important;
+    padding: 0 5px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
-    width: 100% !important;
+    width: auto !important;
+    flex: 1 1 0 !important;
     line-height: 22px !important;
   }
 
