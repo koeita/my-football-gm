@@ -16001,7 +16001,7 @@ body {
     flex-shrink: 0 !important;
   }
   .ovr-cell-badge { font-size: 12.5px; padding: 2px 5px; }
-  .profile-header-right-actions { padding-right: 48px; gap: 8px !important; }
+  
   .profile-header-ovr-box { padding: 4px 10px; }
   .profile-header-ovr-val { font-size: 22px; }
 
@@ -16205,5 +16205,33 @@ body {
 @media (max-width: 768px) {
   .profile-avatar-col .profile-header-ovr-val {
     font-size: 20px;
+  }
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.profile-name-row .profile-player-name {
+  min-width: 0;
+  padding-right: 0 !important;
+}
+.profile-name-row .profile-header-foot-box {
+  flex-shrink: 0;
+}
+.profile-name-row .profile-header-foot-box .foot-print-svg {
+  width: 28px;
+  height: 22px;
+}
+@media (max-width: 768px) {
+  .profile-name-row {
+    padding-right: 40px;
+    gap: 6px;
+  }
+  .profile-name-row .profile-header-foot-box .foot-print-svg {
+    width: 22px;
+    height: 17px;
   }
 }
