@@ -4135,10 +4135,6 @@ function upgradeFacility(facilityKey) {
 
   if (facilityKey === 'stadium') {
     playerClub.supporters += 1200;
-    const bonusPct = (nextLv - 1) * 15;
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡張しました（投資額: ${formatMoney(cost)} / ホーム興行収入 +${bonusPct}%・サポーター +1,200人）`;
-  } else if (facilityKey === 'training') {
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ強化しました（投資額: ${formatMoney(cost)} / 若手成長率UP・負傷率およびスタミナ消耗軽減）`;
   } else if (facilityKey === 'scouting') {
     // スカウト網強化時は即座に新規候補を2名追加リストアップ
     const usedNames = new Set();
@@ -4154,13 +4150,10 @@ function upgradeFacility(facilityKey) {
       const baseTarget = clamp(randInt(64 + scoutingBonusOvr, 74 + scoutingBonusOvr), 58, 86);
       const age = randInt(19, 28);
       const candidate = createPlayer(pos, baseTarget, false, usedNames, [age, age]);
-      const ovr = getPlayerOverallRating(candidate);
-      const isExpiring = candidate.contractYears === 1;
       candidate.transferFee = calculateTransferFee(candidate);
       gameState.transferMarket.push(candidate);
     }
     gameState.transferMarket.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
-    gameState.facilityFeedback = `【設備投資完了】${def.name}を Lv.${nextLv} へ拡大しました（投資額: ${formatMoney(cost)} / 移籍市場に高OVR候補2名を即時追加リストアップ）`;
   }
 
   renderAll();
@@ -7870,12 +7863,8 @@ function renderFacilitiesAndYouth() {
 
   const feedbackBanner = document.getElementById('facility-feedback-banner');
   if (feedbackBanner) {
-    if (gameState.facilityFeedback) {
-      feedbackBanner.textContent = gameState.facilityFeedback;
-      feedbackBanner.classList.remove('hidden');
-    } else {
-      feedbackBanner.classList.add('hidden');
-    }
+    feedbackBanner.textContent = '';
+    feedbackBanner.classList.add('hidden');
   }
 
   const facilitiesGrid = document.getElementById('facilities-grid');
