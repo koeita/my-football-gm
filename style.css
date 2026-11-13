@@ -6628,19 +6628,20 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .intro-selected-summary {
     font-size: 10.5px !important;
-    min-height: 22px !important;
-    height: auto !important;
-    line-height: 1.45 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    line-height: 1.4 !important;
     width: 100% !important;
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
+    align-content: center !important;
     justify-content: center !important;
-    gap: 2px 6px !important;
+    gap: 1px 6px !important;
     text-align: center !important;
     white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
+    overflow: hidden !important;
   }
   .intro-summary-emblem {
     width: 16px !important;
