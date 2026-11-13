@@ -15370,6 +15370,10 @@ body {
    Priority B: 監督采配一任トグル・戦術浸透度タグ・モバイル作戦ボード1行維持
    =========================================================================== */
 .btn-manager-delegation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
   padding: 5px 10px;
   font-size: 11.5px;
   font-weight: 700;
@@ -15379,6 +15383,7 @@ body {
   color: #cbd5e1;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 .btn-manager-delegation:hover {

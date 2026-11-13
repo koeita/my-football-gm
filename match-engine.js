@@ -3613,16 +3613,15 @@ function openMatchPrecheckModal() {
   const tacticKey = normalizeTacticKey(playerClub.tactic);
   const tacticDef = TACTICS_DEFINITIONS[tacticKey] || TACTICS_DEFINITIONS.possession;
 
+  const oppFormationKey = (opponentClub && opponentClub.formation) || '4-3-3';
+  const oppTacticKey = normalizeTacticKey(opponentClub && opponentClub.tactic);
+  const oppTacticDef = TACTICS_DEFINITIONS[oppTacticKey] || TACTICS_DEFINITIONS.possession;
+
   // 自チームスタメン情報
   const starters = playerClub.players.filter(p => p.isStarter);
   const homeAvgOvr = starters.length > 0
     ? Math.round(starters.reduce((s, p) => s + getPlayerOverallRating(p), 0) / starters.length)
     : 70;
-  const homeTotalAtk = starters.reduce((s, p) => s + (p.atk || 0), 0);
-  const homeTotalDef = starters.reduce((s, p) => s + (p.def || 0), 0);
-  const homeAvgSta = starters.length > 0
-    ? Math.round(starters.reduce((s, p) => s + (p.sta || 100), 0) / starters.length)
-    : 100;
 
   // 各スロットの選手行
   let startersRowsHtml = '';
@@ -3688,28 +3687,30 @@ function openMatchPrecheckModal() {
           </div>
         </div>
 
-        <!-- 自チーム作戦・戦力設定（2カラム階層 ＋ 3連数値プレート） -->
+        <!-- 自チーム・相手チーム作戦比較（左：自チーム / 右：相手チーム） -->
         <div class="precheck-tactics-bar">
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:10px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0;">
+              <div class="mono" style="display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;">
+                <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
+                <strong class="accent-green" style="font-size:12.5px;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
+              </div>
+              <span class="accent-gold mono" style="font-size:10.5px;">${tacticDef.badge}</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:2px; min-width:0;">
+              <div class="mono" style="display:flex; align-items:baseline; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
+                <strong style="color:#38bdf8; font-size:14px;">${oppFormationKey}</strong>
+                <strong style="color:#e2e8f0; font-size:12.5px;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
+              </div>
+              <span class="accent-gold mono" style="font-size:10.5px;">${oppTacticDef.badge}</span>
+            </div>
+          </div>
           <div class="ui-kv-list">
             <div class="ui-kv-row">
-              <div class="ui-kv-label accent-cyan-bar">陣形・戦術</div>
-              <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
-                <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
-                <strong class="accent-green">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
-                <span class="accent-gold" style="font-size:11px;">${tacticDef.badge}</span>
-              </div>
-            </div>
-            <div class="ui-kv-row">
-              <div class="ui-kv-label">戦術方針</div>
-              <div class="ui-kv-content" style="font-size:12px; color:#cbd5e1; line-height:1.4;">
-                ${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}
-              </div>
-            </div>
-            <div class="ui-kv-row">
               <div class="ui-kv-label accent-gold-bar">采配委任</div>
-              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-                <span class="mono" style="font-size:11.5px; color:#cbd5e1;">${gameState.managerDelegationEnabled ? '監督一任 (疲労ローテ済)' : 'GM手動編成'}</span>
-                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px;">
+              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap;">
+                <span class="mono" style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${gameState.managerDelegationEnabled ? '監督一任モード' : 'GM手動編成'}</span>
+                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px; min-width: 92px; flex-shrink: 0; justify-content: center;">
                   ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
                 </button>
               </div>
@@ -3722,20 +3723,6 @@ function openMatchPrecheckModal() {
             }
             return '';
           })()}
-          <div class="ui-plate-grid" style="margin-top: 8px;">
-            <div class="ui-stat-plate is-highlight">
-              <span class="ui-plate-label">総攻撃力</span>
-              <span class="ui-plate-val accent-green">${homeTotalAtk}</span>
-            </div>
-            <div class="ui-stat-plate">
-              <span class="ui-plate-label">総守備力</span>
-              <span class="ui-plate-val" style="color:#38bdf8;">${homeTotalDef}</span>
-            </div>
-            <div class="ui-stat-plate is-gold">
-              <span class="ui-plate-label">平均ST</span>
-              <span class="ui-plate-val accent-gold">${homeAvgSta}%</span>
-            </div>
-          </div>
         </div>
       </div>
 
