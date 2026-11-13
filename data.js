@@ -15,7 +15,7 @@ const TACTIC_JP_NAMES = {
   possession: 'ポゼッション',
   gegenpress: 'ゲーゲンプレス',
   counter: 'カウンター',
-  wingplay: 'サイド攻撃',
+  wingplay: 'ワイドアタック',
   parkthebus: 'ウルトラディフェンス'
 };
 
@@ -60,7 +60,7 @@ const MANAGERS_DATABASE = [
   { rank: 'A', focus: 'development', nationality: 'Netherlands', age: 48, preferredFormation: '4-1-2-3', preferredTactic: 'gegenpress', weeklyWage: 88, bio: '高い位置での連動プレスと若手の抜擢で躍進を遂げるオランダ人指揮官。' },
   { rank: 'A', focus: 'tactics', nationality: 'France', age: 49, preferredFormation: '4-2-3-1', preferredTactic: 'wingplay', weeklyWage: 86, bio: '両翼の爆発的スピードを最大限に引き出すサイドアタックの達人。' },
   { rank: 'A', focus: 'discipline', nationality: 'Croatia', age: 53, preferredFormation: '4-3-1-2', preferredTactic: 'counter', weeklyWage: 82, bio: '中盤の密度と勝負強いリアクションサッカーを極めた知将。' },
-  { rank: 'A', focus: 'motivation', nationality: 'Argentina', age: 47, preferredFormation: '3-4-3', preferredTactic: 'wingplay', weeklyWage: 85, bio: '情熱的なサイド攻撃と選手との強い信頼関係でチームを牽引する。' },
+  { rank: 'A', focus: 'motivation', nationality: 'Argentina', age: 47, preferredFormation: '3-4-3', preferredTactic: 'wingplay', weeklyWage: 85, bio: '情熱的なワイドアタックと選手との強い信頼関係でチームを牽引する。' },
   { rank: 'A', focus: 'development', nationality: 'Spain', age: 44, preferredFormation: '4-1-2-3', preferredTactic: 'possession', weeklyWage: 80, bio: '技術と戦術知性を重視し、下部組織出身者を主力へと育て上げる。' },
 
   // --- Bランク（18名：実力派） ---

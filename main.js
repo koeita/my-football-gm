@@ -12374,32 +12374,29 @@ function openManagerHireModal() {
             const rDev = getStaffStatRank(st.development);
             const rDis = getStaffStatRank(st.discipline);
             return `
-              <div class="manager-candidate-card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
-                  <div class="candidate-avatar" style="flex-shrink:0;">${cAvatar}</div>
-                  <div style="flex:1; min-width:0;">
-                    <div class="flat-row-header">
-                      <div class="flat-row-title-wrap">
-                        <span class="flat-row-title">${cand.name}</span>
-                        <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
-                      </div>
-                      <span class="mono accent-gold font-bold flat-row-wage" style="font-size:12px;">£${cand.weeklyWage}k/週${eff.minReputation > 0 ? ` · Rep ${eff.minReputation}` : ''}</span>
-                    </div>
-                    <div class="flat-row-meta mono">
-                      ${cand.nationality} · ${cand.age}歳 · <strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong>
-                    </div>
-                    <div class="staff-stats-chips">
-                      <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
-                    </div>
+              <div class="manager-candidate-card" style="display:flex; align-items:flex-start; gap:10px;">
+                <div class="candidate-avatar" style="flex-shrink:0; margin-top:2px;">${cAvatar}</div>
+                <div style="flex:1; min-width:0;">
+                  <div class="flat-row-header" style="gap:8px;">
+                    <span class="flat-row-title" style="flex:1; min-width:0; font-size:14.5px;">${cand.name}</span>
+                    <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 5px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">
+                      ${repBlocked ? `要Rep ${eff.minReputation}` : (currentMgr ? '交代' : '招聘')}
+                    </button>
                   </div>
-                </div>
-                <div style="flex-shrink:0;">
-                  <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 7px 14px; white-space: nowrap;">
-                    ${repBlocked ? `要Rep ${eff.minReputation}` : (currentMgr ? '交代' : '招聘')}
-                  </button>
+                  <div class="flat-row-meta mono" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                    <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
+                    <span class="accent-gold font-bold wage-nowrap" style="font-size:11.5px;">£${cand.weeklyWage}k/週${eff.minReputation > 0 ? ` · Rep ${eff.minReputation}` : ''}</span>
+                    <span>${cand.nationality} · ${cand.age}歳</span>
+                  </div>
+                  <div class="flat-row-meta mono" style="margin-top:3px;">
+                    <strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong>
+                  </div>
+                  <div class="staff-stats-chips" style="margin-top:6px;">
+                    <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+                    <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+                    <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+                    <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
+                  </div>
                 </div>
               </div>
             `;
@@ -12889,7 +12886,7 @@ function openInitialStaffSetupModal(club) {
     { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
     { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
     { formation: '3-5-2', tactic: 'counter', label: 'カウンター' },
-    { formation: '4-4-2', tactic: 'wingplay', label: 'サイド攻撃' },
+    { formation: '4-4-2', tactic: 'wingplay', label: 'ワイドアタック' },
     { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
   ];
   const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
