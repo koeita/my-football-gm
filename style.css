@@ -10339,21 +10339,24 @@ body.main-menu-active {
     padding: 7px 12px;
   }
   .precheck-modal-body {
-    padding: 6px 10px;
+    padding: 8px 10px;
     gap: 6px;
-    overflow-y: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex: 1;
+    min-height: 0;
   }
   .precheck-body-grid {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    justify-content: space-between;
-    flex: 1;
-    min-height: 0;
+    gap: 8px;
+    justify-content: flex-start;
+    flex: none;
+    height: auto;
+    min-height: auto;
   }
   /* 上段：対戦カードと戦術・戦力を余白なくスリムにスタック配置 */
   .precheck-left-col {
@@ -10435,14 +10438,17 @@ body.main-menu-active {
     flex-shrink: 0;
   }
   .precheck-tactics-bar {
-    padding: 5px 12px;
+    padding: 4px 6px;
     gap: 4px;
     flex: none;
     height: auto;
     min-height: 0;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #181d22 0%, #13171b 100%);
-    border: 1px solid #28303a;
+  }
+  .precheck-tactics-bar .ui-kv-row {
+    padding: 5px 2px;
+  }
+  .precheck-tactics-bar .ui-plate-grid {
+    margin-top: 4px !important;
   }
   .precheck-tactics-bar .precheck-card-subhead {
     display: none;
@@ -10493,37 +10499,39 @@ body.main-menu-active {
   }
 
 
-  /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示） */
+  /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示・全11名見切れ防止） */
   .precheck-right-col {
-    flex: 1;
+    flex: none;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    height: auto;
+    min-height: auto;
   }
   .precheck-starters-card {
-    padding: 6px 8px;
-    gap: 3px;
-    flex: 1;
+    padding: 4px 4px 8px;
+    gap: 4px;
+    flex: none;
+    height: auto;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    min-height: 0;
+    justify-content: flex-start;
+    min-height: auto;
   }
   .precheck-starters-head {
     font-size: 9.5px;
-    padding-bottom: 2px;
+    padding-bottom: 3px;
   }
   .precheck-starters-list {
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
-    flex: 1 !important;
-    gap: 1px !important;
-    min-height: 0 !important;
+    justify-content: flex-start !important;
+    flex: none !important;
+    gap: 3px !important;
+    min-height: auto !important;
   }
   .precheck-player-row {
-    grid-template-columns: 28px 18px 1fr 28px 42px 42px;
-    padding: 2px 5px;
+    grid-template-columns: 28px 20px minmax(0, 1fr) 26px 40px 42px;
+    padding: 4px 5px;
     font-size: 11px;
     gap: 3px;
     line-height: 1.25;
