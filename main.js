@@ -1730,9 +1730,10 @@ function processSeasonEnd(isSkipped = false) {
       for (const yp of club.youthSquad) {
         yp.age += 1;
         let boost = 2;
-        if (yp.potentialGrade === 'S') boost = randInt(4, 7);
-        else if (yp.potentialGrade === 'A') boost = randInt(3, 5);
-        else if (yp.potentialGrade === 'B') boost = randInt(2, 4);
+        const ypPot = yp.potential || yp.potentialGrade || 'B';
+        if (ypPot === 'S') boost = randInt(4, 7);
+        else if (ypPot === 'A') boost = randInt(3, 5);
+        else if (ypPot === 'B') boost = randInt(2, 4);
         else boost = randInt(1, 2);
 
         yp.atk = clamp(yp.atk + boost, 1, 99);
@@ -3996,7 +3997,9 @@ function promoteYouthPlayer(youthId) {
   youth.slotIndex = null;
   youth.contractYears = 3;
   // 週給 £3K〜£6K
-  youth.wage = Math.max(3, Math.min(6, Math.round((youth.potentialRating || 70) / 15)));
+  const potBaseMap = { S: 86, A: 80, B: 74, C: 68 };
+  const potRatingVal = youth.potentialRating || potBaseMap[youth.potential || youth.potentialGrade] || 70;
+  youth.wage = Math.max(3, Math.min(6, Math.round(potRatingVal / 15)));
   youth.salary = youth.wage * 52;
   youth.contractRefused = false;
 
@@ -9412,7 +9415,7 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box" style="margin-top: 12px; border-color: rgba(46, 204, 113, 0.4); background: rgba(18, 24, 20, 0.7);">
             <div class="profile-box-header" style="border-bottom: 1px solid rgba(46, 204, 113, 0.3);">
               <span class="profile-box-title" style="color: var(--accent-green);">プロ契約条件 ＆ トップ昇格 [U-21 YOUTH]</span>
-              <span class="mono accent-gold" style="font-size: 11px;">POT: ${p.potentialMin}-${p.potentialMax}</span>
+              <span class="mono accent-gold" style="font-size: 11px;">POT: ${p.potential || p.potentialGrade || 'B'}</span>
             </div>
             <div class="profile-metrics-row profile-metrics-row-3col" style="margin-top: 8px;">
               <div class="profile-metric-card">
