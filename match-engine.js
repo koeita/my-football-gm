@@ -3373,11 +3373,11 @@ function buildMatchSummaryHtml(md) {
           <div class="summary-col-left">
             ${scoreHeroHtml}
             <div class="summary-section-card summary-stats-card">
-              <div class="summary-section-title">▼ チームスタッツ比較</div>
+              <div class="flat-section-label mono">チームスタッツ比較</div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
                   <span style="color:#2ecc71;">${homePossession}%</span>
-                  <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率 (POSSESSION)</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率</span>
                   <span style="color:#60a5fa;">${awayPossession}%</span>
                 </div>
                 <div class="stat-compare-bar-track">
@@ -3388,7 +3388,7 @@ function buildMatchSummaryHtml(md) {
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
                   <span style="color:#2ecc71;">${safeHomeShots}本 (${homeOnTarget})</span>
-                  <span style="color:var(--text-muted);font-size:9.5px;">シュート / 枠内 (SHOTS / ON TARGET)</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">シュート (枠内)</span>
                   <span style="color:#60a5fa;">${safeAwayShots}本 (${awayOnTarget})</span>
                 </div>
                 <div class="stat-compare-bar-track">
@@ -3410,7 +3410,7 @@ function buildMatchSummaryHtml(md) {
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
                   <span style="color:#2ecc71;">${homePasses}本 [${homePassAccuracy}%]</span>
-                  <span style="color:var(--text-muted);font-size:9.5px;">パス数 / 成功率 (PASSES / ACCURACY)</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">パス数 [成功率]</span>
                   <span style="color:#60a5fa;">${awayPasses}本 [${awayPassAccuracy}%]</span>
                 </div>
                 <div class="stat-compare-bar-track">
@@ -3424,22 +3424,22 @@ function buildMatchSummaryHtml(md) {
           <!-- 右列：ハイライト ＆ GM収支・MOM -->
           <div class="summary-col-right">
             <div class="summary-section-card summary-highlights-card">
-              <div class="summary-section-title">▼ マッチハイライト</div>
+              <div class="flat-section-label mono">マッチハイライト</div>
               <div class="summary-highlights-list">
                 ${highlightsHtml}
               </div>
             </div>
 
             <div class="summary-section-card summary-gm-card">
-              <div class="summary-section-title">▼ GM収支＆MOM</div>
-              <div class="summary-gm-grid">
-                <div class="summary-gm-metric">
-                  <span class="gm-metric-label">${revenueTypeLabel}</span>
-                  <span class="gm-metric-val" style="color:var(--accent-gold);">+${formatMoney(revenueAmount)}</span>
+              <div class="flat-section-label mono">試合収支 ＆ MOM</div>
+              <div class="ui-plate-grid cols-2" style="margin: 8px 0;">
+                <div class="ui-stat-plate is-gold">
+                  <span class="ui-plate-label">${revenueTypeLabel}</span>
+                  <span class="ui-plate-val accent-gold">+${formatMoney(revenueAmount)}</span>
                 </div>
-                <div class="summary-gm-metric">
-                  <span class="gm-metric-label">サポーター (${playerClub.supporters.toLocaleString()}人)</span>
-                  <span class="gm-metric-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">サポーター増減</span>
+                  <span class="ui-plate-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
                 </div>
               </div>
               ${momPlayer ? `
@@ -3661,7 +3661,7 @@ function openMatchPrecheckModal() {
       <div class="precheck-left-col">
         <!-- 対戦カード概要 -->
         <div class="precheck-hero-card">
-          <div class="precheck-card-subhead mono">MATCHDAY FIXTURE</div>
+          
           <div class="precheck-vs-row">
             <div class="precheck-club-box is-player">
               <div class="precheck-club-title-wrap">
@@ -3689,7 +3689,7 @@ function openMatchPrecheckModal() {
 
         <!-- 自チーム作戦・戦力設定 -->
         <div class="precheck-tactics-bar">
-          <div class="precheck-card-subhead mono">TACTICS & STRENGTH</div>
+          
           <div class="precheck-tactics-info-grid">
             <div class="precheck-tactics-item">
               <span class="precheck-label">陣形:</span>

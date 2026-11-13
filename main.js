@@ -2281,14 +2281,14 @@ function renderNegotiationModal() {
       dealTypeTabsHtml = `
         <div class="neg-dealtype-tabs" id="neg-dealtype-group">
           <button type="button" class="btn-dealtype ${session.dealType === 'buy' ? 'active' : ''}" data-deal-type="buy" ${session.completed ? 'disabled' : ''}>
-            完全移籍 (BUY)
+            完全移籍
           </button>
           <button type="button" class="btn-dealtype ${session.dealType === 'loan' ? 'active' : ''}" data-deal-type="loan" ${session.completed ? 'disabled' : ''}>
             レンタル (LOAN)
           </button>
           ${isPreContractOk ? `
             <button type="button" class="btn-dealtype ${session.dealType === 'pre_contract' ? 'active' : ''}" data-deal-type="pre_contract" ${session.completed ? 'disabled' : ''} title="残り契約半年・来季7/1加入内定">
-              事前合意 (FREE)
+              事前合意
             </button>
           ` : ''}
         </div>
@@ -2366,9 +2366,7 @@ function renderNegotiationModal() {
           <span class="neg-control-label">移籍金</span>
           <span class="neg-control-val accent-green">£0 (レンタル加入)</span>
         </div>
-        <div class="text-muted" style="font-size: 11px;">
-          相手クラブへの移籍金支払いは発生しません。
-        </div>
+
       </div>
 
       <div class="neg-control-group">
@@ -9463,183 +9461,206 @@ function openPlayerProfileModal(playerId) {
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
-      <!-- タブ1：能力 -->
+      <!-- タブ1：能力（階層UI：左見出し・右詳細 ＋ スリムゲージ ＋ 数値プレート） -->
       <div class="profile-tab-panel" data-profile-panel="ability">
         <div class="profile-section-grid">
-          <!-- 左：6大能力六角形レーダーチャート ＆ 詳細能力パラメータ -->
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
-              <span class="profile-box-title">能力パラメータ</span>
+              <span class="profile-box-title">能力チャート</span>
               <span class="profile-ovr-badge ${getOvrTierClass(baseOvr)}" style="background:none;">OVR ${baseOvr}</span>
             </div>
             ${hexagonChartHtml}
-            <div class="profile-compact-attrs-grid">
-              <div class="profile-attr-chip"><span class="attr-chip-name">決定力</span><strong class="mono ${getOvrTierClass(attrs.finishing)}" style="background:none;">${attrs.finishing}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">ドリブル</span><strong class="mono ${getOvrTierClass(attrs.dribbling)}" style="background:none;">${attrs.dribbling}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">パス</span><strong class="mono ${getOvrTierClass(attrs.passing)}" style="background:none;">${attrs.passing}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">守備</span><strong class="mono ${getOvrTierClass(attrs.defending)}" style="background:none;">${attrs.defending}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">スピード</span><strong class="mono ${getOvrTierClass(attrs.pace)}" style="background:none;">${attrs.pace}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">スタミナ</span><strong class="mono ${getOvrTierClass(attrs.stamina)}" style="background:none;">${attrs.stamina}</strong></div>
-            </div>
           </div>
 
-          <!-- 右：適性ポジション図 ＆ トレーニング -->
           <div class="profile-box">
-            <div class="profile-box-header">
-              <span class="profile-box-title">適性ポジション</span>
-            </div>
-            ${buildPlayerPitchProficiencyHtml(p)}
+            <div class="ui-kv-list">
+              <div class="ui-kv-row">
+                <div class="ui-kv-label">能力値</div>
+                <div class="ui-kv-content">
+                  <div class="ui-attr-bars-grid">
+                    ${[
+                      ['決定力', attrs.finishing],
+                      ['ドリブル', attrs.dribbling],
+                      ['パス', attrs.passing],
+                      ['守備', attrs.defending],
+                      ['スピード', attrs.pace],
+                      ['スタミナ', attrs.stamina]
+                    ].map(([nm, val]) => {
+                      const cls = getOvrTierClass(val);
+                      return `
+                        <div class="ui-attr-bar-item">
+                          <div class="ui-attr-bar-top">
+                            <span class="ui-attr-bar-name">${nm}</span>
+                            <span class="ui-attr-bar-num ${cls}" style="background:none;">${val}</span>
+                          </div>
+                          <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill ${cls}" style="width:${Math.min(100, Math.max(15, val))}%"></div></div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
 
-            ${trainingSectionHtml}
+              <div class="ui-kv-row">
+                <div class="ui-kv-label accent-cyan-bar">適性配置</div>
+                <div class="ui-kv-content">
+                  ${buildPlayerPitchProficiencyHtml(p)}
+                  ${trainingSectionHtml}
+                </div>
+              </div>
 
-            <div class="profile-box-header" style="margin-top: 8px;">
-              <span class="profile-box-title">選手特徴</span>
-            </div>
-            <div class="profile-traits-wrap">
-              ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
+              <div class="ui-kv-row">
+                <div class="ui-kv-label">選手特徴</div>
+                <div class="ui-kv-content">
+                  <div class="profile-traits-wrap">
+                    ${traits.map(t => `<span class="profile-trait-tag is-active-trait">${t}</span>`).join('')}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 能力タブ下部：契約・市場価値情報 または ユースプロ契約条件 -->
-        ${isYouth ? `
-          <div class="profile-box" style="margin-top: 12px; border-color: rgba(46, 204, 113, 0.4); background: rgba(18, 24, 20, 0.7);">
-            <div class="profile-box-header" style="border-bottom: 1px solid rgba(46, 204, 113, 0.3);">
-              <span class="profile-box-title" style="color: var(--accent-green);">プロ契約条件 ＆ トップ昇格 [U-21 YOUTH]</span>
-              <span class="mono accent-gold" style="font-size: 11px;">POT: ${p.potential || p.potentialGrade || 'B'}</span>
-            </div>
-            <div class="profile-metrics-row profile-metrics-row-3col" style="margin-top: 8px;">
-              <div class="profile-metric-card">
-                <span class="profile-metric-label">初回契約金</span>
-                <span class="profile-metric-val mono accent-gold">£40k</span>
+        <!-- 契約・価値 数値プレート階層 -->
+        <div class="ui-kv-list" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">
+          ${isYouth ? `
+            <div class="ui-kv-row">
+              <div class="ui-kv-label accent-gold-bar">プロ契約</div>
+              <div class="ui-kv-content">
+                <div class="ui-plate-grid">
+                  <div class="ui-stat-plate is-gold">
+                    <span class="ui-plate-label">初回契約金</span>
+                    <span class="ui-plate-val accent-gold">£40k</span>
+                  </div>
+                  <div class="ui-stat-plate is-highlight">
+                    <span class="ui-plate-label">想定週給</span>
+                    <span class="ui-plate-val accent-green">£${p.wage || 2.5}k/週</span>
+                  </div>
+                  <div class="ui-stat-plate">
+                    <span class="ui-plate-label">契約 / POT</span>
+                    <span class="ui-plate-val">3年 · ${p.potential || p.potentialGrade || 'B'}</span>
+                  </div>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                  <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
+                    トップチームへ昇格
+                  </button>
+                  <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 9px 14px;">
+                    放出
+                  </button>
+                </div>
               </div>
-              <div class="profile-metric-card">
-                <span class="profile-metric-label">想定週給</span>
-                <span class="profile-metric-val mono accent-green">£${p.wage || 2.5}k/週</span>
+            </div>
+          ` : `
+            <div class="ui-kv-row">
+              <div class="ui-kv-label accent-gold-bar">契約・価値</div>
+              <div class="ui-kv-content">
+                <div class="ui-plate-grid">
+                  <div class="ui-stat-plate is-gold">
+                    <span class="ui-plate-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
+                    <span class="ui-plate-val accent-gold">${formatMoney(p.salary)}</span>
+                  </div>
+                  <div class="ui-stat-plate">
+                    <span class="ui-plate-label">契約残年数</span>
+                    <span class="ui-plate-val">${p.contractYears}年</span>
+                  </div>
+                  <div class="ui-stat-plate is-highlight profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示" style="cursor: pointer;">
+                    <span class="ui-plate-label">${isMarket ? '移籍金 ▶' : '市場価値 ▶'}</span>
+                    <span class="ui-plate-val accent-green">${formatMoney(estMarketValue)}</span>
+                  </div>
+                </div>
+                ${!isMyClubPlayer && !isCandidate ? `
+                  <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
+                      ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
+                      ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
+                    </button>
+                  </div>
+                ` : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
+                  <div style="margin-top: 10px;">
+                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
+                      ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
+                    </button>
+                  </div>
+                ` : '')}
               </div>
-              <div class="profile-metric-card">
-                <span class="profile-metric-label">契約年数</span>
-                <span class="profile-metric-val mono">3年</span>
-              </div>
             </div>
-            <div style="margin-top: 10px; display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 10px 14px;">
-                トップチームへプロ契約昇格する
-              </button>
-              <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 10px 14px;">
-                放出
-              </button>
-            </div>
-          </div>
-        ` : `
-          <div class="profile-metrics-row profile-metrics-row-3col">
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
-              <span class="profile-metric-val accent-gold">${formatMoney(p.salary)}</span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">契約残年数</span>
-              <span class="profile-metric-val">${p.contractYears}年</span>
-            </div>
-            <div class="profile-metric-card profile-metric-clickable" data-switch-profile-tab="market-value" title="クリックで市場価値推移グラフを表示" style="cursor: pointer;">
-              <span class="profile-metric-label" style="display:flex; justify-content:space-between; align-items:center;">
-                <span>${isMarket ? '移籍金' : '推定市場価値'}</span>
-                <span class="mono accent-green" style="font-size:9.5px;">推移グラフ ▶</span>
-              </span>
-              <span class="profile-metric-val accent-green">${formatMoney(estMarketValue)}</span>
-            </div>
-          </div>
-          ${!isMyClubPlayer && !isCandidate ? `
-            <div style="margin-top: 10px; display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
-                ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉・オファーを提示する'}
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
-                ${isInShortlist(p.id) ? '★ 候補登録済' : '☆ 候補に追加'}
-              </button>
-            </div>
-          ` : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
-            <div style="margin-top: 10px;">
-              <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
-                ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
-              </button>
-            </div>
-          ` : '')}
-        `}
+          `}
+        </div>
       </div>
 
-      <!-- タブ2：今季成績 -->
+      <!-- タブ2：今季成績（数値プレート＋左見出し2カラム＋ゲージ） -->
       <div class="profile-tab-panel hidden" data-profile-panel="season">
-        <div class="profile-box">
-          <div class="profile-box-header">
-            <span class="profile-box-title">今季成績</span>
-            <span class="mono text-muted" style="font-size: 11px;">${clubName}</span>
-          </div>
-
-          <div class="profile-season-stats-grid">
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">出場試合</span>
-              <span class="profile-metric-val mono">${p.appearances} <small style="font-size: 12px; color: var(--text-muted);">試合</small></span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">ゴール</span>
-              <span class="profile-metric-val mono accent-green">${p.goals} <small style="font-size: 12px; color: var(--text-muted);">得点</small></span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">アシスト</span>
-              <span class="profile-metric-val mono text-cyan">${typeof p.assists === 'number' ? p.assists : 0} <small style="font-size: 12px; color: var(--text-muted);">アシスト</small></span>
-            </div>
-            ${['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(primaryPos) || POS_ROLE_GROUP[primaryPos] === 'GK' || POS_ROLE_GROUP[primaryPos] === 'DF' ? `
-              <div class="profile-metric-card">
-                <span class="profile-metric-label">クリーンシート (CS)</span>
-                <span class="profile-metric-val mono accent-gold">${p.cleanSheets || 0} <small style="font-size: 12px; color: var(--text-muted);">完封</small></span>
+        <div class="ui-kv-list">
+          <div class="ui-kv-row">
+            <div class="ui-kv-label accent-gold-bar">主要成績</div>
+            <div class="ui-kv-content">
+              <div class="ui-plate-grid cols-4">
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">出場数</span>
+                  <span class="ui-plate-val">${p.appearances}</span>
+                </div>
+                <div class="ui-stat-plate is-highlight">
+                  <span class="ui-plate-label">ゴール</span>
+                  <span class="ui-plate-val accent-green">${p.goals}</span>
+                </div>
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">アシスト</span>
+                  <span class="ui-plate-val text-cyan">${typeof p.assists === 'number' ? p.assists : 0}</span>
+                </div>
+                <div class="ui-stat-plate is-gold">
+                  <span class="ui-plate-label">平均評価</span>
+                  <span class="ui-plate-val accent-gold">${avgRating !== '-' ? avgRating : '-'}</span>
+                </div>
               </div>
-            ` : `
-              <div class="profile-metric-card">
-                <span class="profile-metric-label">クリーンシート (CS)</span>
-                <span class="profile-metric-val mono text-muted">-</span>
-              </div>
-            `}
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">平均評価点</span>
-              <span class="profile-metric-val mono accent-gold">${avgRating !== '-' ? `★ ${avgRating}` : '-'}</span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">1試合平均得点</span>
-              <span class="profile-metric-val mono">${goalsPerMatch}</span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">出場率</span>
-              <span class="profile-metric-val mono">${appRate}%</span>
-            </div>
-            <div class="profile-metric-card">
-              <span class="profile-metric-label">出場時評価</span>
-              <span class="profile-metric-val mono accent-green">OVR ${effOvr}</span>
             </div>
           </div>
 
-          <div class="profile-season-detail-list">
-            <div class="profile-fit-row">
-              <span class="text-muted">起用区分</span>
-              <span class="mono"><strong>${roleStatusText}</strong></span>
+          <div class="ui-kv-row">
+            <div class="ui-kv-label accent-cyan-bar">貢献指標</div>
+            <div class="ui-kv-content">
+              <div class="ui-plate-grid">
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">クリーンシート (CS)</span>
+                  <span class="ui-plate-val">${(['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(primaryPos) || POS_ROLE_GROUP[primaryPos] === 'GK' || POS_ROLE_GROUP[primaryPos] === 'DF') ? (p.cleanSheets || 0) : '-'}</span>
+                </div>
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">1試合得点</span>
+                  <span class="ui-plate-val">${goalsPerMatch}</span>
+                </div>
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">実効OVR</span>
+                  <span class="ui-plate-val ${getOvrTierClass(effOvr)}" style="background:none;">${effOvr}</span>
+                </div>
+              </div>
             </div>
-            <div class="profile-fit-row">
-              <span class="text-muted">コンディション</span>
-              <span class="mono ${conditionClass}"><strong>${conditionText}</strong></span>
-            </div>
-            <div class="profile-fit-row">
-              <span class="text-muted">蓄積疲労度</span>
-              <span class="mono"><strong style="color:${pFtgStatus.color};">${pFtgVal} / 100 (${pFtgStatus.label})</strong></span>
-            </div>
-            <div class="profile-fit-row profile-scout-comment-row">
-              <span class="text-muted">スカウト評価</span>
-              <span class="profile-scout-comment-text">
-                ${p.appearances === 0
-                  ? '今季の公式戦出場はまだありません。今後の起用と連携向上が期待されます。'
-                  : (parseFloat(avgRating) >= 7.0
-                    ? '極めて高水準なパフォーマンスを維持しており、チームの勝利に大きく貢献しています。'
-                    : 'コンスタントに試合へ絡み、戦術システムの中で安定した役割を果たしています。')}
-              </span>
+          </div>
+
+          <div class="ui-kv-row">
+            <div class="ui-kv-label">稼働状態</div>
+            <div class="ui-kv-content">
+              <div class="ui-attr-bars-grid">
+                <div class="ui-attr-bar-item">
+                  <div class="ui-attr-bar-top">
+                    <span class="ui-attr-bar-name">出場率</span>
+                    <span class="ui-attr-bar-num accent-green">${appRate}%</span>
+                  </div>
+                  <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill ovr-tier-high" style="width:${appRate}%"></div></div>
+                </div>
+                <div class="ui-attr-bar-item">
+                  <div class="ui-attr-bar-top">
+                    <span class="ui-attr-bar-name">蓄積疲労</span>
+                    <span class="ui-attr-bar-num" style="color:${pFtgStatus.color};">${pFtgVal} (${pFtgStatus.label})</span>
+                  </div>
+                  <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill" style="width:${pFtgVal}%; background:${pFtgStatus.color};"></div></div>
+                </div>
+              </div>
+              <div class="mono" style="margin-top:8px; display:flex; justify-content:space-between; gap:8px; font-size:11.5px;">
+                <span class="text-muted">${roleStatusText}</span>
+                <span class="${conditionClass} font-bold wage-nowrap">${conditionText}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -9661,81 +9682,36 @@ function openPlayerProfileModal(playerId) {
           </div>
           <div class="profile-yearly-table-wrap">
             <table class="data-table profile-yearly-table">
-              <thead>
-                <tr>
-                  <th>年度</th>
-                  <th>所属クラブ</th>
-                  <th class="col-num">年齢</th>
-                  <th class="col-num">出場</th>
-                  <th class="col-num">得点</th>
-                  <th class="col-num">アシ</th>
-                  <th class="col-num">評価点</th>
-                  <th class="col-num">OVR</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${yearlyRowsHtml}
-              </tbody>
-              <tfoot>
-                <tr class="profile-yearly-total-row">
-                  <td class="mono" colspan="2">通算</td>
-                  <td class="mono col-num">-</td>
-                  <td class="mono col-num"><strong>${totalAppsSum}</strong></td>
-                  <td class="mono col-num accent-green"><strong>${totalGoalsSum}</strong></td>
-                  <td class="mono col-num text-cyan"><strong>${totalAssistsSum}</strong></td>
-                  <td class="mono col-num accent-gold"><strong>${careerAvgRating}</strong></td>
-                  <td class="mono col-num"><strong>${baseOvr}</strong></td>
-                </tr>
-              </tfoot>
+              <thead><tr><th>年度</th><th>所属クラブ</th><th class="col-num">年齢</th><th class="col-num">出場</th><th class="col-num">得点</th><th class="col-num">アシ</th><th class="col-num">評価点</th><th class="col-num">OVR</th></tr></thead>
+              <tbody>${yearlyRowsHtml}</tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- タブ4：市場価値推移（SVG折れ線グラフ ＆ 4大メトリクス） -->
+      <!-- タブ4：市場価値推移 -->
       ${buildPlayerMarketValueTabHtml(p, clubName)}
 
-      <!-- タブ5：経歴 -->
+      <!-- タブ5：経歴（左見出し・右詳細 2カラム階層） -->
       <div class="profile-tab-panel hidden" data-profile-panel="career">
-        <div class="profile-section-grid">
-          <div class="profile-box">
-            <div class="profile-box-header">
-              <span class="profile-box-title">プロフィール</span>
-            </div>
-            <div class="profile-pos-fit-list">
-              <div class="profile-fit-row">
-                <span class="text-muted">選手名</span>
-                <span class="mono"><strong>${p.fullName || p.name}</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">国籍</span>
-                <span class="mono" style="display: inline-flex; align-items: center; gap: 6px;"><strong>${nationalityDisplay}</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">年齢</span>
-                <span class="mono"><strong>${birthYear}年生まれ (${p.age}歳)</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">身長・利き足</span>
-                <span class="mono"><strong>${heightText} / ${footText}</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">所属・背番号</span>
-                <span class="mono"><strong>${clubName} (${squadNumText})</strong></span>
-              </div>
-              <div class="profile-fit-row">
-                <span class="text-muted">ポジション</span>
-                <span class="mono"><strong>${primaryPos}${subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : ''}</strong></span>
+        <div class="ui-kv-list">
+          <div class="ui-kv-row">
+            <div class="ui-kv-label">基本情報</div>
+            <div class="ui-kv-content">
+              <div class="profile-pos-fit-list">
+                <div class="profile-fit-row"><span class="text-muted">選手名</span><span class="mono"><strong>${p.fullName || p.name}</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">国籍</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${nationalityDisplay}</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">生年・年齢</span><span class="mono"><strong>${birthYear}年 (${p.age}歳)</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono"><strong>${heightText} / ${footText}</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubName} (${squadNumText})</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">適性・成長型</span><span class="mono"><strong>${primaryPos}${subPosList.length ? ` (${subPosList.join('/')})` : ''} · ${growthLabel}</strong></span></div>
               </div>
             </div>
           </div>
-
-          <div class="profile-box">
-            <div class="profile-box-header">
-              <span class="profile-box-title">経歴</span>
-            </div>
-            <div class="profile-career-timeline">
-              ${timelineHtml}
+          <div class="ui-kv-row">
+            <div class="ui-kv-label accent-cyan-bar">キャリア</div>
+            <div class="ui-kv-content">
+              <div class="profile-career-timeline">${timelineHtml}</div>
             </div>
           </div>
         </div>
@@ -12222,31 +12198,56 @@ function renderManagerManagementPanel() {
     const rDis = getStaffStatRank(mStats.discipline);
 
     currentCardHtml = `
-      <div class="manager-current-card">
-        <div class="manager-current-main">
-          <div class="manager-current-avatar">
-            ${avatarHtml}
+      <div class="manager-current-card" style="flex-direction:column; align-items:stretch; border:none; background:transparent; padding:4px 0;">
+        <div style="display:flex; align-items:center; gap:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div class="manager-current-avatar">${avatarHtml}</div>
+          <div style="flex:1; min-width:0;">
+            <div class="flat-row-header">
+              <div class="flat-row-title-wrap">
+                <span class="flat-row-title" style="font-size:16px;">${mgr.name}</span>
+                <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
+              </div>
+              <span class="mono text-muted wage-nowrap" style="font-size:11.5px;">${mgr.nationality} · ${mgr.age}歳</span>
+            </div>
+            <div class="flat-row-meta">${mgr.bio}</div>
           </div>
-          <div class="manager-current-info">
-            <div class="manager-current-name" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-              <span>${mgr.name}</span>
-              <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
-              <span class="mono text-muted" style="font-size: 11px;">(${mgr.nationality} / ${mgr.age}歳)</span>
+        </div>
+        <div class="ui-kv-list">
+          <div class="ui-kv-row">
+            <div class="ui-kv-label accent-cyan-bar">戦術方針</div>
+            <div class="ui-kv-content mono" style="display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;">
+              <span class="text-muted">得意陣形 <strong style="color:#38bdf8; font-size:14px;">${mgr.preferredFormation}</strong></span>
+              <span class="text-muted">得意戦術 <strong class="accent-green" style="font-size:14px;">${tacticLabel}</strong></span>
             </div>
-            <div class="manager-current-meta mono">
-              <span>得意陣形: <strong class="accent-green">${mgr.preferredFormation}</strong></span>
-              <span>得意戦術: <strong class="accent-green">${tacticLabel}</strong></span>
-              <span>契約残り: <strong>${mgr.contractYears}年</strong></span>
-              <span>週給: <strong class="accent-gold">£${mgr.weeklyWage}k</strong> (年俸 £${Math.round(mgr.weeklyWage * 5.2) / 10}M)</span>
+          </div>
+          <div class="ui-kv-row">
+            <div class="ui-kv-label">指導能力</div>
+            <div class="ui-kv-content">
+              <div class="staff-stats-chips" style="margin-top:0 !important;">
+                <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
+              </div>
             </div>
-            <div class="staff-stats-chips">
-              <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
-              <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
-              <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
-              <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
-            </div>
-            <div class="manager-current-bio">
-              ${mgr.bio}
+          </div>
+          <div class="ui-kv-row">
+            <div class="ui-kv-label accent-gold-bar">契約・信頼</div>
+            <div class="ui-kv-content">
+              <div class="ui-plate-grid">
+                <div class="ui-stat-plate is-highlight">
+                  <span class="ui-plate-label">現場信頼度</span>
+                  <span class="ui-plate-val accent-green">${mgr.trust}%</span>
+                </div>
+                <div class="ui-stat-plate is-gold">
+                  <span class="ui-plate-label">週給 (年俸)</span>
+                  <span class="ui-plate-val accent-gold">£${mgr.weeklyWage}k</span>
+                </div>
+                <div class="ui-stat-plate">
+                  <span class="ui-plate-label">契約残年数</span>
+                  <span class="ui-plate-val">${mgr.contractYears}年</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -13796,16 +13797,16 @@ function openPendingMatchPreview(weekNum) {
     const pos = p.primaryPosition || p.assignedPos || p.pos || 'MF';
     const roleGroup = (typeof POS_ROLE_GROUP !== 'undefined' && POS_ROLE_GROUP[pos]) ? POS_ROLE_GROUP[pos] : 'MF';
     return `
-      <tr>
+      <tr style="${isKey ? 'background:rgba(245,158,11,0.08);' : ''}">
         <td class="mono" style="font-weight:700; width:44px;"><span class="pos-badge pos-${roleGroup.toLowerCase()}">${pos}</span></td>
         <td>
           <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-weight:600; color:#ffffff;">${p.name}</span>
-            ${isKey ? '<span class="scout-key-badge">★ KEY PLAYER</span>' : ''}
+            <span style="font-weight:${isKey ? '800' : '500'}; color:${isKey ? '#ffffff' : '#cbd5e1'};">${p.name}</span>
+            ${isKey ? '<span class="scout-key-badge">★ KEY</span>' : ''}
           </div>
         </td>
         <td class="mono" style="color:var(--text-muted); width:44px;">${p.age}歳</td>
-        <td class="mono" style="font-weight:700; color:var(--accent-gold); width:54px;">OVR ${p.calculatedOvr}</td>
+        <td class="mono" style="width:58px; text-align:right;"><span class="ovr-cell-badge ${getOvrTierClass(p.calculatedOvr)}" style="font-size:12px;">${p.calculatedOvr}</span></td>
       </tr>
     `;
   }).join('');
@@ -13844,38 +13845,43 @@ function openPendingMatchPreview(weekNum) {
       </div>
     </div>
 
-    <!-- 相手チーム戦術 ＆ 戦力サマリーグリッド -->
-    <div class="scout-overview-grid">
-      <div class="scout-metric-box">
-        <span class="scout-metric-label">相手戦術スタイル</span>
-        <span class="scout-metric-val accent-green">${tacticLabel}</span>
+    <!-- 相手チーム戦術 ＆ 戦力 数値プレート -->
+    <div class="ui-plate-grid" style="margin: 10px 0 6px;">
+      <div class="ui-stat-plate is-highlight">
+        <span class="ui-plate-label">相手戦術</span>
+        <span class="ui-plate-val accent-green" style="font-size:13.5px;">${tacticLabel}</span>
       </div>
-      <div class="scout-metric-box">
-        <span class="scout-metric-label">基本フォーメーション</span>
-        <span class="scout-metric-val mono">${formation}</span>
+      <div class="ui-stat-plate">
+        <span class="ui-plate-label">基本陣形</span>
+        <span class="ui-plate-val">${formation}</span>
       </div>
-      <div class="scout-metric-box">
-        <span class="scout-metric-label">相手平均戦力</span>
-        <span class="scout-metric-val mono accent-gold">OVR ${oppClub.avgOvr || 76}</span>
+      <div class="ui-stat-plate is-gold">
+        <span class="ui-plate-label">平均戦力</span>
+        <span class="ui-plate-val accent-gold">OVR ${avgOvr}</span>
       </div>
     </div>
 
-    <!-- 直近フォーム＆戦術アナリスト所見 -->
-    <div class="scout-analysis-panel">
-      <div class="scout-form-row">
-        <span class="scout-metric-label">直近5戦フォーム:</span>
-        <div class="scout-form-badges">${formBadgesHtml}</div>
-        <span class="mono" style="font-size:11px; color:var(--text-muted); margin-left:auto;">平均得点 ${avgGfText} / 平均失点 ${avgGaText}</span>
+    <!-- 直近フォーム＆戦術所見（左見出し・右詳細） -->
+    <div class="scout-analysis-panel ui-kv-list">
+      <div class="ui-kv-row">
+        <div class="ui-kv-label accent-cyan-bar">直近5戦</div>
+        <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <div class="scout-form-badges">${formBadgesHtml}</div>
+          <span class="mono wage-nowrap" style="font-size:11.5px; color:#cbd5e1;">得点 <strong class="accent-green">${avgGfText}</strong> / 失点 <strong class="text-danger">${avgGaText}</strong></span>
+        </div>
       </div>
-      <div class="scout-advice-box">
-        <strong class="mono accent-green">[分析班メモ]</strong> ${adviceText}
+      <div class="ui-kv-row">
+        <div class="ui-kv-label">攻略要点</div>
+        <div class="ui-kv-content scout-advice-box" style="background:none; border:none; padding:0; margin:0; font-size:12px; line-height:1.45;">
+          ${adviceText}
+        </div>
       </div>
     </div>
 
     <!-- 相手チーム想定スタメン（スカッド一覧11名） -->
     <div class="scout-squad-panel">
       <div class="scout-panel-header">
-        <span class="scout-panel-title">▼ 相手チーム 想定スタメン11名</span>
+        <span class="scout-panel-title">想定スタメン (11名)</span>
         <span class="mono" style="font-size:11px; color:var(--text-muted);">登録選手数: ${oppPlayers.length}名</span>
       </div>
       <div class="table-wrapper" style="max-height: 280px; overflow-y: auto;">
