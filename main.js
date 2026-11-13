@@ -9404,7 +9404,7 @@ function openPlayerProfileModal(playerId) {
     </tr>
   `).join('');
 
-  const yearlyFotmobRows = [...allRowsData].reverse().map(r => {
+  const yearlyFotmobRows = allRowsData.map(r => {
     const ratNum = parseFloat(r.avgRating);
     const ratCls = Number.isNaN(ratNum) ? 'rat-none' : (ratNum >= 7.0 ? 'rat-high' : 'rat-mid');
     const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 22, 'fotmob-yearly-emblem') : '';
