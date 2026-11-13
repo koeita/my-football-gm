@@ -7630,6 +7630,9 @@ function renderYouthSquad() {
 
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
+    const pot = y.potential || y.potentialGrade || 'B';
+    const potClass = pot === 'S' ? 'stat-rank-S' : (pot === 'A' ? 'stat-rank-A' : (pot === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
+    const growthLabel = typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(y.growthCurve || y.growthType) : '標準';
     const canPromoteBtn = canPromote ? `
       <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
         昇格
@@ -7646,8 +7649,8 @@ function renderYouthSquad() {
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>
         <td class="col-num col-youth-ovr accent-green"><strong>${ovr}</strong></td>
-        <td class="col-num col-youth-atk">${y.atk}</td>
-        <td class="col-num col-youth-def">${y.def}</td>
+        <td class="col-num col-youth-pot"><span class="mono font-bold ${potClass}">${pot}</span></td>
+        <td class="col-num col-youth-growth"><span class="mono" style="font-size:11px;">${growthLabel}</span></td>
         <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
           ${canPromoteBtn}

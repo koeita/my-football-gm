@@ -65,6 +65,10 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('youthScoutReports:', self.storage_js)
         self.assertIn('ensureManagerRankAndStats(c.manager)', self.storage_js)
         self.assertIn('.staff-stat-chip.stat-rank-S', self.css)
+        self.assertIn('col-youth-pot', self.html)
+        self.assertIn('col-youth-growth', self.html)
+        self.assertNotIn('col-youth-atk', self.html)
+        self.assertNotIn('col-youth-def', self.html)
 
 
 if __name__ == '__main__':
