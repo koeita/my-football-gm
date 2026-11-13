@@ -10339,21 +10339,24 @@ body.main-menu-active {
     padding: 7px 12px;
   }
   .precheck-modal-body {
-    padding: 6px 10px;
+    padding: 8px 10px;
     gap: 6px;
-    overflow-y: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex: 1;
+    min-height: 0;
   }
   .precheck-body-grid {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    justify-content: space-between;
-    flex: 1;
-    min-height: 0;
+    gap: 8px;
+    justify-content: flex-start;
+    flex: none;
+    height: auto;
+    min-height: auto;
   }
   /* 上段：対戦カードと戦術・戦力を余白なくスリムにスタック配置 */
   .precheck-left-col {
@@ -10435,14 +10438,17 @@ body.main-menu-active {
     flex-shrink: 0;
   }
   .precheck-tactics-bar {
-    padding: 5px 12px;
+    padding: 4px 6px;
     gap: 4px;
     flex: none;
     height: auto;
     min-height: 0;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #181d22 0%, #13171b 100%);
-    border: 1px solid #28303a;
+  }
+  .precheck-tactics-bar .ui-kv-row {
+    padding: 5px 2px;
+  }
+  .precheck-tactics-bar .ui-plate-grid {
+    margin-top: 4px !important;
   }
   .precheck-tactics-bar .precheck-card-subhead {
     display: none;
@@ -10493,37 +10499,39 @@ body.main-menu-active {
   }
 
 
-  /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示） */
+  /* 下段：スタメン11名リスト（全幅1列で選手名を広くフル表示・全11名見切れ防止） */
   .precheck-right-col {
-    flex: 1;
+    flex: none;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    height: auto;
+    min-height: auto;
   }
   .precheck-starters-card {
-    padding: 6px 8px;
-    gap: 3px;
-    flex: 1;
+    padding: 4px 4px 8px;
+    gap: 4px;
+    flex: none;
+    height: auto;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    min-height: 0;
+    justify-content: flex-start;
+    min-height: auto;
   }
   .precheck-starters-head {
     font-size: 9.5px;
-    padding-bottom: 2px;
+    padding-bottom: 3px;
   }
   .precheck-starters-list {
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
-    flex: 1 !important;
-    gap: 1px !important;
-    min-height: 0 !important;
+    justify-content: flex-start !important;
+    flex: none !important;
+    gap: 3px !important;
+    min-height: auto !important;
   }
   .precheck-player-row {
-    grid-template-columns: 28px 18px 1fr 28px 42px 42px;
-    padding: 2px 5px;
+    grid-template-columns: 28px 20px minmax(0, 1fr) 26px 40px 42px;
+    padding: 4px 5px;
     font-size: 11px;
     gap: 3px;
     line-height: 1.25;
@@ -16365,4 +16373,69 @@ body {
     width: 22px;
     height: 17px;
   }
+}
+
+
+/* ==========================================================================
+   プロ仕様・階層UIデザインシステム（4原則：枠線集中・左見出し2カラム・数値プレート・明暗差）
+   ========================================================================== */
+.ui-plate-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.ui-plate-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ui-plate-grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ui-stat-plate {
+  background-color: #161a1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.ui-stat-plate.is-highlight { border-color: rgba(46, 204, 113, 0.45); }
+.ui-stat-plate.is-gold { border-color: rgba(245, 158, 11, 0.45); }
+.ui-plate-label { font-size: 10px; font-weight: 600; color: #8b949e; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-plate-val { font-family: var(--font-mono); font-size: 16px; font-weight: 900; color: #ffffff; line-height: 1.25; margin-top: 2px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.ui-kv-list { display: flex; flex-direction: column; width: 100%; }
+.ui-kv-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; align-items: start; padding: 11px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.ui-kv-row:last-child { border-bottom: none; }
+.ui-kv-label { font-size: 11.5px; font-weight: 800; color: #94a3b8; border-left: 3px solid var(--accent-green, #2ecc71); padding-left: 8px; line-height: 1.35; white-space: nowrap; margin-top: 2px; }
+.ui-kv-label.accent-gold-bar { border-left-color: #f59e0b; color: #cbd5e1; }
+.ui-kv-label.accent-cyan-bar { border-left-color: #38bdf8; color: #cbd5e1; }
+.ui-kv-content { min-width: 0; width: 100%; }
+
+.ui-attr-bars-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; width: 100%; }
+.ui-attr-bar-item { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ui-attr-bar-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; }
+.ui-attr-bar-name { color: #8b949e; white-space: nowrap; }
+.ui-attr-bar-num { font-family: var(--font-mono); font-size: 13.5px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ui-slim-gauge { width: 100%; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.ui-slim-gauge-fill { height: 100%; border-radius: 999px; }
+.ui-slim-gauge-fill.ovr-tier-elite { background: #f59e0b; }
+.ui-slim-gauge-fill.ovr-tier-high  { background: #2ecc71; }
+.ui-slim-gauge-fill.ovr-tier-mid   { background: #38bdf8; }
+.ui-slim-gauge-fill.ovr-tier-low   { background: #94a3b8; }
+
+.ef-pitch-field .ef-pos-slot.ef-pos-major { background: rgba(46, 204, 113, 0.28) !important; border: 1.5px solid #2ecc71 !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-sub { background: rgba(56, 189, 248, 0.16) !important; border: 1px solid rgba(56, 189, 248, 0.6) !important; color: #bae6fd !important; font-weight: 700 !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-none { background: rgba(255, 255, 255, 0.02) !important; border: 1px solid transparent !important; color: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; }
+.profile-trait-tag.is-active-trait { background: rgba(46, 204, 113, 0.12) !important; border: none !important; color: #2ecc71 !important; font-weight: 700 !important; }
+
+.summary-section-card, .scout-metric-box, .scout-analysis-panel, .neg-control-group, .neg-panel-box, .precheck-tactics-bar, .precheck-starters-card, .detail-tactic-box, .detail-metric-card {
+  background: transparent !important; border: none !important; border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important; border-radius: 0 !important; box-shadow: none !important;
+}
+.summary-hero-box, .summary-mom-box, .precheck-hero-card, .scout-matchup-card {
+  background-color: #161a1e !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 8px !important; box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+  .ui-kv-row { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; padding: 9px 2px; }
+  .ui-kv-label { font-size: 10.5px; padding-left: 6px; }
+  .ui-plate-grid { gap: 6px; }
+  .ui-plate-grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ui-stat-plate { padding: 6px 7px; }
+  .ui-plate-label { font-size: 9.5px; }
+  .ui-plate-val { font-size: 13.5px; }
+  .ui-attr-bars-grid { gap: 6px 10px; }
 }
