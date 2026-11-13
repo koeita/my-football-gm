@@ -1181,6 +1181,11 @@ body {
   white-space: nowrap;
 }
 
+.youth-squad-table .col-action {
+  width: 130px;
+  text-align: center;
+}
+
 .col-num,
 .col-pts {
   text-align: right;
