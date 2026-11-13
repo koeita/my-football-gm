@@ -6627,19 +6627,20 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .intro-selected-summary {
-    font-size: 10px !important;
+    font-size: 10.5px !important;
     min-height: 22px !important;
     height: auto !important;
-    line-height: 20px !important;
+    line-height: 1.45 !important;
     width: 100% !important;
     display: flex !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 4px !important;
+    gap: 2px 6px !important;
     text-align: center !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
   }
   .intro-summary-emblem {
     width: 16px !important;
@@ -15981,9 +15982,9 @@ body {
 .ovr-tier-high  { color: #2ecc71; background: rgba(46, 204, 113, 0.14); }
 .ovr-tier-mid   { color: #38bdf8; background: rgba(56, 189, 248, 0.13); }
 .ovr-tier-low   { color: #cbd5e1; background: rgba(148, 163, 184, 0.12); }
-.profile-header-ovr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; padding: 4px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
-.profile-header-ovr-label { font-size: 9px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
-.profile-header-ovr-val { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.profile-header-ovr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; padding: 6px 14px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+.profile-header-ovr-label { font-size: 10px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
+.profile-header-ovr-val { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
 @media (max-width: 768px) {
   .pitch-node-top {
     flex-wrap: nowrap !important;
@@ -15999,9 +16000,9 @@ body {
     flex-shrink: 0 !important;
   }
   .ovr-cell-badge { font-size: 12.5px; padding: 2px 5px; }
-  .profile-header-right-actions { padding-right: 52px; }
-  .profile-header-ovr-box { padding: 3px 8px; }
-  .profile-header-ovr-val { font-size: 18px; }
+  .profile-header-right-actions { padding-right: 48px; gap: 8px !important; }
+  .profile-header-ovr-box { padding: 4px 10px; }
+  .profile-header-ovr-val { font-size: 22px; }
 
   /* モバイル年別成績テーブルのつめつめ解消：ゆとりのあるパディング＆横スクロール対応 */
   .profile-yearly-table-wrap {
@@ -16063,74 +16064,95 @@ body {
     display: flex !important;
     flex-direction: column;
   }
+  .fotmob-yearly-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 4px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 10px;
+    color: #8b949e;
+  }
   .fotmob-yearly-row {
-    padding: 10px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 4px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     border-left: 3px solid transparent;
   }
   .fotmob-yearly-row.is-current {
     background: rgba(46, 204, 113, 0.06);
     border-left-color: #2ecc71;
-    padding-left: 8px;
+    padding-left: 6px;
   }
-  .fotmob-yearly-row:last-child {
-    border-bottom: none;
-  }
-  .fotmob-yearly-top {
+  .fotmob-yearly-left {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-  }
-  .fotmob-yearly-club-wrap {
-    display: flex;
-    align-items: center;
-    gap: 6px;
     min-width: 0;
     flex: 1 1 auto;
   }
-  .fotmob-yearly-season {
-    font-size: 12px;
-    font-weight: 800;
-    color: #ffffff;
-    white-space: nowrap;
+  .fotmob-yearly-emblem {
+    flex-shrink: 0;
+  }
+  .fotmob-yearly-team-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 1px;
   }
   .fotmob-yearly-club {
-    font-size: 12px;
-    color: #cbd5e1;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .fotmob-yearly-age {
-    font-size: 11px;
+  .fotmob-yearly-season {
+    font-size: 10px;
     color: #8b949e;
     white-space: nowrap;
   }
-  .fotmob-rating-pill {
-    font-size: 12px;
-    font-weight: 900;
-    padding: 2px 7px;
-    border-radius: 5px;
-    white-space: nowrap;
+  .fotmob-yearly-cols {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     flex-shrink: 0;
+  }
+  .fotmob-col-stat {
+    width: 24px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+    font-variant-numeric: tabular-nums;
+  }
+  .fotmob-col-ovr {
+    width: 28px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .fotmob-col-rat {
+    width: 38px;
+    text-align: center;
+  }
+  .fotmob-rating-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
   }
   .fotmob-rating-pill.rat-high { background: rgba(46, 204, 113, 0.22); color: #2ecc71; }
   .fotmob-rating-pill.rat-mid  { background: rgba(245, 158, 11, 0.20); color: #f59e0b; }
   .fotmob-rating-pill.rat-none { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
-  .fotmob-yearly-metrics {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-top: 6px;
-    font-size: 11px;
-    color: #8b949e;
-  }
-  .fotmob-yearly-metrics strong {
-    color: #ffffff;
-    font-size: 12.5px;
-    margin-left: 3px;
-  }
   .fotmob-yearly-total {
     padding: 10px 4px 2px;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
@@ -16160,12 +16182,12 @@ body {
   justify-content: center;
 }
 .profile-header-foot-box .foot-print-svg {
-  width: 32px;
-  height: 25px;
+  width: 44px;
+  height: 34px;
 }
 @media (max-width: 768px) {
   .profile-header-foot-box .foot-print-svg {
-    width: 24px;
-    height: 19px;
+    width: 32px;
+    height: 25px;
   }
 }
