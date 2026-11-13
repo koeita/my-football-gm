@@ -1383,7 +1383,7 @@ function ensurePlayableClubStructure(club) {
   if (!Array.isArray(club.youthSquad) && typeof createYouthSquad === 'function') {
     club.youthSquad = createYouthSquad(usedNames);
   }
-  if (typeof club.funds !== 'number') club.funds = 18000;
+  if (typeof club.funds !== 'number') club.funds = 28000;
   if (typeof club.supporters !== 'number') club.supporters = 14000;
   if (!club.formation) club.formation = '4-3-3';
   if (!club.tactic) club.tactic = 'counter';

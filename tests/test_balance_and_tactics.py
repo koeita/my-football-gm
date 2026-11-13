@@ -18,6 +18,8 @@ class TestBalanceAndTactics(unittest.TestCase):
         cls.match_js = read_text('match-engine.js')
         cls.comp_js = read_text('competitions.js')
         cls.main_js = read_text('main.js')
+        cls.data_js = read_text('data.js')
+        cls.style_css = read_text('style.css')
 
     def test_1_tactics_balanced_without_extreme_double_penalty(self):
         """5戦術バランス: 極端な二重乗算（parkthebus 0.26/0.38等）が撤廃され、相性マトリックスが存在すること"""
@@ -52,6 +54,15 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('const gateUnit = isD2Club ? 0.055 : 0.085;', self.models_js)
         self.assertIn('const estAwayTv = isD2Club ? 450 : 1600;', self.models_js)
         self.assertIn('const isD2Uninit =', self.comp_js)
+
+    def test_5_mobile_header_no_wrap_and_3b_transfer_budget(self):
+        """モバイルヘッダー1行固定と30億ポンド規模の移籍予算・安全枠算出が実装されていること"""
+        self.assertIn('flex-wrap: nowrap !important;', self.style_css)
+        self.assertIn('max-width: 112px !important;', self.style_css)
+        self.assertIn('estGuaranteedEndRev', self.models_js)
+        self.assertIn('initialFunds: 298000', self.data_js)
+        self.assertIn('initialFunds: 94000', self.data_js)
+        self.assertIn('club.funds = 28000;', self.comp_js)
 
 
 if __name__ == '__main__':
