@@ -152,6 +152,31 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         self.assertIn('.main-menu-screen', css)
         self.assertIn('#1a1d20', css)
 
+    def test_tactical_board_half_court_svg(self):
+        """作戦ボードの白線SVGがオールコートではなくハーフコート仕様であること"""
+        with open(self.index_html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+
+        match = re.search(
+            r'<svg[^>]*class="pitch-lines-svg"[^>]*>([\s\S]*?)</svg>',
+            html
+        )
+        self.assertIsNotNone(match, "pitch-lines-svg must exist in index.html")
+        svg_inner = match.group(1)
+
+        # オールコート特有の要素（中央ハーフウェイライン・フル円センターサークル・上側ペナルティエリア）がないこと
+        self.assertNotIn('y1="210"', svg_inner)
+        self.assertNotIn('cy="210"', svg_inner)
+        self.assertNotIn('y="14" width="270" height="72"', svg_inner)
+
+        # ハーフコート要素（上辺ハーフウェイライン・半円センターサークル・自陣ペナルティエリア・ゴール枠・コーナーアーク）が存在すること
+        self.assertIn('y="22" width="568" height="384"', svg_inner)
+        self.assertIn('d="M 232 22 A 68 68 0 0 0 368 22"', svg_inner)
+        self.assertIn('y="292" width="336" height="114"', svg_inner)
+        self.assertIn('y="366" width="152" height="40"', svg_inner)
+        self.assertIn('y="406" width="64" height="9"', svg_inner)
+        self.assertIn('d="M 241 292 A 68 68 0 0 1 359 292"', svg_inner)
+
 class TestGameLogicUnits(unittest.TestCase):
     """ゲームコアロジックの単体テスト（実行時間: 約0.05秒）"""
 

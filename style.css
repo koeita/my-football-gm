@@ -2243,9 +2243,9 @@ body {
 
 .pitch-direction-label {
   position: absolute;
-  top: 7px;
-  right: 12px;
-  font-size: 10px;
+  top: 4px;
+  right: 16px;
+  font-size: 9.5px;
   font-weight: 700;
   color: rgba(240, 242, 245, 0.45);
   letter-spacing: 0.08em;
