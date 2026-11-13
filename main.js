@@ -12365,7 +12365,7 @@ function openManagerHireModal() {
         <div style="display: flex; flex-direction: column; margin-top: 2px;">
           ${filtered.map(cand => {
             const tacticLabel = getManagerTacticLabel(cand.preferredTactic);
-            const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 42) : '';
+            const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-md', 42) : '';
             const eff = typeof getManagerRankEffects === 'function' ? getManagerRankEffects(cand) : { minReputation: 0 };
             const repBlocked = clubRep < (eff.minReputation || 0);
             const st = cand.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
@@ -12374,32 +12374,30 @@ function openManagerHireModal() {
             const rDev = getStaffStatRank(st.development);
             const rDis = getStaffStatRank(st.discipline);
             return `
-              <div class="manager-candidate-card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
-                  <div class="candidate-avatar" style="flex-shrink:0;">${cAvatar}</div>
+              <div class="manager-candidate-card" style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                  <div class="candidate-avatar">${cAvatar}</div>
                   <div style="flex:1; min-width:0;">
-                    <div class="flat-row-header">
-                      <div class="flat-row-title-wrap">
-                        <span class="flat-row-title">${cand.name}</span>
-                        <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
-                      </div>
-                      <span class="mono accent-gold font-bold flat-row-wage" style="font-size:12px;">£${cand.weeklyWage}k/週${eff.minReputation > 0 ? ` · Rep ${eff.minReputation}` : ''}</span>
-                    </div>
-                    <div class="flat-row-meta mono">
-                      ${cand.nationality} · ${cand.age}歳 · <strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong>
-                    </div>
-                    <div class="staff-stats-chips">
-                      <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
-                      <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
+                    <div class="flat-row-title" style="font-size:14.5px; line-height:1.25;">${cand.name}</div>
+                    <div class="flat-row-meta mono" style="margin-top:2px;">
+                      ${cand.nationality} · ${cand.age}歳
                     </div>
                   </div>
-                </div>
-                <div style="flex-shrink:0;">
-                  <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 7px 14px; white-space: nowrap;">
+                  <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 6px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">
                     ${repBlocked ? `要Rep ${eff.minReputation}` : (currentMgr ? '交代' : '招聘')}
                   </button>
+                </div>
+                <div class="flat-row-meta mono" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px;">
+                  <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
+                  <strong class="accent-gold wage-nowrap">£${cand.weeklyWage}k/週</strong>
+                  ${eff.minReputation > 0 ? `<span class="wage-nowrap" style="color:#cbd5e1;">Rep ${eff.minReputation}</span>` : ''}
+                  <span class="wage-nowrap"><strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong></span>
+                </div>
+                <div class="staff-stats-chips" style="margin-top:0;">
+                  <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+                  <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+                  <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+                  <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
                 </div>
               </div>
             `;
@@ -12889,7 +12887,7 @@ function openInitialStaffSetupModal(club) {
     { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
     { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
     { formation: '3-5-2', tactic: 'counter', label: 'カウンター' },
-    { formation: '4-4-2', tactic: 'wingplay', label: 'サイド攻撃' },
+    { formation: '4-4-2', tactic: 'wingplay', label: 'ワイドアタック' },
     { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
   ];
   const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
