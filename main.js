@@ -1932,11 +1932,8 @@ function openContractNegotiationModal(playerId) {
   renderNegotiationModal();
   const modalEl = document.getElementById('negotiation-modal');
   if (modalEl) modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
-
-/**
- * 移籍市場の獲得交渉モーダルを開く（全クラブ対象）
- */
 
 /**
  * 契約残り半年（1月冬ウィンドウ以降 かつ 残り契約1年以下）の事前合意適格判定
@@ -2183,6 +2180,7 @@ function openTransferNegotiationModal(candidateId) {
   renderNegotiationModal();
   const modalEl = document.getElementById('negotiation-modal');
   if (modalEl) modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 /**
@@ -2325,9 +2323,6 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
-          <span>増減: £50K</span>
-        </div>
       </div>
 
       <div class="neg-control-group">
@@ -2371,7 +2366,7 @@ function renderNegotiationModal() {
       <div class="neg-control-group">
         <div class="neg-control-header">
           <span class="neg-control-label">週給負担率</span>
-          <span class="neg-control-val accent-gold" id="neg-loan-coverage-display">${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)</span>
+          <span class="neg-control-val accent-gold" id="neg-loan-coverage-display">${session.loanCoveragePercent}% (${formatWage(coverageAmt)})</span>
         </div>
         <div class="neg-slider-row">
           <input type="range" id="neg-loan-slider" class="neg-slider" min="50" max="100" step="5" value="${session.loanCoveragePercent}" ${session.completed ? 'disabled' : ''}>
@@ -2496,9 +2491,6 @@ function renderNegotiationModal() {
           <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
-          <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
-        </div>
       </div>
 
       <div class="neg-control-group">
@@ -2509,9 +2501,6 @@ function renderNegotiationModal() {
         <div class="neg-slider-row">
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
-        </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
-          <span>増減: £50K</span>
         </div>
       </div>
 
@@ -2618,7 +2607,7 @@ function renderNegotiationModal() {
         </div>
         <div class="ui-stat-plate">
           <span class="ui-plate-label">選手現週給</span>
-          <span class="ui-plate-val">${formatWage(target.wage)}/週</span>
+          <span class="ui-plate-val">${formatWage(target.wage)}</span>
         </div>
       </div>
       <div class="ui-kv-list">
@@ -2828,7 +2817,7 @@ function renderNegotiationModal() {
         const weeklyWage = target.wage || 20;
         const coverageAmt = Math.round(weeklyWage * (session.loanCoveragePercent / 100));
         const disp = document.getElementById('neg-loan-coverage-display');
-        if (disp) disp.textContent = `${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)`;
+        if (disp) disp.textContent = `${session.loanCoveragePercent}% (${formatWage(coverageAmt)})`;
       });
     }
   }
@@ -4124,6 +4113,7 @@ function closeNegotiationModal() {
   if (modalEl) {
     modalEl.classList.add('hidden');
   }
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.negotiationSession = null;
 }
 
