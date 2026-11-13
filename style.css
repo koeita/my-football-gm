@@ -6628,13 +6628,22 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .intro-selected-summary {
     font-size: 10px !important;
-    height: 16px !important;
-    line-height: 16px !important;
+    min-height: 22px !important;
+    height: auto !important;
+    line-height: 20px !important;
     width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
     text-align: center !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+  }
+  .intro-summary-emblem {
+    width: 16px !important;
+    height: 16px !important;
   }
 
   .intro-modal-actions .action-btn-group {
@@ -16143,4 +16152,20 @@ body {
 .foot-print-svg {
   display: inline-block;
   vertical-align: middle;
+}
+
+.profile-header-foot-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-header-foot-box .foot-print-svg {
+  width: 32px;
+  height: 25px;
+}
+@media (max-width: 768px) {
+  .profile-header-foot-box .foot-print-svg {
+    width: 24px;
+    height: 19px;
+  }
 }

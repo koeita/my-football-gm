@@ -9137,6 +9137,10 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
+  const headerFootEl = document.getElementById('profile-header-foot');
+  if (headerFootEl) {
+    headerFootEl.innerHTML = formatFootBadge(p);
+  }
   const headerOvrEl = document.getElementById('profile-header-ovr');
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
@@ -9236,7 +9240,7 @@ function openPlayerProfileModal(playerId) {
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
-      <span class="profile-bio-chip">${footBadgeStr}</span>
+
       <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};border-color:rgba(255,255,255,0.15);">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
       ${youthBadgeHtml}
     `;
