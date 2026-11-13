@@ -16375,8 +16375,8 @@ body {
 .ui-plate-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ui-plate-grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ui-stat-plate {
-  background: linear-gradient(180deg, rgba(16, 20, 25, 0.95) 0%, rgba(11, 14, 18, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  background-color: #161a1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   padding: 7px 10px;
   display: flex;
@@ -16384,8 +16384,8 @@ body {
   justify-content: center;
   min-width: 0;
 }
-.ui-stat-plate.is-highlight { border-color: rgba(46, 204, 113, 0.45); box-shadow: inset 0 0 12px rgba(46, 204, 113, 0.08); }
-.ui-stat-plate.is-gold { border-color: rgba(245, 158, 11, 0.45); box-shadow: inset 0 0 12px rgba(245, 158, 11, 0.08); }
+.ui-stat-plate.is-highlight { border-color: rgba(46, 204, 113, 0.45); }
+.ui-stat-plate.is-gold { border-color: rgba(245, 158, 11, 0.45); }
 .ui-plate-label { font-size: 10px; font-weight: 600; color: #8b949e; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-plate-val { font-family: var(--font-mono); font-size: 16px; font-weight: 900; color: #ffffff; line-height: 1.25; margin-top: 2px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -16409,16 +16409,16 @@ body {
 .ui-slim-gauge-fill.ovr-tier-mid   { background: #38bdf8; }
 .ui-slim-gauge-fill.ovr-tier-low   { background: #94a3b8; }
 
-.ef-pitch-field .ef-pos-slot.ef-pos-major { background: rgba(46, 204, 113, 0.28) !important; border: 1.5px solid #2ecc71 !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: 0 0 10px rgba(46, 204, 113, 0.35) !important; }
-.ef-pitch-field .ef-pos-slot.ef-pos-sub { background: rgba(56, 189, 248, 0.16) !important; border: 1px solid rgba(56, 189, 248, 0.65) !important; color: #bae6fd !important; font-weight: 700 !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-major { background: rgba(46, 204, 113, 0.28) !important; border: 1.5px solid #2ecc71 !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-sub { background: rgba(56, 189, 248, 0.16) !important; border: 1px solid rgba(56, 189, 248, 0.6) !important; color: #bae6fd !important; font-weight: 700 !important; box-shadow: none !important; }
 .ef-pitch-field .ef-pos-slot.ef-pos-none { background: rgba(255, 255, 255, 0.02) !important; border: 1px solid transparent !important; color: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; }
-.profile-trait-tag.is-active-trait { background: rgba(46, 204, 113, 0.15) !important; border: 1px solid rgba(46, 204, 113, 0.45) !important; color: #ffffff !important; font-weight: 700 !important; }
+.profile-trait-tag.is-active-trait { background: rgba(46, 204, 113, 0.12) !important; border: none !important; color: #2ecc71 !important; font-weight: 700 !important; }
 
-.summary-section-card, .scout-metric-box, .scout-analysis-panel, .neg-control-group, .detail-tactic-box, .detail-metric-card {
+.summary-section-card, .scout-metric-box, .scout-analysis-panel, .neg-control-group, .neg-panel-box, .precheck-tactics-bar, .precheck-starters-card, .detail-tactic-box, .detail-metric-card {
   background: transparent !important; border: none !important; border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important; border-radius: 0 !important; box-shadow: none !important;
 }
 .summary-hero-box, .summary-mom-box, .precheck-hero-card, .scout-matchup-card {
-  background: linear-gradient(180deg, rgba(18, 23, 29, 0.95) 0%, rgba(12, 16, 20, 0.98) 100%) !important; border: 1px solid rgba(255, 255, 255, 0.13) !important; border-radius: 8px !important;
+  background-color: #161a1e !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 8px !important; box-shadow: none !important;
 }
 
 @media (max-width: 768px) {

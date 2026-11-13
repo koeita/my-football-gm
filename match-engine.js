@@ -3642,13 +3642,14 @@ function openMatchPrecheckModal() {
     const ftgVal = getPlayerFatigue(p);
     const ftgSt = getPlayerFatigueStatus(ftgVal);
     const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
+    const ovrTierCls = typeof getOvrTierClass === 'function' ? getOvrTierClass(effOvr) : '';
 
     startersRowsHtml += `
       <div class="precheck-player-row ${isOutOfPos ? 'is-warn' : ''}">
         <span class="precheck-pos-badge pos-${roleGroup}">${slot.pos}</span>
         <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
         <span class="precheck-name">${p.name} ${fitBadge}</span>
-        <span class="precheck-ovr mono">${effOvr}</span>
+        <span class="precheck-ovr mono ${ovrTierCls}" style="background:none;">${effOvr}</span>
         <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
         <span class="precheck-ftg mono" style="color:${ftgSt.color};">疲労:${ftgVal}</span>
       </div>
@@ -3687,50 +3688,52 @@ function openMatchPrecheckModal() {
           </div>
         </div>
 
-        <!-- 自チーム作戦・戦力設定 -->
+        <!-- 自チーム作戦・戦力設定（2カラム階層 ＋ 3連数値プレート） -->
         <div class="precheck-tactics-bar">
-          
-          <div class="precheck-tactics-info-grid">
-            <div class="precheck-tactics-item">
-              <span class="precheck-label">陣形:</span>
-              <strong class="mono precheck-val-highlight">${formationKey}</strong>
+          <div class="ui-kv-list">
+            <div class="ui-kv-row">
+              <div class="ui-kv-label accent-cyan-bar">陣形・戦術</div>
+              <div class="ui-kv-content mono" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px;">
+                <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
+                <strong class="accent-green">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
+                <span class="accent-gold" style="font-size:11px;">${tacticDef.badge}</span>
+              </div>
             </div>
-            <div class="precheck-tactics-item">
-              <span class="precheck-label">戦術:</span>
-              <span class="precheck-tag precheck-tag-full">${tacticDef.name}</span>
-              <span class="precheck-tag precheck-tag-short">${tacticDef.name.split('（')[0].split('(')[0]}</span>
-              <span class="precheck-tag" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);">${tacticDef.badge}</span>
+            <div class="ui-kv-row">
+              <div class="ui-kv-label">戦術方針</div>
+              <div class="ui-kv-content" style="font-size:12px; color:#cbd5e1; line-height:1.4;">
+                ${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}
+              </div>
             </div>
-          </div>
-          <div class="precheck-tactics-aim">
-            <span class="mono" style="color:var(--text-muted);font-size:10px;">方針:</span>
-            <span>${tacticDef.aim || '攻守のバランスを保ち主導権を握る'}</span>
-          </div>
-          <div class="precheck-delegation-row">
-            <span class="precheck-delegation-status mono">${gameState.managerDelegationEnabled ? '指揮: 監督に采配一任中（疲労ローテ適用済）' : '指揮: GM手動設定モード'}</span>
-            <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px;">
-              ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
-            </button>
+            <div class="ui-kv-row">
+              <div class="ui-kv-label accent-gold-bar">采配委任</div>
+              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                <span class="mono" style="font-size:11.5px; color:#cbd5e1;">${gameState.managerDelegationEnabled ? '監督一任 (疲労ローテ済)' : 'GM手動編成'}</span>
+                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px;">
+                  ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
+                </button>
+              </div>
+            </div>
           </div>
           ${(() => {
             const natEval = typeof evaluateClubNationalityRules === 'function' ? evaluateClubNationalityRules(playerClub) : null;
             if (natEval && natEval.isWarning) {
-              return `<div class="nationality-rule-warning" style="margin-top:6px;">⚠️ 登録枠超過ペナルティ中（シニア ${natEval.seniorCount}/${natEval.maxSenior}・非HG ${natEval.nonHgCount}/${natEval.maxNonHg}）: 本試合のベンチ枠が <strong>${natEval.effectiveMaxBench}名</strong> に制限されています。</div>`;
+              return `<div class="nationality-rule-warning" style="margin-top:6px;">登録枠超過ペナルティ中（シニア ${natEval.seniorCount}/${natEval.maxSenior}・非HG ${natEval.nonHgCount}/${natEval.maxNonHg}）: 本試合のベンチ枠が <strong>${natEval.effectiveMaxBench}名</strong> に制限されています。</div>`;
             }
             return '';
           })()}
-          <div class="precheck-power-metrics">
-            <div class="power-metric-box">
-              <span class="mono power-lbl">攻撃力</span>
-              <span class="mono power-val text-accent">${homeTotalAtk}</span>
+          <div class="ui-plate-grid" style="margin-top: 8px;">
+            <div class="ui-stat-plate is-highlight">
+              <span class="ui-plate-label">総攻撃力</span>
+              <span class="ui-plate-val accent-green">${homeTotalAtk}</span>
             </div>
-            <div class="power-metric-box">
-              <span class="mono power-lbl">守備力</span>
-              <span class="mono power-val text-blue">${homeTotalDef}</span>
+            <div class="ui-stat-plate">
+              <span class="ui-plate-label">総守備力</span>
+              <span class="ui-plate-val" style="color:#38bdf8;">${homeTotalDef}</span>
             </div>
-            <div class="power-metric-box">
-              <span class="mono power-lbl">平均ST</span>
-              <span class="mono power-val text-gold">${homeAvgSta}%</span>
+            <div class="ui-stat-plate is-gold">
+              <span class="ui-plate-label">平均ST</span>
+              <span class="ui-plate-val accent-gold">${homeAvgSta}%</span>
             </div>
           </div>
         </div>
@@ -3740,8 +3743,8 @@ function openMatchPrecheckModal() {
       <div class="precheck-right-col">
         <div class="precheck-starters-card">
           <div class="precheck-starters-head">
-            <span class="precheck-card-subhead mono">STARTING XI (11名)</span>
-            <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・スタミナ確認</span>
+            <span class="flat-section-label mono" style="margin:0;">先発メンバー (11名)</span>
+            <span class="mono" style="font-size:10px;color:var(--text-muted);">適性・コンディション</span>
           </div>
           <div class="precheck-starters-list">
             ${startersRowsHtml}

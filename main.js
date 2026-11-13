@@ -2579,110 +2579,127 @@ function renderNegotiationModal() {
   }
 
   const safeBudgetVal = getSafeTransferBudget(playerClub);
-  const commonBudgetRowsHtml = `
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">現在資金 / 登録枠</span>
-      <span class="neg-demand-val">${formatMoney(playerClub.funds)} ／ ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+  const budgetKvRowsHtml = `
+    <div class="ui-kv-row">
+      <div class="ui-kv-label">クラブ資金</div>
+      <div class="ui-kv-content mono" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; font-size:12px;">
+        <strong style="color:#ffffff;">${formatMoney(playerClub.funds)}</strong>
+        <span class="text-muted">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+      </div>
     </div>
-    <div class="neg-demand-row">
-      <span class="neg-demand-label">実質移籍予算 (安全枠)</span>
-      <span class="neg-demand-val ${safeBudgetVal < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(safeBudgetVal)}</span>
+    <div class="ui-kv-row">
+      <div class="ui-kv-label accent-cyan-bar">安全予算枠</div>
+      <div class="ui-kv-content mono" style="font-size:13px;">
+        <strong class="${safeBudgetVal < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(safeBudgetVal)}</strong>
+      </div>
     </div>
   `;
 
-  // 要求パネルの表示
+  // 要求パネルの表示（上段：主要要求の2連数値プレート ＋ 下段：左見出し2カラム）
   let demandRowsHtml = '';
   if (isRenewal) {
     demandRowsHtml = `
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">現在年俸 / 残契約</span>
-        <span class="neg-demand-val">${formatMoney(target.salary)} ／ 残り${target.contractYears || 0}年</span>
+      <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
+        <div class="ui-stat-plate is-gold">
+          <span class="ui-plate-label">要求年俸</span>
+          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+        </div>
+        <div class="ui-stat-plate is-highlight">
+          <span class="ui-plate-label">要求期間</span>
+          <span class="ui-plate-val accent-green">${session.demandedYears}年</span>
+        </div>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">今季成績</span>
-        <span class="neg-demand-val accent-green">${target.appearances}試合 / ${target.goals}G / OVR ${ovr}</span>
+      <div class="ui-kv-list">
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">現在契約</div>
+          <div class="ui-kv-content mono" style="font-size:12px;">${formatMoney(target.salary)} · 残${target.contractYears || 0}年</div>
+        </div>
+        <div class="ui-kv-row">
+          <div class="ui-kv-label">今季成績</div>
+          <div class="ui-kv-content mono accent-green" style="font-size:12px;">${target.appearances}試合 · ${target.goals}G · OVR ${ovr}</div>
+        </div>
+        ${budgetKvRowsHtml}
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">代理人の要求年俸</span>
-        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
-      </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">代理人の要求期間</span>
-        <span class="neg-demand-val">${session.demandedYears}年契約</span>
-      </div>
-      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'loan') {
     demandRowsHtml = `
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">取引種別</span>
-        <span class="neg-demand-val accent-green">1シーズン レンタル</span>
+      <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
+        <div class="ui-stat-plate is-gold">
+          <span class="ui-plate-label">要求週給負担</span>
+          <span class="ui-plate-val accent-gold">${session.demandedLoanCoverage}%+</span>
+        </div>
+        <div class="ui-stat-plate">
+          <span class="ui-plate-label">選手現週給</span>
+          <span class="ui-plate-val">${formatWage(target.wage)}/週</span>
+        </div>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">選手週給</span>
-        <span class="neg-demand-val">${formatWage(target.wage)} / 週</span>
+      <div class="ui-kv-list">
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">取引種別</div>
+          <div class="ui-kv-content mono accent-green" style="font-size:12px;">1シーズン レンタル · ${sellerClub ? sellerClub.name : '相手クラブ'}</div>
+        </div>
+        ${budgetKvRowsHtml}
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">相手側要求負担率</span>
-        <span class="neg-demand-val accent-gold">${session.demandedLoanCoverage}% 以上</span>
-      </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">所属元クラブ</span>
-        <span class="neg-demand-val">${sellerClub ? sellerClub.name : '相手クラブ'}</span>
-      </div>
-      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'pre_contract') {
     demandRowsHtml = `
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">取引種別</span>
-        <span class="neg-demand-val accent-green">来季事前合意 (ボスマン)</span>
+      <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
+        <div class="ui-stat-plate is-gold">
+          <span class="ui-plate-label">要求年俸</span>
+          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+        </div>
+        <div class="ui-stat-plate is-highlight">
+          <span class="ui-plate-label">移籍金負担</span>
+          <span class="ui-plate-val accent-green">£0</span>
+        </div>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">現契約</span>
-        <span class="neg-demand-val text-danger">残り半年（今季限りで満了）</span>
+      <div class="ui-kv-list">
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">契約状況</div>
+          <div class="ui-kv-content mono" style="font-size:12px;">来季事前合意 · <span class="text-danger">今季満了</span></div>
+        </div>
+        ${budgetKvRowsHtml}
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">要求年俸</span>
-        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
-      </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">移籍金負担</span>
-        <span class="neg-demand-val accent-green">£0 (フリー移籍)</span>
-      </div>
-      ${commonBudgetRowsHtml}
     `;
   } else if (session.dealType === 'free_agent') {
     demandRowsHtml = `
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">所属ステータス</span>
-        <span class="neg-demand-val accent-green">無所属 (フリー)</span>
+      <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
+        <div class="ui-stat-plate is-gold">
+          <span class="ui-plate-label">希望年俸</span>
+          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+        </div>
+        <div class="ui-stat-plate is-highlight">
+          <span class="ui-plate-label">移籍金負担</span>
+          <span class="ui-plate-val accent-green">£0</span>
+        </div>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">希望年俸</span>
-        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedSalary)} / 年</span>
+      <div class="ui-kv-list">
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">所属状況</div>
+          <div class="ui-kv-content mono accent-green" style="font-size:12px;">無所属 (即時加入可)</div>
+        </div>
+        ${budgetKvRowsHtml}
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">移籍金負担</span>
-        <span class="neg-demand-val accent-green">£0 (即時加入可能)</span>
-      </div>
-      ${commonBudgetRowsHtml}
     `;
   } else {
     demandRowsHtml = `
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">要求移籍金</span>
-        <span class="neg-demand-val accent-gold">${formatMoney(session.demandedFee)}${target.contractYears === 1 ? ' (契約最終年)' : ''}</span>
+      <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
+        <div class="ui-stat-plate is-gold">
+          <span class="ui-plate-label">要求移籍金</span>
+          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedFee)}</span>
+        </div>
+        <div class="ui-stat-plate is-highlight">
+          <span class="ui-plate-label">要求年俸</span>
+          <span class="ui-plate-val accent-green">${formatMoney(session.demandedSalary)}</span>
+        </div>
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">要求年俸</span>
-        <span class="neg-demand-val accent-green">${formatMoney(session.demandedSalary)} / 年</span>
+      <div class="ui-kv-list">
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">希望条件</div>
+          <div class="ui-kv-content mono" style="font-size:12px;">${session.demandedYears}年契約${target.contractYears === 1 ? ' · <span class="accent-gold">現契約最終年</span>' : ''}</div>
+        </div>
+        ${budgetKvRowsHtml}
       </div>
-      <div class="neg-demand-row">
-        <span class="neg-demand-label">希望期間</span>
-        <span class="neg-demand-val">${session.demandedYears}年契約</span>
-      </div>
-      ${commonBudgetRowsHtml}
     `;
   }
 
@@ -2746,7 +2763,7 @@ function renderNegotiationModal() {
         warns.push(`外国籍（非HG）上限を超過します（加入後 ${nextNonHg}/${natEval.maxNonHg}名）`);
       }
       if (warns.length > 0) {
-        natRuleWarnHtml = `<div class="nationality-rule-warning">⚠️ 登録ルール警告：${warns.join(' / ')}。超過時は公式戦ベンチ枠が削減されます。</div>`;
+        natRuleWarnHtml = `<div class="nationality-rule-warning">登録枠超過注意：${warns.join(' / ')}。超過時は公式戦ベンチ枠が削減されます。</div>`;
       }
     }
   }
@@ -12086,7 +12103,7 @@ function renderTacticalManagerBanner() {
             <span class="text-muted">監督:</span>
             <strong class="manager-name">${mgr.name}</strong>
             <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
-            <span class="manager-trust-label mono">[信頼度 ${mgr.trust}%]</span>
+            <span class="manager-trust-label mono">信頼度 ${mgr.trust}%</span>
           </div>
           <div class="manager-banner-style mono">
             得意: ${mgr.preferredFormation} / ${tacticLabel}
@@ -12253,7 +12270,7 @@ function renderManagerManagementPanel() {
         </div>
         <div class="manager-current-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button type="button" class="btn btn-primary mono" id="btn-open-change-manager" style="font-weight: 700; padding: 10px 18px;">
-            監督を交代する [前任違約金 £${buyoutFee.toLocaleString()}k]
+            監督交代 (違約金 £${buyoutFee.toLocaleString()}k)
           </button>
         </div>
       </div>
@@ -12321,9 +12338,18 @@ function openManagerHireModal() {
         .filter(c => specFilter === 'ALL' || (c.specialty || '') === specFilter)
         .sort((a, b) => avgOf(b) - avgOf(a) || (b.weeklyWage || 0) - (a.weeklyWage || 0));
 
-      let noteHtml = currentMgr
-        ? `<div class="mono" style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: #ff7675; line-height: 1.5;">後任監督を選択すると、現監督（<strong>${currentMgr.name}</strong>）を解任して就任します（違約金 <strong>£${buyoutFee.toLocaleString()}k</strong> / 現クラブ格 Rep: ${clubRep}）。</div>`
-        : `<div class="mono" style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: var(--accent-green); line-height: 1.5;">新監督を選択して契約締結（契約期間: 3年）を行います（現クラブ格 Rep: ${clubRep}）。</div>`;
+      const noteHtml = `
+        <div class="ui-plate-grid cols-2" style="margin-bottom: 10px;">
+          <div class="ui-stat-plate is-highlight">
+            <span class="ui-plate-label">現クラブ格 (Rep)</span>
+            <span class="ui-plate-val accent-green">${clubRep}</span>
+          </div>
+          <div class="ui-stat-plate ${currentMgr ? 'is-gold' : ''}">
+            <span class="ui-plate-label">${currentMgr ? `前任解任違約金 (${currentMgr.name})` : '提示契約年数'}</span>
+            <span class="ui-plate-val ${currentMgr ? 'accent-gold' : ''}">${currentMgr ? `£${buyoutFee.toLocaleString()}k` : '3年'}</span>
+          </div>
+        </div>
+      `;
 
       const specList = ['ALL', '戦術の鬼', '人心掌握', '育成の名匠', '規律重視'];
       const filterHtml = `
@@ -12337,10 +12363,10 @@ function openManagerHireModal() {
       `;
 
       const cardsHtml = `
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
+        <div style="display: flex; flex-direction: column; margin-top: 2px;">
           ${filtered.map(cand => {
             const tacticLabel = getManagerTacticLabel(cand.preferredTactic);
-            const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 44) : '';
+            const cAvatar = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(cand, 'avatar-xs', 42) : '';
             const eff = typeof getManagerRankEffects === 'function' ? getManagerRankEffects(cand) : { minReputation: 0 };
             const repBlocked = clubRep < (eff.minReputation || 0);
             const st = cand.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
@@ -12349,26 +12375,19 @@ function openManagerHireModal() {
             const rDev = getStaffStatRank(st.development);
             const rDis = getStaffStatRank(st.discipline);
             return `
-              <div class="manager-candidate-card" style="margin: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px;">
-                <div>
-                  <div class="candidate-head" style="display: flex; align-items: center; gap: 12px;">
-                    <div class="candidate-avatar">${cAvatar}</div>
-                    <div style="flex:1;">
-                      <div class="candidate-info-name" style="font-weight: 700; font-size: 14px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span>${cand.name}</span>
+              <div class="manager-candidate-card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:0;">
+                  <div class="candidate-avatar" style="flex-shrink:0;">${cAvatar}</div>
+                  <div style="flex:1; min-width:0;">
+                    <div class="flat-row-header">
+                      <div class="flat-row-title-wrap">
+                        <span class="flat-row-title">${cand.name}</span>
                         <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
                       </div>
-                      <div class="candidate-info-meta mono text-muted" style="font-size: 11px;">${cand.nationality} / ${cand.age}歳</div>
+                      <span class="mono accent-gold font-bold flat-row-wage" style="font-size:12px;">£${cand.weeklyWage}k/週${eff.minReputation > 0 ? ` · Rep ${eff.minReputation}` : ''}</span>
                     </div>
-                  </div>
-                  <div class="candidate-body mono" style="margin-top: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
-                    <div class="candidate-style-row" style="display: flex; justify-content: space-between;">
-                      <span class="text-muted">得意陣形 / 戦術:</span>
-                      <strong class="accent-green">${cand.preferredFormation} / ${tacticLabel}</strong>
-                    </div>
-                    <div class="candidate-style-row" style="display: flex; justify-content: space-between;">
-                      <span class="text-muted">要求週給 / 必要格:</span>
-                      <strong class="accent-gold">£${cand.weeklyWage}k/週 ${eff.minReputation > 0 ? `(要Rep ${eff.minReputation})` : '(制限なし)'}</strong>
+                    <div class="flat-row-meta mono">
+                      ${cand.nationality} · ${cand.age}歳 · <strong style="color:#38bdf8;">${cand.preferredFormation}</strong> · <strong class="accent-green">${tacticLabel}</strong>
                     </div>
                     <div class="staff-stats-chips">
                       <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
@@ -12376,12 +12395,11 @@ function openManagerHireModal() {
                       <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
                       <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
                     </div>
-                    <div class="candidate-bio text-muted" style="margin-top: 4px; font-size: 11px; line-height: 1.4;">${cand.bio}</div>
                   </div>
                 </div>
-                <div class="candidate-actions" style="margin-top: 10px; text-align: right;">
-                  <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
-                    ${repBlocked ? `クラブ格不足 (要 Rep ${eff.minReputation})` : (currentMgr ? 'この監督を選んで交代する' : '新監督として招聘する')}
+                <div style="flex-shrink:0;">
+                  <button type="button" class="btn btn-hire-manager mono" data-manager-id="${cand.id}" ${repBlocked ? 'disabled' : ''} style="font-weight: 700; padding: 7px 14px; white-space: nowrap;">
+                    ${repBlocked ? `要Rep ${eff.minReputation}` : (currentMgr ? '交代' : '招聘')}
                   </button>
                 </div>
               </div>
