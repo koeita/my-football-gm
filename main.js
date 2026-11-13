@@ -9240,8 +9240,8 @@ function openPlayerProfileModal(playerId) {
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
-
-      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};border-color:rgba(255,255,255,0.15);">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
+      <span class="profile-bio-chip mono" id="profile-squad-num" style="color:var(--accent-green);font-weight:700;">${squadNumText}</span>
+      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
       ${youthBadgeHtml}
     `;
   }
