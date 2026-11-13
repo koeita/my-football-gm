@@ -12859,31 +12859,30 @@ function openInitialStaffSetupModal(club) {
 
   const renderModalContent = () => {
     const state = window._preseasonStaffSetup;
+    const titleEl = document.getElementById('staff-setup-title');
     if (state.step === 1) {
+      if (titleEl) titleEl.textContent = '監督の選任 (1 / 2)';
       const managersHtml = state.candidates.map((m, idx) => {
         const isSelected = idx === state.selectedManagerIdx;
-        const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 48) : '';
+        const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 44) : '';
         const mst = m.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
         const rTac = getStaffStatRank(mst.tactics);
         const rMot = getStaffStatRank(mst.motivation);
         const rDev = getStaffStatRank(mst.development);
         const rDis = getStaffStatRank(mst.discipline);
         return `
-          <div class="staff-candidate-card ${isSelected ? 'selected' : ''}" data-mgr-index="${idx}" style="cursor: pointer; padding: 12px; border-radius: 6px; border: 1.5px solid ${isSelected ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background: ${isSelected ? 'rgba(46,204,113,0.08)' : 'rgba(255,255,255,0.02)'}; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s, background 0.15s;">
-            <input type="radio" name="manager-candidate-radio" ${isSelected ? 'checked' : ''} style="margin: 0; pointer-events: none;">
+          <div class="staff-candidate-card ${isSelected ? 'selected' : ''}" data-mgr-index="${idx}" style="cursor: pointer; display: flex; align-items: center; gap: 12px;">
             <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
             <div style="flex: 1; min-width: 0;">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <span class="font-bold" style="font-size: 14px; color: ${isSelected ? 'var(--accent-green)' : 'var(--text-main)'}; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span>${m.name} 監督</span>
+              <div class="flat-row-header">
+                <div class="flat-row-title-wrap">
+                  <span class="flat-row-title" style="color: ${isSelected ? 'var(--accent-green)' : '#ffffff'};">${m.name}</span>
                   <span class="staff-specialty-tag">${m.specialty || 'バランス型'}</span>
-                </span>
-                <span class="mono accent-gold font-bold" style="font-size: 12px;">£${m.weeklyWage}k/週</span>
+                </div>
+                <span class="mono accent-gold font-bold flat-row-wage" style="font-size: 12px;">£${m.weeklyWage}k/週</span>
               </div>
-              <div class="mono text-muted" style="font-size: 11px; margin-top: 3px;">${m.nationality} / ${m.age}歳 / 契約3年</div>
-              <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
-                <span class="badge mono" style="font-size: 10px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">得意: ${m.preferredFormation}</span>
-                <span class="badge mono" style="font-size: 10px; background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4);">哲学: ${m.tacticLabel}</span>
+              <div class="flat-row-meta mono">
+                ${m.nationality} · ${m.age}歳 · <span style="color:#38bdf8;">${m.preferredFormation}</span> · <span style="color:#2ecc71;">${m.tacticLabel}</span>
               </div>
               <div class="staff-stats-chips">
                 <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
@@ -12896,17 +12895,7 @@ function openInitialStaffSetupModal(club) {
         `;
       }).join('');
 
-      body.innerHTML = `
-        <div style="margin-bottom: 8px;">
-          <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 1 / 2] HEAD COACH SELECTION / 監督選任</div>
-          <p style="font-size: 12px; line-height: 1.5; margin: 0 0 10px 0; color: var(--text-main);">
-            まずチームの戦術方針を担う監督を以下の候補者から選任してください（次画面でコーチ陣を選任します）。
-          </p>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            ${managersHtml}
-          </div>
-        </div>
-      `;
+      body.innerHTML = `<div style="display: flex; flex-direction: column;">${managersHtml}</div>`;
       if (confirmBtn) confirmBtn.textContent = '次へ：コーチを選ぶ ▶';
 
       body.querySelectorAll('.staff-candidate-card').forEach(card => {
@@ -12916,6 +12905,7 @@ function openInitialStaffSetupModal(club) {
         });
       });
     } else {
+      if (titleEl) titleEl.textContent = 'コーチの選任 (2 / 2)';
       const catMeta = [
         { cat: 'attacking', role: 'オフェンスコーチ' },
         { cat: 'defending', role: 'ディフェンスコーチ' },
@@ -12932,13 +12922,16 @@ function openInitialStaffSetupModal(club) {
           const rY = getStaffStatRank(cst.youthDev);
           const rA = getStaffStatRank(cst.analysis);
           return `
-            <div class="initial-coach-choice ${isSel ? 'selected' : ''}" data-coach-cat="${cat}" data-coach-idx="${idx}" style="cursor:pointer; padding:8px 10px; border-radius:6px; border:1.5px solid ${isSel ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background:${isSel ? 'rgba(46,204,113,0.08)' : 'rgba(0,0,0,0.28)'};">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                <strong style="font-size:12px; color:${isSel ? 'var(--accent-green)' : '#fff'};">${c.name}</strong>
-                <span class="mono accent-gold" style="font-size:10.5px;">£${c.weeklyWage}k/w</span>
+            <div class="initial-coach-choice ${isSel ? 'selected' : ''}" data-coach-cat="${cat}" data-coach-idx="${idx}" style="cursor:pointer;">
+              <div class="flat-row-header">
+                <div class="flat-row-title-wrap">
+                  <strong class="flat-row-title" style="font-size:13px; color:${isSel ? 'var(--accent-green)' : '#fff'};">${c.name}</strong>
+                  <span class="staff-specialty-tag">${c.specialty}</span>
+                </div>
+                <span class="mono accent-gold font-bold flat-row-wage" style="font-size:11.5px;">£${c.weeklyWage}k/週</span>
               </div>
-              <div class="mono text-muted" style="font-size:10px; margin:2px 0 4px;">${c.nationality} (${c.age}歳) / <span class="staff-specialty-tag">${c.specialty}</span></div>
-              <div class="staff-stats-chips" style="margin-top:2px;">
+              <div class="flat-row-meta mono" style="font-size:10.5px;">${c.nationality} · ${c.age}歳</div>
+              <div class="staff-stats-chips" style="margin-top:4px;">
                 <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
                 <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
                 <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
@@ -12947,24 +12940,20 @@ function openInitialStaffSetupModal(club) {
           `;
         }).join('');
         return `
-          <div style="margin-bottom: 12px;">
-            <div class="mono" style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">[${role}]</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(195px, 1fr)); gap:8px;">${cards}</div>
+          <div style="margin-bottom: 10px;">
+            <div class="flat-section-label mono">${role}</div>
+            <div style="display:flex; flex-direction:column;">${cards}</div>
           </div>
         `;
       }).join('');
 
       body.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-          <div class="mono text-muted" style="font-size: 11px;">[STEP 2 / 2] COACHING STAFF SELECTION / 初期コーチ選任</div>
+        <div style="display:flex; justify-content:flex-end; margin-bottom:4px;">
           <button type="button" class="btn btn-secondary btn-sm mono" id="btn-back-to-mgr-step">◀ 監督選択へ戻る</button>
         </div>
-        <p style="font-size: 11.5px; line-height: 1.4; margin: 0 0 10px 0; color: var(--text-muted);">
-          各部門（攻撃・守備・GK・フィジカル）の初期コーチを1名ずつ選任してください（指導・育成・分析の各ランクに応じて効果が変化します）。
-        </p>
         ${sectionsHtml}
       `;
-      if (confirmBtn) confirmBtn.textContent = '指導体制を確定してプレシーズン開幕へ';
+      if (confirmBtn) confirmBtn.textContent = '指導体制を確定して開幕へ';
 
       const backBtn = document.getElementById('btn-back-to-mgr-step');
       if (backBtn) {
