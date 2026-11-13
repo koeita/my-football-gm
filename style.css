@@ -16053,18 +16053,110 @@ body {
   letter-spacing: 0.02em !important;
 }
 
-/* FotMob風 モバイル年別成績リスト */
+/* FotMob風 年別成績リスト（PC・モバイル共通） */
+.profile-yearly-table-wrap {
+  display: none !important;
+}
 .profile-yearly-fotmob-list {
-  display: none;
+  display: flex !important;
+  flex-direction: column;
+}
+.fotmob-yearly-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+  color: #8b949e;
+}
+.fotmob-yearly-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid transparent;
+}
+.fotmob-yearly-row.is-current {
+  background: rgba(46, 204, 113, 0.06);
+  border-left-color: #2ecc71;
+}
+.fotmob-yearly-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.fotmob-yearly-emblem { flex-shrink: 0; }
+.fotmob-yearly-team-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.fotmob-yearly-club {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fotmob-yearly-season {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+.fotmob-yearly-cols {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.fotmob-col-stat {
+  width: 36px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+.fotmob-col-ovr {
+  width: 40px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.fotmob-col-rat {
+  width: 48px;
+  text-align: center;
+}
+.fotmob-rating-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.fotmob-rating-pill.rat-high { background: rgba(46, 204, 113, 0.22); color: #2ecc71; }
+.fotmob-rating-pill.rat-mid  { background: rgba(245, 158, 11, 0.20); color: #f59e0b; }
+.fotmob-rating-pill.rat-none { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
+.fotmob-yearly-total {
+  padding: 10px 8px 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #cbd5e1;
 }
 @media (max-width: 768px) {
-  .profile-yearly-table-wrap {
-    display: none !important;
-  }
-  .profile-yearly-fotmob-list {
-    display: flex !important;
-    flex-direction: column;
-  }
   .fotmob-yearly-head {
     display: flex;
     align-items: center;
