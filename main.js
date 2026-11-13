@@ -882,12 +882,14 @@ function advanceCalendarDay(skipRender = false) {
   }
 
   if (isNextDayMatch || eventTriggered) {
+    if (gameState.hasStartedOnce) autoSaveDirty = true;
     if (!skipRender) {
       renderAll();
     }
     return true;
   }
 
+  if (gameState.hasStartedOnce) autoSaveDirty = true;
   if (!skipRender) {
     renderAll();
   }
@@ -13023,10 +13025,11 @@ function confirmIntroAndStartGame() {
   }
   setupNewGame(gameState.selectedClubId);
   const playerClub = getPlayerClub();
+  if (typeof saveGameToStorage === 'function') {
+    saveGameToStorage(true);
+  }
   if (typeof openInitialStaffSetupModal === 'function' && playerClub) {
     openInitialStaffSetupModal(playerClub);
-  } else if (typeof saveGameToStorage === 'function') {
-    saveGameToStorage(true);
   }
 }
 
@@ -15002,9 +15005,12 @@ function saveSettingsToStorage() {
 }
 
 let autoSaveDebounceTimer = null;
+let autoSaveDirty = false;
+let hasShownStorageQuotaWarning = false;
 
 function scheduleAutoSave(delayMs = 400) {
   if (!appSettings.autoSaveEnabled) return;
+  autoSaveDirty = true;
   if (autoSaveDebounceTimer) {
     clearTimeout(autoSaveDebounceTimer);
   }
@@ -15015,9 +15021,11 @@ function scheduleAutoSave(delayMs = 400) {
 }
 
 function flushPendingAutoSave() {
-  if (autoSaveDebounceTimer) {
-    clearTimeout(autoSaveDebounceTimer);
-    autoSaveDebounceTimer = null;
+  if (autoSaveDebounceTimer || autoSaveDirty) {
+    if (autoSaveDebounceTimer) {
+      clearTimeout(autoSaveDebounceTimer);
+      autoSaveDebounceTimer = null;
+    }
     if (gameState.hasStartedOnce) {
       saveGameToStorage(false);
     }
@@ -15132,10 +15140,37 @@ function saveGameToStorage(force = false) {
     }));
     payload.state.lastWeekResults = slimMatchList(gameState.lastWeekResults);
     payload.state.matchHistory = slimMatchList(gameState.matchHistory);
-    localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    try {
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    } catch (storageErr) {
+      const isQuotaErr = storageErr && (
+        storageErr.name === 'QuotaExceededError'
+        || storageErr.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+        || storageErr.code === 22
+        || storageErr.code === 1014
+      );
+      if (!isQuotaErr) throw storageErr;
+      // 容量上限エラー時は履歴・ログを段階的に圧縮してリトライ
+      payload.state.matchHistory = payload.state.matchHistory.slice(-15);
+      payload.state.lastWeekResults = [];
+      payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 30) : [];
+      if (Array.isArray(payload.state.calendar)) {
+        payload.state.calendar = payload.state.calendar.map(d => {
+          if (!d || !d.matchResult) return d;
+          return { ...d, matchResult: { ...d.matchResult, scorers: [] } };
+        });
+      }
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+    }
+    autoSaveDirty = false;
     updateCareerRecordsFromCurrentState();
     return true;
   } catch (e) {
+    console.error('[saveGameToStorage] Failed to save game:', e);
+    if (!hasShownStorageQuotaWarning && typeof addDailyLog === 'function') {
+      hasShownStorageQuotaWarning = true;
+      addDailyLog('【システム警告】ブラウザの保存容量上限によりオートセーブに失敗しました。不要なタブや履歴を整理してください。');
+    }
     return false;
   }
 }
