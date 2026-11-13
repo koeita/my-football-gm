@@ -15,6 +15,64 @@ let playerIdCounter = 1;
 /**
  * 監督オブジェクトの生成（完全架空名ジェネレーターによる動的命名）
  */
+function inferManagerRankFromWage(wage = 70) {
+  if (wage >= 110) return 'S';
+  if (wage >= 80) return 'A';
+  if (wage >= 55) return 'B';
+  return 'C';
+}
+
+function ensureManagerRankAndStats(mgr, focusHint = null) {
+  if (!mgr || typeof mgr !== 'object') return mgr;
+  if (!mgr.rank || !['S', 'A', 'B', 'C'].includes(mgr.rank)) {
+    mgr.rank = inferManagerRankFromWage(mgr.weeklyWage || 70);
+  }
+  const baseRange = mgr.rank === 'S' ? [82, 93] : (mgr.rank === 'A' ? [74, 85] : (mgr.rank === 'B' ? [65, 76] : [56, 68]));
+  if (!mgr.stats || typeof mgr.stats !== 'object') {
+    const pick = () => randInt(baseRange[0], baseRange[1]);
+    const stats = { tactics: pick(), motivation: pick(), development: pick(), discipline: pick() };
+    const focus = focusHint || mgr.focus || ['tactics', 'motivation', 'development', 'discipline'][randInt(0, 3)];
+    if (stats[focus] !== undefined) {
+      stats[focus] = clamp(stats[focus] + randInt(5, 8), 50, 99);
+    }
+    mgr.stats = stats;
+  } else {
+    ['tactics', 'motivation', 'development', 'discipline'].forEach(k => {
+      if (typeof mgr.stats[k] !== 'number') mgr.stats[k] = randInt(baseRange[0], baseRange[1]);
+    });
+  }
+  if (!mgr.specialty) {
+    const entries = Object.entries(mgr.stats);
+    entries.sort((a, b) => b[1] - a[1]);
+    const topKey = entries[0] ? entries[0][0] : 'tactics';
+    const labels = { tactics: '戦術の鬼', motivation: '人心掌握', development: '育成の名匠', discipline: '規律重視' };
+    mgr.specialty = labels[topKey] || 'バランス型';
+  }
+  return mgr;
+}
+
+function getManagerRankEffects(manager) {
+  if (!manager) {
+    return { rank: 'C', minReputation: 0, buffPerMatch: 0.01, highTrustBonus: 0.005, youthGrowthBonus: 0, allGrowthBonus: 0, fatigueMult: 1.0 };
+  }
+  ensureManagerRankAndStats(manager);
+  const defs = typeof MANAGER_RANK_DEFINITIONS !== 'undefined' ? MANAGER_RANK_DEFINITIONS : {};
+  const def = defs[manager.rank] || { minReputation: 0, buffPerMatch: 0.016, highTrustBonus: 0.008, youthGrowthBonus: 0.1, allGrowthBonus: 0 };
+  const st = manager.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
+  const tacticsExtra = Math.max(0, (st.tactics - 70) * 0.0004);
+  const devExtra = Math.max(0, (st.development - 70) * 0.008);
+  const discMult = clamp(1.0 - Math.max(0, (st.discipline - 70) * 0.003), 0.91, 1.0);
+  return {
+    rank: manager.rank,
+    minReputation: def.minReputation || 0,
+    buffPerMatch: (def.buffPerMatch || 0.016) + tacticsExtra,
+    highTrustBonus: def.highTrustBonus || 0.008,
+    youthGrowthBonus: (def.youthGrowthBonus || 0.1) + devExtra,
+    allGrowthBonus: def.allGrowthBonus || 0,
+    fatigueMult: discMult
+  };
+}
+
 function createManager(def, clubId = null, usedNames = null) {
   const age = def.age || randInt(44, 62);
   const nat = def.nationality || 'England';
@@ -27,12 +85,15 @@ function createManager(def, clubId = null, usedNames = null) {
     if (Math.random() < 0.6) genes.facialHair = 'beard';
     if (Math.random() < 0.4) genes.accessories = 'glasses';
   }
-  return {
+  const rank = def.rank || inferManagerRankFromWage(def.weeklyWage || 80);
+  const mgr = {
     id: 'mgr_' + Math.random().toString(36).substr(2, 8),
     name: nameData.displayName,
     fullName: nameData.fullName,
     nationality: nat,
     age: age,
+    rank,
+    focus: def.focus || null,
     preferredFormation: def.preferredFormation || '4-3-3',
     preferredTactic: def.preferredTactic || 'possession',
     trust: typeof def.trust === 'number' ? def.trust : 80,
@@ -42,6 +103,7 @@ function createManager(def, clubId = null, usedNames = null) {
     bio: def.bio || '現代的な戦術眼と指導力でチームを牽引する指揮官。',
     avatarData: genes
   };
+  return ensureManagerRankAndStats(mgr, def.focus || null);
 }
 
 /**
@@ -52,6 +114,32 @@ function getManagerBuyoutFee(manager) {
   const annual = (manager.weeklyWage || 80) * 52;
   const years = Math.max(1, manager.contractYears || 1);
   return Math.max(1000, Math.round(annual * 0.40 * years));
+}
+
+function ensureCoachStats(coach, focusHint = null) {
+  if (!coach || typeof coach !== 'object') return coach;
+  const r = coach.rank || 'B';
+  const baseRange = r === 'A' ? [78, 89] : (r === 'B' ? [66, 77] : [54, 65]);
+  if (!coach.stats || typeof coach.stats !== 'object') {
+    const pick = () => randInt(baseRange[0], baseRange[1]);
+    const stats = { coaching: pick(), youthDev: pick(), analysis: pick() };
+    const focus = focusHint || coach.focus || ['coaching', 'youthDev', 'analysis'][randInt(0, 2)];
+    if (stats[focus] !== undefined) {
+      stats[focus] = clamp(stats[focus] + randInt(6, 9), 45, 99);
+    }
+    coach.stats = stats;
+  } else {
+    ['coaching', 'youthDev', 'analysis'].forEach(k => {
+      if (typeof coach.stats[k] !== 'number') coach.stats[k] = randInt(baseRange[0], baseRange[1]);
+    });
+  }
+  if (!coach.specialty) {
+    const entries = Object.entries(coach.stats).sort((a, b) => b[1] - a[1]);
+    const topKey = entries[0] ? entries[0][0] : 'coaching';
+    const labels = { coaching: '実戦指導型', youthDev: '若手育成型', analysis: '戦術分析型' };
+    coach.specialty = labels[topKey] || 'バランス型';
+  }
+  return coach;
 }
 
 function createCoach(def, category, usedNames = null) {
@@ -68,13 +156,14 @@ function createCoach(def, category, usedNames = null) {
     ? generateRandomStaffName(nat, usedNames)
     : { displayName: `C. Coach`, fullName: `Coach Staff` };
 
-  return {
+  const coach = {
     id: `coach_${category}_${Math.random().toString(36).substr(2, 9)}`,
     name: nameData.displayName,
     fullName: nameData.fullName,
     category,
     roleLabel,
     rank: def.rank || 'B',
+    focus: def.focus || null,
     tag: roleLabel,
     nationality: nat,
     age,
@@ -82,6 +171,7 @@ function createCoach(def, category, usedNames = null) {
     bio: def.bio || '熱心な指導で選手の能力を最大化する専門コーチ。',
     avatarData: null
   };
+  return ensureCoachStats(coach, def.focus || null);
 }
 
 function createInitialCoaches(isPlayer = false, usedNames = null) {
@@ -125,36 +215,48 @@ function getClubCoachingStaffWeeklyWage(club) {
 
 function getClubCoachingEffects(club) {
   if (!club || !club.coaches) {
-    return { attMult: 1.0, defSuppression: 1.0, gkSaveBonus: 1.0, staDrainMult: 1.0, injuryProbMult: 1.0 };
+    return { attMult: 1.0, defSuppression: 1.0, gkSaveBonus: 1.0, staDrainMult: 1.0, injuryProbMult: 1.0, analysisBonus: 0, youthDevBonus: 0 };
   }
+  const calcCoachPower = (c) => {
+    if (!c) return 0;
+    ensureCoachStats(c);
+    const rankBase = c.rank === 'A' ? 0.85 : (c.rank === 'B' ? 0.62 : 0.38);
+    const statBonus = Math.max(0, ((c.stats && c.stats.coaching ? c.stats.coaching : 70) - 65) * 0.008);
+    return rankBase + statBonus;
+  };
   let attScore = 0;
-  (club.coaches.attacking || []).forEach(c => {
-    if (c) attScore += (c.rank === 'A' ? 1.0 : (c.rank === 'B' ? 0.7 : 0.4));
-  });
+  (club.coaches.attacking || []).forEach(c => { attScore += calcCoachPower(c); });
 
   let defScore = 0;
-  (club.coaches.defending || []).forEach(c => {
-    if (c) defScore += (c.rank === 'A' ? 1.0 : (c.rank === 'B' ? 0.7 : 0.4));
+  (club.coaches.defending || []).forEach(c => { defScore += calcCoachPower(c); });
+
+  let gkScore = club.coaches.goalkeeping ? calcCoachPower(club.coaches.goalkeeping) : 0;
+  let fitScore = club.coaches.fitness ? calcCoachPower(club.coaches.fitness) : 0;
+
+  const allCoaches = [
+    ...(club.coaches.attacking || []),
+    ...(club.coaches.defending || []),
+    club.coaches.goalkeeping,
+    club.coaches.fitness
+  ].filter(Boolean);
+  let analysisSum = 0;
+  let youthDevSum = 0;
+  allCoaches.forEach(c => {
+    ensureCoachStats(c);
+    analysisSum += (c.stats && c.stats.analysis) || 65;
+    youthDevSum += (c.stats && c.stats.youthDev) || 65;
   });
-
-  let gkScore = 0;
-  if (club.coaches.goalkeeping) {
-    const r = club.coaches.goalkeeping.rank;
-    gkScore = (r === 'A' ? 1.0 : (r === 'B' ? 0.7 : 0.4));
-  }
-
-  let fitScore = 0;
-  if (club.coaches.fitness) {
-    const r = club.coaches.fitness.rank;
-    fitScore = (r === 'A' ? 1.0 : (r === 'B' ? 0.7 : 0.4));
-  }
+  const avgAnalysis = allCoaches.length > 0 ? analysisSum / allCoaches.length : 65;
+  const avgYouthDev = allCoaches.length > 0 ? youthDevSum / allCoaches.length : 65;
 
   return {
     attMult: 1.0 + attScore * 0.05,
     defSuppression: Math.max(0.75, 1.0 - defScore * 0.05),
     gkSaveBonus: Math.max(0.80, 1.0 - gkScore * 0.07),
     staDrainMult: Math.max(0.60, 1.0 - fitScore * 0.20),
-    injuryProbMult: Math.max(0.40, 1.0 - fitScore * 0.35)
+    injuryProbMult: Math.max(0.40, 1.0 - fitScore * 0.35),
+    analysisBonus: Math.max(0, (avgAnalysis - 65) * 0.015),
+    youthDevBonus: Math.max(0, (avgYouthDev - 65) * 0.012)
   };
 }
 
@@ -2446,6 +2548,22 @@ function computeStatGrowth(player, isPlayerClub = false) {
         const chance = c.rank === 'A' ? 0.65 : (c.rank === 'B' ? 0.45 : 0.30);
         if (Math.random() < chance) dSta += bonusAmt;
       }
+
+      // 5. コーチ陣の若手育成(youthDev) ＆ 監督の育成手腕(development)・ランク補正
+      const coachEff = getClubCoachingEffects(playerClub);
+      if (age <= 22 && coachEff.youthDevBonus > 0 && Math.random() < coachEff.youthDevBonus) {
+        if (player.pos === 'GK') dDef += 1;
+        else { dAtk += 1; dDef += 1; }
+      }
+      if (playerClub.manager) {
+        const mgrEff = getManagerRankEffects(playerClub.manager);
+        if (age <= 22 && Math.random() < mgrEff.youthGrowthBonus) {
+          dAtk += 1;
+          dDef += 1;
+        } else if (age <= 27 && mgrEff.allGrowthBonus > 0 && Math.random() < mgrEff.allGrowthBonus) {
+          dAtk += 1;
+        }
+      }
     }
   }
 
@@ -2923,4 +3041,191 @@ function evaluateClubNationalityRules(club) {
 function getEffectiveBenchLimit(club) {
   const evalRes = evaluateClubNationalityRules(club);
   return evalRes.effectiveMaxBench;
+}
+
+// ==========================================================================
+// 10. ユーススカウト派遣・選手発掘システム
+// ==========================================================================
+
+function getYouthScoutMaxSlots() {
+  const sLv = (typeof gameState !== 'undefined' && gameState.facilities && gameState.facilities.scouting)
+    ? gameState.facilities.scouting : 1;
+  return 1 + Math.floor((sLv - 1) / 2); // Lv1-2: 1枠, Lv3-4: 2枠, Lv5: 3枠
+}
+
+function createYouthScoutProspect(regionDef, targetRole = 'ANY') {
+  const usedNames = new Set();
+  const managedList = typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []);
+  for (const c of managedList) {
+    (c.players || []).forEach(p => usedNames.add(p.name));
+    (c.youthSquad || []).forEach(y => usedNames.add(y.name));
+  }
+  (gameState.youthScoutReports || []).forEach(y => usedNames.add(y.name));
+
+  let rolePool = ALL_POSITIONS;
+  if (targetRole === 'GK') rolePool = ['GK'];
+  else if (targetRole === 'DF') rolePool = ['CB', 'LB', 'RB'];
+  else if (targetRole === 'MF') rolePool = ['DM', 'CM', 'LM', 'RM', 'AM'];
+  else if (targetRole === 'FW') rolePool = ['CF', 'LW', 'RW'];
+  const pos = rolePool[randInt(0, rolePool.length - 1)];
+
+  let nat = 'England';
+  if (Math.random() >= (regionDef.homeProb || 0.5)) {
+    const nats = regionDef.nationalities || ['England'];
+    nat = nats[randInt(0, nats.length - 1)];
+  }
+
+  const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  const tLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+  const prospect = createYouthPlayer(pos, usedNames, nat);
+  prospect.age = randInt(15, 18);
+  prospect.isHomegrown = (nat === 'England');
+  prospect.isYouthGraduate = true;
+
+  // スカウト網・練習施設Lvと地域ボーナスを反映した能力＆ポテンシャル再評価
+  const boost = Math.floor((sLv - 1) * 1.1 + (tLv - 1) * 0.6 + (regionDef.potentialBonus || 0) * 0.6);
+  if (boost > 0) {
+    prospect.atk = clamp(prospect.atk + randInt(0, boost), 40, 74);
+    prospect.def = clamp(prospect.def + randInt(0, boost), 40, 74);
+    prospect.sta = clamp(prospect.sta + randInt(0, boost), 42, 78);
+    if (pos === 'GK') prospect.atk = 25;
+    prospect.attributes = getPlayerFiveAttributes({ primaryPosition: pos, atk: prospect.atk, def: prospect.def, sta: prospect.sta, traits: prospect.traits });
+  }
+  const sBonusRoll = Math.random() - ((sLv - 1) * 0.04) - ((regionDef.potentialBonus || 0) * 0.03);
+  if (sBonusRoll < 0.14) prospect.potential = 'S';
+  else if (sBonusRoll < 0.44) prospect.potential = 'A';
+  else if (sBonusRoll < 0.84) prospect.potential = 'B';
+  else prospect.potential = 'C';
+
+  prospect.scoutRegionName = regionDef.name;
+  return prospect;
+}
+
+function dispatchYouthScout(regionId, targetRole = 'ANY') {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub) return { ok: false, reason: 'クラブが見つかりません' };
+  const regions = typeof YOUTH_SCOUT_REGIONS !== 'undefined' ? YOUTH_SCOUT_REGIONS : {};
+  const region = regions[regionId];
+  if (!region) return { ok: false, reason: '無効な地域です' };
+
+  if (!Array.isArray(gameState.activeYouthScouts)) gameState.activeYouthScouts = [];
+  const maxSlots = getYouthScoutMaxSlots();
+  if (gameState.activeYouthScouts.length >= maxSlots) {
+    return { ok: false, reason: `派遣枠の上限（${maxSlots}枠）に達しています` };
+  }
+  if ((playerClub.funds || 0) < region.cost) {
+    return { ok: false, reason: `資金不足です（必要費用: ${formatMoney(region.cost)}）` };
+  }
+
+  playerClub.funds -= region.cost;
+  gameState.activeYouthScouts.push({
+    id: 'yscout_' + Math.random().toString(36).substr(2, 8),
+    regionId: region.id,
+    regionName: region.name,
+    targetRole: targetRole || 'ANY',
+    daysRemaining: region.days,
+    totalDays: region.days,
+    cost: region.cost
+  });
+
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【ユーススカウト派遣】${region.name}へ ${targetRole === 'ANY' ? '全ポジション' : targetRole} 担当スカウトを派遣しました（期間: ${region.days}日 / 費用: -${formatMoney(region.cost)}）。`);
+  }
+  return { ok: true };
+}
+
+function advanceYouthScoutingDaily() {
+  if (!Array.isArray(gameState.activeYouthScouts) || gameState.activeYouthScouts.length === 0) return;
+  if (!Array.isArray(gameState.youthScoutReports)) gameState.youthScoutReports = [];
+  const regions = typeof YOUTH_SCOUT_REGIONS !== 'undefined' ? YOUTH_SCOUT_REGIONS : {};
+  const remaining = [];
+
+  for (const task of gameState.activeYouthScouts) {
+    if (!task) continue;
+    task.daysRemaining = Math.max(0, (task.daysRemaining || 1) - 1);
+    if (task.daysRemaining === 0) {
+      const reg = regions[task.regionId] || { name: task.regionName || '国内', homeProb: 0.8, nationalities: ['England'], potentialBonus: 0 };
+      const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+      const foundCount = (sLv >= 3 && Math.random() < 0.45) ? 2 : 1;
+      const foundNames = [];
+      for (let i = 0; i < foundCount; i++) {
+        if (gameState.youthScoutReports.length >= 8) gameState.youthScoutReports.shift();
+        const prospect = createYouthScoutProspect(reg, task.targetRole);
+        gameState.youthScoutReports.push(prospect);
+        foundNames.push(`${prospect.pos} ${prospect.name} (${prospect.age}歳/POT:${prospect.potential})`);
+      }
+      if (typeof addDailyLog === 'function') {
+        addDailyLog(`【ユース発掘報告】${reg.name}のスカウトが帰還し、${foundNames.join('・')} を発掘しました！`);
+      }
+      if (typeof showToast === 'function') {
+        showToast(`ユース発掘完了（${reg.name}）：${foundNames[0]}`, 'success');
+      }
+    } else {
+      remaining.push(task);
+    }
+  }
+  gameState.activeYouthScouts = remaining;
+}
+
+function signYouthScoutReportToAcademy(playerId) {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub || !Array.isArray(gameState.youthScoutReports)) return false;
+  const idx = gameState.youthScoutReports.findIndex(p => p.id === playerId);
+  if (idx === -1) return false;
+
+  if (!Array.isArray(playerClub.youthSquad)) playerClub.youthSquad = [];
+  const maxYouth = typeof MAX_YOUTH_SQUAD_SIZE === 'number' ? MAX_YOUTH_SQUAD_SIZE : 10;
+  if (playerClub.youthSquad.length >= maxYouth) {
+    if (typeof showToast === 'function') showToast(`ユースチーム所属上限（${maxYouth}名）に達しています`, 'warn');
+    return false;
+  }
+
+  const [prospect] = gameState.youthScoutReports.splice(idx, 1);
+  prospect.isYouth = true;
+  prospect.isYouthGraduate = true;
+  playerClub.youthSquad.push(prospect);
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【ユース入団】発掘選手 ${prospect.pos} ${prospect.name}（${prospect.age}歳 / POT:${prospect.potential}）がユースチームに入団しました。`);
+  }
+  if (typeof showToast === 'function') showToast(`${prospect.name} がユースチームに入団しました`, 'success');
+  return true;
+}
+
+function promoteYouthScoutReportDirectly(playerId) {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub || !Array.isArray(gameState.youthScoutReports)) return false;
+  const idx = gameState.youthScoutReports.findIndex(p => p.id === playerId);
+  if (idx === -1) return false;
+  const maxTop = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+  if ((playerClub.players || []).length >= maxTop) {
+    if (typeof showToast === 'function') showToast(`トップチーム枠上限（${maxTop}名）に達しています`, 'warn');
+    return false;
+  }
+
+  const [prospect] = gameState.youthScoutReports.splice(idx, 1);
+  const usedNums = new Set((playerClub.players || []).map(p => p.squadNumber).filter(n => typeof n === 'number'));
+  prospect.isYouth = false;
+  prospect.isYouthGraduate = true;
+  prospect.isHomegrown = true;
+  prospect.wage = 15;
+  prospect.salary = 780;
+  prospect.contractYears = 4;
+  prospect.squadNumber = typeof pickAvailableSquadNumber === 'function' ? pickAvailableSquadNumber(prospect.pos, usedNums) : 45;
+  prospect.squadStatus = 'prospect';
+  prospect.transferFee = calculateTransferFee(prospect);
+  playerClub.players.push(prospect);
+  if (typeof ensureValidSquadAndStarters === 'function') ensureValidSquadAndStarters(playerClub);
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【発掘即昇格】${prospect.pos} #${prospect.squadNumber} ${prospect.name}（${prospect.age}歳）とプロ契約を締結しトップチームへ昇格させました！`);
+  }
+  if (typeof showToast === 'function') showToast(`${prospect.name} をトップチームへ直接昇格させました`, 'success');
+  return true;
+}
+
+function dismissYouthScoutReport(playerId) {
+  if (!Array.isArray(gameState.youthScoutReports)) return false;
+  const idx = gameState.youthScoutReports.findIndex(p => p.id === playerId);
+  if (idx === -1) return false;
+  gameState.youthScoutReports.splice(idx, 1);
+  return true;
 }

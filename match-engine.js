@@ -376,7 +376,8 @@ function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = [
   const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
   const isPreseasonMatch = Boolean(curDay && (curDay.cupCompType === 'preseasonCup' || curDay.preseasonRound));
   const preseasonMult = isPreseasonMatch ? 0.5 : 1.0;
-  const drainMult = tacticMult * (coaching.staDrainMult || 1.0) * preseasonMult;
+  const mgrFatigueMult = (club.manager && typeof getManagerRankEffects === 'function') ? getManagerRankEffects(club.manager).fatigueMult : 1.0;
+  const drainMult = tacticMult * (coaching.staDrainMult || 1.0) * mgrFatigueMult * preseasonMult;
 
   starters.forEach(p => {
     const staFactor = clamp(1.12 - (((p.sta || 70) - 65) * 0.006), 0.85, 1.18);
@@ -1179,8 +1180,9 @@ function getTeamStarterStats(club) {
       totalAtk *= 0.97;
       totalDef *= 0.97;
     } else if (managerBonusOvr > 0) {
-      const highTrustExtra = (mgrTrust >= 80 && managerBonusOvr === 2) ? 0.01 : 0;
-      const buff = 1.0 + (managerBonusOvr * 0.02) + highTrustExtra;
+      const mgrEff = typeof getManagerRankEffects === 'function' ? getManagerRankEffects(club.manager) : { buffPerMatch: 0.02, highTrustBonus: 0.01 };
+      const highTrustExtra = (mgrTrust >= 80 && managerBonusOvr === 2) ? mgrEff.highTrustBonus : 0;
+      const buff = 1.0 + (managerBonusOvr * mgrEff.buffPerMatch) + highTrustExtra;
       totalAtk *= buff;
       totalDef *= buff;
     }

@@ -15605,3 +15605,111 @@ body {
 
 
 
+
+
+/* ==========================================
+   監督ランク・スタッフ能力・ユーススカウト発掘 UI
+   ========================================== */
+.mgr-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+}
+.mgr-rank-badge.rank-S { color: #f59e0b; background: rgba(245, 158, 11, 0.16); }
+.mgr-rank-badge.rank-A { color: #2ecc71; background: rgba(46, 204, 113, 0.16); }
+.mgr-rank-badge.rank-B { color: #38bdf8; background: rgba(56, 189, 248, 0.16); }
+.mgr-rank-badge.rank-C { color: #94a3b8; background: rgba(148, 163, 184, 0.16); }
+
+.staff-specialty-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.staff-stats-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.staff-stat-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #cbd5e1;
+}
+.staff-stat-chip strong { color: #ffffff; }
+
+.mgr-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0 10px;
+}
+
+.youth-scout-controls {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+@media (max-width: 768px) {
+  .youth-scout-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.youth-scout-task-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.youth-scout-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.youth-scout-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2ecc71, #38bdf8);
+}
+
+.youth-reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.youth-report-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
