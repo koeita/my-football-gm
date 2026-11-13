@@ -9901,10 +9901,27 @@ function syncIntroFilterTagCounts() {
   });
   container.querySelectorAll('.btn-filter-tag[data-filter]').forEach(btn => {
     const f = btn.dataset.filter;
+    const pcSpan = btn.querySelector('.filter-label-pc');
+    const spSpan = btn.querySelector('.filter-label-sp');
     if (f === 'all') {
-      btn.textContent = `すべて (${counts.all})`;
+      const pcText = `すべて (${counts.all})`;
+      const spText = 'すべて';
+      if (pcSpan && spSpan) {
+        pcSpan.textContent = pcText;
+        spSpan.textContent = spText;
+      } else {
+        btn.textContent = pcText;
+      }
     } else if (typeof CLUB_SELECT_CATEGORIES !== 'undefined' && CLUB_SELECT_CATEGORIES[f]) {
-      btn.textContent = `${CLUB_SELECT_CATEGORIES[f].label} (${counts[f] || 0})`;
+      const cat = CLUB_SELECT_CATEGORIES[f];
+      const pcText = `${cat.label} (${counts[f] || 0})`;
+      const spText = cat.mobileLabel || cat.label;
+      if (pcSpan && spSpan) {
+        pcSpan.textContent = pcText;
+        spSpan.textContent = spText;
+      } else {
+        btn.textContent = pcText;
+      }
     }
   });
 }

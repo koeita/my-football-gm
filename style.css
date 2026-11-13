@@ -1840,6 +1840,14 @@ body {
   transition: all 0.12s ease;
 }
 
+.filter-label-pc {
+  display: inline;
+}
+
+.filter-label-sp {
+  display: none;
+}
+
 .btn-filter-tag:hover {
   background-color: var(--bg-row-hover);
   color: var(--text-main);
@@ -6454,14 +6462,29 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .club-filter-tags {
-    gap: 4px !important;
-    flex-wrap: wrap !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 3px !important;
   }
 
   .btn-filter-tag {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
     font-size: 10px !important;
-    padding: 2px 6px !important;
+    padding: 4px 2px !important;
+    text-align: center !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .filter-label-pc {
+    display: none !important;
+  }
+
+  .filter-label-sp {
+    display: inline !important;
   }
 
   .intro-slider-nav {

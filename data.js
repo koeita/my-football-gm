@@ -383,24 +383,28 @@ const CLUB_SELECT_CATEGORIES = {
   title_ucl: {
     key: 'title_ucl',
     label: '優勝・CL圏',
+    mobileLabel: '優勝・CL',
     targetHint: '目標 1〜5位',
     badgeClass: 'cat-title-ucl'
   },
   euro_race: {
     key: 'euro_race',
     label: '欧州カップ狙い',
+    mobileLabel: '欧州狙い',
     targetHint: '目標 6〜9位',
     badgeClass: 'cat-euro-race'
   },
   mid_table: {
     key: 'mid_table',
     label: '中位定着',
+    mobileLabel: '中位定着',
     targetHint: '目標 10〜15位',
     badgeClass: 'cat-mid-table'
   },
   relegation: {
     key: 'relegation',
     label: '残留争い',
+    mobileLabel: '残留争い',
     targetHint: '目標 16〜17位',
     badgeClass: 'cat-relegation'
   }
