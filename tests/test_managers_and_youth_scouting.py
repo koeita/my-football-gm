@@ -71,6 +71,8 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('.staff-stat-chip.stat-rank-S', self.css)
         self.assertIn('col-youth-pot', self.html)
         self.assertIn('col-youth-growth', self.html)
+        self.assertIn('成長型', self.html)
+        self.assertIn('POT: ${potRank}', self.main_js)
         self.assertNotIn('col-youth-atk', self.html)
         self.assertNotIn('col-youth-def', self.html)
 

@@ -9102,17 +9102,8 @@ function openPlayerProfileModal(playerId) {
   const playerClub = getPlayerClub();
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
 
-  // ユース選手の将来予測OVR（ポテンシャル）生成・維持
-  if (isYouth) {
-    if (!p.potentialMin || !p.potentialMax) {
-      const potBase = Math.max(baseOvr + (p.age <= 18 ? 10 : 7), p.potentialRating || 78);
-      p.potentialMin = clamp(potBase, 75, 90);
-      p.potentialMax = clamp(p.potentialMin + 5, p.potentialMin, 95);
-    }
-  }
-
-  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
-  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
+  const growthLabel = getGrowthCurveLabel(p.growthCurve || p.growthType);
+  const growthClass = `growth-${p.growthCurve || p.growthType || 'standard'}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
@@ -9187,10 +9178,10 @@ function openPlayerProfileModal(playerId) {
     const footBadgeStr = formatFootBadge(p);
     let youthBadgeHtml = '';
     if (isYouth) {
-      const starStr = p.potentialMax >= 88 ? '★★★★★' : (p.potentialMax >= 84 ? '★★★★☆' : '★★★☆☆');
+      const potRank = p.potential || p.potentialGrade || 'B';
+      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
       youthBadgeHtml = `
-        <span class="profile-bio-chip mono" style="background:rgba(46,204,113,0.2);color:var(--accent-green);border-color:var(--accent-green);font-weight:700;">POT: ${p.potentialMin}-${p.potentialMax}</span>
-        <span class="profile-bio-chip mono" style="background:rgba(241,196,15,0.18);color:var(--accent-gold);border-color:rgba(241,196,15,0.4);">将来性: ${starStr}</span>
+        <span class="profile-bio-chip mono ${potRankClass}" style="border-color:currentColor;font-weight:700;">POT: ${potRank}</span>
       `;
     }
 
