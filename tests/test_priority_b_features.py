@@ -44,6 +44,13 @@ class TestPriorityBDelegationPerfUnslop(unittest.TestCase):
         # CPUクラブ選手の古い seasonHistory が直近3シーズン分にトリミングされていること
         self.assertIn('p.seasonHistory = p.seasonHistory.slice(-3);', self.main_js)
         self.assertIn('const slimScorerEntry =', self.main_js)
+        # 容量圧迫要因の pots 除外と、未保存フラグ(autoSaveDirty)・QuotaExceededError リトライが実装されていること
+        with open(os.path.join(ROOT_DIR, 'competitions.js'), 'r', encoding='utf-8') as f:
+            comp_js = f.read()
+        self.assertIn('delete copy.pots;', comp_js)
+        self.assertIn('let autoSaveDirty = false;', self.main_js)
+        self.assertIn('if (autoSaveDebounceTimer || autoSaveDirty)', self.main_js)
+        self.assertIn('QuotaExceededError', self.main_js)
 
     def test_10_ui_meta_labels_replaced_with_worldbuilding_text(self):
         """項目10: UIメタ表記（組織力ボーナス: 実効OVR / スタミナ消費1.3倍 / 96%発揮）が世界観テキストに置換されていること"""

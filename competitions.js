@@ -1307,6 +1307,10 @@ function dehydrateCompetitionsForSave(comps) {
       continue;
     }
     const copy = { ...comp };
+    // pots は初期シード振り分け用の一時配列であり、保存データ容量（約1MB）を圧迫するため除外する
+    if ('pots' in copy) {
+      delete copy.pots;
+    }
     if (Array.isArray(comp.participants)) {
       copy.participants = comp.participants.map(slimClub);
     }
