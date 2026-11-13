@@ -1260,15 +1260,22 @@
     <div class="modal-card negotiation-modal-card">
       <div class="profile-modal-header">
         <div class="profile-header-left">
-          <div class="profile-squad-num mono" id="neg-squad-num">#10</div>
+          <div class="profile-avatar-col">
+            <canvas class="profile-avatar-canvas" id="neg-avatar-canvas" width="64" height="64" aria-label="選手ドット絵アバター"></canvas>
+            <div class="profile-header-ovr-box mono" id="neg-header-ovr" title="総合能力値 (OVR)">
+              <strong class="profile-header-ovr-val">--</strong>
+            </div>
+          </div>
           <div class="profile-identity">
             <div class="profile-top-tags">
               <span class="modal-category mono" id="neg-modal-category">契約交渉</span>
               <span class="profile-pos-pill mono" id="neg-pos-pill">CF</span>
             </div>
-            <h2 class="profile-player-name" id="neg-modal-title">選手名</h2>
+            <div class="profile-name-row">
+              <h2 class="profile-player-name" id="neg-modal-title">選手名</h2>
+            </div>
             <div class="profile-bio-row mono" id="neg-player-meta">
-              <!-- 年齢・OVR・今季成績・現在契約 -->
+              <!-- 国籍・年齢・背番号・現給与 -->
             </div>
           </div>
         </div>
@@ -1279,8 +1286,7 @@
         <!-- JSで交渉条件（要求・スライダー・ステータスログ）を描画 -->
       </div>
 
-      <div class="modal-actions profile-modal-footer" id="neg-modal-footer">
-        <span class="profile-footer-hint mono" id="neg-footer-hint">Esc または ✕ で中断可能</span>
+      <div class="modal-actions profile-modal-footer" id="neg-modal-footer" style="justify-content: flex-end;">
         <div class="action-btn-group" id="neg-footer-actions">
           <button type="button" class="btn btn-primary btn-sm" id="btn-submit-neg-offer">条件を提示</button>
         </div>

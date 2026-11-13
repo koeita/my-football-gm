@@ -1904,7 +1904,7 @@ function openContractNegotiationModal(playerId) {
   const isRefused = Boolean(target.contractRefused);
 
   let statusType = 'info';
-  let statusMessage = `代理人：「#${target.squadNumber || '-'} ${target.name} は今季の貢献度と実力（OVR ${getPlayerOverallRating(target)} / ${target.goals}得点）を踏まえ、年俸 ${formatMoney(demandedSalary)}・${demandedYears}年契約を希望しています。」`;
+  let statusMessage = '';
 
   if (isRefused) {
     statusType = 'error';
@@ -1932,11 +1932,8 @@ function openContractNegotiationModal(playerId) {
   renderNegotiationModal();
   const modalEl = document.getElementById('negotiation-modal');
   if (modalEl) modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
-
-/**
- * 移籍市場の獲得交渉モーダルを開く（全クラブ対象）
- */
 
 /**
  * 契約残り半年（1月冬ウィンドウ以降 かつ 残り契約1年以下）の事前合意適格判定
@@ -2136,7 +2133,7 @@ function openTransferNegotiationModal(candidateId) {
 
   const clubName = isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ');
   let statusType = 'info';
-  let statusMessage = `${clubName}は移籍金 ${formatMoney(demandedFee)}、${target.name} 本人は週給 ${formatWage(demandedWage)}（年俸 ${formatMoney(demandedSalary)} ／ ${demandedYears}年契約）を希望しています。`;
+  let statusMessage = '';
 
   if (repBlocked) {
     statusType = 'error';
@@ -2183,6 +2180,7 @@ function openTransferNegotiationModal(candidateId) {
   renderNegotiationModal();
   const modalEl = document.getElementById('negotiation-modal');
   if (modalEl) modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 /**
@@ -2213,44 +2211,63 @@ function renderNegotiationModal() {
   const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
   const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
 
-  const squadNumEl = document.getElementById('neg-squad-num');
-  if (squadNumEl) {
-    squadNumEl.textContent = isRenewal ? `#${target.squadNumber || 10}` : (session.dealType === 'loan' ? 'LOAN' : 'SIGN');
+  const avatarCanvasEl = document.getElementById('neg-avatar-canvas');
+  if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
+    const avatarClub = isRenewal ? playerClub : (sellerClub || (typeof findAvatarClubForPlayer === 'function' ? findAvatarClubForPlayer(target) : null));
+    generatePlayerAvatar(target, avatarCanvasEl, avatarClub);
+  }
+
+  const headerOvrEl = document.getElementById('neg-header-ovr');
+  if (headerOvrEl) {
+    const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = ovr;
+      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(ovr) : ''}`;
+      valEl.style.background = 'none';
+    }
   }
 
   const catEl = document.getElementById('neg-modal-category');
   if (catEl) {
-    if (isRenewal) {
-      catEl.textContent = '契約延長交渉';
-    } else if (session.dealType === 'loan') {
-      catEl.textContent = `レンタル加入交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
-    } else if (session.dealType === 'pre_contract') {
-      catEl.textContent = `来季事前合意 (ボスマン) 交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
-    } else if (session.dealType === 'free_agent') {
-      catEl.textContent = '無所属選手・獲得交渉';
+    const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
+    const clubLabelText = isRenewal ? (playerClub ? playerClub.name : '自クラブ') : (session.isFreeAgent ? '無所属 (フリー)' : (sellerClub ? sellerClub.name : '相手クラブ'));
+    if (clubDisplayObj && typeof getClubEmblemSvg === 'function') {
+      catEl.innerHTML = `${getClubEmblemSvg(clubDisplayObj, 18, 'profile-club-emblem')}<span>${clubLabelText}</span>`;
     } else {
-      catEl.textContent = `獲得交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+      catEl.textContent = clubLabelText;
     }
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
   if (posPillEl) {
-    const subText = subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : '';
-    posPillEl.innerHTML = `<span class="profile-pos-badge-main">${primaryPos}${subText}</span>`;
+    if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(target);
+    const mains = Array.isArray(target.mainPositions) && target.mainPositions.length > 0
+      ? target.mainPositions
+      : [primaryPos];
+    const subs = Array.isArray(target.subPositions) ? target.subPositions : subPosList;
+    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main">${mp}</span>`).join(' ');
+    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub">${sp}</span>`).join(' ');
+    posPillEl.innerHTML = `<div class="profile-pos-badges-wrap">${mainBadgesHtml}${subBadgesHtml}</div>`;
   }
 
   const titleEl = document.getElementById('neg-modal-title');
-  if (titleEl) titleEl.textContent = target.name;
+  if (titleEl) {
+    if (target.fullName && target.fullName !== target.name) {
+      titleEl.innerHTML = `<span class="profile-name-main">${target.name}</span><span class="profile-fullname-sub">(${target.fullName})</span>`;
+    } else {
+      titleEl.textContent = target.name;
+    }
+  }
 
   const metaEl = document.getElementById('neg-player-meta');
   if (metaEl) {
-    const avgRat = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
-    if (isRenewal) {
-      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>今季成績: <strong>${target.appearances}試合 ${target.goals}得点</strong></span><span>|</span><span>現給与: <strong class="accent-gold">${formatWage(target.wage)} (残り${target.contractYears}年)</strong></span>`;
-    } else {
-      const clubDisplay = session.isFreeAgent ? '<strong class="accent-gold">無所属 (Free Agent)</strong>' : `<strong>${sellerClub ? sellerClub.name : '他クラブ'}</strong>`;
-      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>所属: ${clubDisplay}</span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>現給与: <strong>${formatWage(target.wage)}</strong></span>`;
-    }
+    const rawNat = target.nationality || 'England';
+    const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
+    const natChip = `<span class="profile-bio-chip"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+    const ageChip = `<span class="profile-bio-chip">${target.age}歳</span>`;
+    const numChip = isRenewal ? `<span class="profile-bio-chip mono" style="color:var(--accent-green);font-weight:700;">#${target.squadNumber || '-'}</span>` : '';
+    const wageChip = `<span class="profile-bio-chip mono" style="color:var(--accent-gold);">${formatWage(target.wage)}</span>`;
+    metaEl.innerHTML = `${natChip}${ageChip}${numChip}${wageChip}`;
   }
 
   const maxFails = 2;
@@ -2325,10 +2342,6 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
-          <span>増減: £50K</span>
-        </div>
       </div>
 
       <div class="neg-control-group">
@@ -2372,15 +2385,11 @@ function renderNegotiationModal() {
       <div class="neg-control-group">
         <div class="neg-control-header">
           <span class="neg-control-label">週給負担率</span>
-          <span class="neg-control-val accent-gold" id="neg-loan-coverage-display">${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)</span>
+          <span class="neg-control-val accent-gold" id="neg-loan-coverage-display">${session.loanCoveragePercent}% (${formatWage(coverageAmt)})</span>
         </div>
         <div class="neg-slider-row">
           <input type="range" id="neg-loan-slider" class="neg-slider" min="50" max="100" step="5" value="${session.loanCoveragePercent}" ${session.completed ? 'disabled' : ''}>
           <span class="mono text-muted" style="font-size: 12px; width: 60px; text-align: right;">${session.loanCoveragePercent}%</span>
-        </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>相手側要求負担率: <strong class="mono accent-gold">${session.demandedLoanCoverage}% 以上</strong></span>
-          <span>選手現週給: <strong class="mono">${formatWage(weeklyWage)}</strong></span>
         </div>
       </div>
 
@@ -2397,9 +2406,6 @@ function renderNegotiationModal() {
               <option value="${Math.round(calculateTransferFee(target) * 0.9)}" ${session.buyOptionFee ? 'selected' : ''}>あり (${formatMoney(Math.round(calculateTransferFee(target) * 0.9))})</option>
             </select>
           </label>
-        </div>
-        <div class="text-muted" style="font-size: 11px; margin-top:4px;">
-          シーズン終了時に元クラブへ自動復帰（買取OP設定時は優先買取権）
         </div>
       </div>
     `;
@@ -2431,8 +2437,7 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>合流時期: <strong class="accent-green">来季7月1日付で合流</strong></span>
         </div>
       </div>
@@ -2505,10 +2510,6 @@ function renderNegotiationModal() {
           <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
-          <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
-        </div>
       </div>
 
       <div class="neg-control-group">
@@ -2519,10 +2520,6 @@ function renderNegotiationModal() {
         <div class="neg-slider-row">
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
-        </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
-          <span>増減: £50K</span>
         </div>
       </div>
 
@@ -2539,7 +2536,6 @@ function renderNegotiationModal() {
       <div class="neg-control-group">
         <div class="neg-control-header">
           <span class="neg-control-label">支払方法・契約条項</span>
-          <span class="mono text-cyan" style="font-size:11px;">分割/条項で交渉力UP</span>
         </div>
         <div class="neg-clauses-grid">
           <label class="neg-clause-item">
@@ -2581,10 +2577,10 @@ function renderNegotiationModal() {
   const safeBudgetVal = getSafeTransferBudget(playerClub);
   const budgetKvRowsHtml = `
     <div class="ui-kv-row">
-      <div class="ui-kv-label">クラブ資金</div>
+      <div class="ui-kv-label" style="color:#ffffff;">クラブ資金</div>
       <div class="ui-kv-content mono" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; font-size:12px;">
         <strong style="color:#ffffff;">${formatMoney(playerClub.funds)}</strong>
-        <span class="text-muted">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+        <span style="color:#cbd5e1;">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
       </div>
     </div>
     <div class="ui-kv-row">
@@ -2630,7 +2626,7 @@ function renderNegotiationModal() {
         </div>
         <div class="ui-stat-plate">
           <span class="ui-plate-label">選手現週給</span>
-          <span class="ui-plate-val">${formatWage(target.wage)}/週</span>
+          <span class="ui-plate-val">${formatWage(target.wage)}</span>
         </div>
       </div>
       <div class="ui-kv-list">
@@ -2772,9 +2768,11 @@ function renderNegotiationModal() {
     bodyEl.innerHTML = `
       ${dealTypeTabsHtml}
 
-      <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
-        ${session.statusMessage}
-      </div>
+      ${session.statusMessage ? `
+        <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
+          ${session.statusMessage}
+        </div>
+      ` : ''}
       <div class="neg-cashflow-warning ${initWarn.isCritical ? 'is-critical' : ''} ${initWarn.visible ? '' : 'hidden'}" id="neg-cashflow-warning-box">${initWarn.text}</div>
       ${natRuleWarnHtml}
 
@@ -2838,7 +2836,7 @@ function renderNegotiationModal() {
         const weeklyWage = target.wage || 20;
         const coverageAmt = Math.round(weeklyWage * (session.loanCoveragePercent / 100));
         const disp = document.getElementById('neg-loan-coverage-display');
-        if (disp) disp.textContent = `${session.loanCoveragePercent}% (${formatWage(coverageAmt)} / 週)`;
+        if (disp) disp.textContent = `${session.loanCoveragePercent}% (${formatWage(coverageAmt)})`;
       });
     }
   }
@@ -4134,6 +4132,7 @@ function closeNegotiationModal() {
   if (modalEl) {
     modalEl.classList.add('hidden');
   }
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.negotiationSession = null;
 }
 
