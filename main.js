@@ -12651,23 +12651,70 @@ function openInitialStaffSetupModal(club) {
   const clubRep = club ? (club.reputation || (club.basePower ? club.basePower * 80 : 4500)) : 4500;
   const clubPower = club ? (club.basePower || 65) : 65;
 
-  let mgrTierRanks = ['B', 'B', 'C', 'C'];
-  let coachTierRanks = ['B', 'B', 'C'];
+  // 全体水準は同等で「尖っている能力が異なる」トレードオフ型プロファイル（S/A/B, S/S/C, A/S/B 等）
+  let mgrProfiles = [];
+  let coachProfiles = [];
+  let baseMgrWage = 62;
+  let baseCoachWage = 20;
+
   if (!isD2Club && (clubRep >= 6600 || clubPower >= 73)) {
-    mgrTierRanks = ['S', 'S', 'A', 'A'];
-    coachTierRanks = ['A', 'A', 'B'];
+    baseMgrWage = 115;
+    baseCoachWage = 32;
+    mgrProfiles = [
+      { focus: 'tactics', rank: 'S', stats: { tactics: 92, motivation: 81, development: 72, discipline: 79 } },     // S/A/B/A
+      { focus: 'motivation', rank: 'S', stats: { tactics: 80, motivation: 93, development: 89, discipline: 62 } },  // A/S/S/C
+      { focus: 'development', rank: 'S', stats: { tactics: 73, motivation: 80, development: 92, discipline: 81 } }, // B/A/S/A
+      { focus: 'discipline', rank: 'S', stats: { tactics: 89, motivation: 63, development: 79, discipline: 91 } }   // S/C/A/S
+    ];
+    coachProfiles = [
+      { focus: 'coaching', rank: 'A', stats: { coaching: 90, youthDev: 72, analysis: 81 } }, // S/B/A
+      { focus: 'youthDev', rank: 'A', stats: { coaching: 71, youthDev: 91, analysis: 82 } }, // B/S/A
+      { focus: 'analysis', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 90 } }  // S/C/S
+    ];
   } else if (!isD2Club && (clubRep >= 5200 || clubPower >= 68)) {
-    mgrTierRanks = ['A', 'A', 'B', 'B'];
-    coachTierRanks = ['A', 'B', 'B'];
+    baseMgrWage = 86;
+    baseCoachWage = 25;
+    mgrProfiles = [
+      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 62, discipline: 79 } },     // S/B/C/A
+      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 61 } },  // B/S/A/C
+      { focus: 'development', rank: 'A', stats: { tactics: 63, motivation: 78, development: 89, discipline: 72 } }, // C/A/S/B
+      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 62, development: 71, discipline: 89 } }   // A/C/B/S
+    ];
+    coachProfiles = [
+      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 73 } }, // S/C/B
+      { focus: 'youthDev', rank: 'A', stats: { coaching: 73, youthDev: 89, analysis: 61 } }, // B/S/C
+      { focus: 'analysis', rank: 'A', stats: { coaching: 80, youthDev: 71, analysis: 81 } }  // A/B/A
+    ];
   } else if (!isD2Club && (clubRep >= 3800 || clubPower >= 59)) {
-    mgrTierRanks = ['B', 'B', 'C', 'C'];
-    coachTierRanks = ['B', 'B', 'C'];
+    baseMgrWage = 62;
+    baseCoachWage = 18;
+    mgrProfiles = [
+      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 60, discipline: 71 } },     // A/B/C/B
+      { focus: 'motivation', rank: 'B', stats: { tactics: 61, motivation: 83, development: 71, discipline: 68 } },  // C/A/B/B
+      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 60, development: 84, discipline: 69 } }, // B/C/A/B
+      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 59, discipline: 83 } }   // B/B/C/A
+    ];
+    coachProfiles = [
+      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 59, analysis: 69 } }, // A/C/B
+      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 59 } }, // B/A/C
+      { focus: 'analysis', rank: 'B', stats: { coaching: 60, youthDev: 70, analysis: 82 } }  // C/B/A
+    ];
   } else {
-    mgrTierRanks = ['B', 'C', 'C', 'C'];
-    coachTierRanks = ['B', 'C', 'C'];
+    baseMgrWage = 40;
+    baseCoachWage = 12;
+    mgrProfiles = [
+      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 61, development: 56, discipline: 66 } },     // B/C/C/B
+      { focus: 'motivation', rank: 'C', stats: { tactics: 57, motivation: 75, development: 67, discipline: 59 } },  // C/B/B/C
+      { focus: 'development', rank: 'C', stats: { tactics: 66, motivation: 57, development: 75, discipline: 60 } }, // B/C/B/C
+      { focus: 'discipline', rank: 'C', stats: { tactics: 60, motivation: 67, development: 56, discipline: 74 } }   // C/B/C/B
+    ];
+    coachProfiles = [
+      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 57, analysis: 62 } }, // B/C/C
+      { focus: 'youthDev', rank: 'C', stats: { coaching: 58, youthDev: 75, analysis: 61 } }, // C/B/C
+      { focus: 'analysis', rank: 'C', stats: { coaching: 62, youthDev: 57, analysis: 74 } }  // C/C/B
+    ];
   }
 
-  const wageByRank = { S: 122, A: 88, B: 62, C: 40 };
   const tacticPool = [
     { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
     { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
@@ -12675,49 +12722,43 @@ function openInitialStaffSetupModal(club) {
     { formation: '4-4-2', tactic: 'wingplay', label: 'サイド攻撃' },
     { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
   ];
-  const distinctFocuses = ['tactics', 'motivation', 'development', 'discipline'];
   const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
+  const shuffledMgrProfiles = [...mgrProfiles].sort(() => Math.random() - 0.5);
 
-  const managerCandidates = distinctFocuses.map((focusKey, i) => {
+  const managerCandidates = shuffledMgrProfiles.map((prof, i) => {
     const cfg = shuffledTactics[i];
-    const rk = mgrTierRanks[i] || 'B';
     const nat = ['Spain', 'Germany', 'England', 'Portugal', 'Italy'][i % 5];
     const mgrObj = typeof createManager === 'function'
       ? createManager({
           nationality: nat,
-          age: 39 + i * 5,
-          rank: rk,
-          focus: focusKey,
+          age: 39 + randInt(0, 18),
+          rank: prof.rank,
+          focus: prof.focus,
+          stats: prof.stats,
           preferredFormation: cfg.formation,
           preferredTactic: cfg.tactic,
-          weeklyWage: (wageByRank[rk] || 62) + randInt(-4, 6),
+          weeklyWage: baseMgrWage + randInt(-4, 5),
           trust: 85,
           contractYears: 3
         }, club.id, usedNames)
-      : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: rk, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: 62, trust: 85, contractYears: 3 };
+      : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: prof.rank, stats: prof.stats, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: baseMgrWage, trust: 85, contractYears: 3 };
     mgrObj.tacticLabel = cfg.label;
     return mgrObj;
   });
 
-  // 4部門それぞれの初期コーチ候補（必ず3つの異なる特徴 coaching / youthDev / analysis を1名ずつ用意し、強さはクラブ格連動）
+  // 4部門それぞれの初期コーチ候補（同水準・異なる尖り方を持つ3名を選択可能にする）
   const buildCoachCandidates = (cat) => {
     const db = (typeof COACHES_DATABASE !== 'undefined' && Array.isArray(COACHES_DATABASE[cat])) ? COACHES_DATABASE[cat] : [];
-    const coachFocuses = ['coaching', 'youthDev', 'analysis'];
-    const coachWageByRank = { A: 32, B: 21, C: 13 };
-    return coachFocuses.map((fKey, idx) => {
-      const targetRk = coachTierRanks[idx] || 'B';
-      const exactMatch = db.find(d => d.rank === targetRk && d.focus === fKey)
-        || db.find(d => d.rank === targetRk)
-        || db.find(d => d.focus === fKey)
-        || db[idx % Math.max(1, db.length)]
-        || { nationality: 'England', age: 46, rank: targetRk, focus: fKey, weeklyWage: coachWageByRank[targetRk] || 20 };
-      const clonedDef = {
+    const shuffledProfs = [...coachProfiles].sort(() => Math.random() - 0.5);
+    return shuffledProfs.map((prof, idx) => {
+      const exactMatch = db.find(d => d.focus === prof.focus) || db[idx % Math.max(1, db.length)] || { nationality: 'England', age: 46 };
+      return createCoach({
         ...exactMatch,
-        rank: targetRk,
-        focus: fKey,
-        weeklyWage: coachWageByRank[targetRk] ? coachWageByRank[targetRk] + randInt(-2, 3) : (exactMatch.weeklyWage || 20)
-      };
-      return createCoach(clonedDef, cat, usedNames);
+        rank: prof.rank,
+        focus: prof.focus,
+        stats: prof.stats,
+        weeklyWage: baseCoachWage + randInt(-2, 3)
+      }, cat, usedNames);
     });
   };
   const coachCandidates = {
