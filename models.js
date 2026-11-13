@@ -15,6 +15,15 @@ let playerIdCounter = 1;
 /**
  * 監督オブジェクトの生成（完全架空名ジェネレーターによる動的命名）
  */
+function getStaffStatRank(val) {
+  const v = typeof val === 'number' ? val : 68;
+  if (v >= 88) return 'S';
+  if (v >= 77) return 'A';
+  if (v >= 65) return 'B';
+  if (v >= 54) return 'C';
+  return 'D';
+}
+
 function inferManagerRankFromWage(wage = 70) {
   if (wage >= 110) return 'S';
   if (wage >= 80) return 'A';
@@ -53,22 +62,26 @@ function ensureManagerRankAndStats(mgr, focusHint = null) {
 
 function getManagerRankEffects(manager) {
   if (!manager) {
-    return { rank: 'C', minReputation: 0, buffPerMatch: 0.01, highTrustBonus: 0.005, youthGrowthBonus: 0, allGrowthBonus: 0, fatigueMult: 1.0 };
+    return { minReputation: 0, buffPerMatch: 0.01, highTrustBonus: 0.005, youthGrowthBonus: 0, allGrowthBonus: 0, fatigueMult: 1.0 };
   }
   ensureManagerRankAndStats(manager);
-  const defs = typeof MANAGER_RANK_DEFINITIONS !== 'undefined' ? MANAGER_RANK_DEFINITIONS : {};
-  const def = defs[manager.rank] || { minReputation: 0, buffPerMatch: 0.016, highTrustBonus: 0.008, youthGrowthBonus: 0.1, allGrowthBonus: 0 };
   const st = manager.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
-  const tacticsExtra = Math.max(0, (st.tactics - 70) * 0.0004);
-  const devExtra = Math.max(0, (st.development - 70) * 0.008);
-  const discMult = clamp(1.0 - Math.max(0, (st.discipline - 70) * 0.003), 0.91, 1.0);
+  const avgStat = (st.tactics + st.motivation + st.development + st.discipline) / 4;
+  const minReputation = avgStat >= 85 ? 6200 : (avgStat >= 77 ? 4500 : 0);
+  const tacRank = getStaffStatRank(st.tactics);
+  const motRank = getStaffStatRank(st.motivation);
+  const devRank = getStaffStatRank(st.development);
+  const buffPerMatch = tacRank === 'S' ? 0.036 : (tacRank === 'A' ? 0.027 : (tacRank === 'B' ? 0.018 : 0.011));
+  const highTrustBonus = motRank === 'S' ? 0.016 : (motRank === 'A' ? 0.011 : 0.007);
+  const youthGrowthBonus = devRank === 'S' ? 0.35 : (devRank === 'A' ? 0.24 : (devRank === 'B' ? 0.14 : 0.06));
+  const allGrowthBonus = avgStat >= 84 ? 0.20 : (avgStat >= 76 ? 0.10 : 0);
+  const discMult = clamp(1.0 - Math.max(0, (st.discipline - 65) * 0.003), 0.90, 1.0);
   return {
-    rank: manager.rank,
-    minReputation: def.minReputation || 0,
-    buffPerMatch: (def.buffPerMatch || 0.016) + tacticsExtra,
-    highTrustBonus: def.highTrustBonus || 0.008,
-    youthGrowthBonus: (def.youthGrowthBonus || 0.1) + devExtra,
-    allGrowthBonus: def.allGrowthBonus || 0,
+    minReputation,
+    buffPerMatch,
+    highTrustBonus,
+    youthGrowthBonus,
+    allGrowthBonus,
     fatigueMult: discMult
   };
 }
@@ -220,8 +233,10 @@ function getClubCoachingEffects(club) {
   const calcCoachPower = (c) => {
     if (!c) return 0;
     ensureCoachStats(c);
-    const rankBase = c.rank === 'A' ? 0.85 : (c.rank === 'B' ? 0.62 : 0.38);
-    const statBonus = Math.max(0, ((c.stats && c.stats.coaching ? c.stats.coaching : 70) - 65) * 0.008);
+    const cVal = (c.stats && typeof c.stats.coaching === 'number') ? c.stats.coaching : 70;
+    const cRk = getStaffStatRank(cVal);
+    const rankBase = cRk === 'S' ? 0.95 : (cRk === 'A' ? 0.80 : (cRk === 'B' ? 0.58 : 0.36));
+    const statBonus = Math.max(0, (cVal - 60) * 0.006);
     return rankBase + statBonus;
   };
   let attScore = 0;
@@ -2513,39 +2528,47 @@ function computeStatGrowth(player, isPlayerClub = false) {
       const coaches = playerClub.coaches;
       const pos = player.pos;
 
-      // 1. オフェンスコーチ（最大2名）：FW/WG/AMの成長率にボーナス（合算補正）
+      // 1. オフェンスコーチ（最大2名）：youthDev・coachingランクに応じたFW/WG/AM育成補正
       if (['CF', 'LW', 'RW', 'AM'].includes(pos) && Array.isArray(coaches.attacking)) {
         coaches.attacking.forEach(c => {
           if (!c) return;
-          const bonusAmt = c.rank === 'A' ? 2 : 1;
-          const chance = c.rank === 'A' ? 0.70 : (c.rank === 'B' ? 0.50 : 0.35);
+          ensureCoachStats(c);
+          const yRk = getStaffStatRank(c.stats.youthDev);
+          const bonusAmt = (yRk === 'S' || yRk === 'A') ? 2 : 1;
+          const chance = yRk === 'S' ? 0.80 : (yRk === 'A' ? 0.65 : (yRk === 'B' ? 0.48 : 0.32));
           if (Math.random() < chance) dAtk += bonusAmt;
         });
       }
 
-      // 2. ディフェンスコーチ（最大2名）：DF/DMの守備系能力の成長率にボーナス（合算補正）
+      // 2. ディフェンスコーチ（最大2名）：youthDevランクに応じたDF/DM育成補正
       if (['CB', 'LB', 'RB', 'DM'].includes(pos) && Array.isArray(coaches.defending)) {
         coaches.defending.forEach(c => {
           if (!c) return;
-          const bonusAmt = c.rank === 'A' ? 2 : 1;
-          const chance = c.rank === 'A' ? 0.70 : (c.rank === 'B' ? 0.50 : 0.35);
+          ensureCoachStats(c);
+          const yRk = getStaffStatRank(c.stats.youthDev);
+          const bonusAmt = (yRk === 'S' || yRk === 'A') ? 2 : 1;
+          const chance = yRk === 'S' ? 0.80 : (yRk === 'A' ? 0.65 : (yRk === 'B' ? 0.48 : 0.32));
           if (Math.random() < chance) dDef += bonusAmt;
         });
       }
 
-      // 3. GKコーチ（1名）：GKの能力成長速度を大幅に引き上げ
+      // 3. GKコーチ（1名）：GKの能力成長速度を引き上げ
       if (pos === 'GK' && coaches.goalkeeping) {
         const c = coaches.goalkeeping;
-        const bonusAmt = c.rank === 'A' ? 3 : (c.rank === 'B' ? 2 : 1);
+        ensureCoachStats(c);
+        const yRk = getStaffStatRank(c.stats.youthDev);
+        const bonusAmt = (yRk === 'S' || yRk === 'A') ? 3 : (yRk === 'B' ? 2 : 1);
         dDef += bonusAmt;
         if (Math.random() < 0.6) dSta += 1;
       }
 
-      // 4. フィジカルコーチ（1名）：全選手のフィジカル成長および疲労回復を促進
+      // 4. フィジカルコーチ（1名）：フィジカル成長促進
       if (coaches.fitness) {
         const c = coaches.fitness;
-        const bonusAmt = c.rank === 'A' ? 2 : 1;
-        const chance = c.rank === 'A' ? 0.65 : (c.rank === 'B' ? 0.45 : 0.30);
+        ensureCoachStats(c);
+        const cRk = getStaffStatRank(c.stats.coaching);
+        const bonusAmt = (cRk === 'S' || cRk === 'A') ? 2 : 1;
+        const chance = cRk === 'S' ? 0.75 : (cRk === 'A' ? 0.60 : (cRk === 'B' ? 0.45 : 0.30));
         if (Math.random() < chance) dSta += bonusAmt;
       }
 

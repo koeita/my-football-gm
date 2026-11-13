@@ -11955,7 +11955,7 @@ function renderTacticalManagerBanner() {
         </div>
         <div class="manager-banner-info">
           <div class="manager-banner-title">
-            <span class="mgr-rank-badge rank-${mgr.rank || 'B'}">${mgr.rank || 'B'}</span>
+            <span class="text-muted">監督:</span>
             <strong class="manager-name">${mgr.name}</strong>
             <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
             <span class="manager-trust-label mono">[信頼度 ${mgr.trust}%]</span>
@@ -12064,6 +12064,10 @@ function renderManagerManagementPanel() {
     const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
     const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 48) : '';
     const mStats = mgr.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
+    const rTac = getStaffStatRank(mStats.tactics);
+    const rMot = getStaffStatRank(mStats.motivation);
+    const rDev = getStaffStatRank(mStats.development);
+    const rDis = getStaffStatRank(mStats.discipline);
 
     currentCardHtml = `
       <div class="manager-current-card">
@@ -12073,7 +12077,6 @@ function renderManagerManagementPanel() {
           </div>
           <div class="manager-current-info">
             <div class="manager-current-name" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-              <span class="mgr-rank-badge rank-${mgr.rank || 'B'}">RANK ${mgr.rank || 'B'}</span>
               <span>${mgr.name}</span>
               <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
               <span class="mono text-muted" style="font-size: 11px;">(${mgr.nationality} / ${mgr.age}歳)</span>
@@ -12085,10 +12088,10 @@ function renderManagerManagementPanel() {
               <span>週給: <strong class="accent-gold">£${mgr.weeklyWage}k</strong> (年俸 £${Math.round(mgr.weeklyWage * 5.2) / 10}M)</span>
             </div>
             <div class="staff-stats-chips">
-              <span class="staff-stat-chip">戦術眼 <strong>${mStats.tactics}</strong></span>
-              <span class="staff-stat-chip">人心掌握 <strong>${mStats.motivation}</strong></span>
-              <span class="staff-stat-chip">育成手腕 <strong>${mStats.development}</strong></span>
-              <span class="staff-stat-chip">規律管理 <strong>${mStats.discipline}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
             </div>
             <div class="manager-current-bio">
               ${mgr.bio}
@@ -12154,23 +12157,27 @@ function openManagerHireModal() {
     `;
   } else {
     const clubRep = club ? (club.reputation || 4000) : 4000;
-    let rankFilter = 'ALL';
+    let specFilter = 'ALL';
 
     const renderList = () => {
-      const rankOrder = { S: 0, A: 1, B: 2, C: 3 };
+      const avgOf = (m) => {
+        const s = m.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
+        return s.tactics + s.motivation + s.development + s.discipline;
+      };
       const filtered = freeList
-        .filter(c => rankFilter === 'ALL' || (c.rank || 'B') === rankFilter)
-        .sort((a, b) => (rankOrder[a.rank] ?? 9) - (rankOrder[b.rank] ?? 9) || (b.weeklyWage || 0) - (a.weeklyWage || 0));
+        .filter(c => specFilter === 'ALL' || (c.specialty || '') === specFilter)
+        .sort((a, b) => avgOf(b) - avgOf(a) || (b.weeklyWage || 0) - (a.weeklyWage || 0));
 
       let noteHtml = currentMgr
         ? `<div class="mono" style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: #ff7675; line-height: 1.5;">後任監督を選択すると、現監督（<strong>${currentMgr.name}</strong>）を解任して就任します（違約金 <strong>£${buyoutFee.toLocaleString()}k</strong> / 現クラブ格 Rep: ${clubRep}）。</div>`
         : `<div class="mono" style="background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 4px; padding: 10px 14px; font-size: 12px; color: var(--accent-green); line-height: 1.5;">新監督を選択して契約締結（契約期間: 3年）を行います（現クラブ格 Rep: ${clubRep}）。</div>`;
 
+      const specList = ['ALL', '戦術の鬼', '人心掌握', '育成の名匠', '規律重視'];
       const filterHtml = `
         <div class="mgr-filter-bar">
-          ${['ALL', 'S', 'A', 'B', 'C'].map(rk => `
-            <button type="button" class="btn btn-sm mono ${rankFilter === rk ? 'btn-primary' : 'btn-secondary'} btn-mgr-rank-filter" data-rank="${rk}">
-              ${rk === 'ALL' ? `すべて (${freeList.length})` : `RANK ${rk} (${freeList.filter(x => x.rank === rk).length})`}
+          ${specList.map(sp => `
+            <button type="button" class="btn btn-sm mono ${specFilter === sp ? 'btn-primary' : 'btn-secondary'} btn-mgr-rank-filter" data-spec="${sp}">
+              ${sp === 'ALL' ? `すべて (${freeList.length})` : `${sp} (${freeList.filter(x => x.specialty === sp).length})`}
             </button>
           `).join('')}
         </div>
@@ -12184,6 +12191,10 @@ function openManagerHireModal() {
             const eff = typeof getManagerRankEffects === 'function' ? getManagerRankEffects(cand) : { minReputation: 0 };
             const repBlocked = clubRep < (eff.minReputation || 0);
             const st = cand.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
+            const rTac = getStaffStatRank(st.tactics);
+            const rMot = getStaffStatRank(st.motivation);
+            const rDev = getStaffStatRank(st.development);
+            const rDis = getStaffStatRank(st.discipline);
             return `
               <div class="manager-candidate-card" style="margin: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px;">
                 <div>
@@ -12191,7 +12202,6 @@ function openManagerHireModal() {
                     <div class="candidate-avatar">${cAvatar}</div>
                     <div style="flex:1;">
                       <div class="candidate-info-name" style="font-weight: 700; font-size: 14px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span class="mgr-rank-badge rank-${cand.rank || 'B'}">RANK ${cand.rank || 'B'}</span>
                         <span>${cand.name}</span>
                         <span class="staff-specialty-tag">${cand.specialty || 'バランス型'}</span>
                       </div>
@@ -12208,10 +12218,10 @@ function openManagerHireModal() {
                       <strong class="accent-gold">£${cand.weeklyWage}k/週 ${eff.minReputation > 0 ? `(要Rep ${eff.minReputation})` : '(制限なし)'}</strong>
                     </div>
                     <div class="staff-stats-chips">
-                      <span class="staff-stat-chip">戦術眼 <strong>${st.tactics}</strong></span>
-                      <span class="staff-stat-chip">人心掌握 <strong>${st.motivation}</strong></span>
-                      <span class="staff-stat-chip">育成手腕 <strong>${st.development}</strong></span>
-                      <span class="staff-stat-chip">規律管理 <strong>${st.discipline}</strong></span>
+                      <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+                      <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+                      <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+                      <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
                     </div>
                     <div class="candidate-bio text-muted" style="margin-top: 4px; font-size: 11px; line-height: 1.4;">${cand.bio}</div>
                   </div>
@@ -12231,7 +12241,7 @@ function openManagerHireModal() {
 
       body.querySelectorAll('.btn-mgr-rank-filter').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          rankFilter = e.currentTarget.dataset.rank || 'ALL';
+          specFilter = e.currentTarget.dataset.spec || 'ALL';
           renderList();
         });
       });
@@ -12383,17 +12393,16 @@ function renderCoachingStaffPanel() {
     const catClass = `tag-${slot.category}`;
     if (c) {
       if (typeof ensureCoachStats === 'function') ensureCoachStats(c);
-      const rankClass = `rank-${(c.rank || 'B').toLowerCase()}`;
       const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
       const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+      const rC = getStaffStatRank(cst.coaching);
+      const rY = getStaffStatRank(cst.youthDev);
+      const rA = getStaffStatRank(cst.analysis);
       return `
         <div class="coach-slot-card occupied">
           <div class="coach-slot-head">
             <span class="coach-role-tag ${catClass} mono">[${slot.roleLabel}]</span>
-            <div style="display:flex; align-items:center; gap:4px;">
-              <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
-              <span class="coach-rank-badge ${rankClass} mono">RANK ${c.rank}</span>
-            </div>
+            <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
           </div>
           <div class="coach-slot-main">
             <div class="coach-avatar-wrap">
@@ -12406,9 +12415,9 @@ function renderCoachingStaffPanel() {
                 <span class="text-muted">(${c.nationality}/${c.age}歳)</span>
               </div>
               <div class="staff-stats-chips">
-                <span class="staff-stat-chip">指導 <strong>${cst.coaching}</strong></span>
-                <span class="staff-stat-chip">育成 <strong>${cst.youthDev}</strong></span>
-                <span class="staff-stat-chip">分析 <strong>${cst.analysis}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
               </div>
               <div class="coach-effect-note mono">${slot.effectDesc}</div>
             </div>
@@ -12482,9 +12491,11 @@ function openCoachHireModal(category, slotIndex) {
   } else {
     body.innerHTML = list.map(c => {
       if (typeof ensureCoachStats === 'function') ensureCoachStats(c);
-      const rankClass = `rank-${(c.rank || 'B').toLowerCase()}`;
       const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
       const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+      const rC = getStaffStatRank(cst.coaching);
+      const rY = getStaffStatRank(cst.youthDev);
+      const rA = getStaffStatRank(cst.analysis);
       return `
         <div class="coach-candidate-card">
           <div class="coach-cand-left">
@@ -12494,7 +12505,6 @@ function openCoachHireModal(category, slotIndex) {
             <div class="coach-cand-info">
               <div class="coach-cand-name-row">
                 <strong class="coach-name">${c.name}</strong>
-                <span class="coach-rank-badge ${rankClass} mono">RANK ${c.rank}</span>
                 <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
                 <span class="accent-gold mono" style="font-size: 11px;">£${c.weeklyWage}k/週</span>
               </div>
@@ -12502,9 +12512,9 @@ function openCoachHireModal(category, slotIndex) {
                 ${c.nationality} / ${c.age}歳
               </div>
               <div class="staff-stats-chips">
-                <span class="staff-stat-chip">指導 <strong>${cst.coaching}</strong></span>
-                <span class="staff-stat-chip">育成 <strong>${cst.youthDev}</strong></span>
-                <span class="staff-stat-chip">分析 <strong>${cst.analysis}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
               </div>
               <div class="coach-cand-bio">${c.bio}</div>
             </div>
@@ -12564,9 +12574,9 @@ function hireCoach(category, slotIndex, coachId) {
 
   if (oldCoach) {
     gameState.freeCoaches[category].push(oldCoach);
-    addDailyLog(`[指導陣交代] ${oldCoach.name}コーチとの契約を終了し、${newCoach.name}コーチ（RANK ${newCoach.rank}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+    addDailyLog(`[指導陣交代] ${oldCoach.name}コーチとの契約を終了し、${newCoach.name}コーチ（${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
   } else {
-    addDailyLog(`[指導陣招聘] ${newCoach.name}コーチ（${newCoach.roleLabel} / RANK ${newCoach.rank}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+    addDailyLog(`[指導陣招聘] ${newCoach.name}コーチ（${newCoach.roleLabel} / ${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
   }
 
   renderAll();
@@ -12638,105 +12648,153 @@ function openInitialStaffSetupModal(club) {
     return mgrObj;
   });
 
-  // 初期コーチ陣（4枠：オフェンス1、ディフェンス1、GK1、フィジカル1）
-  const initialCoaches = createInitialCoaches(true);
+  // 4部門それぞれの初期コーチ候補（各3名）を生成して選択可能にする
+  const buildCoachCandidates = (cat) => {
+    const db = (typeof COACHES_DATABASE !== 'undefined' && Array.isArray(COACHES_DATABASE[cat])) ? COACHES_DATABASE[cat] : [];
+    const pool = [...db].sort(() => Math.random() - 0.5).slice(0, 3);
+    return pool.map(d => createCoach(d, cat, usedNames));
+  };
+  const coachCandidates = {
+    attacking: buildCoachCandidates('attacking'),
+    defending: buildCoachCandidates('defending'),
+    goalkeeping: buildCoachCandidates('goalkeeping'),
+    fitness: buildCoachCandidates('fitness')
+  };
 
-  // モーダル内ステート
   window._preseasonStaffSetup = {
+    step: 1,
     selectedManagerIdx: 0,
+    selectedCoachIdx: { attacking: 0, defending: 0, goalkeeping: 0, fitness: 0 },
     candidates: managerCandidates,
-    coaches: initialCoaches,
+    coachCandidates,
     club: club
   };
 
   const renderModalContent = () => {
     const state = window._preseasonStaffSetup;
-    const managersHtml = state.candidates.map((m, idx) => {
-      const isSelected = idx === state.selectedManagerIdx;
-      const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 48) : '';
-      return `
-        <div class="staff-candidate-card ${isSelected ? 'selected' : ''}" data-mgr-index="${idx}" style="cursor: pointer; padding: 12px; border-radius: 6px; border: 1.5px solid ${isSelected ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background: ${isSelected ? 'rgba(46,204,113,0.08)' : 'rgba(255,255,255,0.02)'}; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s, background 0.15s;">
-          <input type="radio" name="manager-candidate-radio" ${isSelected ? 'checked' : ''} style="margin: 0; pointer-events: none;">
-          <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <span class="font-bold" style="font-size: 14px; color: ${isSelected ? 'var(--accent-green)' : 'var(--text-main)'}; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span class="mgr-rank-badge rank-${m.rank || 'B'}">RANK ${m.rank || 'B'}</span>
-                <span>${m.name} 監督</span>
-                <span class="staff-specialty-tag">${m.specialty || 'バランス型'}</span>
-              </span>
-              <span class="mono accent-gold font-bold" style="font-size: 12px;">£${m.weeklyWage}k/週</span>
+    if (state.step === 1) {
+      const managersHtml = state.candidates.map((m, idx) => {
+        const isSelected = idx === state.selectedManagerIdx;
+        const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 48) : '';
+        const mst = m.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
+        const rTac = getStaffStatRank(mst.tactics);
+        const rMot = getStaffStatRank(mst.motivation);
+        const rDev = getStaffStatRank(mst.development);
+        const rDis = getStaffStatRank(mst.discipline);
+        return `
+          <div class="staff-candidate-card ${isSelected ? 'selected' : ''}" data-mgr-index="${idx}" style="cursor: pointer; padding: 12px; border-radius: 6px; border: 1.5px solid ${isSelected ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background: ${isSelected ? 'rgba(46,204,113,0.08)' : 'rgba(255,255,255,0.02)'}; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s, background 0.15s;">
+            <input type="radio" name="manager-candidate-radio" ${isSelected ? 'checked' : ''} style="margin: 0; pointer-events: none;">
+            <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span class="font-bold" style="font-size: 14px; color: ${isSelected ? 'var(--accent-green)' : 'var(--text-main)'}; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span>${m.name} 監督</span>
+                  <span class="staff-specialty-tag">${m.specialty || 'バランス型'}</span>
+                </span>
+                <span class="mono accent-gold font-bold" style="font-size: 12px;">£${m.weeklyWage}k/週</span>
+              </div>
+              <div class="mono text-muted" style="font-size: 11px; margin-top: 3px;">${m.nationality} / ${m.age}歳 / 契約3年</div>
+              <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                <span class="badge mono" style="font-size: 10px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">得意: ${m.preferredFormation}</span>
+                <span class="badge mono" style="font-size: 10px; background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4);">哲学: ${m.tacticLabel}</span>
+              </div>
+              <div class="staff-stats-chips">
+                <span class="staff-stat-chip stat-rank-${rTac}">戦術眼 <strong>${rTac}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rMot}">人心掌握 <strong>${rMot}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rDev}">育成手腕 <strong>${rDev}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rDis}">規律管理 <strong>${rDis}</strong></span>
+              </div>
             </div>
-            <div class="mono text-muted" style="font-size: 11px; margin-top: 3px;">${m.nationality} / ${m.age}歳 / 契約3年</div>
-            <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
-              <span class="badge mono" style="font-size: 10px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4);">得意: ${m.preferredFormation}</span>
-              <span class="badge mono" style="font-size: 10px; background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4);">哲学: ${m.tacticLabel}</span>
-            </div>
-            <div class="staff-stats-chips">
-              <span class="staff-stat-chip">戦術眼 <strong>${(m.stats && m.stats.tactics) || 70}</strong></span>
-              <span class="staff-stat-chip">人心掌握 <strong>${(m.stats && m.stats.motivation) || 70}</strong></span>
-              <span class="staff-stat-chip">育成手腕 <strong>${(m.stats && m.stats.development) || 70}</strong></span>
-              <span class="staff-stat-chip">規律管理 <strong>${(m.stats && m.stats.discipline) || 70}</strong></span>
-            </div>
+          </div>
+        `;
+      }).join('');
+
+      body.innerHTML = `
+        <div style="margin-bottom: 8px;">
+          <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 1 / 2] HEAD COACH SELECTION / 監督選任</div>
+          <p style="font-size: 12px; line-height: 1.5; margin: 0 0 10px 0; color: var(--text-main);">
+            まずチームの戦術方針を担う監督を以下の候補者から選任してください（次画面でコーチ陣を選任します）。
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${managersHtml}
           </div>
         </div>
       `;
-    }).join('');
+      if (confirmBtn) confirmBtn.textContent = '次へ：コーチを選ぶ ▶';
 
-    const coachSlots = [
-      { cat: 'attacking', role: 'オフェンス', c: (state.coaches.attacking || [])[0] },
-      { cat: 'defending', role: 'ディフェンス', c: (state.coaches.defending || [])[0] },
-      { cat: 'goalkeeping', role: 'GK', c: state.coaches.goalkeeping },
-      { cat: 'fitness', role: 'フィジカル', c: state.coaches.fitness }
-    ];
-
-    const coachesHtml = coachSlots.map(slot => {
-      const c = slot.c;
-      const avatarHtml = c && typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
-      return `
-        <div style="padding: 8px 10px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
-          <div style="flex-shrink: 0;">${avatarHtml}</div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span class="mono text-muted" style="font-size: 10px;">[${slot.role}]</span>
-              <span class="mono font-bold" style="font-size: 10px; color: var(--accent-green);">RANK ${c ? c.rank : 'B'}</span>
-            </div>
-            <div class="font-bold" style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c ? c.name : '未定'}</div>
-            <div class="mono accent-gold" style="font-size: 10px;">£${c ? c.weeklyWage : 25}k/週</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    body.innerHTML = `
-      <div style="margin-bottom: 16px;">
-        <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 1] HEAD COACH SELECTION / 監督選任</div>
-        <p style="font-size: 12px; line-height: 1.5; margin: 0 0 10px 0; color: var(--text-main);">
-          新シーズンの開幕に向け、チームの戦術方針を担う監督を以下の候補者から選任してください。選任した監督の得意陣形・戦術スタイルがチームの初期哲学となります。
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          ${managersHtml}
-        </div>
-      </div>
-
-      <div style="margin-bottom: 8px;">
-        <div class="mono text-muted" style="font-size: 11px; margin-bottom: 6px;">[STEP 2] TECHNICAL COACHING STAFF / 初期コーチ体制の確認</div>
-        <p style="font-size: 11px; line-height: 1.4; margin: 0 0 8px 0; color: var(--text-muted);">
-          指導陣各部門（攻撃、守備、GK、フィジカル）の初期スタッフです。開幕後の「経営」タブより最大6枠まで追加招聘や交代が可能です。
-        </p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
-          ${coachesHtml}
-        </div>
-      </div>
-    `;
-
-    body.querySelectorAll('.staff-candidate-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        const idx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
-        window._preseasonStaffSetup.selectedManagerIdx = idx;
-        renderModalContent();
+      body.querySelectorAll('.staff-candidate-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          state.selectedManagerIdx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
+          renderModalContent();
+        });
       });
-    });
+    } else {
+      const catMeta = [
+        { cat: 'attacking', role: 'オフェンスコーチ' },
+        { cat: 'defending', role: 'ディフェンスコーチ' },
+        { cat: 'goalkeeping', role: 'GKコーチ' },
+        { cat: 'fitness', role: 'フィジカルコーチ' }
+      ];
+      const sectionsHtml = catMeta.map(({ cat, role }) => {
+        const list = state.coachCandidates[cat] || [];
+        const selIdx = state.selectedCoachIdx[cat] || 0;
+        const cards = list.map((c, idx) => {
+          const isSel = idx === selIdx;
+          const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+          const rC = getStaffStatRank(cst.coaching);
+          const rY = getStaffStatRank(cst.youthDev);
+          const rA = getStaffStatRank(cst.analysis);
+          return `
+            <div class="initial-coach-choice ${isSel ? 'selected' : ''}" data-coach-cat="${cat}" data-coach-idx="${idx}" style="cursor:pointer; padding:8px 10px; border-radius:6px; border:1.5px solid ${isSel ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; background:${isSel ? 'rgba(46,204,113,0.08)' : 'rgba(0,0,0,0.28)'};">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <strong style="font-size:12px; color:${isSel ? 'var(--accent-green)' : '#fff'};">${c.name}</strong>
+                <span class="mono accent-gold" style="font-size:10.5px;">£${c.weeklyWage}k/w</span>
+              </div>
+              <div class="mono text-muted" style="font-size:10px; margin:2px 0 4px;">${c.nationality} (${c.age}歳) / <span class="staff-specialty-tag">${c.specialty}</span></div>
+              <div class="staff-stats-chips" style="margin-top:2px;">
+                <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
+                <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return `
+          <div style="margin-bottom: 12px;">
+            <div class="mono" style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">[${role}]</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(195px, 1fr)); gap:8px;">${cards}</div>
+          </div>
+        `;
+      }).join('');
+
+      body.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+          <div class="mono text-muted" style="font-size: 11px;">[STEP 2 / 2] COACHING STAFF SELECTION / 初期コーチ選任</div>
+          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-back-to-mgr-step">◀ 監督選択へ戻る</button>
+        </div>
+        <p style="font-size: 11.5px; line-height: 1.4; margin: 0 0 10px 0; color: var(--text-muted);">
+          各部門（攻撃・守備・GK・フィジカル）の初期コーチを1名ずつ選任してください（指導・育成・分析の各ランクに応じて効果が変化します）。
+        </p>
+        ${sectionsHtml}
+      `;
+      if (confirmBtn) confirmBtn.textContent = '指導体制を確定してプレシーズン開幕へ';
+
+      const backBtn = document.getElementById('btn-back-to-mgr-step');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          state.step = 1;
+          renderModalContent();
+        });
+      }
+      body.querySelectorAll('.initial-coach-choice').forEach(el => {
+        el.addEventListener('click', (e) => {
+          const cat = e.currentTarget.dataset.coachCat;
+          const idx = parseInt(e.currentTarget.dataset.coachIdx, 10);
+          state.selectedCoachIdx[cat] = idx;
+          renderModalContent();
+        });
+      });
+    }
   };
 
   renderModalContent();
@@ -12747,20 +12805,31 @@ function openInitialStaffSetupModal(club) {
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       const state = window._preseasonStaffSetup;
+      if (state.step === 1) {
+        state.step = 2;
+        renderModalContent();
+        return;
+      }
       const selectedMgr = state.candidates[state.selectedManagerIdx];
+      const selCoaches = {
+        attacking: [ state.coachCandidates.attacking[state.selectedCoachIdx.attacking || 0] ].filter(Boolean),
+        defending: [ state.coachCandidates.defending[state.selectedCoachIdx.defending || 0] ].filter(Boolean),
+        goalkeeping: state.coachCandidates.goalkeeping[state.selectedCoachIdx.goalkeeping || 0] || null,
+        fitness: state.coachCandidates.fitness[state.selectedCoachIdx.fitness || 0] || null
+      };
       const playerClub = club || getPlayerClub();
       if (playerClub && selectedMgr) {
         playerClub.manager = selectedMgr;
         playerClub.formation = selectedMgr.preferredFormation;
         playerClub.tactic = selectedMgr.preferredTactic;
-        playerClub.coaches = state.coaches;
+        playerClub.coaches = selCoaches;
         if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
           applyManagerPreMatchDelegation(playerClub, true);
         } else {
           optimizeClubStarters(playerClub);
         }
         syncManagerDelegationButtonUI();
-        addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
+        addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
         addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
       }
       modal.classList.add('hidden');

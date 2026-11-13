@@ -35,14 +35,18 @@ class TestManagersAndYouthScouting(unittest.TestCase):
             self.assertIn(f"rank: '{rk}'", mgr_block)
 
     def test_2_manager_and_coach_multi_stats_and_effects(self):
-        """監督4能力・コーチ3能力の補完と試合/育成/分析効果への連動が実装されていること"""
+        """監督・コーチの総合ランク表示が廃止され各ステータスがランク(S/A/B/C/D)表記され、初期コーチ選択ステップがあること"""
+        self.assertIn('function getStaffStatRank(', self.models_js)
         self.assertIn('function ensureManagerRankAndStats(', self.models_js)
         self.assertIn('function getManagerRankEffects(', self.models_js)
         self.assertIn('function ensureCoachStats(', self.models_js)
         self.assertIn('analysisBonus', self.models_js)
         self.assertIn('youthDevBonus', self.models_js)
         self.assertIn('getManagerRankEffects(club.manager)', self.match_js)
-        self.assertIn('btn-mgr-rank-filter', self.main_js)
+        self.assertNotIn('RANK ${mgr.rank', self.main_js)
+        self.assertNotIn('RANK ${c.rank', self.main_js)
+        self.assertIn('btn-back-to-mgr-step', self.main_js)
+        self.assertIn('initial-coach-choice', self.main_js)
 
     def test_3_youth_scouting_regions_dispatch_and_reports(self):
         """ユーススカウト地域定義・派遣・日次進行・入団/昇格/見送りUIとストレージ互換が実装されていること"""
@@ -57,7 +61,7 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('activeYouthScouts:', self.storage_js)
         self.assertIn('youthScoutReports:', self.storage_js)
         self.assertIn('ensureManagerRankAndStats(c.manager)', self.storage_js)
-        self.assertIn('.mgr-rank-badge.rank-S', self.css)
+        self.assertIn('.staff-stat-chip.stat-rank-S', self.css)
 
 
 if __name__ == '__main__':

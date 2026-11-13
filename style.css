@@ -15713,3 +15713,12 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+.staff-stat-chip.stat-rank-S strong, .stat-rank-S { color: #f59e0b !important; }
+.staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #2ecc71 !important; }
+.staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #38bdf8 !important; }
+.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #cbd5e1 !important; }
+.staff-stat-chip.stat-rank-D strong, .stat-rank-D { color: #94a3b8 !important; }
+.staff-stat-chip.stat-rank-S { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.12); }
+.staff-stat-chip.stat-rank-A { border-color: rgba(46, 204, 113, 0.40); background: rgba(46, 204, 113, 0.10); }
+.staff-stat-chip.stat-rank-B { border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.08); }
