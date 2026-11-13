@@ -248,8 +248,10 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
 
   const homeStarters = ensureClubStartersForMatch(homeClub);
   const awayStarters = ensureClubStartersForMatch(awayClub);
-  const homeBench = (homeClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
-  const awayBench = (awayClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+  const homeBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(homeClub) : 9;
+  const awayBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(awayClub) : 9;
+  const homeBench = (homeClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, homeBenchLimit);
+  const awayBench = (awayClub.players || []).filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, awayBenchLimit);
   const homeSubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(homeClub, homeStarters, homeBench, 62, homeScore - awayScore, homeClub.subPolicy, 0) : { subsIn: [] };
   const awaySubRes = typeof executeAutoSubstitutions === 'function' ? executeAutoSubstitutions(awayClub, awayStarters, awayBench, 62, awayScore - homeScore, awayClub.subPolicy, 0) : { subsIn: [] };
   const homeSubs = homeSubRes.subsIn || [];
@@ -1648,8 +1650,10 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
 
   const homeStarters = homeClub.players.filter(p => p.isStarter && !p.isRetired);
   const awayStarters = awayClub.players.filter(p => p.isStarter && !p.isRetired);
-  const homeBench = homeClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
-  const awayBench = awayClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat)));
+  const homeBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(homeClub) : 9;
+  const awayBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(awayClub) : 9;
+  const homeBench = homeClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, homeBenchLimit);
+  const awayBench = awayClub.players.filter(p => !p.isStarter && !p.isRetired && !(typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCat))).slice(0, awayBenchLimit);
 
   const homeSubRes = executeAutoSubstitutions(homeClub, homeStarters, homeBench, 62, homeScore - awayScore, homeClub.subPolicy, 0);
   const awaySubRes = executeAutoSubstitutions(awayClub, awayStarters, awayBench, 62, awayScore - homeScore, awayClub.subPolicy, 0);
@@ -3647,6 +3651,13 @@ function openMatchPrecheckModal() {
               ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
             </button>
           </div>
+          ${(() => {
+            const natEval = typeof evaluateClubNationalityRules === 'function' ? evaluateClubNationalityRules(playerClub) : null;
+            if (natEval && natEval.isWarning) {
+              return `<div class="nationality-rule-warning" style="margin-top:6px;">⚠️ 登録枠超過ペナルティ中（シニア ${natEval.seniorCount}/${natEval.maxSenior}・非HG ${natEval.nonHgCount}/${natEval.maxNonHg}）: 本試合のベンチ枠が <strong>${natEval.effectiveMaxBench}名</strong> に制限されています。</div>`;
+            }
+            return '';
+          })()}
           <div class="precheck-power-metrics">
             <div class="power-metric-box">
               <span class="mono power-lbl">攻撃力</span>

@@ -15247,6 +15247,51 @@ body {
   .market-table .badge-cat-tier {
     display: none !important;
   }
+
+/* ===========================================================================
+   25人登録ルール・ホームグロウン（HG）／U-21免除バッジ＆警告バナー
+   =========================================================================== */
+.badge-hg {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(46, 204, 113, 0.16);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  color: #4ade80;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.badge-u21 {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.nationality-rule-warning {
+  margin: 6px 0 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  background: rgba(231, 76, 60, 0.14);
+  border: 1px solid rgba(231, 76, 60, 0.45);
+  color: #fca5a5;
+}
+.power-badge.is-rule-warning {
+  border-color: rgba(231, 76, 60, 0.65);
+  background: rgba(231, 76, 60, 0.14);
+}
+
 }
 
 @media (max-width: 680px) {

@@ -1341,4 +1341,37 @@ const NATIONAL_TEAM_STRENGTHS = {
 // PSR（収益性と持続可能性に関する規則）許容赤字上限（3シーズン累積：£35.0M = 35000 £K）
 const PSR_MAX_3YR_DEFICIT = -35000;
 
+// プレミアリーグ準拠：25人シニア登録ルール＆ホームグロウン（HG）／外国籍枠ルール
+const SQUAD_NATIONALITY_RULES = {
+  HOME_NATIONALITY: 'England',
+  MAX_SENIOR_SQUAD: 25,       // 22歳以上シニア選手の登録上限
+  MIN_HOMEGROWN_TARGET: 8,    // 推奨HG最低人数
+  MAX_NON_HG_SLOTS: 17,       // 22歳以上の非HG（外国籍）登録上限
+  U21_EXEMPT_MAX_AGE: 21,     // 21歳以下は25人枠・非HG枠から免除
+  BASE_BENCH_LIMIT: 9,        // 通常公式戦ベンチ入り上限
+  MIN_BENCH_LIMIT: 3,         // ペナルティ時最低保証ベンチ枠
+  D1_HOME_RATIO: 0.48,        // 1部初期スカッドの自国籍比率
+  D1_MIN_HOME_COUNT: 7,       // 1部初期20名中の最低自国籍数
+  D2_HOME_RATIO: 0.75,        // 2部初期スカッドの自国籍比率
+  D2_MIN_HOME_COUNT: 12,      // 2部初期20名中の最低自国籍数
+  YOUTH_HOME_RATIO: 0.80,     // ユース生成時の自国籍比率
+  MARKET_HOME_RATIO: 0.35     // フリー市場の自国籍比率
+};
+
+// 欧州クラブ国コード → 選手国籍マッピング
+const COUNTRY_CODE_TO_NATIONALITY = {
+  ENG: 'England',
+  ESP: 'Spain',
+  ITA: 'Italy',
+  GER: 'Germany',
+  FRA: 'France',
+  POR: 'Portugal',
+  NED: 'Netherlands',
+  BEL: 'Belgium',
+  CRO: 'Croatia',
+  JPN: 'Japan',
+  BRA: 'Brazil',
+  ARG: 'Argentina'
+};
+
 

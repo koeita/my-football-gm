@@ -2723,6 +2723,26 @@ function renderNegotiationModal() {
   };
 
   const initWarn = getNegCashflowWarningState();
+  let natRuleWarnHtml = '';
+  if (!isRenewal && typeof evaluateClubNationalityRules === 'function') {
+    const natEval = evaluateClubNationalityRules(playerClub);
+    const isTargetU21 = typeof isPlayerU21Exempt === 'function' ? isPlayerU21Exempt(target) : ((target.age || 22) <= 21);
+    const isTargetHg = typeof isPlayerHomegrown === 'function' ? isPlayerHomegrown(target) : (target.nationality === 'England');
+    if (!isTargetU21) {
+      const nextSenior = natEval.seniorCount + 1;
+      const nextNonHg = natEval.nonHgCount + (isTargetHg ? 0 : 1);
+      const warns = [];
+      if (nextSenior > natEval.maxSenior) {
+        warns.push(`25人シニア枠を超過します（加入後 ${nextSenior}/${natEval.maxSenior}名）`);
+      }
+      if (!isTargetHg && nextNonHg > natEval.maxNonHg) {
+        warns.push(`外国籍（非HG）上限を超過します（加入後 ${nextNonHg}/${natEval.maxNonHg}名）`);
+      }
+      if (warns.length > 0) {
+        natRuleWarnHtml = `<div class="nationality-rule-warning">⚠️ 登録ルール警告：${warns.join(' / ')}。超過時は公式戦ベンチ枠が削減されます。</div>`;
+      }
+    }
+  }
   const bodyEl = document.getElementById('neg-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
@@ -2732,6 +2752,7 @@ function renderNegotiationModal() {
         ${session.statusMessage}
       </div>
       <div class="neg-cashflow-warning ${initWarn.isCritical ? 'is-critical' : ''} ${initWarn.visible ? '' : 'hidden'}" id="neg-cashflow-warning-box">${initWarn.text}</div>
+      ${natRuleWarnHtml}
 
       <div class="neg-grid">
         <!-- 左：相手側（代理人・所属クラブ）の要求条件 -->
@@ -3960,6 +3981,8 @@ function promoteYouthPlayer(youthId) {
   playerClub.funds -= SIGN_FEE;
   const youth = playerClub.youthSquad.splice(idx, 1)[0];
   youth.isYouth = false;
+  youth.isYouthGraduate = true;
+  youth.isHomegrown = true;
   youth.isStarter = false;
   youth.assignedPos = null;
   youth.slotIndex = null;
@@ -4172,6 +4195,9 @@ function promoteYouthCandidate(candidateId) {
   if (idx === -1) return;
 
   const prospect = gameState.youthCandidates[idx];
+  prospect.isYouth = false;
+  prospect.isYouthGraduate = true;
+  prospect.isHomegrown = true;
   prospect.isStarter = false;
   prospect.assignedPos = null;
   prospect.slotIndex = null;
@@ -6352,7 +6378,8 @@ function renderTacticalBoard() {
   if (!benchListEl) return;
 
   const allNonStarters = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
-  const benchPlayers = allNonStarters.filter(p => p.isBench !== false).slice(0, 9);
+  const effectiveBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(playerClub) : 9;
+  const benchPlayers = allNonStarters.filter(p => p.isBench !== false).slice(0, effectiveBenchLimit);
   const reservePlayers = allNonStarters.filter(p => !benchPlayers.some(bp => bp.id === p.id));
 
   const selectedSlot = gameState.selectedSlotIndex !== null ? formationDef.slots[gameState.selectedSlotIndex] : null;
@@ -6417,9 +6444,10 @@ function renderTacticalBoard() {
       }).join('');
     }
   } else {
-    if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名)`;
+    const benchSuffix = effectiveBenchLimit < 9 ? ` [制限:${effectiveBenchLimit}名]` : '';
+    if (subTitleEl) subTitleEl.textContent = `控え選手 (${benchPlayers.length}名${benchSuffix})`;
     const sideBenchBadge = document.getElementById('side-bench-badge');
-    if (sideBenchBadge) sideBenchBadge.textContent = `${benchPlayers.length}名`;
+    if (sideBenchBadge) sideBenchBadge.textContent = `${benchPlayers.length}/${effectiveBenchLimit}`;
     if (clearBtnEl) clearBtnEl.classList.add('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -6586,6 +6614,42 @@ function renderRoster() {
   document.getElementById('team-avg-sta').textContent = stats.avgSta;
   document.getElementById('roster-total-payroll').textContent = formatMoney(payroll);
 
+  if (typeof evaluateClubNationalityRules === 'function') {
+    const natEval = evaluateClubNationalityRules(playerClub);
+    const seniorCountEl = document.getElementById('roster-senior-count');
+    const nonHgCountEl = document.getElementById('roster-nonhg-count');
+    const hgCountEl = document.getElementById('roster-hg-count');
+    const seniorBadgeEl = document.getElementById('roster-senior-badge');
+    const nonHgBadgeEl = document.getElementById('roster-nonhg-badge');
+    const warnBannerEl = document.getElementById('roster-nat-warning-banner');
+
+    if (seniorCountEl) {
+      seniorCountEl.textContent = `${natEval.seniorCount}/${natEval.maxSenior}`;
+      seniorCountEl.className = `mono ${natEval.excessSenior > 0 ? 'text-danger' : ''}`;
+    }
+    if (nonHgCountEl) {
+      nonHgCountEl.textContent = `${natEval.nonHgCount}/${natEval.maxNonHg}`;
+      nonHgCountEl.className = `mono ${natEval.excessNonHg > 0 ? 'text-danger' : ''}`;
+    }
+    if (hgCountEl) {
+      hgCountEl.textContent = `${natEval.totalHgCount}名`;
+    }
+    if (seniorBadgeEl) seniorBadgeEl.classList.toggle('is-rule-warning', natEval.excessSenior > 0);
+    if (nonHgBadgeEl) nonHgBadgeEl.classList.toggle('is-rule-warning', natEval.excessNonHg > 0);
+    if (warnBannerEl) {
+      if (natEval.isWarning) {
+        const msgs = [];
+        if (natEval.excessSenior > 0) msgs.push(`22歳以上シニア登録上限（${natEval.maxSenior}名）を ${natEval.excessSenior}名 超過`);
+        if (natEval.excessNonHg > 0) msgs.push(`非HG（外国籍）上限（${natEval.maxNonHg}名）を ${natEval.excessNonHg}名 超過`);
+        warnBannerEl.innerHTML = `⚠️ <strong>登録ルール警告</strong>：${msgs.join(' ／ ')}。ペナルティにより公式戦ベンチ入り上限が <strong>${natEval.effectiveMaxBench}名</strong>（通常9名）に制限されています（21歳以下は免除）。`;
+        warnBannerEl.classList.remove('hidden');
+      } else {
+        warnBannerEl.innerHTML = '';
+        warnBannerEl.classList.add('hidden');
+      }
+    }
+  }
+
   const currentTactic = normalizeTacticKey(playerClub.tactic);
   playerClub.tactic = currentTactic;
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
@@ -6709,6 +6773,13 @@ function renderRoster() {
       contractText = '残り2年';
     }
 
+    const hgTag = (typeof isPlayerHomegrown === 'function' && isPlayerHomegrown(p))
+      ? `<span class="badge-hg" title="ホームグロウン（自国籍または自クラブユース昇格）">HG</span>`
+      : '';
+    const u21Tag = (typeof isPlayerU21Exempt === 'function' && isPlayerU21Exempt(p))
+      ? `<span class="badge-u21" title="21歳以下：25人シニア枠・非HG枠免除">U21</span>`
+      : '';
+
     return `
       <tr class="${rowClasses.join(' ')}" data-player-id="${p.id}">
         <td class="col-pos">${formatPlayerPositionsHtml(p)}</td>
@@ -6716,7 +6787,7 @@ function renderRoster() {
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${p.id}" title="クリックで選手詳細プロフィールを表示">
             ${getPlayerAvatarHtml(p, playerClub, 'avatar-sm table-avatar')}<span class="mono text-muted roster-squad-num">#${p.squadNumber || '-'}</span> <span class="player-name-text">${p.name}</span>
           </button>
-          ${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
+          ${hgTag}${u21Tag}${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
         </td>
         <td class="col-num">${p.age}</td>
         <td class="col-num accent-green">${ovrDisplay}</td>
