@@ -815,20 +815,20 @@ const REQUIRED_STARTERS = {
   CF: 1
 };
 
-// 1チームの初期20名構成（スタメン11名＋現代プレミアリーグ公式基準ベンチ9名）
+// 1チームの初期27名構成（スタメン11名＋控え・ベンチ外16名の現実的トップチーム編成）
 const SQUAD_COMPOSITION = [
-  { pos: 'GK', total: 2, starters: 1 },  // GK 2名 (スタメン1, 控え1)
-  { pos: 'CB', total: 4, starters: 2 },  // CB 4名 (スタメン2, 控え2)
-  { pos: 'LB', total: 1, starters: 1 },  // LB 1名 (スタメン1)
-  { pos: 'RB', total: 1, starters: 1 },  // RB 1名 (スタメン1)
+  { pos: 'GK', total: 3, starters: 1 },  // GK 3名 (スタメン1, 控え2)
+  { pos: 'CB', total: 5, starters: 2 },  // CB 5名 (スタメン2, 控え3)
+  { pos: 'LB', total: 2, starters: 1 },  // LB 2名 (スタメン1, 控え1)
+  { pos: 'RB', total: 2, starters: 1 },  // RB 2名 (スタメン1, 控え1)
   { pos: 'DM', total: 2, starters: 1 },  // DM 2名 (スタメン1, 控え1)
-  { pos: 'CM', total: 3, starters: 2 },  // CM 3名 (スタメン2, 控え1)
+  { pos: 'CM', total: 4, starters: 2 },  // CM 4名 (スタメン2, 控え2)
   { pos: 'LM', total: 1, starters: 0 },  // LM 1名 (控え1)
   { pos: 'RM', total: 1, starters: 0 },  // RM 1名 (控え1)
-  { pos: 'AM', total: 1, starters: 0 },  // AM 1名 (控え1)
+  { pos: 'AM', total: 2, starters: 0 },  // AM 2名 (控え2)
   { pos: 'LW', total: 1, starters: 1 },  // LW 1名 (スタメン1)
   { pos: 'RW', total: 1, starters: 1 },  // RW 1名 (スタメン1)
-  { pos: 'CF', total: 2, starters: 1 }   // CF 2名 (スタメン1, 控え1)
+  { pos: 'CF', total: 3, starters: 1 }   // CF 3名 (スタメン1, 控え2)
 ];
 
 // 所属選手の上限枠（実質無制限の最大50名、常設ユースチーム最大10名）
@@ -1340,5 +1340,38 @@ const NATIONAL_TEAM_STRENGTHS = {
 
 // PSR（収益性と持続可能性に関する規則）許容赤字上限（3シーズン累積：£35.0M = 35000 £K）
 const PSR_MAX_3YR_DEFICIT = -35000;
+
+// プレミアリーグ準拠：25人シニア登録ルール＆ホームグロウン（HG）／外国籍枠ルール
+const SQUAD_NATIONALITY_RULES = {
+  HOME_NATIONALITY: 'England',
+  MAX_SENIOR_SQUAD: 25,       // 22歳以上シニア選手の登録上限
+  MIN_HOMEGROWN_TARGET: 8,    // 推奨HG最低人数
+  MAX_NON_HG_SLOTS: 17,       // 22歳以上の非HG（外国籍）登録上限
+  U21_EXEMPT_MAX_AGE: 21,     // 21歳以下は25人枠・非HG枠から免除
+  BASE_BENCH_LIMIT: 9,        // 通常公式戦ベンチ入り上限
+  MIN_BENCH_LIMIT: 3,         // ペナルティ時最低保証ベンチ枠
+  D1_HOME_RATIO: 0.48,        // 1部初期スカッドの自国籍比率
+  D1_MIN_HOME_COUNT: 10,      // 1部初期27名中の最低自国籍数
+  D2_HOME_RATIO: 0.75,        // 2部初期スカッドの自国籍比率
+  D2_MIN_HOME_COUNT: 16,      // 2部初期27名中の最低自国籍数
+  YOUTH_HOME_RATIO: 0.80,     // ユース生成時の自国籍比率
+  MARKET_HOME_RATIO: 0.35     // フリー市場の自国籍比率
+};
+
+// 欧州クラブ国コード → 選手国籍マッピング
+const COUNTRY_CODE_TO_NATIONALITY = {
+  ENG: 'England',
+  ESP: 'Spain',
+  ITA: 'Italy',
+  GER: 'Germany',
+  FRA: 'France',
+  POR: 'Portugal',
+  NED: 'Netherlands',
+  BEL: 'Belgium',
+  CRO: 'Croatia',
+  JPN: 'Japan',
+  BRA: 'Brazil',
+  ARG: 'Argentina'
+};
 
 

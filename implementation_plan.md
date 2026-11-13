@@ -1,7 +1,88 @@
 # Implementation Plan
 
 ## [Overview]
-本プロジェクト「ぼくのサッカークラブ（GM）」を、より現実に近い戦術・財政・人間力学を備えた本格的なサッカークラブ経営シミュレーションへと深化させるための実装計画である。
+イングランドを中心とした現実的なチーム構成（国籍比率のリアル化）および、プレミアリーグをモデルとした「25人シニア登録ルール（22歳以上上限25名）＋ホームグロウン（HG）／外国籍枠（非HG上限17名）ルール」を導入する実装計画である。
+
+本計画では以下の3点を統合する：
+1. **選手・クラブ生成時の国籍比率のリアル化**:
+   - イングランド1部（約48%、最低7名保証）、イングランド2部（約75%、最低12名保証）、自クラブユース（約80%）が `England` 国籍となるよう生成ロジックを更新。
+   - 欧州移籍リスト（`generateEuropeanTransferList`）および自由移籍市場（`generateTransferMarket`）でも所属クラブの国コード（`country`）に相関した国籍を付与する。
+2. **25人登録ルール ＆ ホームグロウン（HG）／非HG枠ルール**:
+   - **シニア登録枠（22歳以上）**：トップチーム登録上限 **25名**（`MAX_SENIOR_SQUAD = 25`）
+   - **非HG枠（22歳以上の外国籍）**：登録上限 **17名**（`MAX_NON_HG_SLOTS = 17`、推奨HG最低8名）
+   - **U-21特例（21歳以下）**：25人枠・17人非HG枠の双方から免除（`U21_EXEMPT_MAX_AGE = 21`）
+   - **HG資格**：`nationality === 'England'` または自クラブユース昇格選手（`isYouthGraduate === true`）は国籍を問わずHG扱い（`isHomegrown = true`）。
+3. **違反時の警告表示 ＆ 公式戦ベンチ枠ペナルティ**:
+   - シニア25名または非HG17名を超過した場合、選手一覧・移籍交渉モーダル・試合前確認に警告を表示。
+   - 超過数（`Math.max(excessSenior, excessNonHg)`）に応じて、公式戦ベンチ入り上限（通常9名）が減少するペナルティを適用する。
+
+---
+
+## [Types]
+### 1. Player（`models.js`）
+- `isHomegrown`: `boolean` — HG資格の有無（`England` 国籍または `isYouthGraduate === true`）
+- `isYouthGraduate`: `boolean` — 自クラブユースから昇格した選手フラグ
+
+### 2. 定数（`data.js`）
+- `SQUAD_NATIONALITY_RULES`:
+  - `HOME_NATIONALITY: 'England'`
+  - `MAX_SENIOR_SQUAD: 25`
+  - `MIN_HOMEGROWN_TARGET: 8`
+  - `MAX_NON_HG_SLOTS: 17`
+  - `U21_EXEMPT_MAX_AGE: 21`
+  - `D1_HOME_RATIO: 0.48`, `D1_MIN_HOME_COUNT: 7`
+  - `D2_HOME_RATIO: 0.75`, `D2_MIN_HOME_COUNT: 12`
+  - `YOUTH_HOME_RATIO: 0.80`
+  - `MARKET_HOME_RATIO: 0.35`
+- `COUNTRY_CODE_TO_NATIONALITY`: `'ESP' -> 'Spain'`, `'ITA' -> 'Italy'`, `'GER' -> 'Germany'`, `'FRA' -> 'France'`, `'POR' -> 'Portugal'`, `'NED' -> 'Netherlands'`, `'BEL' -> 'Belgium'`, `'CRO' -> 'Croatia'`, `'ENG' -> 'England'` 等。
+
+---
+
+## [Files]
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/data.js`: `SQUAD_NATIONALITY_RULES`, `COUNTRY_CODE_TO_NATIONALITY` 追加
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/models.js`: 国籍生成リアル化、`isPlayerHomegrown()`, `evaluateClubNationalityRules()`, `getEffectiveBenchLimit()` 実装
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/competitions.js`: 2部クラブ初期生成時の `D2_HOME_RATIO` 適用
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/main.js`: `promoteYouthCandidate`, `renderRoster`, `renderBoardLayout` / `renderBenchDrawer`, `openPreMatchCheckModal`, `renderNegotiationModal` への警告・ベンチ枠ペナルティ統合
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/index.html`: 選手一覧サマリーに国籍ルール枠表示・警告バナー追加
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/style.css`: HG/U-21バッジ・ルール警告バナー用スタイル追加
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/storage.js`: セーブ/ロード時の `isHomegrown` / `isYouthGraduate` 補完
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/tests/test_nationality_rules.py`: 新規単体テスト
+
+---
+
+## [Functions]
+- `pickWeightedNationality(homeRatio, homeNat)` (`models.js`)
+- `createSquad(basePower, usedNames, options)` (`models.js`)
+- `createYouthSquad(usedNames, options)` (`models.js`)
+- `generateEuropeanTransferList(existingUsedNames, scoutingLv)` (`models.js`)
+- `isPlayerHomegrown(player)` (`models.js`)
+- `evaluateClubNationalityRules(club)` (`models.js`)
+- `getEffectiveBenchLimit(club)` (`models.js`)
+
+---
+
+## [Classes]
+変更なし（プレーンオブジェクト＋ドメイン関数構成を維持）。
+
+---
+
+## [Dependencies]
+外部パッケージ追加なし。
+
+---
+
+## [Testing]
+- 既存全テスト（`python tests/run_tests.py --all`）のパス維持。
+- `tests/test_nationality_rules.py` にて1部/2部/ユース/欧州市場の国籍生成比率、HG・U-21免除判定、25人・17人超過時のベンチ枠ペナルティ算出を検証。
+
+---
+
+## [Implementation Order]
+1. `data.js` に定数・国コード変換マップを追加
+2. `models.js`・`competitions.js` に国籍生成リアル化・HG/25人ルール判定を実装
+3. `main.js`・`storage.js`・`index.html`・`style.css` にUI警告・ベンチ枠ペナルティ・交渉アラート・セーブ互換を統合
+4. `tests/test_nationality_rules.py` を作成し全テストを実行検証
+
 
 対象範囲は以下の4領域にわたる：
 1. **試合エンジン・ルール・戦術のリアリティ**: 累積警告（イエローカード）および退場（レッドカード）による公式戦出場停止と試合中10人戦の数的不利シミュレーション、作戦ボードで事前設定可能な交代方針に基づく試合中の自動5人交代（ベンチからの最適投入＆疲労・評価点・スタッツ連動）、およびキャプテン・PKキッカー・FK/CKキッカーの役割指定とセットプレー得点ロジック。

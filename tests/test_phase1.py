@@ -16,11 +16,11 @@ class TestPhase1(unittest.TestCase):
     def test_squad_size_relaxed(self):
         # MAX_SQUAD_SIZE is 50
         self.assertIn("const MAX_SQUAD_SIZE = 50;", self.js)
-        # SQUAD_COMPOSITION has 20 players total (starters 11, bench 9)
-        self.assertIn("{ pos: 'CB', total: 4, starters: 2 }", self.js)
-        self.assertIn("{ pos: 'CF', total: 2, starters: 1 }", self.js)
+        # SQUAD_COMPOSITION has 27 players total (starters 11, bench/reserves 16)
+        self.assertIn("{ pos: 'CB', total: 5, starters: 2 }", self.js)
+        self.assertIn("{ pos: 'CF', total: 3, starters: 1 }", self.js)
         self.assertIn("{ pos: 'DM', total: 2, starters: 1 }", self.js)
-        self.assertIn("{ pos: 'CM', total: 3, starters: 2 }", self.js)
+        self.assertIn("{ pos: 'CM', total: 4, starters: 2 }", self.js)
 
     def test_squad_header_display(self):
         # No slash like 18 / 25

@@ -1291,6 +1291,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     majorPositions,
     secondaryPositions,
     nationality,
+    isHomegrown: nationality === ((typeof SQUAD_NATIONALITY_RULES !== 'undefined' && SQUAD_NATIONALITY_RULES.HOME_NATIONALITY) || 'England'),
+    isYouthGraduate: false,
     avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
     preferredFoot,
     height,
@@ -1337,7 +1339,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
  */
 function createYouthPlayer(pos, usedNames, forcedNationality = null) {
   const age = randInt(16, 19);
-  const nationality = forcedNationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const homeRatio = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES.YOUTH_HOME_RATIO : 0.80);
+  const nationality = forcedNationality || pickWeightedNationality(homeRatio);
   const nameData = generatePlayerName(nationality, usedNames);
   const baseCenter = 56 + randInt(-4, 6);
 
@@ -1383,6 +1386,8 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     majorPositions: profs.mainPositions,
     secondaryPositions: profs.subPositions,
     nationality,
+    isHomegrown: true,
+    isYouthGraduate: true,
     avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
     preferredFoot,
     height,
@@ -1428,29 +1433,71 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
 /**
  * 1クラブ分の常設ユースチーム（U-21 Squad：6〜8名）を生成
  */
-function createYouthSquad(usedNames) {
+function createYouthSquad(usedNames, options = {}) {
   const squad = [];
   const youthPositions = ['GK', 'CB', 'RB', 'LB', 'DM', 'CM', 'RW', 'CF'];
+  const homeRatio = typeof options.homeRatio === 'number'
+    ? options.homeRatio
+    : (typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES.YOUTH_HOME_RATIO : 0.80);
   for (const pos of youthPositions) {
-    squad.push(createYouthPlayer(pos, usedNames));
+    const nat = pickWeightedNationality(homeRatio);
+    squad.push(createYouthPlayer(pos, usedNames, nat));
   }
   return squad;
 }
 
 /**
- * 1クラブ分の初期選手16名を生成（9ポジション網羅・重複なし背番号付与）
+ * 1クラブ分の初期選手20名を生成（9ポジション網羅・重複なし背番号付与・国籍比率リアル化）
  */
-function createSquad(basePower, usedNames) {
+function createSquad(basePower, usedNames, options = {}) {
   const players = [];
   const usedNumbers = new Set();
+  const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : null;
+  const homeNat = (rules && rules.HOME_NATIONALITY) || 'England';
+  const homeRatio = typeof options.homeRatio === 'number' ? options.homeRatio : (rules ? rules.D1_HOME_RATIO : 0.48);
+  const minHomeCount = typeof options.minHomeCount === 'number' ? options.minHomeCount : (rules ? rules.D1_MIN_HOME_COUNT : 10);
+
+  const slots = [];
   for (const group of SQUAD_COMPOSITION) {
     for (let i = 0; i < group.total; i++) {
-      const isStarter = i < group.starters;
-      const p = createPlayer(group.pos, basePower, isStarter, usedNames);
-      p.squadNumber = pickAvailableSquadNumber(group.pos, usedNumbers);
-      players.push(p);
+      slots.push({ pos: group.pos, isStarter: i < group.starters });
     }
   }
+
+  // 国籍リストを事前に決定し、最低自国籍人数を保証
+  const nats = slots.map(() => pickWeightedNationality(homeRatio, homeNat));
+  let homeCount = nats.filter(n => n === homeNat).length;
+  if (homeCount < minHomeCount) {
+    const nonHomeIndices = [];
+    nats.forEach((n, idx) => { if (n !== homeNat) nonHomeIndices.push(idx); });
+    for (let k = nonHomeIndices.length - 1; k > 0; k--) {
+      const r = randInt(0, k);
+      const tmp = nonHomeIndices[k];
+      nonHomeIndices[k] = nonHomeIndices[r];
+      nonHomeIndices[r] = tmp;
+    }
+    for (let k = 0; k < nonHomeIndices.length && homeCount < minHomeCount; k++) {
+      nats[nonHomeIndices[k]] = homeNat;
+      homeCount++;
+    }
+  }
+
+  // 25人シニア登録ルールに初期状態で違反しないよう、控え選手から最低4名をU-21（18〜21歳）として生成
+  const benchIndices = [];
+  slots.forEach((s, idx) => { if (!s.isStarter) benchIndices.push(idx); });
+  const u21SlotSet = new Set(benchIndices.slice(-4));
+
+  let benchAssigned = 0;
+  slots.forEach((slot, idx) => {
+    const ageRange = u21SlotSet.has(idx) ? [18, 21] : null;
+    const p = createPlayer(slot.pos, basePower, slot.isStarter, usedNames, ageRange, null, nats[idx]);
+    p.squadNumber = pickAvailableSquadNumber(slot.pos, usedNumbers);
+    if (!slot.isStarter) {
+      p.isBench = benchAssigned < 9;
+      benchAssigned++;
+    }
+    players.push(p);
+  });
   return players;
 }
 
@@ -1526,10 +1573,12 @@ function generateTransferMarket() {
   const freeMaxOvrCap = 73 + Math.min(3, scoutingLv - 1);
 
   const freeCount = count + 2;
+  const marketHomeRatio = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES.MARKET_HOME_RATIO : 0.35);
   for (let f = 0; f < freeCount; f++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
     const basePower = randInt(freeMinGen, freeMaxGen);
-    const freePlayer = createPlayer(pos, basePower, false, usedNames, [20, 34]);
+    const freeNat = pickWeightedNationality(marketHomeRatio);
+    const freePlayer = createPlayer(pos, basePower, false, usedNames, [20, 34], null, freeNat);
     freePlayer.squadNumber = pickAvailableSquadNumber(pos, usedMarketNums);
     freePlayer.isFreeAgent = true;
     freePlayer.contractYears = 0;
@@ -1582,7 +1631,9 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     const clubTeamOvr = clubDef.basePower || 76;
     const rawGenPower = clamp(clubTeamOvr - 10 + randInt(-2, 2), 58, maxGenPower);
     const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 81 : 77));
-    const p = createPlayer(pos, rawGenPower, i < 8, usedNames, [18, 32]);
+    const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && clubDef.country) ? COUNTRY_CODE_TO_NATIONALITY[clubDef.country] : null;
+    const euroNat = mappedNat ? pickWeightedNationality(0.60, mappedNat) : null;
+    const p = createPlayer(pos, rawGenPower, i < 8, usedNames, [18, 32], null, euroNat);
     p.squadNumber = randInt(2, 30);
     p.contractYears = (i % 4 === 0) ? 1 : randInt(1, 4);
     p.isFreeAgent = false;
@@ -2379,6 +2430,11 @@ function ensurePlayerRealismFields(player, isStarterHint = false) {
   }
   if (player.loanTerms === undefined) player.loanTerms = null;
   if (typeof player.onIntlDuty !== 'boolean') player.onIntlDuty = false;
+  if (typeof player.isYouthGraduate !== 'boolean') player.isYouthGraduate = Boolean(player.isYouth);
+  if (typeof player.isHomegrown !== 'boolean') {
+    const homeNat = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' && SQUAD_NATIONALITY_RULES.HOME_NATIONALITY) || 'England';
+    player.isHomegrown = player.isYouthGraduate || player.nationality === homeNat;
+  }
 }
 
 /**
@@ -2685,4 +2741,118 @@ function updateBoardConfidenceAfterMatch(club, compCategory, won, drawn) {
   if (club.isPlayer && club.boardConfidence <= 10 && !gameState.isSeasonOver && !gameState.isGameOver) {
     gameState.pendingBoardCrisis = true;
   }
+}
+
+// ==========================================================================
+// 9. 国籍比率生成・25人登録ルール＆ホームグロウン（HG）評価
+// ==========================================================================
+
+/**
+ * 指定確率 homeRatio で自国籍（homeNat）を抽選し、それ以外は他国から均等抽選する
+ */
+function pickWeightedNationality(homeRatio = 0.48, homeNat = null) {
+  const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : null;
+  const targetHome = homeNat || (rules && rules.HOME_NATIONALITY) || 'England';
+  const natList = (typeof NATIONALITIES !== 'undefined' && Array.isArray(NATIONALITIES) && NATIONALITIES.length > 0)
+    ? NATIONALITIES
+    : ['England', 'France', 'Spain', 'Germany', 'Italy', 'Netherlands', 'Portugal', 'Brazil', 'Argentina', 'Belgium', 'Croatia', 'Japan'];
+  if (Math.random() < homeRatio) {
+    return targetHome;
+  }
+  const others = natList.filter(n => n !== targetHome);
+  if (others.length === 0) return targetHome;
+  return others[randInt(0, others.length - 1)];
+}
+
+/**
+ * 選手がホームグロウン（HG）資格を持つか判定する
+ * （England国籍、または自クラブユース昇格選手 isYouthGraduate）
+ */
+function isPlayerHomegrown(player) {
+  if (!player) return false;
+  if (player.isHomegrown === true || player.isYouthGraduate === true) return true;
+  const homeNat = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' && SQUAD_NATIONALITY_RULES.HOME_NATIONALITY) || 'England';
+  return player.nationality === homeNat;
+}
+
+/**
+ * 21歳以下（U-21免除対象）か判定する
+ */
+function isPlayerU21Exempt(player) {
+  if (!player) return false;
+  const maxAge = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' && SQUAD_NATIONALITY_RULES.U21_EXEMPT_MAX_AGE) || 21;
+  return (player.age || 22) <= maxAge;
+}
+
+/**
+ * クラブの25人シニア登録ルール＆ホームグロウン／非HG枠の使用状況を評価する
+ */
+function evaluateClubNationalityRules(club) {
+  const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : {
+    MAX_SENIOR_SQUAD: 25,
+    MIN_HOMEGROWN_TARGET: 8,
+    MAX_NON_HG_SLOTS: 17,
+    U21_EXEMPT_MAX_AGE: 21,
+    BASE_BENCH_LIMIT: 9,
+    MIN_BENCH_LIMIT: 3
+  };
+  const activePlayers = (club && Array.isArray(club.players))
+    ? club.players.filter(p => p && !p.isRetired && !p.isLoanOut)
+    : [];
+
+  let seniorCount = 0;
+  let seniorHgCount = 0;
+  let totalHgCount = 0;
+  let nonHgCount = 0;
+  let u21ExemptCount = 0;
+
+  for (const p of activePlayers) {
+    const hg = isPlayerHomegrown(p);
+    const u21 = isPlayerU21Exempt(p);
+    if (hg) totalHgCount++;
+    if (u21) {
+      u21ExemptCount++;
+    } else {
+      seniorCount++;
+      if (hg) seniorHgCount++;
+      else nonHgCount++;
+    }
+  }
+
+  const maxSenior = rules.MAX_SENIOR_SQUAD || 25;
+  const maxNonHg = rules.MAX_NON_HG_SLOTS || 17;
+  const minHgTarget = rules.MIN_HOMEGROWN_TARGET || 8;
+  const baseBench = rules.BASE_BENCH_LIMIT || 9;
+  const minBench = rules.MIN_BENCH_LIMIT || 3;
+
+  const excessSenior = Math.max(0, seniorCount - maxSenior);
+  const excessNonHg = Math.max(0, nonHgCount - maxNonHg);
+  const benchPenaltySlots = Math.max(excessSenior, excessNonHg);
+  const effectiveMaxBench = Math.max(minBench, baseBench - benchPenaltySlots);
+  const isWarning = excessSenior > 0 || excessNonHg > 0;
+
+  return {
+    totalCount: activePlayers.length,
+    seniorCount,
+    maxSenior,
+    seniorHgCount,
+    totalHgCount,
+    minHgTarget,
+    nonHgCount,
+    maxNonHg,
+    u21ExemptCount,
+    excessSenior,
+    excessNonHg,
+    benchPenaltySlots,
+    effectiveMaxBench,
+    isWarning
+  };
+}
+
+/**
+ * 登録枠ペナルティを反映した公式戦ベンチ入り上限人数を返す
+ */
+function getEffectiveBenchLimit(club) {
+  const evalRes = evaluateClubNationalityRules(club);
+  return evalRes.effectiveMaxBench;
 }

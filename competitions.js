@@ -1365,7 +1365,11 @@ function ensurePlayableClubStructure(club) {
 
   if (!Array.isArray(club.players) || club.players.length < 11) {
     if (typeof createSquad === 'function') {
-      club.players = createSquad(squadGenPower, usedNames);
+      const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : null;
+      club.players = createSquad(squadGenPower, usedNames, {
+        homeRatio: rules ? rules.D2_HOME_RATIO : 0.75,
+        minHomeCount: rules ? rules.D2_MIN_HOME_COUNT : 12
+      });
     } else if (typeof ALL_POSITIONS !== 'undefined' && typeof createPlayer === 'function') {
       club.players = ALL_POSITIONS.map(pos => createPlayer(pos, squadGenPower, false, usedNames));
     }
