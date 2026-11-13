@@ -81,7 +81,7 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('function getOvrTierClass(', self.main_js)
         self.assertIn('id="profile-header-ovr"', self.html)
         self.assertIn('.ovr-cell-badge', self.css)
-        self.assertIn('font-size: 16px !important;', self.css)
+        self.assertIn('font-size: 17px !important;', self.css)
         self.assertNotIn('col-youth-atk', self.html)
         self.assertNotIn('col-youth-def', self.html)
 

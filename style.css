@@ -15983,5 +15983,30 @@ body {
   .profile-header-ovr-box { padding: 3px 8px; }
   .profile-header-ovr-val { font-size: 18px; }
 }
-.staff-stat-chip { display: inline-flex !important; align-items: baseline !important; gap: 5px !important; font-size: 10.5px !important; color: #8b949e !important; }
-.staff-stat-chip strong { font-size: 16px !important; font-weight: 900 !important; line-height: 1 !important; margin-left: 0 !important; letter-spacing: 0.02em !important; }
+.staff-stats-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px 18px !important;
+  margin-top: 8px !important;
+}
+.staff-stat-chip {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 44px !important;
+  gap: 3px !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  color: #8b949e !important;
+  text-align: center !important;
+}
+.staff-stat-chip strong {
+  display: block !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  margin: 0 !important;
+  letter-spacing: 0.02em !important;
+}
