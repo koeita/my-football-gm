@@ -13326,7 +13326,7 @@ function renderBoardPsrSponsorPanel(club) {
         <div class="board-psr-title mono">SPONSORSHIP / 胸スポンサー</div>
         <div class="board-psr-main">${sp.name}</div>
         <div class="board-psr-sub mono">年額: <strong class="accent-gold">${formatMoney(sp.baseAnnual)}</strong> (残${sp.yearsRemaining}年)</div>
-        <div class="board-psr-sub mono">CLボーナス: +${formatMoney(sp.clBonus)} / 優勝: +${formatMoney(sp.titleBonus)}</div>
+        <div class="board-psr-sub mono">ECTボーナス: +${formatMoney(sp.clBonus)} / 優勝: +${formatMoney(sp.titleBonus)}</div>
       </div>
       <div class="board-psr-card">
         <div class="board-psr-title mono">PSR / 3年累積財務規律</div>
@@ -13360,6 +13360,24 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     gameState.installments = remainInst;
   }
 
+  const ectQualifiedIds = new Set();
+  if (typeof selectEuropeanCompetitionEntries === 'function') {
+    const entries = selectEuropeanCompetitionEntries();
+    if (entries && Array.isArray(entries.clEntries)) {
+      for (const ec of entries.clEntries) {
+        if (ec && ec.id) ectQualifiedIds.add(ec.id);
+      }
+    }
+  } else {
+    const cupWinners = gameState.lastSeasonCupWinners || {};
+    if (cupWinners.championsCupId) ectQualifiedIds.add(cupWinners.championsCupId);
+    if (cupWinners.europaCupId) ectQualifiedIds.add(cupWinners.europaCupId);
+    for (const c of (sortedD1 || [])) {
+      if (ectQualifiedIds.size >= 4) break;
+      if (c && c.id) ectQualifiedIds.add(c.id);
+    }
+  }
+
   const allClubs = getAllManagedLeagueClubs();
   for (const club of allClubs) {
     if (!club) continue;
@@ -13370,7 +13388,7 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
       spRev = sp.baseAnnual || 3000;
       const d1Idx = sortedD1.findIndex(c => c.id === club.id);
       if (d1Idx === 0) spRev += (sp.titleBonus || 0);
-      if (d1Idx >= 0 && d1Idx < 4) spRev += (sp.clBonus || 0);
+      if (ectQualifiedIds.has(club.id)) spRev += (sp.clBonus || 0);
       club.funds = (club.funds || 0) + spRev;
       sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
       if (sp.yearsRemaining === 0) {
