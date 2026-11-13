@@ -12481,66 +12481,92 @@ function openCoachHireModal(category, slotIndex) {
     gameState.freeCoaches[category] = (COACHES_DATABASE[category] || []).slice(1).map(d => createCoach(d, category));
   }
 
-  const list = gameState.freeCoaches[category];
+  const club = getPlayerClub();
+  const clubRep = club ? (club.reputation || 4000) : 4000;
+  const list = (gameState.freeCoaches[category] || []).map(c => typeof ensureCoachStats === 'function' ? ensureCoachStats(c) : c);
   if (list.length === 0) {
     body.innerHTML = `
       <div class="mono text-muted text-center" style="padding: 24px;">
         現在、招聘可能なフリーの${label}コーチ候補がいません。
       </div>
     `;
+    modal.classList.remove('hidden');
   } else {
-    body.innerHTML = list.map(c => {
-      if (typeof ensureCoachStats === 'function') ensureCoachStats(c);
-      const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
-      const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
-      const rC = getStaffStatRank(cst.coaching);
-      const rY = getStaffStatRank(cst.youthDev);
-      const rA = getStaffStatRank(cst.analysis);
-      return `
-        <div class="coach-candidate-card">
-          <div class="coach-cand-left">
-            <div class="coach-avatar-wrap">
-              ${avatarHtml}
-            </div>
-            <div class="coach-cand-info">
-              <div class="coach-cand-name-row">
-                <strong class="coach-name">${c.name}</strong>
-                <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
-                <span class="accent-gold mono" style="font-size: 11px;">£${c.weeklyWage}k/週</span>
-              </div>
-              <div class="coach-cand-meta mono text-muted" style="font-size: 10px;">
-                ${c.nationality} / ${c.age}歳
-              </div>
-              <div class="staff-stats-chips">
-                <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
-                <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
-                <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
-              </div>
-              <div class="coach-cand-bio">${c.bio}</div>
-            </div>
-          </div>
-          <div>
-            <button type="button" class="btn btn-sign-coach mono" data-coach-id="${c.id}" data-category="${category}" data-index="${slotIndex}">
-              契約する
+    let coachSpecFilter = 'ALL';
+    const renderCoachList = () => {
+      const filtered = list
+        .filter(c => coachSpecFilter === 'ALL' || (c.specialty || '') === coachSpecFilter)
+        .sort((a, b) => {
+          const sa = a.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+          const sb = b.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+          return (sb.coaching + sb.youthDev + sb.analysis) - (sa.coaching + sa.youthDev + sa.analysis);
+        });
+      const specs = ['ALL', '実戦指導型', '若手育成型', '戦術分析型'];
+      const filterBar = `
+        <div class="mgr-filter-bar" style="margin-top:0;">
+          ${specs.map(sp => `
+            <button type="button" class="btn btn-sm mono ${coachSpecFilter === sp ? 'btn-primary' : 'btn-secondary'} btn-coach-spec-filter" data-spec="${sp}">
+              ${sp === 'ALL' ? `すべて (${list.length})` : `${sp} (${list.filter(x => x.specialty === sp).length})`}
             </button>
-          </div>
+          `).join('')}
         </div>
       `;
-    }).join('');
+      const cards = filtered.map(c => {
+        const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+        const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
+        const avgStat = (cst.coaching + cst.youthDev + cst.analysis) / 3;
+        const reqRep = avgStat >= 80 ? 5200 : (avgStat >= 72 ? 3800 : 0);
+        const repBlocked = clubRep < reqRep;
+        const rC = getStaffStatRank(cst.coaching);
+        const rY = getStaffStatRank(cst.youthDev);
+        const rA = getStaffStatRank(cst.analysis);
+        return `
+          <div class="coach-candidate-card">
+            <div class="coach-cand-left">
+              <div class="coach-avatar-wrap">${avatarHtml}</div>
+              <div class="coach-cand-info">
+                <div class="coach-cand-name-row">
+                  <strong class="coach-name">${c.name}</strong>
+                  <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
+                  <span class="accent-gold mono" style="font-size: 11px;">£${c.weeklyWage}k/週 ${reqRep > 0 ? `(要Rep ${reqRep})` : ''}</span>
+                </div>
+                <div class="coach-cand-meta mono text-muted" style="font-size: 10px;">${c.nationality} / ${c.age}歳</div>
+                <div class="staff-stats-chips">
+                  <span class="staff-stat-chip stat-rank-${rC}">指導 <strong>${rC}</strong></span>
+                  <span class="staff-stat-chip stat-rank-${rY}">育成 <strong>${rY}</strong></span>
+                  <span class="staff-stat-chip stat-rank-${rA}">分析 <strong>${rA}</strong></span>
+                </div>
+                <div class="coach-cand-bio">${c.bio}</div>
+              </div>
+            </div>
+            <div>
+              <button type="button" class="btn btn-sign-coach mono" data-coach-id="${c.id}" data-category="${category}" data-index="${slotIndex}" ${repBlocked ? 'disabled' : ''}>
+                ${repBlocked ? `格不足(Rep ${reqRep})` : '契約する'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      body.innerHTML = filterBar + cards;
+      body.querySelectorAll('.btn-coach-spec-filter').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          coachSpecFilter = e.currentTarget.dataset.spec || 'ALL';
+          renderCoachList();
+        });
+      });
+      body.querySelectorAll('.btn-sign-coach').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const cid = e.currentTarget.dataset.coachId;
+          const cat = e.currentTarget.dataset.category;
+          const sIdx = parseInt(e.currentTarget.dataset.index, 10);
+          hireCoach(cat, sIdx, cid);
+          closeCoachHireModal();
+        });
+      });
+    };
+    renderCoachList();
+    modal.classList.remove('hidden');
   }
-
-  modal.classList.remove('hidden');
-
-  // 契約ボタンイベント
-  body.querySelectorAll('.btn-sign-coach').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const cid = e.currentTarget.dataset.coachId;
-      const cat = e.currentTarget.dataset.category;
-      const sIdx = parseInt(e.currentTarget.dataset.index, 10);
-      hireCoach(cat, sIdx, cid);
-      closeCoachHireModal();
-    });
-  });
 }
 
 function closeCoachHireModal() {
@@ -12620,39 +12646,79 @@ function openInitialStaffSetupModal(club) {
   const usedNames = new Set();
   (club.players || []).forEach(p => { usedNames.add(p.name); });
 
-  // クラブ格に応じた多様なランク・戦術・ステータスを持つ監督候補4名を動的生成
-  const clubRep = club ? (club.reputation || 4500) : 4500;
-  const candidateConfigs = [
-    { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス', rank: clubRep >= 6200 ? 'S' : 'A', focus: 'tactics', wage: clubRep >= 6200 ? 120 : 88 },
-    { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション', rank: clubRep >= 4500 ? 'A' : 'B', focus: 'development', wage: clubRep >= 4500 ? 86 : 64 },
-    { formation: '3-5-2', tactic: 'counter', label: 'カウンター', rank: 'B', focus: 'motivation', wage: 62 },
-    { formation: '4-4-2', tactic: 'wingplay', label: 'サイド攻撃', rank: 'C', focus: 'discipline', wage: 42 }
-  ];
+  // 選択クラブの格(reputation)・戦力(basePower)・ディビジョンに応じた候補の強さスケーリング
+  const isD2Club = Boolean(club && (club.division === 'd2' || String(club.id || '').startsWith('c')));
+  const clubRep = club ? (club.reputation || (club.basePower ? club.basePower * 80 : 4500)) : 4500;
+  const clubPower = club ? (club.basePower || 65) : 65;
 
-  const managerCandidates = candidateConfigs.map((cfg, i) => {
+  let mgrTierRanks = ['B', 'B', 'C', 'C'];
+  let coachTierRanks = ['B', 'B', 'C'];
+  if (!isD2Club && (clubRep >= 6600 || clubPower >= 73)) {
+    mgrTierRanks = ['S', 'S', 'A', 'A'];
+    coachTierRanks = ['A', 'A', 'B'];
+  } else if (!isD2Club && (clubRep >= 5200 || clubPower >= 68)) {
+    mgrTierRanks = ['A', 'A', 'B', 'B'];
+    coachTierRanks = ['A', 'B', 'B'];
+  } else if (!isD2Club && (clubRep >= 3800 || clubPower >= 59)) {
+    mgrTierRanks = ['B', 'B', 'C', 'C'];
+    coachTierRanks = ['B', 'B', 'C'];
+  } else {
+    mgrTierRanks = ['B', 'C', 'C', 'C'];
+    coachTierRanks = ['B', 'C', 'C'];
+  }
+
+  const wageByRank = { S: 122, A: 88, B: 62, C: 40 };
+  const tacticPool = [
+    { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
+    { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
+    { formation: '3-5-2', tactic: 'counter', label: 'カウンター' },
+    { formation: '4-4-2', tactic: 'wingplay', label: 'サイド攻撃' },
+    { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
+  ];
+  const distinctFocuses = ['tactics', 'motivation', 'development', 'discipline'];
+  const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
+
+  const managerCandidates = distinctFocuses.map((focusKey, i) => {
+    const cfg = shuffledTactics[i];
+    const rk = mgrTierRanks[i] || 'B';
     const nat = ['Spain', 'Germany', 'England', 'Portugal', 'Italy'][i % 5];
     const mgrObj = typeof createManager === 'function'
       ? createManager({
           nationality: nat,
-          age: 40 + i * 5,
-          rank: cfg.rank,
-          focus: cfg.focus,
+          age: 39 + i * 5,
+          rank: rk,
+          focus: focusKey,
           preferredFormation: cfg.formation,
           preferredTactic: cfg.tactic,
-          weeklyWage: cfg.wage,
+          weeklyWage: (wageByRank[rk] || 62) + randInt(-4, 6),
           trust: 85,
           contractYears: 3
         }, club.id, usedNames)
-      : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: cfg.rank, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: cfg.wage, trust: 85, contractYears: 3 };
+      : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: rk, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: 62, trust: 85, contractYears: 3 };
     mgrObj.tacticLabel = cfg.label;
     return mgrObj;
   });
 
-  // 4部門それぞれの初期コーチ候補（各3名）を生成して選択可能にする
+  // 4部門それぞれの初期コーチ候補（必ず3つの異なる特徴 coaching / youthDev / analysis を1名ずつ用意し、強さはクラブ格連動）
   const buildCoachCandidates = (cat) => {
     const db = (typeof COACHES_DATABASE !== 'undefined' && Array.isArray(COACHES_DATABASE[cat])) ? COACHES_DATABASE[cat] : [];
-    const pool = [...db].sort(() => Math.random() - 0.5).slice(0, 3);
-    return pool.map(d => createCoach(d, cat, usedNames));
+    const coachFocuses = ['coaching', 'youthDev', 'analysis'];
+    const coachWageByRank = { A: 32, B: 21, C: 13 };
+    return coachFocuses.map((fKey, idx) => {
+      const targetRk = coachTierRanks[idx] || 'B';
+      const exactMatch = db.find(d => d.rank === targetRk && d.focus === fKey)
+        || db.find(d => d.rank === targetRk)
+        || db.find(d => d.focus === fKey)
+        || db[idx % Math.max(1, db.length)]
+        || { nationality: 'England', age: 46, rank: targetRk, focus: fKey, weeklyWage: coachWageByRank[targetRk] || 20 };
+      const clonedDef = {
+        ...exactMatch,
+        rank: targetRk,
+        focus: fKey,
+        weeklyWage: coachWageByRank[targetRk] ? coachWageByRank[targetRk] + randInt(-2, 3) : (exactMatch.weeklyWage || 20)
+      };
+      return createCoach(clonedDef, cat, usedNames);
+    });
   };
   const coachCandidates = {
     attacking: buildCoachCandidates('attacking'),

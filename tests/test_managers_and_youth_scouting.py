@@ -47,6 +47,10 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertNotIn('RANK ${c.rank', self.main_js)
         self.assertIn('btn-back-to-mgr-step', self.main_js)
         self.assertIn('initial-coach-choice', self.main_js)
+        self.assertIn('distinctFocuses', self.main_js)
+        self.assertIn('mgrTierRanks', self.main_js)
+        self.assertIn('coachTierRanks', self.main_js)
+        self.assertIn('btn-coach-spec-filter', self.main_js)
 
     def test_3_youth_scouting_regions_dispatch_and_reports(self):
         """ユーススカウト地域定義・派遣・日次進行・入団/昇格/見送りUIとストレージ互換が実装されていること"""
