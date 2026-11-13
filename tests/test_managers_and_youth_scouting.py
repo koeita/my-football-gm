@@ -73,6 +73,8 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertIn('col-youth-growth', self.html)
         self.assertIn('成長型', self.html)
         self.assertIn('POT: ${potRank}', self.main_js)
+        self.assertIn("const ypPot = yp.potential || yp.potentialGrade || 'B';", self.main_js)
+        self.assertNotIn('potentialMin}-${p.potentialMax', self.main_js)
         self.assertNotIn('col-youth-atk', self.html)
         self.assertNotIn('col-youth-def', self.html)
 
