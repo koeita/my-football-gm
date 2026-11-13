@@ -1452,12 +1452,14 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
     });
 
     (subs || []).forEach(p => {
-      let r = 6.6;
-      if (isWin) r += 0.2;
-      else if (!isDraw) r -= 0.2;
+      const inMin = typeof p.lastMatchSubMinute === 'number' ? p.lastMatchSubMinute : 68;
+      const playedMins = Math.max(1, 90 - inMin);
+      let r = playedMins >= 30 ? 6.6 : (playedMins >= 15 ? 6.4 : 6.2);
+      if (isWin) r += playedMins >= 25 ? 0.3 : 0.2;
+      else if (!isDraw) r -= playedMins >= 25 ? 0.2 : 0.1;
 
       const goalsInMatch = (allMatchGoals || []).filter(s => s && s.scorer && s.scorer.id === p.id).length;
-      r += goalsInMatch * 0.8;
+      r += goalsInMatch * 0.9;
       const assistsInMatch = (allMatchGoals || []).filter(s => s && s.assister && s.assister.id === p.id).length;
       r += assistsInMatch * 0.5;
 
@@ -1565,8 +1567,9 @@ function executeAutoSubstitutions(club, starters, bench, matchMinute = 68, score
     if (!inP) break;
 
     usedBenchIds.add(inP.id);
-    subsIn.push(inP);
     const min = clamp((matchMinute || 65) + i * 5 + randInt(0, 4), 55, 89);
+    inP.lastMatchSubMinute = min;
+    subsIn.push(inP);
     subEvents.push({ minute: min, clubId: club.id, outPlayer: outP, inPlayer: inP });
   }
   return { subsIn, subEvents };
@@ -2848,6 +2851,10 @@ function startMatchLiveTimer() {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
         appendLiveCommentary(`${min}'`, ev.text, '');
+      } else if (ev.type === 'sub') {
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-sub');
+      } else if (ev.type === 'red') {
+        appendLiveCommentary(`${min}'`, ev.text, 'ev-red');
       }
     } else if (min % 9 === 0 && min < 44 || (min > 46 && min < 88 && min % 9 === 0)) {
       const md = matchLiveState.matchData;
@@ -2970,8 +2977,17 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
   const homeStarters = getStartersList(homeClub);
   const awayStarters = getStartersList(awayClub);
-  const homeSubs = (typeof matchLiveState !== 'undefined' && matchLiveState.homeSubs) ? matchLiveState.homeSubs : [];
-  const awaySubs = (typeof matchLiveState !== 'undefined' && matchLiveState.awaySubs) ? matchLiveState.awaySubs : [];
+  const buildSubEntries = (club, evList, fallbackList) => {
+    if (Array.isArray(evList) && evList.length > 0) {
+      return evList.map(ev => {
+        const fullP = (club && club.players && ev.inPlayer) ? (club.players.find(x => x.id === ev.inPlayer.id) || ev.inPlayer) : ev.inPlayer;
+        return { p: fullP, inMinute: ev.minute || 68 };
+      }).filter(x => x.p);
+    }
+    return (fallbackList || []).map(p => ({ p, inMinute: p.lastMatchSubMinute || 68 }));
+  };
+  const homeSubEntries = buildSubEntries(homeClub, md && md.homeSubEvents, (typeof matchLiveState !== 'undefined' && matchLiveState.homeSubs) ? matchLiveState.homeSubs : []);
+  const awaySubEntries = buildSubEntries(awayClub, md && md.awaySubEvents, (typeof matchLiveState !== 'undefined' && matchLiveState.awaySubs) ? matchLiveState.awaySubs : []);
   const homeScorers = md.homeScorers || [];
   const awayScorers = md.awayScorers || [];
 
@@ -2982,7 +2998,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
     LW: 12, RW: 13, CF: 14, ST: 15
   };
 
-  const renderClubList = (club, starters, subs, scorers, isHome) => {
+  const renderClubList = (club, starters, subEntries, scorers, isHome) => {
     // スタメン11名をポジション順に整列
     const sortedStarters = [...starters].sort((a, b) => {
       const posA = a.assignedPos || a.pos || 'MF';
@@ -2990,8 +3006,10 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       return (POS_ORDER[posA] || 99) - (POS_ORDER[posB] || 99);
     });
 
-    const all = sortedStarters.map(p => ({ p, isSub: false })).concat(subs.map(p => ({ p, isSub: true })));
-    const rowsHtml = all.map(({ p, isSub }) => {
+    const starterIds = new Set(sortedStarters.map(p => p.id));
+    const filteredSubs = (subEntries || []).filter(se => se.p && !starterIds.has(se.p.id));
+    const all = sortedStarters.map(p => ({ p, isSub: false, inMinute: 0 })).concat(filteredSubs.map(se => ({ p: se.p, isSub: true, inMinute: se.inMinute })));
+    const rowsHtml = all.map(({ p, isSub, inMinute }) => {
       const pos = p.assignedPos || p.pos || 'MF';
       const rat = typeof p.lastMatchRating === 'number' ? p.lastMatchRating.toFixed(1) : '6.7';
       const numRat = Number(rat);
@@ -3012,7 +3030,8 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">🅰️${assistsCount > 1 ? assistsCount : ''}</span>`;
 
       const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
-      const subBadge = isSub ? '<span class="rating-sub-tag">SUB</span>' : '';
+      const playedMins = isSub ? Math.max(1, 90 - (inMinute || 68)) : 90;
+      const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">SUB ${inMinute || 68}'(${playedMins}分)</span>` : '';
 
       return `
         <div class="summary-rating-row ${isMomPlayer ? 'is-mom-row' : ''}">
@@ -3052,8 +3071,8 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
   return `
     <div class="summary-ratings-grid">
-      ${renderClubList(homeClub, homeStarters, homeSubs, homeScorers, true)}
-      ${renderClubList(awayClub, awayStarters, awaySubs, awayScorers, false)}
+      ${renderClubList(homeClub, homeStarters, homeSubEntries, homeScorers, true)}
+      ${renderClubList(awayClub, awayStarters, awaySubEntries, awayScorers, false)}
     </div>
   `;
 }

@@ -15429,6 +15429,20 @@ body {
   .board-psr-grid { grid-template-columns: 1fr; }
   .neg-clauses-grid { grid-template-columns: 1fr; }
 }
+.day-event-intl,
+.cal-event-intl {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  font-weight: 700;
+}
+.ev-sub {
+  color: #38bdf8;
+}
+.ev-red {
+  color: #ef4444;
+  font-weight: 700;
+}
 
 
 

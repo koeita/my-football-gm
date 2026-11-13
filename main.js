@@ -440,6 +440,12 @@ function generateSeasonCalendar(seasonYear, seasonSchedule, totalRounds = null) 
     // 移籍ウィンドウ判定（夏: 7/1〜8/31, 冬: 1/1〜1/31）
     const windowOpen = (m === 7) || (m === 8) || (m === 1);
     const isTransferDeadline = (m === 8 && d === 31) || (m === 1 && d === 31);
+    const isIntlBreakDay = (
+      (m === 9 && d >= 4 && d <= 8) ||
+      (m === 10 && d >= 9 && d <= 13) ||
+      (m === 11 && d >= 13 && d <= 17) ||
+      (m === 3 && d >= 19 && d <= 24)
+    );
 
     const matchIdx = matchdayOffsets.indexOf(offset);
     const isMatchDay = matchIdx !== -1 && matchIdx < targetRounds;
@@ -451,6 +457,8 @@ function generateSeasonCalendar(seasonYear, seasonSchedule, totalRounds = null) 
       eventType = 'match';
     } else if (isTransferDeadline) {
       eventType = 'deadline';
+    } else if (isIntlBreakDay) {
+      eventType = 'intl';
     } else if (matchdayOffsets.indexOf(offset - 1) !== -1) {
       eventType = 'recovery';
     }
@@ -471,6 +479,7 @@ function generateSeasonCalendar(seasonYear, seasonSchedule, totalRounds = null) 
       played: false,
       windowOpen,
       isTransferDeadline,
+      isIntlBreak: isIntlBreakDay,
       eventType
     });
   }
@@ -1053,6 +1062,8 @@ function renderWeeklySchedule() {
       eventHtml = `<span class="day-event-badge day-event-match ${badgeCls}">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
     } else if (day.isTransferDeadline) {
       eventHtml = `<span class="day-event-badge day-event-market">市場最終日</span>`;
+    } else if (day.isIntlBreak || (day.month === 9 && day.day >= 4 && day.day <= 8) || (day.month === 10 && day.day >= 9 && day.day <= 13) || (day.month === 11 && day.day >= 13 && day.day <= 17) || (day.month === 3 && day.day >= 19 && day.day <= 24)) {
+      eventHtml = `<span class="day-event-badge day-event-intl">🌍 代表ウィーク</span>`;
     } else if (day.windowOpen) {
       eventHtml = `<span class="day-event-market">移籍交渉期間</span>`;
     } else if (day.eventType === 'recovery') {
@@ -6560,6 +6571,9 @@ function renderTacticsOverview() {
     const desc = document.getElementById('current-tactic-desc');
     if (desc) desc.textContent = tacticDef.desc;
   }
+  if (typeof renderTacticalRolesAndChemBar === 'function') {
+    renderTacticalRolesAndChemBar(playerClub);
+  }
 }
 
 /**
@@ -11740,10 +11754,6 @@ function renderTacticalManagerBanner() {
       </div>
     </div>
   `;
-
-  if (typeof renderTacticalRolesAndChemBar === 'function') {
-    renderTacticalRolesAndChemBar(club);
-  }
 }
 
 /**
@@ -12952,12 +12962,15 @@ function renderMonthCalendar() {
 
     // 特別イベント期日の判定
     let eventTagHtml = '';
+    const isIntlDay = Boolean(d.isIntlBreak) || (d.month === 9 && d.day >= 4 && d.day <= 8) || (d.month === 10 && d.day >= 9 && d.day <= 13) || (d.month === 11 && d.day >= 13 && d.day <= 17) || (d.month === 3 && d.day >= 19 && d.day <= 24);
     if (d.isTransferDeadline) {
       eventTagHtml = '<div class="cal-event-tag" title="移籍市場閉幕 (デッドラインデー)">移籍閉幕</div>';
     } else if (d.month === 7 && d.day === 1) {
       eventTagHtml = '<div class="cal-event-tag" title="夏の移籍市場解禁">市場解禁</div>';
     } else if (d.month === 1 && d.day === 1) {
       eventTagHtml = '<div class="cal-event-tag" title="冬の移籍市場解禁">冬市場解禁</div>';
+    } else if (isIntlDay) {
+      eventTagHtml = '<div class="cal-event-tag cal-event-intl" title="代表ウィーク（代表招集期間・公式戦休止）">🌍 代表戦</div>';
     }
 
     if (d.isCupMatchDay) {

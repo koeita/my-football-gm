@@ -65,6 +65,10 @@ class TestRealismExpansion(unittest.TestCase):
         """代表ウィークイベントとセーブ/ロード後方互換補完が実装されていること"""
         self.assertIn('NATIONAL_TEAM_STRENGTHS', self.data_js)
         self.assertIn('function processInternationalBreakEvent(', self.main_js)
+        self.assertIn('day-event-intl', self.main_js)
+        self.assertIn('cal-event-intl', self.main_js)
+        self.assertIn("appendLiveCommentary(`${min}'`, ev.text, 'ev-sub')", self.match_js)
+        self.assertIn('lastMatchSubMinute', self.match_js)
         self.assertIn('ensureClubRealismFields(c)', self.storage_js)
         self.assertIn('scoutingIntel:', self.storage_js)
         self.assertIn('installments:', self.storage_js)
