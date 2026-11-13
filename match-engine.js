@@ -3081,13 +3081,17 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
           </div>
           <span class="team-title-avg mono">平均採点: <strong class="accent-green">${avgRat}</strong></span>
         </div>
-        <div class="summary-ratings-group-label mono">▼ スターティングメンバー (${sortedStarters.length}名)</div>
-        <div class="summary-team-ratings-list">
-          ${starterRowsHtml}
+        <div class="summary-ratings-section-box">
+          <div class="summary-ratings-group-label mono">▼ スターティングメンバー (${sortedStarters.length}名)</div>
+          <div class="summary-team-ratings-list">
+            ${starterRowsHtml}
+          </div>
         </div>
-        <div class="summary-ratings-group-label mono" style="margin-top: 10px;">▼ 控え・途中交代出場 (${filteredSubs.length}名)</div>
-        <div class="summary-team-ratings-list">
-          ${subRowsHtml}
+        <div class="summary-ratings-section-box">
+          <div class="summary-ratings-group-label mono">▼ 控え・途中交代出場 (${filteredSubs.length}名)</div>
+          <div class="summary-team-ratings-list">
+            ${subRowsHtml}
+          </div>
         </div>
       </div>
     `;

@@ -14624,9 +14624,9 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
+  flex: none;
+  height: auto;
+  padding-bottom: 8px;
 }
 
 .summary-team-ratings-panel {
@@ -14636,10 +14636,17 @@ body {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 0;
+  gap: 10px;
   height: auto;
-  overflow-y: auto;
+  overflow: visible;
+  box-sizing: border-box;
+}
+.summary-ratings-section-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+  box-sizing: border-box;
 }
 .summary-team-ratings-panel.is-player {
   border-color: rgba(46, 204, 113, 0.35);
@@ -14792,10 +14799,17 @@ body {
 }
 
 @media (max-width: 768px) {
+  .summary-tab-pane {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding-bottom: 10px !important;
+  }
   .summary-ratings-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
+    flex: none !important;
     height: auto !important;
     overflow: visible !important;
   }
