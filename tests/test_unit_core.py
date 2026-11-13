@@ -10,6 +10,7 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
     def setUp(self):
         self.data_js_path = os.path.join(ROOT_DIR, 'data.js')
         self.models_js_path = os.path.join(ROOT_DIR, 'models.js')
+        self.storage_js_path = os.path.join(ROOT_DIR, 'storage.js')
         self.main_js_path = os.path.join(ROOT_DIR, 'main.js')
         self.avatar_js_path = os.path.join(ROOT_DIR, 'avatar.js')
         self.style_css_path = os.path.join(ROOT_DIR, 'style.css')
@@ -18,6 +19,7 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
     def test_files_exist(self):
         self.assertTrue(os.path.exists(self.data_js_path), "data.js exists")
         self.assertTrue(os.path.exists(self.models_js_path), "models.js exists")
+        self.assertTrue(os.path.exists(self.storage_js_path), "storage.js exists")
         self.assertTrue(os.path.exists(self.main_js_path), "main.js exists")
         self.assertTrue(os.path.exists(self.avatar_js_path), "avatar.js exists")
         self.assertTrue(os.path.exists(self.style_css_path), "style.css exists")
@@ -95,8 +97,10 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         """モバイルでのプルダウンリロード防止設定（CSS overscroll-behavior-y: none および JS initReloadPrevention）が設定されていること"""
         with open(self.style_css_path, 'r', encoding='utf-8') as f:
             css = f.read()
+        with open(self.storage_js_path, 'r', encoding='utf-8') as f:
+            storage_js = f.read()
         with open(self.main_js_path, 'r', encoding='utf-8') as f:
-            js = f.read()
+            js = storage_js + '\n' + f.read()
 
         self.assertIn('overscroll-behavior-y: none', css, "style.css must have overscroll-behavior-y: none")
         self.assertIn('initReloadPrevention', js, "main.js must define and call initReloadPrevention")
@@ -119,14 +123,18 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
             data_js = f.read()
         with open(self.models_js_path, 'r', encoding='utf-8') as f:
             models_js = f.read()
+        with open(self.storage_js_path, 'r', encoding='utf-8') as f:
+            storage_js = f.read()
         with open(self.main_js_path, 'r', encoding='utf-8') as f:
-            js = f.read()
+            raw_js = f.read()
+        js = storage_js + '\n' + raw_js
         with open(self.style_css_path, 'r', encoding='utf-8') as f:
             css = f.read()
 
         self.assertEqual(data_js.count('{'), data_js.count('}'), "data.js braces must be balanced")
         self.assertEqual(models_js.count('{'), models_js.count('}'), "models.js braces must be balanced")
-        self.assertEqual(js.count('{'), js.count('}'), "main.js braces must be balanced")
+        self.assertEqual(storage_js.count('{'), storage_js.count('}'), "storage.js braces must be balanced")
+        self.assertEqual(raw_js.count('{'), raw_js.count('}'), "main.js braces must be balanced")
         self.assertEqual(css.count('{'), css.count('}'), "style.css braces must be balanced")
         for dom_id in [
             'main-menu-screen', 'btn-menu-continue', 'btn-menu-new-career',
