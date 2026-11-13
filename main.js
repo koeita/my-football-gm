@@ -12089,7 +12089,7 @@ function renderTacticalManagerBanner() {
     bonusTag = `<span class="mgr-tag none">戦術浸透度: 低</span>`;
   }
 
-  const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-xs', 32) : '';
+  const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 32) : '';
 
   container.innerHTML = `
     <div class="manager-banner-inner">
@@ -12206,7 +12206,7 @@ function renderManagerManagementPanel() {
     if (typeof ensureManagerRankAndStats === 'function') ensureManagerRankAndStats(mgr);
     const buyoutFee = getManagerBuyoutFee(mgr);
     const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
-    const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 48) : '';
+    const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-lg', 48) : '';
     const mStats = mgr.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
     const rTac = getStaffStatRank(mStats.tactics);
     const rMot = getStaffStatRank(mStats.motivation);
@@ -12561,7 +12561,7 @@ function renderCoachingStaffPanel() {
     const catClass = `tag-${slot.category}`;
     if (c) {
       if (typeof ensureCoachStats === 'function') ensureCoachStats(c);
-      const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+      const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-md', 38) : '';
       const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
       const rC = getStaffStatRank(cst.coaching);
       const rY = getStaffStatRank(cst.youthDev);
@@ -12680,7 +12680,7 @@ function openCoachHireModal(category, slotIndex) {
         </div>
       `;
       const cards = filtered.map(c => {
-        const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-xs', 36) : '';
+        const avatarHtml = typeof getCoachAvatarHtml === 'function' ? getCoachAvatarHtml(c, 'avatar-md', 38) : '';
         const cst = c.stats || { coaching: 70, youthDev: 70, analysis: 70 };
         const avgStat = (cst.coaching + cst.youthDev + cst.analysis) / 3;
         const reqRep = avgStat >= 80 ? 5200 : (avgStat >= 72 ? 3800 : 0);
@@ -12952,7 +12952,7 @@ function openInitialStaffSetupModal(club) {
       if (titleEl) titleEl.textContent = '監督の選任 (1 / 2)';
       const managersHtml = state.candidates.map((m, idx) => {
         const isSelected = idx === state.selectedManagerIdx;
-        const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-sm', 44) : '';
+        const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-md', 44) : '';
         const mst = m.stats || { tactics: 70, motivation: 70, development: 70, discipline: 70 };
         const rTac = getStaffStatRank(mst.tactics);
         const rMot = getStaffStatRank(mst.motivation);
