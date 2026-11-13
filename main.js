@@ -9137,6 +9137,10 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
+  const headerFootEl = document.getElementById('profile-header-foot');
+  if (headerFootEl) {
+    headerFootEl.innerHTML = formatFootBadge(p);
+  }
   const headerOvrEl = document.getElementById('profile-header-ovr');
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
@@ -9236,8 +9240,8 @@ function openPlayerProfileModal(playerId) {
       <span class="profile-bio-chip">${nationalityDisplay}</span>
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
-      <span class="profile-bio-chip">${footBadgeStr}</span>
-      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};border-color:rgba(255,255,255,0.15);">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
+      <span class="profile-bio-chip mono" id="profile-squad-num" style="color:var(--accent-green);font-weight:700;">${squadNumText}</span>
+      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
       ${youthBadgeHtml}
     `;
   }
@@ -9399,30 +9403,42 @@ function openPlayerProfileModal(playerId) {
     </tr>
   `).join('');
 
-  const yearlyFotmobHtml = [...allRowsData].reverse().map(r => {
+  const yearlyFotmobRows = [...allRowsData].reverse().map(r => {
     const ratNum = parseFloat(r.avgRating);
     const ratCls = Number.isNaN(ratNum) ? 'rat-none' : (ratNum >= 7.0 ? 'rat-high' : 'rat-mid');
-    const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 16, 'fotmob-yearly-emblem') : '';
+    const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 22, 'fotmob-yearly-emblem') : '';
     return `
       <div class="fotmob-yearly-row ${r.isCurrent ? 'is-current' : ''}">
-        <div class="fotmob-yearly-top">
-          <div class="fotmob-yearly-club-wrap">
-            ${clubEmblem}
-            <span class="fotmob-yearly-season mono">${r.seasonYear}</span>
+        <div class="fotmob-yearly-left">
+          ${clubEmblem}
+          <div class="fotmob-yearly-team-stack">
             <span class="fotmob-yearly-club">${r.clubName}</span>
-            <span class="fotmob-yearly-age mono">${r.age}歳</span>
+            <span class="fotmob-yearly-season mono">${r.seasonYear} · ${r.age}歳</span>
           </div>
-          <span class="fotmob-rating-pill mono ${ratCls}">${r.avgRating}</span>
         </div>
-        <div class="fotmob-yearly-metrics mono">
-          <span>出場<strong>${r.appearances}</strong></span>
-          <span>得点<strong class="${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</strong></span>
-          <span>アシスト<strong class="${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</strong></span>
-          <span>OVR<strong class="${getOvrTierClass(r.ovr)}" style="background:none;">${r.ovr}</strong></span>
+        <div class="fotmob-yearly-cols mono">
+          <span class="fotmob-col-stat">${r.appearances}</span>
+          <span class="fotmob-col-stat ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</span>
+          <span class="fotmob-col-stat ${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</span>
+          <span class="fotmob-col-ovr ${getOvrTierClass(r.ovr)}" style="background:none;">${r.ovr}</span>
+          <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratCls}">${r.avgRating}</span></span>
         </div>
       </div>
     `;
   }).join('');
+  const yearlyFotmobHtml = `
+    <div class="fotmob-yearly-head mono">
+      <span>チーム / 年度</span>
+      <div class="fotmob-yearly-cols">
+        <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">試</span>
+        <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">G</span>
+        <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">A</span>
+        <span class="fotmob-col-ovr" style="font-size:10px;color:#8b949e;">OVR</span>
+        <span class="fotmob-col-rat" style="font-size:10px;color:#8b949e;">評価</span>
+      </div>
+    </div>
+    ${yearlyFotmobRows}
+  `;
 
   const timelineHtml = careerEvents.map(ev => `
     <div class="profile-timeline-item ${ev.badge === 'CURRENT' ? 'is-current' : ''}">

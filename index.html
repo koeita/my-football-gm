@@ -1219,26 +1219,26 @@
         <div class="profile-header-left">
           <div class="profile-avatar-col">
             <canvas class="profile-avatar-canvas" id="profile-avatar-canvas" width="64" height="64" aria-label="選手ドット絵アバター"></canvas>
-            <div class="profile-squad-num mono" id="profile-squad-num">#10</div>
+            <div class="profile-header-ovr-box mono" id="profile-header-ovr">
+              <span class="profile-header-ovr-label">OVR</span>
+              <strong class="profile-header-ovr-val">--</strong>
+            </div>
           </div>
           <div class="profile-identity">
             <div class="profile-top-tags">
               <span class="modal-category mono" id="profile-club-label">選手情報</span>
               <span class="profile-pos-pill mono" id="profile-pos-pill">CF</span>
             </div>
-            <h2 class="profile-player-name" id="profile-player-name">選手名</h2>
+            <div class="profile-name-row">
+              <h2 class="profile-player-name" id="profile-player-name">選手名</h2>
+              <div class="profile-header-foot-box" id="profile-header-foot"></div>
+            </div>
             <div class="profile-bio-row mono" id="profile-bio-row">
-              <!-- 国籍（国旗＋国名）・年齢・利き足・身長 -->
+              <!-- 国籍・年齢・身長・背番号・疲労 -->
             </div>
           </div>
         </div>
-        <div class="profile-header-right-actions" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-          <div class="profile-header-ovr-box mono" id="profile-header-ovr">
-            <span class="profile-header-ovr-label">OVR</span>
-            <strong class="profile-header-ovr-val">--</strong>
-          </div>
-          <button type="button" class="btn-modal-close mono" id="btn-close-profile-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
-        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-profile-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
 
       <!-- 選手カード 5タブ切り替えバー（能力 / 今季成績 / 年別成績 / 市場価値推移 / 経歴） -->

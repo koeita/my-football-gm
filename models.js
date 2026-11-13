@@ -798,13 +798,15 @@ function calculatePlayerSalary(pos, atk, def, sta, age) {
 function formatFootBadge(player) {
   if (!player) return '';
   const foot = player.preferredFoot || 'Right';
-  
-  if (foot === 'Left') {
-    return '<span class="foot-badge" title="左利き">左足</span>';
-  } else if (foot === 'Both') {
-    return '<span class="foot-badge foot-badge-both" title="両利き">両足</span>';
-  }
-  return '<span class="foot-badge">右足</span>';
+  const isLeft = foot === 'Left';
+  const isBoth = foot === 'Both';
+  const label = isLeft ? '左利き' : (isBoth ? '両利き' : '右利き');
+  const leftFill = isBoth ? '#f59e0b' : (isLeft ? '#38bdf8' : '#64748b');
+  const rightFill = isBoth ? '#f59e0b' : (isLeft ? '#64748b' : '#2ecc71');
+  const leftOp = (isLeft || isBoth) ? '1' : '0.24';
+  const rightOp = (!isLeft || isBoth) ? '1' : '0.24';
+  const footPath = 'M6.8 2.2c-1.8 0-3 2.1-2.7 5.2.2 2 .9 3.6 1 4.9.1 1.1-.3 2-.1 3.2.2 1.2 1.1 1.9 2.1 1.9 1.1 0 1.9-.8 2-2 .1-1.2-.3-2.3-.1-3.6.3-1.5 1.1-3.2 1-5.4-.1-2.6-1.5-4.2-3.2-4.2z';
+  return `<span class="foot-badge ${isBoth ? 'foot-badge-both' : ''}" title="${label}" aria-label="${label}"><svg class="foot-print-svg" width="22" height="17" viewBox="0 0 24 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="${footPath}" fill="${leftFill}" opacity="${leftOp}"/><g transform="translate(24,0) scale(-1,1)"><path d="${footPath}" fill="${rightFill}" opacity="${rightOp}"/></g></svg></span>`;
 }
 
 function getFootShortText(player) {
