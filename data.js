@@ -1285,3 +1285,60 @@ function getGrowthCurveLabel(curve) {
   return found ? found.label : '標準';
 }
 
+// ==========================================================================
+// リアルシミュレーション拡張マスタ定義
+// ==========================================================================
+
+// 試合中の自動交代方針定義
+const SUB_POLICY_DEFINITIONS = {
+  balanced: {
+    id: 'balanced',
+    label: 'バランス（標準）',
+    desc: '後半60〜80分に疲労した選手と低評価選手をバランス良く交代します。'
+  },
+  fatigue: {
+    id: 'fatigue',
+    label: '疲労温存重視',
+    desc: '後半55分から蓄積疲労の高い主力選手を積極的に下げて怪我と消耗を防ぎます。'
+  },
+  defensive_lead: {
+    id: 'defensive_lead',
+    label: 'リード時守備固め',
+    desc: 'リードしている展開では後半65分以降にDF/DMを優先投入して逃げ切りを図ります。'
+  },
+  attack_chase: {
+    id: 'attack_chase',
+    label: 'ビハインド時攻勢',
+    desc: '引き分け・ビハインド時に攻撃的MF/WG/CFを早期投入して同点・逆転を狙います。'
+  }
+};
+
+// チーム内序列（Squad Status）ラベル
+const SQUAD_STATUS_LABELS = {
+  key: '絶対的主力',
+  first_team: 'レギュラー',
+  rotation: 'ローテーション',
+  prospect: '若手有望株'
+};
+
+// 胸スポンサー企業テンプレート（単位：£1K）
+const SPONSOR_TEMPLATES = [
+  { id: 'sp_global_fin', name: 'Apex Global Bank', tier: 'top', baseAnnual: 18000, clBonus: 5000, titleBonus: 7000, relegationPenaltyPct: 45, minReputation: 6800 },
+  { id: 'sp_airways', name: 'Britannia Airways', tier: 'top', baseAnnual: 15000, clBonus: 4500, titleBonus: 6000, relegationPenaltyPct: 40, minReputation: 6000 },
+  { id: 'sp_tech_core', name: 'Nexa Cloud Systems', tier: 'upper', baseAnnual: 10500, clBonus: 3500, titleBonus: 4500, relegationPenaltyPct: 35, minReputation: 4800 },
+  { id: 'sp_motors', name: 'Veloce Motors UK', tier: 'mid', baseAnnual: 7500, clBonus: 2500, titleBonus: 3500, relegationPenaltyPct: 30, minReputation: 3800 },
+  { id: 'sp_energy', name: 'NorthSea Energy', tier: 'mid', baseAnnual: 5500, clBonus: 2000, titleBonus: 2500, relegationPenaltyPct: 25, minReputation: 2800 },
+  { id: 'sp_local_bet', name: 'Albion Heritage Co.', tier: 'lower', baseAnnual: 3200, clBonus: 1200, titleBonus: 1800, relegationPenaltyPct: 15, minReputation: 1000 }
+];
+
+// 代表チーム戦力・招集基準マスタ（代表ウィーク用）
+const NATIONAL_TEAM_STRENGTHS = {
+  England: 84, France: 86, Spain: 85, Germany: 83, Brazil: 85,
+  Argentina: 86, Portugal: 84, Italy: 82, Netherlands: 82, Belgium: 80,
+  Japan: 78, Croatia: 80, Uruguay: 80, Colombia: 79, Denmark: 77
+};
+
+// PSR（収益性と持続可能性に関する規則）許容赤字上限（3シーズン累積：£35.0M = 35000 £K）
+const PSR_MAX_3YR_DEFICIT = -35000;
+
+

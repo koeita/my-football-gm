@@ -654,6 +654,10 @@
             <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
           </div>
           <div class="panel-body">
+            <!-- 役割指定・自動交代方針・チーム連携バー（戦術タブ配置） -->
+            <div class="tactical-roles-chem-bar" id="tactical-roles-chem-bar">
+              <!-- JSで描画 -->
+            </div>
             <div class="tactics-overview-card">
               <span id="current-tactic-desc" class="hidden"></span>
               <div class="tactics-btn-group tactics-btn-group-5" id="tactics-btn-group" role="tablist" aria-label="チーム戦術スタイル選択">
@@ -1033,6 +1037,9 @@
           <div class="panel-body">
             <div class="facilities-grid" id="facilities-grid">
               <!-- JSで3つの施設カードを描画 -->
+            </div>
+            <div class="board-psr-sponsor-panel" id="board-psr-sponsor-panel" style="margin-top: 16px;">
+              <!-- JSでスポンサー契約・PSR財務・理事会評価を描画 -->
             </div>
           </div>
         </div>
@@ -1691,6 +1698,21 @@
       </div>
       <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; align-items: center;">
         <button type="button" class="btn btn-primary btn-sm mono" id="btn-go-to-tactics-board" style="font-weight: 700; padding: 8px 16px;">作戦ボードへ移動して準備 ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 理事会解任・再就職選択モーダル -->
+  <div id="board-crisis-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="board-crisis-title">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <span class="info-popup-tag mono text-danger">[BOARD DISMISSAL]</span>
+          <h2 class="info-popup-title" id="board-crisis-title">理事会からの解任通告</h2>
+        </div>
+      </div>
+      <div class="modal-body" id="board-crisis-body" style="padding: 18px 20px;">
+        <!-- JSで再就職先クラブ選択またはキャリア終了を描画 -->
       </div>
     </div>
   </div>
