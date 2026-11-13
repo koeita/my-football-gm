@@ -9872,20 +9872,41 @@ function closePlayerProfileModal() {
 let introClubFilter = 'all';
 
 /**
- * クラブをフィルターカテゴリに分類
+ * クラブを目標・実力別の排他的4区分でフィルター判定
  */
 function matchesClubFilter(clubDef, filter) {
-  if (filter === 'all') return true;
-  if (filter === 'big') {
-    return clubDef.basePower >= 70 || ['MEGA RICH', 'TRADITIONAL', 'CONTENDER', 'BIG CLUB', 'AMBITIOUS'].includes(clubDef.tier);
-  }
-  if (filter === 'mid') {
-    return (clubDef.basePower >= 64 && clubDef.basePower <= 69) || ['RISING FORCE', 'CHALLENGER', 'SMART SCOUT', 'MID TABLE', 'MONEYBALL'].includes(clubDef.tier);
-  }
-  if (filter === 'challenger') {
-    return clubDef.basePower <= 63 || ['HISTORIC', 'MIRACLE', 'ACADEMY', 'PROMOTED'].includes(clubDef.tier);
+  if (!filter || filter === 'all') return true;
+  if (typeof getClubSelectCategory === 'function') {
+    return getClubSelectCategory(clubDef) === filter;
   }
   return true;
+}
+
+/**
+ * チーム選択モーダルのフィルタータグに最新クラブ件数を同期
+ */
+function syncIntroFilterTagCounts() {
+  const container = document.getElementById('club-filter-tags');
+  if (!container) return;
+  const counts = {
+    all: CLUB_DEFINITIONS.length,
+    title_ucl: 0,
+    euro_race: 0,
+    mid_table: 0,
+    relegation: 0
+  };
+  CLUB_DEFINITIONS.forEach(c => {
+    const cat = typeof getClubSelectCategory === 'function' ? getClubSelectCategory(c) : 'mid_table';
+    if (typeof counts[cat] === 'number') counts[cat] += 1;
+  });
+  container.querySelectorAll('.btn-filter-tag[data-filter]').forEach(btn => {
+    const f = btn.dataset.filter;
+    if (f === 'all') {
+      btn.textContent = `すべて (${counts.all})`;
+    } else if (typeof CLUB_SELECT_CATEGORIES !== 'undefined' && CLUB_SELECT_CATEGORIES[f]) {
+      btn.textContent = `${CLUB_SELECT_CATEGORIES[f].label} (${counts[f] || 0})`;
+    }
+  });
 }
 
 /**
@@ -9961,6 +9982,11 @@ function renderIntroClubDetail() {
     selectEl.value = club.id;
   }
 
+  const catKey = typeof getClubSelectCategory === 'function' ? getClubSelectCategory(club) : 'mid_table';
+  const catMeta = (typeof CLUB_SELECT_CATEGORIES !== 'undefined' && CLUB_SELECT_CATEGORIES[catKey])
+    ? CLUB_SELECT_CATEGORIES[catKey]
+    : { label: '中位定着', badgeClass: 'cat-mid-table' };
+
   detailEl.innerHTML = `
     <div class="detail-header-card">
       <div class="detail-title-row">
@@ -9968,7 +9994,10 @@ function renderIntroClubDetail() {
           ${getClubEmblemSvg(club, 48, 'intro-club-emblem')}
           <div class="detail-club-header-text">
             <h3 class="detail-club-name">${club.name}</h3>
-            <span class="detail-tier-badge">${club.tier}</span>
+            <div class="detail-club-badges">
+              <span class="detail-category-pill ${catMeta.badgeClass}">${catMeta.label}</span>
+              <span class="detail-tier-badge">${club.tier}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -10023,6 +10052,7 @@ function openIntroModal(allowCancel = false) {
   }
 
   introClubFilter = 'all';
+  syncIntroFilterTagCounts();
   document.querySelectorAll('#club-filter-tags .btn-filter-tag').forEach(b => {
     b.classList.toggle('active', b.dataset.filter === 'all');
   });

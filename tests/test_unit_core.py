@@ -177,6 +177,47 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
         self.assertIn('y="406" width="64" height="9"', svg_inner)
         self.assertIn('d="M 241 292 A 68 68 0 0 1 359 292"', svg_inner)
 
+    def test_club_select_categories_structure(self):
+        """チーム選択モーダルの分類が目標・実力別の排他的4区分（6/4/6/4）で構成されていること"""
+        with open(self.data_js_path, 'r', encoding='utf-8') as f:
+            data_js = f.read()
+        with open(self.index_html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+        with open(self.main_js_path, 'r', encoding='utf-8') as f:
+            main_js = f.read()
+
+        self.assertIn('const CLUB_SELECT_CATEGORIES =', data_js)
+        self.assertIn('function getClubSelectCategory', data_js)
+        self.assertIn('function syncIntroFilterTagCounts', main_js)
+        self.assertIn('getClubSelectCategory(clubDef) === filter', main_js)
+
+        # CLUB_DEFINITIONS ブロック内の category 割り当て件数を検証（計20クラブ、重複・漏れなし）
+        club_block_match = re.search(
+            r'const CLUB_DEFINITIONS = \[([\s\S]*?)\n\];',
+            data_js
+        )
+        self.assertIsNotNone(club_block_match, "CLUB_DEFINITIONS must exist in data.js")
+        club_block = club_block_match.group(1)
+
+        categories = re.findall(r"category:\s*'([a-z_]+)'", club_block)
+        self.assertEqual(len(categories), 20, "All 20 clubs in CLUB_DEFINITIONS must define category")
+        self.assertEqual(categories.count('title_ucl'), 6)
+        self.assertEqual(categories.count('euro_race'), 4)
+        self.assertEqual(categories.count('mid_table'), 6)
+        self.assertEqual(categories.count('relegation'), 4)
+
+        # index.html のフィルタータグが新4区分になっていること（旧3区分が存在しないこと）
+        filter_match = re.search(
+            r'<div class="club-filter-tags" id="club-filter-tags">([\s\S]*?)</div>',
+            html
+        )
+        self.assertIsNotNone(filter_match, "#club-filter-tags must exist in index.html")
+        filter_html = filter_match.group(1)
+        for key in ['all', 'title_ucl', 'euro_race', 'mid_table', 'relegation']:
+            self.assertIn(f'data-filter="{key}"', filter_html)
+        for old_key in ['data-filter="big"', 'data-filter="mid"', 'data-filter="challenger"']:
+            self.assertNotIn(old_key, filter_html)
+
 class TestGameLogicUnits(unittest.TestCase):
     """ゲームコアロジックの単体テスト（実行時間: 約0.05秒）"""
 

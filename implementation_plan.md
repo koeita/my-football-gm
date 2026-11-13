@@ -1,3 +1,33 @@
+# Implementation Plan (チーム選択カテゴリの見直し：目標・実力別4区分)
+
+## [Overview]
+チーム選択モーダル（`#intro-modal-overlay`）におけるクラブ分類を、現行の「強豪 / 中堅 / 古豪・昇格」（一部クラブが複数区分へ重複する曖昧な判定）から、**目標・実力に基づく排他的な4区分（「優勝・CL圏」「欧州カップ狙い」「中位定着」「残留争い」）** へ見直す。
+
+## [Types]
+- **`CLUB_SELECT_CATEGORIES` (`data.js`)**: `title_ucl`（優勝・CL圏 / 目標1〜5位・6クラブ）、`euro_race`（欧州カップ狙い / 目標6〜9位・4クラブ）、`mid_table`（中位定着 / 目標10〜15位・6クラブ）、`relegation`（残留争い / 目標16〜17位・4クラブ）の4区分定義。
+- **`CLUB_DEFINITIONS[i].category` (`data.js`)**: 全20クラブに上記4キーのいずれかを排他的に付与。
+
+## [Files]
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/data.js`
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/index.html`
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/main.js`
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/style.css`
+- `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/tests/test_unit_core.py`
+
+## [Functions]
+- `getClubSelectCategory(clubDef)` (`data.js`)
+- `matchesClubFilter(clubDef, filter)` (`main.js`)
+- `syncIntroFilterTagCounts()` (`main.js`)
+- `renderIntroClubDetail()` (`main.js`)
+- `openIntroModal(allowCancel)` (`main.js`)
+
+## [Testing]
+- `tests/test_unit_core.py` による4区分の排他性・件数（6/4/6/4）・DOM整合性テスト。
+- Playwright による PC / モバイル（393x852）全20クラブ巡回・高さ固定検証。
+
+---
+
+
 # Implementation Plan (監督数増加＆ランク・ステータス導入 ＆ ユーススカウト発掘)
 
 ## [Overview]

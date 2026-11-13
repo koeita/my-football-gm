@@ -378,11 +378,52 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
   `.trim();
 }
 
+// チーム選択モーダル用：目標・実力別の排他的4区分定義
+const CLUB_SELECT_CATEGORIES = {
+  title_ucl: {
+    key: 'title_ucl',
+    label: '優勝・CL圏',
+    targetHint: '目標 1〜5位',
+    badgeClass: 'cat-title-ucl'
+  },
+  euro_race: {
+    key: 'euro_race',
+    label: '欧州カップ狙い',
+    targetHint: '目標 6〜9位',
+    badgeClass: 'cat-euro-race'
+  },
+  mid_table: {
+    key: 'mid_table',
+    label: '中位定着',
+    targetHint: '目標 10〜15位',
+    badgeClass: 'cat-mid-table'
+  },
+  relegation: {
+    key: 'relegation',
+    label: '残留争い',
+    targetHint: '目標 16〜17位',
+    badgeClass: 'cat-relegation'
+  }
+};
+
+function getClubSelectCategory(clubDef) {
+  if (!clubDef) return 'mid_table';
+  if (clubDef.category && CLUB_SELECT_CATEGORIES[clubDef.category]) {
+    return clubDef.category;
+  }
+  const rank = typeof clubDef.targetRank === 'number' ? clubDef.targetRank : 12;
+  if (rank <= 5) return 'title_ucl';
+  if (rank <= 9) return 'euro_race';
+  if (rank <= 15) return 'mid_table';
+  return 'relegation';
+}
+
 const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
     emblem: CLUB_EMBLEM_MAP['manchester_b'],
     name: 'マンチェスター・B',
+    category: 'title_ucl',
     tier: 'MEGA RICH',
     desc: '潤沢なオイルマネーと世界屈指の戦力を誇る現王者',
     basePower: 76,
@@ -397,6 +438,7 @@ const CLUB_DEFINITIONS = [
     id: 'manchester_r',
     emblem: CLUB_EMBLEM_MAP['manchester_r'],
     name: 'マンチェスター・R',
+    category: 'title_ucl',
     tier: 'TRADITIONAL',
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
     basePower: 74,
@@ -411,6 +453,7 @@ const CLUB_DEFINITIONS = [
     id: 'liverpool_b',
     emblem: CLUB_EMBLEM_MAP['liverpool_b'],
     name: 'リバプール・B',
+    category: 'title_ucl',
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
     basePower: 75,
@@ -425,6 +468,7 @@ const CLUB_DEFINITIONS = [
     id: 'northlondon_a',
     emblem: CLUB_EMBLEM_MAP['northlondon_a'],
     name: 'ノースロンドン・A',
+    category: 'title_ucl',
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
     basePower: 74,
@@ -439,6 +483,7 @@ const CLUB_DEFINITIONS = [
     id: 'london_fc',
     emblem: CLUB_EMBLEM_MAP['london_fc'],
     name: 'ロンドン・FC',
+    category: 'title_ucl',
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
     basePower: 72,
@@ -453,6 +498,7 @@ const CLUB_DEFINITIONS = [
     id: 'northlondon_w',
     emblem: CLUB_EMBLEM_MAP['northlondon_w'],
     name: 'ノースロンドン・W',
+    category: 'title_ucl',
     tier: 'BIG CLUB',
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
     basePower: 71,
@@ -467,6 +513,7 @@ const CLUB_DEFINITIONS = [
     id: 'newcastle_u',
     emblem: CLUB_EMBLEM_MAP['newcastle_u'],
     name: 'ニューカッスル・U',
+    category: 'euro_race',
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
     basePower: 70,
@@ -481,6 +528,7 @@ const CLUB_DEFINITIONS = [
     id: 'aston_v',
     emblem: CLUB_EMBLEM_MAP['aston_v'],
     name: 'アストン・V',
+    category: 'euro_race',
     tier: 'CHALLENGER',
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
     basePower: 69,
@@ -495,6 +543,7 @@ const CLUB_DEFINITIONS = [
     id: 'brighton_g',
     emblem: CLUB_EMBLEM_MAP['brighton_g'],
     name: 'ブライトン・G',
+    category: 'euro_race',
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
     basePower: 67,
@@ -509,6 +558,7 @@ const CLUB_DEFINITIONS = [
     id: 'eastlondon_h',
     emblem: CLUB_EMBLEM_MAP['eastlondon_h'],
     name: 'イーストロンドン・H',
+    category: 'euro_race',
     tier: 'MID TABLE',
     desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
     basePower: 66,
@@ -524,6 +574,7 @@ const CLUB_DEFINITIONS = [
     id: 'southlondon_p',
     emblem: CLUB_EMBLEM_MAP['southlondon_p'],
     name: 'サウスロンドン・P',
+    category: 'mid_table',
     tier: 'MID TABLE',
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
     basePower: 65,
@@ -538,6 +589,7 @@ const CLUB_DEFINITIONS = [
     id: 'westlondon_c',
     emblem: CLUB_EMBLEM_MAP['westlondon_c'],
     name: 'ウェストロンドン・C',
+    category: 'mid_table',
     tier: 'MID TABLE',
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
     basePower: 65,
@@ -552,6 +604,7 @@ const CLUB_DEFINITIONS = [
     id: 'westlondon_b',
     emblem: CLUB_EMBLEM_MAP['westlondon_b'],
     name: 'ウェストロンドン・B',
+    category: 'mid_table',
     tier: 'MONEYBALL',
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
     basePower: 64,
@@ -566,6 +619,7 @@ const CLUB_DEFINITIONS = [
     id: 'midlands_w',
     emblem: CLUB_EMBLEM_MAP['midlands_w'],
     name: 'ミッドランズ・W',
+    category: 'mid_table',
     tier: 'MID TABLE',
     desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
     basePower: 64,
@@ -580,6 +634,7 @@ const CLUB_DEFINITIONS = [
     id: 'merseyside_b',
     emblem: CLUB_EMBLEM_MAP['merseyside_b'],
     name: 'マージーサイド・B',
+    category: 'mid_table',
     tier: 'TRADITIONAL',
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
     basePower: 63,
@@ -594,6 +649,7 @@ const CLUB_DEFINITIONS = [
     id: 'southcoast_c',
     emblem: CLUB_EMBLEM_MAP['southcoast_c'],
     name: 'サウスコースト・C',
+    category: 'mid_table',
     tier: 'CHALLENGER',
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
     basePower: 63,
@@ -608,6 +664,7 @@ const CLUB_DEFINITIONS = [
     id: 'nottingham_r',
     emblem: CLUB_EMBLEM_MAP['nottingham_r'],
     name: 'ノッティンガム・R',
+    category: 'relegation',
     tier: 'HISTORIC',
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
     basePower: 62,
@@ -622,6 +679,7 @@ const CLUB_DEFINITIONS = [
     id: 'leicester_f',
     emblem: CLUB_EMBLEM_MAP['leicester_f'],
     name: 'レスター・F',
+    category: 'relegation',
     tier: 'MIRACLE',
     desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
     basePower: 61,
@@ -636,6 +694,7 @@ const CLUB_DEFINITIONS = [
     id: 'southampton_s',
     emblem: CLUB_EMBLEM_MAP['southampton_s'],
     name: 'サウサンプトン・S',
+    category: 'relegation',
     tier: 'ACADEMY',
     desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
     basePower: 60,
@@ -650,6 +709,7 @@ const CLUB_DEFINITIONS = [
     id: 'ipswich_t',
     emblem: CLUB_EMBLEM_MAP['ipswich_t'],
     name: 'イプスウィッチ・T',
+    category: 'relegation',
     tier: 'PROMOTED',
     desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
     basePower: 59,
