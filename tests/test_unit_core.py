@@ -10,6 +10,7 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
     def setUp(self):
         self.data_js_path = os.path.join(ROOT_DIR, 'data.js')
         self.models_js_path = os.path.join(ROOT_DIR, 'models.js')
+        self.match_js_path = os.path.join(ROOT_DIR, 'match-engine.js')
         self.storage_js_path = os.path.join(ROOT_DIR, 'storage.js')
         self.main_js_path = os.path.join(ROOT_DIR, 'main.js')
         self.avatar_js_path = os.path.join(ROOT_DIR, 'avatar.js')
@@ -19,6 +20,7 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
     def test_files_exist(self):
         self.assertTrue(os.path.exists(self.data_js_path), "data.js exists")
         self.assertTrue(os.path.exists(self.models_js_path), "models.js exists")
+        self.assertTrue(os.path.exists(self.match_js_path), "match-engine.js exists")
         self.assertTrue(os.path.exists(self.storage_js_path), "storage.js exists")
         self.assertTrue(os.path.exists(self.main_js_path), "main.js exists")
         self.assertTrue(os.path.exists(self.avatar_js_path), "avatar.js exists")
@@ -125,6 +127,8 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
             models_js = f.read()
         with open(self.storage_js_path, 'r', encoding='utf-8') as f:
             storage_js = f.read()
+        with open(self.match_js_path, 'r', encoding='utf-8') as f:
+            match_js = f.read()
         with open(self.main_js_path, 'r', encoding='utf-8') as f:
             raw_js = f.read()
         js = storage_js + '\n' + raw_js
@@ -133,6 +137,7 @@ class TestProjectSyntaxAndStructure(unittest.TestCase):
 
         self.assertEqual(data_js.count('{'), data_js.count('}'), "data.js braces must be balanced")
         self.assertEqual(models_js.count('{'), models_js.count('}'), "models.js braces must be balanced")
+        self.assertEqual(match_js.count('{'), match_js.count('}'), "match-engine.js braces must be balanced")
         self.assertEqual(storage_js.count('{'), storage_js.count('}'), "storage.js braces must be balanced")
         self.assertEqual(raw_js.count('{'), raw_js.count('}'), "main.js braces must be balanced")
         self.assertEqual(css.count('{'), css.count('}'), "style.css braces must be balanced")
@@ -155,9 +160,11 @@ class TestGameLogicUnits(unittest.TestCase):
             self.data_js = f.read()
         with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
             self.models_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'match-engine.js'), 'r', encoding='utf-8') as f:
+            self.match_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             self.main_js = f.read()
-        self.js_code = self.data_js + '\n' + self.models_js + '\n' + self.main_js
+        self.js_code = self.data_js + '\n' + self.models_js + '\n' + self.match_js + '\n' + self.main_js
 
     def test_formation_definitions(self):
         """全8フォーメーションが定義され、それぞれ11スロット（GK含む）持つこと"""

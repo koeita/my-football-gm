@@ -9,8 +9,11 @@ class TestBugfixesAndCompStats(unittest.TestCase):
     def setUpClass(cls):
         with open(os.path.join(ROOT_DIR, 'index.html'), 'r', encoding='utf-8') as f:
             cls.html = f.read()
+        with open(os.path.join(ROOT_DIR, 'match-engine.js'), 'r', encoding='utf-8') as f:
+            match_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
-            cls.main_js = f.read()
+            raw_main = f.read()
+        cls.main_js = match_js + '\n' + raw_main
         with open(os.path.join(ROOT_DIR, 'competitions.js'), 'r', encoding='utf-8') as f:
             cls.comp_js = f.read()
         with open(os.path.join(ROOT_DIR, 'style.css'), 'r', encoding='utf-8') as f:

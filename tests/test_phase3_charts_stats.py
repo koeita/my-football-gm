@@ -10,9 +10,11 @@ class TestPhase3ChartsAndStats(unittest.TestCase):
             self.html = f.read()
         with open(os.path.join(ROOT_DIR, 'models.js'), 'r', encoding='utf-8') as f:
             models_js = f.read()
+        with open(os.path.join(ROOT_DIR, 'match-engine.js'), 'r', encoding='utf-8') as f:
+            match_js = f.read()
         with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as f:
             main_js = f.read()
-        self.js = models_js + '\n' + main_js
+        self.js = models_js + '\n' + match_js + '\n' + main_js
         with open(os.path.join(ROOT_DIR, 'style.css'), 'r', encoding='utf-8') as f:
             self.css = f.read()
 

@@ -10,11 +10,13 @@ class TestPhase4Targeted(unittest.TestCase):
             data_js = f.read()
         with open('models.js', 'r', encoding='utf-8') as f:
             models_js = f.read()
+        with open('match-engine.js', 'r', encoding='utf-8') as f:
+            match_js = f.read()
         with open('storage.js', 'r', encoding='utf-8') as f:
             storage_js = f.read()
         with open('main.js', 'r', encoding='utf-8') as f:
             raw_main = f.read()
-        self.main_js = data_js + '\n' + models_js + '\n' + storage_js + '\n' + raw_main
+        self.main_js = data_js + '\n' + models_js + '\n' + match_js + '\n' + storage_js + '\n' + raw_main
         with open('index.html', 'r', encoding='utf-8') as f:
             self.index_html = f.read()
         with open('style.css', 'r', encoding='utf-8') as f:
