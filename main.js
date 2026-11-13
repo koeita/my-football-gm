@@ -6809,9 +6809,9 @@ function renderRoster() {
       contractText = '満了(0年)';
     } else if (p.contractYears === 1) {
       contractClass = 'contract-expiring';
-      contractText = '残り1年';
+      contractText = '1年';
     } else if (p.contractYears === 2) {
-      contractText = '残り2年';
+      contractText = '2年';
     }
 
     const hgTag = (typeof isPlayerHomegrown === 'function' && isPlayerHomegrown(p))
