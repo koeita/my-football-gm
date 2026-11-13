@@ -1904,7 +1904,7 @@ function openContractNegotiationModal(playerId) {
   const isRefused = Boolean(target.contractRefused);
 
   let statusType = 'info';
-  let statusMessage = `代理人：「#${target.squadNumber || '-'} ${target.name} は今季の貢献度と実力（OVR ${getPlayerOverallRating(target)} / ${target.goals}得点）を踏まえ、年俸 ${formatMoney(demandedSalary)}・${demandedYears}年契約を希望しています。」`;
+  let statusMessage = '';
 
   if (isRefused) {
     statusType = 'error';
@@ -2136,7 +2136,7 @@ function openTransferNegotiationModal(candidateId) {
 
   const clubName = isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ');
   let statusType = 'info';
-  let statusMessage = `${clubName}は移籍金 ${formatMoney(demandedFee)}、${target.name} 本人は週給 ${formatWage(demandedWage)}（年俸 ${formatMoney(demandedSalary)} ／ ${demandedYears}年契約）を希望しています。`;
+  let statusMessage = '';
 
   if (repBlocked) {
     statusType = 'error';
@@ -2325,8 +2325,7 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>増減: £50K</span>
         </div>
       </div>
@@ -2378,10 +2377,6 @@ function renderNegotiationModal() {
           <input type="range" id="neg-loan-slider" class="neg-slider" min="50" max="100" step="5" value="${session.loanCoveragePercent}" ${session.completed ? 'disabled' : ''}>
           <span class="mono text-muted" style="font-size: 12px; width: 60px; text-align: right;">${session.loanCoveragePercent}%</span>
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>相手側要求負担率: <strong class="mono accent-gold">${session.demandedLoanCoverage}% 以上</strong></span>
-          <span>選手現週給: <strong class="mono">${formatWage(weeklyWage)}</strong></span>
-        </div>
       </div>
 
       <div class="neg-control-group">
@@ -2397,9 +2392,6 @@ function renderNegotiationModal() {
               <option value="${Math.round(calculateTransferFee(target) * 0.9)}" ${session.buyOptionFee ? 'selected' : ''}>あり (${formatMoney(Math.round(calculateTransferFee(target) * 0.9))})</option>
             </select>
           </label>
-        </div>
-        <div class="text-muted" style="font-size: 11px; margin-top:4px;">
-          シーズン終了時に元クラブへ自動復帰（買取OP設定時は優先買取権）
         </div>
       </div>
     `;
@@ -2431,8 +2423,7 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>合流時期: <strong class="accent-green">来季7月1日付で合流</strong></span>
         </div>
       </div>
@@ -2505,8 +2496,7 @@ function renderNegotiationModal() {
           <input type="range" id="neg-fee-slider" class="neg-slider" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-fee-input" class="neg-num-input" min="${minFee}" max="${maxFee}" step="100" value="${session.offeredFee}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求額: <strong class="mono">${formatMoney(session.demandedFee)}</strong></span>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>クラブ予算: <strong class="mono ${playerClub.funds < session.offeredFee ? 'text-danger' : 'accent-gold'}">${formatMoney(playerClub.funds)}</strong></span>
         </div>
       </div>
@@ -2520,8 +2510,7 @@ function renderNegotiationModal() {
           <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
           <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
         </div>
-        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: space-between;">
-          <span>要求年俸比: <strong class="mono" id="neg-salary-ratio-text">${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%</strong></span>
+        <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>増減: £50K</span>
         </div>
       </div>
@@ -2539,7 +2528,6 @@ function renderNegotiationModal() {
       <div class="neg-control-group">
         <div class="neg-control-header">
           <span class="neg-control-label">支払方法・契約条項</span>
-          <span class="mono text-cyan" style="font-size:11px;">分割/条項で交渉力UP</span>
         </div>
         <div class="neg-clauses-grid">
           <label class="neg-clause-item">
@@ -2772,9 +2760,11 @@ function renderNegotiationModal() {
     bodyEl.innerHTML = `
       ${dealTypeTabsHtml}
 
-      <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
-        ${session.statusMessage}
-      </div>
+      ${session.statusMessage ? `
+        <div class="neg-feedback-box status-${session.statusType}" id="neg-feedback-box">
+          ${session.statusMessage}
+        </div>
+      ` : ''}
       <div class="neg-cashflow-warning ${initWarn.isCritical ? 'is-critical' : ''} ${initWarn.visible ? '' : 'hidden'}" id="neg-cashflow-warning-box">${initWarn.text}</div>
       ${natRuleWarnHtml}
 
