@@ -9464,7 +9464,7 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
               <span class="profile-box-title">能力パラメータ</span>
-              <span class="profile-ovr-badge">OVR ${baseOvr}</span>
+              <span class="profile-ovr-badge ${getOvrTierClass(baseOvr)}" style="background:none;">OVR ${baseOvr}</span>
             </div>
             ${hexagonChartHtml}
             <div class="profile-compact-attrs-grid">
