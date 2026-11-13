@@ -6718,15 +6718,6 @@ function renderRoster() {
     if (gameState.selectedPlayerId === p.id) rowClasses.push('row-selected');
 
     const baseOvr = getPlayerOverallRating(p);
-  const headerOvrEl = document.getElementById('profile-header-ovr');
-  if (headerOvrEl) {
-    const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
-    if (valEl) {
-      valEl.textContent = baseOvr;
-      valEl.className = `profile-header-ovr-val ${getOvrTierClass(baseOvr)}`;
-      valEl.style.background = 'none';
-    }
-  }
     const effOvr = getEffectivePlayerRating(p);
     const assignedSlot = p.isStarter ? (p.assignedPos || p.pos) : null;
     const fitInfo = p.isStarter ? getPositionFitInfo(p, assignedSlot) : { type: 'main', factor: 1.0 };
@@ -9146,6 +9137,15 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
+  const headerOvrEl = document.getElementById('profile-header-ovr');
+  if (headerOvrEl) {
+    const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = baseOvr;
+      valEl.className = `profile-header-ovr-val ${getOvrTierClass(baseOvr)}`;
+      valEl.style.background = 'none';
+    }
+  }
   const playerClub = getPlayerClub();
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
 
