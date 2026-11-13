@@ -7978,10 +7978,42 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .roster-table td.col-pos .pos-sub-text {
-    font-size: 7.5px !important;
-    max-width: 40px !important;
-    letter-spacing: -0.02em !important;
-    margin-top: 1px !important;
+    display: none !important;
+  }
+
+  .roster-table td.col-pos .pos-tag:not(.pos-tag-primary) {
+    display: none !important;
+  }
+
+  /* --- 選手市場（モバイル：メインポジションのみ表示＆適性列幅の最適化） --- */
+  .market-table th.col-pos,
+  .market-table td.col-pos {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  .market-table td.col-pos .pos-tags-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .market-table td.col-pos .pos-tag {
+    font-size: 10px !important;
+    min-width: auto !important;
+    line-height: 1.1 !important;
+    padding: 0 2px !important;
+  }
+
+  .market-table td.col-pos .pos-tag:not(.pos-tag-primary),
+  .market-table td.col-pos .pos-sub-text {
+    display: none !important;
   }
 
   .roster-table th.col-name,

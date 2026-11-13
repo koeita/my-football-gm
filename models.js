@@ -250,12 +250,18 @@ function formatPlayerPositionsHtml(p) {
   const majors = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
     ? [...p.mainPositions]
     : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? [...p.majorPositions] : [primary]);
-  if (!majors.includes(primary)) majors.unshift(primary);
+  const uniqueMajors = [];
+  if (primary) uniqueMajors.push(primary);
+  for (const m of majors) {
+    if (m && !uniqueMajors.includes(m)) uniqueMajors.push(m);
+  }
   const subs = Array.isArray(p.subPositions)
-    ? p.subPositions.filter(s => !majors.includes(s))
-    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !majors.includes(s)) : []);
+    ? p.subPositions.filter(s => !uniqueMajors.includes(s))
+    : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions.filter(s => !uniqueMajors.includes(s)) : []);
 
-  const majorsHtml = majors.map(m => `<span class="pos-tag pos-${m}">${m}</span>`).join('');
+  const majorsHtml = uniqueMajors
+    .map((m, idx) => `<span class="pos-tag pos-${m}${idx === 0 ? ' pos-tag-primary' : ''}">${m}</span>`)
+    .join('');
   const wrappedMajors = `<div class="pos-tags-wrap">${majorsHtml}</div>`;
   if (subs.length === 0) {
     return wrappedMajors;
