@@ -270,7 +270,10 @@ function simQuickMatch(homeClub, awayClub) {
       const avgOvr = Math.round(lineup.reduce((sum, p) => sum + getPlayerOverallRating(p), 0) / lineup.length);
       if (avgOvr > 0) return avgOvr;
     }
-    if (c && c.basePower) return c.basePower;
+    if (c && c.basePower) {
+      const isD2Uninit = String(c.id || '').startsWith('c') || c.division === 'd2';
+      return isD2Uninit ? Math.max(54, c.basePower - 10) : c.basePower;
+    }
     if (typeof calcClubOvr === 'function') {
       const ovr = calcClubOvr(c);
       if (ovr > 0) return ovr;
@@ -1380,7 +1383,7 @@ function ensurePlayableClubStructure(club) {
   if (!Array.isArray(club.youthSquad) && typeof createYouthSquad === 'function') {
     club.youthSquad = createYouthSquad(usedNames);
   }
-  if (typeof club.funds !== 'number') club.funds = 18000;
+  if (typeof club.funds !== 'number') club.funds = 28000;
   if (typeof club.supporters !== 'number') club.supporters = 14000;
   if (!club.formation) club.formation = '4-3-3';
   if (!club.tactic) club.tactic = 'counter';

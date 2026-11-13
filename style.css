@@ -5691,15 +5691,21 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
+    gap: 6px !important;
+    min-width: 0 !important;
   }
 
   .brand-top-row {
     font-size: 9px !important;
     display: flex !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 4px !important;
     order: 2 !important;
-    padding-right: 76px !important;
+    padding-right: 36px !important;
+    min-width: 0 !important;
+    flex-shrink: 1 !important;
+    overflow: hidden !important;
   }
 
   .game-label {
@@ -5712,6 +5718,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     align-items: center !important;
     gap: 6px !important;
     order: 1 !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
   }
 
   .club-title {
@@ -5720,6 +5729,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     color: var(--text-main, #ffffff) !important;
     letter-spacing: -0.01em !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .gm-badge {
@@ -5729,11 +5740,18 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .finance-status-badge {
     font-size: 8.5px !important;
     padding: 1px 4px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 
   .target-rank-badge {
     font-size: 8.5px !important;
     padding: 1px 4px !important;
+    white-space: nowrap !important;
+    flex-shrink: 1 !important;
+    max-width: 112px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* 下段：日付、節数、資金の主要3項目を横1行に完全固定（折り返し禁止） */

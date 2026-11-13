@@ -1,3 +1,32 @@
+# Implementation Plan (ゲームバランス検証・修正)
+
+## [Overview]
+得点・失点分布、5大戦術のバランスと相性、および1部・2部リーグの財政・PSR収支を現実的な水準へ是正するバランス調整計画である。
+
+事前シミュレーションおよびコード検証により判明した以下の不均衡を修正する：
+1. **5大戦術の二重補正解消と相性設計**: `getTeamStarterStats` には選手適性・能力構成とのシナジーのみを残し、`simulateMatch` 側で戦術の基本特性と明確な相性（`gegenpress > possession > parkthebus > counter > gegenpress`、`wingplay > parkthebus / counter` 等）を反映する。これにより同格対決の期待勝点を均衡させつつ、`parkthebus`（従来期待勝点 0.83〜1.07pt）を実用的な堅守戦術（1.36〜1.65pt）へ再生し、`counter` の一強状態を解消する。
+2. **得点・失点分布の現実化**: ベース期待得点（ホーム 1.46 / アウェイ 1.24）と戦術係数を正規化し、リーグ平均合計得点が現実のプレミアリーグに近い **2.5〜2.8点/試合** に収まるよう調整する。あわせて `simQuickMatch` の未生成2部クラブ評価フォールバックを整合させる。
+3. **財政・PSRの正常化**: 旧スポンサー収入の二重計上（`main.js` シーズン末処理）を廃止して `club.sponsor` に一本化し、2部リーグ戦の入場料・アウェイ放映権料を2部相応の水準（係数 `0.055` / `450` £K）へ調整する。さらに `processSeasonEndFinanceAndPSR` の収益算出にリーグ順位賞金およびディビジョン別試合数・単価を正確に反映し、健全経営クラブの不当なPSR即違反を防止する。
+
+## [Types]
+新規プロパティの追加や既存セーブデータスキーマの破壊的変更は行わない。
+
+## [Files]
+1. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/match-engine.js`
+2. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/competitions.js`
+3. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/main.js`
+4. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/models.js`
+5. `c:/Users/xcang/Desktop/Antigravity/my-footballl-gm/tests/test_balance_and_tactics.py`
+
+## [Implementation Order]
+1. `match-engine.js` の戦術・得点分布・2部試合収入を修正
+2. `competitions.js` の `simQuickMatch` フォールバック補正
+3. `main.js`・`models.js` のスポンサー一本化・PSR収益算出・安全予算単価を修正
+4. `tests/test_balance_and_tactics.py` を作成し全テストを実行検証
+
+---
+
+
 # Implementation Plan
 
 ## [Overview]

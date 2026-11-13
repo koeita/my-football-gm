@@ -2213,13 +2213,21 @@ function getSafeTransferBudget(club) {
   const weeklyPayroll = getClubWeeklyPayroll(club);
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const stadiumMult = club.isPlayer ? (1 + (stadiumLv - 1) * 0.15) : 1.0;
-  const estHomeGate = Math.round(((club.supporters || 14000) * 0.085) * stadiumMult);
-  const estAwayTv = 1600;
+  const isD2Club = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) || club.division === 'd2';
+  const gateUnit = isD2Club ? 0.055 : 0.085;
+  const estHomeGate = Math.round(((club.supporters || 14000) * gateUnit) * stadiumMult);
+  const estAwayTv = isD2Club ? 450 : 1600;
+  let estSponsorBase = (club.sponsor && typeof club.sponsor.baseAnnual === 'number') ? club.sponsor.baseAnnual : 3200;
+  if (isD2Club && club.sponsor && club.sponsor.relegationPenaltyPct) {
+    estSponsorBase = Math.round(estSponsorBase * (1 - club.sponsor.relegationPenaltyPct / 100));
+  }
+  const estMinLeaguePrize = isD2Club ? 1500 : 5000;
+  const estGuaranteedEndRev = estSponsorBase + estMinLeaguePrize;
 
   if (gameState.isSeasonOver) {
     const totalMatches = isPlayerInSecondDivision() ? 46 : 38;
     const halfMatches = Math.floor(totalMatches / 2);
-    const estNextLeagueRev = halfMatches * estHomeGate + halfMatches * estAwayTv;
+    const estNextLeagueRev = halfMatches * estHomeGate + halfMatches * estAwayTv + estGuaranteedEndRev;
     const nextAnnualPayroll = weeklyPayroll * 52;
     const netSeasonBurn = Math.max(0, nextAnnualPayroll - estNextLeagueRev);
     const preseasonBuffer = weeklyPayroll * 7; // 7月〜8月開幕までの無収入期間バッファ
@@ -2233,7 +2241,7 @@ function getSafeTransferBudget(club) {
   const remMatches = Math.max(0, totalWeeks - (gameState.currentWeek || 0));
   const remHome = Math.floor(remMatches / 2);
   const remAway = remMatches - remHome;
-  const estRemLeagueRev = remHome * estHomeGate + remAway * estAwayTv;
+  const estRemLeagueRev = remHome * estHomeGate + remAway * estAwayTv + estGuaranteedEndRev;
   const preseasonWeeksAhead = (gameState.currentWeek || 0) === 0 ? Math.min(remWeeks, 6) : 2;
   const netRemBurn = Math.max(0, (weeklyPayroll * remWeeks) - estRemLeagueRev);
   const requiredReserve = Math.max(weeklyPayroll * Math.min(remWeeks, 6), netRemBurn + (weeklyPayroll * preseasonWeeksAhead));

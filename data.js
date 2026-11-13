@@ -338,7 +338,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MEGA RICH',
     desc: '潤沢なオイルマネーと世界屈指の戦力を誇る現王者',
     basePower: 76,
-    initialFunds: 140000, // £140.0M
+    initialFunds: 298000, // £298.0M
     supporters: 21500,
     targetRank: 1,
     targetLabel: '1位（優勝）',
@@ -352,7 +352,7 @@ const CLUB_DEFINITIONS = [
     tier: 'TRADITIONAL',
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
     basePower: 74,
-    initialFunds: 125000, // £125.0M
+    initialFunds: 284000, // £284.0M
     supporters: 22000,
     targetRank: 3,
     targetLabel: '3位以内',
@@ -366,7 +366,7 @@ const CLUB_DEFINITIONS = [
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
     basePower: 75,
-    initialFunds: 115000, // £115.0M
+    initialFunds: 264000, // £264.0M
     supporters: 21000,
     targetRank: 2,
     targetLabel: '2位以内',
@@ -380,7 +380,7 @@ const CLUB_DEFINITIONS = [
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
     basePower: 74,
-    initialFunds: 105000, // £105.0M
+    initialFunds: 278000, // £278.0M
     supporters: 20000,
     targetRank: 3,
     targetLabel: '3位以内',
@@ -394,7 +394,7 @@ const CLUB_DEFINITIONS = [
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
     basePower: 72,
-    initialFunds: 98000, // £98.0M
+    initialFunds: 239000, // £239.0M
     supporters: 19000,
     targetRank: 4,
     targetLabel: '4位以内',
@@ -408,7 +408,7 @@ const CLUB_DEFINITIONS = [
     tier: 'BIG CLUB',
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
     basePower: 71,
-    initialFunds: 88000, // £88.0M
+    initialFunds: 204000, // £204.0M
     supporters: 18500,
     targetRank: 5,
     targetLabel: '5位以内',
@@ -422,7 +422,7 @@ const CLUB_DEFINITIONS = [
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
     basePower: 70,
-    initialFunds: 82000, // £82.0M
+    initialFunds: 191000, // £191.0M
     supporters: 18000,
     targetRank: 6,
     targetLabel: '6位以内',
@@ -436,7 +436,7 @@ const CLUB_DEFINITIONS = [
     tier: 'CHALLENGER',
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
     basePower: 69,
-    initialFunds: 68000, // £68.0M
+    initialFunds: 166000, // £166.0M
     supporters: 16800,
     targetRank: 6,
     targetLabel: '6位以内',
@@ -450,7 +450,7 @@ const CLUB_DEFINITIONS = [
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
     basePower: 67,
-    initialFunds: 58000, // £58.0M
+    initialFunds: 148000, // £148.0M
     supporters: 15000,
     targetRank: 8,
     targetLabel: '8位以内',
@@ -464,7 +464,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MID TABLE',
     desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
     basePower: 66,
-    initialFunds: 60000, // £60.0M
+    initialFunds: 147000, // £147.0M
     supporters: 16500,
     targetRank: 9,
     targetLabel: '9位以内',
@@ -479,7 +479,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MID TABLE',
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
     basePower: 65,
-    initialFunds: 52000, // £52.0M
+    initialFunds: 136000, // £136.0M
     supporters: 14500,
     targetRank: 10,
     targetLabel: '10位以内',
@@ -493,7 +493,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MID TABLE',
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
     basePower: 65,
-    initialFunds: 48000, // £48.0M
+    initialFunds: 131000, // £131.0M
     supporters: 14000,
     targetRank: 12,
     targetLabel: '12位以内',
@@ -507,7 +507,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MONEYBALL',
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
     basePower: 64,
-    initialFunds: 45000, // £45.0M
+    initialFunds: 127000, // £127.0M
     supporters: 13200,
     targetRank: 13,
     targetLabel: '13位以内',
@@ -521,7 +521,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MID TABLE',
     desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
     basePower: 64,
-    initialFunds: 46000, // £46.0M
+    initialFunds: 127000, // £127.0M
     supporters: 13800,
     targetRank: 13,
     targetLabel: '13位以内',
@@ -535,7 +535,7 @@ const CLUB_DEFINITIONS = [
     tier: 'TRADITIONAL',
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
     basePower: 63,
-    initialFunds: 45000, // £45.0M
+    initialFunds: 126000, // £126.0M
     supporters: 15200,
     targetRank: 14,
     targetLabel: '14位以内',
@@ -549,7 +549,7 @@ const CLUB_DEFINITIONS = [
     tier: 'CHALLENGER',
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
     basePower: 63,
-    initialFunds: 42000, // £42.0M
+    initialFunds: 121000, // £121.0M
     supporters: 12500,
     targetRank: 15,
     targetLabel: '15位以内',
@@ -563,7 +563,7 @@ const CLUB_DEFINITIONS = [
     tier: 'HISTORIC',
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
     basePower: 62,
-    initialFunds: 40000, // £40.0M
+    initialFunds: 115000, // £115.0M
     supporters: 13500,
     targetRank: 16,
     targetLabel: '16位以内',
@@ -577,7 +577,7 @@ const CLUB_DEFINITIONS = [
     tier: 'MIRACLE',
     desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
     basePower: 61,
-    initialFunds: 38000, // £38.0M
+    initialFunds: 110000, // £110.0M
     supporters: 13200,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
@@ -591,7 +591,7 @@ const CLUB_DEFINITIONS = [
     tier: 'ACADEMY',
     desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
     basePower: 60,
-    initialFunds: 35000, // £35.0M
+    initialFunds: 99000, // £99.0M
     supporters: 12200,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
@@ -605,7 +605,7 @@ const CLUB_DEFINITIONS = [
     tier: 'PROMOTED',
     desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
     basePower: 59,
-    initialFunds: 32000, // £32.0M
+    initialFunds: 94000, // £94.0M
     supporters: 11500,
     targetRank: 17,
     targetLabel: '17位以内（残留）',

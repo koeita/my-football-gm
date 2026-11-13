@@ -1047,44 +1047,44 @@ function getTeamStarterStats(club) {
       wideCount += 1;
     }
 
-    // 5大戦術スタイル別の選手能力反映補正
+    // 5大戦術スタイル別の選手能力反映補正（適性・能力構成とのシナジーをマイルドに反映）
     if (tactic === 'possession') {
-      // ① ポゼッション：中盤（CM/DM/AM）のパス・OVRが高いほど攻守に強く反映
+      // ① ポゼッション：中盤（CM/DM/AM）のパス・OVRが高いほど攻守に安定貢献
       if (CENTRAL_MIDS.includes(slot) || roleGroup === 'MF') {
-        const passBonus = 1.18 + Math.max(0, (attrs.passing - 60) * 0.005);
+        const passBonus = 1.08 + Math.max(0, (attrs.passing - 65) * 0.003);
         pAtk *= passBonus;
-        pDef *= (passBonus + 0.06);
+        pDef *= (passBonus + 0.02);
       }
     } else if (tactic === 'gegenpress') {
-      // ② ゲーゲンプレス：前線から激しく奪い決定機大幅UP（攻撃+22%、前線・中盤の守備貢献UP）
-      pAtk *= 1.22;
+      // ② ゲーゲンプレス：前線から激しく奪い決定機UP（攻撃+8%、前線・中盤の守備貢献UP）
+      pAtk *= 1.08;
       if (roleGroup === 'FW' || roleGroup === 'MF') {
-        pDef *= 1.16;
+        pDef *= 1.07;
       } else {
         pDef *= 0.96; // ハイライン裏のスペースリスク
       }
     } else if (tactic === 'counter') {
       // ③ ダイレクトカウンター：自陣ブロック守備強化＋快足FW（Pace）の得点力UP
       if (roleGroup === 'DF' || slot === 'DM') {
-        pDef *= 1.26;
+        pDef *= 1.06;
       }
       if (roleGroup === 'FW' || FW_POSITIONS.includes(slot)) {
-        const paceBoost = 1.18 + Math.max(0, (attrs.pace - 60) * 0.008);
+        const paceBoost = 1.04 + Math.max(0, (attrs.pace - 65) * 0.003);
         pAtk *= paceBoost;
       }
     } else if (tactic === 'wingplay') {
-      // ④ ワイドアタック：両翼（WG/SB/WB/LM/RM）の総合値が攻撃力に強く反映
+      // ④ ワイドアタック：両翼（WG/SB/WB/LM/RM）の総合値が攻撃力に反映
       if (WIDE_POSITIONS.includes(slot)) {
-        const wideBoost = 1.28 + Math.max(0, (effOvr - 62) * 0.005);
+        const wideBoost = 1.08 + Math.max(0, (effOvr - 65) * 0.003);
         pAtk *= wideBoost;
-        pDef *= 1.08;
+        pDef *= 1.02;
       } else if (slot === 'CF') {
-        pAtk *= 1.14; // クロスに合わせるCFの得点力ボーナス
+        pAtk *= 1.04; // クロスに合わせるCFの得点力ボーナス
       }
     } else if (tactic === 'parkthebus') {
-      // ⑤ ウルトラディフェンス：11人全員でバイタルを埋め守備力大幅UP、攻撃力は大幅抑制
-      pDef *= 1.48;
-      pAtk *= 0.52;
+      // ⑤ ウルトラディフェンス：全員でバイタルを埋め守備強化、攻撃参加を抑制
+      pDef *= 1.20;
+      pAtk *= 0.85;
     }
 
     totalAtk += pAtk;
@@ -1114,9 +1114,9 @@ function getTeamStarterStats(club) {
   // 戦術スタイルに応じた実効スタミナ負荷表示（ゲーゲンプレスは1.3倍消費相当、カウンターは省エネ）
   const staminaConsumptionRate = tactic === 'gegenpress' ? 1.30 : (tactic === 'counter' ? 0.78 : (tactic === 'parkthebus' ? 0.90 : 1.00));
   if (tactic === 'gegenpress') {
-    avgSta = Math.max(30, Math.round(rawAvgSta - 10));
+    avgSta = Math.max(30, Math.round(rawAvgSta - 5));
   } else if (tactic === 'counter') {
-    avgSta = Math.min(99, Math.round(rawAvgSta + 3));
+    avgSta = Math.min(99, Math.round(rawAvgSta + 2));
   }
 
   // 監督（ヘッドコーチ）哲学一致・現場信頼度による戦術浸透度補正
@@ -1210,16 +1210,16 @@ function simulateMatch(homeClub, awayClub) {
   const awayPossession = 100 - homePossession;
 
   // 2. 実効攻守と戦術・フォーメーション相性による得点期待値（Lambda）の算出
-  const homeStaFactor = 0.85 + (homeStats.avgSta / 100) * 0.3;
-  const awayStaFactor = 0.85 + (awayStats.avgSta / 100) * 0.3;
+  const homeStaFactor = 0.88 + (homeStats.avgSta / 100) * 0.24;
+  const awayStaFactor = 0.88 + (awayStats.avgSta / 100) * 0.24;
 
   const homeEffAtk = homeStats.totalAtk * homeStaFactor * 1.04;
   const homeEffDef = homeStats.totalDef * homeStaFactor * 1.04;
   const awayEffAtk = awayStats.totalAtk * awayStaFactor;
   const awayEffDef = awayStats.totalDef * awayStaFactor;
 
-  let rawHomeLambda = 1.35 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
-  let rawAwayLambda = 1.20 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
+  let rawHomeLambda = 1.46 * Math.pow(homeEffAtk / Math.max(awayEffDef, 200), 1.15);
+  let rawAwayLambda = 1.24 * Math.pow(awayEffAtk / Math.max(homeEffDef, 200), 1.15);
 
   // --- 指導陣（COACHING STAFF）の効果反映 ---
   const hCoaching = getClubCoachingEffects(homeClub);
@@ -1239,70 +1239,81 @@ function simulateMatch(homeClub, awayClub) {
 
   const CENTRAL_DEF_FORMATIONS = ['5-3-2', '4-3-1-2', '3-5-2'];
 
-  // --- ホーム側の5大戦術効果反映 ---
-  if (hTactic === 'possession') {
-    // ① ポゼッション：CM/DMのパス・OVRが高いほど失点リスクDOWN、格下相手に取りこぼしにくい
-    const midQuality = clamp((homeStats.cmDmPassScore - 58) / 30, 0, 1);
-    rawAwayLambda *= (0.86 - midQuality * 0.12);
-    if (homeStats.avgEffOvr >= awayStats.avgEffOvr + 2) {
-      rawHomeLambda *= 1.16; // 格下を確実に崩す
-      rawAwayLambda *= 0.82;
-    }
-  } else if (hTactic === 'gegenpress') {
-    // ② ゲーゲンプレス：決定機が大幅UPするが、スタミナ消費1.3倍により終盤の失点リスクが微増
-    rawHomeLambda *= 1.26;
-    rawAwayLambda *= 1.13;
-  } else if (hTactic === 'counter') {
-    // ③ ダイレクトカウンター：FWのスピードが高いほど得点力UP、格上（強豪）に対して金星を挙げやすい
-    const paceBonus = 1.05 + clamp((homeStats.fwPaceScore - 60) / 35, 0, 0.25);
-    rawHomeLambda *= paceBonus;
-    rawAwayLambda *= 0.90;
-    if (awayStats.avgEffOvr >= homeStats.avgEffOvr + 2) {
-      rawHomeLambda *= 1.22; // ジャイアントキリング補正
-      rawAwayLambda *= 0.88;
-    }
-  } else if (hTactic === 'wingplay') {
-    // ④ ワイドアタック：サイド総合値が攻撃力に強く反映、相手の5バック（5-3-2）や中央守備を攻略しやすい
-    const wideBonus = 1.06 + clamp((homeStats.wideOvrScore - 60) / 35, 0, 0.22);
-    rawHomeLambda *= wideBonus;
-    if (CENTRAL_DEF_FORMATIONS.includes(aForm) || aTactic === 'parkthebus' || aTactic === 'counter') {
-      rawHomeLambda *= 1.22; // 5バック・中央固めを外から崩す
-    }
-  } else if (hTactic === 'parkthebus') {
-    // ⑤ ウルトラディフェンス：失点率を大幅カットするが、自チームの得点期待値もほぼゼロに（勝点1狙い）
-    rawAwayLambda *= 0.38;
-    rawHomeLambda *= 0.26;
-  }
+  // --- 5大戦術の基本特性＆相性マトリックス（均衡バランス・三すくみ設計） ---
+  const applyTacticAndMatchup = (myTac, oppTac, myStats, oppStats, oppForm, isHome) => {
+    let attMult = 1.0;
+    let oppAttMult = 1.0;
 
-  // --- アウェイ側の5大戦術効果反映 ---
-  if (aTactic === 'possession') {
-    const midQuality = clamp((awayStats.cmDmPassScore - 58) / 30, 0, 1);
-    rawHomeLambda *= (0.86 - midQuality * 0.12);
-    if (awayStats.avgEffOvr >= homeStats.avgEffOvr + 2) {
-      rawAwayLambda *= 1.16;
-      rawHomeLambda *= 0.82;
+    if (myTac === 'possession') {
+      // ① ポゼッション：中盤パス力に応じて被決定機を抑え、格下相手に取りこぼしにくい。引いた相手(parkthebus)を揺さぶり崩す
+      const midQuality = clamp((myStats.cmDmPassScore - 60) / 30, 0, 1);
+      attMult *= 1.04;
+      oppAttMult *= (0.94 - midQuality * 0.05);
+      if (myStats.avgEffOvr >= oppStats.avgEffOvr + 2) {
+        attMult *= 1.08;
+        oppAttMult *= 0.90;
+      }
+      if (oppTac === 'parkthebus') {
+        attMult *= 1.18;
+      } else if (oppTac === 'gegenpress') {
+        oppAttMult *= 1.12; // ハイプレスにビルドアップが狙われやすい
+      }
+    } else if (myTac === 'gegenpress') {
+      // ② ゲーゲンプレス：高い位置で奪い決定機大幅UP、ただし被リスクも微増。ポゼッション・ワイドに強く、カウンターに裏を突かれやすい
+      attMult *= 1.14;
+      oppAttMult *= 1.08;
+      if (oppTac === 'possession') {
+        attMult *= 1.14;
+      } else if (oppTac === 'wingplay') {
+        attMult *= 1.08;
+      } else if (oppTac === 'counter') {
+        oppAttMult *= 1.14;
+      }
+    } else if (myTac === 'counter') {
+      // ③ ダイレクトカウンター：FWスピード連動、格上相手に金星を挙げやすい。ポゼッション・ゲーゲンプレスに強く、ブロック守備・ワイドに苦戦
+      const paceBonus = 0.99 + clamp((myStats.fwPaceScore - 60) / 45, 0, 0.10);
+      attMult *= paceBonus;
+      oppAttMult *= 0.99;
+      if (oppStats.avgEffOvr >= myStats.avgEffOvr + 2) {
+        attMult *= 1.14; // ジャイアントキリング補正
+        oppAttMult *= 0.92;
+      }
+      if (oppTac === 'possession' || oppTac === 'gegenpress') {
+        attMult *= 1.10;
+      } else if (oppTac === 'parkthebus' || oppTac === 'wingplay') {
+        attMult *= 0.90;
+      }
+    } else if (myTac === 'wingplay') {
+      // ④ ワイドアタック：サイド能力連動。中央固め(5バック/parkthebus/counter)を外から攻略しやすい
+      const wideBonus = 1.01 + clamp((myStats.wideOvrScore - 60) / 45, 0, 0.10);
+      attMult *= wideBonus;
+      if (CENTRAL_DEF_FORMATIONS.includes(oppForm) || oppTac === 'parkthebus' || oppTac === 'counter') {
+        attMult *= 1.14;
+      } else if (oppTac === 'gegenpress') {
+        attMult *= 0.92;
+      }
+    } else if (myTac === 'parkthebus') {
+      // ⑤ ウルトラディフェンス：堅守ブロックで失点を大幅カットしつつ最小限のカウンター機会を残す（勝点1〜ウノゼロ狙い）
+      attMult *= 0.80;
+      oppAttMult *= 0.68;
+      if (oppTac === 'counter') {
+        oppAttMult *= 0.85; // スペースを消してカウンターを封じる
+      } else if (oppTac === 'wingplay') {
+        oppAttMult *= 1.12; // サイドアタックにはやや揺さぶられやすい
+      }
     }
-  } else if (aTactic === 'gegenpress') {
-    rawAwayLambda *= 1.26;
-    rawHomeLambda *= 1.13;
-  } else if (aTactic === 'counter') {
-    const paceBonus = 1.05 + clamp((awayStats.fwPaceScore - 60) / 35, 0, 0.25);
-    rawAwayLambda *= paceBonus;
-    rawHomeLambda *= 0.90;
-    if (homeStats.avgEffOvr >= awayStats.avgEffOvr + 2) {
-      rawAwayLambda *= 1.22;
-      rawHomeLambda *= 0.88;
+
+    if (isHome) {
+      rawHomeLambda *= attMult;
+      rawAwayLambda *= oppAttMult;
+    } else {
+      rawAwayLambda *= attMult;
+      rawHomeLambda *= oppAttMult;
     }
-  } else if (aTactic === 'wingplay') {
-    const wideBonus = 1.06 + clamp((awayStats.wideOvrScore - 60) / 35, 0, 0.22);
-    rawAwayLambda *= wideBonus;
-    if (CENTRAL_DEF_FORMATIONS.includes(hForm) || hTactic === 'parkthebus' || hTactic === 'counter') {
-      rawAwayLambda *= 1.22;
-    }
-  } else if (aTactic === 'parkthebus') {
-    rawHomeLambda *= 0.38;
-    rawAwayLambda *= 0.26;
-  }
+  };
+
+  applyTacticAndMatchup(hTactic, aTactic, homeStats, awayStats, aForm, true);
+  applyTacticAndMatchup(aTactic, hTactic, awayStats, homeStats, hForm, false);
 
   // --- チームケミストリー・戦術習熟度・役割（キャプテン・セットプレー）補正 ---
   const hChem = typeof homeClub.teamChemistry === 'number' ? homeClub.teamChemistry : 75;
@@ -1337,19 +1348,19 @@ function simulateMatch(homeClub, awayClub) {
     rawHomeLambda *= (1 + 0.28 * remainRatio);
   }
 
-  const homeLambda = clamp(rawHomeLambda, 0.08, 4.4);
-  const awayLambda = clamp(rawAwayLambda, 0.08, 4.2);
+  const homeLambda = clamp(rawHomeLambda, 0.18, 4.2);
+  const awayLambda = clamp(rawAwayLambda, 0.15, 4.0);
 
   const homeScore = samplePoisson(homeLambda);
   const awayScore = samplePoisson(awayLambda);
 
-  // 3. シュート数の算出（ゲーゲンプレスで大幅UP、ウルトラディフェンスで極小、スコア以上のシュート数を保証）
+  // 3. シュート数の算出（ゲーゲンプレスでUP、ウルトラディフェンスで少なめ、スコア以上のシュート数を保証）
   let baseHomeShots = Math.round(homeLambda * 5.2 + (homePossession - 50) * 0.12 + randInt(1, 4));
   let baseAwayShots = Math.round(awayLambda * 5.2 + (awayPossession - 50) * 0.12 + randInt(1, 4));
-  if (hTactic === 'gegenpress') baseHomeShots = Math.round(baseHomeShots * 1.35 + 2);
-  if (aTactic === 'gegenpress') baseAwayShots = Math.round(baseAwayShots * 1.35 + 2);
-  if (hTactic === 'parkthebus') baseHomeShots = Math.min(baseHomeShots, Math.max(homeScore + 1, randInt(1, 3)));
-  if (aTactic === 'parkthebus') baseAwayShots = Math.min(baseAwayShots, Math.max(awayScore + 1, randInt(1, 3)));
+  if (hTactic === 'gegenpress') baseHomeShots = Math.round(baseHomeShots * 1.25 + 1);
+  if (aTactic === 'gegenpress') baseAwayShots = Math.round(baseAwayShots * 1.25 + 1);
+  if (hTactic === 'parkthebus') baseHomeShots = Math.min(baseHomeShots, Math.max(homeScore + 2, randInt(3, 6)));
+  if (aTactic === 'parkthebus') baseAwayShots = Math.min(baseAwayShots, Math.max(awayScore + 2, randInt(3, 6)));
 
   const homeShots = Math.max(homeScore, clamp(baseHomeShots, 1, 28));
   const awayShots = Math.max(awayScore, clamp(baseAwayShots, 1, 26));
@@ -2054,15 +2065,17 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     match.awayPassAccuracy = awayPassAccuracy;
     match.played = true;
 
-    // ホーム開催時（全19試合）：サポーター規模＋スタジアム拡張Lv補正（Lvごとに+15%）に応じたマッチデイ収入（£1.2M〜£2.5M）
-    const rawIncome = homeClub.supporters * 0.085 + randInt(-30, 30);
+    const isD2League = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision());
+    // ホーム開催時：1部はサポーター規模×0.085（£1.2M〜£2.5M）、2部は×0.055（£0.6M〜£1.0M）＋スタジアム拡張Lv補正
+    const gateUnit = isD2League ? 0.055 : 0.085;
+    const rawIncome = homeClub.supporters * gateUnit + randInt(-30, 30);
     const effectiveIncome = homeClub.isPlayer ? rawIncome * stadiumMultiplier : rawIncome;
     const matchIncome = Math.round(effectiveIncome / 10) * 10;
     homeClub.funds += matchIncome;
     match.homeRevenue = matchIncome;
 
-    // アウェイ戦（全19試合）：プレミア放映権料分配金 £1.6M（1,600 £K）
-    const awayBroadcastingFee = 1600;
+    // アウェイ戦：1部はプレミア放映権料 £1.6M（1,600 £K）、2部は £450K（450 £K）
+    const awayBroadcastingFee = isD2League ? 450 : 1600;
     awayClub.funds += awayBroadcastingFee;
     match.awayRevenue = awayBroadcastingFee;
 
