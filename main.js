@@ -7890,7 +7890,7 @@ function renderFacilitiesAndYouth() {
 
       let pipsHtml = '';
       for (let i = 1; i <= def.maxLevel; i++) {
-        pipsHtml += `<span class="facility-pip ${i <= lv ? 'active' : ''}"></span>`;
+        pipsHtml += `<span class="facility-pip ${i <= lv ? 'pip-active active' : ''}"></span>`;
       }
 
       let btnLabel = isMax ? 'MAX達成' : `Lv.${lv + 1} 改修（${formatMoney(nextCost)}）`;
@@ -7902,13 +7902,13 @@ function renderFacilitiesAndYouth() {
       const nextEffect = typeof def.getNextEffectText === 'function' ? def.getNextEffectText(lv) : (isMax ? '最大レベル' : '効果増大');
 
       return `
-        <div class="facility-card">
+        <div class="facility-card ${isMax ? 'facility-maxed' : ''}">
           <div class="facility-card-header">
             <div class="facility-header-left">
               <h3 class="facility-name">${def.name}</h3>
               <button type="button" class="btn-facility-info" data-facility-info="${key}" title="詳細を表示" aria-label="詳細解説">ⓘ</button>
             </div>
-            <span class="facility-level-badge">Lv.${lv}/${def.maxLevel}</span>
+            <span class="facility-lv-badge facility-level-badge">Lv.${lv}/${def.maxLevel}</span>
           </div>
 
           <div class="facility-pips-row">
