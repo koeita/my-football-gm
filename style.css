@@ -16132,3 +16132,15 @@ body {
     color: #cbd5e1;
   }
 }
+
+.foot-badge,
+.foot-badge-both {
+  background: none !important;
+  border: none !important;
+  padding: 0 2px !important;
+  vertical-align: middle;
+}
+.foot-print-svg {
+  display: inline-block;
+  vertical-align: middle;
+}
