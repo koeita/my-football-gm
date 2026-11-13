@@ -2211,44 +2211,63 @@ function renderNegotiationModal() {
   const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
   const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
 
-  const squadNumEl = document.getElementById('neg-squad-num');
-  if (squadNumEl) {
-    squadNumEl.textContent = isRenewal ? `#${target.squadNumber || 10}` : (session.dealType === 'loan' ? 'LOAN' : 'SIGN');
+  const avatarCanvasEl = document.getElementById('neg-avatar-canvas');
+  if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
+    const avatarClub = isRenewal ? playerClub : (sellerClub || (typeof findAvatarClubForPlayer === 'function' ? findAvatarClubForPlayer(target) : null));
+    generatePlayerAvatar(target, avatarCanvasEl, avatarClub);
+  }
+
+  const headerOvrEl = document.getElementById('neg-header-ovr');
+  if (headerOvrEl) {
+    const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = ovr;
+      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(ovr) : ''}`;
+      valEl.style.background = 'none';
+    }
   }
 
   const catEl = document.getElementById('neg-modal-category');
   if (catEl) {
-    if (isRenewal) {
-      catEl.textContent = '契約延長交渉';
-    } else if (session.dealType === 'loan') {
-      catEl.textContent = `レンタル加入交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
-    } else if (session.dealType === 'pre_contract') {
-      catEl.textContent = `来季事前合意 (ボスマン) 交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
-    } else if (session.dealType === 'free_agent') {
-      catEl.textContent = '無所属選手・獲得交渉';
+    const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
+    const clubLabelText = isRenewal ? (playerClub ? playerClub.name : '自クラブ') : (session.isFreeAgent ? '無所属 (フリー)' : (sellerClub ? sellerClub.name : '相手クラブ'));
+    if (clubDisplayObj && typeof getClubEmblemSvg === 'function') {
+      catEl.innerHTML = `${getClubEmblemSvg(clubDisplayObj, 18, 'profile-club-emblem')}<span>${clubLabelText}</span>`;
     } else {
-      catEl.textContent = `獲得交渉 (${sellerClub ? sellerClub.name : '相手クラブ'})`;
+      catEl.textContent = clubLabelText;
     }
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
   if (posPillEl) {
-    const subText = subPosList.length > 0 ? ` / ${subPosList.join(', ')}` : '';
-    posPillEl.innerHTML = `<span class="profile-pos-badge-main">${primaryPos}${subText}</span>`;
+    if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(target);
+    const mains = Array.isArray(target.mainPositions) && target.mainPositions.length > 0
+      ? target.mainPositions
+      : [primaryPos];
+    const subs = Array.isArray(target.subPositions) ? target.subPositions : subPosList;
+    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main">${mp}</span>`).join(' ');
+    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub">${sp}</span>`).join(' ');
+    posPillEl.innerHTML = `<div class="profile-pos-badges-wrap">${mainBadgesHtml}${subBadgesHtml}</div>`;
   }
 
   const titleEl = document.getElementById('neg-modal-title');
-  if (titleEl) titleEl.textContent = target.name;
+  if (titleEl) {
+    if (target.fullName && target.fullName !== target.name) {
+      titleEl.innerHTML = `<span class="profile-name-main">${target.name}</span><span class="profile-fullname-sub">(${target.fullName})</span>`;
+    } else {
+      titleEl.textContent = target.name;
+    }
+  }
 
   const metaEl = document.getElementById('neg-player-meta');
   if (metaEl) {
-    const avgRat = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
-    if (isRenewal) {
-      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>今季成績: <strong>${target.appearances}試合 ${target.goals}得点</strong></span><span>|</span><span>現給与: <strong class="accent-gold">${formatWage(target.wage)} (残り${target.contractYears}年)</strong></span>`;
-    } else {
-      const clubDisplay = session.isFreeAgent ? '<strong class="accent-gold">無所属 (Free Agent)</strong>' : `<strong>${sellerClub ? sellerClub.name : '他クラブ'}</strong>`;
-      metaEl.innerHTML = `<span>年齢: <strong>${target.age}歳</strong></span><span>|</span><span>所属: ${clubDisplay}</span><span>|</span><span>総合力: <strong class="accent-green">OVR ${ovr}</strong></span><span>|</span><span>現給与: <strong>${formatWage(target.wage)}</strong></span>`;
-    }
+    const rawNat = target.nationality || 'England';
+    const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
+    const natChip = `<span class="profile-bio-chip"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+    const ageChip = `<span class="profile-bio-chip">${target.age}歳</span>`;
+    const numChip = isRenewal ? `<span class="profile-bio-chip mono" style="color:var(--accent-green);font-weight:700;">#${target.squadNumber || '-'}</span>` : '';
+    const wageChip = `<span class="profile-bio-chip mono" style="color:var(--accent-gold);">${formatWage(target.wage)}</span>`;
+    metaEl.innerHTML = `${natChip}${ageChip}${numChip}${wageChip}`;
   }
 
   const maxFails = 2;
@@ -2558,10 +2577,10 @@ function renderNegotiationModal() {
   const safeBudgetVal = getSafeTransferBudget(playerClub);
   const budgetKvRowsHtml = `
     <div class="ui-kv-row">
-      <div class="ui-kv-label">クラブ資金</div>
+      <div class="ui-kv-label" style="color:#ffffff;">クラブ資金</div>
       <div class="ui-kv-content mono" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; font-size:12px;">
         <strong style="color:#ffffff;">${formatMoney(playerClub.funds)}</strong>
-        <span class="text-muted">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+        <span style="color:#cbd5e1;">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
       </div>
     </div>
     <div class="ui-kv-row">
