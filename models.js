@@ -1455,7 +1455,7 @@ function createSquad(basePower, usedNames, options = {}) {
   const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : null;
   const homeNat = (rules && rules.HOME_NATIONALITY) || 'England';
   const homeRatio = typeof options.homeRatio === 'number' ? options.homeRatio : (rules ? rules.D1_HOME_RATIO : 0.48);
-  const minHomeCount = typeof options.minHomeCount === 'number' ? options.minHomeCount : (rules ? rules.D1_MIN_HOME_COUNT : 7);
+  const minHomeCount = typeof options.minHomeCount === 'number' ? options.minHomeCount : (rules ? rules.D1_MIN_HOME_COUNT : 10);
 
   const slots = [];
   for (const group of SQUAD_COMPOSITION) {
@@ -1482,9 +1482,20 @@ function createSquad(basePower, usedNames, options = {}) {
     }
   }
 
+  // 25人シニア登録ルールに初期状態で違反しないよう、控え選手から最低4名をU-21（18〜21歳）として生成
+  const benchIndices = [];
+  slots.forEach((s, idx) => { if (!s.isStarter) benchIndices.push(idx); });
+  const u21SlotSet = new Set(benchIndices.slice(-4));
+
+  let benchAssigned = 0;
   slots.forEach((slot, idx) => {
-    const p = createPlayer(slot.pos, basePower, slot.isStarter, usedNames, null, null, nats[idx]);
+    const ageRange = u21SlotSet.has(idx) ? [18, 21] : null;
+    const p = createPlayer(slot.pos, basePower, slot.isStarter, usedNames, ageRange, null, nats[idx]);
     p.squadNumber = pickAvailableSquadNumber(slot.pos, usedNumbers);
+    if (!slot.isStarter) {
+      p.isBench = benchAssigned < 9;
+      benchAssigned++;
+    }
     players.push(p);
   });
   return players;

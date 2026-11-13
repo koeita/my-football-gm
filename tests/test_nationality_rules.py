@@ -28,8 +28,8 @@ class TestNationalityAndSquadRules(unittest.TestCase):
         self.assertIn('MAX_SENIOR_SQUAD: 25', self.data_js)
         self.assertIn('MAX_NON_HG_SLOTS: 17', self.data_js)
         self.assertIn('U21_EXEMPT_MAX_AGE: 21', self.data_js)
-        self.assertIn('D1_MIN_HOME_COUNT: 7', self.data_js)
-        self.assertIn('D2_MIN_HOME_COUNT: 12', self.data_js)
+        self.assertIn('D1_MIN_HOME_COUNT: 10', self.data_js)
+        self.assertIn('D2_MIN_HOME_COUNT: 16', self.data_js)
         self.assertIn('const COUNTRY_CODE_TO_NATIONALITY =', self.data_js)
 
     def test_2_realistic_nationality_generation(self):
