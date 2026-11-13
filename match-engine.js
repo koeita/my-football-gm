@@ -1476,6 +1476,8 @@ function calculateAndAssignMatchRatings(homeClub, awayClub, homeStarters, awaySt
   const assignGroup = (club, starters, subs, scored, conceded, isWin, isDraw) => {
     starters.forEach(p => {
       let r = 6.7;
+      const pBaseOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 72;
+      r += clamp((pBaseOvr - 70) * 0.025, -0.15, 0.45);
       if (isWin) r += 0.4;
       else if (isDraw) r += 0.0;
       else r -= 0.3;

@@ -6809,9 +6809,9 @@ function renderRoster() {
       contractText = '満了(0年)';
     } else if (p.contractYears === 1) {
       contractClass = 'contract-expiring';
-      contractText = '残り1年';
+      contractText = '1年';
     } else if (p.contractYears === 2) {
-      contractText = '残り2年';
+      contractText = '2年';
     }
 
     const hgTag = (typeof isPlayerHomegrown === 'function' && isPlayerHomegrown(p))
@@ -8719,8 +8719,13 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
         const yearsAgo = pastSeasonsCount - i;
         const estOvr = clamp(baseOvr - Math.min(8, Math.round(yearsAgo * 1.1)), 52, 95);
-        const baseR = 6.35 + ((estOvr - 65) * 0.025) + (goals / Math.max(10, apps || 1)) * 0.65 + (assists / Math.max(10, apps || 1)) * 0.35;
-        const avgR = apps > 0 ? clamp(baseR, 6.10, 8.45).toFixed(2) : '-';
+        const ovrBonus = (estOvr - 65) * 0.042;
+        const goalContrib = (goals / Math.max(8, apps || 1)) * 0.75;
+        const assistContrib = (assists / Math.max(8, apps || 1)) * 0.45;
+        const defPosBonus = (primaryPos === 'GK' || primaryPos === 'CB' || primaryPos === 'DM') ? Math.max(0, (estOvr - 72) * 0.015) : 0;
+        const seasonJitter = (((absHash >> (i % 12)) % 9) - 4) * 0.04;
+        const baseR = 6.52 + ovrBonus + goalContrib + assistContrib + defPosBonus + seasonJitter;
+        const avgR = apps > 0 ? clamp(baseR, 6.20, 8.55).toFixed(2) : '-';
         const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : (currentClubName || '現所属クラブ');
 
         history.push({
