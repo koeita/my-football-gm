@@ -6632,6 +6632,14 @@ function renderTacticsOverview() {
 /**
  * 自チーム登録選手一覧の描画（9ポジション順ソート、メイン100%/サブ92%/適性外80%、契約延長ボタン含む）
  */
+function getOvrTierClass(ovr) {
+  const v = typeof ovr === 'number' ? ovr : 65;
+  if (v >= 80) return 'ovr-tier-elite';
+  if (v >= 74) return 'ovr-tier-high';
+  if (v >= 67) return 'ovr-tier-mid';
+  return 'ovr-tier-low';
+}
+
 function renderRoster() {
   const playerClub = getPlayerClub();
   renderTacticalManagerBanner();
@@ -6710,6 +6718,15 @@ function renderRoster() {
     if (gameState.selectedPlayerId === p.id) rowClasses.push('row-selected');
 
     const baseOvr = getPlayerOverallRating(p);
+  const headerOvrEl = document.getElementById('profile-header-ovr');
+  if (headerOvrEl) {
+    const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = baseOvr;
+      valEl.className = `profile-header-ovr-val ${getOvrTierClass(baseOvr)}`;
+      valEl.style.background = 'none';
+    }
+  }
     const effOvr = getEffectivePlayerRating(p);
     const assignedSlot = p.isStarter ? (p.assignedPos || p.pos) : null;
     const fitInfo = p.isStarter ? getPositionFitInfo(p, assignedSlot) : { type: 'main', factor: 1.0 };
@@ -6781,11 +6798,12 @@ function renderRoster() {
     const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">レンタル募集中</span>' : '';
     const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
-    let ovrDisplay = `<strong>${effOvr}</strong>`;
+    const ovrTierCls = getOvrTierClass(effOvr);
+    let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
-      ovrDisplay = `<span class="text-danger">${effOvr}</span> <span class="text-muted">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="ovr-cell-badge text-danger" style="background:rgba(231,76,60,0.16);">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     } else if (fitInfo.type === 'sub') {
-      ovrDisplay = `<span class="text-cyan">${effOvr}</span> <span class="text-muted">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="ovr-cell-badge ovr-tier-mid">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
     const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : '-';
@@ -7082,7 +7100,7 @@ function renderShortlist() {
         <td class="col-team" title="${clubName}"><span class="team-cell-wrap">${getClubEmblemSvg(ctx.club || clubName, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(ctx.club || clubName)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
-        <td class="col-num accent-green"><strong>${ovr}</strong></td>
+        <td class="col-num"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}">${ovr}</span></td>
         <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
         <td class="col-num mono">${formatWage(p.wage || 20)}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
@@ -7611,7 +7629,7 @@ function renderMarket() {
         <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
-        <td class="col-num ${scoutView.isScouted ? 'accent-green' : 'text-cyan'}"><strong>${scoutView.ovrDisplay}</strong></td>
+        <td class="col-num"><span class="ovr-cell-badge ${scoutView.isScouted ? getOvrTierClass(getPlayerOverallRating(p)) : 'ovr-tier-mid'}">${scoutView.ovrDisplay}</span></td>
         <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
         <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
@@ -7672,7 +7690,7 @@ function renderYouthSquad() {
           </button>
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>
-        <td class="col-num col-youth-ovr accent-green"><strong>${ovr}</strong></td>
+        <td class="col-num col-youth-ovr"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}">${ovr}</span></td>
         <td class="col-num col-youth-pot"><span class="mono font-bold ${potClass}">${pot}</span></td>
         <td class="col-num col-youth-growth"><span class="mono" style="font-size:11px;">${growthLabel}</span></td>
         <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
@@ -7745,7 +7763,7 @@ function renderYouthScoutingPanel() {
                 <span class="pos-tag pos-${y.pos}">${y.pos}</span>
                 <strong style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${y.name}</strong>
               </div>
-              <span class="mono font-bold accent-green" style="font-size:12px;">OVR ${ovr} / POT ${y.potential || 'B'}</span>
+              <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${y.potential === 'S' ? 'stat-rank-S' : (y.potential === 'A' ? 'stat-rank-A' : 'stat-rank-B')}" style="font-size:14px; font-weight:900;">POT ${y.potential || 'B'}</span></span>
             </div>
             <div class="mono text-muted" style="font-size:10.5px;">
               ${flag} ${nat} | ${y.age}歳 | ${y.scoutRegionName || '発掘'} | ${getGrowthCurveLabel(y.growthCurve)}
