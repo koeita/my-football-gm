@@ -178,7 +178,7 @@ const gameState = {
   isSimulating: false,
   consecutiveDeficitSeasons: 0,
   paidPayrollWeeks: 0,          // 今季支払い済みの週次給与回数（0〜52週）
-  managerDelegationEnabled: false, // 監督への采配一任（戦術同期＋疲労ローテーション）
+  managerDelegationEnabled: true, // 監督への采配一任（戦術同期＋疲労ローテーション）
   pendingManagerCrisis: false,
   lastSeasonStandingsOrder: null,
   lastSeasonCupWinners: null,
@@ -9790,7 +9790,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.lastSeasonCupWinners = null;
   gameState.lastPromotionRelegation = null;
   gameState.d2PowerCalibratedV1 = true;
-  gameState.managerDelegationEnabled = false;
+  gameState.managerDelegationEnabled = true;
   gameState.pendingManagerCrisis = false;
   markAllViewsDirty();
   syncManagerDelegationButtonUI();
@@ -12541,7 +12541,12 @@ function openInitialStaffSetupModal(club) {
         playerClub.formation = selectedMgr.preferredFormation;
         playerClub.tactic = selectedMgr.preferredTactic;
         playerClub.coaches = state.coaches;
-        optimizeClubStarters(playerClub);
+        if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
+          applyManagerPreMatchDelegation(playerClub, true);
+        } else {
+          optimizeClubStarters(playerClub);
+        }
+        syncManagerDelegationButtonUI();
         addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
         addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
       }

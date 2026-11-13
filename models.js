@@ -2029,12 +2029,14 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
   const ftg = typeof player.fatigue === 'number' ? player.fatigue : 0;
   if (ftg >= 80) {
     score -= 28; // 限界・負傷危険域の選手は確実に休養させる
-  } else if (ftg >= 64) {
-    score -= 14; // 疲労が溜まっている主力を控えの実力者とターンオーバー
-  } else if (ftg >= 50) {
-    score -= 5;
-  } else if (ftg <= 18) {
-    score += 3;  // フレッシュな選手を優遇
+  } else if (ftg >= 60) {
+    score -= 18; // 高疲労の主力を控えの実力者とターンオーバー
+  } else if (ftg >= 42) {
+    score -= 10; // 中程度の疲労蓄積でローテーション候補
+  } else if (ftg >= 28) {
+    score -= 5;  // 連戦時の軽微ローテ補正
+  } else if (ftg <= 12) {
+    score += 4;  // フレッシュな選手を優遇
   }
 
   if (player.sta) {
@@ -2155,6 +2157,7 @@ function optimizeClubStarters(club) {
     const p = assignment && assignment[j];
     if (p) {
       p.isStarter = true;
+      p.isBench = false;
       p.slotIndex = slots[j].slotIndex;
       p.assignedPos = slots[j].pos;
       totalEffOvr += getEffectivePlayerRatingForSlot(p, slots[j].pos);
@@ -2162,10 +2165,67 @@ function optimizeClubStarters(club) {
     }
   }
 
+  optimizeClubBench(club);
   ensureValidSquadAndStarters(club);
 
   const avgEffOvr = starterCount > 0 ? Math.round(totalEffOvr / starterCount) : 0;
   return { avgEffOvr, starterCount };
+}
+
+/**
+ * 非スタメン全体から、健康状態・出場可否・ポジションバランス・OVR・フレッシュさを考慮してベンチ枠（最大9名）を動的選抜する
+ */
+function optimizeClubBench(club, compCategory = 'league') {
+  if (!club || !Array.isArray(club.players)) return;
+  const benchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(club) : 9;
+  const nonStarters = club.players.filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+
+  const isUnavailable = (p) => {
+    const injured = (p.injuryWeeks > 0) || (p.injuryDays > 0);
+    const suspended = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCategory);
+    return injured || suspended || Boolean(p.onIntlDuty);
+  };
+
+  const scoreBenchCandidate = (p) => {
+    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 65;
+    const ftg = typeof p.fatigue === 'number' ? p.fatigue : 0;
+    const unavailPenalty = isUnavailable(p) ? -5000 : 0;
+    return unavailPenalty + ovr - (ftg * 0.18);
+  };
+
+  const sorted = [...nonStarters].sort((a, b) => scoreBenchCandidate(b) - scoreBenchCandidate(a));
+  const selected = [];
+  const selectedIds = new Set();
+
+  // 1. 控えGKを1名優先確保（出場可能なGKがいる場合）
+  const bestGk = sorted.find(p => (p.primaryPosition || p.pos) === 'GK' && !isUnavailable(p));
+  if (bestGk && selected.length < benchLimit) {
+    selected.push(bestGk);
+    selectedIds.add(bestGk.id);
+  }
+
+  // 2. DF / MF / FW 各役割グループから最低1名ずつ出場可能な選手を確保してバランス維持
+  for (const role of ['DF', 'MF', 'FW']) {
+    if (selected.length >= benchLimit) break;
+    const cand = sorted.find(p => !selectedIds.has(p.id) && !isUnavailable(p) && ((POS_ROLE_GROUP[p.primaryPosition || p.pos] || 'MF') === role));
+    if (cand) {
+      selected.push(cand);
+      selectedIds.add(cand.id);
+    }
+  }
+
+  // 3. 残りのベンチ枠を総合スコア順に補充
+  for (const p of sorted) {
+    if (selected.length >= benchLimit) break;
+    if (!selectedIds.has(p.id)) {
+      selected.push(p);
+      selectedIds.add(p.id);
+    }
+  }
+
+  nonStarters.forEach(p => {
+    p.isBench = selectedIds.has(p.id);
+  });
 }
 
 /**

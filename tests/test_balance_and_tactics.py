@@ -64,6 +64,15 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('initialFunds: 94000', self.data_js)
         self.assertIn('club.funds = 28000;', self.comp_js)
 
+    def test_6_manager_delegation_default_on_fatigue_and_bench_selection(self):
+        """監督一任デフォルトON・疲労蓄積適正化・ベンチ枠動的選抜が実装されていること"""
+        self.assertIn('managerDelegationEnabled: true', self.main_js)
+        self.assertIn('gameState.managerDelegationEnabled = true;', self.main_js)
+        self.assertIn('state.managerDelegationEnabled === undefined ? true : Boolean(state.managerDelegationEnabled)', read_text('storage.js'))
+        self.assertIn('randInt(22, 27)', self.match_js)
+        self.assertIn('function optimizeClubBench(', self.models_js)
+        self.assertIn('optimizeClubBench(club);', self.models_js)
+
 
 if __name__ == '__main__':
     unittest.main()
