@@ -3708,9 +3708,9 @@ function openMatchPrecheckModal() {
           <div class="ui-kv-list">
             <div class="ui-kv-row">
               <div class="ui-kv-label accent-gold-bar">采配委任</div>
-              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-                <span class="mono" style="font-size:11.5px; color:#cbd5e1;">${gameState.managerDelegationEnabled ? '監督一任 (疲労ローテ済)' : 'GM手動編成'}</span>
-                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px;">
+              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap;">
+                <span class="mono" style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${gameState.managerDelegationEnabled ? '監督一任モード' : 'GM手動編成'}</span>
+                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px; min-width: 92px; flex-shrink: 0; justify-content: center;">
                   ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
                 </button>
               </div>
