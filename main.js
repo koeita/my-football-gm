@@ -9241,6 +9241,7 @@ function openPlayerProfileModal(playerId) {
       <span class="profile-bio-chip">${p.age}歳</span>
       <span class="profile-bio-chip">${heightText}</span>
       <span class="profile-bio-chip mono" id="profile-squad-num" style="color:var(--accent-green);font-weight:700;">${squadNumText}</span>
+      <span class="profile-bio-chip profile-bio-foot-mob">${formatFootBadge(p)}</span>
       <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
       ${youthBadgeHtml}
     `;
@@ -9468,12 +9469,12 @@ function openPlayerProfileModal(playerId) {
             </div>
             ${hexagonChartHtml}
             <div class="profile-compact-attrs-grid">
-              <div class="profile-attr-chip"><span class="attr-chip-name">決定力</span><strong class="mono ${getStatTierClass(attrs.finishing).valClass}">${attrs.finishing}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">ドリブル</span><strong class="mono ${getStatTierClass(attrs.dribbling).valClass}">${attrs.dribbling}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">パス</span><strong class="mono ${getStatTierClass(attrs.passing).valClass}">${attrs.passing}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">守備</span><strong class="mono ${getStatTierClass(attrs.defending).valClass}">${attrs.defending}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">スピード</span><strong class="mono ${getStatTierClass(attrs.pace).valClass}">${attrs.pace}</strong></div>
-              <div class="profile-attr-chip"><span class="attr-chip-name">スタミナ</span><strong class="mono ${getStatTierClass(attrs.stamina).valClass}">${attrs.stamina}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">決定力</span><strong class="mono ${getOvrTierClass(attrs.finishing)}" style="background:none;">${attrs.finishing}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">ドリブル</span><strong class="mono ${getOvrTierClass(attrs.dribbling)}" style="background:none;">${attrs.dribbling}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">パス</span><strong class="mono ${getOvrTierClass(attrs.passing)}" style="background:none;">${attrs.passing}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">守備</span><strong class="mono ${getOvrTierClass(attrs.defending)}" style="background:none;">${attrs.defending}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">スピード</span><strong class="mono ${getOvrTierClass(attrs.pace)}" style="background:none;">${attrs.pace}</strong></div>
+              <div class="profile-attr-chip"><span class="attr-chip-name">スタミナ</span><strong class="mono ${getOvrTierClass(attrs.stamina)}" style="background:none;">${attrs.stamina}</strong></div>
             </div>
           </div>
 

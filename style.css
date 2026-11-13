@@ -16257,3 +16257,20 @@ body {
     height: 17px;
   }
 }
+
+.profile-bio-foot-mob {
+  display: none !important;
+}
+@media (max-width: 768px) {
+  .profile-name-row .profile-header-foot-box {
+    display: none !important;
+  }
+  .profile-bio-foot-mob {
+    display: inline-flex !important;
+    align-items: center;
+  }
+  .profile-bio-foot-mob .foot-print-svg {
+    width: 22px;
+    height: 17px;
+  }
+}
