@@ -270,7 +270,10 @@ function simQuickMatch(homeClub, awayClub) {
       const avgOvr = Math.round(lineup.reduce((sum, p) => sum + getPlayerOverallRating(p), 0) / lineup.length);
       if (avgOvr > 0) return avgOvr;
     }
-    if (c && c.basePower) return c.basePower;
+    if (c && c.basePower) {
+      const isD2Uninit = String(c.id || '').startsWith('c') || c.division === 'd2';
+      return isD2Uninit ? Math.max(54, c.basePower - 10) : c.basePower;
+    }
     if (typeof calcClubOvr === 'function') {
       const ovr = calcClubOvr(c);
       if (ovr > 0) return ovr;

@@ -2213,8 +2213,10 @@ function getSafeTransferBudget(club) {
   const weeklyPayroll = getClubWeeklyPayroll(club);
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const stadiumMult = club.isPlayer ? (1 + (stadiumLv - 1) * 0.15) : 1.0;
-  const estHomeGate = Math.round(((club.supporters || 14000) * 0.085) * stadiumMult);
-  const estAwayTv = 1600;
+  const isD2Club = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) || club.division === 'd2';
+  const gateUnit = isD2Club ? 0.055 : 0.085;
+  const estHomeGate = Math.round(((club.supporters || 14000) * gateUnit) * stadiumMult);
+  const estAwayTv = isD2Club ? 450 : 1600;
 
   if (gameState.isSeasonOver) {
     const totalMatches = isPlayerInSecondDivision() ? 46 : 38;

@@ -1607,12 +1607,10 @@ function processSeasonEnd(isSkipped = false) {
 
   sortedD1.forEach((club, idx) => {
     const prize = PRIZE_MONEY_TABLE[idx] || 4000;
-    const sponsorIncome = Math.round(((club.supporters || 15000) * 0.55) / 10) * 10;
-    club.funds = (club.funds || 0) + prize + sponsorIncome;
+    club.funds = (club.funds || 0) + prize;
 
     if (club.isPlayer) {
       playerPrize = prize;
-      playerSponsorIncome = sponsorIncome;
       if (playerRank <= (club.targetRank || 4)) {
         targetBonus = 3000;
         club.funds += targetBonus;
@@ -1623,13 +1621,11 @@ function processSeasonEnd(isSkipped = false) {
   if (sortedD2.length > 0) {
     sortedD2.forEach((club, idx) => {
       const prize = PRIZE_MONEY_TABLE_D2[idx] || 1500;
-      const sponsorIncome = Math.round(((club.supporters || 12000) * 0.35) / 10) * 10;
       if (typeof club.funds === 'number' || club.isPlayer) {
-        club.funds = (club.funds || 15000) + prize + sponsorIncome;
+        club.funds = (club.funds || 15000) + prize;
       }
       if (club.isPlayer) {
         playerPrize = prize;
-        playerSponsorIncome = sponsorIncome;
         if (playerRank <= (club.targetRank || 3)) {
           targetBonus = 3000;
           club.funds += targetBonus;
@@ -1653,7 +1649,10 @@ function processSeasonEnd(isSkipped = false) {
   gameState.paidPayrollWeeks = 52;
 
   if (typeof processSeasonEndFinanceAndPSR === 'function') {
-    processSeasonEndFinanceAndPSR(sortedD1, sortedD2);
+    const finRes = processSeasonEndFinanceAndPSR(sortedD1, sortedD2);
+    if (finRes && typeof finRes.playerSponsorIncome === 'number') {
+      playerSponsorIncome = finRes.playerSponsorIncome;
+    }
   }
 
   const playerAgingLogs = [];
@@ -13449,18 +13448,29 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     }
   }
 
+  let playerSponsorIncome = 0;
+  const d1RankMap = new Map();
+  (sortedD1 || []).forEach((c, i) => { if (c && c.id) d1RankMap.set(c.id, i); });
+  const d2RankMap = new Map();
+  (sortedD2 || []).forEach((c, i) => { if (c && c.id) d2RankMap.set(c.id, i); });
+
   const allClubs = getAllManagedLeagueClubs();
   for (const club of allClubs) {
     if (!club) continue;
     if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(club);
+    const isD2Club = d2RankMap.has(club.id) || club.division === 'd2';
     const sp = club.sponsor;
     let spRev = 0;
     if (sp) {
       spRev = sp.baseAnnual || 3000;
-      const d1Idx = sortedD1.findIndex(c => c.id === club.id);
+      const d1Idx = d1RankMap.has(club.id) ? d1RankMap.get(club.id) : -1;
       if (d1Idx === 0) spRev += (sp.titleBonus || 0);
       if (ectQualifiedIds.has(club.id)) spRev += (sp.clBonus || 0);
+      if (isD2Club && sp.relegationPenaltyPct) {
+        spRev = Math.round(spRev * (1 - sp.relegationPenaltyPct / 100));
+      }
       club.funds = (club.funds || 0) + spRev;
+      if (club.isPlayer) playerSponsorIncome = spRev;
       sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
       if (sp.yearsRemaining === 0) {
         club.sponsor = null;
@@ -13469,7 +13479,14 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     }
 
     const annualPayroll = typeof getClubTotalPayroll === 'function' ? getClubTotalPayroll(club) : 10000;
-    const estMatchRev = Math.round((club.supporters || 14000) * 0.085 * 19 + 1600 * 19 + spRev);
+    const homeMatches = isD2Club ? 23 : 19;
+    const awayMatches = isD2Club ? 23 : 19;
+    const gateUnit = isD2Club ? 0.055 : 0.085;
+    const awayTvUnit = isD2Club ? 450 : 1600;
+    const leaguePrize = isD2Club
+      ? (d2RankMap.has(club.id) ? (PRIZE_MONEY_TABLE_D2[d2RankMap.get(club.id)] || 1500) : 2500)
+      : (d1RankMap.has(club.id) ? (PRIZE_MONEY_TABLE[d1RankMap.get(club.id)] || 5000) : 12000);
+    const estMatchRev = Math.round((club.supporters || 14000) * gateUnit * homeMatches + awayTvUnit * awayMatches + leaguePrize + spRev);
     const netProfit = estMatchRev - annualPayroll;
     if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
     club.psrHistory.push({
@@ -13494,6 +13511,7 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
       club.psrSanction.pointsDeductedThisSeason = 0;
     }
   }
+  return { playerSponsorIncome };
 }
 
 function processInternationalBreakEvent(day) {
