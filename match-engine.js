@@ -361,12 +361,14 @@ function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = [
   const drainMult = tacticMult * (coaching.staDrainMult || 1.0) * preseasonMult;
 
   starters.forEach(p => {
-    const fatigueDelta = Math.round(randInt(13, 17) * drainMult);
+    const staFactor = clamp(1.12 - (((p.sta || 70) - 65) * 0.006), 0.85, 1.18);
+    const fatigueDelta = Math.round(randInt(22, 27) * staFactor * drainMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
   });
 
   (playedSubs || []).forEach(p => {
-    const fatigueDelta = Math.round(randInt(6, 10) * drainMult);
+    const staFactor = clamp(1.10 - (((p.sta || 70) - 65) * 0.005), 0.85, 1.15);
+    const fatigueDelta = Math.round(randInt(10, 15) * staFactor * drainMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
   });
 

@@ -276,7 +276,7 @@ function loadGameFromStorage() {
         gameState.paidPayrollWeeks = 0;
       }
     }
-    gameState.managerDelegationEnabled = Boolean(state.managerDelegationEnabled);
+    gameState.managerDelegationEnabled = state.managerDelegationEnabled === undefined ? true : Boolean(state.managerDelegationEnabled);
     gameState.pendingManagerCrisis = false;
     gameState.isSimulating = false;
     gameState.isAdvancingCalendar = false;
