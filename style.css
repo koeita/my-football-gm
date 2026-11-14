@@ -7256,9 +7256,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .pitch-node.dragging,
-.bench-sub-item.dragging {
-  opacity: 0.35;
-  filter: grayscale(35%);
+.bench-sub-item.dragging,
+.bench-sub-item.reserve-node.dragging {
+  opacity: 0.35 !important;
+  filter: grayscale(35%) !important;
 }
 
 /* ドラッグ追従ゴースト（スタメンカード形状） */
@@ -11814,13 +11815,13 @@ button.hidden,
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
-.bench-sub-item.reserve-node {
+.bench-sub-item.reserve-node:not(.dragging) {
   border: 1px dashed rgba(255, 255, 255, 0.22) !important;
   opacity: 0.9;
   background-color: rgba(18, 22, 26, 0.85) !important;
 }
 
-.bench-sub-item.reserve-node:hover {
+.bench-sub-item.reserve-node:not(.dragging):hover {
   opacity: 1 !important;
   border: 1px solid var(--accent-green) !important;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5) !important;
