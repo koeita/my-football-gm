@@ -5958,7 +5958,7 @@ const LEAGUE_STATS_CATEGORIES = {
   cleansheets: {
     id: 'cleansheets',
     icon: '',
-    title: 'クリーンシート（完封）ランキング',
+    title: 'クリーンシートランキング',
     desc: '相手攻撃をシャットアウトした守護神（GK）＆DF陣の完封記録',
     filter: p => ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos) || POS_ROLE_GROUP[p.pos] === 'GK' || POS_ROLE_GROUP[p.pos] === 'DF',
     mainColHeader: 'クリーンシート',
@@ -5970,7 +5970,7 @@ const LEAGUE_STATS_CATEGORIES = {
   moms: {
     id: 'moms',
     icon: '',
-    title: 'マン・オブ・ザ・マッチ（MOM）獲得数ランキング',
+    title: 'MOMランキング',
     desc: '試合で最も輝いたMVP選出回数トップのスタープレイヤー',
     mainColHeader: 'MOM獲得数',
     getScore: p => p.momCount || 0,
@@ -6119,14 +6119,12 @@ function renderLeagueStats(catKey = 'goals') {
   const { compKey, compShortLabel, compFullLabel } = resolveStatsCompetitionAndRenderNav();
 
   const titleEl = document.getElementById('stats-panel-title');
-  const descEl = document.getElementById('stats-panel-desc');
   const subtitleEl = document.getElementById('stats-panel-subtitle');
   const theadEl = document.getElementById('stats-ranking-thead');
   const tbody = document.getElementById('top-scorers-tbody');
 
   const baseTitleSuffix = config.title.replace(/^リーグ/, '');
   if (titleEl) titleEl.textContent = `${compShortLabel} ${baseTitleSuffix}`;
-  if (descEl) descEl.textContent = `${compFullLabel} ｜ ${config.desc.replace(/^イングランド・ディビジョン1\s*/, '')}`;
   if (subtitleEl) subtitleEl.textContent = `${compShortLabel} TOP 10`;
 
   const navBar = document.getElementById('stats-category-nav-bar');

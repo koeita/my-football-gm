@@ -14057,38 +14057,53 @@ button.hidden,
 /* 大会切り替えセグメントコントロール */
 .comp-segment-nav {
   display: flex;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.35);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 4px;
+  padding: 0 12px;
+  background: #14161a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-wrap: wrap;
 }
 
 .comp-tab-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #94A3B8;
-  padding: 7px 16px;
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  padding: 9px 12px;
+  border-radius: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
 }
 
 .comp-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #F8FAFC;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f8fafc;
 }
 
 .comp-tab-btn.active {
-  background: #00F0FF;
-  border-color: #00F0FF;
-  color: #0B0E14;
+  background: transparent;
+  border-bottom: 2px solid #2ecc71;
+  color: #2ecc71;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .comp-segment-nav {
+    padding: 0 4px;
+    flex-wrap: nowrap;
+  }
+
+  .comp-tab-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 4px;
+    text-align: center;
+    white-space: nowrap;
+  }
 }
 
 /* サブナビゲーション（国内カップ・欧州コンペの大会選択） */
@@ -14096,9 +14111,9 @@ button.hidden,
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 6px 12px;
-  background: rgba(0, 240, 255, 0.03);
-  border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+  padding: 4px 12px 0 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   max-width: 100%;
 }
@@ -14108,6 +14123,7 @@ button.hidden,
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 30px;
   box-sizing: border-box;
 }
 
@@ -14133,15 +14149,25 @@ button.hidden,
 
 .comp-sub-btn,
 .euro-phase-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #CBD5E1;
-  padding: 6px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 0;
   font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex: 1;
   text-align: center;
   min-width: 0;
@@ -14150,16 +14176,16 @@ button.hidden,
 
 .comp-sub-btn:hover,
 .euro-phase-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
 }
 
 .comp-sub-btn.active,
 .euro-phase-btn.active {
-  background: rgba(0, 240, 255, 0.2);
-  border-color: #00F0FF;
-  color: #00F0FF;
-  font-weight: 600;
+  background: transparent;
+  border-bottom: 2px solid #2ecc71;
+  color: #2ecc71;
+  font-weight: 700;
 }
 
 /* 2部リーグ昇格・降格圏ハイライト（背景色は消去し左端カラーラインに統一） */
@@ -14517,11 +14543,12 @@ button.hidden,
 }
 
 .euro-phase-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #CBD5E1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -14533,15 +14560,15 @@ button.hidden,
 }
 
 .euro-phase-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
   color: #FFFFFF;
 }
 
 .euro-phase-btn.active {
-  background: rgba(0, 240, 255, 0.2);
-  border-color: #00F0FF;
-  color: #00F0FF;
-  font-weight: 600;
+  background: transparent;
+  border-bottom: 2px solid #2ecc71;
+  color: #2ecc71;
+  font-weight: 700;
 }
 
 /* ==========================================================================
@@ -15357,10 +15384,11 @@ body {
 .stats-category-nav-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   overflow-x: auto;
-  padding: 4px 2px 10px;
-  margin-bottom: 8px;
+  padding: 0 2px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
@@ -15373,13 +15401,14 @@ body {
 }
 
 .stats-cat-btn {
-  background: #14181c;
-  border: 1px solid #282f37;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 0;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -15388,15 +15417,14 @@ body {
   gap: 6px;
 }
 .stats-cat-btn:hover {
-  background: #1b2127;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-main);
-  border-color: #3b4550;
 }
 .stats-cat-btn.active {
-  background: rgba(46, 204, 113, 0.18);
-  color: var(--accent-green);
-  border-color: rgba(46, 204, 113, 0.45);
-  box-shadow: 0 0 8px rgba(46, 204, 113, 0.2);
+  background: transparent;
+  color: #2ecc71;
+  border-bottom: 2px solid #2ecc71;
+  box-shadow: none;
 }
 
 /* 個人スタッツランキングテーブル */
