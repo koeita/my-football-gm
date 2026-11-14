@@ -227,28 +227,6 @@
     </div>
 
 
-    <!-- シーズン終了・決算・世代交代サマリー（オフシーズン中のみ上部表示） -->
-    <section id="season-summary-box" class="season-summary hidden">
-      <div class="summary-grid">
-        <div class="summary-banner">
-          <h3 id="summary-headline">シーズン終了・決算報告</h3>
-          <p id="summary-reward-text" class="mono"></p>
-          <p id="summary-payroll-projection" class="mono"></p>
-          <p id="summary-contract-warning" class="mono text-danger"></p>
-        </div>
-        <div class="summary-logs-wrapper">
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
-            <div id="summary-retirement-log" class="summary-retirement-list"></div>
-          </div>
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
-            <div id="summary-aging-log" class="summary-details"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- タブ3：本部（GM執務室）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
       <!-- 業務タスク一覧 -->
@@ -1734,6 +1712,38 @@
       </div>
       <div class="modal-body" id="board-crisis-body" style="padding: 18px 20px;">
         <!-- JSで再就職先クラブ選択またはキャリア終了を描画 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- シーズン終了・決算・世代交代サマリーモーダル -->
+  <div id="season-summary-box" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="summary-headline">
+    <div class="modal-card season-summary-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <h2 class="info-popup-title" id="summary-headline">シーズン終了・決算報告</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-season-summary" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body season-summary-modal-body">
+        <div class="summary-banner">
+          <p id="summary-reward-text" class="mono"></p>
+          <p id="summary-payroll-projection" class="mono"></p>
+          <p id="summary-contract-warning" class="mono text-danger"></p>
+        </div>
+        <div class="summary-logs-wrapper">
+          <div class="summary-log-block">
+            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
+            <div id="summary-retirement-log" class="summary-retirement-list"></div>
+          </div>
+          <div class="summary-log-block">
+            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
+            <div id="summary-aging-log" class="summary-details"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer season-summary-modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-season-summary">確認して閉じる</button>
       </div>
     </div>
   </div>

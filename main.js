@@ -5585,18 +5585,27 @@ function renderFinancialAlert() {
   }
 }
 
+function openSeasonSettlementModal() {
+  const modal = document.getElementById('season-summary-box');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeSeasonSettlementModal() {
+  const modal = document.getElementById('season-summary-box');
+  if (modal) modal.classList.add('hidden');
+}
+
 /**
- * オフシーズン決算・世代交代・契約満了警告サマリーの描画
+ * オフシーズン決算・世代交代・契約満了警告サマリーモーダルの描画
  */
 function renderSeasonSettlement() {
   const summaryBox = document.getElementById('season-summary-box');
   if (!summaryBox) return;
   if (!gameState.isSeasonOver || !gameState.lastSettlement) {
-    summaryBox.classList.add('hidden');
+    closeSeasonSettlementModal();
     return;
   }
 
-  summaryBox.classList.remove('hidden');
   const s = gameState.lastSettlement;
   const playerClub = getPlayerClub();
   const currentPayroll = getClubTotalPayroll(playerClub);
@@ -5629,8 +5638,10 @@ function renderSeasonSettlement() {
   if (expiringPlayers.length > 0) {
     const names = expiringPlayers.map(p => `${p.pos} ${p.name}`).join('、');
     contractWarnEl.textContent = `【要確認】契約満了選手（${expiringPlayers.length}名）：${names} — 残留させる場合は「所属選手・戦術・契約」タブで「契約延長」を行ってください（未更新のまま開幕するとフリー移籍で退団します）。`;
+    contractWarnEl.classList.remove('hidden');
   } else {
     contractWarnEl.textContent = '';
+    contractWarnEl.classList.add('hidden');
   }
 
   const retireEl = document.getElementById('summary-retirement-log');
@@ -5645,6 +5656,11 @@ function renderSeasonSettlement() {
     const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
     return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳/${item.growthLabel}</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
   }).join('');
+
+  if (!s._modalShown && !gameState.isGameOver && !gameState.pendingManagerCrisis) {
+    s._modalShown = true;
+    openSeasonSettlementModal();
+  }
 }
 
 /**
@@ -12373,6 +12389,11 @@ function initGame() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const seasonSummaryModal = document.getElementById('season-summary-box');
+      if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
+        closeSeasonSettlementModal();
+        return;
+      }
       const scoutModal = document.getElementById('fixture-preview-modal');
       if (scoutModal && !scoutModal.classList.contains('hidden')) {
         closePendingMatchPreviewModal();
@@ -12557,6 +12578,22 @@ function initGame() {
   if (modalFixturePreview) {
     modalFixturePreview.addEventListener('click', (e) => {
       if (e.target === modalFixturePreview) closePendingMatchPreviewModal();
+    });
+  }
+
+  // シーズン終了・決算サマリーモーダルの閉じる・確認・背景クリック
+  const btnCloseSeasonSummary = document.getElementById('btn-close-season-summary');
+  if (btnCloseSeasonSummary) {
+    btnCloseSeasonSummary.addEventListener('click', closeSeasonSettlementModal);
+  }
+  const btnConfirmSeasonSummary = document.getElementById('btn-confirm-season-summary');
+  if (btnConfirmSeasonSummary) {
+    btnConfirmSeasonSummary.addEventListener('click', closeSeasonSettlementModal);
+  }
+  const modalSeasonSummary = document.getElementById('season-summary-box');
+  if (modalSeasonSummary) {
+    modalSeasonSummary.addEventListener('click', (e) => {
+      if (e.target === modalSeasonSummary) closeSeasonSettlementModal();
     });
   }
 
