@@ -9238,20 +9238,21 @@ body.main-menu-active {
   max-width: 100%;
 }
 .match-live-team.is-player {
-  background: rgba(46, 204, 113, 0.08);
-  border: 1px solid rgba(46, 204, 113, 0.4);
+  background: var(--team-tint-bg, rgba(46, 204, 113, 0.18));
+  border: 1px solid var(--team-tint-border, rgba(46, 204, 113, 0.5));
   border-radius: 6px;
   padding: 3px 8px;
-  box-shadow: inset 0 0 10px rgba(46, 204, 113, 0.15);
+  box-shadow: inset 0 0 10px var(--team-tint-glow, rgba(46, 204, 113, 0.15));
 }
 .match-live-team.is-opponent {
-  background: rgba(231, 76, 60, 0.05);
-  border: 1px solid rgba(231, 76, 60, 0.25);
+  background: var(--team-tint-bg, rgba(231, 76, 60, 0.18));
+  border: 1px solid var(--team-tint-border, rgba(231, 76, 60, 0.45));
   border-radius: 6px;
   padding: 3px 8px;
+  box-shadow: inset 0 0 10px var(--team-tint-glow, rgba(231, 76, 60, 0.12));
 }
 .match-live-team.is-player .match-live-team-name {
-  color: var(--accent-green);
+  color: var(--text-main);
 }
 .match-live-you-tag {
   display: inline-block;

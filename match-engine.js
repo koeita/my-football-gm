@@ -2661,6 +2661,22 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
         awayGk: { primary: '#00d2d3', secondary: '#111827', text: '#111827' }
       };
 
+  const applyBoxKitTint = (boxEl, kitObj) => {
+    if (!boxEl || !kitObj) return;
+    const rgb = typeof parseHexToRgb === 'function'
+      ? parseHexToRgb(kitObj.primary)
+      : { r: 46, g: 204, b: 113 };
+    const lum = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+    const borderRgb = (lum < 35 && typeof parseHexToRgb === 'function' && kitObj.secondary)
+      ? parseHexToRgb(kitObj.secondary)
+      : rgb;
+    boxEl.style.setProperty('--team-tint-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)`);
+    boxEl.style.setProperty('--team-tint-border', `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.55)`);
+    boxEl.style.setProperty('--team-tint-glow', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.18)`);
+  };
+  applyBoxKitTint(document.getElementById('match-live-home-box'), kits.home);
+  applyBoxKitTint(document.getElementById('match-live-away-box'), kits.away);
+
   // ホーム（左コート ➔ 右へ攻める）
   const isHomePlayer = Boolean(homeClub.isPlayer);
   const isAwayPlayer = Boolean(awayClub.isPlayer);

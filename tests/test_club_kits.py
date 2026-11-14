@@ -149,6 +149,11 @@ class TestClubKits(unittest.TestCase):
         self.assertNotIn('border: 2px solid #ffffff !important', css_block)
         self.assertNotIn('border: 1.5px solid rgba(255, 255, 255, 0.7) !important', css_block)
 
+        self.assertIn("boxEl.style.setProperty('--team-tint-bg'", setup_fn)
+        self.assertIn("boxEl.style.setProperty('--team-tint-border'", setup_fn)
+        self.assertIn('var(--team-tint-bg', self.style_css)
+        self.assertIn('var(--team-tint-border', self.style_css)
+
         self.assertIn('club.kit = CLUB_KIT_MAP[club.id];', self.storage_js)
 
 
