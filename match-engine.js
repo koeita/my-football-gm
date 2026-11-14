@@ -3659,7 +3659,7 @@ function openMatchPrecheckModal() {
         <span class="precheck-pos-badge pos-${roleGroup}">${slot.pos}</span>
         <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
         <span class="precheck-name">${p.name} ${fitBadge}</span>
-        <span class="precheck-ovr mono ${ovrTierCls}" style="background:none;">${effOvr}</span>
+        <span class="precheck-ovr mono ${ovrTierCls}" style="background:none;border:none;box-shadow:none;">${effOvr}</span>
         <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
         <span class="precheck-ftg mono" style="color:${ftgSt.color};">疲労:${ftgVal}</span>
       </div>

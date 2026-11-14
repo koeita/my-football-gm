@@ -16177,15 +16177,19 @@ body {
   margin-bottom: 6px;
 }
 
-.ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; font-weight: 900; line-height: 1; padding: 3px 7px; border-radius: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ovr-tier-elite { color: #e0f2fe; background: linear-gradient(135deg, rgba(56, 189, 248, 0.40), rgba(37, 99, 235, 0.34)); border: 1px solid rgba(125, 211, 252, 0.72); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28); }
-.ovr-tier-high  { color: #6ee7b7; background: linear-gradient(135deg, rgba(46, 204, 113, 0.25), rgba(16, 185, 129, 0.17)); border: 1px solid rgba(52, 211, 153, 0.48); }
-.ovr-tier-mid   { color: #fbbf24; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); }
-.ovr-tier-low   { color: #f87171; background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.26); }
-.profile-header-ovr-val.ovr-tier-elite { color: #7dd3fc; background: none; border: none; box-shadow: none; }
-.profile-header-ovr-val.ovr-tier-high  { color: #34d399; background: none; border: none; }
-.profile-header-ovr-val.ovr-tier-mid   { color: #fbbf24; background: none; border: none; }
-.profile-header-ovr-val.ovr-tier-low   { color: #f87171; background: none; border: none; }
+.ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; font-weight: 900; line-height: 1; padding: 0; font-variant-numeric: tabular-nums; white-space: nowrap; background: none !important; border: none !important; box-shadow: none !important; }
+.ovr-tier-elite { color: #7dd3fc; background: none; border: none; box-shadow: none; }
+.ovr-tier-high  { color: #34d399; background: none; border: none; box-shadow: none; }
+.ovr-tier-mid   { color: #fbbf24; background: none; border: none; box-shadow: none; }
+.ovr-tier-low   { color: #f87171; background: none; border: none; box-shadow: none; }
+.precheck-ovr.ovr-tier-elite,
+.profile-header-ovr-val.ovr-tier-elite { color: #7dd3fc; background: none !important; border: none !important; box-shadow: none !important; }
+.precheck-ovr.ovr-tier-high,
+.profile-header-ovr-val.ovr-tier-high  { color: #34d399; background: none !important; border: none !important; }
+.precheck-ovr.ovr-tier-mid,
+.profile-header-ovr-val.ovr-tier-mid   { color: #fbbf24; background: none !important; border: none !important; }
+.precheck-ovr.ovr-tier-low,
+.profile-header-ovr-val.ovr-tier-low   { color: #f87171; background: none !important; border: none !important; }
 .tier-text-elite { color: #7dd3fc; font-weight: 900; }
 .tier-text-high  { color: #34d399; font-weight: 800; }
 .tier-text-mid   { color: #fbbf24; font-weight: 700; }
