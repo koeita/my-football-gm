@@ -7489,7 +7489,7 @@ function renderIncomingOffers() {
               </div>
               <div class="offer-player-tags">
                 <span>${offer.playerAge}歳</span>
-                <span>OVR <strong class="accent-green">${offer.ovr}</strong></span>
+                <span class="ovr-cell-badge ${getOvrTierClass(offer.ovr)}">OVR ${offer.ovr}</span>
               </div>
             </div>
           </div>
@@ -7601,7 +7601,7 @@ function renderIncomingOffers() {
             </div>
             <div class="offer-player-tags">
               <span>${offer.playerAge}歳</span>
-              <span>OVR <strong class="accent-green">${offer.ovr}</strong></span>
+              <span class="ovr-cell-badge ${getOvrTierClass(offer.ovr)}">OVR ${offer.ovr}</span>
               <span>${footBadge}</span>
             </div>
           </div>
