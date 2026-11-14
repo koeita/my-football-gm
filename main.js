@@ -7913,24 +7913,24 @@ function renderMarket() {
       const activeOutOffer = outgoingList.find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
       let directOfferBtn = '';
       if (isPreContracted) {
-        directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity:0.65;padding:3px 8px;font-size:11px;">来季内定</button>`;
+        directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled market-offer-slot-btn" disabled style="opacity:0.65;">来季内定</button>`;
       } else if (activeOutOffer) {
         if (activeOutOffer.status === 'agreed') {
-          directOfferBtn = `<button type="button" class="btn btn-sm btn-offer-accept" data-goto-offers="outgoing" style="font-weight:700;padding:3px 8px;font-size:11px;">契約確定へ</button>`;
+          directOfferBtn = `<button type="button" class="btn btn-sm btn-offer-accept market-offer-slot-btn" data-goto-offers="outgoing">契約確定へ</button>`;
         } else if (activeOutOffer.status === 'cpu_counter') {
-          directOfferBtn = `<button type="button" class="btn btn-sm" data-goto-offers="outgoing" style="background:#f39c12;color:#0d1117;font-weight:700;padding:3px 8px;font-size:11px;">回答確認</button>`;
+          directOfferBtn = `<button type="button" class="btn btn-sm market-offer-slot-btn" data-goto-offers="outgoing" style="background:#f39c12;color:#0d1117;">回答確認</button>`;
         } else {
-          directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity:0.65;padding:3px 8px;font-size:11px;">回答待(${activeOutOffer.pendingDays || 1}日)</button>`;
+          directOfferBtn = `<button type="button" class="btn btn-sm btn-disabled market-offer-slot-btn" disabled style="opacity:0.65;">回答待(${activeOutOffer.pendingDays || 1}日)</button>`;
         }
       } else {
-        directOfferBtn = `<button type="button" class="btn btn-primary btn-sm btn-market-direct-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} title="直接オファー・交渉を開く">交渉</button>`;
+        directOfferBtn = `<button type="button" class="btn btn-primary btn-sm btn-market-direct-offer market-offer-slot-btn" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} title="直接オファー・交渉を開く">交渉</button>`;
       }
       let scoutBtn = '';
       if (!scoutView.isScouted) {
         if (isScoutingNow) {
-          scoutBtn = `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="opacity:0.75;padding:3px 6px;font-size:10px;">調査中(${isScoutingNow.daysRemaining}日)</button>`;
+          scoutBtn = `<button type="button" class="btn btn-sm btn-disabled mono market-scout-slot-btn" disabled style="opacity:0.75;">調査中(${isScoutingNow.daysRemaining}日)</button>`;
         } else {
-          scoutBtn = `<button type="button" class="btn btn-secondary btn-sm btn-scout-dispatch mono" data-scout-player-id="${p.id}" style="padding:3px 6px;font-size:10px;" title="スカウトを派遣して能力・契約条件を解明">調査</button>`;
+          scoutBtn = `<button type="button" class="btn btn-secondary btn-sm btn-scout-dispatch mono market-scout-slot-btn" data-scout-player-id="${p.id}" title="スカウトを派遣して能力・契約条件を解明">調査</button>`;
         }
       }
       const shortlistBtn = `<button type="button" class="btn btn-sm btn-shortlist-toggle btn-shortlist-icon ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? '獲得ターゲット解除' : '獲得ターゲットに追加'}">${inShortlist ? '★' : '☆'}</button>`;
