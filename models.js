@@ -1661,6 +1661,63 @@ function capGeneratedPlayerOvr(player, maxOvr) {
 }
 
 /**
+ * 選手の国籍およびID・名前から決定論的に前所属クラブ名を選出する（完全無所属・漢字色直訳の排除）
+ */
+function pickFormerClubForPlayer(player, seedOffset = 0, excludeClubName = null) {
+  const fallbackEng = [
+    'リーズ・U', 'バーンリー・C', 'ノリッジ・C', 'ワトフォード・H', 'ミドルズブラ・B',
+    'ウェストブロム・A', 'コヴェントリー・C', 'ブリストル・C', 'ストーク・C', 'スウォンジー・C',
+    'サンダーランド・A', 'ハル・C', 'ブラックバーン・R', 'シェフィールド・W'
+  ];
+  const champClubs = (typeof CHAMPIONSHIP_CLUBS_DEFINITIONS !== 'undefined' && Array.isArray(CHAMPIONSHIP_CLUBS_DEFINITIONS) && CHAMPIONSHIP_CLUBS_DEFINITIONS.length > 0)
+    ? CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => c.name).filter(Boolean)
+    : fallbackEng;
+  const d1MidLower = (typeof CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CLUB_DEFINITIONS))
+    ? CLUB_DEFINITIONS.filter(c => c && c.targetRank >= 10).map(c => c.name).filter(Boolean)
+    : [];
+  const engPool = [...new Set([...champClubs, ...d1MidLower])];
+
+  const PAST_CLUBS_BY_NATIONALITY = {
+    England: engPool,
+    Spain: ['アラベス・D', 'エスパニョール・B', 'バジャドリード・V', 'レガネス・CD', 'オサスナ・CA', 'マジョルカ・RCD', 'セルタ・RC', 'バレンシア・CF', 'セビージャ・FC'],
+    Italy: ['パルマ・FC', 'コモ・C', 'レッチェ・US', 'エンポリ・FC', 'ヴェネツィア・FC', 'ウディネ・UC', 'カリアリ・C', 'トリノ・FC', 'ボローニャ・FC'],
+    Germany: ['ウニオン・B', 'ハイデンハイム・FC', 'ザンクトパウリ・FC', 'キール・H', 'ボーフム・V', 'ブレーメン・SV', 'アウクスブルク・FC', 'マインツ・FSV', 'フライブルク・SC'],
+    France: ['オセール・AJ', 'ル・アーヴル・AC', 'アンジェ・SCO', 'サンテティエンヌ・AS', 'ストラスブール・RC', 'ナント・FC', 'モンペリエ・HSC', 'ブレスト・SB', 'ランス・RC'],
+    Netherlands: ['アムステルダム・AFC', 'アイントホーフェン・PSV', 'ロッテルダム・F', 'アルクマール・AZ', 'エンスヘデ・FC', 'ユトレヒト・FC'],
+    Portugal: ['リスボン・CP', 'ポルト・FC', 'リスボン・SL', 'ブラガ・SC', 'ギマランイス・SC'],
+    Belgium: ['ブルージュ・KV', 'ブリュッセル・SG', 'アンデルレヒト・RSC', 'ゲント・KAA', 'ヘンク・KRC'],
+    Croatia: ['ザグレブ・GNK', 'スプリト・HNK', 'リエカ・HNK'],
+    Brazil: ['サンパウロ・FC', 'リオ・CR', 'サントス・FC', 'ポルトアレグレ・SC', 'ベロオリゾンテ・CA'],
+    Argentina: ['ブエノスアイレス・CA', 'ラプラタ・SC', 'コルドバ・AC', 'ロサリオ・CA', 'アベジャネーダ・RC'],
+    Japan: ['東京・FC', '横浜・SC', '川崎・F', '大阪・G', '名古屋・G']
+  };
+
+  const nat = player && player.nationality;
+  const fallbackPool = ['コペンハーゲン・FC', 'プラハ・AC', 'グラスゴー・FC', 'ウィーン・SK', 'バーゼル・FC', ...engPool.slice(0, 6)];
+  const basePool = (nat && PAST_CLUBS_BY_NATIONALITY[nat]) ? PAST_CLUBS_BY_NATIONALITY[nat] : fallbackPool;
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const playerClubName = playerClub ? playerClub.name : null;
+
+  let candidates = basePool.filter(name => name && name !== excludeClubName && name !== playerClubName);
+  if (candidates.length === 0) {
+    candidates = fallbackPool.filter(name => name && name !== excludeClubName && name !== playerClubName);
+  }
+  if (candidates.length === 0) {
+    candidates = basePool.length > 0 ? basePool : ['ロンドン・B'];
+  }
+
+  const seedStr = `${(player && player.id) || 'p'}_${(player && player.name) || 'player'}_${seedOffset}`;
+  let hash = 2166136261;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash ^= seedStr.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const absHash = Math.abs(hash);
+  return candidates[absHash % candidates.length];
+}
+
+/**
  * 移籍市場候補選手（無所属フリー選手 ＆ 欧州主要クラブ移籍リストアップ選手）を生成
  */
 function generateTransferMarket() {
@@ -1688,14 +1745,42 @@ function generateTransferMarket() {
 
   const usedMarketNums = new Set();
   const candidates = [];
+
+  // シーズン終了時に実際のクラブから契約満了で退団した選手プールを優先編入
+  const expiredPool = (typeof gameState !== 'undefined' && Array.isArray(gameState.expiredMarketPool))
+    ? gameState.expiredMarketPool
+    : [];
+  for (const expP of expiredPool) {
+    if (!expP || expP.isRetired) continue;
+    if (candidates.some(c => c.id === expP.id)) continue;
+    if (expP.name && usedNames.has(expP.name)) continue;
+    if (expP.name) usedNames.add(expP.name);
+    if (expP.fullName) usedNames.add(expP.fullName);
+    expP.isFreeAgent = true;
+    expP.contractYears = 0;
+    expP.transferFee = 0;
+    expP.squadNumber = pickAvailableSquadNumber(expP.pos, usedMarketNums);
+    if (!expP.lastClubName) {
+      expP.lastClubName = pickFormerClubForPlayer(expP, 0);
+    }
+    if (typeof ensurePlayerHistoryAndCareer === 'function') {
+      ensurePlayerHistoryAndCareer(expP, '無所属 (Free Agent)');
+    }
+    candidates.push(expP);
+  }
+  if (typeof gameState !== 'undefined') {
+    gameState.expiredMarketPool = [];
+  }
+
   // 無所属フリー選手は現実的に OVR 60〜72 中心（掘り出し物でも最大 73〜76）とする
   const freeMinGen = 56 + Math.min(3, scoutingLv - 1);
   const freeMaxGen = 63 + Math.min(4, scoutingLv - 1);
   const freeMaxOvrCap = 73 + Math.min(3, scoutingLv - 1);
 
   const freeCount = count + 2;
+  const remainingFreeCount = Math.max(4, freeCount - candidates.length);
   const marketHomeRatio = (typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES.MARKET_HOME_RATIO : 0.35);
-  for (let f = 0; f < freeCount; f++) {
+  for (let f = 0; f < remainingFreeCount; f++) {
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
     const basePower = randInt(freeMinGen, freeMaxGen);
     const freeNat = pickWeightedNationality(marketHomeRatio);
@@ -1704,9 +1789,16 @@ function generateTransferMarket() {
     freePlayer.isFreeAgent = true;
     freePlayer.contractYears = 0;
     freePlayer.transferFee = 0;
+    freePlayer.lastClubName = pickFormerClubForPlayer(freePlayer, 0);
     capGeneratedPlayerOvr(freePlayer, freeMaxOvrCap);
     freePlayer.salary = calculatePlayerSalary(freePlayer.pos, freePlayer.atk, freePlayer.def, freePlayer.sta, freePlayer.age);
     freePlayer.wage = Math.max(5, Math.round(freePlayer.salary / 52));
+    if (typeof gameState !== 'undefined' && gameState.isSeasonOver) {
+      freePlayer._generatedInOffseasonOfSeason = gameState.season || 1;
+    }
+    if (typeof ensurePlayerHistoryAndCareer === 'function') {
+      ensurePlayerHistoryAndCareer(freePlayer, '無所属 (Free Agent)');
+    }
     candidates.push(freePlayer);
   }
 
