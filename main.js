@@ -10129,7 +10129,7 @@ function openPlayerProfileModal(playerId) {
             ${yearlyFotmobHtml}
             <div class="fotmob-yearly-total mono">
               <span>通算 (${totalAppsSum}試合)</span>
-              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <strong class="accent-gold">${careerAvgRating}</strong></span>
+              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <span class="fotmob-rating-pill mono ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
             </div>
           </div>
           <div class="profile-yearly-table-wrap">
