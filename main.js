@@ -4402,6 +4402,10 @@ function dismissYouthCandidate(candidateId) {
  * GM業務タスク（GM Dashboard）の「実行 / 移動」ボタン処理
  */
 function handleGmDutyAction(actionKey) {
+  if (actionKey === 'restart-game') {
+    if (typeof showMainMenuScreen === 'function') showMainMenuScreen();
+    return;
+  }
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   if (actionKey === 'goto-market-offers') {
@@ -5568,28 +5572,13 @@ function renderHeader() {
 }
 
 /**
- * 赤字経営・ゲームオーバー警告バナーの描画
+ * 赤字経営・ゲームオーバー警告バナーの描画（本部以外のUI崩れ防止のため、表示は業務タスク側へ統合）
  */
 function renderFinancialAlert() {
   const banner = document.getElementById('financial-alert-banner');
-  const playerClub = getPlayerClub();
-  if (!banner || !playerClub) return;
-
-  if (gameState.isGameOver) {
-    banner.className = 'financial-alert-banner alert-gameover';
-    banner.textContent = `【ゲームオーバー】債務超過（資金：${formatMoney(playerClub.funds)}）が改善されず、${gameState.gmName} GMの解任が通告されました。「最初からやり直す」で新たなクラブ運営を開始できます。`;
-    banner.classList.remove('hidden');
-    return;
+  if (banner) {
+    banner.classList.add('hidden');
   }
-
-  if (playerClub.funds < 0) {
-    banner.className = 'financial-alert-banner';
-    banner.textContent = `【警告：債務超過】クラブ資金がマイナス（${formatMoney(playerClub.funds)}）です。次シーズン開幕時も債務超過が続くとGM解任（ゲームオーバー）となります。高年俸選手の自由契約や売却で収支を改善してください。`;
-    banner.classList.remove('hidden');
-    return;
-  }
-
-  banner.classList.add('hidden');
 }
 
 /**
@@ -8194,18 +8183,30 @@ function renderGmDuties() {
     }
   }
 
-  // 1. 必須タスク（CRITICAL / 赤）
-  let criticalDuty = null;
-  if (playerClub.funds < 0) {
-    criticalDuty = {
+  // 0.5 債務超過・ゲームオーバー警告（本部以外のUI崩れを防ぐため業務タスクに表示）
+  if (gameState.isGameOver) {
+    duties.push({
       level: 'critical',
-      badge: '重要',
+      badge: 'ゲームオーバー',
+      title: '債務超過によるGM解任',
+      desc: `資金 ${formatMoney(playerClub.funds)} の債務超過によりGM解任となりました。`,
+      btnText: '最初からやり直す',
+      action: 'restart-game'
+    });
+  } else if (playerClub.funds < 0) {
+    duties.push({
+      level: 'critical',
+      badge: '警告：債務超過',
       title: '赤字解消・人件費削減',
-      desc: `資金が ${formatMoney(playerClub.funds)} の赤字です。選手の自由契約等で総年俸を圧縮してください。`,
+      desc: `資金 ${formatMoney(playerClub.funds)} の赤字です。次季開幕までに黒字化しないと解任となります。`,
       btnText: '契約・編成へ',
       action: 'goto-roster-table'
-    };
-  } else if (gameState.isSeasonOver) {
+    });
+  }
+
+  // 1. 必須タスク（CRITICAL / 赤）
+  let criticalDuty = null;
+  if (gameState.isSeasonOver) {
     criticalDuty = {
       level: 'critical',
       badge: '重要',
