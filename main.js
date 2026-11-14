@@ -6572,11 +6572,11 @@ function renderTacticalBoard() {
         nodeEl.innerHTML = `
           <div class="pitch-node-avatar-wrap">
             ${getPlayerAvatarHtml(starter, playerClub, 'pitch-node-avatar', 48)}
+            <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
           </div>
           <div class="pitch-node-body">
             <div class="pitch-node-top">
               <span class="pitch-node-pos">${sl.pos}</span>
-              <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
               <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6624,11 +6624,11 @@ function renderTacticalBoard() {
           <div class="${nodeClasses}" data-slot-index="${sl.slotIndex}" data-player-id="${starter.id}" style="left: ${sl.x}%; top: ${sl.y}%;" title="ドラッグで選手交代 / タップで詳細プロフィール表示">
             <div class="pitch-node-avatar-wrap">
               ${getPlayerAvatarHtml(starter, playerClub, 'pitch-node-avatar', 48)}
+              <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
             </div>
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${sl.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6704,11 +6704,11 @@ function renderTacticalBoard() {
           <div class="pitch-node pos-group-${roleGroup} bench-sub-item ${itemClass}" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
             <div class="pitch-node-avatar-wrap">
               ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
+              <span class="pitch-node-ovr ${getOvrTierClass(simOvr)}">${simOvr}</span>
             </div>
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(simOvr)}">${simOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6756,11 +6756,11 @@ function renderTacticalBoard() {
           <div class="pitch-node pos-group-${roleGroup} bench-sub-item" data-player-id="${bp.id}" title="ドラッグまたはクリックで選手交代">
             <div class="pitch-node-avatar-wrap">
               ${getPlayerAvatarHtml(bp, playerClub, 'pitch-node-avatar', 48)}
+              <span class="pitch-node-ovr ${getOvrTierClass(baseOvr)}">${baseOvr}</span>
             </div>
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(baseOvr)}">${baseOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6828,11 +6828,11 @@ function renderTacticalBoard() {
           <div class="pitch-node pos-group-${roleGroup} bench-sub-item reserve-node ${fitClass}" data-player-id="${rp.id}" title="ドラッグまたはクリックで選手交代">
             <div class="pitch-node-avatar-wrap">
               ${getPlayerAvatarHtml(rp, playerClub, 'pitch-node-avatar', 48)}
+              <span class="pitch-node-ovr ${getOvrTierClass(ovrVal)}">${ovrVal}</span>
             </div>
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${rp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(ovrVal)}">${ovrVal}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${rp.squadNumber || '-'}</span> ${rp.name}</span>
