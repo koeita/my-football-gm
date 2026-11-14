@@ -8748,13 +8748,13 @@ function buildPlayerHexagonChartSvg(attrs) {
 
   const dataPolyPts = valPoints.map(v => `${v.pt.x},${v.pt.y}`).join(' ');
   const dataDots = valPoints.map(v => {
-    const tier = getStatTierClass(v.val);
-    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.5" class="hex-data-dot ${tier.valClass}" />`;
+    const tierCls = getOvrTierClass(v.val);
+    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.5" class="hex-data-dot ${tierCls}" />`;
   }).join('');
 
   // ラベルと数値の配置
   const labelsSvg = axes.map(a => {
-    const tier = getStatTierClass(a.val);
+    const tierCls = getOvrTierClass(a.val);
     let lx = cx;
     let lyLabel = cy;
     let lyVal = cy;
@@ -8805,7 +8805,7 @@ function buildPlayerHexagonChartSvg(attrs) {
     return `
       <g class="hex-label-group">
         <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
-        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tier.valClass}">${a.val}</text>
+        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.val}</text>
       </g>
     `;
   }).join('');
@@ -9786,33 +9786,6 @@ function openPlayerProfileModal(playerId) {
 
           <div class="profile-box">
             <div class="ui-kv-list">
-              <div class="ui-kv-row">
-                <div class="ui-kv-label">能力値</div>
-                <div class="ui-kv-content">
-                  <div class="ui-attr-bars-grid">
-                    ${[
-                      ['決定力', attrs.finishing],
-                      ['ドリブル', attrs.dribbling],
-                      ['パス', attrs.passing],
-                      ['守備', attrs.defending],
-                      ['スピード', attrs.pace],
-                      ['スタミナ', attrs.stamina]
-                    ].map(([nm, val]) => {
-                      const cls = getOvrTierClass(val);
-                      return `
-                        <div class="ui-attr-bar-item">
-                          <div class="ui-attr-bar-top">
-                            <span class="ui-attr-bar-name">${nm}</span>
-                            <span class="ui-attr-bar-num ${cls}" style="background:none;">${val}</span>
-                          </div>
-                          <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill ${cls}" style="width:${Math.min(100, Math.max(15, val))}%"></div></div>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-              </div>
-
               <div class="ui-kv-row">
                 <div class="ui-kv-label accent-cyan-bar">適性配置</div>
                 <div class="ui-kv-content">
