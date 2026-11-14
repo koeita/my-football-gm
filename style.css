@@ -392,6 +392,56 @@
   }
 }
 
+/* すべての数字 (0-9) のみを Barlow Condensed に統一し、日本語・英語は元のフォントを維持する */
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTx3L3I-JCGChYJ8VI-L6OO_au7B6xHT2g.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B4-Lwz3bWuQ.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B4873z3bWuQ.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3bWuQ.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B47b1z3bWuQ.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+@font-face {
+  font-family: 'Barlow Digits';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B45L0z3bWuQ.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+
 :root {
   --bg-main: #121417;
   --bg-panel: #1a1e23;
@@ -409,8 +459,8 @@
   --accent-cyan: #00d2d3;
   --danger-red: #e74c3c;
   --danger-red-dark: #c0392b;
-  --font-sans: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: 'Roboto Mono', Menlo, Consolas, monospace;
+  --font-sans: 'Barlow Digits', 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: 'Barlow Digits', 'Roboto Mono', Menlo, Consolas, monospace;
   --font-display: 'Barlow Condensed', 'Roboto Mono', sans-serif;
 
   /* セーフエリア & 画面レイアウト一元管理変数 */
@@ -16729,25 +16779,8 @@ body {
 .metric-value.mono,
 .metric-sub-value,
 .metric-sub-value.mono,
-.fotmob-yearly-cols,
-.fotmob-yearly-cols.mono,
-.fotmob-col-stat,
 .fotmob-col-ovr,
 .fotmob-rating-pill,
-.fotmob-yearly-total,
-.fotmob-yearly-total.mono,
-.fotmob-yearly-season,
-.fotmob-yearly-season.mono,
-.profile-yearly-table td,
-.profile-yearly-table td.mono,
-.profile-timeline-year,
-.profile-timeline-year.mono,
-.profile-timeline-badge,
-.profile-timeline-badge.mono,
-.profile-fit-row,
-.profile-fit-row .mono,
-.profile-bio-chip,
-.profile-bio-chip.mono,
 .yearly-table-ovr,
 .yearly-table-rat,
 .tier-text-elite,
