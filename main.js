@@ -5895,6 +5895,12 @@ function setupCompetitionNavListeners() {
  */
 let currentLeagueStatsCategory = 'goals';
 
+const formatStatsAvgRatingHtml = (avgR) => {
+  const info = typeof getRatingTierInfo === 'function' ? getRatingTierInfo(avgR) : { textClass: 'rat-text-none', text: 'N/A' };
+  const disp = (avgR === '-' || !avgR) ? 'N/A' : avgR;
+  return `<strong class="${info.textClass}">${disp}</strong>`;
+};
+
 const LEAGUE_STATS_CATEGORIES = {
   goals: {
     id: 'goals',
@@ -5905,7 +5911,7 @@ const LEAGUE_STATS_CATEGORIES = {
     getScore: p => p.goals || 0,
     formatScore: (val) => `<strong class="accent-gold">${val}</strong>`,
     secondaryColHeader: '平均評価',
-    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+    formatSecondary: (p, avgR) => formatStatsAvgRatingHtml(avgR)
   },
   assists: {
     id: 'assists',
@@ -5916,7 +5922,7 @@ const LEAGUE_STATS_CATEGORIES = {
     getScore: p => p.assists || 0,
     formatScore: (val) => `<strong class="text-cyan">${val}</strong>`,
     secondaryColHeader: '平均評価',
-    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+    formatSecondary: (p, avgR) => formatStatsAvgRatingHtml(avgR)
   },
   ratings: {
     id: 'ratings',
@@ -5926,11 +5932,11 @@ const LEAGUE_STATS_CATEGORIES = {
     mainColHeader: '平均評価',
     getScore: (p, apps) => (apps >= 2 ? (p.totalRating / apps) : 0),
     formatScore: (val) => {
-      const cls = val >= 7.5 ? 'accent-gold' : (val >= 7.0 ? 'accent-green' : 'text-main');
-      return `<strong class="${cls}">${val.toFixed(2)}</strong>`;
+      const info = typeof getRatingTierInfo === 'function' ? getRatingTierInfo(val) : { textClass: 'rat-text-mid', text: val.toFixed(2) };
+      return `<strong class="${info.textClass}">${val.toFixed(2)}</strong>`;
     },
     secondaryColHeader: 'G / A',
-    formatSecondary: (p) => `<span class="mono">${p.goals || 0}G / ${p.assists || 0}A</span>`
+    formatSecondary: (p) => `<strong>${p.goals || 0}G / ${p.assists || 0}A</strong>`
   },
   cleansheets: {
     id: 'cleansheets',
@@ -5942,7 +5948,7 @@ const LEAGUE_STATS_CATEGORIES = {
     getScore: p => p.cleanSheets || 0,
     formatScore: (val) => `<strong class="accent-gold">${val} <small style="font-size:10px; color:var(--text-muted);">試合</small></strong>`,
     secondaryColHeader: '平均評価',
-    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+    formatSecondary: (p, avgR) => formatStatsAvgRatingHtml(avgR)
   },
   moms: {
     id: 'moms',
@@ -5953,7 +5959,7 @@ const LEAGUE_STATS_CATEGORIES = {
     getScore: p => p.momCount || 0,
     formatScore: (val) => `<strong class="accent-gold">${val} <small style="font-size:10px; color:var(--text-muted);">回</small></strong>`,
     secondaryColHeader: '平均評価',
-    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+    formatSecondary: (p, avgR) => formatStatsAvgRatingHtml(avgR)
   },
   appearances: {
     id: 'appearances',
@@ -5968,7 +5974,7 @@ const LEAGUE_STATS_CATEGORIES = {
       return `<strong>${val}試合</strong> <span class="mono" style="font-size:9.5px; color:${ftgSt.color}; margin-left:4px;">(疲労:${ftg})</span>`;
     },
     secondaryColHeader: '平均評価',
-    formatSecondary: (p, avgR) => `<span class="accent-green">${avgR}</span>`
+    formatSecondary: (p, avgR) => formatStatsAvgRatingHtml(avgR)
   },
   cards: {
     id: 'cards',
@@ -5977,9 +5983,9 @@ const LEAGUE_STATS_CATEGORIES = {
     desc: '激しいファウル・警告カードを受けたカード枚数ランキング',
     mainColHeader: '警告数 (黄)',
     getScore: p => ((p.redCards || 0) * 3 + (p.yellowCards || 0)),
-    formatScore: (val, p) => `<strong style="color:#f1c40f;">${p.yellowCards || 0}枚</strong>`,
+    formatScore: (val, p) => `<strong style="color:#fbbf24;">${p.yellowCards || 0}枚</strong>`,
     secondaryColHeader: '退場数 (赤)',
-    formatSecondary: (p) => `<strong style="color:#e74c3c;">${p.redCards || 0}枚</strong>`
+    formatSecondary: (p) => `<strong style="color:#f87171;">${p.redCards || 0}枚</strong>`
   }
 };
 
@@ -6167,7 +6173,7 @@ function renderLeagueStats(catKey = 'goals') {
 
       if (config.filter && !config.filter(compViewPlayer)) continue;
       const apps = compViewPlayer.appearances;
-      const avgRating = apps > 0 ? (compViewPlayer.totalRating / apps).toFixed(1) : '-';
+      const avgRating = apps > 0 ? (compViewPlayer.totalRating / apps).toFixed(1) : 'N/A';
       const score = catKey === 'ratings'
         ? (apps >= minAppsForRating ? (compViewPlayer.totalRating / apps) : 0)
         : config.getScore(compViewPlayer, apps);
@@ -6190,7 +6196,7 @@ function renderLeagueStats(catKey = 'goals') {
         for (const p of (club.players || [])) {
           if (p.isRetired || (config.filter && !config.filter(p))) continue;
           const apps = p.appearances || 0;
-          const avgRating = apps > 0 ? (p.totalRating / apps).toFixed(1) : '-';
+          const avgRating = apps > 0 ? (p.totalRating / apps).toFixed(1) : 'N/A';
           allPlayers.push({ player: p, clubName: club.name, isPlayerClub: club.isPlayer, apps, avgRating, score: config.getScore(p, apps) });
         }
       }
@@ -7918,7 +7924,7 @@ function renderYouthSquad() {
   if (youthList.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" class="empty-log-message" style="text-align: center; padding: 20px;">
+        <td colspan="7" class="empty-log-message" style="text-align: center; padding: 20px;">
           現在ユースチーム選手はいません。シーズン終了時に新アカデミー生が入団します。
         </td>
       </tr>
@@ -7930,7 +7936,6 @@ function renderYouthSquad() {
     const ovr = getPlayerOverallRating(y);
     const pot = y.potential || y.potentialGrade || 'B';
     const potClass = pot === 'S' ? 'stat-rank-S' : (pot === 'A' ? 'stat-rank-A' : (pot === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
-    const growthLabel = typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(y.growthCurve || y.growthType) : '標準';
     const canPromoteBtn = canPromote ? `
       <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
         昇格
@@ -7947,8 +7952,7 @@ function renderYouthSquad() {
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>
         <td class="col-num col-youth-ovr"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}">${ovr}</span></td>
-        <td class="col-num col-youth-pot"><span class="mono font-bold ${potClass}">${pot}</span></td>
-        <td class="col-num col-youth-growth"><span class="mono" style="font-size:11px;">${growthLabel}</span></td>
+        <td class="col-num col-youth-pot"><span class="youth-pot-val ${potClass}">${pot}</span></td>
         <td class="col-num col-youth-wage mono">${formatWage(y.wage || 2)}</td>
         <td class="col-action">
           <div class="youth-action-group" style="display:flex; gap:4px; justify-content:center;">
