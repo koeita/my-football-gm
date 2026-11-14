@@ -1298,10 +1298,6 @@ body {
   cursor: pointer;
 }
 
-.roster-table tbody tr.row-bench {
-  color: var(--text-muted);
-}
-
 .roster-table tbody tr.row-selected {
   outline: 2px solid var(--accent-gold);
   outline-offset: -2px;
