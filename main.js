@@ -6576,7 +6576,7 @@ function renderTacticalBoard() {
           <div class="pitch-node-body">
             <div class="pitch-node-top">
               <span class="pitch-node-pos">${sl.pos}</span>
-              <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">OVR ${effOvr}</span>
+              <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
               <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6628,7 +6628,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${sl.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">OVR ${effOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">${effOvr}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6708,7 +6708,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(simOvr)}">OVR ${simOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(simOvr)}">${simOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6760,7 +6760,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(baseOvr)}">OVR ${baseOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(baseOvr)}">${baseOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6832,7 +6832,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${rp.pos}</span>
-                <span class="pitch-node-ovr ${getOvrTierClass(ovrVal)}">OVR ${ovrVal}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(ovrVal)}">${ovrVal}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${rp.squadNumber || '-'}</span> ${rp.name}</span>
@@ -9638,21 +9638,21 @@ function openPlayerProfileModal(playerId) {
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
 
   const footLabelMap = {
-    Right: 'Right（右利き）',
-    Left: 'Left（左利き）',
-    Both: 'Both（両足）'
+    Right: 'Right',
+    Left: 'Left',
+    Both: 'Both'
   };
   const footShortMap = {
     Right: '右利き',
     Left: '左利き',
     Both: '両利き'
   };
-  const footText = footLabelMap[p.preferredFoot] || p.preferredFoot || 'Right（右利き）';
+  const footText = footLabelMap[p.preferredFoot] || p.preferredFoot || 'Right';
   const footShortText = footShortMap[p.preferredFoot] || '右利き';
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
   const rawNat = p.nationality || 'England';
   const flagHtml = getNationalityFlagHtml(rawNat);
-  const nationalityDisplay = `<span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span>`;
+  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:6px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
   const squadNumText = `#${p.squadNumber || 10}`;
   const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
   const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
@@ -10170,7 +10170,6 @@ function openPlayerProfileModal(playerId) {
                 <div class="profile-fit-row"><span class="text-muted">生年・年齢</span><span class="mono"><strong>${birthYear}年 (${p.age}歳)</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono"><strong>${heightText} / ${footText}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubDisplayLabel} (${squadNumText})</strong></span></div>
-                <div class="profile-fit-row"><span class="text-muted">適性・成長型</span><span class="mono"><strong>${primaryPos}${subPosList.length ? ` (${subPosList.join('/')})` : ''} · ${growthLabel}</strong></span></div>
               </div>
             </div>
           </div>
