@@ -185,36 +185,418 @@ function getClubShortCode(clubOrId) {
 }
 
 /**
- * 欧州20クラブの固有エンブレム定義（形状・配色・パターン・頭文字シンボル）
+ * 欧州20クラブの固有エンブレム定義（形状・3色配色・伝統パターン・固有モチーフ・3文字コード）
  */
 const CLUB_EMBLEM_MAP = {
-  'manchester_b': { shape: 'circle', primaryColor: '#6ba4d9', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'M' },
-  'manchester_r': { shape: 'shield', primaryColor: '#da020e', secondaryColor: '#ffe500', pattern: 'diagonal', symbol: 'M' },
-  'liverpool_b': { shape: 'shield', primaryColor: '#c8102e', secondaryColor: '#00b2a9', pattern: 'solid', symbol: 'L' },
-  'northlondon_a': { shape: 'shield', primaryColor: '#ef0107', secondaryColor: '#ffffff', pattern: 'split', symbol: 'A' },
-  'london_fc': { shape: 'circle', primaryColor: '#034694', secondaryColor: '#dba111', pattern: 'solid', symbol: 'L' },
-  'northlondon_w': { shape: 'shield', primaryColor: '#132257', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'W' },
-  'newcastle_u': { shape: 'shield', primaryColor: '#241f20', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'N' },
-  'aston_v': { shape: 'shield', primaryColor: '#670e36', secondaryColor: '#95bfe5', pattern: 'diagonal', symbol: 'V' },
-  'brighton_g': { shape: 'circle', primaryColor: '#0057b8', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'B' },
-  'eastlondon_h': { shape: 'shield', primaryColor: '#7a263a', secondaryColor: '#1bb1e7', pattern: 'chevron', symbol: 'H' },
-  'southlondon_p': { shape: 'shield', primaryColor: '#1b458f', secondaryColor: '#c4122e', pattern: 'stripes', symbol: 'P' },
-  'westlondon_c': { shape: 'shield', primaryColor: '#1a1d20', secondaryColor: '#cc0000', pattern: 'solid', symbol: 'C' },
-  'westlondon_b': { shape: 'circle', primaryColor: '#e30613', secondaryColor: '#ffffff', pattern: 'diagonal', symbol: 'B' },
-  'midlands_w': { shape: 'diamond', primaryColor: '#fdb913', secondaryColor: '#231f20', pattern: 'solid', symbol: 'W' },
-  'merseyside_b': { shape: 'shield', primaryColor: '#003399', secondaryColor: '#ffffff', pattern: 'chevron', symbol: 'M' },
-  'southcoast_c': { shape: 'shield', primaryColor: '#da291c', secondaryColor: '#111111', pattern: 'stripes', symbol: 'C' },
-  'nottingham_r': { shape: 'shield', primaryColor: '#dd0000', secondaryColor: '#ffffff', pattern: 'solid', symbol: 'N' },
-  'leicester_f': { shape: 'circle', primaryColor: '#003090', secondaryColor: '#fdbe11', pattern: 'solid', symbol: 'F' },
-  'southampton_s': { shape: 'shield', primaryColor: '#d71920', secondaryColor: '#ffffff', pattern: 'diagonal', symbol: 'S' },
-  'ipswich_t': { shape: 'shield', primaryColor: '#004494', secondaryColor: '#ffffff', pattern: 'stripes', symbol: 'T' }
+  'manchester_b':  { shape: 'circle',       primaryColor: '#6ba4d9', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'ship',         code: 'MNC', symbol: 'MNC' },
+  'manchester_r':  { shape: 'crest',        primaryColor: '#da020e', secondaryColor: '#7a0912', accentColor: '#ffe500', pattern: 'split-vertical',    motif: 'trident',      code: 'MNR', symbol: 'MNR' },
+  'liverpool_b':   { shape: 'crown-shield', primaryColor: '#c8102e', secondaryColor: '#00b2a9', accentColor: '#f6eb61', pattern: 'solid',             motif: 'wings-flame',  code: 'LIV', symbol: 'LIV' },
+  'northlondon_a': { shape: 'crest',        primaryColor: '#ef0107', secondaryColor: '#ffffff', accentColor: '#db9b32', pattern: 'sleeve-split',      motif: 'cannon',       code: 'NLA', symbol: 'NLA' },
+  'london_fc':     { shape: 'circle',       primaryColor: '#034694', secondaryColor: '#ffffff', accentColor: '#dba111', pattern: 'ring',              motif: 'lion-stars',   code: 'LON', symbol: 'LON' },
+  'northlondon_w': { shape: 'hexagon',      primaryColor: '#f4f6f9', secondaryColor: '#132257', accentColor: '#9fb0c7', pattern: 'solid',             motif: 'spurs-tower',  code: 'NLW', symbol: 'NLW' },
+  'newcastle_u':   { shape: 'shield',       primaryColor: '#1a1d20', secondaryColor: '#ffffff', accentColor: '#d4af37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'NEW', symbol: 'NEW' },
+  'aston_v':       { shape: 'crest',        primaryColor: '#670e36', secondaryColor: '#95bfe5', accentColor: '#fee505', pattern: 'halves-horizontal', motif: 'crown-star',   code: 'AST', symbol: 'AST' },
+  'brighton_g':    { shape: 'circle',       primaryColor: '#0057b8', secondaryColor: '#ffffff', accentColor: '#ffcc00', pattern: 'stripes-vertical',  motif: 'seagull',      code: 'BRI', symbol: 'BRI' },
+  'eastlondon_h':  { shape: 'shield',       primaryColor: '#7a263a', secondaryColor: '#1bb1e7', accentColor: '#f3d459', pattern: 'chevron',           motif: 'hammers',      code: 'ELO', symbol: 'ELO' },
+  'southlondon_p': { shape: 'crest',        primaryColor: '#1b458f', secondaryColor: '#c4122e', accentColor: '#ffffff', pattern: 'stripes-vertical',  motif: 'eagle',        code: 'SLO', symbol: 'SLO' },
+  'westlondon_c':  { shape: 'shield',       primaryColor: '#ffffff', secondaryColor: '#181b20', accentColor: '#cc0000', pattern: 'split-vertical',    motif: 'cross-swords', code: 'WLC', symbol: 'WLC' },
+  'westlondon_b':  { shape: 'circle',       primaryColor: '#e30613', secondaryColor: '#ffffff', accentColor: '#181b20', pattern: 'quarters',          motif: 'honeycomb',    code: 'WLB', symbol: 'WLB' },
+  'midlands_w':    { shape: 'hexagon',      primaryColor: '#fdb913', secondaryColor: '#1e1b18', accentColor: '#ffffff', pattern: 'diagonal',          motif: 'wolf',         code: 'MDL', symbol: 'MDL' },
+  'merseyside_b':  { shape: 'crest-tall',   primaryColor: '#003399', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'sash-diagonal',     motif: 'tower-laurel', code: 'MER', symbol: 'MER' },
+  'southcoast_c':  { shape: 'shield',       primaryColor: '#da291c', secondaryColor: '#14171a', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'wave-star',    code: 'SCO', symbol: 'SCO' },
+  'nottingham_r':  { shape: 'circle',       primaryColor: '#dd0000', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'solid',             motif: 'tree-stars',   code: 'NOT', symbol: 'NOT' },
+  'leicester_f':   { shape: 'circle',       primaryColor: '#003090', secondaryColor: '#fdbe11', accentColor: '#ffffff', pattern: 'ring',              motif: 'cinquefoil',   code: 'LEI', symbol: 'LEI' },
+  'southampton_s': { shape: 'crown-shield', primaryColor: '#d71920', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'halo-wave',    code: 'SOU', symbol: 'SOU' },
+  'ipswich_t':     { shape: 'shield',       primaryColor: '#004494', secondaryColor: '#ffffff', accentColor: '#de2c37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'IPS', symbol: 'IPS' }
 };
 
 let emblemSvgUidCounter = 0;
 
 /**
+ * 7種のクレスト形状（外枠・クリップパス・内枠ディテール）を構築
+ */
+function buildEmblemShapeSpec(shape, accentColor) {
+  const rimAccent = accentColor || 'rgba(255,255,255,0.45)';
+  switch (shape) {
+    case 'circle':
+      return {
+        clip: '<circle cx="50" cy="50" r="44"/>',
+        border: `
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-opacity="0.95"/>
+          <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(0,0,0,0.48)" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="39.2" fill="none" stroke="${rimAccent}" stroke-width="0.9" stroke-opacity="0.65"/>
+        `
+      };
+    case 'crest':
+      return {
+        clip: '<path d="M 15 15 Q 50 6 85 15 L 87 50 C 87 76, 50 95, 50 95 C 50 95, 13 76, 13 50 Z"/>',
+        border: `
+          <path d="M 15 15 Q 50 6 85 15 L 87 50 C 87 76, 50 95, 50 95 C 50 95, 13 76, 13 50 Z" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 19 19 Q 50 11 81 19 L 83 50 C 83 72, 50 89, 50 89 C 50 89, 17 72, 17 50 Z" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="1.4" stroke-linejoin="round"/>
+        `
+      };
+    case 'crown-shield':
+      return {
+        clip: '<path d="M 14 19 L 31 10 L 50 18 L 69 10 L 86 19 L 86 52 C 86 77, 50 94, 50 94 C 50 94, 14 77, 14 52 Z"/>',
+        border: `
+          <path d="M 14 19 L 31 10 L 50 18 L 69 10 L 86 19 L 86 52 C 86 77, 50 94, 50 94 C 50 94, 14 77, 14 52 Z" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 18 22 L 32 15 L 50 22 L 68 15 L 82 22 L 82 51 C 82 72, 50 88, 50 88 C 50 88, 18 72, 18 51 Z" fill="none" stroke="rgba(0,0,0,0.42)" stroke-width="1.4" stroke-linejoin="round"/>
+        `
+      };
+    case 'hexagon':
+      return {
+        clip: '<path d="M 50 6 L 88 26 L 88 74 L 50 94 L 12 74 L 12 26 Z"/>',
+        border: `
+          <path d="M 50 6 L 88 26 L 88 74 L 50 94 L 12 74 L 12 26 Z" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 50 11 L 83 28.5 L 83 71.5 L 50 89 L 17 71.5 L 17 28.5 Z" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="1.4" stroke-linejoin="round"/>
+        `
+      };
+    case 'crest-tall':
+      return {
+        clip: '<path d="M 29 8 L 71 8 L 87 26 L 87 67 L 50 94 L 13 67 L 13 26 Z"/>',
+        border: `
+          <path d="M 29 8 L 71 8 L 87 26 L 87 67 L 50 94 L 13 67 L 13 26 Z" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 31 12.5 L 69 12.5 L 82.5 28 L 82.5 64.5 L 50 88.5 L 17.5 64.5 L 17.5 28 Z" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="1.4" stroke-linejoin="round"/>
+        `
+      };
+    case 'diamond':
+      return {
+        clip: '<path d="M 50 6 L 92 50 L 50 94 L 8 50 Z"/>',
+        border: `
+          <path d="M 50 6 L 92 50 L 50 94 L 8 50 Z" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 50 13 L 85 50 L 50 87 L 15 50 Z" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="1.5" stroke-linejoin="round"/>
+        `
+      };
+    default:
+      return {
+        clip: '<path d="M 14 12 L 86 12 L 86 52 C 86 77, 50 94, 50 94 C 50 94, 14 77, 14 52 Z"/>',
+        border: `
+          <path d="M 14 12 L 86 12 L 86 52 C 86 77, 50 94, 50 94 C 50 94, 14 77, 14 52 Z" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95" stroke-linejoin="round"/>
+          <path d="M 18 16 L 82 16 L 82 51 C 82 72, 50 88, 50 88 C 50 88, 18 72, 18 51 Z" fill="none" stroke="rgba(0,0,0,0.42)" stroke-width="1.4" stroke-linejoin="round"/>
+        `
+      };
+  }
+}
+
+/**
+ * 9種の伝統フィールド模様を構築
+ */
+function buildEmblemPatternSvg(pattern, primaryColor, secondaryColor, accentColor) {
+  switch (pattern) {
+    case 'stripes':
+    case 'stripes-vertical':
+      return `
+        <rect x="19" y="0" width="13" height="100" fill="${secondaryColor}" opacity="0.92"/>
+        <rect x="43.5" y="0" width="13" height="100" fill="${secondaryColor}" opacity="0.92"/>
+        <rect x="68" y="0" width="13" height="100" fill="${secondaryColor}" opacity="0.92"/>
+      `;
+    case 'stripes-horizontal':
+      return `
+        <rect x="0" y="18" width="100" height="12" fill="${secondaryColor}" opacity="0.92"/>
+        <rect x="0" y="44" width="100" height="12" fill="${secondaryColor}" opacity="0.92"/>
+        <rect x="0" y="70" width="100" height="12" fill="${secondaryColor}" opacity="0.92"/>
+      `;
+    case 'split':
+    case 'split-vertical':
+      return `<rect x="50" y="0" width="50" height="100" fill="${secondaryColor}" opacity="0.95"/>`;
+    case 'halves-horizontal':
+      return `<rect x="0" y="50" width="100" height="50" fill="${secondaryColor}" opacity="0.95"/>`;
+    case 'quarters':
+      return `
+        <rect x="50" y="0" width="50" height="50" fill="${secondaryColor}" opacity="0.95"/>
+        <rect x="0" y="50" width="50" height="50" fill="${secondaryColor}" opacity="0.95"/>
+      `;
+    case 'diagonal':
+    case 'sash-diagonal':
+      return `
+        <polygon points="0,10 14,0 100,86 86,100" fill="${secondaryColor}" opacity="0.92"/>
+        <line x1="8" y1="0" x2="100" y2="92" stroke="${accentColor}" stroke-width="2" opacity="0.65"/>
+      `;
+    case 'chevron':
+    case 'chevron-down':
+      return `<path d="M 0 24 L 50 56 L 100 24 L 100 41 L 50 73 L 0 41 Z" fill="${secondaryColor}" opacity="0.95"/>`;
+    case 'sleeve-split':
+      return `
+        <rect x="0" y="0" width="23" height="100" fill="${secondaryColor}" opacity="0.95"/>
+        <rect x="77" y="0" width="23" height="100" fill="${secondaryColor}" opacity="0.95"/>
+        <line x1="23" y1="0" x2="23" y2="100" stroke="${accentColor}" stroke-width="2" opacity="0.85"/>
+        <line x1="77" y1="0" x2="77" y2="100" stroke="${accentColor}" stroke-width="2" opacity="0.85"/>
+      `;
+    case 'ring':
+      return `
+        <circle cx="50" cy="50" r="37" fill="none" stroke="${secondaryColor}" stroke-width="5.5" opacity="0.9"/>
+        <circle cx="50" cy="50" r="30" fill="${primaryColor}" stroke="${accentColor}" stroke-width="1.6" opacity="0.95"/>
+      `;
+    case 'circle-center':
+      return `
+        <circle cx="50" cy="50" r="24" fill="${secondaryColor}" opacity="0.24"/>
+        <circle cx="50" cy="50" r="33" fill="none" stroke="${secondaryColor}" stroke-width="2" opacity="0.5"/>
+      `;
+    default:
+      // solid: ピンストライプ＋同心装飾
+      return `
+        <line x1="25" y1="0" x2="25" y2="100" stroke="${secondaryColor}" stroke-width="1.4" opacity="0.22"/>
+        <line x1="50" y1="0" x2="50" y2="100" stroke="${secondaryColor}" stroke-width="1.4" opacity="0.22"/>
+        <line x1="75" y1="0" x2="75" y2="100" stroke="${secondaryColor}" stroke-width="1.4" opacity="0.22"/>
+        <circle cx="50" cy="50" r="33" fill="none" stroke="${secondaryColor}" stroke-width="1.8" opacity="0.3"/>
+      `;
+  }
+}
+
+/**
+ * クラブ固有モチーフSVG（上部 y:14〜34、下部 y:67〜85 に配置してバナーと重ならない構成）
+ */
+function buildEmblemMotifSvg(motif, accentColor, secondaryColor) {
+  const c1 = accentColor || '#f5c542';
+  const c2 = secondaryColor || '#ffffff';
+  const starPath = (cx, cy, r) => {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const ang = (i * 36 - 90) * Math.PI / 180;
+      const rad = i % 2 === 0 ? r : r * 0.44;
+      pts.push(`${(cx + rad * Math.cos(ang)).toFixed(1)},${(cy + rad * Math.sin(ang)).toFixed(1)}`);
+    }
+    return `<polygon points="${pts.join(' ')}" fill="${c1}" stroke="rgba(0,0,0,0.45)" stroke-width="0.7"/>`;
+  };
+  const crownTop = `<path d="M 39 32 L 36 21 L 44 26 L 50 18 L 56 26 L 64 21 L 61 32 Z" fill="${c1}" stroke="rgba(0,0,0,0.55)" stroke-width="1.1" stroke-linejoin="round"/>`;
+  const threeStarsBottom = `${starPath(37, 74, 4.4)}${starPath(50, 76, 5)}${starPath(63, 74, 4.4)}`;
+
+  switch (motif) {
+    case 'ship':
+      return `
+        <path d="M 41 25 L 49 17 L 49 27 Z M 51 27 L 51 19 L 58 26 Z" fill="${c2}" stroke="rgba(0,0,0,0.45)" stroke-width="0.8"/>
+        <path d="M 38 29 L 62 29 L 57 34 L 43 34 Z" fill="${c1}" stroke="rgba(0,0,0,0.55)" stroke-width="1"/>
+        ${threeStarsBottom}
+      `;
+    case 'trident':
+      return `
+        ${crownTop}
+        <path d="M 50 67 L 50 83 M 43 69 L 43 74 C 43 77 57 77 57 74 L 57 69" fill="none" stroke="${c1}" stroke-width="2.4" stroke-linecap="round"/>
+        <polygon points="43,66 40.5,71 45.5,71" fill="${c1}"/>
+        <polygon points="50,64 47.5,70 52.5,70" fill="${c1}"/>
+        <polygon points="57,66 54.5,71 59.5,71" fill="${c1}"/>
+      `;
+    case 'wings-flame':
+      return `
+        <path d="M 50 20 C 46 25 46 31 50 34 C 54 31 54 25 50 20 Z" fill="${c1}" stroke="rgba(0,0,0,0.45)" stroke-width="0.9"/>
+        <path d="M 42 29 C 34 27 29 22 27 18 C 33 21 38 24 44 27 Z" fill="${c2}" opacity="0.92"/>
+        <path d="M 58 29 C 66 27 71 22 73 18 C 67 21 62 24 56 27 Z" fill="${c2}" opacity="0.92"/>
+        ${starPath(42, 74, 4.3)}${starPath(58, 74, 4.3)}
+      `;
+    case 'cannon':
+      return `
+        <rect x="36" y="23" width="23" height="5.5" rx="2.5" fill="${c1}" stroke="rgba(0,0,0,0.55)" stroke-width="1"/>
+        <circle cx="44" cy="30" r="4.5" fill="${c1}" stroke="rgba(0,0,0,0.6)" stroke-width="1.2"/>
+        <circle cx="44" cy="30" r="1.6" fill="#181b20"/>
+        <path d="M 58 24 L 64 24.8 L 64 26.8 L 58 27.5 Z" fill="${c1}"/>
+        ${starPath(50, 75, 5.2)}
+      `;
+    case 'lion-stars':
+      return `
+        ${crownTop}
+        ${starPath(37, 74, 4.4)}${starPath(50, 76, 5.2)}${starPath(63, 74, 4.4)}
+      `;
+    case 'spurs-tower':
+      return `
+        <path d="M 50 15 L 54 27 L 59 33 L 41 33 L 46 27 Z" fill="${c2}" stroke="rgba(0,0,0,0.45)" stroke-width="1"/>
+        <circle cx="50" cy="75" r="6" fill="${c2}" stroke="rgba(0,0,0,0.5)" stroke-width="1.2"/>
+        <path d="M 46 73 L 54 73 M 47 77 L 53 77" stroke="#132257" stroke-width="1.2"/>
+      `;
+    case 'castle':
+      return `
+        <path d="M 36 33 L 36 22 L 41 22 L 41 25 L 46 25 L 46 21 L 54 21 L 54 25 L 59 25 L 59 22 L 64 22 L 64 33 Z" fill="${c1}" stroke="rgba(0,0,0,0.55)" stroke-width="1.1" stroke-linejoin="round"/>
+        ${threeStarsBottom}
+      `;
+    case 'crown-star':
+      return `
+        ${crownTop}
+        ${starPath(50, 75, 6.2)}
+      `;
+    case 'seagull':
+      return `
+        <path d="M 28 29 C 35 21 43 22 50 28 C 57 22 65 21 72 29 C 64 26 56 27 50 32 C 44 27 36 26 28 29 Z" fill="${c2}" stroke="rgba(0,0,0,0.55)" stroke-width="1.1"/>
+        <path d="M 35 73 Q 42.5 69 50 73 T 65 73" fill="none" stroke="${c1}" stroke-width="2.2" stroke-linecap="round"/>
+      `;
+    case 'hammers':
+      return `
+        <g stroke="rgba(0,0,0,0.55)" stroke-width="1">
+          <line x1="39" y1="33" x2="61" y2="20" stroke="${c1}" stroke-width="2.8" stroke-linecap="round"/>
+          <line x1="61" y1="33" x2="39" y2="20" stroke="${c1}" stroke-width="2.8" stroke-linecap="round"/>
+          <rect x="56" y="17" width="8" height="4.5" rx="1" transform="rotate(-31 60 19)" fill="${c2}"/>
+          <rect x="36" y="17" width="8" height="4.5" rx="1" transform="rotate(31 40 19)" fill="${c2}"/>
+        </g>
+        ${starPath(50, 75, 4.8)}
+      `;
+    case 'eagle':
+      return `
+        <path d="M 31 21 L 44 26 L 50 18 L 56 26 L 69 21 L 60 32 L 50 30 L 40 32 Z" fill="${c2}" stroke="rgba(0,0,0,0.55)" stroke-width="1" stroke-linejoin="round"/>
+        ${starPath(42, 74, 4.3)}${starPath(58, 74, 4.3)}
+      `;
+    case 'cross-swords':
+      return `
+        <line x1="40" y1="32" x2="60" y2="19" stroke="${c1}" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="60" y1="32" x2="40" y2="19" stroke="${c1}" stroke-width="2.6" stroke-linecap="round"/>
+        <polygon points="50,67 56,74 50,81 44,74" fill="${c1}" stroke="rgba(0,0,0,0.45)" stroke-width="0.9"/>
+      `;
+    case 'honeycomb':
+      return `
+        <polygon points="50,17 57,21 57,29 50,33 43,29 43,21" fill="${c1}" stroke="#ffffff" stroke-width="1.3"/>
+        <polygon points="39,23 44,26 44,32 39,35 34,32 34,26" fill="${c1}" opacity="0.85"/>
+        <polygon points="61,23 66,26 66,32 61,35 56,32 56,26" fill="${c1}" opacity="0.85"/>
+        ${starPath(50, 75, 4.8)}
+      `;
+    case 'wolf':
+      return `
+        <polygon points="35,20 43,24 50,21 57,24 65,20 60,33 50,35 40,33" fill="${c2}" stroke="rgba(0,0,0,0.6)" stroke-width="1" stroke-linejoin="round"/>
+        <polygon points="41,26 46,28 43,30" fill="#fdb913"/>
+        <polygon points="59,26 54,28 57,30" fill="#fdb913"/>
+        <path d="M 41 72 L 50 80 L 59 72" fill="none" stroke="${c2}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    case 'tower-laurel':
+      return `
+        <path d="M 44 33 L 45 21 L 50 16 L 55 21 L 56 33 Z" fill="${c2}" stroke="rgba(0,0,0,0.5)" stroke-width="1"/>
+        <path d="M 35 70 C 37 78 44 82 50 82 C 56 82 63 78 65 70" fill="none" stroke="${c1}" stroke-width="2.4" stroke-linecap="round"/>
+      `;
+    case 'wave-star':
+      return `
+        ${starPath(50, 26, 5.8)}
+        <path d="M 34 73 Q 42 68 50 73 T 66 73" fill="none" stroke="${c1}" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M 38 79 Q 44 75 50 79 T 62 79" fill="none" stroke="${c2}" stroke-width="1.8" stroke-linecap="round"/>
+      `;
+    case 'tree-stars':
+      return `
+        <circle cx="50" cy="23" r="6.5" fill="${c2}" stroke="rgba(0,0,0,0.45)" stroke-width="1"/>
+        <rect x="48.5" y="27" width="3" height="7" fill="${c2}"/>
+        ${starPath(42, 74, 4.8)}${starPath(58, 74, 4.8)}
+      `;
+    case 'cinquefoil':
+      return `
+        <circle cx="50" cy="21" r="3.4" fill="${c1}"/>
+        <circle cx="45" cy="25" r="3.4" fill="${c1}"/>
+        <circle cx="55" cy="25" r="3.4" fill="${c1}"/>
+        <circle cx="47" cy="30" r="3.4" fill="${c1}"/>
+        <circle cx="53" cy="30" r="3.4" fill="${c1}"/>
+        <circle cx="50" cy="25.5" r="2.2" fill="#003090"/>
+        ${threeStarsBottom}
+      `;
+    case 'halo-wave':
+      return `
+        <ellipse cx="50" cy="24" rx="11" ry="3.8" fill="none" stroke="${c1}" stroke-width="2.4"/>
+        <path d="M 35 74 Q 42.5 69 50 74 T 65 74" fill="none" stroke="${c1}" stroke-width="2.2" stroke-linecap="round"/>
+      `;
+    case 'crown':
+      return `${crownTop}${starPath(50, 75, 4.8)}`;
+    case 'stars-3':
+      return `${starPath(50, 26, 5.2)}${threeStarsBottom}`;
+    case 'laurel':
+      return `
+        ${starPath(50, 26, 5)}
+        <path d="M 36 70 C 39 78 45 81 50 81 C 55 81 61 78 64 70" fill="none" stroke="${c1}" stroke-width="2.2" stroke-linecap="round"/>
+      `;
+    default:
+      return `${starPath(50, 26, 5.2)}${starPath(50, 75, 4.6)}`;
+  }
+}
+
+/**
+ * クラブオブジェクト・ID・名称から統一エンブレム設定（3文字コード・形状・配色・模様・モチーフ）を解決する
+ */
+function resolveClubEmblemConfig(clubOrNameOrId) {
+  let clubId = '';
+  let clubName = '';
+  let clubObj = null;
+  let emblemConf = null;
+
+  if (typeof clubOrNameOrId === 'object') {
+    clubObj = clubOrNameOrId;
+    clubId = clubOrNameOrId.id || '';
+    clubName = clubOrNameOrId.name || '';
+    emblemConf = clubOrNameOrId.emblem || (clubId ? CLUB_EMBLEM_MAP[clubId] : null);
+  } else if (typeof clubOrNameOrId === 'string') {
+    if (CLUB_EMBLEM_MAP[clubOrNameOrId]) {
+      clubId = clubOrNameOrId;
+      emblemConf = CLUB_EMBLEM_MAP[clubOrNameOrId];
+    } else {
+      clubName = clubOrNameOrId;
+      const allBigFive = typeof getAllBigFiveClubs === 'function' ? getAllBigFiveClubs() : [];
+      const matchedClub = (typeof gameState !== 'undefined' && Array.isArray(gameState.clubs) && gameState.clubs.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name)))
+        || (typeof CLUB_DEFINITIONS !== 'undefined' && CLUB_DEFINITIONS.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name)))
+        || allBigFive.find(c => c.name === clubName || c.id === clubName);
+      if (matchedClub) {
+        clubObj = matchedClub;
+        clubId = matchedClub.id || '';
+        clubName = matchedClub.name || clubName;
+        emblemConf = matchedClub.emblem || (clubId ? CLUB_EMBLEM_MAP[clubId] : null);
+      }
+    }
+  }
+
+  const code = getClubShortCode(clubObj || clubId || clubName);
+  if (emblemConf) {
+    return {
+      shape: emblemConf.shape || 'shield',
+      primaryColor: emblemConf.primaryColor || '#1e3a8a',
+      secondaryColor: emblemConf.secondaryColor || '#ffffff',
+      accentColor: emblemConf.accentColor || '#f5c542',
+      pattern: emblemConf.pattern || 'solid',
+      motif: emblemConf.motif || 'star-1',
+      code: emblemConf.code || code
+    };
+  }
+
+  // competitions.js 等で定義されたクラブ（primaryColor / pattern / shortName あり）
+  const src = clubObj;
+  const seedStr = clubName || clubId || code;
+  const seed = seedStr.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+
+  if (src && src.primaryColor) {
+    const shapes = ['shield', 'crest', 'crown-shield', 'circle', 'hexagon', 'crest-tall', 'diamond'];
+    const baseShape = src.shape || shapes[seed % shapes.length];
+    const resolvedShape = (baseShape === 'shield' && seed % 3 === 1) ? 'crest'
+      : (baseShape === 'shield' && seed % 5 === 0) ? 'crown-shield'
+      : baseShape;
+    const pow = Number(src.basePower) || 72;
+    const autoMotif = pow >= 82 ? 'crown' : (pow >= 78 ? 'stars-3' : (seed % 2 === 0 ? 'laurel' : 'star-1'));
+    return {
+      shape: resolvedShape,
+      primaryColor: src.primaryColor,
+      secondaryColor: src.secondaryColor || '#ffffff',
+      accentColor: src.accentColor || '#f5c542',
+      pattern: src.pattern || 'stripes-vertical',
+      motif: src.motif || autoMotif,
+      code
+    };
+  }
+
+  // フォールバック生成（未定義クラブ名等）
+  const shapes = ['shield', 'crest', 'circle', 'hexagon', 'crest-tall', 'diamond'];
+  const patterns = ['stripes-vertical', 'sash-diagonal', 'chevron', 'quarters', 'split-vertical', 'halves-horizontal'];
+  const motifs = ['crown', 'stars-3', 'laurel', 'star-1'];
+  const palettes = [
+    { p: '#1e3a8a', s: '#ffffff', a: '#f5c542' },
+    { p: '#b91c1c', s: '#ffffff', a: '#f5c542' },
+    { p: '#047857', s: '#ffffff', a: '#f5c542' },
+    { p: '#4c1d95', s: '#f3e8ff', a: '#f5c542' },
+    { p: '#0f172a', s: '#38bdf8', a: '#ffffff' },
+    { p: '#c2410c', s: '#ffffff', a: '#f5c542' },
+    { p: '#0284c7', s: '#ffffff', a: '#f5c542' },
+    { p: '#831843', s: '#fbcfe8', a: '#f5c542' }
+  ];
+  const pal = palettes[seed % palettes.length];
+  return {
+    shape: shapes[seed % shapes.length],
+    primaryColor: pal.p,
+    secondaryColor: pal.s,
+    accentColor: pal.a,
+    pattern: patterns[seed % patterns.length],
+    motif: motifs[seed % motifs.length],
+    code
+  };
+}
+
+/**
  * クラブエンブレム（バッジ）を動的インラインSVGとして生成する
- * 外部画像不要・高精細ベクトル描画・絵文字不使用
+ * 外部画像不要・高精細ベクター多層クレスト・全クラブ3文字コード統一
  * @param {Object|string} clubOrNameOrId クラブオブジェクト、ID、またはクラブ名
  * @param {number} size 表示ピクセルサイズ（width/height）
  * @param {string} extraClass 追加CSSクラス名
@@ -223,157 +605,41 @@ let emblemSvgUidCounter = 0;
 function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
   if (!clubOrNameOrId) return '';
 
-  let clubId = '';
-  let clubName = '';
-  let emblemConf = null;
-
-  if (typeof clubOrNameOrId === 'object') {
-    clubId = clubOrNameOrId.id || '';
-    clubName = clubOrNameOrId.name || '';
-    emblemConf = clubOrNameOrId.emblem || (clubId ? CLUB_EMBLEM_MAP[clubId] : null);
-    if (!emblemConf && clubOrNameOrId.primaryColor) {
-      const rawPat = (clubOrNameOrId.pattern || 'stripes').replace(/-vertical|-horizontal|-diagonal/g, '');
-      const validPat = ['stripes', 'diagonal', 'chevron', 'solid', 'split'].includes(rawPat) ? rawPat : 'stripes';
-      const sym = (clubOrNameOrId.initial || clubOrNameOrId.shortName || clubName || 'FC').charAt(0).toUpperCase();
-      emblemConf = {
-        shape: clubOrNameOrId.shape || 'shield',
-        primaryColor: clubOrNameOrId.primaryColor,
-        secondaryColor: clubOrNameOrId.secondaryColor || '#ffffff',
-        pattern: validPat,
-        symbol: sym
-      };
-    }
-  } else if (typeof clubOrNameOrId === 'string') {
-    if (CLUB_EMBLEM_MAP[clubOrNameOrId]) {
-      clubId = clubOrNameOrId;
-      emblemConf = CLUB_EMBLEM_MAP[clubOrNameOrId];
-    } else {
-      clubName = clubOrNameOrId;
-      // クラブ名から検索
-      const allBigFive = typeof getAllBigFiveClubs === 'function' ? getAllBigFiveClubs() : [];
-      const matchedClub = (typeof gameState !== 'undefined' && Array.isArray(gameState.clubs) && gameState.clubs.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name)))
-        || CLUB_DEFINITIONS.find(c => c.name === clubName || c.id === clubName || clubName.includes(c.name))
-        || allBigFive.find(c => c.name === clubName || c.id === clubName);
-      if (matchedClub) {
-        clubId = matchedClub.id;
-        emblemConf = matchedClub.emblem || CLUB_EMBLEM_MAP[clubId];
-        if (!emblemConf && matchedClub.primaryColor) {
-          const rawPat = (matchedClub.pattern || 'stripes').replace(/-vertical|-horizontal|-diagonal/g, '');
-          const validPat = ['stripes', 'diagonal', 'chevron', 'solid', 'split'].includes(rawPat) ? rawPat : 'stripes';
-          const sym = (matchedClub.initial || matchedClub.shortName || matchedClub.name || 'FC').charAt(0).toUpperCase();
-          emblemConf = {
-            shape: matchedClub.shape || 'shield',
-            primaryColor: matchedClub.primaryColor,
-            secondaryColor: matchedClub.secondaryColor || '#ffffff',
-            pattern: validPat,
-            symbol: sym
-          };
-        }
-      }
-    }
-  }
-
-  // フォールバック生成（海外クラブや未定義名などの場合）
-  if (!emblemConf) {
-    const seed = (clubName || clubId || 'FC').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-    const shapes = ['shield', 'circle', 'diamond'];
-    const patterns = ['stripes', 'diagonal', 'chevron', 'solid', 'split'];
-    const palettes = [
-      { p: '#1e3a8a', s: '#ffffff' },
-      { p: '#b91c1c', s: '#f59e0b' },
-      { p: '#047857', s: '#ffffff' },
-      { p: '#4c1d95', s: '#f3e8ff' },
-      { p: '#0f172a', s: '#38bdf8' },
-      { p: '#c2410c', s: '#ffffff' },
-      { p: '#0284c7', s: '#ffffff' },
-      { p: '#831843', s: '#fbcfe8' }
-    ];
-    const pal = palettes[seed % palettes.length];
-    const initialChar = (clubName || clubId || 'F').replace(/[^a-zA-Z0-9぀-ゟ゠-ヿ]/g, '').charAt(0).toUpperCase() || 'F';
-
-    emblemConf = {
-      shape: shapes[seed % shapes.length],
-      primaryColor: pal.p,
-      secondaryColor: pal.s,
-      pattern: patterns[seed % patterns.length],
-      symbol: initialChar
-    };
-  }
-
-  const { shape, primaryColor, secondaryColor, pattern, symbol } = emblemConf;
+  const { shape, primaryColor, secondaryColor, accentColor, pattern, motif, code } = resolveClubEmblemConfig(clubOrNameOrId);
   const uid = 'emb-' + (++emblemSvgUidCounter);
+  const shapeSpec = buildEmblemShapeSpec(shape, accentColor);
+  const patternElements = buildEmblemPatternSvg(pattern, primaryColor, secondaryColor, accentColor);
+  const motifElements = buildEmblemMotifSvg(motif, accentColor, secondaryColor);
+  const bannerBorderColor = accentColor || secondaryColor || '#ffffff';
 
-  let shapePath = '';
-  let clipShape = '';
-  let borderElement = '';
-
-  if (shape === 'circle') {
-    clipShape = `<circle cx="50" cy="50" r="44"/>`;
-    borderElement = `
-      <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff" stroke-width="3" stroke-opacity="0.95"/>
-      <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="1.5"/>
+  // 中央横断バナー帯：背景模様と文字が干渉せず、18pxでも3文字コードがくっきり読める
+  const bannerSvg = shape === 'circle'
+    ? `
+      <rect x="4" y="38" width="92" height="24" fill="rgba(12, 16, 22, 0.90)"/>
+      <line x1="4" y1="38.8" x2="96" y2="38.8" stroke="${bannerBorderColor}" stroke-width="1.8"/>
+      <line x1="4" y1="61.2" x2="96" y2="61.2" stroke="${bannerBorderColor}" stroke-width="1.8"/>
+    `
+    : `
+      <rect x="6" y="38" width="88" height="24" fill="rgba(12, 16, 22, 0.90)"/>
+      <line x1="6" y1="38.8" x2="94" y2="38.8" stroke="${bannerBorderColor}" stroke-width="1.8"/>
+      <line x1="6" y1="61.2" x2="94" y2="61.2" stroke="${bannerBorderColor}" stroke-width="1.8"/>
     `;
-  } else if (shape === 'diamond') {
-    shapePath = 'M 50 8 L 92 50 L 50 92 L 8 50 Z';
-    clipShape = `<path d="${shapePath}"/>`;
-    borderElement = `
-      <path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.95" stroke-linejoin="round"/>
-      <path d="M 50 14 L 86 50 L 50 86 L 14 50 Z" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="1.5" stroke-linejoin="round"/>
-    `;
-  } else {
-    // デフォルト: shield
-    shapePath = 'M 14 12 L 86 12 L 86 52 C 86 76, 50 94, 50 94 C 50 94, 14 76, 14 52 Z';
-    const innerShieldPath = 'M 18 16 L 82 16 L 82 50 C 82 72, 50 88, 50 88 C 50 88, 18 72, 18 50 Z';
-    clipShape = `<path d="${shapePath}"/>`;
-    borderElement = `
-      <path d="${shapePath}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.95" stroke-linejoin="round"/>
-      <path d="${innerShieldPath}" fill="none" stroke="rgba(0, 0, 0, 0.4)" stroke-width="1.5" stroke-linejoin="round"/>
-    `;
-  }
-
-  // 内部幾何学パターン（エンブレム全面に鮮やかに展開）
-  let patternElements = '';
-  if (pattern === 'stripes') {
-    patternElements = `
-      <rect x="24" y="0" width="16" height="100" fill="${secondaryColor}" opacity="0.95"/>
-      <rect x="60" y="0" width="16" height="100" fill="${secondaryColor}" opacity="0.95"/>
-    `;
-  } else if (pattern === 'diagonal') {
-    patternElements = `
-      <polygon points="0,0 42,0 100,58 100,100" fill="${secondaryColor}" opacity="0.95"/>
-      <polygon points="0,58 0,100 42,100" fill="${secondaryColor}" opacity="0.95"/>
-    `;
-  } else if (pattern === 'chevron') {
-    patternElements = `
-      <path d="M 0 35 L 50 65 L 100 35 L 100 55 L 50 85 L 0 55 Z" fill="${secondaryColor}" opacity="0.95"/>
-    `;
-  } else if (pattern === 'split') {
-    patternElements = `
-      <rect x="50" y="0" width="50" height="100" fill="${secondaryColor}" opacity="0.95"/>
-    `;
-  } else {
-    // solid（単色）：アクセントの同心ライン
-    patternElements = `
-      <circle cx="50" cy="50" r="32" fill="none" stroke="${secondaryColor}" stroke-width="2.5" opacity="0.45"/>
-    `;
-  }
 
   return `
     <svg class="club-emblem ${extraClass}" width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:inline-block; vertical-align:middle; flex-shrink:0;">
       <defs>
         <clipPath id="${uid}">
-          ${clipShape}
+          ${shapeSpec.clip}
         </clipPath>
       </defs>
-      <!-- 背景メイン色 ＆ 全面幾何学パターン -->
       <g clip-path="url(#${uid})">
         <rect x="0" y="0" width="100" height="100" fill="${primaryColor}"/>
         ${patternElements}
+        ${motifElements}
+        ${bannerSvg}
       </g>
-      <!-- 外枠二重線（ディテール強化） -->
-      ${borderElement}
-      <!-- 中央シンボル（黒丸を撤去し、輪郭付きテキストで背景パターンと調和） -->
-      <text x="50" y="55" font-family="'Roboto Mono', 'Arial Black', sans-serif" font-weight="900" font-size="34" text-anchor="middle" dominant-baseline="central" fill="#ffffff" stroke="rgba(0, 0, 0, 0.85)" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));">${symbol}</text>
+      ${shapeSpec.border}
+      <text x="50" y="51" font-family="'Barlow Condensed', 'Roboto Mono', 'Arial Black', sans-serif" font-weight="800" font-size="24" letter-spacing="1.2" text-anchor="middle" dominant-baseline="central" fill="#ffffff">${code}</text>
     </svg>
   `.trim();
 }
