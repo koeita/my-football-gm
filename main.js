@@ -8150,10 +8150,28 @@ function renderGmDuties() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
+  let nextMatchInfo = null;
+  if (!gameState.isSeasonOver && Array.isArray(gameState.calendar)) {
+    const startIdx = Math.max(0, gameState.currentDayIndex || 0);
+    for (let i = startIdx; i < gameState.calendar.length; i++) {
+      const d = gameState.calendar[i];
+      if (!d || d.played) continue;
+      const mInfo = typeof getCalendarDayPlayerMatch === 'function' ? getCalendarDayPlayerMatch(d) : null;
+      if (mInfo && !mInfo.played) {
+        nextMatchInfo = mInfo;
+        break;
+      }
+    }
+  }
+
   if (subtitleEl) {
-    subtitleEl.textContent = gameState.isSeasonOver
-      ? `Season ${gameState.season} オフシーズン経営・編成タスク`
-      : `Season ${gameState.season} / 第${Math.min(gameState.currentWeek + 1, gameState.totalWeeks)}節 優先業務`;
+    if (gameState.isSeasonOver) {
+      subtitleEl.textContent = `Season ${gameState.season} オフシーズン経営・編成タスク`;
+    } else if (nextMatchInfo && nextMatchInfo.type !== 'league') {
+      subtitleEl.textContent = `Season ${gameState.season} / ${nextMatchInfo.title} 優先業務`;
+    } else {
+      subtitleEl.textContent = `Season ${gameState.season} / 第${Math.min(gameState.currentWeek + 1, gameState.totalWeeks)}節 優先業務`;
+    }
   }
 
   const duties = [];
@@ -8195,6 +8213,17 @@ function renderGmDuties() {
       desc: '補強や契約更新、ユース昇格を終えたら新シーズンを開幕してください。',
       btnText: '次シーズン開幕',
       action: 'start-next-season'
+    };
+  } else if (nextMatchInfo && nextMatchInfo.type !== 'league') {
+    const venue = nextMatchInfo.isHome ? 'H' : 'A';
+    const oppName = nextMatchInfo.oppClub ? nextMatchInfo.oppClub.name : '対戦相手未定';
+    criticalDuty = {
+      level: 'critical',
+      badge: '重要',
+      title: `${nextMatchInfo.title} vs ${oppName} (${venue})`,
+      desc: 'スタメンと戦術陣形を確認し、キックオフへ進みます。',
+      btnText: '作戦確認',
+      action: 'goto-pitch'
     };
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
@@ -12272,16 +12301,8 @@ function initGame() {
       const cupCell = e.target.closest('[data-cal-cup-day-index]');
       if (cupCell) {
         const dayIdx = parseInt(cupCell.dataset.calCupDayIndex, 10);
-        const dayObj = gameState.calendar && gameState.calendar[dayIdx];
-        if (dayObj) {
-          if (!dayObj.played && dayIdx === gameState.currentDayIndex) {
-            openMatchPrecheckModal();
-          } else {
-            const mInfo = getCalendarDayPlayerMatch(dayObj);
-            if (mInfo && mInfo.oppClub) {
-              showToast(`${mInfo.title} vs ${mInfo.oppClub.name}`, 'info');
-            }
-          }
+        if (!Number.isNaN(dayIdx)) {
+          openCupMatchPreview(dayIdx);
         }
         return;
       }
@@ -13908,7 +13929,7 @@ function renderMonthCalendar() {
         const myMatch = matchInfo.match;
         const isPlayed = Boolean(d.played || (myMatch && myMatch.played));
         matchClass = `has-match ${isPlayed ? 'match-played' : 'match-pending'}`;
-        cellAttr = `data-cal-cup-day-index="${d.dayIndex}" role="button" tabindex="0" title="${matchInfo.title} vs ${oppClub.name}"`;
+        cellAttr = `data-cal-cup-day-index="${d.dayIndex}" role="button" tabindex="0" title="${matchInfo.title} ${oppClub.name}戦の対戦スカウティングレポート"`;
 
         let scoreBadge = '';
         if (isPlayed && myMatch && myMatch.homeScore !== null && myMatch.homeScore !== undefined) {
@@ -14026,15 +14047,10 @@ function renderMonthCalendar() {
 }
 
 /**
- * 未消化試合マス目をタップした際の対戦プレビュー・確認
+ * 未消化試合マス目をタップした際の対戦プレビュー・確認（リーグ戦）
  * @param {number} weekNum 第何節か（1〜38）
  */
 function openPendingMatchPreview(weekNum) {
-  const modal = document.getElementById('fixture-preview-modal');
-  const body = document.getElementById('fixture-preview-modal-body');
-  const title = document.getElementById('fixture-preview-title');
-  if (!modal || !body) return;
-
   const playerClub = getPlayerClub();
   if (!playerClub || !gameState.schedule || !gameState.schedule[weekNum - 1]) return;
 
@@ -14046,17 +14062,69 @@ function openPendingMatchPreview(weekNum) {
   const oppClub = getClubById(oppId);
   if (!oppClub) return;
 
-  if (title) title.textContent = `第${weekNum}節 対戦スカウティングレポート`;
-
-  // 順位算出
-  const sortedClubs = [...gameState.clubs].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-  const myRank = sortedClubs.findIndex(c => c.id === playerClub.id) + 1;
-  const oppRank = sortedClubs.findIndex(c => c.id === oppClub.id) + 1;
-
-  // 日程情報
   const matchDays = (gameState.calendar || []).filter(d => d.isMatchDay);
   const dayInfo = matchDays[weekNum - 1];
   const dateStr = dayInfo ? `${dayInfo.month}月${dayInfo.day}日 (${dayInfo.dayOfWeekName})` : `第${weekNum}節`;
+
+  renderFixtureScoutingModal({
+    titleText: `第${weekNum}節 対戦スカウティングレポート`,
+    match,
+    playerClub,
+    oppClub,
+    isHome,
+    dateStr
+  });
+}
+
+/**
+ * リーグ以外の試合（カップ戦・欧州戦・プレシーズン杯）のスカウティングレポートを表示
+ * @param {number} dayIndex カレンダー配列上のインデックス
+ */
+function openCupMatchPreview(dayIndex) {
+  const dayObj = gameState.calendar && gameState.calendar[dayIndex];
+  if (!dayObj) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  const matchInfo = typeof getCalendarDayPlayerMatch === 'function' ? getCalendarDayPlayerMatch(dayObj) : null;
+  if (!matchInfo || !matchInfo.oppClub) return;
+
+  const oppClub = matchInfo.oppClub;
+  const isHome = Boolean(matchInfo.isHome);
+  const match = matchInfo.match || {
+    homeId: isHome ? playerClub.id : oppClub.id,
+    awayId: isHome ? oppClub.id : playerClub.id
+  };
+  const dateStr = `${dayObj.month}月${dayObj.day}日 (${dayObj.dayOfWeekName || ''})`;
+  const scoreSuffix = (matchInfo.played && match && match.homeScore != null && match.awayScore != null)
+    ? ` (${match.homeScore}-${match.awayScore})`
+    : '';
+
+  renderFixtureScoutingModal({
+    titleText: `${matchInfo.title} 対戦スカウティングレポート${scoreSuffix}`,
+    match,
+    playerClub,
+    oppClub,
+    isHome,
+    dateStr
+  });
+}
+
+/**
+ * 対戦スカウティングレポートモーダル（#fixture-preview-modal）共通描画
+ */
+function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isHome, dateStr }) {
+  const modal = document.getElementById('fixture-preview-modal');
+  const body = document.getElementById('fixture-preview-modal-body');
+  const title = document.getElementById('fixture-preview-title');
+  if (!modal || !body || !playerClub || !oppClub) return;
+
+  if (title) title.textContent = titleText;
+
+  // 順位算出（国内リーグ所属クラブのみ順位表示）
+  const sortedClubs = [...gameState.clubs].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  const myRank = sortedClubs.findIndex(c => c.id === playerClub.id) + 1;
+  const oppRank = sortedClubs.findIndex(c => c.id === oppClub.id) + 1;
 
   // 戦術情報
   const tacticKey = oppClub.defaultTactic || oppClub.tactic || 'possession';
@@ -14148,18 +14216,27 @@ function openPendingMatchPreview(weekNum) {
     `;
   }).join('');
 
+  const myMetaText = myRank > 0 ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `OVR ${playerClub.avgOvr || '-'}`;
+  const oppMetaText = oppRank > 0
+    ? `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`
+    : `${oppClub.leagueName || oppClub.country || '海外クラブ'} (OVR ${oppClub.avgOvr || avgOvr})`;
+  const homeTeamIsPlayer = (match && match.homeId) ? (match.homeId === playerClub.id) : isHome;
+  const awayTeamIsPlayer = !homeTeamIsPlayer;
+  const homeClubObj = homeTeamIsPlayer ? playerClub : oppClub;
+  const awayClubObj = awayTeamIsPlayer ? playerClub : oppClub;
+
   body.innerHTML = `
     <!-- クラブ対決カード -->
     <div class="scout-matchup-card">
       <div class="scout-team-col home">
         <div class="scout-team-title-wrap">
-          ${getClubEmblemSvg(match.homeId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
-          <span class="scout-team-name mono ${playerClub.id === match.homeId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
-            ${getClubShortCode(match.homeId === playerClub.id ? playerClub : oppClub)}
+          ${getClubEmblemSvg(homeClubObj, 28, 'scout-emblem')}
+          <span class="scout-team-name mono ${homeTeamIsPlayer ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(homeClubObj)}
           </span>
         </div>
         <span class="scout-team-meta mono">
-          ${match.homeId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
+          ${homeTeamIsPlayer ? myMetaText : oppMetaText}
         </span>
       </div>
       <div class="scout-vs-center">
@@ -14171,13 +14248,13 @@ function openPendingMatchPreview(weekNum) {
       </div>
       <div class="scout-team-col away">
         <div class="scout-team-title-wrap">
-          <span class="scout-team-name mono ${playerClub.id === match.awayId ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
-            ${getClubShortCode(match.awayId === playerClub.id ? playerClub : oppClub)}
+          <span class="scout-team-name mono ${awayTeamIsPlayer ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
+            ${getClubShortCode(awayClubObj)}
           </span>
-          ${getClubEmblemSvg(match.awayId === playerClub.id ? playerClub : oppClub, 28, 'scout-emblem')}
+          ${getClubEmblemSvg(awayClubObj, 28, 'scout-emblem')}
         </div>
         <span class="scout-team-meta mono">
-          ${match.awayId === playerClub.id ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`}
+          ${awayTeamIsPlayer ? myMetaText : oppMetaText}
         </span>
       </div>
     </div>

@@ -646,6 +646,12 @@ function openSettingsModal() {
   if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
   if (autoHtCheck) autoHtCheck.checked = Boolean(appSettings.autoHalftimeResume);
   if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
+  const mainMenuEl = document.getElementById('main-menu-screen');
+  const titleReturnRow = overlay ? overlay.querySelector('.settings-title-return-row') : null;
+  if (titleReturnRow) {
+    const isOnMainMenu = Boolean(mainMenuEl && !mainMenuEl.classList.contains('hidden'));
+    titleReturnRow.classList.toggle('hidden', isOnMainMenu);
+  }
   if (overlay) {
     if (!overlay._hasOverlayListener) {
       overlay._hasOverlayListener = true;
