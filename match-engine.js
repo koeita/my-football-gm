@@ -3103,9 +3103,12 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       else if (numRat >= 6.0) ratClass = 'summary-rat-mid';
       else ratClass = 'summary-rat-low';
 
+      const goalBallSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="2"/><polygon points="12,7.2 16.5,10.5 14.8,15.8 9.2,15.8 7.5,10.5" fill="currentColor"/><line x1="12" y1="7.2" x2="12" y2="2.5" stroke="currentColor" stroke-width="1.6"/><line x1="16.5" y1="10.5" x2="21" y2="9" stroke="currentColor" stroke-width="1.6"/><line x1="14.8" y1="15.8" x2="17.6" y2="19.7" stroke="currentColor" stroke-width="1.6"/><line x1="9.2" y1="15.8" x2="6.4" y2="19.7" stroke="currentColor" stroke-width="1.6"/><line x1="7.5" y1="10.5" x2="3" y2="9" stroke="currentColor" stroke-width="1.6"/></svg>';
+      const assistBootSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 16.5V7.5h4.5l2.3 2.8 6.7 1.6c3 .7 4.5 2.2 4.5 4v.6H3z"/><rect x="4" y="17.5" width="2.5" height="2.5" rx="0.4"/><rect x="10.75" y="17.5" width="2.5" height="2.5" rx="0.4"/><rect x="17.5" y="17.5" width="2.5" height="2.5" rx="0.4"/></svg>';
+
       let eventBadges = '';
-      if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">${goalsCount > 1 ? goalsCount : ''}G</span>`;
-      if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">${assistsCount > 1 ? assistsCount : ''}A</span>`;
+      if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点" aria-label="${goalsCount}得点">${goalBallSvg}${goalsCount > 1 ? `<span>×${goalsCount}</span>` : ''}</span>`;
+      if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト" aria-label="${assistsCount}アシスト">${assistBootSvg}${assistsCount > 1 ? `<span>×${assistsCount}</span>` : ''}</span>`;
 
       const momStarSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       const momBadge = isMomPlayer ? `<span class="rating-mom-crown" title="MAN OF THE MATCH">${momStarSvg}MOM</span>` : '';
