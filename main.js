@@ -5958,7 +5958,7 @@ const LEAGUE_STATS_CATEGORIES = {
   cleansheets: {
     id: 'cleansheets',
     icon: '',
-    title: 'クリーンシート（完封）ランキング',
+    title: 'クリーンシートランキング',
     desc: '相手攻撃をシャットアウトした守護神（GK）＆DF陣の完封記録',
     filter: p => ['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos) || POS_ROLE_GROUP[p.pos] === 'GK' || POS_ROLE_GROUP[p.pos] === 'DF',
     mainColHeader: 'クリーンシート',
@@ -5970,7 +5970,7 @@ const LEAGUE_STATS_CATEGORIES = {
   moms: {
     id: 'moms',
     icon: '',
-    title: 'マン・オブ・ザ・マッチ（MOM）獲得数ランキング',
+    title: 'MOMランキング',
     desc: '試合で最も輝いたMVP選出回数トップのスタープレイヤー',
     mainColHeader: 'MOM獲得数',
     getScore: p => p.momCount || 0,
