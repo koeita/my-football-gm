@@ -7969,6 +7969,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 3px;
   text-align: left;
   width: 100%;
   max-width: 100%;
@@ -7982,7 +7983,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   border-bottom-color: var(--accent-green);
 }
 
+.pitch-node-num {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.pitch-node-name-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
 .pitch-node-name-text {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7991,21 +8009,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   font-weight: 700;
 }
 
-.pitch-node-name-btn.is-marquee .pitch-node-name-text {
-  display: inline-block !important;
-  flex-shrink: 0 !important;
-  width: auto !important;
-  max-width: none !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  animation: pitch-name-marquee var(--marquee-dur, 6s) ease-in-out infinite;
-  will-change: transform;
-}
-
 @keyframes pitch-name-marquee {
-  0%, 18% { transform: translateX(0); }
-  55%, 75% { transform: translateX(var(--marquee-dist, 0px)); }
-  92%, 100% { transform: translateX(0); }
+  0%, 16% { transform: translateX(0); }
+  62% { transform: translateX(var(--marquee-exit, -100%)); }
+  62.01% { transform: translateX(var(--marquee-enter, 100%)); }
+  96%, 100% { transform: translateX(0); }
 }
 
 .pitch-node-meta {
@@ -8122,12 +8130,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   .pitch-node-name-btn,
   .pitch-node-name-btn.clickable-player-name {
     display: flex !important;
+    gap: 2px !important;
     width: 100% !important;
     max-width: 100% !important;
     text-align: left !important;
     padding: 0 0 1px 0 !important;
   }
 
+  .pitch-node-num,
   .pitch-node-name-text {
     display: block !important;
     font-size: 8.5px !important;
@@ -17057,3 +17067,27 @@ body {
 .pitch-node .pitch-node-ovr.ovr-tier-low,
 .precheck-club-ovr strong.ovr-tier-low,
 .youth-ovr-val.ovr-tier-low   { color: #f87171 !important; }
+
+/* 作戦ボード選手名マーキー：背番号は左固定、名前のみ左へ流れて右から出現するループ表示 */
+body .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-viewport,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-btn.is-marquee .pitch-node-name-viewport {
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-num {
+  font-size: 10.5px !important;
+}
+
+body .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-text,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-text,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-btn.is-marquee .pitch-node-name-text {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+  width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  animation: pitch-name-marquee var(--marquee-dur, 6.5s) linear infinite !important;
+  will-change: transform;
+}

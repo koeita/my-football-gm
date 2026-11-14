@@ -6582,7 +6582,7 @@ function renderTacticalBoard() {
               <span class="pitch-node-pos">${sl.pos}</span>
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
-              <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
+              <span class="pitch-node-num mono">#${starter.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${starter.name}</span></span>
             </div>
             <div class="pitch-node-meta">
               <span class="pitch-node-pref">${posDisplay}</span>
@@ -6634,7 +6634,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-pos">${sl.pos}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
-                <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
+                <span class="pitch-node-num mono">#${starter.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${starter.name}</span></span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6714,7 +6714,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-pos">${bp.pos}</span>
               </div>
               <div class="pitch-node-name-btn">
-                <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
+                <span class="pitch-node-num mono">#${bp.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${bp.name}</span></span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6766,7 +6766,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-pos">${bp.pos}</span>
               </div>
               <div class="pitch-node-name-btn">
-                <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
+                <span class="pitch-node-num mono">#${bp.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${bp.name}</span></span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6838,7 +6838,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-pos">${rp.pos}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
-                <span class="pitch-node-name-text"><span class="mono">#${rp.squadNumber || '-'}</span> ${rp.name}</span>
+                <span class="pitch-node-num mono">#${rp.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${rp.name}</span></span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6862,19 +6862,24 @@ function renderTacticalBoard() {
  * 作戦ボード上で名前が見切れている選手カードのみ、左方向へ往復スクロールさせる
  */
 function applyPitchNodeNameMarquee() {
-  const btns = document.querySelectorAll('#tactical-pitch .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
+  const btns = document.querySelectorAll('#pitch-nodes-layer .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
   btns.forEach(btn => {
+    const viewportEl = btn.querySelector('.pitch-node-name-viewport') || btn;
     const textEl = btn.querySelector('.pitch-node-name-text');
     if (!textEl) return;
     btn.classList.remove('is-marquee');
-    btn.style.removeProperty('--marquee-dist');
+    btn.style.removeProperty('--marquee-exit');
+    btn.style.removeProperty('--marquee-enter');
     btn.style.removeProperty('--marquee-dur');
-    if (btn.clientWidth <= 0) return;
-    const overflow = textEl.scrollWidth - btn.clientWidth;
-    if (overflow > 2) {
-      const dist = Math.ceil(overflow + 4);
-      const dur = Math.max(4.5, Math.min(9.5, 3.6 + dist * 0.06)).toFixed(2);
-      btn.style.setProperty('--marquee-dist', `-${dist}px`);
+    const boxW = viewportEl.clientWidth;
+    if (boxW <= 0) return;
+    const textW = textEl.scrollWidth;
+    if (textW - boxW > 1) {
+      const exitDist = Math.ceil(textW + 4);
+      const enterDist = Math.ceil(boxW + 4);
+      const dur = Math.max(5.0, Math.min(9.5, 2.2 + (exitDist + enterDist) * 0.04)).toFixed(2);
+      btn.style.setProperty('--marquee-exit', `-${exitDist}px`);
+      btn.style.setProperty('--marquee-enter', `${enterDist}px`);
       btn.style.setProperty('--marquee-dur', `${dur}s`);
       btn.classList.add('is-marquee');
     }
