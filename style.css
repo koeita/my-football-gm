@@ -392,13 +392,13 @@
   }
 }
 
-/* すべての数字 (0-9) のみを Barlow Condensed に統一し、日本語・英語は元のフォントを維持する */
+/* すべての数字 (0-9) のみを Barlow Condensed（太文字）に統一し、日本語・英語は元のフォントを維持する */
 @font-face {
   font-family: 'Barlow Digits';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTx3L3I-JCGChYJ8VI-L6OO_au7B6xHT2g.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3bWuQ.woff2) format('woff2');
   unicode-range: U+0030-0039;
 }
 @font-face {
@@ -406,7 +406,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B4-Lwz3bWuQ.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3bWuQ.woff2) format('woff2');
   unicode-range: U+0030-0039;
 }
 @font-face {
@@ -414,7 +414,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B4873z3bWuQ.woff2) format('woff2');
+  src: url(https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2z3bWuQ.woff2) format('woff2');
   unicode-range: U+0030-0039;
 }
 @font-face {
@@ -16010,7 +16010,7 @@ body {
 .staff-stat-chip.stat-rank-S strong, .stat-rank-S { color: #7dd3fc !important; font-weight: 900; }
 .staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #34d399 !important; font-weight: 800; }
 .staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #fbbf24 !important; font-weight: 700; }
-.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #f87171 !important; font-weight: 600; }
+.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #f87171 !important; font-weight: 700; }
 .staff-stat-chip.stat-rank-D strong, .stat-rank-D { color: #94a3b8 !important; }
 .staff-stat-chip.stat-rank-S { border-color: rgba(125, 211, 252, 0.55); background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(37, 99, 235, 0.16)); }
 .staff-stat-chip.stat-rank-A { border-color: rgba(52, 211, 153, 0.45); background: rgba(46, 204, 113, 0.14); }
@@ -16266,7 +16266,7 @@ body {
 .tier-text-elite { color: #7dd3fc; font-weight: 900; }
 .tier-text-high  { color: #34d399; font-weight: 800; }
 .tier-text-mid   { color: #fbbf24; font-weight: 700; }
-.tier-text-low   { color: #f87171; font-weight: 600; }
+.tier-text-low   { color: #f87171; font-weight: 700; }
 .profile-header-ovr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; padding: 6px 14px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
 .profile-header-ovr-label { font-size: 10px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
 .profile-header-ovr-val { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -16432,11 +16432,11 @@ body {
 .fotmob-rating-pill.rat-high  { color: #34d399; font-weight: 800; background: none; border: none; }
 .fotmob-rating-pill.rat-mid   { color: #fbbf24; font-weight: 700; background: none; border: none; }
 .fotmob-rating-pill.rat-low   { color: #f87171; font-weight: 700; background: none; border: none; }
-.fotmob-rating-pill.rat-none  { color: #94a3b8; font-weight: 600; background: none; border: none; }
+.fotmob-rating-pill.rat-none  { color: #94a3b8; font-weight: 700; background: none; border: none; }
 .rat-text-elite { color: #7dd3fc; font-weight: 900; }
 .rat-text-high  { color: #34d399; font-weight: 800; }
 .rat-text-mid   { color: #fbbf24; font-weight: 700; }
-.rat-text-low   { color: #f87171; font-weight: 600; }
+.rat-text-low   { color: #f87171; font-weight: 700; }
 .rat-text-none  { color: #94a3b8; }
 .fotmob-yearly-total {
   padding: 10px 8px 2px;
@@ -16538,7 +16538,7 @@ body {
   .fotmob-rating-pill.rat-high  { color: #34d399; font-weight: 800; background: none; border: none; }
   .fotmob-rating-pill.rat-mid   { color: #fbbf24; font-weight: 700; background: none; border: none; }
   .fotmob-rating-pill.rat-low   { color: #f87171; font-weight: 700; background: none; border: none; }
-  .fotmob-rating-pill.rat-none  { color: #94a3b8; font-weight: 600; background: none; border: none; }
+  .fotmob-rating-pill.rat-none  { color: #94a3b8; font-weight: 700; background: none; border: none; }
   .fotmob-yearly-total {
     padding: 10px 4px 2px;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
@@ -16612,7 +16612,7 @@ body {
 .fotmob-col-ovr.ovr-tier-mid   { color: #fbbf24; font-weight: 700; background: none; border: none; }
 .profile-ovr-badge.ovr-tier-low,
 .ui-plate-val.ovr-tier-low,
-.fotmob-col-ovr.ovr-tier-low   { color: #f87171; font-weight: 600; background: none; border: none; }
+.fotmob-col-ovr.ovr-tier-low   { color: #f87171; font-weight: 700; background: none; border: none; }
 @media (max-width: 768px) {
   .profile-avatar-col .profile-header-ovr-box {
     margin-top: -10px;
