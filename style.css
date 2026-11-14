@@ -1258,7 +1258,9 @@ body {
   white-space: nowrap;
 }
 
-.growth-early {
+.growth-early,
+.growth-early_fade,
+.growth-early_long {
   border-color: var(--accent-gold);
   color: var(--accent-gold);
 }
@@ -1269,12 +1271,19 @@ body {
   color: var(--text-main);
 }
 
-.growth-late {
+.growth-steady_iron {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.growth-late,
+.growth-late_bloom {
   border-color: var(--accent-green);
   color: var(--accent-green);
 }
 
-.growth-fragile {
+.growth-fragile,
+.growth-fragile_genius {
   border-color: var(--danger-red);
   color: var(--danger-red);
 }

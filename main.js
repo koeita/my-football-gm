@@ -1310,7 +1310,8 @@ function triggerInjuryEvent() {
 
   const weighted = [];
   for (const p of starters) {
-    const weight = p.growthCurve === 'fragile' ? 3 : 1;
+    const normCurve = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve) : p.growthCurve;
+    const weight = normCurve === 'fragile_genius' ? 6 : (normCurve === 'steady_iron' ? 1 : 2);
     for (let i = 0; i < weight; i++) {
       weighted.push(p);
     }
@@ -6967,7 +6968,8 @@ function renderRoster() {
   const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
   const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
   const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
-  const growthClass = isYouth ? 'growth-unknown' : `growth-${p.growthCurve}`;
+  const normGrowthId = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve) : (p.growthCurve || 'standard');
+  const growthClass = isYouth ? 'growth-unknown' : `growth-${normGrowthId}`;
     const growthBadge = `<span class="growth-pill ${growthClass}">${growthLabel}</span>`;
 
     const atkDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.atk) : '';
@@ -9032,8 +9034,16 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         if (apps === 0) assists = 0;
         remAssists = Math.max(0, remAssists - assists);
 
-        const yearsAgo = pastSeasonsCount - i;
-        const estOvr = clamp(baseOvr - Math.min(8, Math.round(yearsAgo * 1.1)), 52, 95);
+        const curveMeta = (typeof getGrowthCurveMeta === 'function')
+          ? getGrowthCurveMeta(p.growthCurve)
+          : { peakAge: 27, riseSlope: 1.4, fallSlope: 1.2 };
+        const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
+          ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
+          : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
+        const currentOffset = calcCurveOffset(age);
+        const pastOffset = calcCurveOffset(ageAtSeason);
+        const ovrSeasonJitter = (((absHash >> (i % 10)) % 5) - 2) * 0.5;
+        const estOvr = clamp(Math.round(baseOvr + (pastOffset - currentOffset) + ovrSeasonJitter), 50, 95);
         const ovrBonus = (estOvr - 65) * 0.042;
         const goalContrib = (goals / Math.max(8, apps || 1)) * 0.75;
         const assistContrib = (assists / Math.max(8, apps || 1)) * 0.45;
@@ -9165,16 +9175,6 @@ function ensurePlayerValueHistory(p, currentClubName) {
   const currentOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (p.ovr || 70);
   const currentAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 24;
 
-  // すでに十分な数年前からの推移データ（3点以上）が存在する場合は最新値のみ更新して返却
-  if (Array.isArray(p.valueHistory) && p.valueHistory.length >= 3) {
-    const lastPt = p.valueHistory[p.valueHistory.length - 1];
-    if (lastPt) {
-      lastPt.value = currentVal;
-      lastPt.ovr = currentOvr;
-    }
-    return p.valueHistory;
-  }
-
   const historyData = ensurePlayerHistoryAndCareer(p, currentClubName);
   const { seasonHistory } = historyData;
 
@@ -9187,7 +9187,14 @@ function ensurePlayerValueHistory(p, currentClubName) {
     pastSubset.forEach((sh) => {
       const shOvr = (typeof sh.ovr === 'number' && !Number.isNaN(sh.ovr)) ? sh.ovr : 65;
       const shAge = (typeof sh.age === 'number' && !Number.isNaN(sh.age)) ? sh.age : 22;
-      const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2);
+      const perfStats = {
+        appearances: sh.appearances || 0,
+        goals: sh.goals || 0,
+        assists: sh.assists || 0,
+        avgRating: sh.avgRating,
+        pos: p.pos
+      };
+      const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2, perfStats);
       vHistory.push({
         label: `${sh.seasonYear.slice(2, 7)} (${shAge}歳)`,
         shortLabel: `${sh.seasonYear.slice(2, 7)}`,
@@ -9498,7 +9505,8 @@ function openPlayerProfileModal(playerId) {
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
 
   const growthLabel = getGrowthCurveLabel(p.growthCurve || p.growthType);
-  const growthClass = `growth-${p.growthCurve || p.growthType || 'standard'}`;
+  const normGrowthId = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve || p.growthType) : (p.growthCurve || p.growthType || 'standard');
+  const growthClass = `growth-${normGrowthId}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
@@ -9706,7 +9714,7 @@ function openPlayerProfileModal(playerId) {
     ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
     : '良好 (出場可能)';
   const conditionClass = ((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)) ? 'text-danger' : 'accent-green';
-  const estMarketValue = calculateTransferFee(p);
+  const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
 
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
   const lastHistoryRow = seasonHistory.length > 0 ? seasonHistory[seasonHistory.length - 1] : null;

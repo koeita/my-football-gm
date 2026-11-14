@@ -1229,17 +1229,23 @@ const PRIZE_MONEY_TABLE_D2 = [
   2300, 2100, 1900, 1800, 1650, 1500
 ];
 
-// 4つの成長曲線（growthCurve）定義
+// 6つの成長曲線（growthCurve）再定義マスタ
 const GROWTH_CURVES = [
-  { id: 'early',
-    emblem: CLUB_EMBLEM_MAP['early'], label: '早熟' },
-  { id: 'standard',
-    emblem: CLUB_EMBLEM_MAP['standard'], label: '標準' },
-  { id: 'late',
-    emblem: CLUB_EMBLEM_MAP['late'], label: '晩成' },
-  { id: 'fragile',
-    emblem: CLUB_EMBLEM_MAP['fragile'], label: '天才' }
+  { id: 'early_fade',     label: '早熟・急落型', peakAge: 23, riseSlope: 2.3, fallSlope: 1.9 },
+  { id: 'early_long',     label: '早熟・持続型', peakAge: 24, riseSlope: 2.0, fallSlope: 0.9 },
+  { id: 'standard',       label: '標準型',       peakAge: 27, riseSlope: 1.5, fallSlope: 1.1 },
+  { id: 'steady_iron',    label: '持続・鉄人型', peakAge: 28, riseSlope: 1.3, fallSlope: 0.65 },
+  { id: 'late_bloom',     label: '晩成型',       peakAge: 29, riseSlope: 1.1, fallSlope: 0.75 },
+  { id: 'fragile_genius', label: 'ガラスの天才', peakAge: 25, riseSlope: 2.1, fallSlope: 1.5 }
 ];
+
+const LEGACY_GROWTH_CURVE_MAP = {
+  early: 'early_fade',
+  normal: 'standard',
+  standard: 'standard',
+  late: 'late_bloom',
+  fragile: 'fragile_genius'
+};
 
 // 5大チーム戦術スタイル定義
 const TACTICS_DEFINITIONS = {
@@ -1629,21 +1635,33 @@ function samplePoisson(lambda) {
   return k - 1;
 }
 
+function normalizeGrowthCurveId(curve) {
+  if (!curve) return 'standard';
+  if (LEGACY_GROWTH_CURVE_MAP[curve]) return LEGACY_GROWTH_CURVE_MAP[curve];
+  if (GROWTH_CURVES.some(g => g.id === curve)) return curve;
+  return 'standard';
+}
+
+function getGrowthCurveMeta(curve) {
+  const norm = normalizeGrowthCurveId(curve);
+  return GROWTH_CURVES.find(g => g.id === norm) || GROWTH_CURVES[2];
+}
+
 /**
  * 成長曲線（growthCurve）をランダムに決定
  */
 function pickRandomGrowthCurve() {
   const r = Math.random();
-  if (r < 0.24) return 'early';
-  if (r < 0.68) return 'standard';
-  if (r < 0.88) return 'late';
-  return 'fragile'; // 12%の確率で「天才（怪我多め）」
+  if (r < 0.14) return 'early_fade';
+  if (r < 0.28) return 'early_long';
+  if (r < 0.62) return 'standard';
+  if (r < 0.76) return 'steady_iron';
+  if (r < 0.90) return 'late_bloom';
+  return 'fragile_genius';
 }
 
 function getGrowthCurveLabel(curve) {
-  const normalized = curve === 'normal' ? 'standard' : curve;
-  const found = GROWTH_CURVES.find(g => g.id === normalized);
-  return found ? found.label : '標準';
+  return getGrowthCurveMeta(curve).label;
 }
 
 // ==========================================================================
