@@ -12259,9 +12259,9 @@ button.hidden,
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
     flex-shrink: 0 !important;
-    width: auto !important;
-    min-width: 104px !important;
-    max-width: 118px !important;
+    width: 114px !important;
+    min-width: 114px !important;
+    max-width: 114px !important;
     height: 38px !important;
     min-height: 38px !important;
     position: relative !important;
@@ -12273,6 +12273,83 @@ button.hidden,
     align-items: center !important;
     padding: 2px 5px !important;
     box-sizing: border-box !important;
+  }
+
+  /* モバイル作戦ボード：スタメン選手カードもベンチ選手と同じ見た目・質感・固定幅に統一 */
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node:not(.tactical-drag-ghost-card) {
+    width: 114px !important;
+    min-width: 114px !important;
+    max-width: 114px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 2px 5px !important;
+    gap: 5px !important;
+    background: #1c222b !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-main:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #2ecc71 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-sub:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.sub-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #38bdf8 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-semi:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.semi-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #f1c40f !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-out:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.out-of-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #e74c3c !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.selected:not(.tactical-drag-ghost-card) {
+    background-color: #28261f !important;
+    outline: 2px solid var(--accent-gold) !important;
+    outline-offset: 1px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-avatar-wrap {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .player-avatar.pitch-node-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-top {
+    justify-content: flex-start !important;
+    gap: 2px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-cap,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-loan,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-susp,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-injury {
+    font-size: 6.5px !important;
+    padding: 0 2px !important;
+    line-height: 1.1 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-num,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-name-text {
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-meta {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 2px !important;
   }
 }
 
