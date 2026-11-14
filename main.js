@@ -8189,7 +8189,7 @@ function renderGmDuties() {
       level: 'critical',
       badge: 'ゲームオーバー',
       title: '債務超過によるGM解任',
-      desc: `債務超過（資金：${formatMoney(playerClub.funds)}）が改善されず、${gameState.gmName} GMの解任が通告されました。「最初からやり直す」で新たなクラブ運営を開始できます。`,
+      desc: `資金 ${formatMoney(playerClub.funds)} の債務超過によりGM解任となりました。`,
       btnText: '最初からやり直す',
       action: 'restart-game'
     });
@@ -8198,7 +8198,7 @@ function renderGmDuties() {
       level: 'critical',
       badge: '警告：債務超過',
       title: '赤字解消・人件費削減',
-      desc: `クラブ資金がマイナス（${formatMoney(playerClub.funds)}）です。次シーズン開幕時も債務超過が続くとGM解任（ゲームオーバー）となります。高年俸選手の自由契約や売却で収支を改善してください。`,
+      desc: `資金 ${formatMoney(playerClub.funds)} の赤字です。次季開幕までに黒字化しないと解任となります。`,
       btnText: '契約・編成へ',
       action: 'goto-roster-table'
     });
