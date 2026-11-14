@@ -141,8 +141,8 @@ const COACHES_DATABASE = {
 // 初期資金：£32.0M〜£140.0M（32000〜140000 £K）、サポーター規模、目標順位に差を設定
 
 const CLUB_SHORT_CODES = {
-  manchester_b: 'MCB',
-  manchester_r: 'MCR',
+  manchester_b: 'MNC',
+  manchester_r: 'MNR',
   liverpool_b: 'LIV',
   northlondon_a: 'NLA',
   london_fc: 'LON',
@@ -150,16 +150,16 @@ const CLUB_SHORT_CODES = {
   newcastle_u: 'NEW',
   aston_v: 'AST',
   brighton_g: 'BRI',
-  eastlondon_h: 'WHU',
-  southlondon_p: 'CRY',
-  westlondon_c: 'FUL',
-  westlondon_b: 'BRE',
-  midlands_w: 'WOL',
-  merseyside_b: 'EVE',
-  southcoast_c: 'SOU',
-  nottingham_r: 'NFO',
+  eastlondon_h: 'ELO',
+  southlondon_p: 'SLO',
+  westlondon_c: 'WLC',
+  westlondon_b: 'WLB',
+  midlands_w: 'MDL',
+  merseyside_b: 'MER',
+  southcoast_c: 'SCO',
+  nottingham_r: 'NOT',
   leicester_f: 'LEI',
-  southampton_s: 'SHT',
+  southampton_s: 'SOU',
   ipswich_t: 'IPS'
 };
 
