@@ -14914,6 +14914,9 @@ body {
   color: var(--text-muted);
 }
 .team-title-avg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   color: var(--text-muted);
 }

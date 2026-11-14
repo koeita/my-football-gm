@@ -7043,12 +7043,12 @@ function renderRoster() {
     const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">レンタル募集中</span>' : '';
     const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
-    const ovrTierCls = getOvrTierClass(effOvr);
-    let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
+    const ovrTextCls = effOvr >= 90 ? 'tier-text-elite' : (effOvr >= 80 ? 'tier-text-high' : (effOvr >= 70 ? 'tier-text-mid' : 'tier-text-low'));
+    let ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
-      ovrDisplay = `<span class="ovr-cell-badge text-danger" style="background:rgba(231,76,60,0.16);">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="mono tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     } else if (fitInfo.type === 'sub') {
-      ovrDisplay = `<span class="ovr-cell-badge ovr-tier-mid">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
     const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : 'N/A';
@@ -7086,7 +7086,7 @@ function renderRoster() {
           ${hgTag}${u21Tag}${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
         </td>
         <td class="col-num">${p.age}</td>
-        <td class="col-num accent-green">${ovrDisplay}</td>
+        <td class="col-num">${ovrDisplay}</td>
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
         <td class="col-num ${avgRatInfo.textClass} font-bold">${avgRating}</td>
