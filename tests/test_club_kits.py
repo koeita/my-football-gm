@@ -156,6 +156,66 @@ class TestClubKits(unittest.TestCase):
 
         self.assertIn('club.kit = CLUB_KIT_MAP[club.id];', self.storage_js)
 
+    def test_match_summary_stats_and_ratings_sync_with_kit_colors(self):
+        """マッチサマリーのスコアボード・チームスタッツ・全選手評価点一覧がユニホーム色と同期していること"""
+        self.assertIn('function buildKitUiTheme(', self.match_js)
+        self.assertIn('function resolveSummaryKitThemes(', self.match_js)
+
+        ratings_fn = re.search(
+            r'function buildSummaryPlayerRatingsHtml\(homeClub, awayClub, md, resolvedKits = null\) \{([\s\S]*?)\n\}\n\n/\*\*\n \* 公式戦マッチサマリー',
+            self.match_js
+        ).group(1)
+        self.assertIn('resolveSummaryKitThemes(homeClub, awayClub, resolvedKits)', ratings_fn)
+        self.assertIn('class="summary-team-tab-btn ${defaultTeam === \'home\' ? \'active\' : \'\'}" data-ratings-team="home" style="${homeTheme.inlineVars}"', ratings_fn)
+        self.assertIn('class="summary-team-tab-btn ${defaultTeam === \'away\' ? \'active\' : \'\'}" data-ratings-team="away" style="${awayTheme.inlineVars}"', ratings_fn)
+        self.assertIn('data-ratings-panel="${sideKey}" style="${teamTheme ? teamTheme.inlineVars : \'\'}"', ratings_fn)
+
+        summary_fn = re.search(
+            r'function buildMatchSummaryHtml\(md\) \{([\s\S]*?)\n\}\n\nfunction transitionToMatchSummary',
+            self.match_js
+        ).group(1)
+        self.assertIn('resolveSummaryKitThemes(homeClub, awayClub)', summary_fn)
+        for css_var in [
+            '--${prefix}-kit-bg:', '--${prefix}-kit-border:', '--${prefix}-kit-sub-border:', '--${prefix}-kit-glow:',
+            '--${prefix}-kit-accent:', '--${prefix}-kit-bar:', '--${prefix}-kit-bar-border:'
+        ]:
+            self.assertIn(css_var, summary_fn)
+        self.assertIn("toSideCssVars('home', homeTheme)", summary_fn)
+        self.assertIn("toSideCssVars('away', awayTheme)", summary_fn)
+
+        self.assertIn('<div class="summary-wrapper" style="${summaryWrapperVars}">', summary_fn)
+        self.assertIn('summary-club-col home ${homeClub.isPlayer ? \'is-player\' : \'\'}" style="${homeTheme.inlineVars}"', summary_fn)
+        self.assertIn('summary-club-col away ${awayClub.isPlayer ? \'is-player\' : \'\'}" style="${awayTheme.inlineVars}"', summary_fn)
+        self.assertIn('class="stat-val-home" style="color:${homeTheme.accentColor};"', summary_fn)
+        self.assertIn('class="stat-val-away" style="color:${awayTheme.accentColor};"', summary_fn)
+        self.assertNotIn('style="color:#2ecc71;"', summary_fn)
+        self.assertNotIn('style="color:#60a5fa;"', summary_fn)
+        self.assertIn('mini-score-club home mono ${homeClub.isPlayer ? \'accent-green\' : \'\'}" style="color:${homeTheme.accentColor};"', summary_fn)
+        self.assertIn('mini-score-club away mono ${awayClub.isPlayer ? \'accent-green\' : \'\'}" style="color:${awayTheme.accentColor};"', summary_fn)
+
+        stats_css = re.search(r'\.summary-stats-card \{[\s\S]*?\.stat-bar-away \{[\s\S]*?\}', self.style_css).group(0)
+        self.assertIn('var(--home-kit-bg', stats_css)
+        self.assertIn('var(--away-kit-bg', stats_css)
+        self.assertIn('var(--home-kit-border', stats_css)
+        self.assertIn('var(--away-kit-border', stats_css)
+        self.assertIn('var(--home-kit-bar', stats_css)
+        self.assertIn('var(--away-kit-bar', stats_css)
+
+        ratings_css = re.search(r'\.summary-mini-score-bar \{[\s\S]*?\.team-title-code \{[\s\S]*?\}', self.style_css).group(0)
+        self.assertIn('var(--home-kit-border', ratings_css)
+        self.assertIn('var(--away-kit-border', ratings_css)
+        self.assertIn('var(--team-tint-bg', ratings_css)
+        self.assertIn('var(--team-tint-border', ratings_css)
+        self.assertIn('var(--team-tint-header-bg', ratings_css)
+        self.assertIn('var(--team-tint-sub-border', ratings_css)
+        self.assertIn('var(--team-accent-color', ratings_css)
+
+        tabs_css = re.search(r'\.summary-team-tab-btn \{[\s\S]*?\.summary-team-tab-btn\.active \{[\s\S]*?\}', self.style_css).group(0)
+        self.assertIn('var(--team-tint-sub-border', tabs_css)
+        self.assertIn('var(--team-tint-header-bg', tabs_css)
+        self.assertIn('var(--team-tint-border', tabs_css)
+        self.assertIn('var(--team-accent-color', tabs_css)
+
 
 if __name__ == '__main__':
     unittest.main()
