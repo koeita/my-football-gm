@@ -1747,9 +1747,9 @@ function capGeneratedPlayerOvr(player, maxOvr) {
  */
 function pickFormerClubForPlayer(player, seedOffset = 0, excludeClubName = null) {
   const fallbackEng = [
-    'リーズ・U', 'バーンリー・C', 'ノリッジ・C', 'ワトフォード・H', 'ミドルズブラ・B',
-    'ウェストブロム・A', 'コヴェントリー・C', 'ブリストル・C', 'ストーク・C', 'スウォンジー・C',
-    'サンダーランド・A', 'ハル・C', 'ブラックバーン・R', 'シェフィールド・W'
+    'シェフィールド B', 'バーンリー C', 'ノリッジ Y', 'ワトフォード Y', 'ミドルズブラ R',
+    'ウェストブロム B', 'プレストン W', 'ブリストル R', 'ストーク R', 'スウォンジー W',
+    'ダービー W', 'ポーツマス B', 'ブラックバーン B', 'バーミンガム B'
   ];
   const champClubs = (typeof CHAMPIONSHIP_CLUBS_DEFINITIONS !== 'undefined' && Array.isArray(CHAMPIONSHIP_CLUBS_DEFINITIONS) && CHAMPIONSHIP_CLUBS_DEFINITIONS.length > 0)
     ? CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => c.name).filter(Boolean)
@@ -1761,21 +1761,21 @@ function pickFormerClubForPlayer(player, seedOffset = 0, excludeClubName = null)
 
   const PAST_CLUBS_BY_NATIONALITY = {
     England: engPool,
-    Spain: ['アラベス・D', 'エスパニョール・B', 'バジャドリード・V', 'レガネス・CD', 'オサスナ・CA', 'マジョルカ・RCD', 'セルタ・RC', 'バレンシア・CF', 'セビージャ・FC'],
-    Italy: ['パルマ・FC', 'コモ・C', 'レッチェ・US', 'エンポリ・FC', 'ヴェネツィア・FC', 'ウディネ・UC', 'カリアリ・C', 'トリノ・FC', 'ボローニャ・FC'],
-    Germany: ['ウニオン・B', 'ハイデンハイム・FC', 'ザンクトパウリ・FC', 'キール・H', 'ボーフム・V', 'ブレーメン・SV', 'アウクスブルク・FC', 'マインツ・FSV', 'フライブルク・SC'],
-    France: ['オセール・AJ', 'ル・アーヴル・AC', 'アンジェ・SCO', 'サンテティエンヌ・AS', 'ストラスブール・RC', 'ナント・FC', 'モンペリエ・HSC', 'ブレスト・SB', 'ランス・RC'],
-    Netherlands: ['アムステルダム・AFC', 'アイントホーフェン・PSV', 'ロッテルダム・F', 'アルクマール・AZ', 'エンスヘデ・FC', 'ユトレヒト・FC'],
-    Portugal: ['リスボン・CP', 'ポルト・FC', 'リスボン・SL', 'ブラガ・SC', 'ギマランイス・SC'],
-    Belgium: ['ブルージュ・KV', 'ブリュッセル・SG', 'アンデルレヒト・RSC', 'ゲント・KAA', 'ヘンク・KRC'],
-    Croatia: ['ザグレブ・GNK', 'スプリト・HNK', 'リエカ・HNK'],
-    Brazil: ['サンパウロ・FC', 'リオ・CR', 'サントス・FC', 'ポルトアレグレ・SC', 'ベロオリゾンテ・CA'],
-    Argentina: ['ブエノスアイレス・CA', 'ラプラタ・SC', 'コルドバ・AC', 'ロサリオ・CA', 'アベジャネーダ・RC'],
-    Japan: ['東京・FC', '横浜・SC', '川崎・F', '大阪・G', '名古屋・G']
+    Spain: ['アラベス B', 'エスパニョール B', 'バジャドリード V', 'レガネス B', 'オサスナ R', 'マジョルカ R', 'セルタ S', 'バレンシア O', 'セビージャ W'],
+    Italy: ['パルマ W', 'コモ B', 'レッチェ Y', 'エンポリ B', 'ヴェネツィア O', 'ウディネーゼ K', 'カリアリ B', 'トリノ G', 'ボローニャ R'],
+    Germany: ['ウニオン R', 'ハイデンハイム B', 'ザンクトパウリ K', 'キール B', 'ボーフム B', 'ブレーメン G', 'アウクスブルク R', 'マインツ R', 'フライブルク R'],
+    France: ['オセール W', 'ルアーヴル S', 'アンジェ K', 'サンテティエンヌ G', 'ストラスブール B', 'ナント Y', 'モンペリエ O', 'ブレスト R', 'ランス G'],
+    Netherlands: ['アヤックス W', 'アイントホーフェン R', 'フェイエノールト R', 'アルクマール R', 'トゥウェンテ R', 'ユトレヒト R'],
+    Portugal: ['スポルティング G', 'ポルト B', 'ベンフィカ R', 'ブラガ R', 'ギマランイス W'],
+    Belgium: ['ブルージュ B', 'サンジロワーズ Y', 'アンデルレヒト V', 'ゲント B', 'ヘンク B'],
+    Croatia: ['ディナモザグレブ B', 'スプリト W', 'リエカ W'],
+    Brazil: ['サンパウロ R', 'フラメンゴ R', 'サントス W', 'グレミオ B', 'ミネイロ K'],
+    Argentina: ['ボカ B', 'リーベル W', 'ラプラタ R', 'ロサリオ Y', 'ラシン S'],
+    Japan: ['東京 B', '横浜 B', '川崎 S', '大阪 B', '名古屋 R']
   };
 
   const nat = player && player.nationality;
-  const fallbackPool = ['コペンハーゲン・FC', 'プラハ・AC', 'グラスゴー・FC', 'ウィーン・SK', 'バーゼル・FC', ...engPool.slice(0, 6)];
+  const fallbackPool = ['コペンハーゲン W', 'スパルタプラハ M', 'セルティック G', 'ウィーン G', 'バーゼル R', ...engPool.slice(0, 6)];
   const basePool = (nat && PAST_CLUBS_BY_NATIONALITY[nat]) ? PAST_CLUBS_BY_NATIONALITY[nat] : fallbackPool;
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;

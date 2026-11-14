@@ -226,7 +226,7 @@ function getSavedGameSummary() {
     const playerClub = st.clubs.find(c => c && c.isPlayer)
       || (Array.isArray(d2Clubs) ? d2Clubs.find(c => c && c.isPlayer) : null)
       || st.clubs[0];
-    const clubName = playerClub ? playerClub.name : 'ロンドン・FC';
+    const clubName = playerClub ? playerClub.name : 'チェルシー B';
     const season = st.season || 1;
     const week = Math.min(st.totalWeeks || 38, (st.currentWeek || 0) + (st.isSeasonOver ? 0 : 1));
     const weekLabel = st.isSeasonOver ? 'シーズン終了' : `第${week}節`;
@@ -240,6 +240,182 @@ function getSavedGameSummary() {
   } catch (e) {
     return null;
   }
+}
+
+const LEGACY_CLUB_NAME_MIGRATIONS = {
+  'マンチェスター・B': 'マンチェスター B',
+  'マンチェスター・R': 'マンチェスター R',
+  'リバプール・B': 'リヴァプール R',
+  'ノースロンドン・A': 'アーセナル A',
+  'ロンドン・FC': 'チェルシー B',
+  'ノースロンドン・W': 'トッテナム W',
+  'ニューカッスル・U': 'ニューカッスル K',
+  'アストン・V': 'アストンヴィラ V',
+  'ブライトン・G': 'ブライトン G',
+  'イーストロンドン・H': 'ウェストハム W',
+  'サウスロンドン・P': 'クリスタルパレス P',
+  'ウェストロンドン・C': 'フラム W',
+  'ウェストロンドン・B': 'ブレントフォード B',
+  'ミッドランズ・W': 'ウルヴァーハンプトン G',
+  'マージーサイド・B': 'エヴァートン B',
+  'サウスコースト・C': 'ボーンマス C',
+  'ノッティンガム・R': 'ノッティンガム R',
+  'レスター・F': 'レスター B',
+  'サウサンプトン・S': 'サウサンプトン R',
+  'イプスウィッチ・T': 'イプスウィッチ B',
+  'マドリード・ブランコス': 'レアルマドリード W',
+  'バルセロナ・カタルーニャ': 'バルセロナ G',
+  'ミュンヘン・バヴァリア': 'バイエルン R',
+  'ミラノ・ロッソネリ': 'ミラン R',
+  'トリノ・ビアンコネリ': 'ユヴェントス W',
+  'パリ・メトロポリタン': 'パリ B',
+  'シェフィールド・S': 'シェフィールド B',
+  'リーズ・U': 'リーズ W',
+  'バーンリー・C': 'バーンリー C',
+  'ノリッジ・C': 'ノリッジ Y',
+  'ワトフォード・H': 'ワトフォード Y',
+  'ミドルズブラ・B': 'ミドルズブラ R',
+  'ウェストブロム・A': 'ウェストブロム B',
+  'コヴェントリー・C': 'コヴェントリー S',
+  'プレストン・NE': 'プレストン W',
+  'ブリストル・C': 'ブリストル R',
+  'ストーク・C': 'ストーク R',
+  'スウォンジー・C': 'スウォンジー W',
+  'カーディフ・C': 'カーディフ B',
+  'ミルウォール・L': 'ミルウォール B',
+  'ブラックバーン・R': 'ブラックバーン B',
+  'クイーンズパーク・R': 'クイーンズパーク B',
+  'ハル・C': 'ハル Y',
+  'サンダーランド・A': 'サンダーランド R',
+  'バーミンガム・C': 'バーミンガム B'
+};
+
+const LEGACY_ID_COMPAT_MAP = {
+  eastlondon_h: { name: 'ウェストハム W', shortName: 'WHW' },
+  midlands_w: { name: 'ウルヴァーハンプトン G', shortName: 'WLG' },
+  leicester_f: { name: 'レスター B', shortName: 'LCB' },
+  southampton_s: { name: 'サウサンプトン R', shortName: 'SHR' }
+};
+
+function migrateLegacyClubsData() {
+  const defById = new Map();
+  const registerDefs = (arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(d => {
+      if (d && d.id) defById.set(d.id, d);
+    });
+  };
+  if (typeof CLUB_DEFINITIONS !== 'undefined') registerDefs(CLUB_DEFINITIONS);
+  if (typeof EUROPEAN_MEGA_CLUBS !== 'undefined') registerDefs(EUROPEAN_MEGA_CLUBS);
+  if (typeof CHAMPIONSHIP_CLUBS_DEFINITIONS !== 'undefined') registerDefs(CHAMPIONSHIP_CLUBS_DEFINITIONS);
+  if (typeof SPAIN_CLUBS_DEFINITIONS !== 'undefined') registerDefs(SPAIN_CLUBS_DEFINITIONS);
+  if (typeof ITALY_CLUBS_DEFINITIONS !== 'undefined') registerDefs(ITALY_CLUBS_DEFINITIONS);
+  if (typeof GERMANY_CLUBS_DEFINITIONS !== 'undefined') registerDefs(GERMANY_CLUBS_DEFINITIONS);
+  if (typeof FRANCE_CLUBS_DEFINITIONS !== 'undefined') registerDefs(FRANCE_CLUBS_DEFINITIONS);
+  if (typeof OTHER_EURO_CLUBS_DEFINITIONS !== 'undefined') registerDefs(OTHER_EURO_CLUBS_DEFINITIONS);
+
+  const normalizeNameStr = (str) => {
+    if (!str || typeof str !== 'string') return str;
+    if (LEGACY_CLUB_NAME_MIGRATIONS[str]) return LEGACY_CLUB_NAME_MIGRATIONS[str];
+    return str.includes('・') ? str.replace(/・/g, ' ') : str;
+  };
+
+  const syncClubObj = (club) => {
+    if (!club || typeof club !== 'object') return;
+    const def = club.id ? defById.get(club.id) : null;
+    const compat = (!def && club.id) ? LEGACY_ID_COMPAT_MAP[club.id] : null;
+    if (def) {
+      club.name = def.name;
+      const code = (typeof CLUB_SHORT_CODES !== 'undefined' && CLUB_SHORT_CODES[club.id]) || def.shortName;
+      if (code) {
+        club.shortName = code;
+        club.shortCode = code;
+      }
+    } else if (compat) {
+      club.name = compat.name;
+      club.shortName = compat.shortName;
+      club.shortCode = compat.shortName;
+    } else if (club.name) {
+      club.name = normalizeNameStr(club.name);
+    }
+    if (club.id && typeof CLUB_EMBLEM_MAP !== 'undefined' && CLUB_EMBLEM_MAP[club.id]) {
+      club.emblem = Object.assign({}, CLUB_EMBLEM_MAP[club.id]);
+    } else if (club.emblem && club.shortName) {
+      club.emblem.code = club.shortName;
+      club.emblem.symbol = club.shortName;
+    }
+    if (Array.isArray(club.players)) {
+      club.players.forEach(p => {
+        if (p && Array.isArray(p.pastClubs)) {
+          p.pastClubs = p.pastClubs.map(normalizeNameStr);
+        }
+      });
+    }
+  };
+
+  if (Array.isArray(gameState.clubs)) {
+    gameState.clubs.forEach(syncClubObj);
+  }
+  if (Array.isArray(gameState.freeAgents)) {
+    gameState.freeAgents.forEach(p => {
+      if (p && Array.isArray(p.pastClubs)) p.pastClubs = p.pastClubs.map(normalizeNameStr);
+    });
+  }
+  if (Array.isArray(gameState.euroTransferList)) {
+    gameState.euroTransferList.forEach(p => {
+      if (!p) return;
+      if (p.clubName) p.clubName = normalizeNameStr(p.clubName);
+      if (p.club && typeof p.club === 'object') syncClubObj(p.club);
+      if (Array.isArray(p.pastClubs)) p.pastClubs = p.pastClubs.map(normalizeNameStr);
+    });
+  }
+  if (gameState.competitions && typeof gameState.competitions === 'object') {
+    for (const comp of Object.values(gameState.competitions)) {
+      if (!comp || typeof comp !== 'object') continue;
+      if (Array.isArray(comp.clubs)) comp.clubs.forEach(syncClubObj);
+      if (Array.isArray(comp.standings)) {
+        comp.standings.forEach(row => {
+          if (!row) return;
+          if (row.club) syncClubObj(row.club);
+          if (row.name) row.name = normalizeNameStr(row.name);
+          if (row.clubId && defById.has(row.clubId)) row.name = defById.get(row.clubId).name;
+        });
+      }
+      if (Array.isArray(comp.matches)) {
+        comp.matches.forEach(m => {
+          if (!m) return;
+          if (m.homeName) m.homeName = normalizeNameStr(m.homeName);
+          if (m.awayName) m.awayName = normalizeNameStr(m.awayName);
+        });
+      }
+    }
+  }
+  if (Array.isArray(gameState.matchHistory)) {
+    gameState.matchHistory.forEach(m => {
+      if (!m) return;
+      if (m.homeName) m.homeName = normalizeNameStr(m.homeName);
+      if (m.awayName) m.awayName = normalizeNameStr(m.awayName);
+      if (m.oppName) m.oppName = normalizeNameStr(m.oppName);
+      if (m.oppClub) syncClubObj(m.oppClub);
+    });
+  }
+  if (Array.isArray(gameState.calendar)) {
+    gameState.calendar.forEach(d => {
+      if (d && d.matchResult && d.matchResult.oppClub) {
+        syncClubObj(d.matchResult.oppClub);
+      }
+    });
+  }
+  ['incomingOffers', 'outgoingOffers'].forEach(key => {
+    if (Array.isArray(gameState[key])) {
+      gameState[key].forEach(o => {
+        if (!o) return;
+        if (o.fromClubName) o.fromClubName = normalizeNameStr(o.fromClubName);
+        if (o.toClubName) o.toClubName = normalizeNameStr(o.toClubName);
+        if (o.clubName) o.clubName = normalizeNameStr(o.clubName);
+      });
+    }
+  });
 }
 
 function loadGameFromStorage() {
@@ -324,6 +500,8 @@ function loadGameFromStorage() {
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
       generateEuropeanTransferList(null, sLv);
     }
+
+    migrateLegacyClubsData();
 
     // 既存セーブデータの大会別スタッツ・消化済み試合記録に残存する旧カタカナ仮想選手名をアルファベット名へ自動変換
     if (gameState.competitionStats && typeof gameState.competitionStats === 'object') {
@@ -603,7 +781,7 @@ function openRecordsModal() {
       </div>
     </div>
     <div class="records-section">
-      <h4 class="records-section-title">現在の担当クラブ成績（${activeClub ? activeClub.name : 'ロンドン・FC'}）</h4>
+      <h4 class="records-section-title">現在の担当クラブ成績（${activeClub ? activeClub.name : 'チェルシー B'}）</h4>
       <div class="records-current-line mono">${currentStats}</div>
     </div>
     <div class="records-section">

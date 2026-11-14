@@ -2122,7 +2122,7 @@ function triggerPreContractDepartures() {
   if (Math.random() > 0.03) return false;
 
   const target = eligible[randInt(0, eligible.length - 1)];
-  const foreignClubs = ['バイエルン', 'レアル・マドリード', 'パリ・サンジェルマン', 'インテル', 'バルセロナ', 'ユヴェントス', 'ドルトムント'];
+  const foreignClubs = ['バイエルン R', 'レアルマドリード W', 'パリ B', 'インテル B', 'バルセロナ G', 'ユヴェントス W', 'ドルトムント Y'];
   const foreignClub = foreignClubs[randInt(0, foreignClubs.length - 1)];
 
   target.preContractDeparture = {
@@ -14164,7 +14164,7 @@ function renderMonthCalendar() {
         const isHome = match.homeId === playerClub.id;
         const oppId = isHome ? match.awayId : match.homeId;
         const oppClub = getClubById(oppId) || { name: oppId, shortName: oppId };
-        const oppName = oppClub.shortName || oppClub.name.replace(/・FC|・C|・U|・A|・W/g, '').trim();
+        const oppName = oppClub.shortName || (typeof getClubShortCode === 'function' ? getClubShortCode(oppClub) : oppClub.name.replace(/\s+[A-Z]+$/g, '').trim());
 
         const isPlayed = match.played || (d.matchWeek <= gameState.currentWeek && match.homeScore !== null);
         const isNext = !isPlayed && (d.matchWeek === gameState.currentWeek + 1);
