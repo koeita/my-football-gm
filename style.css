@@ -9463,26 +9463,25 @@ body.main-menu-active {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
 }
 .pitch-2d-token.home-token {
-  background-color: #2ecc71;
-  border: 1.5px solid #ffffff;
-  color: #0b1a10;
+  background-color: var(--kit-bg, #2ecc71);
+  border: 2px solid var(--kit-border, #ffffff);
+  color: var(--kit-text, #0b1a10);
 }
 .pitch-2d-token.away-token {
-  background-color: #e74c3c;
-  border: 1.5px solid #ffffff;
-  color: #ffffff;
+  background-color: var(--kit-bg, #e74c3c);
+  border: 2px solid var(--kit-border, #ffffff);
+  color: var(--kit-text, #ffffff);
 }
 .pitch-2d-token.token-player {
-  box-shadow: 0 0 7px rgba(46, 204, 113, 0.8), 0 2px 5px rgba(0, 0, 0, 0.8);
-  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.55), 0 2px 5px rgba(0, 0, 0, 0.85);
 }
 .pitch-2d-token.token-opponent {
-  opacity: 0.92;
-  border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+  opacity: 0.94;
 }
 .pitch-2d-token.is-gk {
-  background-color: #f1c40f;
-  color: #111;
+  background-color: var(--kit-bg, #f1c40f);
+  border: 2px solid var(--kit-border, #111827);
+  color: var(--kit-text, #111827);
 }
 .pitch-2d-token.active-actor {
   transform: translate(-50%, -50%) scale(1.35);

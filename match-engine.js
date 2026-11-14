@@ -2652,6 +2652,15 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
   matchLiveState.homeBaseTokens = [];
   matchLiveState.awayBaseTokens = [];
 
+  const kits = typeof resolveMatchKits === 'function'
+    ? resolveMatchKits(homeClub, awayClub)
+    : {
+        home: { primary: '#2ecc71', secondary: '#ffffff', text: '#0b1a10' },
+        away: { primary: '#e74c3c', secondary: '#ffffff', text: '#ffffff' },
+        homeGk: { primary: '#f1c40f', secondary: '#111827', text: '#111827' },
+        awayGk: { primary: '#00d2d3', secondary: '#111827', text: '#111827' }
+      };
+
   // ホーム（左コート ➔ 右へ攻める）
   const isHomePlayer = Boolean(homeClub.isPlayer);
   const isAwayPlayer = Boolean(awayClub.isPlayer);
@@ -2664,6 +2673,10 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
     el.className = `pitch-2d-token home-token ${isHomePlayer ? 'token-player' : 'token-opponent'} ${isGk ? 'is-gk' : ''}`;
     el.style.left = `${baseX}%`;
     el.style.top = `${baseY}%`;
+    const tkKit = isGk ? kits.homeGk : kits.home;
+    el.style.setProperty('--kit-bg', tkKit.primary);
+    el.style.setProperty('--kit-border', tkKit.secondary);
+    el.style.setProperty('--kit-text', tkKit.text);
     el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
     tokensLayer.appendChild(el);
     matchLiveState.homeBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY, isPlayer: isHomePlayer });
@@ -2679,6 +2692,10 @@ function setupMatch2DPitchTokens(homeClub, awayClub) {
     el.className = `pitch-2d-token away-token ${isAwayPlayer ? 'token-player' : 'token-opponent'} ${isGk ? 'is-gk' : ''}`;
     el.style.left = `${baseX}%`;
     el.style.top = `${baseY}%`;
+    const tkKit = isGk ? kits.awayGk : kits.away;
+    el.style.setProperty('--kit-bg', tkKit.primary);
+    el.style.setProperty('--kit-border', tkKit.secondary);
+    el.style.setProperty('--kit-text', tkKit.text);
     el.textContent = p ? (p.squadNumber || idx + 1) : idx + 1;
     tokensLayer.appendChild(el);
     matchLiveState.awayBaseTokens.push({ el, player: p, pos: slot.pos, isGk, baseX, baseY, curX: baseX, curY: baseY, isPlayer: isAwayPlayer });

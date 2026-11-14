@@ -220,6 +220,188 @@ const CLUB_EMBLEM_MAP = {
   'southampton_s': { shape: 'crown-shield', primaryColor: '#d71920', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'halo-wave',    code: 'SHR', symbol: 'SHR' }
 };
 
+/**
+ * クラブのHome / Awayユニホームカラー定義
+ */
+const CLUB_KIT_MAP = {
+  'manchester_b':  { home: { primary: '#6cabdd', secondary: '#ffffff' }, away: { primary: '#1c2c5b', secondary: '#f5c542' } },
+  'manchester_r':  { home: { primary: '#da020e', secondary: '#ffffff' }, away: { primary: '#1a1d20', secondary: '#f3f4f6' } },
+  'liverpool_b':   { home: { primary: '#c8102e', secondary: '#f6eb61' }, away: { primary: '#f4f6f9', secondary: '#00b2a9' } },
+  'northlondon_a': { home: { primary: '#ef0107', secondary: '#ffffff' }, away: { primary: '#111827', secondary: '#db9b32' } },
+  'london_fc':     { home: { primary: '#034694', secondary: '#ffffff' }, away: { primary: '#f8fafc', secondary: '#034694' } },
+  'northlondon_w': { home: { primary: '#f8fafc', secondary: '#132257' }, away: { primary: '#132257', secondary: '#9fb0c7' } },
+  'newcastle_u':   { home: { primary: '#1a1d20', secondary: '#ffffff' }, away: { primary: '#047857', secondary: '#ffffff' } },
+  'aston_v':       { home: { primary: '#670e36', secondary: '#95bfe5' }, away: { primary: '#f8fafc', secondary: '#670e36' } },
+  'brighton_g':    { home: { primary: '#0057b8', secondary: '#ffffff' }, away: { primary: '#facc15', secondary: '#0057b8' } },
+  'southlondon_p': { home: { primary: '#1b458f', secondary: '#c4122e' }, away: { primary: '#f8fafc', secondary: '#1b458f' } },
+  'westlondon_c':  { home: { primary: '#f8fafc', secondary: '#181b20' }, away: { primary: '#181b20', secondary: '#cc0000' } },
+  'westlondon_b':  { home: { primary: '#e30613', secondary: '#ffffff' }, away: { primary: '#38bdf8', secondary: '#1e293b' } },
+  'merseyside_b':  { home: { primary: '#003399', secondary: '#ffffff' }, away: { primary: '#f59e0b', secondary: '#003399' } },
+  'southcoast_c':  { home: { primary: '#da291c', secondary: '#14171a' }, away: { primary: '#f8fafc', secondary: '#14171a' } },
+  'nottingham_r':  { home: { primary: '#dd0000', secondary: '#ffffff' }, away: { primary: '#1e3a8a', secondary: '#f5c542' } },
+  'ipswich_t':     { home: { primary: '#004494', secondary: '#ffffff' }, away: { primary: '#f8fafc', secondary: '#de2c37' } },
+  'leeds_u':       { home: { primary: '#f8fafc', secondary: '#1d428a' }, away: { primary: '#ffcd00', secondary: '#1d428a' } },
+  'sunderland_a':  { home: { primary: '#eb172b', secondary: '#ffffff' }, away: { primary: '#1e293b', secondary: '#d4af37' } },
+  'coventry_c':    { home: { primary: '#00a3e0', secondary: '#ffffff' }, away: { primary: '#1d252c', secondary: '#00a3e0' } },
+  'hull_c':        { home: { primary: '#f7941d', secondary: '#111111' }, away: { primary: '#f8fafc', secondary: '#111111' } },
+  // 旧1部クラブ互換用
+  'eastlondon_h':  { home: { primary: '#7a263a', secondary: '#1bb1e7' }, away: { primary: '#f8fafc', secondary: '#7a263a' } },
+  'midlands_w':    { home: { primary: '#fdb913', secondary: '#1e1b18' }, away: { primary: '#1e1b18', secondary: '#fdb913' } },
+  'leicester_f':   { home: { primary: '#003090', secondary: '#fdbe11' }, away: { primary: '#f8fafc', secondary: '#003090' } },
+  'southampton_s': { home: { primary: '#d71920', secondary: '#ffffff' }, away: { primary: '#1e293b', secondary: '#f5c542' } },
+  // 欧州メガクラブ
+  'madrid':        { home: { primary: '#f8fafc', secondary: '#d4af37' }, away: { primary: '#1e293b', secondary: '#f59e0b' } },
+  'barcelona':     { home: { primary: '#a50044', secondary: '#004d98' }, away: { primary: '#facc15', secondary: '#a50044' } },
+  'munich':        { home: { primary: '#dc052d', secondary: '#ffffff' }, away: { primary: '#111827', secondary: '#dc052d' } },
+  'milano':        { home: { primary: '#fb090b', secondary: '#111827' }, away: { primary: '#f8fafc', secondary: '#fb090b' } },
+  'torino':        { home: { primary: '#f8fafc', secondary: '#111827' }, away: { primary: '#1e3a8a', secondary: '#facc15' } },
+  'paris':         { home: { primary: '#002b49', secondary: '#da291c' }, away: { primary: '#f8fafc', secondary: '#002b49' } }
+};
+
+function parseHexToRgb(hex) {
+  const clean = String(hex || '#1e3a8a').replace(/[^0-9a-fA-F]/g, '');
+  const full = clean.length === 3
+    ? clean.split('').map(c => c + c).join('')
+    : (clean.padEnd(6, '0').slice(0, 6));
+  const num = parseInt(full, 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
+function getColorLuminance(hex) {
+  const { r, g, b } = parseHexToRgb(hex);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+function getContrastTextColor(bgHex) {
+  return getColorLuminance(bgHex) >= 155 ? '#111827' : '#ffffff';
+}
+
+function getColorDistance(hex1, hex2) {
+  const c1 = parseHexToRgb(hex1);
+  const c2 = parseHexToRgb(hex2);
+  const rMean = (c1.r + c2.r) / 2;
+  const dr = c1.r - c2.r;
+  const dg = c1.g - c2.g;
+  const db = c1.b - c2.b;
+  return Math.sqrt((2 + rMean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rMean) / 256) * db * db);
+}
+
+function resolveClubKit(clubOrId) {
+  let clubObj = null;
+  let clubId = '';
+  let clubName = '';
+  if (typeof clubOrId === 'object' && clubOrId) {
+    clubObj = clubOrId;
+    clubId = clubOrId.id || '';
+    clubName = clubOrId.name || '';
+  } else if (typeof clubOrId === 'string') {
+    clubId = clubOrId;
+    clubName = clubOrId;
+  }
+
+  if (clubId && CLUB_KIT_MAP[clubId]) {
+    return CLUB_KIT_MAP[clubId];
+  }
+  if (clubObj && clubObj.kit && clubObj.kit.home && clubObj.kit.away) {
+    return clubObj.kit;
+  }
+
+  // 名前やIDから既知のクラブを検索
+  if (!clubObj || !clubObj.primaryColor) {
+    const allBigFive = typeof getAllBigFiveClubs === 'function' ? getAllBigFiveClubs() : [];
+    const matched = (typeof CLUB_DEFINITIONS !== 'undefined' && CLUB_DEFINITIONS.find(c => c.id === clubId || c.name === clubName))
+      || allBigFive.find(c => c.id === clubId || c.name === clubName);
+    if (matched) {
+      if (matched.id && CLUB_KIT_MAP[matched.id]) return CLUB_KIT_MAP[matched.id];
+      clubObj = matched;
+    }
+  }
+
+  const emb = (clubId && CLUB_EMBLEM_MAP[clubId]) ? CLUB_EMBLEM_MAP[clubId] : null;
+  const pColor = (clubObj && clubObj.primaryColor) || (emb && emb.primaryColor) || '#1e3a8a';
+  const sColor = (clubObj && clubObj.secondaryColor) || (emb && emb.secondaryColor) || '#ffffff';
+
+  const pLum = getColorLuminance(pColor);
+  const sDist = getColorDistance(pColor, sColor);
+  let awayPrimary = sDist >= 130 ? sColor : (pLum >= 145 ? '#162032' : '#f8fafc');
+  if (getColorDistance(pColor, awayPrimary) < 130) {
+    awayPrimary = pLum >= 145 ? '#111827' : '#f8fafc';
+  }
+  const awaySecondary = pColor;
+
+  return {
+    home: { primary: pColor, secondary: sColor },
+    away: { primary: awayPrimary, secondary: awaySecondary }
+  };
+}
+
+function resolveMatchKits(homeClub, awayClub) {
+  const hKitSpec = resolveClubKit(homeClub);
+  const aKitSpec = resolveClubKit(awayClub);
+
+  const homeActive = {
+    primary: hKitSpec.home.primary,
+    secondary: hKitSpec.home.secondary,
+    text: getContrastTextColor(hKitSpec.home.primary)
+  };
+
+  let awayCand = aKitSpec.home;
+  if (getColorDistance(homeActive.primary, awayCand.primary) < 125) {
+    awayCand = aKitSpec.away;
+  }
+  if (getColorDistance(homeActive.primary, awayCand.primary) < 120) {
+    const hLum = getColorLuminance(homeActive.primary);
+    awayCand = hLum >= 140
+      ? { primary: '#111827', secondary: '#f5c542' }
+      : { primary: '#f8fafc', secondary: '#1e293b' };
+  }
+
+  const awayActive = {
+    primary: awayCand.primary,
+    secondary: awayCand.secondary,
+    text: getContrastTextColor(awayCand.primary)
+  };
+
+  const gkCandidates = [
+    { primary: '#f1c40f', secondary: '#111827' },
+    { primary: '#00d2d3', secondary: '#111827' },
+    { primary: '#ff6b35', secondary: '#ffffff' },
+    { primary: '#a855f7', secondary: '#ffffff' },
+    { primary: '#10b981', secondary: '#ffffff' }
+  ];
+
+  const pickGkKit = (avoidHexList) => {
+    for (const cand of gkCandidates) {
+      if (avoidHexList.every(hex => getColorDistance(cand.primary, hex) >= 100)) {
+        return { primary: cand.primary, secondary: cand.secondary, text: getContrastTextColor(cand.primary) };
+      }
+    }
+    return { primary: '#f1c40f', secondary: '#111827', text: '#111827' };
+  };
+
+  const homeGk = pickGkKit([homeActive.primary, awayActive.primary]);
+  const awayGk = pickGkKit([homeActive.primary, awayActive.primary, homeGk.primary]);
+
+  return {
+    home: homeActive,
+    away: awayActive,
+    homeGk,
+    awayGk
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.CLUB_KIT_MAP = CLUB_KIT_MAP;
+  window.getColorDistance = getColorDistance;
+  window.getContrastTextColor = getContrastTextColor;
+  window.resolveClubKit = resolveClubKit;
+  window.resolveMatchKits = resolveMatchKits;
+}
+
 let emblemSvgUidCounter = 0;
 
 /**
@@ -702,6 +884,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
     emblem: CLUB_EMBLEM_MAP['manchester_b'],
+    kit: CLUB_KIT_MAP['manchester_b'],
     name: 'マンチェスター B',
     category: 'title_ucl',
     tier: 'MEGA RICH',
@@ -717,6 +900,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'manchester_r',
     emblem: CLUB_EMBLEM_MAP['manchester_r'],
+    kit: CLUB_KIT_MAP['manchester_r'],
     name: 'マンチェスター R',
     category: 'title_ucl',
     tier: 'TRADITIONAL',
@@ -732,6 +916,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'liverpool_b',
     emblem: CLUB_EMBLEM_MAP['liverpool_b'],
+    kit: CLUB_KIT_MAP['liverpool_b'],
     name: 'リヴァプール R',
     category: 'title_ucl',
     tier: 'CONTENDER',
@@ -747,6 +932,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'northlondon_a',
     emblem: CLUB_EMBLEM_MAP['northlondon_a'],
+    kit: CLUB_KIT_MAP['northlondon_a'],
     name: 'アーセナル A',
     category: 'title_ucl',
     tier: 'CONTENDER',
@@ -762,6 +948,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'london_fc',
     emblem: CLUB_EMBLEM_MAP['london_fc'],
+    kit: CLUB_KIT_MAP['london_fc'],
     name: 'チェルシー B',
     category: 'title_ucl',
     tier: 'AMBITIOUS',
@@ -777,6 +964,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'northlondon_w',
     emblem: CLUB_EMBLEM_MAP['northlondon_w'],
+    kit: CLUB_KIT_MAP['northlondon_w'],
     name: 'トッテナム W',
     category: 'title_ucl',
     tier: 'BIG CLUB',
@@ -792,6 +980,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'newcastle_u',
     emblem: CLUB_EMBLEM_MAP['newcastle_u'],
+    kit: CLUB_KIT_MAP['newcastle_u'],
     name: 'ニューカッスル K',
     category: 'euro_race',
     tier: 'RISING FORCE',
@@ -807,6 +996,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'aston_v',
     emblem: CLUB_EMBLEM_MAP['aston_v'],
+    kit: CLUB_KIT_MAP['aston_v'],
     name: 'アストンヴィラ V',
     category: 'euro_race',
     tier: 'CHALLENGER',
@@ -822,6 +1012,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'brighton_g',
     emblem: CLUB_EMBLEM_MAP['brighton_g'],
+    kit: CLUB_KIT_MAP['brighton_g'],
     name: 'ブライトン G',
     category: 'euro_race',
     tier: 'SMART SCOUT',
@@ -837,6 +1028,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'southlondon_p',
     emblem: CLUB_EMBLEM_MAP['southlondon_p'],
+    kit: CLUB_KIT_MAP['southlondon_p'],
     name: 'クリスタルパレス P',
     category: 'euro_race',
     tier: 'MID TABLE',
@@ -852,6 +1044,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'westlondon_c',
     emblem: CLUB_EMBLEM_MAP['westlondon_c'],
+    kit: CLUB_KIT_MAP['westlondon_c'],
     name: 'フラム W',
     category: 'mid_table',
     tier: 'MID TABLE',
@@ -867,6 +1060,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'westlondon_b',
     emblem: CLUB_EMBLEM_MAP['westlondon_b'],
+    kit: CLUB_KIT_MAP['westlondon_b'],
     name: 'ブレントフォード B',
     category: 'mid_table',
     tier: 'MONEYBALL',
@@ -882,6 +1076,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'merseyside_b',
     emblem: CLUB_EMBLEM_MAP['merseyside_b'],
+    kit: CLUB_KIT_MAP['merseyside_b'],
     name: 'エヴァートン B',
     category: 'mid_table',
     tier: 'TRADITIONAL',
@@ -897,6 +1092,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'southcoast_c',
     emblem: CLUB_EMBLEM_MAP['southcoast_c'],
+    kit: CLUB_KIT_MAP['southcoast_c'],
     name: 'ボーンマス C',
     category: 'mid_table',
     tier: 'CHALLENGER',
@@ -912,6 +1108,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'nottingham_r',
     emblem: CLUB_EMBLEM_MAP['nottingham_r'],
+    kit: CLUB_KIT_MAP['nottingham_r'],
     name: 'ノッティンガム R',
     category: 'mid_table',
     tier: 'HISTORIC',
@@ -927,6 +1124,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'leeds_u',
     emblem: CLUB_EMBLEM_MAP['leeds_u'],
+    kit: CLUB_KIT_MAP['leeds_u'],
     name: 'リーズ W',
     category: 'mid_table',
     tier: 'TRADITIONAL',
@@ -942,6 +1140,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'sunderland_a',
     emblem: CLUB_EMBLEM_MAP['sunderland_a'],
+    kit: CLUB_KIT_MAP['sunderland_a'],
     name: 'サンダーランド R',
     category: 'relegation',
     tier: 'HISTORIC',
@@ -957,6 +1156,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'ipswich_t',
     emblem: CLUB_EMBLEM_MAP['ipswich_t'],
+    kit: CLUB_KIT_MAP['ipswich_t'],
     name: 'イプスウィッチ B',
     category: 'relegation',
     tier: 'PROMOTED',
@@ -972,6 +1172,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'coventry_c',
     emblem: CLUB_EMBLEM_MAP['coventry_c'],
+    kit: CLUB_KIT_MAP['coventry_c'],
     name: 'コヴェントリー S',
     category: 'relegation',
     tier: 'PROMOTED',
@@ -987,6 +1188,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'hull_c',
     emblem: CLUB_EMBLEM_MAP['hull_c'],
+    kit: CLUB_KIT_MAP['hull_c'],
     name: 'ハル Y',
     category: 'relegation',
     tier: 'PROMOTED',
@@ -1004,17 +1206,17 @@ const CLUB_DEFINITIONS = [
 // 他国（スペイン、ドイツ、イタリア、フランス）の主要メガクラブ（欧州強豪データとして内部保持）
 const EUROPEAN_MEGA_CLUBS = [
   { id: 'madrid',
-    emblem: CLUB_EMBLEM_MAP['madrid'], name: 'レアルマドリード W', country: 'スペイン', basePower: 75, budget: 120000 },
+    emblem: CLUB_EMBLEM_MAP['madrid'], kit: CLUB_KIT_MAP['madrid'], name: 'レアルマドリード W', country: 'スペイン', basePower: 75, budget: 120000 },
   { id: 'barcelona',
-    emblem: CLUB_EMBLEM_MAP['barcelona'], name: 'バルセロナ G', country: 'スペイン', basePower: 73, budget: 95000 },
+    emblem: CLUB_EMBLEM_MAP['barcelona'], kit: CLUB_KIT_MAP['barcelona'], name: 'バルセロナ G', country: 'スペイン', basePower: 73, budget: 95000 },
   { id: 'munich',
-    emblem: CLUB_EMBLEM_MAP['munich'], name: 'バイエルン R', country: 'ドイツ', basePower: 74, budget: 105000 },
+    emblem: CLUB_EMBLEM_MAP['munich'], kit: CLUB_KIT_MAP['munich'], name: 'バイエルン R', country: 'ドイツ', basePower: 74, budget: 105000 },
   { id: 'milano',
-    emblem: CLUB_EMBLEM_MAP['milano'], name: 'ミラン R', country: 'イタリア', basePower: 71, budget: 82000 },
+    emblem: CLUB_EMBLEM_MAP['milano'], kit: CLUB_KIT_MAP['milano'], name: 'ミラン R', country: 'イタリア', basePower: 71, budget: 82000 },
   { id: 'torino',
-    emblem: CLUB_EMBLEM_MAP['torino'], name: 'ユヴェントス W', country: 'イタリア', basePower: 71, budget: 85000 },
+    emblem: CLUB_EMBLEM_MAP['torino'], kit: CLUB_KIT_MAP['torino'], name: 'ユヴェントス W', country: 'イタリア', basePower: 71, budget: 85000 },
   { id: 'paris',
-    emblem: CLUB_EMBLEM_MAP['paris'], name: 'パリ B', country: 'フランス', basePower: 73, budget: 115000 }
+    emblem: CLUB_EMBLEM_MAP['paris'], kit: CLUB_KIT_MAP['paris'], name: 'パリ B', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
 // 12ポジション定義とカテゴリ分類
