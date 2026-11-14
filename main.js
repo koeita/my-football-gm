@@ -7396,16 +7396,16 @@ function renderShortlist() {
     if (activeOutOffer) {
       if (activeOutOffer.status === 'agreed') {
         offerStatusBadge = '<span class="sub-badge badge-bargain" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; border-color: #2ecc71;">オファー合意</span>';
-        offerBtnHtml = `<button type="button" class="btn btn-sm btn-offer-accept" data-goto-offers="outgoing" style="font-weight: 700; padding: 2px 8px; font-size: 11px;">契約確定へ</button>`;
+        offerBtnHtml = `<button type="button" class="btn btn-sm btn-offer-accept market-offer-slot-btn" data-goto-offers="outgoing">契約確定へ</button>`;
       } else if (activeOutOffer.status === 'cpu_counter') {
         offerStatusBadge = '<span class="sub-badge" style="background: rgba(243, 156, 18, 0.2); color: #f39c12; border-color: #f39c12;">増額逆提示あり</span>';
-        offerBtnHtml = `<button type="button" class="btn btn-sm" data-goto-offers="outgoing" style="background: #f39c12; color: #0d1117; font-weight: 700; padding: 2px 8px; font-size: 11px;">回答確認</button>`;
+        offerBtnHtml = `<button type="button" class="btn btn-sm market-offer-slot-btn" data-goto-offers="outgoing" style="background: #f39c12; color: #0d1117;">回答確認</button>`;
       } else {
         offerStatusBadge = `<span class="sub-badge" style="background: rgba(243, 156, 18, 0.15); color: #f39c12;">回答待ち(${activeOutOffer.pendingDays || 1}日)</span>`;
-        offerBtnHtml = `<button type="button" class="btn btn-sm btn-disabled" disabled style="opacity: 0.6; padding: 2px 8px; font-size: 11px;">送信中</button>`;
+        offerBtnHtml = `<button type="button" class="btn btn-sm btn-disabled market-offer-slot-btn" disabled style="opacity: 0.65;">送信中</button>`;
       }
     } else {
-      offerBtnHtml = `<button type="button" class="btn btn-primary btn-sm btn-formal-offer" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>正式オファー</button>`;
+      offerBtnHtml = `<button type="button" class="btn btn-primary btn-sm btn-formal-offer market-offer-slot-btn" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>交渉</button>`;
     }    const footBadge = formatFootBadge(p);
 
     rows.push(`
@@ -7425,9 +7425,10 @@ function renderShortlist() {
         <td class="col-num mono">${formatWage(p.wage || 20)}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
         <td class="col-action" style="white-space: nowrap;">
-          <button type="button" class="btn btn-secondary btn-sm" data-profile-id="${p.id}" title="選手詳細スカウティングレポート">詳細</button>
-          ${offerBtnHtml}
-          <button type="button" class="btn btn-outline btn-sm btn-shortlist-remove" data-shortlist-remove="${p.id}" title="ターゲットリストから除外">解除</button>
+          <div class="market-action-group">
+            ${offerBtnHtml}
+            <button type="button" class="btn btn-outline btn-sm btn-shortlist-remove" data-shortlist-remove="${p.id}" title="ターゲットリストから除外">解除</button>
+          </div>
         </td>
       </tr>
     `);
