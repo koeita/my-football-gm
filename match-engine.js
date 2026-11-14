@@ -3186,7 +3186,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
         <span class="mono">${getClubShortCode(awayClub)} (AWAY)${awayClub.isPlayer ? ' ★' : ''}</span>
       </button>
     </div>
-    <div class="summary-ratings-grid" style="grid-template-columns: 1fr;">
+    <div class="summary-ratings-grid">
       ${renderClubList(homeClub, homeStarters, homeSubEntries, homeScorers, true)}
       ${renderClubList(awayClub, awayStarters, awaySubEntries, awayScorers, false)}
     </div>
