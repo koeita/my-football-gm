@@ -7043,12 +7043,12 @@ function renderRoster() {
     const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">レンタル募集中</span>' : '';
     const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
-    const ovrTierCls = getOvrTierClass(effOvr);
-    let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
+    const ovrTextCls = effOvr >= 90 ? 'tier-text-elite' : (effOvr >= 80 ? 'tier-text-high' : (effOvr >= 70 ? 'tier-text-mid' : 'tier-text-low'));
+    let ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
-      ovrDisplay = `<span class="ovr-cell-badge text-danger" style="background:rgba(231,76,60,0.16);">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="mono tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     } else if (fitInfo.type === 'sub') {
-      ovrDisplay = `<span class="ovr-cell-badge ovr-tier-mid">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
     const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : 'N/A';
@@ -7086,13 +7086,13 @@ function renderRoster() {
           ${hgTag}${u21Tag}${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
         </td>
         <td class="col-num">${p.age}</td>
-        <td class="col-num accent-green">${ovrDisplay}</td>
+        <td class="col-num">${ovrDisplay}</td>
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
         <td class="col-num ${avgRatInfo.textClass} font-bold">${avgRating}</td>
-        <td class="col-num">${p.atk}${atkDiff}</td>
-        <td class="col-num">${p.def}${defDiff}</td>
-        <td class="col-num">${p.sta}${staDiff}</td>
+        <td class="col-num ${p.atk >= 90 ? 'tier-text-elite' : (p.atk >= 80 ? 'tier-text-high' : (p.atk >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.atk}${atkDiff}</td>
+        <td class="col-num ${p.def >= 90 ? 'tier-text-elite' : (p.def >= 80 ? 'tier-text-high' : (p.def >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.def}${defDiff}</td>
+        <td class="col-num ${p.sta >= 90 ? 'tier-text-elite' : (p.sta >= 80 ? 'tier-text-high' : (p.sta >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.sta}${staDiff}</td>
         <td class="col-num">${formatFatigueCellHtml(p)}</td>
         <td class="col-num ${contractClass}">${contractText}</td>
         <td class="col-num mono" title="年間総給与: ${formatMoney(p.salary)}">
@@ -10129,7 +10129,7 @@ function openPlayerProfileModal(playerId) {
             ${yearlyFotmobHtml}
             <div class="fotmob-yearly-total mono">
               <span>通算 (${totalAppsSum}試合)</span>
-              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <strong class="accent-gold">${careerAvgRating}</strong></span>
+              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <span class="fotmob-rating-pill mono ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
             </div>
           </div>
           <div class="profile-yearly-table-wrap">

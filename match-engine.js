@@ -3134,7 +3134,16 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       : '<div class="summary-rating-empty text-muted mono">途中交代出場なし</div>';
 
     const ratedPlayers = sortedStarters.concat(filteredSubs.map(se => se.p)).filter(p => typeof p.lastMatchRating === 'number');
-    const avgRat = (ratedPlayers.reduce((s, p) => s + p.lastMatchRating, 0) / Math.max(1, ratedPlayers.length)).toFixed(1);
+    const hasAvgRat = ratedPlayers.length > 0;
+    const avgRat = hasAvgRat ? (ratedPlayers.reduce((s, p) => s + p.lastMatchRating, 0) / ratedPlayers.length).toFixed(1) : 'N/A';
+    const avgNumRat = hasAvgRat ? Number(avgRat) : 0;
+    let avgRatClass = 'summary-rat-none';
+    if (hasAvgRat) {
+      if (avgNumRat >= 8.0) avgRatClass = 'summary-rat-elite';
+      else if (avgNumRat >= 7.0) avgRatClass = 'summary-rat-high';
+      else if (avgNumRat >= 6.0) avgRatClass = 'summary-rat-mid';
+      else avgRatClass = 'summary-rat-low';
+    }
     const sideKey = isHome ? 'home' : 'away';
     const isHidden = sideKey !== defaultTeam;
 
@@ -3146,7 +3155,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
             <span class="team-title-code mono">${getClubShortCode(club)}</span>
             <span class="team-title-side mono">${isHome ? 'HOME' : 'AWAY'}${club.isPlayer ? ' (YOU)' : ''}</span>
           </div>
-          <span class="team-title-avg mono">平均採点: <strong class="accent-green">${avgRat}</strong></span>
+          <span class="team-title-avg">平均採点: <span class="summary-rating-pill mono ${avgRatClass}">${avgRat}</span></span>
         </div>
         <div class="summary-ratings-section-box">
           <div class="summary-ratings-group-label mono">▼ スターティングメンバー (${sortedStarters.length}名)</div>
