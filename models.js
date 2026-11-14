@@ -1377,9 +1377,10 @@ function getPlayerFiveAttributes(p) {
 }
 
 /**
- * 能力値（1〜99）に応じたUIクラス（80以上：緑、70台：黄、60台以下：灰）を返す
+ * 能力値（1〜99）に応じたUIクラス（90以上：青、80台：緑、70台：オレンジ、70未満：赤）を返す
  */
 function getStatTierClass(val) {
+  if (val >= 90) return { valClass: 'stat-elite', barClass: 'bar-elite' };
   if (val >= 80) return { valClass: 'stat-high', barClass: 'bar-high' };
   if (val >= 70) return { valClass: 'stat-mid', barClass: 'bar-mid' };
   return { valClass: 'stat-low', barClass: 'bar-low' };

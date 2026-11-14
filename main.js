@@ -6876,10 +6876,21 @@ function renderTacticsOverview() {
  */
 function getOvrTierClass(ovr) {
   const v = typeof ovr === 'number' ? ovr : 65;
-  if (v >= 80) return 'ovr-tier-elite';
-  if (v >= 74) return 'ovr-tier-high';
-  if (v >= 67) return 'ovr-tier-mid';
+  if (v >= 90) return 'ovr-tier-elite';
+  if (v >= 80) return 'ovr-tier-high';
+  if (v >= 70) return 'ovr-tier-mid';
   return 'ovr-tier-low';
+}
+
+function getRatingTierInfo(val) {
+  const num = typeof val === 'number' ? val : parseFloat(val);
+  if (Number.isNaN(num)) {
+    return { pillClass: 'rat-none', textClass: 'rat-text-none', text: 'N/A' };
+  }
+  if (num >= 8.0) return { pillClass: 'rat-elite', textClass: 'rat-text-elite', text: num.toFixed(2) };
+  if (num >= 7.0) return { pillClass: 'rat-high', textClass: 'rat-text-high', text: num.toFixed(2) };
+  if (num >= 6.0) return { pillClass: 'rat-mid', textClass: 'rat-text-mid', text: num.toFixed(2) };
+  return { pillClass: 'rat-low', textClass: 'rat-text-low', text: num.toFixed(2) };
 }
 
 function renderRoster() {
@@ -7040,7 +7051,8 @@ function renderRoster() {
       ovrDisplay = `<span class="ovr-cell-badge ovr-tier-mid">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
-    const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : '-';
+    const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : 'N/A';
+    const avgRatInfo = getRatingTierInfo(avgRating);
 
     let contractClass = '';
     let contractText = `${p.contractYears}年`;
@@ -7077,7 +7089,7 @@ function renderRoster() {
         <td class="col-num accent-green">${ovrDisplay}</td>
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
-        <td class="col-num accent-green">${avgRating}</td>
+        <td class="col-num ${avgRatInfo.textClass} font-bold">${avgRating}</td>
         <td class="col-num">${p.atk}${atkDiff}</td>
         <td class="col-num">${p.def}${defDiff}</td>
         <td class="col-num">${p.sta}${staDiff}</td>
@@ -9607,7 +9619,7 @@ function openPlayerProfileModal(playerId) {
   const growthLabel = getGrowthCurveLabel(p.growthCurve || p.growthType);
   const normGrowthId = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve || p.growthType) : (p.growthCurve || p.growthType || 'standard');
   const growthClass = `growth-${normGrowthId}`;
-  const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+  const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : 'N/A';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
 
@@ -9855,9 +9867,12 @@ function openPlayerProfileModal(playerId) {
       ratedAppsSum += r.appearances;
     }
   }
-  const careerAvgRating = ratedAppsSum > 0 ? (weightedRatingSum / ratedAppsSum).toFixed(2) : '-';
+  const careerAvgRating = ratedAppsSum > 0 ? (weightedRatingSum / ratedAppsSum).toFixed(2) : 'N/A';
 
-  const yearlyRowsHtml = allRowsData.map(r => `
+  const yearlyRowsHtml = allRowsData.map(r => {
+    const ratInfo = getRatingTierInfo(r.avgRating);
+    const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
+    return `
     <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
       <td class="mono">${r.seasonYear}</td>
       <td class="col-yearly-club">${r.clubName}</td>
@@ -9865,14 +9880,15 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num">${r.appearances}</td>
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
-      <td class="col-num yearly-table-rat ${r.avgRating !== '-' ? 'accent-gold' : 'text-muted'}">${r.avgRating}</td>
-      <td class="col-num yearly-table-ovr">${r.ovr}</td>
+      <td class="col-num yearly-table-rat ${ratInfo.textClass} font-bold">${ratDisp}</td>
+      <td class="col-num yearly-table-ovr ${getOvrTierClass(r.ovr)}">${r.ovr}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   const yearlyFotmobRows = allRowsData.map(r => {
-    const ratNum = parseFloat(r.avgRating);
-    const ratCls = Number.isNaN(ratNum) ? 'rat-none' : (ratNum >= 7.0 ? 'rat-high' : 'rat-mid');
+    const ratInfo = getRatingTierInfo(r.avgRating);
+    const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
     const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 22, 'fotmob-yearly-emblem') : '';
     return `
       <div class="fotmob-yearly-row ${r.isCurrent ? 'is-current' : ''}">
@@ -9888,7 +9904,7 @@ function openPlayerProfileModal(playerId) {
           <span class="fotmob-col-stat ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</span>
           <span class="fotmob-col-stat ${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</span>
           <span class="fotmob-col-ovr ${getOvrTierClass(r.ovr)}" style="background:none;">${r.ovr}</span>
-          <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratCls}">${r.avgRating}</span></span>
+          <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratInfo.pillClass}">${ratDisp}</span></span>
         </div>
       </div>
     `;
@@ -10047,9 +10063,9 @@ function openPlayerProfileModal(playerId) {
                   <span class="ui-plate-label">アシスト</span>
                   <span class="ui-plate-val text-cyan">${typeof p.assists === 'number' ? p.assists : 0}</span>
                 </div>
-                <div class="ui-stat-plate is-gold">
+                <div class="ui-stat-plate">
                   <span class="ui-plate-label">平均評価</span>
-                  <span class="ui-plate-val accent-gold">${avgRating !== '-' ? avgRating : '-'}</span>
+                  <span class="ui-plate-val ${getRatingTierInfo(avgRating).textClass}">${avgRating !== '-' ? avgRating : 'N/A'}</span>
                 </div>
               </div>
             </div>
