@@ -411,6 +411,7 @@
   --danger-red-dark: #c0392b;
   --font-sans: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: 'Roboto Mono', Menlo, Consolas, monospace;
+  --font-display: 'Barlow Condensed', 'Roboto Mono', sans-serif;
 
   /* セーフエリア & 画面レイアウト一元管理変数 */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -16546,4 +16547,168 @@ body {
   .ui-plate-label { font-size: 9.5px; }
   .ui-plate-val { font-size: 13.5px; }
   .ui-attr-bars-grid { gap: 6px 10px; }
+}
+
+/* ==========================================================================
+   ディスプレイフォント適用（OVR・ランク・スコア・タイトル等の強調要素）
+   ========================================================================== */
+.ovr-cell-badge,
+.profile-header-ovr-val,
+.profile-ovr-badge,
+.pitch-node-ovr,
+.youth-ovr-val,
+.matchday-club-ovr,
+.mgr-rank-badge,
+.coach-rank-badge,
+.staff-stat-chip strong,
+.stat-rank-S,
+.stat-rank-A,
+.stat-rank-B,
+.stat-rank-C,
+.stat-rank-D,
+.rank-badge,
+.match-score-box,
+.matchday-vs-badge,
+.match-live-score,
+.match-live-score.mono,
+.ui-plate-val,
+.ui-attr-bar-num,
+.fotmob-col-ovr,
+.fotmob-rating-pill,
+.main-menu-title,
+.main-menu-title.mono {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.ovr-cell-badge {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+}
+
+.profile-header-ovr-val {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.profile-avatar-col .profile-header-ovr-val {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.pitch-node-ovr {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.youth-ovr-val {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.mgr-rank-badge,
+.coach-rank-badge {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+
+.staff-stat-chip strong {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.03em !important;
+}
+
+.rank-badge {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.match-score-box {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.matchday-vs-badge {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.match-live-score,
+.match-live-score.mono {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.ui-plate-val {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ui-attr-bar-num {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.fotmob-col-ovr {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.fotmob-rating-pill {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.main-menu-title,
+.main-menu-title.mono {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 768px) {
+  .ovr-cell-badge {
+    font-size: 14.5px;
+    padding: 2px 5px;
+  }
+  .pitch-node-ovr {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+  }
+  .profile-header-ovr-val {
+    font-size: 26px;
+  }
+  .profile-avatar-col .profile-header-ovr-val {
+    font-size: 16px;
+  }
+  .ui-plate-val {
+    font-size: 15.5px;
+  }
+  .fotmob-col-ovr {
+    font-size: 13.5px;
+  }
+  .fotmob-rating-pill {
+    font-size: 12.5px;
+  }
+  .match-live-score,
+  .match-live-score.mono {
+    font-size: 28px;
+  }
+  .main-menu-title,
+  .main-menu-title.mono {
+    font-size: 26px;
+  }
 }
