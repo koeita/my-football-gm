@@ -6119,14 +6119,12 @@ function renderLeagueStats(catKey = 'goals') {
   const { compKey, compShortLabel, compFullLabel } = resolveStatsCompetitionAndRenderNav();
 
   const titleEl = document.getElementById('stats-panel-title');
-  const descEl = document.getElementById('stats-panel-desc');
   const subtitleEl = document.getElementById('stats-panel-subtitle');
   const theadEl = document.getElementById('stats-ranking-thead');
   const tbody = document.getElementById('top-scorers-tbody');
 
   const baseTitleSuffix = config.title.replace(/^リーグ/, '');
   if (titleEl) titleEl.textContent = `${compShortLabel} ${baseTitleSuffix}`;
-  if (descEl) descEl.textContent = `${compFullLabel} ｜ ${config.desc.replace(/^イングランド・ディビジョン1\s*/, '')}`;
   if (subtitleEl) subtitleEl.textContent = `${compShortLabel} TOP 10`;
 
   const navBar = document.getElementById('stats-category-nav-bar');
