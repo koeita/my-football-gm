@@ -231,8 +231,8 @@ class TestClubKits(unittest.TestCase):
         self.assertIn('}, popupDurationMs);', popup_fn)
         self.assertNotIn('【自チーム】', popup_fn)
         self.assertNotIn('【相手チーム】', popup_fn)
-        self.assertIn('ゴールを決めた！', popup_fn)
-        self.assertIn('が決定機を阻止！', popup_fn)
+        self.assertIn('${playerName}${clubParen}がゴールを決めた！', popup_fn)
+        self.assertIn('GK ${playerName}${clubParen}が決定機を阻止！', popup_fn)
 
         popup_css = re.search(
             r'\.match-pitch-event-popup \{[\s\S]*?\.event-popup-badge \{[\s\S]*?\}',
