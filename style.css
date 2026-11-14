@@ -14091,6 +14091,21 @@ button.hidden,
   box-shadow: none;
 }
 
+@media (max-width: 768px) {
+  .comp-segment-nav {
+    padding: 0 4px;
+    flex-wrap: nowrap;
+  }
+
+  .comp-tab-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 4px;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
 /* サブナビゲーション（国内カップ・欧州コンペの大会選択） */
 .comp-subnav-row {
   display: flex;
