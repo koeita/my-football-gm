@@ -9606,19 +9606,23 @@ function openPlayerProfileModal(playerId) {
       const modeText = mode === 'major' ? '本適性へ昇格' : '薄適性を習得';
       const prog = Math.min(100, Math.round(p.positionTraining.progress || 0));
       trainingSectionHtml = `
-        <div class="profile-box-header" style="margin-top: 8px;">
-          <span class="profile-box-title">ポジショントレーニング中</span>
-          <span class="mono accent-green" style="font-size: 11px; font-weight: 700;">${prog}%</span>
-        </div>
-        <div class="profile-training-box">
-          <div class="training-info-row">
-            <span>目標: <span class="pos-tag pos-${tPos}"><strong>${tPos === 'LB' ? 'LB/LWB' : (tPos === 'RB' ? 'RB/RWB' : tPos)}</strong></span> <span class="mono text-cyan" style="font-size:10px;">(${modeText})</span></span>
-            <span class="text-muted" style="font-size: 10px;">(平日練習・試合出場で進行)</span>
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">適性特訓</div>
+          <div class="ui-kv-content">
+            <div class="profile-training-box" style="margin-top: 0;">
+              <div class="training-info-row">
+                <span>目標: <span class="pos-tag pos-${tPos}"><strong>${tPos === 'LB' ? 'LB/LWB' : (tPos === 'RB' ? 'RB/RWB' : tPos)}</strong></span> <span class="mono text-cyan" style="font-size:10px;">(${modeText})</span></span>
+                <span class="mono accent-green" style="font-size: 12px; font-weight: 800;">${prog}%</span>
+              </div>
+              <div class="training-prog-track">
+                <div class="training-prog-fill" style="width: ${prog}%;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:6px;">
+                <span class="text-muted" style="font-size: 10px;">平日練習・試合出場で進行</span>
+                <button type="button" class="btn btn-secondary btn-sm btn-cancel-training" data-player-id="${p.id}" style="padding: 4px 10px; font-size: 11px; white-space: nowrap;">特訓中止</button>
+              </div>
+            </div>
           </div>
-          <div class="training-prog-track">
-            <div class="training-prog-fill" style="width: ${prog}%;"></div>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm btn-cancel-training" data-player-id="${p.id}" style="width: 100%; margin-top: 6px; padding: 4px 6px; font-size: 11px;">特訓中止</button>
         </div>
       `;
     } else if (upgradeCandidates.length > 0 || newSubCandidates.length > 0) {
@@ -9636,18 +9640,20 @@ function openPlayerProfileModal(playerId) {
       }
 
       trainingSectionHtml = `
-        <div class="profile-box-header" style="margin-top: 8px;">
-          <span class="profile-box-title">ポジショントレーニング</span>
-        </div>
-        <div class="profile-training-box">
-          <div class="training-select-row">
-            <select class="form-select form-select-sm training-pos-select" id="training-target-select-${p.id}" style="padding: 4px 8px; font-size: 11px; flex: 1; background: #1a222d; color: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
-              ${optionsHtml}
-            </select>
-            <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" style="padding: 4px 12px; font-size: 11px; white-space: nowrap;">特訓開始</button>
-          </div>
-          <div class="text-muted" style="font-size: 9.5px; margin-top: 4px; line-height: 1.35;">
-            ※ 日々の練習や公式戦出場を通じて、未習得ポジションの「薄適性」習得や「本適性」への昇格が可能です。
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">適性特訓</div>
+          <div class="ui-kv-content">
+            <div class="profile-training-box" style="margin-top: 0;">
+              <div class="training-select-row">
+                <select class="form-select form-select-sm training-pos-select" id="training-target-select-${p.id}" style="padding: 5px 8px; font-size: 11.5px; flex: 1; min-width: 0; background: #1a222d; color: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
+                  ${optionsHtml}
+                </select>
+                <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" style="padding: 5px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">特訓開始</button>
+              </div>
+              <div class="text-muted" style="font-size: 10px; margin-top: 5px; line-height: 1.35;">
+                ※ 練習や公式戦出場で、未習得ポジションの習得や本適性への昇格が可能
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -9800,9 +9806,9 @@ function openPlayerProfileModal(playerId) {
                 <div class="ui-kv-label accent-cyan-bar">適性配置</div>
                 <div class="ui-kv-content">
                   ${buildPlayerPitchProficiencyHtml(p)}
-                  ${trainingSectionHtml}
                 </div>
               </div>
+              ${trainingSectionHtml}
             </div>
           </div>
         </div>
