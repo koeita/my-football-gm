@@ -141,26 +141,31 @@ const COACHES_DATABASE = {
 // 初期資金：£32.0M〜£140.0M（32000〜140000 £K）、サポーター規模、目標順位に差を設定
 
 const CLUB_SHORT_CODES = {
-  manchester_b: 'MNC',
+  manchester_b: 'MCB',
   manchester_r: 'MNR',
-  liverpool_b: 'LIV',
-  northlondon_a: 'NLA',
-  london_fc: 'LON',
-  northlondon_w: 'NLW',
-  newcastle_u: 'NEW',
-  aston_v: 'AST',
-  brighton_g: 'BRI',
-  eastlondon_h: 'ELO',
-  southlondon_p: 'SLO',
-  westlondon_c: 'WLC',
-  westlondon_b: 'WLB',
-  midlands_w: 'MDL',
-  merseyside_b: 'MER',
-  southcoast_c: 'SCO',
-  nottingham_r: 'NOT',
-  leicester_f: 'LEI',
-  southampton_s: 'SOU',
-  ipswich_t: 'IPS'
+  liverpool_b: 'LVR',
+  northlondon_a: 'ASA',
+  london_fc: 'CHB',
+  northlondon_w: 'TTW',
+  newcastle_u: 'NCK',
+  aston_v: 'AVV',
+  brighton_g: 'BHG',
+  southlondon_p: 'CPP',
+  westlondon_c: 'FLW',
+  westlondon_b: 'BFB',
+  merseyside_b: 'EVB',
+  southcoast_c: 'BMC',
+  nottingham_r: 'NFR',
+  ipswich_t: 'IPB',
+  leeds_u: 'LDW',
+  sunderland_a: 'SLR',
+  coventry_c: 'CVS',
+  hull_c: 'HLY',
+  // 旧1部クラブ互換用
+  eastlondon_h: 'WHW',
+  midlands_w: 'WLG',
+  leicester_f: 'LCB',
+  southampton_s: 'SHR'
 };
 
 function getClubShortCode(clubOrId) {
@@ -188,26 +193,31 @@ function getClubShortCode(clubOrId) {
  * 欧州20クラブの固有エンブレム定義（形状・3色配色・伝統パターン・固有モチーフ・3文字コード）
  */
 const CLUB_EMBLEM_MAP = {
-  'manchester_b':  { shape: 'circle',       primaryColor: '#6ba4d9', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'ship',         code: 'MNC', symbol: 'MNC' },
+  'manchester_b':  { shape: 'circle',       primaryColor: '#6ba4d9', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'ship',         code: 'MCB', symbol: 'MCB' },
   'manchester_r':  { shape: 'crest',        primaryColor: '#da020e', secondaryColor: '#7a0912', accentColor: '#ffe500', pattern: 'split-vertical',    motif: 'trident',      code: 'MNR', symbol: 'MNR' },
-  'liverpool_b':   { shape: 'crown-shield', primaryColor: '#c8102e', secondaryColor: '#00b2a9', accentColor: '#f6eb61', pattern: 'solid',             motif: 'wings-flame',  code: 'LIV', symbol: 'LIV' },
-  'northlondon_a': { shape: 'crest',        primaryColor: '#ef0107', secondaryColor: '#ffffff', accentColor: '#db9b32', pattern: 'sleeve-split',      motif: 'cannon',       code: 'NLA', symbol: 'NLA' },
-  'london_fc':     { shape: 'circle',       primaryColor: '#034694', secondaryColor: '#ffffff', accentColor: '#dba111', pattern: 'ring',              motif: 'lion-stars',   code: 'LON', symbol: 'LON' },
-  'northlondon_w': { shape: 'hexagon',      primaryColor: '#f4f6f9', secondaryColor: '#132257', accentColor: '#9fb0c7', pattern: 'solid',             motif: 'spurs-tower',  code: 'NLW', symbol: 'NLW' },
-  'newcastle_u':   { shape: 'shield',       primaryColor: '#1a1d20', secondaryColor: '#ffffff', accentColor: '#d4af37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'NEW', symbol: 'NEW' },
-  'aston_v':       { shape: 'crest',        primaryColor: '#670e36', secondaryColor: '#95bfe5', accentColor: '#fee505', pattern: 'halves-horizontal', motif: 'crown-star',   code: 'AST', symbol: 'AST' },
-  'brighton_g':    { shape: 'circle',       primaryColor: '#0057b8', secondaryColor: '#ffffff', accentColor: '#ffcc00', pattern: 'stripes-vertical',  motif: 'seagull',      code: 'BRI', symbol: 'BRI' },
-  'eastlondon_h':  { shape: 'shield',       primaryColor: '#7a263a', secondaryColor: '#1bb1e7', accentColor: '#f3d459', pattern: 'chevron',           motif: 'hammers',      code: 'ELO', symbol: 'ELO' },
-  'southlondon_p': { shape: 'crest',        primaryColor: '#1b458f', secondaryColor: '#c4122e', accentColor: '#ffffff', pattern: 'stripes-vertical',  motif: 'eagle',        code: 'SLO', symbol: 'SLO' },
-  'westlondon_c':  { shape: 'shield',       primaryColor: '#ffffff', secondaryColor: '#181b20', accentColor: '#cc0000', pattern: 'split-vertical',    motif: 'cross-swords', code: 'WLC', symbol: 'WLC' },
-  'westlondon_b':  { shape: 'circle',       primaryColor: '#e30613', secondaryColor: '#ffffff', accentColor: '#181b20', pattern: 'quarters',          motif: 'honeycomb',    code: 'WLB', symbol: 'WLB' },
-  'midlands_w':    { shape: 'hexagon',      primaryColor: '#fdb913', secondaryColor: '#1e1b18', accentColor: '#ffffff', pattern: 'diagonal',          motif: 'wolf',         code: 'MDL', symbol: 'MDL' },
-  'merseyside_b':  { shape: 'crest-tall',   primaryColor: '#003399', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'sash-diagonal',     motif: 'tower-laurel', code: 'MER', symbol: 'MER' },
-  'southcoast_c':  { shape: 'shield',       primaryColor: '#da291c', secondaryColor: '#14171a', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'wave-star',    code: 'SCO', symbol: 'SCO' },
-  'nottingham_r':  { shape: 'circle',       primaryColor: '#dd0000', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'solid',             motif: 'tree-stars',   code: 'NOT', symbol: 'NOT' },
-  'leicester_f':   { shape: 'circle',       primaryColor: '#003090', secondaryColor: '#fdbe11', accentColor: '#ffffff', pattern: 'ring',              motif: 'cinquefoil',   code: 'LEI', symbol: 'LEI' },
-  'southampton_s': { shape: 'crown-shield', primaryColor: '#d71920', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'halo-wave',    code: 'SOU', symbol: 'SOU' },
-  'ipswich_t':     { shape: 'shield',       primaryColor: '#004494', secondaryColor: '#ffffff', accentColor: '#de2c37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'IPS', symbol: 'IPS' }
+  'liverpool_b':   { shape: 'crown-shield', primaryColor: '#c8102e', secondaryColor: '#00b2a9', accentColor: '#f6eb61', pattern: 'solid',             motif: 'wings-flame',  code: 'LVR', symbol: 'LVR' },
+  'northlondon_a': { shape: 'crest',        primaryColor: '#ef0107', secondaryColor: '#ffffff', accentColor: '#db9b32', pattern: 'sleeve-split',      motif: 'cannon',       code: 'ASA', symbol: 'ASA' },
+  'london_fc':     { shape: 'circle',       primaryColor: '#034694', secondaryColor: '#ffffff', accentColor: '#dba111', pattern: 'ring',              motif: 'lion-stars',   code: 'CHB', symbol: 'CHB' },
+  'northlondon_w': { shape: 'hexagon',      primaryColor: '#f4f6f9', secondaryColor: '#132257', accentColor: '#9fb0c7', pattern: 'solid',             motif: 'spurs-tower',  code: 'TTW', symbol: 'TTW' },
+  'newcastle_u':   { shape: 'shield',       primaryColor: '#1a1d20', secondaryColor: '#ffffff', accentColor: '#d4af37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'NCK', symbol: 'NCK' },
+  'aston_v':       { shape: 'crest',        primaryColor: '#670e36', secondaryColor: '#95bfe5', accentColor: '#fee505', pattern: 'halves-horizontal', motif: 'crown-star',   code: 'AVV', symbol: 'AVV' },
+  'brighton_g':    { shape: 'circle',       primaryColor: '#0057b8', secondaryColor: '#ffffff', accentColor: '#ffcc00', pattern: 'stripes-vertical',  motif: 'seagull',      code: 'BHG', symbol: 'BHG' },
+  'southlondon_p': { shape: 'crest',        primaryColor: '#1b458f', secondaryColor: '#c4122e', accentColor: '#ffffff', pattern: 'stripes-vertical',  motif: 'eagle',        code: 'CPP', symbol: 'CPP' },
+  'westlondon_c':  { shape: 'shield',       primaryColor: '#ffffff', secondaryColor: '#181b20', accentColor: '#cc0000', pattern: 'split-vertical',    motif: 'cross-swords', code: 'FLW', symbol: 'FLW' },
+  'westlondon_b':  { shape: 'circle',       primaryColor: '#e30613', secondaryColor: '#ffffff', accentColor: '#181b20', pattern: 'quarters',          motif: 'honeycomb',    code: 'BFB', symbol: 'BFB' },
+  'merseyside_b':  { shape: 'crest-tall',   primaryColor: '#003399', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'sash-diagonal',     motif: 'tower-laurel', code: 'EVB', symbol: 'EVB' },
+  'southcoast_c':  { shape: 'shield',       primaryColor: '#da291c', secondaryColor: '#14171a', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'wave-star',    code: 'BMC', symbol: 'BMC' },
+  'nottingham_r':  { shape: 'circle',       primaryColor: '#dd0000', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'solid',             motif: 'tree-stars',   code: 'NFR', symbol: 'NFR' },
+  'ipswich_t':     { shape: 'shield',       primaryColor: '#004494', secondaryColor: '#ffffff', accentColor: '#de2c37', pattern: 'stripes-vertical',  motif: 'castle',       code: 'IPB', symbol: 'IPB' },
+  'leeds_u':       { shape: 'crest',        primaryColor: '#ffffff', secondaryColor: '#1d428a', accentColor: '#ffcd00', pattern: 'split-vertical',    motif: 'crown-star',   code: 'LDW', symbol: 'LDW' },
+  'sunderland_a':  { shape: 'shield',       primaryColor: '#eb172b', secondaryColor: '#ffffff', accentColor: '#d4af37', pattern: 'stripes-vertical',  motif: 'ship',         code: 'SLR', symbol: 'SLR' },
+  'coventry_c':    { shape: 'circle',       primaryColor: '#00a3e0', secondaryColor: '#1d252c', accentColor: '#ffffff', pattern: 'halves-horizontal', motif: 'laurel',       code: 'CVS', symbol: 'CVS' },
+  'hull_c':        { shape: 'shield',       primaryColor: '#f7941d', secondaryColor: '#111111', accentColor: '#ffffff', pattern: 'stripes-vertical',  motif: 'star-1',       code: 'HLY', symbol: 'HLY' },
+  // 旧1部クラブ互換用
+  'eastlondon_h':  { shape: 'shield',       primaryColor: '#7a263a', secondaryColor: '#1bb1e7', accentColor: '#f3d459', pattern: 'chevron',           motif: 'hammers',      code: 'WHW', symbol: 'WHW' },
+  'midlands_w':    { shape: 'hexagon',      primaryColor: '#fdb913', secondaryColor: '#1e1b18', accentColor: '#ffffff', pattern: 'diagonal',          motif: 'wolf',         code: 'WLG', symbol: 'WLG' },
+  'leicester_f':   { shape: 'circle',       primaryColor: '#003090', secondaryColor: '#fdbe11', accentColor: '#ffffff', pattern: 'ring',              motif: 'cinquefoil',   code: 'LCB', symbol: 'LCB' },
+  'southampton_s': { shape: 'crown-shield', primaryColor: '#d71920', secondaryColor: '#ffffff', accentColor: '#f5c542', pattern: 'stripes-vertical',  motif: 'halo-wave',    code: 'SHR', symbol: 'SHR' }
 };
 
 let emblemSvgUidCounter = 0;
@@ -692,10 +702,10 @@ const CLUB_DEFINITIONS = [
   {
     id: 'manchester_b',
     emblem: CLUB_EMBLEM_MAP['manchester_b'],
-    name: 'マンチェスター・B',
+    name: 'マンチェスター B',
     category: 'title_ucl',
     tier: 'MEGA RICH',
-    desc: '潤沢なオイルマネーと世界屈指の戦力を誇る現王者',
+    desc: '潤沢な資金と世界屈指の戦力を誇る強豪クラブ',
     basePower: 76,
     initialFunds: 298000, // £298.0M
     supporters: 21500,
@@ -707,7 +717,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'manchester_r',
     emblem: CLUB_EMBLEM_MAP['manchester_r'],
-    name: 'マンチェスター・R',
+    name: 'マンチェスター R',
     category: 'title_ucl',
     tier: 'TRADITIONAL',
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
@@ -722,7 +732,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'liverpool_b',
     emblem: CLUB_EMBLEM_MAP['liverpool_b'],
-    name: 'リバプール・B',
+    name: 'リヴァプール R',
     category: 'title_ucl',
     tier: 'CONTENDER',
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
@@ -737,22 +747,22 @@ const CLUB_DEFINITIONS = [
   {
     id: 'northlondon_a',
     emblem: CLUB_EMBLEM_MAP['northlondon_a'],
-    name: 'ノースロンドン・A',
+    name: 'アーセナル A',
     category: 'title_ucl',
     tier: 'CONTENDER',
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
-    basePower: 74,
-    initialFunds: 278000, // £278.0M
-    supporters: 20000,
-    targetRank: 3,
-    targetLabel: '3位以内',
+    basePower: 75,
+    initialFunds: 282000, // £282.0M
+    supporters: 20500,
+    targetRank: 1,
+    targetLabel: '1位（優勝）',
     defaultTactic: 'possession',
     defaultFormation: '4-3-3'
   },
   {
     id: 'london_fc',
     emblem: CLUB_EMBLEM_MAP['london_fc'],
-    name: 'ロンドン・FC',
+    name: 'チェルシー B',
     category: 'title_ucl',
     tier: 'AMBITIOUS',
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
@@ -767,7 +777,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'northlondon_w',
     emblem: CLUB_EMBLEM_MAP['northlondon_w'],
-    name: 'ノースロンドン・W',
+    name: 'トッテナム W',
     category: 'title_ucl',
     tier: 'BIG CLUB',
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
@@ -782,7 +792,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'newcastle_u',
     emblem: CLUB_EMBLEM_MAP['newcastle_u'],
-    name: 'ニューカッスル・U',
+    name: 'ニューカッスル K',
     category: 'euro_race',
     tier: 'RISING FORCE',
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
@@ -797,7 +807,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'aston_v',
     emblem: CLUB_EMBLEM_MAP['aston_v'],
-    name: 'アストン・V',
+    name: 'アストンヴィラ V',
     category: 'euro_race',
     tier: 'CHALLENGER',
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
@@ -812,7 +822,7 @@ const CLUB_DEFINITIONS = [
   {
     id: 'brighton_g',
     emblem: CLUB_EMBLEM_MAP['brighton_g'],
-    name: 'ブライトン・G',
+    name: 'ブライトン G',
     category: 'euro_race',
     tier: 'SMART SCOUT',
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
@@ -825,166 +835,165 @@ const CLUB_DEFINITIONS = [
     defaultFormation: '3-4-3'
   },
   {
-    id: 'eastlondon_h',
-    emblem: CLUB_EMBLEM_MAP['eastlondon_h'],
-    name: 'イーストロンドン・H',
-    category: 'euro_race',
-    tier: 'MID TABLE',
-    desc: '労働者階級の熱い支持と堅守速攻を誇る東ロンドンの雄',
-    basePower: 66,
-    initialFunds: 147000, // £147.0M
-    supporters: 16500,
-    targetRank: 9,
-    targetLabel: '9位以内',
-    defaultTactic: 'counter',
-    defaultFormation: '4-2-3-1'
-  },
-
-  {
     id: 'southlondon_p',
     emblem: CLUB_EMBLEM_MAP['southlondon_p'],
-    name: 'サウスロンドン・P',
-    category: 'mid_table',
+    name: 'クリスタルパレス P',
+    category: 'euro_race',
     tier: 'MID TABLE',
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
-    basePower: 65,
-    initialFunds: 136000, // £136.0M
-    supporters: 14500,
-    targetRank: 10,
-    targetLabel: '10位以内',
+    basePower: 66,
+    initialFunds: 142000, // £142.0M
+    supporters: 14800,
+    targetRank: 9,
+    targetLabel: '9位以内',
     defaultTactic: 'wingplay',
     defaultFormation: '3-4-3'
   },
   {
     id: 'westlondon_c',
     emblem: CLUB_EMBLEM_MAP['westlondon_c'],
-    name: 'ウェストロンドン・C',
+    name: 'フラム W',
     category: 'mid_table',
     tier: 'MID TABLE',
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
     basePower: 65,
     initialFunds: 131000, // £131.0M
     supporters: 14000,
-    targetRank: 12,
-    targetLabel: '12位以内',
+    targetRank: 11,
+    targetLabel: '11位以内',
     defaultTactic: 'wingplay',
     defaultFormation: '4-2-3-1'
   },
   {
     id: 'westlondon_b',
     emblem: CLUB_EMBLEM_MAP['westlondon_b'],
-    name: 'ウェストロンドン・B',
+    name: 'ブレントフォード B',
     category: 'mid_table',
     tier: 'MONEYBALL',
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
     basePower: 64,
     initialFunds: 127000, // £127.0M
     supporters: 13200,
-    targetRank: 13,
-    targetLabel: '13位以内',
+    targetRank: 12,
+    targetLabel: '12位以内',
     defaultTactic: 'gegenpress',
     defaultFormation: '3-5-2'
   },
   {
-    id: 'midlands_w',
-    emblem: CLUB_EMBLEM_MAP['midlands_w'],
-    name: 'ミッドランズ・W',
-    category: 'mid_table',
-    tier: 'MID TABLE',
-    desc: 'イベリア半島出身の技巧派選手を数多く擁する中部の実力派',
-    basePower: 64,
-    initialFunds: 127000, // £127.0M
-    supporters: 13800,
-    targetRank: 13,
-    targetLabel: '13位以内',
-    defaultTactic: 'counter',
-    defaultFormation: '5-3-2'
-  },
-  {
     id: 'merseyside_b',
     emblem: CLUB_EMBLEM_MAP['merseyside_b'],
-    name: 'マージーサイド・B',
+    name: 'エヴァートン B',
     category: 'mid_table',
     tier: 'TRADITIONAL',
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
-    basePower: 63,
-    initialFunds: 126000, // £126.0M
-    supporters: 15200,
-    targetRank: 14,
-    targetLabel: '14位以内',
+    basePower: 64,
+    initialFunds: 128000, // £128.0M
+    supporters: 15500,
+    targetRank: 13,
+    targetLabel: '13位以内',
     defaultTactic: 'parkthebus',
     defaultFormation: '4-4-2'
   },
   {
     id: 'southcoast_c',
     emblem: CLUB_EMBLEM_MAP['southcoast_c'],
-    name: 'サウスコースト・C',
+    name: 'ボーンマス C',
     category: 'mid_table',
     tier: 'CHALLENGER',
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
     basePower: 63,
-    initialFunds: 121000, // £121.0M
+    initialFunds: 122000, // £122.0M
     supporters: 12500,
-    targetRank: 15,
-    targetLabel: '15位以内',
+    targetRank: 14,
+    targetLabel: '14位以内',
     defaultTactic: 'gegenpress',
     defaultFormation: '4-3-1-2'
   },
   {
     id: 'nottingham_r',
     emblem: CLUB_EMBLEM_MAP['nottingham_r'],
-    name: 'ノッティンガム・R',
-    category: 'relegation',
+    name: 'ノッティンガム R',
+    category: 'mid_table',
     tier: 'HISTORIC',
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
-    basePower: 62,
-    initialFunds: 115000, // £115.0M
-    supporters: 13500,
-    targetRank: 16,
-    targetLabel: '16位以内',
+    basePower: 63,
+    initialFunds: 121000, // £121.0M
+    supporters: 13800,
+    targetRank: 15,
+    targetLabel: '15位以内',
     defaultTactic: 'counter',
     defaultFormation: '5-3-2'
   },
   {
-    id: 'leicester_f',
-    emblem: CLUB_EMBLEM_MAP['leicester_f'],
-    name: 'レスター・F',
+    id: 'leeds_u',
+    emblem: CLUB_EMBLEM_MAP['leeds_u'],
+    name: 'リーズ W',
+    category: 'mid_table',
+    tier: 'TRADITIONAL',
+    desc: '熱狂的なサポーターと運動量豊富なサッカーで1部へ定着した北部の名門',
+    basePower: 62,
+    initialFunds: 118000, // £118.0M
+    supporters: 15000,
+    targetRank: 15,
+    targetLabel: '15位以内',
+    defaultTactic: 'gegenpress',
+    defaultFormation: '4-2-3-1'
+  },
+  {
+    id: 'sunderland_a',
+    emblem: CLUB_EMBLEM_MAP['sunderland_a'],
+    name: 'サンダーランド R',
     category: 'relegation',
-    tier: 'MIRACLE',
-    desc: '奇跡のリーグ制覇の記憶を胸に再び上位定着を目指すフォックス',
+    tier: 'HISTORIC',
+    desc: '巨大なスタジアムと熱い地元の声援を背に1部で戦う北東部の古豪',
     basePower: 61,
-    initialFunds: 110000, // £110.0M
-    supporters: 13200,
+    initialFunds: 108000, // £108.0M
+    supporters: 14200,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'counter',
-    defaultFormation: '4-3-1-2'
-  },
-  {
-    id: 'southampton_s',
-    emblem: CLUB_EMBLEM_MAP['southampton_s'],
-    name: 'サウサンプトン・S',
-    category: 'relegation',
-    tier: 'ACADEMY',
-    desc: '数々の名選手を輩出してきた南部屈指の育成型クラブ',
-    basePower: 60,
-    initialFunds: 99000, // £99.0M
-    supporters: 12200,
-    targetRank: 17,
-    targetLabel: '17位以内（残留）',
-    defaultTactic: 'possession',
-    defaultFormation: '4-1-2-3'
+    defaultFormation: '4-4-2'
   },
   {
     id: 'ipswich_t',
     emblem: CLUB_EMBLEM_MAP['ipswich_t'],
-    name: 'イプスウィッチ・T',
+    name: 'イプスウィッチ B',
     category: 'relegation',
     tier: 'PROMOTED',
-    desc: '連続昇格の勢いと組織力でプレミア残留に挑む東部の古豪',
+    desc: '組織力と攻撃的なスタイルで1部残留に挑む東部の昇格組',
+    basePower: 60,
+    initialFunds: 99000, // £99.0M
+    supporters: 11800,
+    targetRank: 17,
+    targetLabel: '17位以内（残留）',
+    defaultTactic: 'possession',
+    defaultFormation: '4-2-3-1'
+  },
+  {
+    id: 'coventry_c',
+    emblem: CLUB_EMBLEM_MAP['coventry_c'],
+    name: 'コヴェントリー S',
+    category: 'relegation',
+    tier: 'PROMOTED',
+    desc: '粘り強い戦いで2部から這い上がり1部の舞台へ戻ってきた中部の古豪',
+    basePower: 59,
+    initialFunds: 95000, // £95.0M
+    supporters: 11400,
+    targetRank: 17,
+    targetLabel: '17位以内（残留）',
+    defaultTactic: 'counter',
+    defaultFormation: '3-5-2'
+  },
+  {
+    id: 'hull_c',
+    emblem: CLUB_EMBLEM_MAP['hull_c'],
+    name: 'ハル Y',
+    category: 'relegation',
+    tier: 'PROMOTED',
+    desc: '堅実な守備とカウンターを武器に大舞台での生き残りを懸ける挑戦者',
     basePower: 59,
     initialFunds: 94000, // £94.0M
-    supporters: 11500,
+    supporters: 11000,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'parkthebus',
@@ -995,17 +1004,17 @@ const CLUB_DEFINITIONS = [
 // 他国（スペイン、ドイツ、イタリア、フランス）の主要メガクラブ（欧州強豪データとして内部保持）
 const EUROPEAN_MEGA_CLUBS = [
   { id: 'madrid',
-    emblem: CLUB_EMBLEM_MAP['madrid'], name: 'マドリード・ブランコス', country: 'スペイン', basePower: 75, budget: 120000 },
+    emblem: CLUB_EMBLEM_MAP['madrid'], name: 'レアルマドリード W', country: 'スペイン', basePower: 75, budget: 120000 },
   { id: 'barcelona',
-    emblem: CLUB_EMBLEM_MAP['barcelona'], name: 'バルセロナ・カタルーニャ', country: 'スペイン', basePower: 73, budget: 95000 },
+    emblem: CLUB_EMBLEM_MAP['barcelona'], name: 'バルセロナ G', country: 'スペイン', basePower: 73, budget: 95000 },
   { id: 'munich',
-    emblem: CLUB_EMBLEM_MAP['munich'], name: 'ミュンヘン・バヴァリア', country: 'ドイツ', basePower: 74, budget: 105000 },
+    emblem: CLUB_EMBLEM_MAP['munich'], name: 'バイエルン R', country: 'ドイツ', basePower: 74, budget: 105000 },
   { id: 'milano',
-    emblem: CLUB_EMBLEM_MAP['milano'], name: 'ミラノ・ロッソネリ', country: 'イタリア', basePower: 71, budget: 82000 },
+    emblem: CLUB_EMBLEM_MAP['milano'], name: 'ミラン R', country: 'イタリア', basePower: 71, budget: 82000 },
   { id: 'torino',
-    emblem: CLUB_EMBLEM_MAP['torino'], name: 'トリノ・ビアンコネリ', country: 'イタリア', basePower: 71, budget: 85000 },
+    emblem: CLUB_EMBLEM_MAP['torino'], name: 'ユヴェントス W', country: 'イタリア', basePower: 71, budget: 85000 },
   { id: 'paris',
-    emblem: CLUB_EMBLEM_MAP['paris'], name: 'パリ・メトロポリタン', country: 'フランス', basePower: 73, budget: 115000 }
+    emblem: CLUB_EMBLEM_MAP['paris'], name: 'パリ B', country: 'フランス', basePower: 73, budget: 115000 }
 ];
 
 // 12ポジション定義とカテゴリ分類
