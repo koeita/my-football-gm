@@ -501,7 +501,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
-    const finalBonusText = (roundNum === 3 && userWon) ? ' 🏆 WCTトロフィー獲得！' : '';
+    const finalBonusText = (roundNum === 3 && userWon) ? ' WCTトロフィー獲得！' : '';
     const emitPreseasonPostMatchLogAndToast = () => {
       addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
       if (typeof showToast === 'function') {
@@ -2512,7 +2512,7 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       club: homeClub,
       actor: g.scorer,
       assister: g.assister || null,
-      text: `⚽ GOAL!! ${homeClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がネットを揺らす！${assistText}`
+      text: `GOAL!! ${homeClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がネットを揺らす！${assistText}`
     };
     byMinute[min] = ev;
     highlights.push(ev);
@@ -2530,7 +2530,7 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       club: awayClub,
       actor: g.scorer,
       assister: g.assister || null,
-      text: `⚽ GOAL!! ${awayClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がゴールを決めた！${assistText}`
+      text: `GOAL!! ${awayClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がゴールを決めた！${assistText}`
     };
     byMinute[min] = ev;
     highlights.push(ev);
@@ -2560,8 +2560,8 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       actor: shooter,
       keeper: awayGk,
       text: isSave
-        ? `🧤 SUPER SAVE! ${homeClub.name} ${fmtNum(shooter)}${shooter.name} の鋭いシュートをGK ${awayGk.name} が好セーブ！`
-        : `⚡ 惜しい！ ${homeClub.name} ${fmtNum(shooter)}${shooter.name} のミドルシュートはわずかに枠の外！`
+        ? `SUPER SAVE! ${homeClub.name} ${fmtNum(shooter)}${shooter.name} の鋭いシュートをGK ${awayGk.name} が好セーブ！`
+        : `惜しい！ ${homeClub.name} ${fmtNum(shooter)}${shooter.name} のミドルシュートはわずかに枠の外！`
     };
     byMinute[min] = ev;
     if (isSave) subHighlights.push(ev);
@@ -2581,8 +2581,8 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       actor: shooter,
       keeper: homeGk,
       text: isSave
-        ? `🧤 ナイスセーブ！ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} の決定機をGK ${fmtNum(homeGk)}${homeGk.name} が阻止！`
-        : `⚡ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} がペナルティエリア内から狙うも枠を捉えきれず！`
+        ? `ナイスセーブ！ ${awayClub.name} ${fmtNum(shooter)}${shooter.name} の決定機をGK ${fmtNum(homeGk)}${homeGk.name} が阻止！`
+        : `${awayClub.name} ${fmtNum(shooter)}${shooter.name} がペナルティエリア内から狙うも枠を捉えきれず！`
     };
     byMinute[min] = ev;
     if (isSave) subHighlights.push(ev);
@@ -2601,7 +2601,7 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       side: isHome ? 'home' : 'away',
       club: isHome ? homeClub : awayClub,
       actor: rc.player,
-      text: `🟥 RED CARD!! ${cName} ${fmtNum(rc.player)}${rc.player.name} が一発退場！残りを10人で戦う厳しい展開！`
+      text: `RED CARD!! ${cName} ${fmtNum(rc.player)}${rc.player.name} が一発退場！残りを10人で戦う厳しい展開！`
     };
     byMinute[min] = ev;
     highlights.push(ev);
@@ -2620,7 +2620,7 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       side: sub.side,
       club: sub.club,
       actor: sub.inPlayer,
-      text: `🔄 選手交代 [${sub.club.name}] OUT ${fmtNum(sub.outPlayer)}${sub.outPlayer.name} ➔ IN ${fmtNum(sub.inPlayer)}${sub.inPlayer.name}`
+      text: `選手交代 [${sub.club.name}] OUT ${fmtNum(sub.outPlayer)}${sub.outPlayer.name} ➔ IN ${fmtNum(sub.inPlayer)}${sub.inPlayer.name}`
     };
     byMinute[min] = ev;
   });
@@ -2823,7 +2823,7 @@ function showMatchPitchPopup(ev) {
   const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
   const targetClub = isGoal ? ev.club : (keeperClub || ev.club);
   const playerPrefix = isPlayerSuccess ? '【自チーム】' : '【相手チーム】';
-  const badgeText = isGoal ? `⚽ GOAL!! (${ev.minute}')` : `🧤 SUPER SAVE! (${ev.minute}')`;
+  const badgeText = isGoal ? `GOAL!! (${ev.minute}')` : `SUPER SAVE! (${ev.minute}')`;
   const subText = isGoal
     ? `${playerPrefix} ${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
     : `${playerPrefix} GK ${targetPlayer ? targetPlayer.name : ''}（${targetClub ? targetClub.name : ''}）が決定機を阻止！`;
@@ -3103,10 +3103,10 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       else if (numRat < 6.0) ratClass = 'summary-rat-low';
 
       let eventBadges = '';
-      if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">⚽${goalsCount > 1 ? goalsCount : ''}</span>`;
-      if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">🅰️${assistsCount > 1 ? assistsCount : ''}</span>`;
+      if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">${goalsCount > 1 ? goalsCount : ''}G</span>`;
+      if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">${assistsCount > 1 ? assistsCount : ''}A</span>`;
 
-      const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="★ MAN OF THE MATCH">👑</span>' : '';
+      const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="MAN OF THE MATCH">MOM</span>' : '';
       const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">IN ${inMinute || 68}' (${playedMins}分)</span>` : '';
 
       return `
@@ -3204,11 +3204,11 @@ function buildMatchSummaryHtml(md) {
   }
 
   const homeScorersHtml = homeScorers.length > 0
-    ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
+    ? homeScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
     : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
 
   const awayScorersHtml = awayScorers.length > 0
-    ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">⚽ ${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
+    ? awayScorers.slice().sort((a, b) => a.minute - b.minute).map(s => `<div class="scorer-item">${s.minute}' ${s.scorer ? s.scorer.name : (s.name || '得点')}</div>`).join('')
     : '<div class="scorer-item" style="color:var(--text-muted);">-</div>';
 
   // 枠内シュート数・xG・パス数の取得または算出（必ず スコア <= 枠内シュート <= 総シュート数 を保証）
@@ -3245,7 +3245,7 @@ function buildMatchSummaryHtml(md) {
   } else {
     if (homeScorers.length > 0 || awayScorers.length > 0) {
       const allScorers = [...homeScorers.map(s => ({ ...s, club: homeClub })), ...awayScorers.map(s => ({ ...s, club: awayClub }))].sort((a,b) => a.minute - b.minute);
-      highlightsHtml = allScorers.slice(0, 3).map(s => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:26px;">[${s.minute}']</span><span>⚽ GOAL!! ${s.club.name} ${s.scorer ? s.scorer.name : (s.name || '')} が鮮やかなゴールを記録！</span></div>`).join('');
+      highlightsHtml = allScorers.slice(0, 3).map(s => `<div class="summary-highlight-item"><span class="mono" style="color:#f1c40f;font-weight:700;min-width:26px;">[${s.minute}']</span><span>GOAL!! ${s.club.name} ${s.scorer ? s.scorer.name : (s.name || '')} が鮮やかなゴールを記録！</span></div>`).join('');
     } else {
       highlightsHtml = `<div class="summary-highlight-item" style="color:var(--text-muted);">両チーム堅い守備で決定機を許さずタイムアップ。</div>`;
     }

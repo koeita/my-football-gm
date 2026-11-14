@@ -1457,21 +1457,6 @@ const NATIONALITIES = [
   'Croatia', 'Japan'
 ];
 
-const NATIONALITY_FLAG_MAP = {
-  England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-  France: '🇫🇷',
-  Spain: '🇪🇸',
-  Germany: '🇩🇪',
-  Italy: '🇮🇹',
-  Netherlands: '🇳🇱',
-  Portugal: '🇵🇹',
-  Brazil: '🇧🇷',
-  Argentina: '🇦🇷',
-  Belgium: '🇧🇪',
-  Croatia: '🇭🇷',
-  Japan: '🇯🇵'
-};
-
 /**
  * Windows等のPC環境でも確実に美しい国旗を描画するためのインラインSVG国旗マップ（比率3:2）
  */
@@ -1490,12 +1475,10 @@ const NATIONALITY_FLAG_SVG = {
   Japan: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><circle cx="9" cy="6" r="3.2" fill="#bc002d"/></svg>'
 };
 
+const NATIONALITY_FLAG_FALLBACK_SVG = '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#2b3137"/><circle cx="9" cy="6" r="4.2" fill="none" stroke="#8b949e" stroke-width="0.9"/><ellipse cx="9" cy="6" rx="2" ry="4.2" fill="none" stroke="#8b949e" stroke-width="0.7"/><line x1="4.8" y1="6" x2="13.2" y2="6" stroke="#8b949e" stroke-width="0.7"/></svg>';
+
 function getNationalityFlagHtml(nat) {
-  if (NATIONALITY_FLAG_SVG[nat]) {
-    return NATIONALITY_FLAG_SVG[nat];
-  }
-  const flagEmoji = NATIONALITY_FLAG_MAP[nat] || '🌍';
-  return `<span class="profile-flag-fallback">${flagEmoji}</span>`;
+  return NATIONALITY_FLAG_SVG[nat] || NATIONALITY_FLAG_FALLBACK_SVG;
 }
 
 // メイン適性に応じたサブ適性（secondaryPositions）候補プール

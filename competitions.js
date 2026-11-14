@@ -1318,7 +1318,7 @@ function finalizeCupMatch(compType, roundKey, match, userWon, homeScore, awaySco
     if (userWon && pClub) {
       pClub.funds = (pClub.funds || 0) + (comp.prizeMoney || 0);
       if (typeof addDailyLog === 'function') {
-        addDailyLog(`🏆【祝！${comp.name} 優勝】賞金 £${((comp.prizeMoney || 0) / 1000).toFixed(1)}M をクラブ資金に獲得しました！`);
+        addDailyLog(`【祝！${comp.name} 優勝】賞金 £${((comp.prizeMoney || 0) / 1000).toFixed(1)}M をクラブ資金に獲得しました！`);
       }
     }
   }

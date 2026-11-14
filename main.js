@@ -920,7 +920,7 @@ function advanceCalendarDay(skipRender = false) {
   }
   if (nextDay.isTransferDeadline && !gameState.pendingDeadlineOffer) {
     gameState.pendingDeadlineOffer = true;
-    addDailyLog('⏰【デッドラインデイ】本日は移籍市場最終日！駆け込みオファーや交渉が活発化しています。');
+    addDailyLog('【デッドラインデイ】本日は移籍市場最終日！駆け込みオファーや交渉が活発化しています。');
     eventTriggered = true;
   } else if (!nextDay.isTransferDeadline) {
     gameState.pendingDeadlineOffer = false;
@@ -1072,7 +1072,7 @@ function renderWeeklySchedule() {
     } else if (day.isTransferDeadline) {
       eventHtml = `<span class="day-event-badge day-event-market">市場最終日</span>`;
     } else if (day.isIntlBreak || (day.month === 9 && day.day >= 4 && day.day <= 8) || (day.month === 10 && day.day >= 9 && day.day <= 13) || (day.month === 11 && day.day >= 13 && day.day <= 17) || (day.month === 3 && day.day >= 19 && day.day <= 24)) {
-      eventHtml = `<span class="day-event-badge day-event-intl">🌍 代表ウィーク</span>`;
+      eventHtml = `<span class="day-event-badge day-event-intl">代表ウィーク</span>`;
     } else if (day.windowOpen) {
       eventHtml = `<span class="day-event-market">移籍交渉期間</span>`;
     } else if (day.eventType === 'recovery') {
@@ -1559,11 +1559,11 @@ function showTacticInfoPopup(tacticKey) {
   const bodyHtml = `
     <div class="info-popup-section">
       <div class="info-popup-meta-row">
-        <span class="info-popup-label">🎯 狙い</span>
+        <span class="info-popup-label">狙い</span>
         <p class="info-popup-desc-text" style="margin: 4px 0 0; color: var(--text-main); font-weight: 500;">${def.aim}</p>
       </div>
       <div class="info-popup-meta-row" style="margin-top: 12px;">
-        <span class="info-popup-label">⚡ 効果</span>
+        <span class="info-popup-label">効果</span>
         <p class="info-popup-desc-text" style="margin: 4px 0 0; color: var(--accent-green); font-weight: 500;">${def.effect}</p>
       </div>
     </div>
@@ -1863,7 +1863,7 @@ function processSeasonEnd(isSkipped = false) {
   } else if (promoRelResult && promoRelResult.isPlayerPromoted) {
     showGmModal({
       category: 'BOARD OF DIRECTORS / PROMOTION ACHIEVED',
-      title: '🏆【祝・1部昇格達成】ファーストディビジョン（ENG-D1）への復帰決定！',
+      title: '【祝・1部昇格達成】ファーストディビジョン（ENG-D1）への復帰決定！',
       description: `見事セカンドディビジョン（ENG-D2）を ${playerRank}位 で勝ち抜き、来季からのイングランド・ファーストディビジョン（ENG-D1）昇格が決定しました！理事会およびサポーターはあなたの手腕を高く称賛しています。`,
       detailHtml: `昇格クラブ: ${promoRelResult.promoted.join('、')}<br>降格クラブ: ${promoRelResult.relegated.join('、')}`,
       actions: [
@@ -2131,7 +2131,7 @@ function triggerPreContractDepartures() {
   target.contractRefused = true; // 今季中のこれ以上の更新は不可に
   gameState.hasPreContractDepartureThisSeason = true;
 
-  addDailyLog(`🚨【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClub} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
+  addDailyLog(`【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClub} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
   if (typeof showToast === 'function') {
     showToast(`【事前合意流出】${target.name}が来季${foreignClub}へのフリー移籍に事前合意しました`);
   }
@@ -4794,7 +4794,7 @@ function startNextSeason() {
   // 2. レンタル放出（レンタル）選手の成長復帰
   playerClub.players.forEach(p => {
     if (p.loanStatus && p.loanStatus.isLoanOut) {
-      addDailyLog(`🎉【レンタルから頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間のレンタル期間を終え、実力を高めてチームへ合流しました！`);
+      addDailyLog(`【レンタルから頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間のレンタル期間を終え、実力を高めてチームへ合流しました！`);
       p.loanStatus = null;
       p.isLoanListed = false;
     }
@@ -4897,7 +4897,7 @@ function startNextSeason() {
       p.slotIndex = null;
       if (!playerClub.players.some(existing => existing.id === p.id) && playerClub.players.length < MAX_SQUAD_SIZE) {
         playerClub.players.push(p);
-        addDailyLog(`🎉【事前合意新戦力合流】内定していた ${p.pos} #${p.squadNumber} ${p.name} が来季契約に基づき正式合流しました！（契約${p.contractYears}年 / 週給${formatWage(p.wage)}）`);
+        addDailyLog(`【事前合意新戦力合流】内定していた ${p.pos} #${p.squadNumber} ${p.name} が来季契約に基づき正式合流しました！（契約${p.contractYears}年 / 週給${formatWage(p.wage)}）`);
       }
     });
     gameState.preContractPlayers = [];
@@ -6933,7 +6933,7 @@ function renderRoster() {
         const msgs = [];
         if (natEval.excessSenior > 0) msgs.push(`22歳以上シニア登録上限（${natEval.maxSenior}名）を ${natEval.excessSenior}名 超過`);
         if (natEval.excessNonHg > 0) msgs.push(`非HG（外国籍）上限（${natEval.maxNonHg}名）を ${natEval.excessNonHg}名 超過`);
-        warnBannerEl.innerHTML = `⚠️ <strong>登録ルール警告</strong>：${msgs.join(' ／ ')}。ペナルティにより公式戦ベンチ入り上限が <strong>${natEval.effectiveMaxBench}名</strong>（通常9名）に制限されています（21歳以下は免除）。`;
+        warnBannerEl.innerHTML = `<strong>登録ルール警告</strong>：${msgs.join(' ／ ')}。ペナルティにより公式戦ベンチ入り上限が <strong>${natEval.effectiveMaxBench}名</strong>（通常9名）に制限されています（21歳以下は免除）。`;
         warnBannerEl.classList.remove('hidden');
       } else {
         warnBannerEl.innerHTML = '';
@@ -7976,7 +7976,7 @@ function renderYouthScoutingPanel() {
         return `
           <div class="youth-scout-task-row">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; flex-wrap:wrap;" class="mono">
-              <span>🔍 <strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
+              <span><strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
               <div style="display:flex; align-items:center; gap:8px;">
                 <span class="accent-green">次回報告: ${nextRep}日後 (報告済:${repCnt}回)</span>
                 <span class="accent-gold">残${t.daysRemaining}日</span>
@@ -7997,7 +7997,7 @@ function renderYouthScoutingPanel() {
     : `<div class="youth-reports-grid">${reports.map(y => {
         const ovr = getPlayerOverallRating(y);
         const nat = y.nationality || 'England';
-        const flag = (typeof NATIONALITY_FLAG_MAP !== 'undefined' && NATIONALITY_FLAG_MAP[nat]) || '🌍';
+        const flag = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(nat) : '';
         const traits = Array.isArray(y.traits) ? y.traits.slice(0, 2) : [];
         return `
           <div class="youth-report-card">
@@ -8517,7 +8517,7 @@ function renderFacilitiesAndYouth() {
       const ovr = getPlayerOverallRating(y);
       const growthLabel = getGrowthCurveLabel(y.growthCurve);
       const rawNat = y.nationality || 'England';
-      const flagEmoji = NATIONALITY_FLAG_MAP[rawNat] || '🌍';
+      const flagEmoji = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
       const traits = Array.isArray(y.traits) ? y.traits : [];
 
       return `
@@ -13895,7 +13895,7 @@ function renderMonthCalendar() {
     } else if (d.month === 1 && d.day === 1) {
       eventTagHtml = '<div class="cal-event-tag" title="冬の移籍市場解禁">冬市場解禁</div>';
     } else if (isIntlDay) {
-      eventTagHtml = '<div class="cal-event-tag cal-event-intl" title="代表ウィーク（代表招集期間・公式戦休止）">🌍 代表戦</div>';
+      eventTagHtml = '<div class="cal-event-tag cal-event-intl" title="代表ウィーク（代表招集期間・公式戦休止）">代表戦</div>';
     }
 
     if (d.isCupMatchDay) {
@@ -14383,7 +14383,7 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
         pointsDeductedThisSeason: psrEval.pointsDeduction
       };
       if (club.isPlayer && typeof addDailyLog === 'function') {
-        addDailyLog(`⚠️【PSR違反処分】過去3季の累積赤字が上限を超過したため、来季開幕時勝点-${psrEval.pointsDeduction}pt ＆ 次ウィンドウ補強禁止が科されました！`);
+        addDailyLog(`【PSR違反処分】過去3季の累積赤字が上限を超過したため、来季開幕時勝点-${psrEval.pointsDeduction}pt ＆ 次ウィンドウ補強禁止が科されました！`);
       }
     } else if (club.psrSanction && club.psrSanction.transferBanWindows > 0) {
       club.psrSanction.transferBanWindows = Math.max(0, club.psrSanction.transferBanWindows - 1);
@@ -14416,7 +14416,7 @@ function processInternationalBreakEvent(day) {
       }
     }
     if (called.length > 0 && typeof addDailyLog === 'function') {
-      addDailyLog(`🌍【代表ウィーク突入】自クラブから ${called.slice(0, 5).join(', ')}${called.length > 5 ? ` 他${called.length - 5}名` : ''} が各国代表に招集されました。`);
+      addDailyLog(`【代表ウィーク突入】自クラブから ${called.slice(0, 5).join(', ')}${called.length > 5 ? ` 他${called.length - 5}名` : ''} が各国代表に招集されました。`);
     }
     return called.length > 0;
   }
@@ -14439,7 +14439,7 @@ function processInternationalBreakEvent(day) {
       }
     }
     if (returned.length > 0 && typeof addDailyLog === 'function') {
-      addDailyLog(`✈️【代表ウィーク終了】代表組 ${returned.length}名がクラブへ帰還しました。${injuredNames.length > 0 ? `負傷帰還: ${injuredNames.join(', ')}` : '全員無事に合流しています。'}`);
+      addDailyLog(`【代表ウィーク終了】代表組 ${returned.length}名がクラブへ帰還しました。${injuredNames.length > 0 ? `負傷帰還: ${injuredNames.join(', ')}` : '全員無事に合流しています。'}`);
     }
     return returned.length > 0;
   }
@@ -14508,7 +14508,7 @@ function handleBoardRelegationRestart(newClubId) {
   gameState.playerDivision = (nextClub.division === 'd2' || nextClub.tier === 'D2') ? 'd2' : 'd1';
   nextClub.boardConfidence = 75;
   gameState.pendingBoardCrisis = false;
-  addDailyLog(`🔄【新天地就任】${nextClub.name} の新GMに就任し、クラブ再建の指揮を執ることになりました！`);
+  addDailyLog(`【新天地就任】${nextClub.name} の新GMに就任し、クラブ再建の指揮を執ることになりました！`);
   showToast(`${nextClub.name} のGMに就任しました！`, 'info');
   markAllViewsDirty();
   renderAll();
