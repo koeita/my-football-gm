@@ -16177,7 +16177,7 @@ body {
   margin-bottom: 6px;
 }
 
-.ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; font-weight: 900; line-height: 1; padding: 0; font-variant-numeric: tabular-nums; white-space: nowrap; background: none !important; border: none !important; box-shadow: none !important; }
+.ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: inherit; font-weight: 800; line-height: 1; padding: 0; font-variant-numeric: tabular-nums; white-space: nowrap; background: none !important; border: none !important; box-shadow: none !important; }
 .ovr-tier-elite { color: #7dd3fc; background: none; border: none; box-shadow: none; }
 .ovr-tier-high  { color: #34d399; background: none; border: none; box-shadow: none; }
 .ovr-tier-mid   { color: #fbbf24; background: none; border: none; box-shadow: none; }

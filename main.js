@@ -7884,8 +7884,8 @@ function renderMarket() {
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num">${scoutView.isScouted
-          ? `<span class="mono ${getOvrTextClass(getPlayerOverallRating(p))}" style="font-size:14px;">${scoutView.ovrDisplay}</span>`
-          : `<span class="mono" style="font-size:13px;white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
+          ? `<span class="${getOvrTextClass(getPlayerOverallRating(p))}">${scoutView.ovrDisplay}</span>`
+          : `<span style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
         <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
         <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
