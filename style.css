@@ -7904,10 +7904,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .player-avatar.avatar-sm { width: 32px; height: 32px; }
 .player-avatar.avatar-md { width: 38px; height: 38px; }
 
-/* 1. 作戦ボード（ピッチ上ノード）：アバター直径36px〜40px ＋ 横に潰れない整列レイアウト */
+/* 1. 作戦ボード（ピッチ上ノード）：アバター直径36px〜40px ＋ 固定サイズ整列レイアウト */
 .pitch-node {
-  min-width: 134px;
+  width: 152px;
+  min-width: 152px;
   max-width: 152px;
+  height: 60px;
+  box-sizing: border-box;
   padding: 5px 8px;
   display: flex;
   flex-direction: row;
@@ -7961,13 +7964,21 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   gap: 4px;
 }
 
-.pitch-node-name-btn {
+.pitch-node-name-btn,
+.pitch-node-name-btn.clickable-player-name {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   text-align: left;
+  width: 100%;
   max-width: 100%;
-  padding: 0;
+  padding: 0 0 1px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  text-decoration: none;
+}
+
+.pitch-node-name-btn.clickable-player-name:hover {
+  border-bottom-color: var(--accent-green);
 }
 
 .pitch-node-name-text {
@@ -7981,10 +7992,25 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .pitch-node-meta {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
   gap: 3px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pitch-node-meta .pitch-node-pref {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.pitch-node-meta > :not(.pitch-node-pref) {
+  flex-shrink: 0;
 }
 
 /* 3. 所属選手一覧・各種テーブル：アバター直径30px〜34px ＋ 行高の自然な整列 */
@@ -8031,6 +8057,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     overflow: visible !important;
     flex-direction: column !important;
     align-items: center !important;
+    width: auto !important;
+    height: auto !important;
     min-width: 60px !important;
     max-width: 70px !important;
     padding: 2px 3px 3px !important;
