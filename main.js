@@ -6862,15 +6862,16 @@ function renderTacticalBoard() {
  * 作戦ボード上で名前が見切れている選手カードのみ、左方向へ往復スクロールさせる
  */
 function applyPitchNodeNameMarquee() {
-  const btns = document.querySelectorAll('#tactical-pitch .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
+  const btns = document.querySelectorAll('#pitch-nodes-layer .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
   btns.forEach(btn => {
     const textEl = btn.querySelector('.pitch-node-name-text');
     if (!textEl) return;
     btn.classList.remove('is-marquee');
     btn.style.removeProperty('--marquee-dist');
     btn.style.removeProperty('--marquee-dur');
-    if (btn.clientWidth <= 0) return;
-    const overflow = textEl.scrollWidth - btn.clientWidth;
+    const boxW = btn.clientWidth;
+    if (boxW <= 0) return;
+    const overflow = textEl.scrollWidth - boxW;
     if (overflow > 2) {
       const dist = Math.ceil(overflow + 4);
       const dur = Math.max(4.5, Math.min(9.5, 3.6 + dist * 0.06)).toFixed(2);

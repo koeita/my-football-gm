@@ -17057,3 +17057,23 @@ body {
 .pitch-node .pitch-node-ovr.ovr-tier-low,
 .precheck-club-ovr strong.ovr-tier-low,
 .youth-ovr-val.ovr-tier-low   { color: #f87171 !important; }
+
+/* 作戦ボード選手名マーキー：モバイル・控えカードの詳細度上書きを確実に解除して全文スクロール表示 */
+body .pitch-node .pitch-node-name-btn.is-marquee,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-btn.is-marquee {
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+body .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-text,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-text,
+body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-btn.is-marquee .pitch-node-name-text {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+  width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  animation: pitch-name-marquee var(--marquee-dur, 6s) ease-in-out infinite !important;
+  will-change: transform;
+}
