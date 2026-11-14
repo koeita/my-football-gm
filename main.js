@@ -9120,35 +9120,72 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       : null;
   }
 
-  // 経歴タイムラインイベントの生成
-  const youthYear = birthYear + 15;
-  const debutYear = birthYear + 18;
+  // 経歴タイムラインイベントの生成（p.seasonHistory の所属クラブ変遷と完全一致させる）
+  const histArr = Array.isArray(p.seasonHistory) ? p.seasonHistory : [];
+  const firstHist = histArr.length > 0 ? histArr[0] : null;
+  const firstHistYear = (firstHist && firstHist.seasonYear) ? parseInt(String(firstHist.seasonYear).slice(0, 4), 10) : null;
+  const firstHistAge = (firstHist && typeof firstHist.age === 'number') ? firstHist.age : 18;
+  const debutAgeForEvent = Math.min(18, firstHistAge);
+  const debutYear = !Number.isNaN(firstHistYear) && firstHistYear ? firstHistYear : (birthYear + debutAgeForEvent);
+  const youthYear = Math.min(birthYear + 15, debutYear - 1);
+
+  const validFirstHistClub = (firstHist && !isFreeAgentClubStr(firstHist.clubName)) ? firstHist.clubName : null;
   const validFormerClub = !isFreeAgentClubStr(p._formerClubName) ? p._formerClubName : null;
-  const originClub = validFormerClub || pastMainClubName;
+  const originClub = validFirstHistClub || validFormerClub || pastMainClubName;
+
   const careerEvents = [
     {
       year: `${youthYear}年`,
       badge: 'YOUTH',
       title: `${originClub} ユースアカデミー入団`,
-      desc: `15歳で${originClub}の下部組織に入団。${primaryPos}を主戦場に頭角を現す。`
+      desc: `下部組織に入団し、${primaryPos}を主戦場に頭角を現す。`
     }
   ];
 
-  if ((p.age || 18) >= 18) {
+  if ((p.age || 18) >= debutAgeForEvent) {
     careerEvents.push({
       year: `${debutYear}年`,
       badge: 'DEBUT',
       title: `${originClub} トップチーム昇格・プロデビュー`,
-      desc: `18歳でプロ契約を締結し公式戦デビュー。持ち前の${(Array.isArray(p.traits) && p.traits[0]) || 'プレイスタイル'}で評価を高める。`
+      desc: `${debutAgeForEvent}歳でプロ契約を締結し公式戦デビュー。持ち前の${(Array.isArray(p.traits) && p.traits[0]) || 'プレイスタイル'}で評価を高める。`
     });
   }
 
-  if (validFormerClub && p._transferYear) {
-    careerEvents.push({
-      year: `${p._transferYear}年`,
-      badge: 'TRANSFER',
-      title: `${pastMainClubName} へ完全移籍`,
-      desc: `${validFormerClub}での活躍が認められ、戦力補強の目玉として${pastMainClubName}へ加入。`
+  // seasonHistory 上のクラブ変更を時系列で抽出
+  const transferSteps = [];
+  let prevClubTrack = originClub;
+  for (let i = 0; i < histArr.length; i++) {
+    const sh = histArr[i];
+    if (!sh || isFreeAgentClubStr(sh.clubName)) continue;
+    if (sh.clubName !== prevClubTrack) {
+      const yrNum = parseInt(String(sh.seasonYear || '').slice(0, 4), 10);
+      transferSteps.push({
+        year: !Number.isNaN(yrNum) && yrNum > 0 ? yrNum : (debutYear + i),
+        fromClub: prevClubTrack,
+        toClub: sh.clubName
+      });
+      prevClubTrack = sh.clubName;
+    }
+  }
+  if (!isCurrentlyFreeAgent && !p.signedFromFreeAgent && !isFreeAgentClubStr(currentClubName) && prevClubTrack !== currentClubName) {
+    transferSteps.push({
+      year: curBaseYear,
+      fromClub: prevClubTrack,
+      toClub: currentClubName
+    });
+  }
+
+  if (transferSteps.length > 0) {
+    transferSteps.forEach((tr, idx) => {
+      const descText = idx === 0
+        ? `${tr.fromClub}での活躍が認められ、戦力補強の目玉として${tr.toClub}へ加入。`
+        : `${tr.fromClub}でのプレーを経てさらなるステップアップを求め、${tr.toClub}へ完全移籍。`;
+      careerEvents.push({
+        year: `${tr.year}年`,
+        badge: 'TRANSFER',
+        title: `${tr.toClub} へ完全移籍`,
+        desc: descText
+      });
     });
   } else if ((p.age || 18) >= 21) {
     careerEvents.push({
