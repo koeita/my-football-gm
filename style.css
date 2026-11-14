@@ -8038,8 +8038,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .pitch-node-avatar-wrap {
+    margin-top: -14px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .pitch-node-avatar-wrap .pitch-node-ovr {
     margin-top: -12px !important;
-    margin-bottom: 1px !important;
+    padding: 0 4px !important;
+    line-height: 1.05 !important;
   }
 
   .player-avatar.pitch-node-avatar {
@@ -8059,7 +8065,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .pitch-node-top {
     width: 100% !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     padding: 0 1px !important;
   }
 
