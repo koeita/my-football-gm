@@ -841,6 +841,19 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+.btn-outline {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.36);
+}
+
 .btn-accent {
   background-color: var(--accent-gold);
   color: #111417;
@@ -15585,19 +15598,66 @@ body {
   white-space: nowrap;
 }
 
-.btn-market-direct-offer {
-  padding: 4px 10px !important;
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
+.market-scout-slot-btn {
+  width: 74px;
+  min-width: 74px;
+  height: 26px;
+  padding: 4px 6px !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.market-offer-slot-btn,
+.btn-market-direct-offer {
+  width: 82px;
+  min-width: 82px;
+  height: 26px;
+  padding: 4px 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .btn-shortlist-icon {
+  -webkit-appearance: none;
+  appearance: none;
   min-width: 28px;
+  height: 26px;
   padding: 4px 6px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   line-height: 1;
   border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.btn-shortlist-remove {
+  height: 26px;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 /* 交渉モーダル内：実質移籍予算・キャッシュフロー警告バー */
