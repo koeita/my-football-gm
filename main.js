@@ -7090,9 +7090,9 @@ function renderRoster() {
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
         <td class="col-num ${avgRatInfo.textClass} font-bold">${avgRating}</td>
-        <td class="col-num">${p.atk}${atkDiff}</td>
-        <td class="col-num">${p.def}${defDiff}</td>
-        <td class="col-num">${p.sta}${staDiff}</td>
+        <td class="col-num ${p.atk >= 90 ? 'tier-text-elite' : (p.atk >= 80 ? 'tier-text-high' : (p.atk >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.atk}${atkDiff}</td>
+        <td class="col-num ${p.def >= 90 ? 'tier-text-elite' : (p.def >= 80 ? 'tier-text-high' : (p.def >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.def}${defDiff}</td>
+        <td class="col-num ${p.sta >= 90 ? 'tier-text-elite' : (p.sta >= 80 ? 'tier-text-high' : (p.sta >= 70 ? 'tier-text-mid' : 'tier-text-low'))}">${p.sta}${staDiff}</td>
         <td class="col-num">${formatFatigueCellHtml(p)}</td>
         <td class="col-num ${contractClass}">${contractText}</td>
         <td class="col-num mono" title="年間総給与: ${formatMoney(p.salary)}">

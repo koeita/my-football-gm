@@ -3073,19 +3073,23 @@ body {
 }
 
 .profile-stat-val.stat-elite {
-  color: #38bdf8;
+  color: #7dd3fc;
+  font-weight: 900;
 }
 
 .profile-stat-val.stat-high {
-  color: #2ecc71;
+  color: #34d399;
+  font-weight: 800;
 }
 
 .profile-stat-val.stat-mid {
-  color: #f59e0b;
+  color: #fbbf24;
+  font-weight: 700;
 }
 
 .profile-stat-val.stat-low {
-  color: #ef4444;
+  color: #f87171;
+  font-weight: 600;
 }
 
 .profile-stat-bar-bg {
@@ -3102,19 +3106,19 @@ body {
 }
 
 .profile-stat-bar-fill.bar-elite {
-  background-color: #38bdf8;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #7dd3fc);
 }
 
 .profile-stat-bar-fill.bar-high {
-  background-color: #2ecc71;
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 
 .profile-stat-bar-fill.bar-mid {
-  background-color: #f59e0b;
+  background: #f59e0b;
 }
 
 .profile-stat-bar-fill.bar-low {
-  background-color: #ef4444;
+  background: #ef4444;
 }
 
 /* 六角形能力レーダーチャート（SVG） */
@@ -11339,27 +11343,28 @@ button.hidden,
 }
 
 .coach-rank-badge.rank-s {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #e0f2fe;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.42), rgba(37, 99, 235, 0.38));
+  border: 1px solid rgba(125, 211, 252, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .coach-rank-badge.rank-a {
-  color: #2ecc71;
-  background: rgba(46, 204, 113, 0.15);
-  border: 1px solid rgba(46, 204, 113, 0.5);
+  color: #6ee7b7;
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.28), rgba(16, 185, 129, 0.20));
+  border: 1px solid rgba(52, 211, 153, 0.58);
 }
 
 .coach-rank-badge.rank-b {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.45);
 }
 
 .coach-rank-badge.rank-c {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.10);
+  border: 1px solid rgba(239, 68, 68, 0.32);
 }
 
 .coach-slot-main {
@@ -15023,24 +15028,25 @@ body {
 }
 .summary-rat-mom,
 .summary-rat-elite {
-  background: rgba(56, 189, 248, 0.20);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.38), rgba(37, 99, 235, 0.32));
+  color: #e0f2fe;
+  border: 1px solid rgba(125, 211, 252, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 .summary-rat-high {
-  background: rgba(46, 204, 113, 0.20);
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.45);
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.26), rgba(16, 185, 129, 0.18));
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.52);
 }
 .summary-rat-mid {
-  background: rgba(245, 158, 11, 0.20);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.42);
 }
 .summary-rat-low {
-  background: rgba(239, 68, 68, 0.20);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.32);
 }
 .summary-rat-none {
   background: rgba(148, 163, 184, 0.14);
@@ -15826,10 +15832,10 @@ body {
   letter-spacing: 0.04em;
   border: 1px solid currentColor;
 }
-.mgr-rank-badge.rank-S { color: #38bdf8; background: rgba(56, 189, 248, 0.16); }
-.mgr-rank-badge.rank-A { color: #2ecc71; background: rgba(46, 204, 113, 0.16); }
-.mgr-rank-badge.rank-B { color: #f59e0b; background: rgba(245, 158, 11, 0.16); }
-.mgr-rank-badge.rank-C { color: #ef4444; background: rgba(239, 68, 68, 0.16); }
+.mgr-rank-badge.rank-S { color: #e0f2fe; background: linear-gradient(135deg, rgba(56, 189, 248, 0.40), rgba(37, 99, 235, 0.34)); border-color: rgba(125, 211, 252, 0.75); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26); }
+.mgr-rank-badge.rank-A { color: #6ee7b7; background: linear-gradient(135deg, rgba(46, 204, 113, 0.26), rgba(16, 185, 129, 0.18)); border-color: rgba(52, 211, 153, 0.55); }
+.mgr-rank-badge.rank-B { color: #fbbf24; background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.45); }
+.mgr-rank-badge.rank-C { color: #f87171; background: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.32); }
 
 .staff-specialty-tag {
   font-family: var(--font-mono);
@@ -15918,15 +15924,15 @@ body {
   gap: 8px;
 }
 
-.staff-stat-chip.stat-rank-S strong, .stat-rank-S { color: #38bdf8 !important; }
-.staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #2ecc71 !important; }
-.staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #f59e0b !important; }
-.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #ef4444 !important; }
+.staff-stat-chip.stat-rank-S strong, .stat-rank-S { color: #7dd3fc !important; font-weight: 900; }
+.staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #34d399 !important; font-weight: 800; }
+.staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #fbbf24 !important; font-weight: 700; }
+.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #f87171 !important; font-weight: 600; }
 .staff-stat-chip.stat-rank-D strong, .stat-rank-D { color: #94a3b8 !important; }
-.staff-stat-chip.stat-rank-S { border-color: rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.12); }
-.staff-stat-chip.stat-rank-A { border-color: rgba(46, 204, 113, 0.40); background: rgba(46, 204, 113, 0.10); }
-.staff-stat-chip.stat-rank-B { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); }
-.staff-stat-chip.stat-rank-C { border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.08); }
+.staff-stat-chip.stat-rank-S { border-color: rgba(125, 211, 252, 0.55); background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(37, 99, 235, 0.16)); }
+.staff-stat-chip.stat-rank-A { border-color: rgba(52, 211, 153, 0.45); background: rgba(46, 204, 113, 0.14); }
+.staff-stat-chip.stat-rank-B { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.09); }
+.staff-stat-chip.stat-rank-C { border-color: rgba(239, 68, 68, 0.28); background: rgba(239, 68, 68, 0.06); }
 
 
 /* ==========================================================================
@@ -16162,14 +16168,18 @@ body {
 }
 
 .ovr-cell-badge { display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; font-weight: 900; line-height: 1; padding: 3px 7px; border-radius: 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ovr-tier-elite { color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
-.ovr-tier-high  { color: #2ecc71; background: rgba(46, 204, 113, 0.14); }
-.ovr-tier-mid   { color: #f59e0b; background: rgba(245, 158, 11, 0.15); }
-.ovr-tier-low   { color: #ef4444; background: rgba(239, 68, 68, 0.14); }
-.profile-header-ovr-val.ovr-tier-elite { color: #38bdf8; }
-.profile-header-ovr-val.ovr-tier-high  { color: #2ecc71; }
-.profile-header-ovr-val.ovr-tier-mid   { color: #f59e0b; }
-.profile-header-ovr-val.ovr-tier-low   { color: #ef4444; }
+.ovr-tier-elite { color: #e0f2fe; background: linear-gradient(135deg, rgba(56, 189, 248, 0.40), rgba(37, 99, 235, 0.34)); border: 1px solid rgba(125, 211, 252, 0.72); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28); }
+.ovr-tier-high  { color: #6ee7b7; background: linear-gradient(135deg, rgba(46, 204, 113, 0.25), rgba(16, 185, 129, 0.17)); border: 1px solid rgba(52, 211, 153, 0.48); }
+.ovr-tier-mid   { color: #fbbf24; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); }
+.ovr-tier-low   { color: #f87171; background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.26); }
+.profile-header-ovr-val.ovr-tier-elite { color: #7dd3fc; background: none; border: none; box-shadow: none; }
+.profile-header-ovr-val.ovr-tier-high  { color: #34d399; background: none; border: none; }
+.profile-header-ovr-val.ovr-tier-mid   { color: #fbbf24; background: none; border: none; }
+.profile-header-ovr-val.ovr-tier-low   { color: #f87171; background: none; border: none; }
+.tier-text-elite { color: #7dd3fc; font-weight: 900; }
+.tier-text-high  { color: #34d399; font-weight: 800; }
+.tier-text-mid   { color: #fbbf24; font-weight: 700; }
+.tier-text-low   { color: #f87171; font-weight: 600; }
 .profile-header-ovr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; padding: 6px 14px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
 .profile-header-ovr-label { font-size: 10px; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
 .profile-header-ovr-val { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -16331,15 +16341,15 @@ body {
   border-radius: 5px;
   white-space: nowrap;
 }
-.fotmob-rating-pill.rat-elite { background: rgba(56, 189, 248, 0.22); color: #38bdf8; }
-.fotmob-rating-pill.rat-high  { background: rgba(46, 204, 113, 0.22); color: #2ecc71; }
-.fotmob-rating-pill.rat-mid   { background: rgba(245, 158, 11, 0.20); color: #f59e0b; }
-.fotmob-rating-pill.rat-low   { background: rgba(239, 68, 68, 0.20); color: #ef4444; }
-.fotmob-rating-pill.rat-none  { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
-.rat-text-elite { color: #38bdf8; }
-.rat-text-high  { color: #2ecc71; }
-.rat-text-mid   { color: #f59e0b; }
-.rat-text-low   { color: #ef4444; }
+.fotmob-rating-pill.rat-elite { background: linear-gradient(135deg, rgba(56, 189, 248, 0.38), rgba(37, 99, 235, 0.32)); color: #e0f2fe; border: 1px solid rgba(125, 211, 252, 0.70); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26); }
+.fotmob-rating-pill.rat-high  { background: linear-gradient(135deg, rgba(46, 204, 113, 0.26), rgba(16, 185, 129, 0.18)); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.50); }
+.fotmob-rating-pill.rat-mid   { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.38); }
+.fotmob-rating-pill.rat-low   { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.30); }
+.fotmob-rating-pill.rat-none  { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.rat-text-elite { color: #7dd3fc; font-weight: 900; }
+.rat-text-high  { color: #34d399; font-weight: 800; }
+.rat-text-mid   { color: #fbbf24; font-weight: 700; }
+.rat-text-low   { color: #f87171; font-weight: 600; }
 .rat-text-none  { color: #94a3b8; }
 .fotmob-yearly-total {
   padding: 10px 8px 2px;
@@ -16437,11 +16447,11 @@ body {
     border-radius: 4px;
     white-space: nowrap;
   }
-  .fotmob-rating-pill.rat-elite { background: rgba(56, 189, 248, 0.22); color: #38bdf8; }
-  .fotmob-rating-pill.rat-high  { background: rgba(46, 204, 113, 0.22); color: #2ecc71; }
-  .fotmob-rating-pill.rat-mid   { background: rgba(245, 158, 11, 0.20); color: #f59e0b; }
-  .fotmob-rating-pill.rat-low   { background: rgba(239, 68, 68, 0.20); color: #ef4444; }
-  .fotmob-rating-pill.rat-none  { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
+  .fotmob-rating-pill.rat-elite { background: linear-gradient(135deg, rgba(56, 189, 248, 0.38), rgba(37, 99, 235, 0.32)); color: #e0f2fe; border: 1px solid rgba(125, 211, 252, 0.70); }
+  .fotmob-rating-pill.rat-high  { background: linear-gradient(135deg, rgba(46, 204, 113, 0.26), rgba(16, 185, 129, 0.18)); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.50); }
+  .fotmob-rating-pill.rat-mid   { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.38); }
+  .fotmob-rating-pill.rat-low   { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.30); }
+  .fotmob-rating-pill.rat-none  { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
   .fotmob-yearly-total {
     padding: 10px 4px 2px;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
@@ -16504,10 +16514,10 @@ body {
   font-size: 16px;
   line-height: 1.15;
 }
-.profile-ovr-badge.ovr-tier-elite { color: #38bdf8; }
-.profile-ovr-badge.ovr-tier-high  { color: #2ecc71; }
-.profile-ovr-badge.ovr-tier-mid   { color: #f59e0b; }
-.profile-ovr-badge.ovr-tier-low   { color: #ef4444; }
+.profile-ovr-badge.ovr-tier-elite { color: #7dd3fc; font-weight: 900; }
+.profile-ovr-badge.ovr-tier-high  { color: #34d399; font-weight: 800; }
+.profile-ovr-badge.ovr-tier-mid   { color: #fbbf24; font-weight: 700; }
+.profile-ovr-badge.ovr-tier-low   { color: #f87171; font-weight: 600; }
 @media (max-width: 768px) {
   .profile-avatar-col .profile-header-ovr-box {
     margin-top: -10px;
@@ -16600,8 +16610,8 @@ body {
 .ui-attr-bar-num { font-family: var(--font-mono); font-size: 13.5px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .ui-slim-gauge { width: 100%; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
 .ui-slim-gauge-fill { height: 100%; border-radius: 999px; }
-.ui-slim-gauge-fill.ovr-tier-elite { background: #38bdf8; }
-.ui-slim-gauge-fill.ovr-tier-high  { background: #2ecc71; }
+.ui-slim-gauge-fill.ovr-tier-elite { background: linear-gradient(90deg, #0284c7, #38bdf8, #7dd3fc); }
+.ui-slim-gauge-fill.ovr-tier-high  { background: linear-gradient(90deg, #10b981, #34d399); }
 .ui-slim-gauge-fill.ovr-tier-mid   { background: #f59e0b; }
 .ui-slim-gauge-fill.ovr-tier-low   { background: #ef4444; }
 
@@ -16826,15 +16836,15 @@ body {
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
-.hex-label-val.ovr-tier-elite { fill: #38bdf8; }
-.hex-label-val.ovr-tier-high  { fill: #2ecc71; }
-.hex-label-val.ovr-tier-mid   { fill: #f59e0b; }
-.hex-label-val.ovr-tier-low   { fill: #ef4444; }
+.hex-label-val.ovr-tier-elite { fill: #7dd3fc; font-weight: 900; }
+.hex-label-val.ovr-tier-high  { fill: #34d399; }
+.hex-label-val.ovr-tier-mid   { fill: #fbbf24; }
+.hex-label-val.ovr-tier-low   { fill: #f87171; }
 
-.hex-data-dot.ovr-tier-elite { fill: #38bdf8; }
-.hex-data-dot.ovr-tier-high  { fill: #2ecc71; }
-.hex-data-dot.ovr-tier-mid   { fill: #f59e0b; }
-.hex-data-dot.ovr-tier-low   { fill: #ef4444; }
+.hex-data-dot.ovr-tier-elite { fill: #7dd3fc; }
+.hex-data-dot.ovr-tier-high  { fill: #34d399; }
+.hex-data-dot.ovr-tier-mid   { fill: #fbbf24; }
+.hex-data-dot.ovr-tier-low   { fill: #f87171; }
 
 .precheck-club-ovr {
   font-size: 13px;
