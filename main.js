@@ -7051,12 +7051,12 @@ function renderRoster() {
     const loanListedBadge = (p.isLoanListed && !p.loanStatus?.isLoanOut) ? '<span class="sub-badge badge-loanlisted">レンタル募集中</span>' : '';
     const preDepartBadge = p.preContractDeparture ? `<span class="sub-badge badge-refused">来季流出(${p.preContractDeparture.toClubName})</span>` : '';
 
-    const ovrTextCls = effOvr >= 90 ? 'tier-text-elite' : (effOvr >= 80 ? 'tier-text-high' : (effOvr >= 70 ? 'tier-text-mid' : 'tier-text-low'));
-    let ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span>`;
+    const ovrTierCls = getOvrTierClass(effOvr);
+    let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
-      ovrDisplay = `<span class="mono tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="ovr-cell-badge tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     } else if (fitInfo.type === 'sub') {
-      ovrDisplay = `<span class="mono ${ovrTextCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
+      ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
     const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(1) : 'N/A';
@@ -7884,8 +7884,8 @@ function renderMarket() {
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
         <td class="col-num">${scoutView.isScouted
-          ? `<span class="${getOvrTextClass(getPlayerOverallRating(p))}">${scoutView.ovrDisplay}</span>`
-          : `<span style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
+          ? `<span class="ovr-cell-badge ${getOvrTierClass(getPlayerOverallRating(p))}">${scoutView.ovrDisplay}</span>`
+          : `<span class="ovr-cell-badge" style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
         <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
         <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>

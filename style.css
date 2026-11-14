@@ -16701,6 +16701,15 @@ body {
 .fotmob-rating-pill,
 .yearly-table-ovr,
 .yearly-table-rat,
+.tier-text-elite,
+.tier-text-high,
+.tier-text-mid,
+.tier-text-low,
+.rat-text-elite,
+.rat-text-high,
+.rat-text-mid,
+.rat-text-low,
+.rat-text-none,
 .inline-ovr-display,
 .summary-rating-pill,
 .summary-rating-pill.mono,
@@ -16719,10 +16728,10 @@ body {
 }
 
 .ovr-cell-badge {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  padding: 2px 7px;
+  padding: 0;
 }
 
 .profile-header-ovr-val {
@@ -16817,8 +16826,8 @@ body {
 
 @media (max-width: 768px) {
   .ovr-cell-badge {
-    font-size: 14.5px;
-    padding: 2px 5px;
+    font-size: 14px;
+    padding: 0;
   }
   .pitch-node-ovr {
     font-size: 11px !important;
