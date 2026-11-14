@@ -9040,7 +9040,8 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
           ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
           : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
-        const currentOffset = calcCurveOffset(age);
+        const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
+        const currentOffset = calcCurveOffset(curAge);
         const pastOffset = calcCurveOffset(ageAtSeason);
         const ovrSeasonJitter = (((absHash >> (i % 10)) % 5) - 2) * 0.5;
         const estOvr = clamp(Math.round(baseOvr + (pastOffset - currentOffset) + ovrSeasonJitter), 50, 95);
