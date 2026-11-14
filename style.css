@@ -16558,6 +16558,11 @@ body {
 .pitch-node-ovr,
 .youth-ovr-val,
 .matchday-club-ovr,
+.precheck-club-ovr,
+.precheck-club-ovr strong,
+.precheck-ovr,
+.detail-metric-val,
+.detail-metric-val.mono,
 .mgr-rank-badge,
 .coach-rank-badge,
 .staff-stat-chip strong,
@@ -16566,6 +16571,11 @@ body {
 .stat-rank-B,
 .stat-rank-C,
 .stat-rank-D,
+.profile-bio-chip.stat-rank-S,
+.profile-bio-chip.stat-rank-A,
+.profile-bio-chip.stat-rank-B,
+.profile-bio-chip.stat-rank-C,
+.profile-bio-chip.stat-rank-D,
 .rank-badge,
 .match-score-box,
 .matchday-vs-badge,
@@ -16730,3 +16740,29 @@ body {
 .hex-data-dot.ovr-tier-high  { fill: #2ecc71; }
 .hex-data-dot.ovr-tier-mid   { fill: #38bdf8; }
 .hex-data-dot.ovr-tier-low   { fill: #cbd5e1; }
+
+.precheck-club-ovr {
+  font-size: 13px;
+}
+.precheck-club-ovr strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+.precheck-ovr {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.detail-metric-val,
+.detail-metric-val.mono {
+  font-size: 17px;
+  font-weight: 800;
+}
+.profile-bio-chip.stat-rank-S,
+.profile-bio-chip.stat-rank-A,
+.profile-bio-chip.stat-rank-B,
+.profile-bio-chip.stat-rank-C,
+.profile-bio-chip.stat-rank-D {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
