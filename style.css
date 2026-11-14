@@ -7972,6 +7972,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   text-align: left;
   width: 100%;
   max-width: 100%;
+  overflow: hidden;
   padding: 0 0 1px 0;
   border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
   text-decoration: none;
@@ -7988,6 +7989,23 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   min-width: 0;
   font-size: 11px;
   font-weight: 700;
+}
+
+.pitch-node-name-btn.is-marquee .pitch-node-name-text {
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  animation: pitch-name-marquee var(--marquee-dur, 6s) ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pitch-name-marquee {
+  0%, 18% { transform: translateX(0); }
+  55%, 75% { transform: translateX(var(--marquee-dist, 0px)); }
+  92%, 100% { transform: translateX(0); }
 }
 
 .pitch-node-meta {
@@ -8052,61 +8070,67 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 @media (max-width: 768px) {
-  /* モバイル作戦ボード：中央上部に直径36pxのアバター ＋ 下部にポジション・OVR・選手名を美しく整列 */
+  /* モバイル作戦ボード：PCと同じ横並びカード形状（4バック・中盤が重ならないコンパクト固定サイズ） */
   .pitch-node {
-    overflow: visible !important;
-    flex-direction: column !important;
+    overflow: hidden !important;
+    flex-direction: row !important;
     align-items: center !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: 60px !important;
-    max-width: 70px !important;
-    padding: 2px 3px 3px !important;
-    gap: 1px !important;
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px !important;
+    height: 40px !important;
+    box-sizing: border-box !important;
+    padding: 3px 4px !important;
+    gap: 4px !important;
   }
 
   .pitch-node-avatar-wrap {
-    margin-top: -14px !important;
+    margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
 
   .pitch-node-avatar-wrap .pitch-node-ovr {
-    margin-top: -12px !important;
-    padding: 0 4px !important;
+    margin-top: -6px !important;
+    padding: 0 3px !important;
+    font-size: 9px !important;
     line-height: 1.05 !important;
   }
 
   .player-avatar.pitch-node-avatar {
     position: static !important;
     transform: none !important;
-    width: 36px !important;
-    height: 36px !important;
+    width: 24px !important;
+    height: 24px !important;
     border: 1.5px solid #3a3f45 !important;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55) !important;
   }
 
   .pitch-node-body {
-    width: 100% !important;
-    align-items: center !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    align-items: stretch !important;
     gap: 1px !important;
   }
 
   .pitch-node-top {
     width: 100% !important;
     justify-content: flex-start !important;
-    padding: 0 1px !important;
+    padding: 0 !important;
   }
 
-  .pitch-node-name-btn {
-    display: block !important;
+  .pitch-node-name-btn,
+  .pitch-node-name-btn.clickable-player-name {
+    display: flex !important;
     width: 100% !important;
-    max-width: 64px !important;
-    text-align: center !important;
+    max-width: 100% !important;
+    text-align: left !important;
+    padding: 0 0 1px 0 !important;
   }
 
   .pitch-node-name-text {
     display: block !important;
-    font-size: 8px !important;
+    font-size: 8.5px !important;
     line-height: 1.15 !important;
   }
 
@@ -12076,28 +12100,39 @@ button.hidden,
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
+    height: 54px !important;
     box-sizing: border-box !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
-    padding: 6px 4px !important;
+    padding: 4px 7px !important;
+    gap: 6px !important;
     background: #1c222b !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 6px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-avatar-wrap {
-    width: 44px !important;
+    width: auto !important;
     height: auto !important;
-    margin-bottom: 2px !important;
+    margin: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .player-avatar.pitch-node-avatar {
+    width: 32px !important;
+    height: 32px !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-text {
-    font-size: 10px !important;
-    max-width: 90px !important;
+    font-size: 10.5px !important;
+    max-width: 100% !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-meta {
+    display: flex !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {

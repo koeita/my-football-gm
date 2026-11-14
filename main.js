@@ -5213,6 +5213,9 @@ function switchRosterSubtab(subtabKey, shouldRender = true) {
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
+    if (typeof applyPitchNodeNameMarquee === 'function') {
+      requestAnimationFrame(() => applyPitchNodeNameMarquee());
+    }
     if (shouldRender) {
       if (typeof syncManagerDelegationButtonUI === 'function') syncManagerDelegationButtonUI();
       renderTacticalManagerBanner();
@@ -6849,6 +6852,42 @@ function renderTacticalBoard() {
       if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(reservesListEl);
     }
   }
+
+  if (typeof applyPitchNodeNameMarquee === 'function') {
+    requestAnimationFrame(() => applyPitchNodeNameMarquee());
+  }
+}
+
+/**
+ * 作戦ボード上で名前が見切れている選手カードのみ、左方向へ往復スクロールさせる
+ */
+function applyPitchNodeNameMarquee() {
+  const btns = document.querySelectorAll('#tactical-pitch .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
+  btns.forEach(btn => {
+    const textEl = btn.querySelector('.pitch-node-name-text');
+    if (!textEl) return;
+    btn.classList.remove('is-marquee');
+    btn.style.removeProperty('--marquee-dist');
+    btn.style.removeProperty('--marquee-dur');
+    if (btn.clientWidth <= 0) return;
+    const overflow = textEl.scrollWidth - btn.clientWidth;
+    if (overflow > 2) {
+      const dist = Math.ceil(overflow + 4);
+      const dur = Math.max(4.5, Math.min(9.5, 3.6 + dist * 0.06)).toFixed(2);
+      btn.style.setProperty('--marquee-dist', `-${dist}px`);
+      btn.style.setProperty('--marquee-dur', `${dur}s`);
+      btn.classList.add('is-marquee');
+    }
+  });
+}
+
+if (typeof window !== 'undefined' && !window.__pitchMarqueeResizeBound) {
+  window.__pitchMarqueeResizeBound = true;
+  window.addEventListener('resize', () => {
+    if (typeof applyPitchNodeNameMarquee === 'function') {
+      applyPitchNodeNameMarquee();
+    }
+  });
 }
 
 /**
