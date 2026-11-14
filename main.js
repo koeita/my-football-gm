@@ -1667,9 +1667,17 @@ function processSeasonEnd(isSkipped = false) {
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
+  gameState.expiredMarketPool = [];
+  const finishedSeasonNum = gameState.season || 1;
+  const finishedBaseYear = 2025 + finishedSeasonNum;
+  const finishedYearStr = `${finishedBaseYear}-${String((finishedBaseYear + 1) % 100).padStart(2, '0')}`;
 
   for (const club of getAllManagedLeagueClubs()) {
+    const expiredDepartures = new Set();
+    let remainingPoolCount = (club.players || []).filter(pl => pl && !pl.isRetired).length;
+
     for (const p of (club.players || [])) {
+      const seasonAge = p.age || 18;
       p.age += 1;
       p.injuryWeeks = 0;
       p.contractYears = Math.max(0, (p.contractYears || 1) - 1);
@@ -1677,6 +1685,7 @@ function processSeasonEnd(isSkipped = false) {
       if (shouldPlayerRetire(p)) {
         p.isRetired = true;
         p.isStarter = false;
+        remainingPoolCount = Math.max(0, remainingPoolCount - 1);
         if (club.isPlayer) {
           playerRetirementLogs.push(
             `[現役引退] ${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
@@ -1704,6 +1713,57 @@ function processSeasonEnd(isSkipped = false) {
 
       // ボスマン事前合意（preContract）締結済みの選手はCPUクラブが勝手に再契約しない
       if (!club.isPlayer && p.contractYears === 0 && !p.preContract && !preContractIds.has(p.id)) {
+        const isLoanedPlayer = Boolean(p.loanStatus && (p.loanStatus.isLoan || p.loanStatus.isLoanOut));
+        const canReleaseToFreeAgent = (
+          !isLoanedPlayer &&
+          !p.isStarter &&
+          remainingPoolCount >= 16 &&
+          gameState.expiredMarketPool.length < 4 &&
+          Math.random() < 0.35
+        );
+        if (canReleaseToFreeAgent) {
+          if (!Array.isArray(p.seasonHistory)) {
+            const savedAge = p.age;
+            p.age = seasonAge;
+            ensurePlayerHistoryAndCareer(p, club.name);
+            p.age = savedAge;
+          }
+          if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStr)) {
+            const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+            p.seasonHistory.push({
+              seasonYear: finishedYearStr,
+              clubName: club.name,
+              age: seasonAge,
+              appearances: p.appearances || 0,
+              goals: p.goals || 0,
+              assists: p.assists || 0,
+              avgRating: prevAvg,
+              ovr: getPlayerOverallRating(p)
+            });
+          }
+          p.lastClubName = club.name;
+          p.lastClubId = club.id;
+          p.isFreeAgent = true;
+          p.contractYears = 0;
+          p.transferFee = 0;
+          p.isStarter = false;
+          p.isBench = false;
+          p.assignedPos = null;
+          p.slotIndex = null;
+          p.appearances = 0;
+          p.goals = 0;
+          p.assists = 0;
+          p.totalRating = 0;
+          p.cleanSheets = 0;
+          p.momCount = 0;
+          p.yellowCards = 0;
+          p.redCards = 0;
+          p._generatedInOffseasonOfSeason = finishedSeasonNum;
+          expiredDepartures.add(p.id);
+          remainingPoolCount = Math.max(0, remainingPoolCount - 1);
+          gameState.expiredMarketPool.push(p);
+          continue;
+        }
         p.contractYears = randInt(2, 4);
         p.salary = calculatePlayerSalary(p.pos, p.atk, p.def, p.sta, p.age);
       }
@@ -1722,7 +1782,7 @@ function processSeasonEnd(isSkipped = false) {
       }
     }
 
-    club.players = club.players.filter(p => !p.isRetired);
+    club.players = club.players.filter(p => !p.isRetired && !expiredDepartures.has(p.id));
     ensureValidSquadAndStarters(club, playerRetirementLogs);
 
     // 常設ユースチーム（U-21 Squad）の加齢およびポテンシャル急成長
@@ -3204,6 +3264,9 @@ function completeOutgoingTransferSigning(offerId) {
   }
 
   // レンタル・完全移籍・無所属獲得の処理
+  const originSellerName = (sellerClub && sellerClub.name && !sellerClub.name.includes('無所属'))
+    ? sellerClub.name
+    : (target.lastClubName || null);
   const cleanupMarketPools = (pid) => {
     if (Array.isArray(gameState.transferMarket)) {
       gameState.transferMarket = gameState.transferMarket.filter(p => p.id !== pid);
@@ -3214,6 +3277,9 @@ function completeOutgoingTransferSigning(offerId) {
   };
 
   if (dealType === 'buy') {
+    if (originSellerName && !Array.isArray(target.seasonHistory)) {
+      ensurePlayerHistoryAndCareer(target, originSellerName);
+    }
     const instYears = offer.installmentYears || 1;
     const upfrontFee = instYears > 1 ? Math.round(offer.offeredFee / instYears) : offer.offeredFee;
     playerClub.funds -= upfrontFee;
@@ -3261,6 +3327,9 @@ function completeOutgoingTransferSigning(offerId) {
     };
   } else if (dealType === 'loan') {
     // レンタル加入
+    if (originSellerName && !Array.isArray(target.seasonHistory)) {
+      ensurePlayerHistoryAndCareer(target, originSellerName);
+    }
     if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
       ensureValidSquadAndStarters(sellerClub);
@@ -3293,6 +3362,7 @@ function completeOutgoingTransferSigning(offerId) {
     };
   } else if (dealType === 'free_agent') {
     // 無所属獲得
+    ensurePlayerHistoryAndCareer(target, '無所属 (Free Agent)');
     cleanupMarketPools(target.id);
     target.isEuroListed = false;
     target.euroClubId = null;
@@ -3302,6 +3372,45 @@ function completeOutgoingTransferSigning(offerId) {
     target.contractYears = offer.offeredYears;
     target.loanStatus = null;
     target.isFreeAgent = false;
+    target.signedFromFreeAgent = true;
+    target.signedFreeAgentYear = 2025 + (gameState.season || 1) + (gameState.isSeasonOver ? 1 : 0);
+  }
+
+  if (gameState.isSeasonOver) {
+    const curS = gameState.season || 1;
+    const curBaseYr = 2025 + curS;
+    const curYearStr = `${curBaseYr}-${String((curBaseYr + 1) % 100).padStart(2, '0')}`;
+    target._joinedInOffseasonOfSeason = curS;
+    if (originSellerName && !originSellerName.includes('無所属')) {
+      target.lastClubName = originSellerName;
+    }
+    const prevClubForHist = target.lastClubName || (typeof pickFormerClubForPlayer === 'function' ? pickFormerClubForPlayer(target, 0) : 'リーズ・U');
+    if (!Array.isArray(target.seasonHistory)) {
+      ensurePlayerHistoryAndCareer(target, originSellerName || '無所属 (Free Agent)');
+    }
+    if (!target.seasonHistory.some(r => r && r.seasonYear === curYearStr)) {
+      const ovr = getPlayerOverallRating(target);
+      const pos = target.primaryPosition || target.pos || 'CM';
+      const hadApps = (target.appearances || 0) > 0;
+      const estApps = hadApps ? target.appearances : randInt(16, 30);
+      const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+      const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
+      const estGoals = hadApps ? (target.goals || 0) : (pos === 'GK' ? 0 : Math.round(estApps * gRate));
+      const estAssists = hadApps ? (target.assists || 0) : (pos === 'GK' ? 0 : Math.round(estApps * aRate));
+      const estRating = (hadApps && target.totalRating > 0)
+        ? (target.totalRating / target.appearances).toFixed(2)
+        : clamp(6.5 + (ovr - 68) * 0.04, 6.2, 8.2).toFixed(2);
+      target.seasonHistory.push({
+        seasonYear: curYearStr,
+        clubName: prevClubForHist,
+        age: target.age || 24,
+        appearances: estApps,
+        goals: estGoals,
+        assists: estAssists,
+        avgRating: estRating,
+        ovr
+      });
+    }
   }
 
   target.isStarter = false;
@@ -4219,7 +4328,16 @@ function upgradeFacility(facilityKey) {
       const baseTarget = clamp(randInt(64 + scoutingBonusOvr, 74 + scoutingBonusOvr), 58, 86);
       const age = randInt(19, 28);
       const candidate = createPlayer(pos, baseTarget, false, usedNames, [age, age]);
-      candidate.transferFee = calculateTransferFee(candidate);
+      candidate.isFreeAgent = true;
+      candidate.contractYears = 0;
+      candidate.transferFee = 0;
+      candidate.lastClubName = typeof pickFormerClubForPlayer === 'function' ? pickFormerClubForPlayer(candidate, 0) : 'リーズ・U';
+      if (typeof gameState !== 'undefined' && gameState.isSeasonOver) {
+        candidate._generatedInOffseasonOfSeason = gameState.season || 1;
+      }
+      if (typeof ensurePlayerHistoryAndCareer === 'function') {
+        ensurePlayerHistoryAndCareer(candidate, '無所属 (Free Agent)');
+      }
       gameState.transferMarket.push(candidate);
     }
     gameState.transferMarket.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
@@ -4692,8 +4810,55 @@ function startNextSeason() {
   }
 
   // 4. 契約残り0年のまま更新されなかった選手、または交渉決裂で流出確定した選手はフリー移籍でチームを離脱
+  const finishedSeasonNumForOut = gameState.season || 1;
+  const finishedBaseYearForOut = 2025 + finishedSeasonNumForOut;
+  const finishedYearStrForOut = `${finishedBaseYearForOut}-${String((finishedBaseYearForOut + 1) % 100).padStart(2, '0')}`;
   const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 || p.contractRefused);
   if (expiredPlayers.length > 0) {
+    expiredPlayers.forEach(p => {
+      const seasonAge = Math.max(16, (p.age || 18) - 1);
+      if (!Array.isArray(p.seasonHistory)) {
+        const savedAge = p.age;
+        p.age = seasonAge;
+        ensurePlayerHistoryAndCareer(p, playerClub.name);
+        p.age = savedAge;
+      }
+      if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStrForOut)) {
+        const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+        p.seasonHistory.push({
+          seasonYear: finishedYearStrForOut,
+          clubName: playerClub.name,
+          age: seasonAge,
+          appearances: p.appearances || 0,
+          goals: p.goals || 0,
+          assists: p.assists || 0,
+          avgRating: prevAvg,
+          ovr: getPlayerOverallRating(p)
+        });
+      }
+      p.lastClubName = playerClub.name;
+      p.lastClubId = playerClub.id;
+      p.isFreeAgent = true;
+      p.contractYears = 0;
+      p.transferFee = 0;
+      p.contractRefused = false;
+      p.isStarter = false;
+      p.isBench = false;
+      p.assignedPos = null;
+      p.slotIndex = null;
+      p.appearances = 0;
+      p.goals = 0;
+      p.assists = 0;
+      p.totalRating = 0;
+      p.cleanSheets = 0;
+      p.momCount = 0;
+      p.yellowCards = 0;
+      p.redCards = 0;
+      if (Array.isArray(gameState.transferMarket) && !gameState.transferMarket.some(x => x.id === p.id)) {
+        gameState.transferMarket.push(p);
+      }
+      addDailyLog(`【契約満了・退団】#${p.squadNumber || '-'} ${p.name} が契約満了により退団し、無所属（フリーエージェント）となりました。`);
+    });
     playerClub.players = playerClub.players.filter(p => p.contractYears > 0 && !p.contractRefused);
   }
 
@@ -4787,24 +4952,54 @@ function startNextSeason() {
     club.pts = (club.psrSanction && club.psrSanction.pointsDeductedThisSeason > 0)
       ? -club.psrSanction.pointsDeductedThisSeason
       : 0;
+    const prevSeasonNum = Math.max(1, (gameState.season || 2) - 1);
+    const prevBaseYear = 2025 + prevSeasonNum;
+    const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
     for (const p of (club.players || [])) {
+      const seasonAge = Math.max(16, (p.age || 18) - 1);
       if (!Array.isArray(p.seasonHistory)) {
+        const savedSeason = gameState.season;
+        const savedAge = p.age;
+        gameState.season = prevSeasonNum;
+        p.age = seasonAge;
         ensurePlayerHistoryAndCareer(p, club.name);
+        gameState.season = savedSeason;
+        p.age = savedAge;
       }
-      const prevSeasonNum = Math.max(1, (gameState.season || 2) - 1);
-      const prevBaseYear = 2025 + prevSeasonNum;
-      const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
-      const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
-      p.seasonHistory.push({
-        seasonYear: prevYearStr,
-        clubName: club.name,
-        age: p.age,
-        appearances: p.appearances || 0,
-        goals: p.goals || 0,
-        assists: p.assists || 0,
-        avgRating: prevAvg,
-        ovr: getPlayerOverallRating(p)
-      });
+      if (!p.seasonHistory.some(r => r && r.seasonYear === prevYearStr)) {
+        const joinedOffseason = p._joinedInOffseasonOfSeason === prevSeasonNum;
+        const histClubName = joinedOffseason ? (p.lastClubName || club.name) : club.name;
+        const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+        let histApps = p.appearances || 0;
+        let histGoals = p.goals || 0;
+        let histAssists = p.assists || 0;
+        let histRating = prevAvg;
+        if (joinedOffseason && histApps === 0) {
+          const ovr = getPlayerOverallRating(p);
+          const pos = p.primaryPosition || p.pos || 'CM';
+          histApps = randInt(16, 30);
+          const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+          const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
+          histGoals = pos === 'GK' ? 0 : Math.round(histApps * gRate);
+          histAssists = pos === 'GK' ? 0 : Math.round(histApps * aRate);
+          histRating = clamp(6.5 + (ovr - 68) * 0.04, 6.2, 8.2).toFixed(2);
+          if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+          p.careerStats.appearances = (p.careerStats.appearances || 0) + histApps;
+          p.careerStats.goals = (p.careerStats.goals || 0) + histGoals;
+          p.careerStats.assists = (p.careerStats.assists || 0) + histAssists;
+        }
+        p.seasonHistory.push({
+          seasonYear: prevYearStr,
+          clubName: histClubName,
+          age: seasonAge,
+          appearances: histApps,
+          goals: histGoals,
+          assists: histAssists,
+          avgRating: histRating,
+          ovr: getPlayerOverallRating(p)
+        });
+      }
+      p._joinedInOffseasonOfSeason = null;
       // CPUクラブ所属選手の古い年度履歴は直近3シーズン分に圧縮し長期プレイ時のセーブ肥大化を防止（通算成績 careerStats は完全保持）
       if (!club.isPlayer && p.seasonHistory.length > 3) {
         p.seasonHistory = p.seasonHistory.slice(-3);
@@ -4821,6 +5016,49 @@ function startNextSeason() {
       p.injuryWeeks = 0;
       p.injuryDays = 0;
       p.lastDiff = null;
+    }
+  }
+
+  if (Array.isArray(gameState.transferMarket)) {
+    const prevSeasonNum = Math.max(1, (gameState.season || 2) - 1);
+    const prevBaseYear = 2025 + prevSeasonNum;
+    const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
+    for (const fp of gameState.transferMarket) {
+      if (!fp) continue;
+      if (!Array.isArray(fp.seasonHistory)) {
+        const savedSeason = gameState.season;
+        gameState.season = prevSeasonNum;
+        ensurePlayerHistoryAndCareer(fp, '無所属 (Free Agent)');
+        gameState.season = savedSeason;
+      }
+      if (!fp.seasonHistory.some(r => r && r.seasonYear === prevYearStr)) {
+        const formerName = fp.lastClubName || (typeof pickFormerClubForPlayer === 'function' ? pickFormerClubForPlayer(fp, 0) : 'リーズ・U');
+        fp.lastClubName = formerName;
+        const ovr = getPlayerOverallRating(fp);
+        const pos = fp.primaryPosition || fp.pos || 'CM';
+        const estApps = randInt(14, 28);
+        const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+        const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
+        const estGoals = pos === 'GK' ? 0 : Math.round(estApps * gRate);
+        const estAssists = pos === 'GK' ? 0 : Math.round(estApps * aRate);
+        const estRating = clamp(6.5 + (ovr - 68) * 0.04, 6.2, 8.2).toFixed(2);
+        fp.seasonHistory.push({
+          seasonYear: prevYearStr,
+          clubName: formerName,
+          age: fp.age || 25,
+          appearances: estApps,
+          goals: estGoals,
+          assists: estAssists,
+          avgRating: estRating,
+          ovr
+        });
+        fp.age = (fp.age || 25) + 1;
+        if (!fp.careerStats) fp.careerStats = { appearances: 0, goals: 0, assists: 0 };
+        fp.careerStats.appearances = (fp.careerStats.appearances || 0) + estApps;
+        fp.careerStats.goals = (fp.careerStats.goals || 0) + estGoals;
+        fp.careerStats.assists = (fp.careerStats.assists || 0) + estAssists;
+      }
+      fp._generatedInOffseasonOfSeason = null;
     }
   }
 
@@ -8621,6 +8859,9 @@ function switchProfileModalTab(tabKey) {
 function ensurePlayerHistoryAndCareer(p, currentClubName) {
   if (!p) return { seasonHistory: [], careerEvents: [], birthYear: 2002 };
 
+  const isFreeAgentClubStr = (str) => !str || str.includes('無所属') || str.includes('Free Agent') || str === '現所属クラブ' || str === 'クラブ';
+  const isCurrentlyFreeAgent = Boolean(p.isFreeAgent || isFreeAgentClubStr(currentClubName));
+
   // 選手IDおよび名前から決定論的ハッシュ値を算出
   const seedStr = `${p.id || 'p'}_${p.name || 'player'}`;
   let hash = 2166136261;
@@ -8632,21 +8873,64 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
   const curSeasonNum = gameState.season || 1;
   const curBaseYear = 2025 + curSeasonNum; // Season 1 => 2026-27
-  const birthYear = curBaseYear - (p.age || 22);
+  const isOffseasonNewFreeAgent = Boolean(typeof gameState !== 'undefined' && gameState.isSeasonOver && p._generatedInOffseasonOfSeason === curSeasonNum);
+  const effectiveBaseYear = isOffseasonNewFreeAgent ? (curBaseYear + 1) : curBaseYear;
+  const birthYear = effectiveBaseYear - (p.age || 22);
   const baseOvr = getPlayerOverallRating(p);
   const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
+
+  // 無所属または前所属情報が欠損・不正な場合は実在風の架空前所属クラブを決定論的に割り当てる
+  if (isFreeAgentClubStr(p.lastClubName)) {
+    p.lastClubName = typeof pickFormerClubForPlayer === 'function'
+      ? pickFormerClubForPlayer(p, 0, isCurrentlyFreeAgent ? null : currentClubName)
+      : 'ノース・ロンドンFC';
+  }
+
+  const pastMainClubName = (isCurrentlyFreeAgent || p.signedFromFreeAgent)
+    ? p.lastClubName
+    : currentClubName;
 
   // 過去シーズン数の算出（18歳プロデビュー〜前シーズンまで）
   const pastSeasonsCount = Math.max(0, (p.age || 18) - 18);
 
-  if (!Array.isArray(p.seasonHistory)) {
+  const needsHistoryRebuild = !Array.isArray(p.seasonHistory) || p.seasonHistory.some(r => !r || isFreeAgentClubStr(r.clubName));
+  if (needsHistoryRebuild) {
+    // 無所属表記などで壊れていた既存の市場価値履歴も再生成させるためリセット
+    if (Array.isArray(p.seasonHistory)) {
+      p.valueHistory = null;
+    }
+
     const history = [];
     const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
-    const careerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
+    const rawCareerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
 
-    // キャリア通算アシスト数の取得・決定論的補完（未設定の場合はポジションと出場数から決定）
-    if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: careerGoals, assists: 0 };
-    if (typeof p.careerStats.assists !== 'number') {
+    if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: rawCareerGoals, assists: 0 };
+
+    let totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
+    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * 8) {
+      const minExpectedPastApps = pastSeasonsCount * (12 + (absHash % 10));
+      totalPastApps = minExpectedPastApps;
+      p.careerStats.appearances = totalPastApps + (p.appearances || 0);
+    }
+
+    let totalPastGoals = Math.max(0, rawCareerGoals - (p.goals || 0));
+    if (pastSeasonsCount > 0 && rawCareerGoals === 0 && primaryPos !== 'GK') {
+      let gRate = 0.04;
+      if (primaryPos === 'CB') gRate = 0.04;
+      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') gRate = 0.04;
+      else if (primaryPos === 'DM') gRate = 0.05;
+      else if (primaryPos === 'CM') gRate = 0.10;
+      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') gRate = 0.14;
+      else if (primaryPos === 'AM') gRate = 0.20;
+      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.24;
+      else if (primaryPos === 'CF') gRate = 0.38;
+      const jitterG = 0.75 + ((absHash % 13) / 25);
+      totalPastGoals = Math.max(0, Math.round(totalPastApps * gRate * jitterG));
+      p.careerStats.goals = totalPastGoals + (p.goals || 0);
+    }
+
+    // キャリア通算アシスト数の取得・決定論的補完（未設定または0補完が必要な場合）
+    if (typeof p.careerStats.assists !== 'number' || (pastSeasonsCount > 0 && p.careerStats.assists === 0 && primaryPos !== 'GK')) {
       let aRate = 0.02;
       if (primaryPos === 'GK') aRate = 0;
       else if (primaryPos === 'CB') aRate = 0.02;
@@ -8658,29 +8942,16 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') aRate = 0.18;
       else if (primaryPos === 'CF') aRate = 0.10;
       const jitterA = 0.8 + ((absHash % 17) / 40);
-      p.careerStats.assists = primaryPos === 'GK' ? 0 : Math.max(0, Math.round(careerApps * aRate * jitterA));
+      p.careerStats.assists = primaryPos === 'GK' ? 0 : Math.max(0, Math.round((totalPastApps + (p.appearances || 0)) * aRate * jitterA));
     }
     const careerAssists = Math.max(p.assists || 0, p.careerStats.assists || 0);
-    const totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
-    const totalPastGoals = Math.max(0, careerGoals - (p.goals || 0));
     const totalPastAssists = Math.max(0, careerAssists - (p.assists || 0));
 
-    // 過去所属クラブの決定（23歳以上かつ一定確率で前所属クラブを経由）
-    const foreignClubsByNat = {
-      England: ['ウェスト・ロンドンFC', 'サウス・ユナイテッド', 'ミッドランド・シティ'],
-      Spain: ['マドリード・アスレティック', 'バレンシア・ソシエダ', 'セビージャ・レアル'],
-      Germany: ['ミュンヘン・シュポルト', 'ライン・ドルトムント', 'フランクフルトSV'],
-      France: ['パリ・メトロポリタン', 'リヨン・オリンピック', 'マルセイユ・コート'],
-      Italy: ['ミラノ・カルチョ', 'トリノ・ユヴェントス', 'ローマ・クラブ'],
-      Brazil: ['サンパウロFC', 'フラメンゴ・リオ', 'サントス・クルーベ'],
-      Argentina: ['ブエノスアイレスCA', 'リバー・プレートSC', 'ボカ・アトレティコ'],
-      Netherlands: ['アムステルダム・アヤックス', 'アイントホーフェンPSV', 'ロッテルダムSC'],
-      Portugal: ['リスボン・スポルティング', 'ポルト・ドラゴンズ', 'ベンフィカSL'],
-      Japan: ['東京メトロポリタンFC', '横浜マリナーズSC', '川崎フロンティア']
-    };
-    const natPool = foreignClubsByNat[p.nationality] || ['コンチネンタルFC', 'メトロポリタンSC', 'ユナイテッド・アカデミー'];
-    const formerClubName = natPool[absHash % natPool.length];
-    const hasTransferred = pastSeasonsCount >= 3 && (absHash % 3 !== 0);
+    // 過去所属クラブの決定（23歳以上かつ一定確率でさらに前のクラブを経由）
+    const formerClubName = typeof pickFormerClubForPlayer === 'function'
+      ? pickFormerClubForPlayer(p, 1, pastMainClubName)
+      : pastMainClubName;
+    const hasTransferred = pastSeasonsCount >= 3 && (absHash % 3 !== 0) && formerClubName !== pastMainClubName;
     const transferSeasonIdx = hasTransferred ? Math.max(1, Math.floor(pastSeasonsCount * 0.55)) : pastSeasonsCount + 1;
 
     if (pastSeasonsCount > 0) {
@@ -8712,13 +8983,13 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       let remAssists = totalPastAssists;
 
       for (let i = 0; i < pastSeasonsCount; i++) {
-        const seasonStartYr = curBaseYear - (pastSeasonsCount - i);
+        const seasonStartYr = effectiveBaseYear - (pastSeasonsCount - i);
         const seasonYearStr = `${seasonStartYr}-${String((seasonStartYr + 1) % 100).padStart(2, '0')}`;
         const ageAtSeason = 18 + i;
         const isLast = (i === pastSeasonsCount - 1);
 
         let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
-        apps = clamp(apps, 0, Math.min(38, remApps));
+        apps = clamp(apps, 1, Math.min(38, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
         remApps = Math.max(0, remApps - apps);
 
         let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
@@ -8740,7 +9011,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const seasonJitter = (((absHash >> (i % 12)) % 9) - 4) * 0.04;
         const baseR = 6.52 + ovrBonus + goalContrib + assistContrib + defPosBonus + seasonJitter;
         const avgR = apps > 0 ? clamp(baseR, 6.20, 8.55).toFixed(2) : '-';
-        const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : (currentClubName || '現所属クラブ');
+        const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : pastMainClubName;
 
         history.push({
           seasonYear: seasonYearStr,
@@ -8768,13 +9039,14 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
     p.seasonHistory = history;
     p._formerClubName = hasTransferred ? formerClubName : null;
-    p._transferYear = hasTransferred ? (curBaseYear - (pastSeasonsCount - transferSeasonIdx)) : null;
+    p._transferYear = hasTransferred ? (effectiveBaseYear - (pastSeasonsCount - transferSeasonIdx)) : null;
   }
 
   // 経歴タイムラインイベントの生成
   const youthYear = birthYear + 15;
   const debutYear = birthYear + 18;
-  const originClub = p._formerClubName || currentClubName || 'クラブ';
+  const validFormerClub = !isFreeAgentClubStr(p._formerClubName) ? p._formerClubName : null;
+  const originClub = validFormerClub || pastMainClubName;
   const careerEvents = [
     {
       year: `${youthYear}年`,
@@ -8793,31 +9065,50 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     });
   }
 
-  if (p._formerClubName && p._transferYear) {
+  if (validFormerClub && p._transferYear) {
     careerEvents.push({
       year: `${p._transferYear}年`,
       badge: 'TRANSFER',
-      title: `${currentClubName} へ完全移籍`,
-      desc: `${p._formerClubName}での活躍が認められ、戦力補強の目玉として${currentClubName}へ加入。`
+      title: `${pastMainClubName} へ完全移籍`,
+      desc: `${validFormerClub}での活躍が認められ、戦力補強の目玉として${pastMainClubName}へ加入。`
     });
   } else if ((p.age || 18) >= 21) {
     careerEvents.push({
       year: `${debutYear + 2}年`,
       badge: 'SQUAD',
-      title: `${currentClubName} 主力メンバー定着`,
-      desc: `コンスタントな出場機会を確保し、背番号${p.squadNumber || 10}を背負う中核選手へと成長。`
+      title: `${pastMainClubName} 主力メンバー定着`,
+      desc: `コンスタントな出場機会を確保し、中核選手としてシーズンを戦う。`
+    });
+  }
+
+  if (!isCurrentlyFreeAgent && p.signedFromFreeAgent) {
+    const freeJoinYr = p.signedFreeAgentYear || curBaseYear;
+    careerEvents.push({
+      year: `${freeJoinYr}年`,
+      badge: 'TRANSFER',
+      title: `${currentClubName} へフリー加入`,
+      desc: `${pastMainClubName}との契約満了後、フリーエージェントを経て${currentClubName}へ加入。`
     });
   }
 
   // 現在のステータス
   const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
   const curAssists = typeof p.assists === 'number' ? p.assists : 0;
-  careerEvents.push({
-    year: `${curSeasonStr} (現在)`,
-    badge: 'CURRENT',
-    title: `${currentClubName} 在籍（契約残り${p.contractYears}年 / OVR ${baseOvr}）`,
-    desc: `今季ここまで ${p.appearances || 0}試合出場・${p.goals || 0}得点・${curAssists}アシスト。${p.isStarter ? `スタメン（${p.assignedPos || primaryPos}）として稼働中。` : 'スカッドの一員としてシーズンを戦う。'}`
-  });
+  if (isCurrentlyFreeAgent) {
+    careerEvents.push({
+      year: `${curSeasonStr} (現在)`,
+      badge: 'CURRENT',
+      title: `${pastMainClubName} 契約満了・無所属（OVR ${baseOvr}）`,
+      desc: `${pastMainClubName}との契約が満了し、現在はフリーエージェントとして新天地を探している。`
+    });
+  } else {
+    careerEvents.push({
+      year: `${curSeasonStr} (現在)`,
+      badge: 'CURRENT',
+      title: `${currentClubName} 在籍（契約残り${p.contractYears}年 / OVR ${baseOvr}）`,
+      desc: `今季ここまで ${p.appearances || 0}試合出場・${p.goals || 0}得点・${curAssists}アシスト。${p.isStarter ? `スタメン（${p.assignedPos || primaryPos}）として稼働中。` : 'スカッドの一員としてシーズンを戦う。'}`
+    });
+  }
 
   return {
     seasonHistory: p.seasonHistory,
@@ -9149,6 +9440,10 @@ function openPlayerProfileModal(playerId) {
   if (!ctx) return;
 
   const { player: p, clubName, isMarket } = ctx;
+  const historyData = ensurePlayerHistoryAndCareer(p, clubName);
+  const { seasonHistory, careerEvents, birthYear, curSeasonStr } = historyData;
+  const isFreeAgentPlayer = Boolean(p.isFreeAgent || (clubName && clubName.includes('無所属')));
+  const clubDisplayLabel = isFreeAgentPlayer ? `無所属 (前所属: ${p.lastClubName} / 契約満了)` : clubName;
   gameState.profileModalPlayerId = p.id;
   const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
 
@@ -9213,7 +9508,7 @@ function openPlayerProfileModal(playerId) {
   }
 
   const clubLabelEl = document.getElementById('profile-club-label');
-  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 18, 'profile-club-emblem')}<span>${clubName}</span>`;
+  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 18, 'profile-club-emblem')}<span>${clubDisplayLabel}</span>`;
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
@@ -9359,9 +9654,6 @@ function openPlayerProfileModal(playerId) {
     }
   }
 
-  // 年別成績・経歴データの取得と補完
-  const historyData = ensurePlayerHistoryAndCareer(p, clubName);
-  const { seasonHistory, careerEvents, birthYear, curSeasonStr } = historyData;
 
   // 今季成績の補助指標
   const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
@@ -9381,11 +9673,15 @@ function openPlayerProfileModal(playerId) {
   const estMarketValue = calculateTransferFee(p);
 
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
+  const lastHistoryRow = seasonHistory.length > 0 ? seasonHistory[seasonHistory.length - 1] : null;
+  const hasCurrentSeasonInHistory = Boolean(lastHistoryRow && lastHistoryRow.seasonYear === curSeasonStr);
   const allRowsData = [
-    ...seasonHistory.map(row => ({ ...row, isCurrent: false })),
-    {
+    ...seasonHistory.map(row => ({ ...row, isCurrent: false }))
+  ];
+  if (!hasCurrentSeasonInHistory) {
+    allRowsData.push({
       seasonYear: `${curSeasonStr}`,
-      clubName: clubName,
+      clubName: isFreeAgentPlayer ? '無所属 (契約満了)' : clubName,
       age: p.age,
       appearances: p.appearances || 0,
       goals: p.goals || 0,
@@ -9393,8 +9689,8 @@ function openPlayerProfileModal(playerId) {
       avgRating: avgRating,
       ovr: baseOvr,
       isCurrent: true
-    }
-  ];
+    });
+  }
 
   const totalAppsSum = allRowsData.reduce((acc, r) => acc + (r.appearances || 0), 0);
   const totalGoalsSum = allRowsData.reduce((acc, r) => acc + (r.goals || 0), 0);
@@ -9719,7 +10015,7 @@ function openPlayerProfileModal(playerId) {
                 <div class="profile-fit-row"><span class="text-muted">国籍</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${nationalityDisplay}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">生年・年齢</span><span class="mono"><strong>${birthYear}年 (${p.age}歳)</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono"><strong>${heightText} / ${footText}</strong></span></div>
-                <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubName} (${squadNumText})</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubDisplayLabel} (${squadNumText})</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">適性・成長型</span><span class="mono"><strong>${primaryPos}${subPosList.length ? ` (${subPosList.join('/')})` : ''} · ${growthLabel}</strong></span></div>
               </div>
             </div>
