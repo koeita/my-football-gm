@@ -3702,18 +3702,14 @@ function openMatchPrecheckModal() {
         <div class="precheck-tactics-bar">
           <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:10px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.07);">
             <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0;">
-              <div class="mono" style="display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;">
-                <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
-                <strong class="accent-green" style="font-size:12.5px;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
-              </div>
-              <span class="accent-gold mono" style="font-size:10.5px;">${tacticDef.badge}</span>
+              <strong style="font-family:var(--font-display); font-variant-numeric:tabular-nums; color:#38bdf8; font-size:15px; line-height:1.15; white-space:nowrap;">${formationKey}</strong>
+              <strong class="accent-green" style="font-size:12.5px; line-height:1.25; white-space:nowrap;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
+              <span class="accent-gold mono" style="font-size:10.5px; line-height:1.2; white-space:nowrap;">${tacticDef.badge}</span>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:2px; min-width:0;">
-              <div class="mono" style="display:flex; align-items:baseline; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
-                <strong style="color:#38bdf8; font-size:14px;">${oppFormationKey}</strong>
-                <strong style="color:#e2e8f0; font-size:12.5px;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
-              </div>
-              <span class="accent-gold mono" style="font-size:10.5px;">${oppTacticDef.badge}</span>
+              <strong style="font-family:var(--font-display); font-variant-numeric:tabular-nums; color:#38bdf8; font-size:15px; line-height:1.15; white-space:nowrap;">${oppFormationKey}</strong>
+              <strong style="color:#e2e8f0; font-size:12.5px; line-height:1.25; white-space:nowrap;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
+              <span class="accent-gold mono" style="font-size:10.5px; line-height:1.2; white-space:nowrap;">${oppTacticDef.badge}</span>
             </div>
           </div>
           <div class="ui-kv-list">
