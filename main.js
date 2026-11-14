@@ -6596,16 +6596,16 @@ function renderTacticalBoard() {
           <div class="pitch-node-body">
             <div class="pitch-node-top">
               <span class="pitch-node-pos">${sl.pos}</span>
+              ${capBadgeHtml}
+              ${fitBadgeHtml}
+              ${suspBadgeHtml}
+              ${injuryBadgeHtml}
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
               <span class="pitch-node-num mono">#${starter.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${starter.name}</span></span>
             </div>
             <div class="pitch-node-meta">
               <span class="pitch-node-pref">${posDisplay}</span>
-              ${capBadgeHtml}
-              ${fitBadgeHtml}
-              ${suspBadgeHtml}
-              ${injuryBadgeHtml}
             </div>
           </div>
         `;
@@ -6651,16 +6651,16 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${sl.pos}</span>
+                ${capBadgeHtml}
+                ${fitBadgeHtml}
+                ${suspBadgeHtml}
+                ${injuryBadgeHtml}
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-num mono">#${starter.squadNumber || '-'}</span><span class="pitch-node-name-viewport"><span class="pitch-node-name-text">${starter.name}</span></span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
-                ${capBadgeHtml}
-                ${fitBadgeHtml}
-                ${suspBadgeHtml}
-                ${injuryBadgeHtml}
               </div>
             </div>
           </div>
