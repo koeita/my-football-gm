@@ -7964,13 +7964,21 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   gap: 4px;
 }
 
-.pitch-node-name-btn {
+.pitch-node-name-btn,
+.pitch-node-name-btn.clickable-player-name {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   text-align: left;
+  width: 100%;
   max-width: 100%;
-  padding: 0;
+  padding: 0 0 1px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  text-decoration: none;
+}
+
+.pitch-node-name-btn.clickable-player-name:hover {
+  border-bottom-color: var(--accent-green);
 }
 
 .pitch-node-name-text {
