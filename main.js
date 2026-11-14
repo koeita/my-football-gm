@@ -5873,21 +5873,19 @@ function renderStandings() {
         bracketWrapper.classList.add('standings-view');
         bracketWrapper.innerHTML = renderEuroLeaguePhaseStandingsHtml(curEuro);
       }
-      const euroComp = gameState.competitions && gameState.competitions[curEuro];
-      const mw = euroComp ? euroComp.currentMatchweek || 0 : 0;
-      if (statusText) statusText.textContent = `${compName} MATCHWEEK ${mw} / 8`;
+      if (statusText) statusText.textContent = compName;
     } else if (curTab === 'schedule') {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
       }
-      if (statusText) statusText.textContent = `${compName} - 対戦日程・結果`;
+      if (statusText) statusText.textContent = compName;
     } else {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
       }
-      if (statusText) statusText.textContent = `${compName} - 決勝トーナメント`;
+      if (statusText) statusText.textContent = compName;
     }
   }
 }
@@ -6012,7 +6010,11 @@ const LEAGUE_STATS_CATEGORIES = {
  * 個人スタッツの選択中大会キーと表示ラベルを解決し、大会サブナビUIを描画する
  */
 function resolveStatsCompetitionAndRenderNav() {
-  const compGroup = gameState.statsCompView || 'league';
+  let compGroup = gameState.statsCompView || 'league';
+  if (!['league', 'domestic', 'europe'].includes(compGroup)) {
+    compGroup = 'league';
+    gameState.statsCompView = 'league';
+  }
   const segNav = document.getElementById('stats-comp-segment-nav');
   if (segNav) {
     segNav.querySelectorAll('.comp-tab-btn').forEach(b => {
@@ -6106,14 +6108,6 @@ function resolveStatsCompetitionAndRenderNav() {
           renderLeagueStats(currentLeagueStatsCategory);
         };
       });
-    }
-  } else {
-    compKey = 'preseasonCup';
-    compShortLabel = 'WCT';
-    compFullLabel = 'ワールド・チャレンジ・トロフィー (WCT / プレシーズン)';
-    if (subnavRow) {
-      subnavRow.classList.add('hidden');
-      subnavRow.innerHTML = '';
     }
   }
 
