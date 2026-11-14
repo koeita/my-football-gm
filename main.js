@@ -6882,6 +6882,14 @@ function getOvrTierClass(ovr) {
   return 'ovr-tier-low';
 }
 
+function getOvrTextClass(ovr) {
+  const v = typeof ovr === 'number' ? ovr : 65;
+  if (v >= 90) return 'tier-text-elite';
+  if (v >= 80) return 'tier-text-high';
+  if (v >= 70) return 'tier-text-mid';
+  return 'tier-text-low';
+}
+
 function getRatingTierInfo(val) {
   const num = typeof val === 'number' ? val : parseFloat(val);
   if (Number.isNaN(num)) {
@@ -7875,7 +7883,9 @@ function renderMarket() {
         <td class="col-team" title="${c.name}"><span class="team-cell-wrap">${getClubEmblemSvg(c, 18, 'market-club-emblem')}<strong class="mono" style="font-weight:700;">${getClubShortCode(c)}</strong></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
-        <td class="col-num"><span class="ovr-cell-badge ${scoutView.isScouted ? getOvrTierClass(getPlayerOverallRating(p)) : 'ovr-tier-mid'}">${scoutView.ovrDisplay}</span></td>
+        <td class="col-num">${scoutView.isScouted
+          ? `<span class="${getOvrTextClass(getPlayerOverallRating(p))}">${scoutView.ovrDisplay}</span>`
+          : `<span style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
         <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
         <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
