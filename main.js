@@ -3741,7 +3741,7 @@ function openCounterOfferModal(offerId) {
         <div>
           <span class="accent-green mono font-bold">[${offer.playerPos}]</span>
           <span style="font-weight: 700; font-size: 14px; margin-left: 4px;">#${offer.squadNumber} ${offer.playerName}</span>
-          <span class="text-muted" style="font-size: 11.5px; margin-left: 6px;">(${offer.playerAge}歳 / OVR ${offer.ovr})</span>
+          <span class="text-muted mono" style="font-size: 11.5px; margin-left: 6px;">(${offer.playerAge}歳 / <span class="inline-ovr-display" style="font-weight:800; color:#e6edf3;">OVR ${offer.ovr}</span>)</span>
         </div>
         <div style="text-align: right;">
           <div style="font-size: 11px; color: #8b949e;">オファー元クラブ</div>
@@ -6583,7 +6583,7 @@ function renderTacticalBoard() {
               <span class="pitch-node-ovr">OVR ${effOvr}</span>
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
-              <span class="pitch-node-name-text">#${starter.squadNumber || '-'} ${starter.name}</span>
+              <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
             </div>
             <div class="pitch-node-meta">
               <span class="pitch-node-pref">${posDisplay}</span>
@@ -6635,7 +6635,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-ovr">OVR ${effOvr}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
-                <span class="pitch-node-name-text">#${starter.squadNumber || '-'} ${starter.name}</span>
+                <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6715,7 +6715,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-ovr">OVR ${simOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
-                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+                <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6767,7 +6767,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-ovr">OVR ${baseOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
-                <span class="pitch-node-name-text">#${bp.squadNumber || '-'} ${bp.name}</span>
+                <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -6839,7 +6839,7 @@ function renderTacticalBoard() {
                 <span class="pitch-node-ovr">OVR ${ovrVal}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
-                <span class="pitch-node-name-text">#${rp.squadNumber || '-'} ${rp.name}</span>
+                <span class="pitch-node-name-text"><span class="mono">#${rp.squadNumber || '-'}</span> ${rp.name}</span>
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
@@ -7436,7 +7436,7 @@ function renderIncomingOffers() {
       } else if (offer.status === 'cpu_counter') {
         statusBadge = `<span class="offer-deadline-badge mono accent-gold" style="border: 1px solid rgba(243, 156, 18, 0.4); background: rgba(243, 156, 18, 0.15); font-weight: 700;">相手より増額逆提示あり（回答期限: 残り${offer.pendingDays || 1}日）</span>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-outgoing-accept-counter="${offer.id}" style="font-weight: 700;">増額を受け入れて合意 (${formatMoney(offer.counterFee)})</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-outgoing-accept-counter="${offer.id}" style="font-weight: 700;">増額を受け入れて合意 (<span class="mono">${formatMoney(offer.counterFee)}</span>)</button>
           <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">拒否・交渉終了</button>
         `;
       } else if (offer.status === 'agreed') {
@@ -7544,7 +7544,7 @@ function renderIncomingOffers() {
     } else if (offer.status === 'counter_agreed') {
       deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">上乗せ合意！ 残り期限: ${offer.daysLeft}日</span>`;
       actionButtons = `
-        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (ACCEPT: ${formatMoney(offer.offerFee)})</button>
+        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (ACCEPT: <span class="mono">${formatMoney(offer.offerFee)}</span>)</button>
         <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒絶 (REJECT)</button>
       `;
     } else if (offer.status === 'accepted') {
@@ -9720,8 +9720,8 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num">${r.appearances}</td>
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
-      <td class="mono col-num ${r.avgRating !== '-' ? 'accent-gold' : 'text-muted'}">${r.avgRating}</td>
-      <td class="mono col-num">${r.ovr}</td>
+      <td class="col-num yearly-table-rat ${r.avgRating !== '-' ? 'accent-gold' : 'text-muted'}">${r.avgRating}</td>
+      <td class="col-num yearly-table-ovr">${r.ovr}</td>
     </tr>
   `).join('');
 
