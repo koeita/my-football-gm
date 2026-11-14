@@ -3090,7 +3090,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
       const assistsCount = scorers.filter(s => s && s.assister && s.assister.id === p.id).length;
       const isNoRating = (p.lastMatchRating === null) || (isSub && playedMins < 15 && goalsCount === 0 && assistsCount === 0 && typeof p.lastMatchRating !== 'number');
       const hasNumRating = !isNoRating && typeof p.lastMatchRating === 'number';
-      const rat = isNoRating ? '評価なし' : (hasNumRating ? p.lastMatchRating.toFixed(1) : '6.7');
+      const rat = isNoRating ? 'N/A' : (hasNumRating ? p.lastMatchRating.toFixed(1) : '6.7');
       const numRat = isNoRating ? 0 : Number(rat);
 
       const explicitMomId = (md && md.momPlayer && md.momPlayer.id) ? md.momPlayer.id : null;
@@ -3098,15 +3098,17 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
       let ratClass = 'summary-rat-mid';
       if (isNoRating) ratClass = 'summary-rat-none';
-      else if (isMomPlayer || numRat >= 8.2) ratClass = 'summary-rat-mom';
+      else if (numRat >= 8.0) ratClass = 'summary-rat-elite';
       else if (numRat >= 7.0) ratClass = 'summary-rat-high';
-      else if (numRat < 6.0) ratClass = 'summary-rat-low';
+      else if (numRat >= 6.0) ratClass = 'summary-rat-mid';
+      else ratClass = 'summary-rat-low';
 
       let eventBadges = '';
       if (goalsCount > 0) eventBadges += `<span class="rating-event-badge goal" title="${goalsCount}得点">${goalsCount > 1 ? goalsCount : ''}G</span>`;
       if (assistsCount > 0) eventBadges += `<span class="rating-event-badge assist" title="${assistsCount}アシスト">${assistsCount > 1 ? assistsCount : ''}A</span>`;
 
-      const momBadge = isMomPlayer ? '<span class="rating-mom-crown" title="MAN OF THE MATCH">MOM</span>' : '';
+      const momStarSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      const momBadge = isMomPlayer ? `<span class="rating-mom-crown" title="MAN OF THE MATCH">${momStarSvg}MOM</span>` : '';
       const subBadge = isSub ? `<span class="rating-sub-tag" title="${inMinute || 68}分から途中出場">IN ${inMinute || 68}' (${playedMins}分)</span>` : '';
 
       return `
