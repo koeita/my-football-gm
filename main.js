@@ -4821,7 +4821,7 @@ function startNextSeason() {
   const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 || p.contractRefused);
   if (expiredPlayers.length > 0) {
     expiredPlayers.forEach(p => {
-      const seasonAge = Math.max(16, (p.age || 18) - 1);
+      const seasonAge = Math.max(15, (p.age || 18) - 1);
       if (!Array.isArray(p.seasonHistory)) {
         const savedAge = p.age;
         p.age = seasonAge;
@@ -4961,7 +4961,7 @@ function startNextSeason() {
     const prevBaseYear = 2025 + prevSeasonNum;
     const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
     for (const p of (club.players || [])) {
-      const seasonAge = Math.max(16, (p.age || 18) - 1);
+      const seasonAge = Math.max(15, (p.age || 18) - 1);
       if (!Array.isArray(p.seasonHistory)) {
         const savedSeason = gameState.season;
         const savedAge = p.age;
@@ -8922,8 +8922,10 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     ? p.lastClubName
     : currentClubName;
 
-  // 過去シーズン数の算出（18歳プロデビュー〜前シーズンまで）
-  const pastSeasonsCount = Math.max(0, (p.age || 18) - 18);
+  // 過去シーズン数の算出（原則18歳デビューだが、18-19歳の高OVR早熟スターは16-17歳デビュー扱い）
+  const curPWeightAge = p.age || 18;
+  const debutBaseAge = (curPWeightAge <= 19 && baseOvr >= 80) ? (baseOvr >= 84 ? 16 : 17) : 18;
+  const pastSeasonsCount = Math.max(0, curPWeightAge - debutBaseAge);
 
   const needsHistoryRebuild = !Array.isArray(p.seasonHistory) || p.seasonHistory.some(r => !r || isFreeAgentClubStr(r.clubName));
   if (needsHistoryRebuild) {
@@ -8979,12 +8981,44 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     const careerAssists = Math.max(p.assists || 0, p.careerStats.assists || 0);
     const totalPastAssists = Math.max(0, careerAssists - (p.assists || 0));
 
-    // 過去所属クラブの決定（23歳以上かつ一定確率でさらに前のクラブを経由）
-    const formerClubName = typeof pickFormerClubForPlayer === 'function'
-      ? pickFormerClubForPlayer(p, 1, pastMainClubName)
-      : pastMainClubName;
-    const hasTransferred = pastSeasonsCount >= 3 && (absHash % 3 !== 0) && formerClubName !== pastMainClubName;
-    const transferSeasonIdx = hasTransferred ? Math.max(1, Math.floor(pastSeasonsCount * 0.55)) : pastSeasonsCount + 1;
+    // 過去所属クラブの決定（プロ年数に応じて最大3〜4クラブへの移籍履歴を生成）
+    let clubCount = 1;
+    if (pastSeasonsCount >= 8) {
+      const rMod = absHash % 10;
+      if (rMod < 3) clubCount = 4;
+      else if (rMod < 8) clubCount = 3;
+      else if (rMod < 9) clubCount = 2;
+      else clubCount = 1;
+    } else if (pastSeasonsCount >= 4) {
+      const rMod = absHash % 10;
+      if (rMod < 3) clubCount = 3;
+      else if (rMod < 8) clubCount = 2;
+      else clubCount = 1;
+    } else if (pastSeasonsCount >= 2) {
+      clubCount = (absHash % 3 === 0) ? 1 : 2;
+    }
+
+    const clubTimeline = [];
+    let nextExclude = pastMainClubName;
+    for (let cIdx = clubCount - 1; cIdx >= 0; cIdx--) {
+      if (cIdx === clubCount - 1) {
+        clubTimeline.unshift(pastMainClubName);
+      } else {
+        const picked = typeof pickFormerClubForPlayer === 'function'
+          ? pickFormerClubForPlayer(p, cIdx + 1, nextExclude)
+          : pastMainClubName;
+        const resolved = (picked && picked !== nextExclude) ? picked : pastMainClubName;
+        clubTimeline.unshift(resolved);
+        nextExclude = resolved;
+      }
+    }
+
+    const resolveClubForSeasonIdx = (sIdx) => {
+      if (clubTimeline.length <= 1 || pastSeasonsCount <= 1) return pastMainClubName;
+      const ratio = sIdx / Math.max(1, pastSeasonsCount);
+      const bucket = Math.min(clubTimeline.length - 1, Math.floor(ratio * clubTimeline.length));
+      return clubTimeline[bucket] || pastMainClubName;
+    };
 
     if (pastSeasonsCount > 0) {
       // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分
@@ -8996,7 +9030,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       let sumAssistW = 0;
 
       for (let i = 0; i < pastSeasonsCount; i++) {
-        const ageAtSeason = 18 + i;
+        const ageAtSeason = debutBaseAge + i;
         const maturity = ageAtSeason <= 19 ? 0.55 : (ageAtSeason <= 21 ? 0.82 : 1.0);
         const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
         const aw = maturity * jitter;
@@ -9017,7 +9051,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
       for (let i = 0; i < pastSeasonsCount; i++) {
         const seasonStartYr = effectiveBaseYear - (pastSeasonsCount - i);
         const seasonYearStr = `${seasonStartYr}-${String((seasonStartYr + 1) % 100).padStart(2, '0')}`;
-        const ageAtSeason = 18 + i;
+        const ageAtSeason = debutBaseAge + i;
         const isLast = (i === pastSeasonsCount - 1);
 
         let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
@@ -9043,7 +9077,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
         const currentOffset = calcCurveOffset(curAge);
         const pastOffset = calcCurveOffset(ageAtSeason);
-        const ovrSeasonJitter = (((absHash >> (i % 10)) % 5) - 2) * 0.5;
+        const ovrSeasonJitter = isLast ? 0 : (((absHash >> (i % 10)) % 5) - 2) * 0.4;
         const estOvr = clamp(Math.round(baseOvr + (pastOffset - currentOffset) + ovrSeasonJitter), 50, 95);
         const ovrBonus = (estOvr - 65) * 0.042;
         const goalContrib = (goals / Math.max(8, apps || 1)) * 0.75;
@@ -9052,7 +9086,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const seasonJitter = (((absHash >> (i % 12)) % 9) - 4) * 0.04;
         const baseR = 6.52 + ovrBonus + goalContrib + assistContrib + defPosBonus + seasonJitter;
         const avgR = apps > 0 ? clamp(baseR, 6.20, 8.55).toFixed(2) : '-';
-        const clubAtSeason = (hasTransferred && i < transferSeasonIdx) ? formerClubName : pastMainClubName;
+        const clubAtSeason = resolveClubForSeasonIdx(i);
 
         history.push({
           seasonYear: seasonYearStr,
@@ -9079,8 +9113,11 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     }
 
     p.seasonHistory = history;
-    p._formerClubName = hasTransferred ? formerClubName : null;
-    p._transferYear = hasTransferred ? (effectiveBaseYear - (pastSeasonsCount - transferSeasonIdx)) : null;
+    const hasTransferred = clubTimeline.length > 1;
+    p._formerClubName = hasTransferred ? clubTimeline[0] : null;
+    p._transferYear = hasTransferred
+      ? (effectiveBaseYear - Math.max(1, Math.floor(pastSeasonsCount / clubTimeline.length)))
+      : null;
   }
 
   // 経歴タイムラインイベントの生成
@@ -9183,17 +9220,25 @@ function ensurePlayerValueHistory(p, currentClubName) {
 
   // 1. プレイしていない数年前からの過去各シーズンの市場価値推移
   if (seasonHistory && seasonHistory.length > 0) {
-    // 最大直近6シーズン分（キャリア初期〜前シーズン）を時系列順に抽出
+    // 累積通算出場数を計算しながら直近6シーズン分を抽出
+    const startIdx = Math.max(0, seasonHistory.length - 6);
+    let cumApps = 0;
+    for (let idx = 0; idx < startIdx; idx++) {
+      cumApps += (seasonHistory[idx] && seasonHistory[idx].appearances) ? seasonHistory[idx].appearances : 0;
+    }
     const pastSubset = seasonHistory.slice(-6);
     pastSubset.forEach((sh) => {
       const shOvr = (typeof sh.ovr === 'number' && !Number.isNaN(sh.ovr)) ? sh.ovr : 65;
       const shAge = (typeof sh.age === 'number' && !Number.isNaN(sh.age)) ? sh.age : 22;
+      cumApps += (sh.appearances || 0);
+      const parsedAvg = parseFloat(sh.avgRating);
       const perfStats = {
         appearances: sh.appearances || 0,
         goals: sh.goals || 0,
         assists: sh.assists || 0,
-        avgRating: sh.avgRating,
-        pos: p.pos
+        avgRating: Number.isNaN(parsedAvg) ? null : parsedAvg,
+        pos: p.pos,
+        careerApps: cumApps
       };
       const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2, perfStats);
       vHistory.push({
@@ -9209,51 +9254,68 @@ function ensurePlayerValueHistory(p, currentClubName) {
     });
   }
 
-  // 2. 若手選手（過去シーズンが少ない場合）でもデビュー初期からの推移を自然に補完
+  // 2. 若手選手（過去シーズンが少ない場合）でも現在年齢より若い範囲で推移を自然に補完
   if (vHistory.length === 0) {
-    const debutAge = Math.max(17, currentAge - 2);
-    const debutOvr = Math.max(50, currentOvr - 6);
-    const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3);
-    vHistory.push({
-      label: `2年前 (${debutAge}歳)`,
-      shortLabel: `2年前`,
-      fullLabel: `プロデビュー初期 (${debutAge}歳 / OVR ${debutOvr})`,
-      season: 'Debut',
-      age: debutAge,
-      ovr: debutOvr,
-      value: debutVal,
-      isPast: true
-    });
-
-    const midAge = Math.max(18, currentAge - 1);
-    const midOvr = Math.max(52, currentOvr - 3);
-    const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2);
-    vHistory.push({
-      label: `前年 (${midAge}歳)`,
-      shortLabel: `前年`,
-      fullLabel: `前シーズン台頭時 (${midAge}歳 / OVR ${midOvr})`,
-      season: 'LastSeason',
-      age: midAge,
-      ovr: midOvr,
-      value: midVal,
-      isPast: true
-    });
+    if (currentAge >= 18) {
+      const debutAge = currentAge - 2;
+      const debutOvr = Math.max(50, currentOvr - 4);
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: p.pos });
+      vHistory.push({
+        label: `2年前 (${debutAge}歳)`,
+        shortLabel: `2年前`,
+        fullLabel: `プロデビュー初期 (${debutAge}歳 / OVR ${debutOvr})`,
+        season: 'Debut',
+        age: debutAge,
+        ovr: debutOvr,
+        value: debutVal,
+        isPast: true
+      });
+      const midAge = currentAge - 1;
+      const midOvr = Math.max(52, currentOvr - 2);
+      const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2, { careerApps: 18, pos: p.pos });
+      vHistory.push({
+        label: `前年 (${midAge}歳)`,
+        shortLabel: `前年`,
+        fullLabel: `前シーズン (${midAge}歳 / OVR ${midOvr})`,
+        season: 'LastSeason',
+        age: midAge,
+        ovr: midOvr,
+        value: midVal,
+        isPast: true
+      });
+    } else if (currentAge >= 16) {
+      const prevAge = currentAge - 1;
+      const prevOvr = Math.max(48, currentOvr - 2);
+      const prevVal = calculateMarketValueFromOvrAndAge(prevOvr, prevAge, 3, { careerApps: 0, pos: p.pos });
+      vHistory.push({
+        label: `前年 (${prevAge}歳)`,
+        shortLabel: `前年`,
+        fullLabel: `アカデミー時代 (${prevAge}歳 / OVR ${prevOvr})`,
+        season: 'Academy',
+        age: prevAge,
+        ovr: prevOvr,
+        value: prevVal,
+        isPast: true
+      });
+    }
   } else if (vHistory.length === 1) {
-    // 過去1年のみの場合、デビュー時の基点を先頭に補足
+    // 過去1年のみの場合、15歳以上であればデビュー時の基点を先頭に補足
     const firstH = vHistory[0];
-    const debutAge = Math.max(17, firstH.age - 1);
-    const debutOvr = Math.max(50, firstH.ovr - 4);
-    const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3);
-    vHistory.unshift({
-      label: `デビュー (${debutAge}歳)`,
-      shortLabel: `デビュー`,
-      fullLabel: `プロデビュー時 (${debutAge}歳 / OVR ${debutOvr})`,
-      season: 'Debut',
-      age: debutAge,
-      ovr: debutOvr,
-      value: debutVal,
-      isPast: true
-    });
+    if (firstH.age > 15) {
+      const debutAge = firstH.age - 1;
+      const debutOvr = Math.max(48, firstH.ovr - 3);
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 0, pos: p.pos });
+      vHistory.unshift({
+        label: `デビュー (${debutAge}歳)`,
+        shortLabel: `デビュー`,
+        fullLabel: `プロデビュー時 (${debutAge}歳 / OVR ${debutOvr})`,
+        season: 'Debut',
+        age: debutAge,
+        ovr: debutOvr,
+        value: debutVal,
+        isPast: true
+      });
+    }
   }
 
   // 3. 最新（現在）の市場価値ポイント
@@ -9735,6 +9797,13 @@ function openPlayerProfileModal(playerId) {
       ovr: baseOvr,
       isCurrent: true
     });
+  }
+  // 過去行の年齢が現在年齢や直後行より大きくなる逆転を防止
+  for (let rIdx = allRowsData.length - 2; rIdx >= 0; rIdx--) {
+    const nextAge = allRowsData[rIdx + 1].age;
+    if (typeof nextAge === 'number' && typeof allRowsData[rIdx].age === 'number' && allRowsData[rIdx].age >= nextAge) {
+      allRowsData[rIdx].age = Math.max(15, nextAge - 1);
+    }
   }
 
   const totalAppsSum = allRowsData.reduce((acc, r) => acc + (r.appearances || 0), 0);
