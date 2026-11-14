@@ -9498,7 +9498,7 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
 
     // X軸ラベル（2段組：上段に年度、下段に年齢で横幅重なりを100%防止）
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + (isMobile ? 13 : 15)).toFixed(1)}" text-anchor="middle" font-family="var(--font-display)">
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + (isMobile ? 13 : 15)).toFixed(1)}" text-anchor="middle" font-family="var(--font-mono)">
         <tspan x="${pt.x.toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#9ba3af')}" font-size="${isMobile ? '10' : '11'}" font-weight="${isLast || isPeak ? '700' : '500'}">${seasonShort}</tspan>
         <tspan x="${pt.x.toFixed(1)}" dy="${isMobile ? '10' : '11.5'}" fill="#64748b" font-size="${isMobile ? '8.5' : '9.5'}">${pt.h.age}歳</tspan>
       </text>
@@ -9510,7 +9510,7 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
         <!-- PEAKハイライト -->
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 8 : 9}" fill="rgba(241, 196, 15, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 5 : 5.5}" fill="#f1c40f" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 11 : 13)).toFixed(1)}" fill="#f1c40f" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-display)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 11 : 13)).toFixed(1)}" fill="#f1c40f" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
       `;
     } else if (isLast) {
       // PEAKがすぐ横にある場合はラベルを下側に逃がして文字重なりを回避
@@ -9519,13 +9519,13 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
         <!-- 現在値ハイライト -->
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 7.5 : 8}" fill="rgba(46, 204, 113, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 4.5 : 5}" fill="#2ecc71" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${lastLabelY.toFixed(1)}" fill="#2ecc71" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-display)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${lastLabelY.toFixed(1)}" fill="#2ecc71" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
       `;
     } else {
       // 通常点（左端を含むすべての過去年を通常色で表示）
       pointsSvg += `
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 3 : 3.5}" fill="#14171b" stroke="#94a3b8" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#cbd5e1" font-size="${isMobile ? '9' : '10'}" font-family="var(--font-display)" text-anchor="middle">${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#cbd5e1" font-size="${isMobile ? '9' : '10'}" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
       `;
     }
   });

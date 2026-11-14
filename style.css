@@ -15802,7 +15802,7 @@ body {
   border-radius: 4px;
   font-size: 10.5px;
   font-weight: 800;
-  font-family: 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
 }
 .form-w { background: rgba(46, 204, 113, 0.22); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.45); }
 .form-d { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid rgba(241, 196, 15, 0.4); }
@@ -16724,29 +16724,18 @@ body {
 
 /* ==========================================================================
    ディスプレイフォント適用（OVR・ランク・スコア・タイトル等の強調要素）
+   ※通常の数値・金額・日本語/英語混在セルは Barlow Digits により数字のみ自動適用
    ========================================================================== */
 .ovr-cell-badge,
-.col-num,
-.col-num.mono,
-.col-pts,
-.col-pts.mono,
 .profile-header-ovr-val,
 .profile-ovr-badge,
-.profile-stat-val,
-.profile-metric-val,
 .pitch-node-ovr,
 .tactical-drag-ghost .ghost-ovr,
 .youth-ovr-val,
-.youth-stat-cell-val,
 .matchday-club-ovr,
 .precheck-club-ovr,
 .precheck-club-ovr strong,
 .precheck-ovr,
-.precheck-num,
-.precheck-sta,
-.precheck-ftg,
-.detail-metric-val,
-.detail-metric-val.mono,
 .mgr-rank-badge,
 .coach-rank-badge,
 .staff-stat-chip strong,
@@ -16765,20 +16754,7 @@ body {
 .matchday-vs-badge,
 .match-live-score,
 .match-live-score.mono,
-.ui-plate-val,
 .ui-attr-bar-num,
-.gm-metric-val,
-.scout-metric-val,
-.neg-demand-val,
-.neg-control-val,
-.neg-num-input,
-.offer-finance-val,
-.power-badge strong,
-.power-badge strong.mono,
-.metric-value,
-.metric-value.mono,
-.metric-sub-value,
-.metric-sub-value.mono,
 .fotmob-col-ovr,
 .fotmob-rating-pill,
 .yearly-table-ovr,
