@@ -3065,9 +3065,89 @@ function resumeSecondHalfMatch() {
  */
 
 /**
+ * ユニフォーム色からUI（背景網掛け・枠線・アクセント文字・バー色）向けのテーマ変数を算出
+ * 低輝度ユニフォーム（黒・濃紺等）でも暗いパネル上で視認性を確保する
+ */
+function buildKitUiTheme(kitObj, fallbackHex = '#2ecc71') {
+  const safeFallback = fallbackHex || '#2ecc71';
+  const primaryHex = (kitObj && kitObj.primary) ? kitObj.primary : safeFallback;
+  const secondaryHex = (kitObj && kitObj.secondary) ? kitObj.secondary : '#ffffff';
+
+  const toRgb = (hex) => {
+    if (typeof parseHexToRgb === 'function') return parseHexToRgb(hex);
+    const clean = String(hex || safeFallback).replace(/[^0-9a-fA-F]/g, '').padEnd(6, '0').slice(0, 6);
+    const num = parseInt(clean, 16) || 0;
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  };
+  const clampByte = (v) => Math.max(0, Math.min(255, Math.round(v)));
+
+  const rgb = toRgb(primaryHex);
+  const secRgb = toRgb(secondaryHex);
+  const lum = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+  const secLum = 0.299 * secRgb.r + 0.587 * secRgb.g + 0.114 * secRgb.b;
+
+  const borderRgb = lum < 45
+    ? (secLum >= 60 ? secRgb : { r: clampByte(rgb.r + 95), g: clampByte(rgb.g + 95), b: clampByte(rgb.b + 95) })
+    : rgb;
+
+  let accentColor = primaryHex;
+  if (lum < 45 && secLum >= 80) {
+    accentColor = `rgb(${secRgb.r}, ${secRgb.g}, ${secRgb.b})`;
+  } else if (lum < 90) {
+    const blend = Math.min(0.68, Math.max(0.32, (115 - lum) / 145));
+    accentColor = `rgb(${clampByte(rgb.r + (255 - rgb.r) * blend)}, ${clampByte(rgb.g + (255 - rgb.g) * blend)}, ${clampByte(rgb.b + (255 - rgb.b) * blend)})`;
+  }
+
+  const barColor = lum < 38
+    ? `rgb(${clampByte(rgb.r + 48)}, ${clampByte(rgb.g + 48)}, ${clampByte(rgb.b + 48)})`
+    : primaryHex;
+  const barBorder = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, ${lum < 45 ? 0.85 : 0.45})`;
+  const tintBg = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${lum < 38 ? 0.34 : 0.18})`;
+  const tintHeaderBg = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${lum < 38 ? 0.42 : 0.24})`;
+  const tintBorder = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.55)`;
+  const tintSubBorder = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.28)`;
+  const tintGlow = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.16)`;
+
+  const inlineVars = `--team-tint-bg:${tintBg};--team-tint-header-bg:${tintHeaderBg};--team-tint-border:${tintBorder};--team-tint-sub-border:${tintSubBorder};--team-tint-glow:${tintGlow};--team-accent-color:${accentColor};--team-bar-color:${barColor};--team-bar-border:${barBorder};`;
+
+  return {
+    primaryHex,
+    secondaryHex,
+    accentColor,
+    barColor,
+    barBorder,
+    tintBg,
+    tintHeaderBg,
+    tintBorder,
+    tintSubBorder,
+    tintGlow,
+    inlineVars
+  };
+}
+
+/**
+ * 試合のHome/AwayユニフォームからUIテーマを一括解決
+ */
+function resolveSummaryKitThemes(homeClub, awayClub, resolvedKits = null) {
+  const kits = resolvedKits || (typeof resolveMatchKits === 'function'
+    ? resolveMatchKits(homeClub, awayClub)
+    : {
+        home: { primary: '#2ecc71', secondary: '#ffffff', text: '#0b1a10' },
+        away: { primary: '#3b82f6', secondary: '#ffffff', text: '#ffffff' }
+      });
+  return {
+    kits,
+    homeTheme: buildKitUiTheme(kits.home, '#2ecc71'),
+    awayTheme: buildKitUiTheme(kits.away, '#3b82f6')
+  };
+}
+
+/**
  * マッチサマリー用：両チーム全出場選手の詳細採点一覧HTMLを構築
  */
-function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
+function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md, resolvedKits = null) {
+  const { homeTheme, awayTheme } = resolveSummaryKitThemes(homeClub, awayClub, resolvedKits);
+
   const getStartersList = (club) => {
     if (!club || !club.players) return [];
     if (club.isPlayer && typeof ensureValidSquadAndStarters === 'function') {
@@ -3105,7 +3185,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
     LW: 12, RW: 13, CF: 14, ST: 15
   };
 
-  const renderClubList = (club, starters, subEntries, scorers, isHome) => {
+  const renderClubList = (club, starters, subEntries, scorers, isHome, teamTheme) => {
     // スタメン11名をポジション順に整列
     const sortedStarters = [...starters].sort((a, b) => {
       const posA = a.assignedPos || a.pos || 'MF';
@@ -3184,7 +3264,7 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
     const isHidden = sideKey !== defaultTeam;
 
     return `
-      <div class="summary-team-ratings-panel ${club.isPlayer ? 'is-player' : ''} ${isHidden ? 'hidden' : ''}" data-ratings-panel="${sideKey}">
+      <div class="summary-team-ratings-panel ${club.isPlayer ? 'is-player' : ''} ${isHidden ? 'hidden' : ''}" data-ratings-panel="${sideKey}" style="${teamTheme ? teamTheme.inlineVars : ''}">
         <div class="summary-team-ratings-title">
           <div class="team-title-left">
             ${getClubEmblemSvg(club, 20, 'team-ratings-emblem')}
@@ -3213,18 +3293,18 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md) {
 
   return `
     <div class="summary-ratings-team-tabs">
-      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'home' ? 'active' : ''}" data-ratings-team="home">
+      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'home' ? 'active' : ''}" data-ratings-team="home" style="${homeTheme.inlineVars}">
         ${getClubEmblemSvg(homeClub, 16)}
         <span class="mono">${getClubShortCode(homeClub)} (HOME)${homeClub.isPlayer ? ' ★' : ''}</span>
       </button>
-      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'away' ? 'active' : ''}" data-ratings-team="away">
+      <button type="button" class="summary-team-tab-btn ${defaultTeam === 'away' ? 'active' : ''}" data-ratings-team="away" style="${awayTheme.inlineVars}">
         ${getClubEmblemSvg(awayClub, 16)}
         <span class="mono">${getClubShortCode(awayClub)} (AWAY)${awayClub.isPlayer ? ' ★' : ''}</span>
       </button>
     </div>
     <div class="summary-ratings-grid">
-      ${renderClubList(homeClub, homeStarters, homeSubEntries, homeScorers, true)}
-      ${renderClubList(awayClub, awayStarters, awaySubEntries, awayScorers, false)}
+      ${renderClubList(homeClub, homeStarters, homeSubEntries, homeScorers, true, homeTheme)}
+      ${renderClubList(awayClub, awayStarters, awaySubEntries, awayScorers, false, awayTheme)}
     </div>
   `;
 }
@@ -3370,12 +3450,24 @@ function buildMatchSummaryHtml(md) {
     md.momRating = momRating;
   }
 
-  const ratingsHtml = buildSummaryPlayerRatingsHtml(homeClub, awayClub, md);
+  const { kits, homeTheme, awayTheme } = resolveSummaryKitThemes(homeClub, awayClub);
+  const toSideCssVars = (prefix, t) => [
+    `--${prefix}-kit-bg:${t.tintBg}`,
+    `--${prefix}-kit-border:${t.tintBorder}`,
+    `--${prefix}-kit-sub-border:${t.tintSubBorder}`,
+    `--${prefix}-kit-glow:${t.tintGlow}`,
+    `--${prefix}-kit-accent:${t.accentColor}`,
+    `--${prefix}-kit-bar:${t.barColor}`,
+    `--${prefix}-kit-bar-border:${t.barBorder}`
+  ].join(';');
+  const summaryWrapperVars = `${toSideCssVars('home', homeTheme)};${toSideCssVars('away', awayTheme)};`;
+
+  const ratingsHtml = buildSummaryPlayerRatingsHtml(homeClub, awayClub, md, kits);
 
   const scoreHeroHtml = `
     <div class="summary-hero-box">
       <div class="summary-score-row">
-        <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}">
+        <div class="summary-club-col home ${homeClub.isPlayer ? 'is-player' : ''}" style="${homeTheme.inlineVars}">
           <div class="summary-club-header-wrap">
             ${getClubEmblemSvg(homeClub, 22, 'summary-club-emblem')}
             <span class="summary-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(homeClub)}</span>
@@ -3386,7 +3478,7 @@ function buildMatchSummaryHtml(md) {
           <div class="summary-final-score mono">${homeScore} - ${awayScore}</div>
           <span class="summary-result-pill res-${resType}">${resLabel}</span>
         </div>
-        <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}">
+        <div class="summary-club-col away ${awayClub.isPlayer ? 'is-player' : ''}" style="${awayTheme.inlineVars}">
           <div class="summary-club-header-wrap">
             <span class="summary-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(awayClub)}</span>
             ${getClubEmblemSvg(awayClub, 22, 'summary-club-emblem')}
@@ -3402,7 +3494,7 @@ function buildMatchSummaryHtml(md) {
   `;
 
   return `
-    <div class="summary-wrapper">
+    <div class="summary-wrapper" style="${summaryWrapperVars}">
       <!-- サマリー内タブ切り替えバー（スタッツ ⇄ 選手採点） -->
       <div class="summary-subnav-bar">
         <button type="button" class="summary-subnav-btn active" data-subnav="stats">
@@ -3423,9 +3515,9 @@ function buildMatchSummaryHtml(md) {
               <div class="flat-section-label mono">チームスタッツ比較</div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span style="color:#2ecc71;">${homePossession}%</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePossession}%</span>
                   <span style="color:var(--text-muted);font-size:9.5px;">ポゼッション率</span>
-                  <span style="color:#60a5fa;">${awayPossession}%</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPossession}%</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homePossession}%;"></div>
@@ -3434,9 +3526,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span style="color:#2ecc71;">${safeHomeShots}本 (${homeOnTarget})</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${safeHomeShots}本 (${homeOnTarget})</span>
                   <span style="color:var(--text-muted);font-size:9.5px;">シュート (枠内)</span>
-                  <span style="color:#60a5fa;">${safeAwayShots}本 (${awayOnTarget})</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${safeAwayShots}本 (${awayOnTarget})</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homeShotsPct}%;"></div>
@@ -3445,9 +3537,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span style="color:#2ecc71;">${homeXg.toFixed(2)}</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homeXg.toFixed(2)}</span>
                   <span style="color:var(--text-muted);font-size:9.5px;">ゴール期待値 (xG)</span>
-                  <span style="color:#60a5fa;">${awayXg.toFixed(2)}</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayXg.toFixed(2)}</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homeXgPct}%;"></div>
@@ -3456,9 +3548,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span style="color:#2ecc71;">${homePasses}本 [${homePassAccuracy}%]</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePasses}本 [${homePassAccuracy}%]</span>
                   <span style="color:var(--text-muted);font-size:9.5px;">パス数 [成功率]</span>
-                  <span style="color:#60a5fa;">${awayPasses}本 [${awayPassAccuracy}%]</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPasses}本 [${awayPassAccuracy}%]</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>
@@ -3509,9 +3601,9 @@ function buildMatchSummaryHtml(md) {
       <!-- タブ2：全選手評価点一覧 -->
       <div class="summary-tab-pane hidden" id="summary-tab-ratings">
         <div class="summary-mini-score-bar">
-          <span class="mini-score-club home mono ${homeClub.isPlayer ? 'accent-green' : ''}">${getClubShortCode(homeClub)}</span>
+          <span class="mini-score-club home mono ${homeClub.isPlayer ? 'accent-green' : ''}" style="color:${homeTheme.accentColor};">${getClubShortCode(homeClub)}</span>
           <span class="mini-score-nums mono"><strong>${homeScore} - ${awayScore}</strong></span>
-          <span class="mini-score-club away mono ${awayClub.isPlayer ? 'accent-green' : ''}">${getClubShortCode(awayClub)}</span>
+          <span class="mini-score-club away mono ${awayClub.isPlayer ? 'accent-green' : ''}" style="color:${awayTheme.accentColor};">${getClubShortCode(awayClub)}</span>
           <span class="summary-result-pill res-${resType}" style="margin-left:8px;">${resLabel}</span>
         </div>
         ${ratingsHtml}
