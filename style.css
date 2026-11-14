@@ -7917,10 +7917,24 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .pitch-node-avatar-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   line-height: 0;
+  position: relative;
+}
+
+.pitch-node-avatar-wrap .pitch-node-ovr {
+  margin-top: -9px;
+  position: relative;
+  z-index: 2;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #14181d;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  line-height: 1.1;
 }
 
 .player-avatar.pitch-node-avatar {
@@ -8045,7 +8059,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .pitch-node-top {
     width: 100% !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     padding: 0 1px !important;
   }
 
@@ -12040,7 +12054,7 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-avatar-wrap {
     width: 44px !important;
-    height: 44px !important;
+    height: auto !important;
     margin-bottom: 2px !important;
   }
 
