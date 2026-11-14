@@ -12277,9 +12277,9 @@ button.hidden,
 
   /* モバイル作戦ボード：スタメン選手カードもベンチ選手と同じ見た目・質感に統一 */
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node:not(.tactical-drag-ghost-card) {
-    width: 90px !important;
-    min-width: 90px !important;
-    max-width: 90px !important;
+    width: auto !important;
+    min-width: 104px !important;
+    max-width: 118px !important;
     height: 44px !important;
     padding: 3px 5px !important;
     gap: 5px !important;
