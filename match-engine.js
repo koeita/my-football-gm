@@ -2851,15 +2851,31 @@ function showMatchPitchPopup(ev) {
     ? Boolean(ev.club && ev.club.isPlayer)
     : Boolean(keeperClub && keeperClub.isPlayer);
 
+  const targetSide = isGoal ? ev.side : (ev.side === 'home' ? 'away' : 'home');
+  const { homeTheme, awayTheme } = resolveSummaryKitThemes(homeClub, awayClub);
+  const targetTheme = targetSide === 'away' ? awayTheme : homeTheme;
+  const speed = Math.max(1, Number(matchLiveState.speed) || 1);
+  const popupDurationMs = Math.max(350, Math.round(2000 / speed));
+  const animDurationMs = Math.max(90, Math.round(220 / Math.sqrt(speed)));
+
+  popupEl.style.setProperty('--popup-border', targetTheme.tintBorder);
+  popupEl.style.setProperty('--popup-glow', targetTheme.tintGlow);
+  popupEl.style.setProperty('--popup-accent', targetTheme.accentColor);
+  popupEl.style.setProperty('--popup-bg', targetTheme.tintBg);
+  popupEl.style.setProperty('--popup-anim-dur', `${animDurationMs}ms`);
+
   popupEl.className = `match-pitch-event-popup ${isGoal ? 'popup-goal' : 'popup-save'} ${isPlayerSuccess ? 'popup-player' : 'popup-opponent'}`;
 
   const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
   const targetClub = isGoal ? ev.club : (keeperClub || ev.club);
-  const playerPrefix = isPlayerSuccess ? '【自チーム】' : '【相手チーム】';
+  const playerName = targetPlayer ? targetPlayer.name : '';
+  const clubName = (targetClub && targetClub.name) ? targetClub.name : '';
+  const clubParen = clubName ? `（${clubName}）` : '';
   const badgeText = isGoal ? `GOAL!! (${ev.minute}')` : `SUPER SAVE! (${ev.minute}')`;
+  const assistText = (isGoal && ev.assister) ? `（Assist: ${ev.assister.name}）` : '';
   const subText = isGoal
-    ? `${playerPrefix} ${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
-    : `${playerPrefix} GK ${targetPlayer ? targetPlayer.name : ''}（${targetClub ? targetClub.name : ''}）が決定機を阻止！`;
+    ? `${playerName}${clubParen}がゴールを決めた！${assistText}`
+    : `GK ${playerName}${clubParen}が決定機を阻止！`;
   const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
   const avatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
     ? getPlayerAvatarHtml(targetPlayer, targetClub, 'avatar-md', 42)
@@ -2881,7 +2897,7 @@ function showMatchPitchPopup(ev) {
 
   matchLiveState.popupTimeoutId = setTimeout(() => {
     popupEl.classList.add('hidden');
-  }, 2000);
+  }, popupDurationMs);
 }
 
 /**
@@ -3831,7 +3847,7 @@ function openMatchPrecheckModal() {
           <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:10px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.07);">
             <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0;">
               <strong style="font-family:var(--font-display); font-variant-numeric:tabular-nums; color:#38bdf8; font-size:15px; line-height:1.15; white-space:nowrap;">${formationKey}</strong>
-              <strong class="accent-green" style="font-size:12.5px; line-height:1.25; white-space:nowrap;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
+              <strong style="color:#ffffff; font-size:12.5px; line-height:1.25; white-space:nowrap;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
               <span class="accent-gold mono" style="font-size:10.5px; line-height:1.2; white-space:nowrap;">${tacticDef.badge}</span>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:2px; min-width:0;">

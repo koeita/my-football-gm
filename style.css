@@ -9511,37 +9511,37 @@ body.main-menu-active {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(16, 20, 24, 0.94);
-  border: 2px solid #f1c40f;
+  background: linear-gradient(135deg, var(--popup-bg, rgba(255, 255, 255, 0.04)) 0%, rgba(16, 20, 24, 0.96) 70%), rgba(16, 20, 24, 0.96);
+  border: 2px solid var(--popup-border, #f1c40f);
   border-radius: 8px;
   padding: 10px 16px;
   display: flex;
   align-items: center;
   gap: 10px;
   z-index: 12;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 18px rgba(241, 196, 15, 0.35);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 18px var(--popup-glow, rgba(241, 196, 15, 0.35));
   min-width: 230px;
   max-width: 90%;
-  animation: matchGoalPopIn 0.22s ease-out;
+  animation: matchGoalPopIn var(--popup-anim-dur, 0.22s) ease-out;
 }
 .match-pitch-event-popup.popup-save {
-  border-color: #3498db;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 18px rgba(52, 152, 219, 0.35);
+  border-color: var(--popup-border, #3498db);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 18px var(--popup-glow, rgba(52, 152, 219, 0.35));
 }
 
 .match-pitch-event-popup.popup-player {
-  border-color: #2ecc71 !important;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px rgba(46, 204, 113, 0.45) !important;
+  border-color: var(--popup-border, #2ecc71);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px var(--popup-glow, rgba(46, 204, 113, 0.45));
 }
 .match-pitch-event-popup.popup-player .event-popup-badge {
-  color: #2ecc71 !important;
+  color: var(--popup-accent, #2ecc71);
 }
 .match-pitch-event-popup.popup-opponent {
-  border-color: #e74c3c !important;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px rgba(231, 76, 60, 0.35) !important;
+  border-color: var(--popup-border, #e74c3c);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.85), 0 0 20px var(--popup-glow, rgba(231, 76, 60, 0.35));
 }
 .match-pitch-event-popup.popup-opponent .event-popup-badge {
-  color: #ff6b6b !important;
+  color: var(--popup-accent, #ff6b6b);
 }
 
 @keyframes matchGoalPopIn {
@@ -9564,7 +9564,7 @@ body.main-menu-active {
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 900;
-  color: #f1c40f;
+  color: var(--popup-accent, #f1c40f);
   letter-spacing: 0.05em;
 }
 .event-popup-player {
@@ -10369,7 +10369,7 @@ body.main-menu-active {
   max-width: 150px;
 }
 .precheck-club-box.is-player .precheck-club-name {
-  color: var(--accent-green);
+  color: #ffffff;
 }
 
 .precheck-club-ovr {
