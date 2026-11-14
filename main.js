@@ -11095,7 +11095,6 @@ function initTacticalDragAndDrop() {
             dragSource.element.classList.add('dragging');
           }
 
-          if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
           if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
@@ -11151,7 +11150,6 @@ function initTacticalDragAndDrop() {
         const dragThreshold = isTouch ? 4 : 2;
         if (dist > dragThreshold) {
           isDragging = true;
-          if (dragSource.type === 'bench' && typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
           if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           if (longPressTimer) {
             clearTimeout(longPressTimer);

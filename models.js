@@ -801,8 +801,8 @@ function formatFootBadge(player) {
   const isLeft = foot === 'Left';
   const isBoth = foot === 'Both';
   const label = isLeft ? '左利き' : (isBoth ? '両利き' : '右利き');
-  const leftFill = isBoth ? '#f59e0b' : (isLeft ? '#38bdf8' : '#64748b');
-  const rightFill = isBoth ? '#f59e0b' : (isLeft ? '#64748b' : '#2ecc71');
+  const leftFill = '#ffffff';
+  const rightFill = '#ffffff';
   const leftOp = (isLeft || isBoth) ? '1' : '0.24';
   const rightOp = (!isLeft || isBoth) ? '1' : '0.24';
   const footPath = 'M6.8 2.2c-1.8 0-3 2.1-2.7 5.2.2 2 .9 3.6 1 4.9.1 1.1-.3 2-.1 3.2.2 1.2 1.1 1.9 2.1 1.9 1.1 0 1.9-.8 2-2 .1-1.2-.3-2.3-.1-3.6.3-1.5 1.1-3.2 1-5.4-.1-2.6-1.5-4.2-3.2-4.2z';
