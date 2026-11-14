@@ -10857,11 +10857,12 @@ function initTacticalDragAndDrop() {
     }
   });
 
-  // ドロップ先の最適ターゲット検出（ポインタ直下 ＋ ゴースト矩形重なり・近접判定）
+  // ドロップ先の最適ターゲット検出（ポインタ直下 ＋ ポインタ近接判定）
   function findBestDropTarget(clientX, clientY, ghostRect, source) {
     const tacticalSideCol = document.getElementById('tactical-side-column');
     const isDrawerOpen = tacticalSideCol && tacticalSideCol.classList.contains('sheet-open');
     const winWidth = window.innerWidth;
+    const isMobile = winWidth <= 900;
     const isPointerInsideDrawer = isDrawerOpen && clientX > (winWidth - 295);
 
     const elAtPoint = document.elementFromPoint(clientX, clientY);
@@ -10879,70 +10880,69 @@ function initTacticalDragAndDrop() {
       }
     }
 
-    const gCenterX = ghostRect ? (ghostRect.left + ghostRect.width / 2) : clientX;
-    const gCenterY = ghostRect ? (ghostRect.top + ghostRect.height / 2) : clientY;
+    const hitMargin = isMobile ? 6 : 10;
+    const calcRectEdgeDist = (px, py, r) => {
+      const dx = Math.max(r.left - px, 0, px - r.right);
+      const dy = Math.max(r.top - py, 0, py - r.bottom);
+      return Math.hypot(dx, dy);
+    };
 
-    // ピッチ上のスタメン枠との重なり・近接判定
-    const starterNodes = document.querySelectorAll('#pitch-nodes-layer .pitch-node[data-slot-index]');
-    let bestStarter = null;
-    let bestDist = Infinity;
+    // ピッチ上のスタメン枠との当たり判定（ポインタ位置ベースで誤吸着を防止）
+    if (!isPointerInsideDrawer) {
+      const starterNodes = document.querySelectorAll('#pitch-nodes-layer .pitch-node[data-slot-index]');
+      let bestStarter = null;
+      let bestDist = Infinity;
 
-    starterNodes.forEach(node => {
-      if (node === source.element) return;
-      const r = node.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) return;
+      starterNodes.forEach(node => {
+        if (node === source.element) return;
+        const r = node.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return;
 
-      const nCenterX = r.left + r.width / 2;
-      const nCenterY = r.top + r.height / 2;
-      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+        const edgeDist = calcRectEdgeDist(clientX, clientY, r);
+        if (edgeDist > hitMargin) return;
 
-      const isOverlapping = ghostRect && !(
-        ghostRect.right < r.left ||
-        ghostRect.left > r.right ||
-        ghostRect.bottom < r.top ||
-        ghostRect.top > r.bottom
-      );
+        const nCenterX = r.left + r.width / 2;
+        const nCenterY = r.top + r.height / 2;
+        const centerDist = Math.hypot(clientX - nCenterX, clientY - nCenterY);
 
-      if ((isOverlapping || dist < 80) && dist < bestDist) {
-        bestDist = dist;
-        bestStarter = node;
+        if (centerDist < bestDist) {
+          bestDist = centerDist;
+          bestStarter = node;
+        }
+      });
+
+      if (bestStarter) {
+        return { type: 'starter', element: bestStarter };
       }
-    });
-
-    // ドロワー展開中かつ指がドロワーエリア内にある場合は、背後スタメンとの誤交代を完全遮断
-    if (bestStarter && !isPointerInsideDrawer) {
-      return { type: 'starter', element: bestStarter };
     }
 
-    // 控え選手カードとの重なり・近接判定
-    const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id]');
-    let bestBench = null;
-    let bestBenchDist = Infinity;
+    // 控え選手カードとの当たり判定（モバイルでドロワーが閉じている時は除外）
+    if (!isMobile || isDrawerOpen) {
+      const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id]');
+      let bestBench = null;
+      let bestBenchDist = Infinity;
 
-    benchNodes.forEach(node => {
-      if (node === source.element) return;
-      const r = node.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) return;
+      benchNodes.forEach(node => {
+        if (node === source.element) return;
+        const r = node.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return;
 
-      const nCenterX = r.left + r.width / 2;
-      const nCenterY = r.top + r.height / 2;
-      const dist = Math.hypot(gCenterX - nCenterX, gCenterY - nCenterY);
+        const edgeDist = calcRectEdgeDist(clientX, clientY, r);
+        if (edgeDist > hitMargin) return;
 
-      const isOverlapping = ghostRect && !(
-        ghostRect.right < r.left ||
-        ghostRect.left > r.right ||
-        ghostRect.bottom < r.top ||
-        ghostRect.top > r.bottom
-      );
+        const nCenterX = r.left + r.width / 2;
+        const nCenterY = r.top + r.height / 2;
+        const centerDist = Math.hypot(clientX - nCenterX, clientY - nCenterY);
 
-      if ((isOverlapping || dist < 70) && dist < bestBenchDist) {
-        bestBenchDist = dist;
-        bestBench = node;
+        if (centerDist < bestBenchDist) {
+          bestBenchDist = centerDist;
+          bestBench = node;
+        }
+      });
+
+      if (bestBench) {
+        return { type: 'bench-item', element: bestBench };
       }
-    });
-
-    if (bestBench) {
-      return { type: 'bench-item', element: bestBench };
     }
 
     if (source.type === 'starter' && elAtPoint) {
@@ -11095,7 +11095,6 @@ function initTacticalDragAndDrop() {
             dragSource.element.classList.add('dragging');
           }
 
-          if (typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
           if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           ghostEl = dragSource.element.cloneNode(true);
           ghostEl.removeAttribute('id');
@@ -11151,7 +11150,6 @@ function initTacticalDragAndDrop() {
         const dragThreshold = isTouch ? 4 : 2;
         if (dist > dragThreshold) {
           isDragging = true;
-          if (dragSource.type === 'bench' && typeof toggleBenchSheet === 'function') toggleBenchSheet(false);
           if (window.innerWidth <= 900) document.body.classList.add('is-tactical-dragging');
           if (longPressTimer) {
             clearTimeout(longPressTimer);
@@ -11219,10 +11217,23 @@ function initTacticalDragAndDrop() {
           toggleBenchSheet(false);
         }
       }
-      // 控えタブ・右端エリア（画面右から80px以内）に指を持ってきた時は、確実にドロワーをスッと開く！
-      else if (!isDrawerOpen && e.clientX > (winWidth - 80)) {
-        if (typeof toggleBenchSheet === 'function') {
-          toggleBenchSheet(true);
+      // 控えタブのボタン領域（+8px余白）に指を持ってきた時のみドロワーを開く
+      else if (!isDrawerOpen) {
+        const benchTabBtn = document.getElementById('btn-open-bench-sheet');
+        if (benchTabBtn) {
+          const tabRect = benchTabBtn.getBoundingClientRect();
+          if (
+            tabRect.width > 0 &&
+            tabRect.height > 0 &&
+            e.clientX >= tabRect.left - 8 &&
+            e.clientX <= tabRect.right + 8 &&
+            e.clientY >= tabRect.top - 8 &&
+            e.clientY <= tabRect.bottom + 8
+          ) {
+            if (typeof toggleBenchSheet === 'function') {
+              toggleBenchSheet(true);
+            }
+          }
         }
       }
 
