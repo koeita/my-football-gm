@@ -216,6 +216,42 @@ class TestClubKits(unittest.TestCase):
         self.assertIn('var(--team-tint-border', tabs_css)
         self.assertIn('var(--team-accent-color', tabs_css)
 
+    def test_pitch_popup_kit_color_speed_scaling_and_precheck_white_text(self):
+        """試合中ポップアップの色・倍速連動と、作戦確認の自チーム名・戦術名の白文字化を検証"""
+        popup_fn = re.search(
+            r'function showMatchPitchPopup\(ev\) \{([\s\S]*?)\n\}',
+            self.match_js
+        ).group(1)
+        self.assertIn('resolveSummaryKitThemes(homeClub, awayClub)', popup_fn)
+        self.assertIn("popupEl.style.setProperty('--popup-border'", popup_fn)
+        self.assertIn("popupEl.style.setProperty('--popup-glow'", popup_fn)
+        self.assertIn("popupEl.style.setProperty('--popup-accent'", popup_fn)
+        self.assertIn("popupEl.style.setProperty('--popup-bg'", popup_fn)
+        self.assertIn('Math.max(350, Math.round(2000 / speed))', popup_fn)
+        self.assertIn('}, popupDurationMs);', popup_fn)
+
+        popup_css = re.search(
+            r'\.match-pitch-event-popup \{[\s\S]*?\.event-popup-badge \{[\s\S]*?\}',
+            self.style_css
+        ).group(0)
+        self.assertIn('var(--popup-border', popup_css)
+        self.assertIn('var(--popup-glow', popup_css)
+        self.assertIn('var(--popup-accent', popup_css)
+        self.assertIn('var(--popup-anim-dur', popup_css)
+
+        precheck_fn = re.search(
+            r'function openMatchPrecheckModal\(\) \{([\s\S]*?)\n\}',
+            self.match_js
+        ).group(1)
+        self.assertNotIn('<strong class="accent-green"', precheck_fn)
+        self.assertIn('<strong style="color:#ffffff;', precheck_fn)
+
+        precheck_css = re.search(
+            r'\.precheck-club-box\.is-player \.precheck-club-name \{[\s\S]*?\}',
+            self.style_css
+        ).group(0)
+        self.assertIn('color: #ffffff;', precheck_css)
+
 
 if __name__ == '__main__':
     unittest.main()
