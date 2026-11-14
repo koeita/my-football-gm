@@ -7972,6 +7972,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   text-align: left;
   width: 100%;
   max-width: 100%;
+  overflow: hidden;
   padding: 0 0 1px 0;
   border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
   text-decoration: none;
@@ -7988,6 +7989,23 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   min-width: 0;
   font-size: 11px;
   font-weight: 700;
+}
+
+.pitch-node-name-btn.is-marquee .pitch-node-name-text {
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  animation: pitch-name-marquee var(--marquee-dur, 6s) ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pitch-name-marquee {
+  0%, 18% { transform: translateX(0); }
+  55%, 75% { transform: translateX(var(--marquee-dist, 0px)); }
+  92%, 100% { transform: translateX(0); }
 }
 
 .pitch-node-meta {
