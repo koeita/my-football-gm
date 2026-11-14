@@ -6634,6 +6634,9 @@ function renderTacticalBoard() {
         ].filter(Boolean).join(' ');
 
         const fitBadgeHtml = starter.loanStatus?.isLoan ? '<span class="pitch-node-loan" title="レンタル加入選手">LOAN</span>' : '';
+        const capBadgeHtml = (playerClub.roles && playerClub.roles.captainId === starter.id) ? '<span class="pitch-node-cap" title="チームキャプテン">©</span>' : '';
+        const isSusp = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(starter, 'league');
+        const suspBadgeHtml = isSusp ? '<span class="pitch-node-susp" title="累積警告/退場により出場停止">停</span>' : '';
 
         const injuryBadgeHtml = starter.injuryWeeks > 0
           ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
@@ -6654,7 +6657,9 @@ function renderTacticalBoard() {
               </div>
               <div class="pitch-node-meta">
                 <span class="pitch-node-pref">${posDisplay}</span>
+                ${capBadgeHtml}
                 ${fitBadgeHtml}
+                ${suspBadgeHtml}
                 ${injuryBadgeHtml}
               </div>
             </div>

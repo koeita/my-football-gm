@@ -12274,6 +12274,68 @@ button.hidden,
     padding: 2px 5px !important;
     box-sizing: border-box !important;
   }
+
+  /* モバイル作戦ボード：スタメン選手カードもベンチ選手と同じ見た目・質感に統一 */
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node:not(.tactical-drag-ghost-card) {
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
+    height: 44px !important;
+    padding: 3px 5px !important;
+    gap: 5px !important;
+    background: #1c222b !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-main:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #2ecc71 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-sub:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.sub-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #38bdf8 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-semi:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.semi-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #f1c40f !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.fit-out:not(.tactical-drag-ghost-card),
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.out-of-pos:not(.tactical-drag-ghost-card) {
+    border-left: 3px solid #e74c3c !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node.selected:not(.tactical-drag-ghost-card) {
+    background-color: #28261f !important;
+    outline: 2px solid var(--accent-gold) !important;
+    outline-offset: 1px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-avatar-wrap {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .player-avatar.pitch-node-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-num,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-name-text {
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node .pitch-node-meta {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 2px !important;
+  }
 }
 
 /* ----------------------------------------------------
