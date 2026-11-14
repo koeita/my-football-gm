@@ -3462,7 +3462,7 @@ function buildMatchSummaryHtml(md) {
                       <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
                     </div>
                   </div>
-                  <span class="mom-rating-badge">Rating ${momRating}</span>
+                  <span class="mom-rating-badge ${typeof getRatingTierInfo === 'function' ? getRatingTierInfo(momRating).textClass : ''}">Rating ${momRating}</span>
                 </div>
               ` : ''}
             </div>
@@ -3651,7 +3651,7 @@ function openMatchPrecheckModal() {
 
     const ftgVal = getPlayerFatigue(p);
     const ftgSt = getPlayerFatigueStatus(ftgVal);
-    const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
+    const staCls = typeof getOvrTextClass === 'function' ? getOvrTextClass(p.sta) : '';
     const ovrTierCls = typeof getOvrTierClass === 'function' ? getOvrTierClass(effOvr) : '';
 
     startersRowsHtml += `
@@ -3660,7 +3660,7 @@ function openMatchPrecheckModal() {
         <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
         <span class="precheck-name">${p.name} ${fitBadge}</span>
         <span class="precheck-ovr mono ${ovrTierCls}" style="background:none;border:none;box-shadow:none;">${effOvr}</span>
-        <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
+        <span class="precheck-sta ${staCls}">ST:${p.sta}</span>
         <span class="precheck-ftg mono" style="color:${ftgSt.color};">疲労:${ftgVal}</span>
       </div>
     `;
@@ -3680,7 +3680,7 @@ function openMatchPrecheckModal() {
                 <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(playerClub)}</span>
               </div>
               <div class="precheck-club-meta">
-                <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
+                <span class="precheck-club-ovr mono">OVR <strong class="${typeof getOvrTierClass === 'function' ? getOvrTierClass(homeAvgOvr) : ''}">${homeAvgOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
               </div>
             </div>
@@ -3691,7 +3691,7 @@ function openMatchPrecheckModal() {
                 ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}
               </div>
               <div class="precheck-club-meta">
-                <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
+                <span class="precheck-club-ovr mono">OVR <strong class="${typeof getOvrTierClass === 'function' ? getOvrTierClass(oppOvr) : ''}">${oppOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
               </div>
             </div>
@@ -3702,18 +3702,14 @@ function openMatchPrecheckModal() {
         <div class="precheck-tactics-bar">
           <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:10px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.07);">
             <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0;">
-              <div class="mono" style="display:flex; align-items:baseline; gap:6px; flex-wrap:wrap;">
-                <strong style="color:#38bdf8; font-size:14px;">${formationKey}</strong>
-                <strong class="accent-green" style="font-size:12.5px;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
-              </div>
-              <span class="accent-gold mono" style="font-size:10.5px;">${tacticDef.badge}</span>
+              <strong style="font-family:var(--font-display); font-variant-numeric:tabular-nums; color:#38bdf8; font-size:15px; line-height:1.15; white-space:nowrap;">${formationKey}</strong>
+              <strong class="accent-green" style="font-size:12.5px; line-height:1.25; white-space:nowrap;">${tacticDef.name.split('（')[0].split('(')[0]}</strong>
+              <span class="accent-gold mono" style="font-size:10.5px; line-height:1.2; white-space:nowrap;">${tacticDef.badge}</span>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:2px; min-width:0;">
-              <div class="mono" style="display:flex; align-items:baseline; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
-                <strong style="color:#38bdf8; font-size:14px;">${oppFormationKey}</strong>
-                <strong style="color:#e2e8f0; font-size:12.5px;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
-              </div>
-              <span class="accent-gold mono" style="font-size:10.5px;">${oppTacticDef.badge}</span>
+              <strong style="font-family:var(--font-display); font-variant-numeric:tabular-nums; color:#38bdf8; font-size:15px; line-height:1.15; white-space:nowrap;">${oppFormationKey}</strong>
+              <strong style="color:#e2e8f0; font-size:12.5px; line-height:1.25; white-space:nowrap;">${oppTacticDef.name.split('（')[0].split('(')[0]}</strong>
+              <span class="accent-gold mono" style="font-size:10.5px; line-height:1.2; white-space:nowrap;">${oppTacticDef.badge}</span>
             </div>
           </div>
           <div class="ui-kv-list">

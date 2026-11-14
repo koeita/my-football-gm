@@ -1185,7 +1185,7 @@ function triggerMegaOfferEvent(autoOpenModal = false) {
   // 通常の1.8倍〜2.4倍の破格オファー（ポンド建て）
   const offerAmount = Math.round((baseValue * (1.8 + Math.random() * 0.6)) / 100) * 100;
   const ovr = getPlayerOverallRating(target);
-  const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
+  const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : 'N/A';
 
   gameState.pendingMegaOffer = {
     playerId: target.id,
@@ -1225,7 +1225,7 @@ function openMegaOfferModal() {
   }
 
   const ovr = getPlayerOverallRating(target);
-  const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : '-';
+  const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : 'N/A';
 
   showGmModal({
     category: 'EUROPEAN MEGA TRANSFER OFFER / CRITICAL',
@@ -6305,7 +6305,7 @@ function renderMatchLog() {
               ${getClubEmblemSvg(home, 26, 'matchday-club-emblem')}
               <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(home)}</span>
             </div>
-            <span class="matchday-club-ovr">OVR ${homeOvr} ${home.isPlayer ? '(自チーム)' : ''}</span>
+            <span class="matchday-club-ovr">OVR <strong class="${getOvrTierClass(homeOvr)}">${homeOvr}</strong> ${home.isPlayer ? '(自チーム)' : ''}</span>
           </div>
           <div class="matchday-vs-badge">VS</div>
           <div class="matchday-club-side ${away.isPlayer ? 'is-player-side' : ''}">
@@ -6313,7 +6313,7 @@ function renderMatchLog() {
               <span class="matchday-club-name mono" style="font-weight:800; font-size:15px; letter-spacing:0.05em;">${getClubShortCode(away)}</span>
               ${getClubEmblemSvg(away, 26, 'matchday-club-emblem')}
             </div>
-            <span class="matchday-club-ovr">OVR ${awayOvr} ${away.isPlayer ? '(自チーム)' : ''}</span>
+            <span class="matchday-club-ovr">OVR <strong class="${getOvrTierClass(awayOvr)}">${awayOvr}</strong> ${away.isPlayer ? '(自チーム)' : ''}</span>
           </div>
         </div>
         <div class="matchday-action-row matchday-action-dual">
@@ -6576,7 +6576,7 @@ function renderTacticalBoard() {
           <div class="pitch-node-body">
             <div class="pitch-node-top">
               <span class="pitch-node-pos">${sl.pos}</span>
-              <span class="pitch-node-ovr">OVR ${effOvr}</span>
+              <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">OVR ${effOvr}</span>
             </div>
             <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
               <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6628,7 +6628,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${sl.pos}</span>
-                <span class="pitch-node-ovr">OVR ${effOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(effOvr)}">OVR ${effOvr}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${starter.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${starter.squadNumber || '-'}</span> ${starter.name}</span>
@@ -6708,7 +6708,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr">OVR ${simOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(simOvr)}">OVR ${simOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6760,7 +6760,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${bp.pos}</span>
-                <span class="pitch-node-ovr">OVR ${baseOvr}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(baseOvr)}">OVR ${baseOvr}</span>
               </div>
               <div class="pitch-node-name-btn">
                 <span class="pitch-node-name-text"><span class="mono">#${bp.squadNumber || '-'}</span> ${bp.name}</span>
@@ -6832,7 +6832,7 @@ function renderTacticalBoard() {
             <div class="pitch-node-body">
               <div class="pitch-node-top">
                 <span class="pitch-node-pos">${rp.pos}</span>
-                <span class="pitch-node-ovr">OVR ${ovrVal}</span>
+                <span class="pitch-node-ovr ${getOvrTierClass(ovrVal)}">OVR ${ovrVal}</span>
               </div>
               <div class="pitch-node-name-btn clickable-player-name" data-profile-id="${rp.id}" title="タップで選手詳細プロフィールを表示">
                 <span class="pitch-node-name-text"><span class="mono">#${rp.squadNumber || '-'}</span> ${rp.name}</span>
@@ -8599,22 +8599,22 @@ function renderFacilitiesAndYouth() {
             </div>
             <div class="youth-ovr-box">
               <span class="youth-ovr-label">CURRENT OVR</span>
-              <span class="youth-ovr-val">${ovr}</span>
+              <span class="youth-ovr-val ${getOvrTierClass(ovr)}">${ovr}</span>
             </div>
           </div>
 
           <div class="youth-stats-strip">
             <div class="youth-stat-cell">
               <span class="youth-stat-cell-label">ATK（攻撃）</span>
-              <span class="youth-stat-cell-val">${y.atk}</span>
+              <span class="youth-stat-cell-val ${getOvrTextClass(y.atk)}">${y.atk}</span>
             </div>
             <div class="youth-stat-cell">
               <span class="youth-stat-cell-label">DEF（守備）</span>
-              <span class="youth-stat-cell-val">${y.def}</span>
+              <span class="youth-stat-cell-val ${getOvrTextClass(y.def)}">${y.def}</span>
             </div>
             <div class="youth-stat-cell">
               <span class="youth-stat-cell-label">STA（体力）</span>
-              <span class="youth-stat-cell-val">${y.sta}</span>
+              <span class="youth-stat-cell-val ${getOvrTextClass(y.sta)}">${y.sta}</span>
             </div>
           </div>
 
@@ -9111,7 +9111,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const defPosBonus = (primaryPos === 'GK' || primaryPos === 'CB' || primaryPos === 'DM') ? Math.max(0, (estOvr - 72) * 0.015) : 0;
         const seasonJitter = (((absHash >> (i % 12)) % 9) - 4) * 0.04;
         const baseR = 6.52 + ovrBonus + goalContrib + assistContrib + defPosBonus + seasonJitter;
-        const avgR = apps > 0 ? clamp(baseR, 6.20, 8.55).toFixed(2) : '-';
+        const avgR = apps > 0 ? clamp(baseR, 6.20, 8.55).toFixed(2) : 'N/A';
         const clubAtSeason = resolveClubForSeasonIdx(i);
 
         history.push({
@@ -9498,7 +9498,7 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
 
     // X軸ラベル（2段組：上段に年度、下段に年齢で横幅重なりを100%防止）
     xLabelsSvg += `
-      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + (isMobile ? 13 : 15)).toFixed(1)}" text-anchor="middle" font-family="var(--font-mono)">
+      <text x="${pt.x.toFixed(1)}" y="${(baseLineY + (isMobile ? 13 : 15)).toFixed(1)}" text-anchor="middle" font-family="var(--font-display)">
         <tspan x="${pt.x.toFixed(1)}" fill="${isLast ? 'var(--accent-green)' : (isPeak ? 'var(--accent-gold)' : '#9ba3af')}" font-size="${isMobile ? '10' : '11'}" font-weight="${isLast || isPeak ? '700' : '500'}">${seasonShort}</tspan>
         <tspan x="${pt.x.toFixed(1)}" dy="${isMobile ? '10' : '11.5'}" fill="#64748b" font-size="${isMobile ? '8.5' : '9.5'}">${pt.h.age}歳</tspan>
       </text>
@@ -9510,7 +9510,7 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
         <!-- PEAKハイライト -->
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 8 : 9}" fill="rgba(241, 196, 15, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 5 : 5.5}" fill="#f1c40f" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 11 : 13)).toFixed(1)}" fill="#f1c40f" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - (isMobile ? 11 : 13)).toFixed(1)}" fill="#f1c40f" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-display)" font-weight="800" text-anchor="middle">PEAK ${formattedVal}</text>
       `;
     } else if (isLast) {
       // PEAKがすぐ横にある場合はラベルを下側に逃がして文字重なりを回避
@@ -9519,13 +9519,13 @@ function renderMarketValueSvgContent(p, history, W, H, isMobile = false) {
         <!-- 現在値ハイライト -->
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 7.5 : 8}" fill="rgba(46, 204, 113, 0.25)" />
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 4.5 : 5}" fill="#2ecc71" stroke="#14171b" stroke-width="2.5" />
-        <text x="${pt.x.toFixed(1)}" y="${lastLabelY.toFixed(1)}" fill="#2ecc71" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-mono)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${lastLabelY.toFixed(1)}" fill="#2ecc71" font-size="${isMobile ? '10.5' : '11.5'}" font-family="var(--font-display)" font-weight="800" text-anchor="middle">現在 ${formattedVal}</text>
       `;
     } else {
       // 通常点（左端を含むすべての過去年を通常色で表示）
       pointsSvg += `
         <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isMobile ? 3 : 3.5}" fill="#14171b" stroke="#94a3b8" stroke-width="2" />
-        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#cbd5e1" font-size="${isMobile ? '9' : '10'}" font-family="var(--font-mono)" text-anchor="middle">${formattedVal}</text>
+        <text x="${pt.x.toFixed(1)}" y="${(pt.y - 8).toFixed(1)}" fill="#cbd5e1" font-size="${isMobile ? '9' : '10'}" font-family="var(--font-display)" text-anchor="middle">${formattedVal}</text>
       `;
     }
   });
@@ -10143,7 +10143,7 @@ function openPlayerProfileModal(playerId) {
             ${yearlyFotmobHtml}
             <div class="fotmob-yearly-total mono">
               <span>通算 (${totalAppsSum}試合)</span>
-              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <span class="fotmob-rating-pill mono ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
+              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <span class="fotmob-rating-pill ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
             </div>
           </div>
           <div class="profile-yearly-table-wrap">
@@ -10482,7 +10482,7 @@ function renderIntroClubDetail() {
       </div>
       <div class="detail-metric-card">
         <span class="detail-metric-label">チーム戦力値</span>
-        <span class="detail-metric-val mono">OVR ${club.basePower}</span>
+        <span class="detail-metric-val">OVR <span class="${getOvrTierClass(club.basePower)}">${club.basePower}</span></span>
       </div>
       <div class="detail-metric-card">
         <span class="detail-metric-label">サポーター規模</span>

@@ -9893,14 +9893,15 @@ body.main-menu-active {
   text-overflow: ellipsis;
 }
 .mom-rating-badge {
-  font-family: var(--font-mono);
-  font-size: 13.5px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 900;
-  padding: 3px 9px;
-  border-radius: 4px;
-  background-color: #f1c40f;
-  color: #111;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .match-summary-footer {
@@ -16675,14 +16676,25 @@ body {
    ディスプレイフォント適用（OVR・ランク・スコア・タイトル等の強調要素）
    ========================================================================== */
 .ovr-cell-badge,
+.col-num,
+.col-num.mono,
+.col-pts,
+.col-pts.mono,
 .profile-header-ovr-val,
 .profile-ovr-badge,
+.profile-stat-val,
+.profile-metric-val,
 .pitch-node-ovr,
+.tactical-drag-ghost .ghost-ovr,
 .youth-ovr-val,
+.youth-stat-cell-val,
 .matchday-club-ovr,
 .precheck-club-ovr,
 .precheck-club-ovr strong,
 .precheck-ovr,
+.precheck-num,
+.precheck-sta,
+.precheck-ftg,
 .detail-metric-val,
 .detail-metric-val.mono,
 .mgr-rank-badge,
@@ -16705,6 +16717,18 @@ body {
 .match-live-score.mono,
 .ui-plate-val,
 .ui-attr-bar-num,
+.gm-metric-val,
+.scout-metric-val,
+.neg-demand-val,
+.neg-control-val,
+.neg-num-input,
+.offer-finance-val,
+.power-badge strong,
+.power-badge strong.mono,
+.metric-value,
+.metric-value.mono,
+.metric-sub-value,
+.metric-sub-value.mono,
 .fotmob-col-ovr,
 .fotmob-rating-pill,
 .yearly-table-ovr,
@@ -16910,3 +16934,17 @@ body {
   font-weight: 800;
   letter-spacing: 0.03em;
 }
+
+/* ピッチノード・ユース・事前確認OVR等の統一カラー詳細度確保 */
+.pitch-node .pitch-node-ovr.ovr-tier-elite,
+.precheck-club-ovr strong.ovr-tier-elite,
+.youth-ovr-val.ovr-tier-elite { color: #7dd3fc !important; }
+.pitch-node .pitch-node-ovr.ovr-tier-high,
+.precheck-club-ovr strong.ovr-tier-high,
+.youth-ovr-val.ovr-tier-high  { color: #34d399 !important; }
+.pitch-node .pitch-node-ovr.ovr-tier-mid,
+.precheck-club-ovr strong.ovr-tier-mid,
+.youth-ovr-val.ovr-tier-mid   { color: #fbbf24 !important; }
+.pitch-node .pitch-node-ovr.ovr-tier-low,
+.precheck-club-ovr strong.ovr-tier-low,
+.youth-ovr-val.ovr-tier-low   { color: #f87171 !important; }
