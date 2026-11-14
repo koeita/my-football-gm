@@ -3241,12 +3241,16 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .training-info-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 4px 8px;
   font-size: 11.5px;
   margin-bottom: 6px;
 }
@@ -16526,9 +16530,12 @@ body {
 .ui-slim-gauge-fill.ovr-tier-mid   { background: #38bdf8; }
 .ui-slim-gauge-fill.ovr-tier-low   { background: #94a3b8; }
 
-.ef-pitch-field .ef-pos-slot.ef-pos-major { background: rgba(46, 204, 113, 0.28) !important; border: 1.5px solid #2ecc71 !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: none !important; }
-.ef-pitch-field .ef-pos-slot.ef-pos-sub { background: rgba(56, 189, 248, 0.16) !important; border: 1px solid rgba(56, 189, 248, 0.6) !important; color: #bae6fd !important; font-weight: 700 !important; box-shadow: none !important; }
-.ef-pitch-field .ef-pos-slot.ef-pos-none { background: rgba(255, 255, 255, 0.02) !important; border: 1px solid transparent !important; color: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-major,
+.ef-pitch-legend .ef-legend-color.ef-pos-major { background: rgba(46, 204, 113, 0.28) !important; border: 1.5px solid #2ecc71 !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-sub,
+.ef-pitch-legend .ef-legend-color.ef-pos-sub { background: rgba(46, 204, 113, 0.14) !important; border: 1px dashed #2ecc71 !important; color: #a8e063 !important; font-weight: 700 !important; box-shadow: none !important; }
+.ef-pitch-field .ef-pos-slot.ef-pos-none,
+.ef-pitch-legend .ef-legend-color.ef-pos-none { background: rgba(255, 255, 255, 0.02) !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; color: rgba(255, 255, 255, 0.16) !important; box-shadow: none !important; }
 .profile-trait-tag.is-active-trait { background: rgba(46, 204, 113, 0.12) !important; border: none !important; color: #2ecc71 !important; font-weight: 700 !important; }
 
 .summary-section-card, .scout-metric-box, .scout-analysis-panel, .neg-control-group, .neg-panel-box, .precheck-tactics-bar, .precheck-starters-card, .detail-tactic-box, .detail-metric-card {
@@ -16558,6 +16565,11 @@ body {
 .pitch-node-ovr,
 .youth-ovr-val,
 .matchday-club-ovr,
+.precheck-club-ovr,
+.precheck-club-ovr strong,
+.precheck-ovr,
+.detail-metric-val,
+.detail-metric-val.mono,
 .mgr-rank-badge,
 .coach-rank-badge,
 .staff-stat-chip strong,
@@ -16566,6 +16578,11 @@ body {
 .stat-rank-B,
 .stat-rank-C,
 .stat-rank-D,
+.profile-bio-chip.stat-rank-S,
+.profile-bio-chip.stat-rank-A,
+.profile-bio-chip.stat-rank-B,
+.profile-bio-chip.stat-rank-C,
+.profile-bio-chip.stat-rank-D,
 .rank-badge,
 .match-score-box,
 .matchday-vs-badge,
@@ -16711,4 +16728,48 @@ body {
   .main-menu-title.mono {
     font-size: 26px;
   }
+}
+
+/* 選手プロフィール六角形チャート：能力値と同じフォント・ティアカラーに統一 */
+.hex-label-val {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.hex-label-val.ovr-tier-elite { fill: #f59e0b; }
+.hex-label-val.ovr-tier-high  { fill: #2ecc71; }
+.hex-label-val.ovr-tier-mid   { fill: #38bdf8; }
+.hex-label-val.ovr-tier-low   { fill: #cbd5e1; }
+
+.hex-data-dot.ovr-tier-elite { fill: #f59e0b; }
+.hex-data-dot.ovr-tier-high  { fill: #2ecc71; }
+.hex-data-dot.ovr-tier-mid   { fill: #38bdf8; }
+.hex-data-dot.ovr-tier-low   { fill: #cbd5e1; }
+
+.precheck-club-ovr {
+  font-size: 13px;
+}
+.precheck-club-ovr strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+.precheck-ovr {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.detail-metric-val,
+.detail-metric-val.mono {
+  font-size: 17px;
+  font-weight: 800;
+}
+.profile-bio-chip.stat-rank-S,
+.profile-bio-chip.stat-rank-A,
+.profile-bio-chip.stat-rank-B,
+.profile-bio-chip.stat-rank-C,
+.profile-bio-chip.stat-rank-D {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
