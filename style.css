@@ -14108,6 +14108,7 @@ button.hidden,
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 30px;
   box-sizing: border-box;
 }
 
@@ -14133,17 +14134,25 @@ button.hidden,
 
 .comp-sub-btn,
 .euro-phase-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   color: #94a3b8;
-  padding: 6px 8px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
   border-radius: 0;
   font-size: 11px;
+  line-height: 1.2;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex: 1;
   text-align: center;
   min-width: 0;
