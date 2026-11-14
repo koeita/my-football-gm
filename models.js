@@ -818,9 +818,9 @@ function getFootShortText(player) {
 }
 
 /**
- * OVR・年齢・残り契約年数から直接市場価値（£k単位）を算出するコアロジック
+ * OVR・年齢・残り契約年数・成績実績（任意）から市場価値（£k単位）を算出するコアロジック
  */
-function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2) {
+function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2, perfStats = null) {
   const safeOvr = (typeof ovr === 'number' && !Number.isNaN(ovr)) ? ovr : 70;
   const safeAge = (typeof age === 'number' && !Number.isNaN(age)) ? age : 25;
   const safeContractYears = (typeof contractYears === 'number' && !Number.isNaN(contractYears)) ? contractYears : 2;
@@ -844,23 +844,28 @@ function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2) {
     const t = (safeOvr - 80) / 4;
     baseVal = 40000 + t * 35000; // 40000k..75000k (£40.0M〜£75.0M)
   } else {
-    // OVR 85以上（ワールドクラス）：£80.0M 〜 最大£130.0M
-    const extra = Math.min(6, safeOvr - 85); // 85..91
-    const t = extra / 6;
-    baseVal = 80000 + t * 50000; // 80000k..130000k (£80.0M〜£130.0M)
+    // OVR 85以上（ワールドクラス）：£75.0M 〜 £175.0M（年齢・活躍補正込みで最大£250.0M）
+    const extra = Math.min(10, safeOvr - 85); // 85..95
+    const t = extra / 10;
+    baseVal = 75000 + t * 100000; // 75000k..175000k (£75.0M〜£175.0M)
   }
 
-  // 年齢補正：18〜23歳（x1.2〜1.4）、24〜28歳（x1.0）、29〜32歳（x0.75）、33歳以上（x0.4〜0.5）
+  // 年齢補正：若手プレミアムと29歳以降の明確な下落カーブ
   let ageFactor = 1.0;
-  if (safeAge <= 19) ageFactor = 1.40;
-  else if (safeAge <= 21) ageFactor = 1.30;
-  else if (safeAge <= 23) ageFactor = 1.20;
+  if (safeAge <= 19) ageFactor = 1.35;
+  else if (safeAge <= 21) ageFactor = 1.25;
+  else if (safeAge <= 23) ageFactor = 1.15;
+  else if (safeAge <= 25) ageFactor = 1.06;
   else if (safeAge <= 28) ageFactor = 1.00;
-  else if (safeAge <= 32) ageFactor = 0.75;
-  else if (safeAge <= 34) ageFactor = 0.50;
-  else ageFactor = 0.40;
+  else if (safeAge === 29) ageFactor = 0.86;
+  else if (safeAge === 30) ageFactor = 0.72;
+  else if (safeAge === 31) ageFactor = 0.58;
+  else if (safeAge === 32) ageFactor = 0.46;
+  else if (safeAge === 33) ageFactor = 0.36;
+  else if (safeAge === 34) ageFactor = 0.28;
+  else ageFactor = 0.22;
 
-  // 契約残り年数による軽微な補正（市場価値そのものは実力・年齢ベースであり、契約年数で不自然に半減させない）
+  // 契約残り年数による軽微な補正
   let contractFactor = 1.0;
   if (safeContractYears <= 1) {
     contractFactor = 0.95;
@@ -870,27 +875,99 @@ function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2) {
     contractFactor = 1.05;
   }
 
-  const fee = Math.round((baseVal * ageFactor * contractFactor) / 100) * 100;
-  return clamp(fee, 200, 130000);
+  // 年別成績（出場数・平均評価点・G/A貢献）に基づく活躍度補正
+  let perfFactor = 1.0;
+  if (perfStats && typeof perfStats === 'object') {
+    const apps = typeof perfStats.appearances === 'number' ? perfStats.appearances : null;
+    const avgR = typeof perfStats.avgRating === 'number' && !Number.isNaN(perfStats.avgRating) ? perfStats.avgRating : null;
+    const goals = typeof perfStats.goals === 'number' ? perfStats.goals : 0;
+    const assists = typeof perfStats.assists === 'number' ? perfStats.assists : 0;
+    const pos = perfStats.pos || '';
+
+    let mod = 0;
+    if (avgR !== null && (apps === null || apps > 0)) {
+      mod += clamp((avgR - 6.75) * 0.14, -0.14, 0.16);
+    }
+    if (apps !== null) {
+      if (apps === 0) mod -= 0.14;
+      else if (apps <= 8) mod -= 0.08;
+      else if (apps >= 28) mod += 0.05;
+    }
+    if (pos !== 'GK' && apps !== null && apps >= 10) {
+      const gaRate = (goals + assists * 0.8) / apps;
+      if (gaRate >= 0.65) mod += 0.08;
+      else if (gaRate >= 0.35) mod += 0.04;
+    }
+    perfFactor = clamp(1.0 + mod, 0.78, 1.24);
+  }
+
+  // プロ通算出場実績に基づく未証明ディスカウント（実戦実績ゼロでの超高額評価を防止）
+  let careerFactor = 1.0;
+  if (perfStats && typeof perfStats.careerApps === 'number') {
+    const cApps = perfStats.careerApps;
+    if (cApps <= 0) careerFactor = 0.50;
+    else if (cApps < 10) careerFactor = 0.65 + (cApps / 10) * 0.15;
+    else if (cApps < 25) careerFactor = 0.80 + ((cApps - 10) / 15) * 0.20;
+  }
+
+  const fee = Math.round((baseVal * ageFactor * contractFactor * perfFactor * careerFactor) / 100) * 100;
+  return clamp(fee, 200, 250000);
 }
 
 function calculatePlayerMarketValue(player) {
   if (!player) return 1000;
 
-  // すでに ovr プロパティが数値で存在していればそれを最優先（過去推移オブジェクトやキャッシュ対応）
+  // 実際の能力値（atk/def/sta）からの動的OVR算出を最優先し、成長・衰えを即座に反映
   let ovr = 70;
-  if (typeof player.ovr === 'number' && !Number.isNaN(player.ovr)) {
-    ovr = player.ovr;
-  } else if (typeof getPlayerOverallRating === 'function') {
+  if (typeof getPlayerOverallRating === 'function' && typeof player.atk === 'number') {
     const calc = getPlayerOverallRating(player);
     if (typeof calc === 'number' && !Number.isNaN(calc)) {
       ovr = calc;
     }
+  } else if (typeof player.ovr === 'number' && !Number.isNaN(player.ovr)) {
+    ovr = player.ovr;
   }
 
   const age = typeof player.age === 'number' && !Number.isNaN(player.age) ? player.age : 25;
   const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
-  return calculateMarketValueFromOvrAndAge(ovr, age, contractYears);
+  const curApps = typeof player.appearances === 'number' ? player.appearances : 0;
+  const histAppsSum = Array.isArray(player.seasonHistory)
+    ? player.seasonHistory.reduce((sum, r) => sum + (r && typeof r.appearances === 'number' ? r.appearances : 0), 0)
+    : 0;
+  const careerStatApps = (player.careerStats && typeof player.careerStats.appearances === 'number')
+    ? player.careerStats.appearances
+    : 0;
+  const careerApps = Math.max(careerStatApps, histAppsSum + curApps, curApps);
+
+  let perfStats = { careerApps, pos: player.primaryPosition || player.pos || '' };
+  if (curApps >= 5) {
+    const avgR = (typeof player.totalRating === 'number' && curApps > 0)
+      ? (player.totalRating / curApps)
+      : null;
+    perfStats = {
+      appearances: curApps,
+      goals: player.goals || 0,
+      assists: player.assists || 0,
+      avgRating: avgR,
+      pos: player.primaryPosition || player.pos || '',
+      careerApps
+    };
+  } else if (Array.isArray(player.seasonHistory) && player.seasonHistory.length > 0) {
+    // 開幕前（0試合）や序盤（5試合未満）は直近の過去シーズン実績を引き継いで連続性を保つ
+    const lastSh = player.seasonHistory[player.seasonHistory.length - 1];
+    if (lastSh) {
+      const parsedR = parseFloat(lastSh.avgRating);
+      perfStats = {
+        appearances: typeof lastSh.appearances === 'number' ? lastSh.appearances : curApps,
+        goals: lastSh.goals || 0,
+        assists: lastSh.assists || 0,
+        avgRating: Number.isNaN(parsedR) ? null : parsedR,
+        pos: player.primaryPosition || player.pos || '',
+        careerApps
+      };
+    }
+  }
+  return calculateMarketValueFromOvrAndAge(ovr, age, contractYears, perfStats);
 }
 
 /**
@@ -921,7 +998,7 @@ function calculateTransferFee(player) {
     }
 
     const discountedFee = Math.round((marketVal * discountRatio) / 100) * 100;
-    return clamp(discountedFee, 200, 130000);
+    return clamp(discountedFee, 200, 250000);
   }
 
   return marketVal;
@@ -1116,11 +1193,12 @@ function generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, pr
 /**
  * 年齢とポジションに応じた初期キャリア通算成績を生成
  */
-function generateInitialCareerStats(pos, age) {
-  const activeYears = Math.max(0, age - 18);
+function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 70) {
+  const isProdigy = isStarter && approxPower >= 78 && age <= 19;
+  const activeYears = isProdigy ? Math.max(1, age - 16) : Math.max(0, age - 18);
   if (activeYears === 0) {
-    const apps = randInt(0, 8);
-    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, 2) : 0;
+    const apps = isStarter ? randInt(4, 14) : randInt(0, 6);
+    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, apps > 5 ? 3 : 1) : 0;
     return { appearances: apps, goals };
   }
 
@@ -1320,10 +1398,13 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
   const age = customAgeRange ? randInt(customAgeRange[0], customAgeRange[1]) : randInt(18, 33);
   const growthCurve = forcedCurve || pickRandomGrowthCurve();
 
-  // 天才（fragile）は初期能力に+4〜+7のボーナス
-  const fragileBonus = growthCurve === 'fragile' ? randInt(4, 7) : 0;
-  const starterBonus = isStarter ? randInt(1, 5) : randInt(-4, 1);
-  const center = basePower + starterBonus + fragileBonus;
+  // ガラスの天才（fragile_genius / 旧fragile）は初期能力に+4〜+7のボーナス（控え若手は抑えめ）
+  const normCurve = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(growthCurve) : growthCurve;
+  const rawFragileBonus = normCurve === 'fragile_genius' ? randInt(4, 7) : 0;
+  const fragileBonus = (!isStarter && age <= 20) ? Math.floor(rawFragileBonus / 2) : rawFragileBonus;
+  const starterBonus = isStarter ? randInt(1, 5) : randInt(-5, 0);
+  const rawCenter = basePower + starterBonus + fragileBonus;
+  const center = isStarter ? rawCenter : Math.min(82, rawCenter);
 
   let atk, def, sta;
   switch (pos) {
@@ -1393,7 +1474,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const traits = generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot);
-  const careerStats = generateInitialCareerStats(pos, age);
+  const careerStats = generateInitialCareerStats(pos, age, isStarter, center);
   const defaultSquadNum = (PREFERRED_SQUAD_NUMBERS[pos] || [14])[0];
 
   return {
@@ -2530,57 +2611,57 @@ function getSafeTransferBudget(club) {
  */
 function computeStatGrowth(player, isPlayerClub = false) {
   const age = player.age;
-  const curve = player.growthCurve === 'normal' ? 'standard' : (player.growthCurve || 'standard');
+  const curve = typeof normalizeGrowthCurveId === 'function'
+    ? normalizeGrowthCurveId(player.growthCurve || player.growthType)
+    : (player.growthCurve || 'standard');
 
   let atkRange, defRange, staRange;
 
-  if (curve === 'early') {
-    if (age <= 23) {
-      atkRange = [2, 6];
-      defRange = [2, 6];
-      staRange = [1, 5];
-    } else if (age <= 27) {
-      atkRange = [-1, 2];
-      defRange = [-1, 2];
-      staRange = [-1, 1];
+  if (curve === 'early_fade') {
+    if (age <= 22) {
+      atkRange = [2, 6]; defRange = [2, 6]; staRange = [1, 5];
+    } else if (age <= 25) {
+      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-1, 1];
     } else {
-      atkRange = [-4, -1];
-      defRange = [-4, -1];
-      staRange = [-5, -2];
+      atkRange = [-4, -1]; defRange = [-4, -1]; staRange = [-5, -2];
     }
-  } else if (curve === 'late') {
-    if (age <= 25) {
-      atkRange = [0, 2];
-      defRange = [0, 2];
-      staRange = [0, 2];
-    } else if (age <= 31) {
-      atkRange = [1, 4];
-      defRange = [1, 4];
-      staRange = [0, 3];
+  } else if (curve === 'early_long') {
+    if (age <= 22) {
+      atkRange = [2, 5]; defRange = [2, 5]; staRange = [1, 4];
+    } else if (age <= 29) {
+      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-1, 2];
     } else {
-      atkRange = [-2, 1];
-      defRange = [-2, 1];
-      staRange = [-3, 0];
+      atkRange = [-3, -1]; defRange = [-3, -1]; staRange = [-3, -1];
     }
-  } else if (curve === 'fragile') {
+  } else if (curve === 'steady_iron') {
     if (age <= 26) {
-      atkRange = [1, 5];
-      defRange = [1, 5];
-      staRange = [-1, 3];
-    } else if (age <= 30) {
-      atkRange = [0, 3];
-      defRange = [0, 3];
-      staRange = [-2, 1];
+      atkRange = [1, 3]; defRange = [1, 3]; staRange = [1, 4];
+    } else if (age <= 31) {
+      atkRange = [0, 2]; defRange = [0, 2]; staRange = [0, 2];
     } else {
-      atkRange = [-4, 0];
-      defRange = [-4, 0];
-      staRange = [-5, -1];
+      atkRange = [-2, 0]; defRange = [-2, 0]; staRange = [-2, 0];
+    }
+  } else if (curve === 'late_bloom') {
+    if (age <= 24) {
+      atkRange = [0, 2]; defRange = [0, 2]; staRange = [0, 2];
+    } else if (age <= 30) {
+      atkRange = [1, 4]; defRange = [1, 4]; staRange = [0, 3];
+    } else if (age <= 32) {
+      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-2, 1];
+    } else {
+      atkRange = [-2, 0]; defRange = [-2, 0]; staRange = [-3, 0];
+    }
+  } else if (curve === 'fragile_genius') {
+    if (age <= 25) {
+      atkRange = [2, 6]; defRange = [2, 6]; staRange = [-1, 3];
+    } else if (age <= 29) {
+      atkRange = [0, 3]; defRange = [0, 3]; staRange = [-2, 1];
+    } else {
+      atkRange = [-4, 0]; defRange = [-4, 0]; staRange = [-5, -1];
     }
   } else {
     if (age <= 25) {
-      atkRange = [1, 4];
-      defRange = [1, 4];
-      staRange = [0, 4];
+      atkRange = [1, 4]; defRange = [1, 4]; staRange = [0, 4];
     } else if (age <= 29) {
       atkRange = [0, 2];
       defRange = [0, 2];
@@ -2599,6 +2680,15 @@ function computeStatGrowth(player, isPlayerClub = false) {
   let dAtk = randInt(atkRange[0], atkRange[1]);
   let dDef = randInt(defRange[0], defRange[1]);
   let dSta = randInt(staRange[0], staRange[1]);
+
+  // 実戦出場・好成績ボーナス（試合に出て活躍した若手はさらに伸びる）
+  if (age <= 23 && (player.appearances || 0) >= 20 && player.totalRating > 0) {
+    const avgR = player.totalRating / player.appearances;
+    if (avgR >= 7.1) {
+      dAtk += 1;
+      dDef += 1;
+    }
+  }
 
   // レンタル（レンタル放出中）の若手選手は成長率が通常控え時の+30%加速
   if (player.loanStatus && player.loanStatus.isLoanOut) {
@@ -2699,8 +2789,10 @@ function shouldPlayerRetire(player) {
   else if (player.age === 35) baseProb = 0.60;
   else if (player.age >= 36) baseProb = 0.82;
 
-  if (player.growthCurve === 'late') baseProb -= 0.15;
-  if (player.growthCurve === 'early') baseProb += 0.12;
+  const normCurve = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(player.growthCurve) : player.growthCurve;
+  if (normCurve === 'late_bloom' || normCurve === 'steady_iron') baseProb -= 0.15;
+  if (normCurve === 'early_fade') baseProb += 0.15;
+  if (normCurve === 'fragile_genius') baseProb += 0.10;
 
   return Math.random() < baseProb;
 }
