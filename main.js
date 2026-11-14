@@ -9963,7 +9963,6 @@ function openPlayerProfileModal(playerId) {
         <div class="profile-box">
           <div class="profile-box-header">
             <span class="profile-box-title">年度別成績</span>
-            <span class="mono text-muted" style="font-size: 11px;">通算 ${totalAppsSum}試合 / ${totalGoalsSum}G / ${totalAssistsSum}A</span>
           </div>
           <div class="profile-yearly-fotmob-list">
             ${yearlyFotmobHtml}
