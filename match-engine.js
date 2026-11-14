@@ -3462,7 +3462,7 @@ function buildMatchSummaryHtml(md) {
                       <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
                     </div>
                   </div>
-                  <span class="mom-rating-badge">Rating ${momRating}</span>
+                  <span class="mom-rating-badge ${typeof getRatingTierInfo === 'function' ? getRatingTierInfo(momRating).textClass : ''}">Rating ${momRating}</span>
                 </div>
               ` : ''}
             </div>
@@ -3651,7 +3651,7 @@ function openMatchPrecheckModal() {
 
     const ftgVal = getPlayerFatigue(p);
     const ftgSt = getPlayerFatigueStatus(ftgVal);
-    const staColor = p.sta < 60 ? '#e74c3c' : (p.sta < 75 ? '#f1c40f' : 'var(--accent-green)');
+    const staCls = typeof getOvrTextClass === 'function' ? getOvrTextClass(p.sta) : '';
     const ovrTierCls = typeof getOvrTierClass === 'function' ? getOvrTierClass(effOvr) : '';
 
     startersRowsHtml += `
@@ -3660,7 +3660,7 @@ function openMatchPrecheckModal() {
         <span class="precheck-num mono">#${p.squadNumber || '-'}</span>
         <span class="precheck-name">${p.name} ${fitBadge}</span>
         <span class="precheck-ovr mono ${ovrTierCls}" style="background:none;border:none;box-shadow:none;">${effOvr}</span>
-        <span class="precheck-sta mono" style="color:${staColor};">ST:${p.sta}</span>
+        <span class="precheck-sta ${staCls}">ST:${p.sta}</span>
         <span class="precheck-ftg mono" style="color:${ftgSt.color};">疲労:${ftgVal}</span>
       </div>
     `;
@@ -3680,7 +3680,7 @@ function openMatchPrecheckModal() {
                 <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(playerClub)}</span>
               </div>
               <div class="precheck-club-meta">
-                <span class="precheck-club-ovr mono">OVR <strong>${homeAvgOvr}</strong></span>
+                <span class="precheck-club-ovr mono">OVR <strong class="${typeof getOvrTierClass === 'function' ? getOvrTierClass(homeAvgOvr) : ''}">${homeAvgOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'HOME' : 'AWAY'}</span>
               </div>
             </div>
@@ -3691,7 +3691,7 @@ function openMatchPrecheckModal() {
                 ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}
               </div>
               <div class="precheck-club-meta">
-                <span class="precheck-club-ovr mono">OVR <strong>${oppOvr}</strong></span>
+                <span class="precheck-club-ovr mono">OVR <strong class="${typeof getOvrTierClass === 'function' ? getOvrTierClass(oppOvr) : ''}">${oppOvr}</strong></span>
                 <span class="precheck-venue-tag">${isHome ? 'AWAY' : 'HOME'}</span>
               </div>
             </div>
