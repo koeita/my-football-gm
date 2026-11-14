@@ -9778,10 +9778,20 @@ function openPlayerProfileModal(playerId) {
         <div class="profile-section-grid">
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
-              <span class="profile-box-title">能力チャート</span>
+              <span class="ui-kv-label" style="margin-top: 0;">能力チャート</span>
               <span class="profile-ovr-badge ${getOvrTierClass(baseOvr)}" style="background:none;">OVR ${baseOvr}</span>
             </div>
             ${hexagonChartHtml}
+            <div class="ui-kv-list" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
+              <div class="ui-kv-row">
+                <div class="ui-kv-label">選手特徴</div>
+                <div class="ui-kv-content">
+                  <div class="profile-traits-wrap">
+                    ${traits.map(t => `<span class="profile-trait-tag is-active-trait">${t}</span>`).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="profile-box">
@@ -9791,15 +9801,6 @@ function openPlayerProfileModal(playerId) {
                 <div class="ui-kv-content">
                   ${buildPlayerPitchProficiencyHtml(p)}
                   ${trainingSectionHtml}
-                </div>
-              </div>
-
-              <div class="ui-kv-row">
-                <div class="ui-kv-label">選手特徴</div>
-                <div class="ui-kv-content">
-                  <div class="profile-traits-wrap">
-                    ${traits.map(t => `<span class="profile-trait-tag is-active-trait">${t}</span>`).join('')}
-                  </div>
                 </div>
               </div>
             </div>
