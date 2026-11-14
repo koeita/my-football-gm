@@ -344,6 +344,9 @@ function migrateLegacyClubsData() {
       club.emblem.code = club.shortName;
       club.emblem.symbol = club.shortName;
     }
+    if (club.id && typeof CLUB_KIT_MAP !== 'undefined' && CLUB_KIT_MAP[club.id]) {
+      club.kit = CLUB_KIT_MAP[club.id];
+    }
     if (Array.isArray(club.players)) {
       club.players.forEach(p => {
         if (p && Array.isArray(p.pastClubs)) {
