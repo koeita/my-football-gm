@@ -1298,11 +1298,6 @@ body {
   cursor: pointer;
 }
 
-.roster-table tbody tr.row-bench {
-  color: var(--text-muted);
-  background-color: #1f2327;
-}
-
 .roster-table tbody tr.row-selected {
   outline: 2px solid var(--accent-gold);
   outline-offset: -2px;
@@ -7525,11 +7520,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   /* 行状態に応じた固定列の背景色追従（透け防止） */
-  .roster-table tr.row-bench td.col-pos,
-  .roster-table tr.row-bench td.col-name {
-    background: #13161a !important;
-  }
-
   .roster-table tr.row-selected td.col-pos,
   .roster-table tr.row-selected td.col-name {
     background: #1a2720 !important;
