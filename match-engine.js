@@ -2868,11 +2868,12 @@ function showMatchPitchPopup(ev) {
 
   const targetPlayer = isGoal ? ev.actor : (ev.keeper || ev.actor);
   const targetClub = isGoal ? ev.club : (keeperClub || ev.club);
-  const playerPrefix = isPlayerSuccess ? '【自チーム】' : '【相手チーム】';
+  const clubName = (targetClub && targetClub.name) ? targetClub.name : '';
   const badgeText = isGoal ? `GOAL!! (${ev.minute}')` : `SUPER SAVE! (${ev.minute}')`;
+  const assistText = (isGoal && ev.assister) ? `（Assist: ${ev.assister.name}）` : '';
   const subText = isGoal
-    ? `${playerPrefix} ${ev.club.name}${ev.assister ? ` / Assist: ${ev.assister.name}` : ''}`
-    : `${playerPrefix} GK ${targetPlayer ? targetPlayer.name : ''}（${targetClub ? targetClub.name : ''}）が決定機を阻止！`;
+    ? `${clubName ? `${clubName} が` : ''}ゴールを決めた！${assistText}`
+    : `GK ${targetPlayer ? targetPlayer.name : ''}${clubName ? `（${clubName}）` : ''}が決定機を阻止！`;
   const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber} ` : '';
   const avatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
     ? getPlayerAvatarHtml(targetPlayer, targetClub, 'avatar-md', 42)

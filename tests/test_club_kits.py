@@ -229,6 +229,10 @@ class TestClubKits(unittest.TestCase):
         self.assertIn("popupEl.style.setProperty('--popup-bg'", popup_fn)
         self.assertIn('Math.max(350, Math.round(2000 / speed))', popup_fn)
         self.assertIn('}, popupDurationMs);', popup_fn)
+        self.assertNotIn('【自チーム】', popup_fn)
+        self.assertNotIn('【相手チーム】', popup_fn)
+        self.assertIn('ゴールを決めた！', popup_fn)
+        self.assertIn('が決定機を阻止！', popup_fn)
 
         popup_css = re.search(
             r'\.match-pitch-event-popup \{[\s\S]*?\.event-popup-badge \{[\s\S]*?\}',
