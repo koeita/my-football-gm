@@ -15776,6 +15776,18 @@ body {
   gap: 8px;
   margin-bottom: 10px;
 }
+@media (min-width: 769px) {
+  .summary-ratings-team-tabs {
+    display: none;
+  }
+  .summary-ratings-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .summary-team-ratings-panel.hidden {
+    display: flex !important;
+  }
+}
 .summary-team-tab-btn {
   flex: 1;
   display: inline-flex;
