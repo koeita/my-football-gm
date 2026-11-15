@@ -7527,6 +7527,13 @@ function renderIncomingOffers() {
           if (p) { target = p; sellerClub = c; break; }
         }
       }
+      if (!target && typeof findTransferTargetWithSeller === 'function') {
+        const found = findTransferTargetWithSeller(offer.playerId);
+        if (found) {
+          target = found.player;
+          sellerClub = found.sellerClub;
+        }
+      }
       if (!target && Array.isArray(gameState.transferMarket)) {
         target = gameState.transferMarket.find(c => c.id === offer.playerId);
       }
@@ -7755,6 +7762,14 @@ function renderMarket() {
   }
 
   const euroClubMap = new Map();
+  const euroCompClubs = typeof getEuropeanCompetitionClubsWithPlayers === 'function'
+    ? getEuropeanCompetitionClubsWithPlayers()
+    : [];
+  for (const ec of euroCompClubs) {
+    if (ec && ec.id && !euroClubMap.has(ec.id)) {
+      euroClubMap.set(ec.id, ec);
+    }
+  }
   if (Array.isArray(gameState.euroTransferList)) {
     for (const p of gameState.euroTransferList) {
       if (!p) continue;
@@ -7815,6 +7830,13 @@ function renderMarket() {
       if (!p || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
       allEntries.push({ player: p, club: c, category: 'ENG_D2', isMyClub: Boolean(c.isPlayer) });
+    }
+  }
+  for (const c of euroCompClubs) {
+    for (const p of (c.players || [])) {
+      if (!p || p.isRetired || seenIds.has(p.id)) continue;
+      seenIds.add(p.id);
+      allEntries.push({ player: p, club: c, category: 'EUROPE', isMyClub: false });
     }
   }
   if (Array.isArray(gameState.euroTransferList)) {
@@ -8770,6 +8792,21 @@ function findPlayerWithContextById(playerId) {
           isMarket: false,
           isPlayerClub: club.isPlayer,
           isYouth: true
+        };
+      }
+    }
+  }
+  if (typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+    for (const euroClub of getEuropeanCompetitionClubsWithPlayers()) {
+      const found = (euroClub.players || []).find(p => p && p.id === playerId);
+      if (found) {
+        return {
+          player: found,
+          club: euroClub,
+          clubName: euroClub.name,
+          isMarket: true,
+          isPlayerClub: false,
+          isYouth: false
         };
       }
     }

@@ -1983,19 +1983,18 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     if (p.fullName) usedNames.add(p.fullName);
   });
 
-  const sLv = Math.max(1, scoutingLv);
-  const targetCount = 50 + (sLv - 1) * 10;
-  // 欧州主要クラブ（ESP/ITA/GER/FRA等）からクラブ実力相応の主力〜スター候補も市場に流通させる
-  const maxGenPower = Math.min(84, 78 + (sLv - 1) * 2);
-  const maxEuroOvrCap = Math.min(90, 85 + (sLv - 1));
+  // スカウトレベルに関係なく欧州主要クラブの主力〜トップスターを一定数リストアップする
+  const targetCount = 120;
+  const maxGenPower = 86;
+  const maxEuroOvrCap = 93;
 
   const euroList = [...preservedPreContracts];
   for (let i = 0; i < targetCount; i++) {
     const clubDef = euroClubs[randInt(0, euroClubs.length - 1)];
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
     const clubTeamOvr = clubDef.basePower || 76;
-    const rawGenPower = clamp(clubTeamOvr - 6 + randInt(-4, 3), 62, maxGenPower);
-    const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 84 : 79));
+    const rawGenPower = clamp(clubTeamOvr - 4 + randInt(-4, 5), 64, maxGenPower);
+    const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 86 : 81));
     const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && clubDef.country) ? COUNTRY_CODE_TO_NATIONALITY[clubDef.country] : null;
     const euroNat = mappedNat ? pickWeightedNationality(0.60, mappedNat) : null;
     const isEuroStarter = rawGenPower >= 72 || i < 14;
@@ -2065,7 +2064,28 @@ function advanceEuropeanTransferListMatchweek() {
 }
 
 /**
- * 移籍交渉・オファー処理用：1部・2部・欧州主要クラブリスト・無所属市場から対象選手と所属元クラブを一元検索
+ * 欧州コンペ（ECT / EPC / ECS）に現在参加しており選手データが存在する欧州クラブ一覧を重複排除して返す
+ */
+function getEuropeanCompetitionClubsWithPlayers() {
+  const clubMap = new Map();
+  if (typeof gameState === 'undefined' || !gameState.competitions) return [];
+  for (const ek of ['championsCup', 'europaCup', 'conferenceCup']) {
+    const comp = gameState.competitions[ek];
+    if (!comp || !Array.isArray(comp.participants)) continue;
+    for (const c of comp.participants) {
+      if (!c || !c.id || c.isPlayer) continue;
+      if (!c.country || c.country === 'ENG') continue;
+      if (!Array.isArray(c.players) || c.players.length === 0) continue;
+      if (!clubMap.has(c.id)) {
+        clubMap.set(c.id, c);
+      }
+    }
+  }
+  return Array.from(clubMap.values());
+}
+
+/**
+ * 移籍交渉・オファー処理用：1部・2部・欧州コンペ所属クラブ・欧州主要クラブリスト・無所属市場から対象選手と所属元クラブを一元検索
  */
 function findTransferTargetWithSeller(playerId) {
   if (!playerId) return null;
@@ -2078,11 +2098,20 @@ function findTransferTargetWithSeller(playerId) {
     }
   }
 
-  const d2Clubs = (gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || [];
+  const d2Clubs = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
+    ? gameState.competitions.championship.clubs
+    : [];
   for (const c of d2Clubs) {
     const p = (c.players || []).find(x => x.id === playerId);
     if (p) {
       return { player: p, sellerClub: c, category: 'ENG_D2', isFreeAgent: false, isEuroListed: false };
+    }
+  }
+
+  for (const c of getEuropeanCompetitionClubsWithPlayers()) {
+    const p = (c.players || []).find(x => x && x.id === playerId);
+    if (p) {
+      return { player: p, sellerClub: c, category: 'EUROPE', isFreeAgent: false, isEuroListed: false };
     }
   }
 
