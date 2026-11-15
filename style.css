@@ -12150,7 +12150,7 @@ button.hidden,
     flex-direction: row !important;
     align-items: center !important;
     padding: 4px 7px !important;
-    gap: 6px !important;
+    gap: 5px !important;
     background: #1c222b !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 6px !important;
@@ -12163,12 +12163,17 @@ button.hidden,
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .player-avatar.pitch-node-avatar {
-    width: 32px !important;
-    height: 32px !important;
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-num,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-text {
+    font-size: 10px !important;
+    line-height: 1.15 !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-name-text {
-    font-size: 10.5px !important;
     max-width: 100% !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -17278,8 +17283,10 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   text-overflow: clip !important;
 }
 
-body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-num {
-  font-size: 10.5px !important;
+@media (max-width: 900px) {
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub-item .pitch-node-num {
+    font-size: 10px !important;
+  }
 }
 
 body .pitch-node .pitch-node-name-btn.is-marquee .pitch-node-name-text,
