@@ -8333,8 +8333,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .market-table td.col-pos .pos-tag:not(.pos-tag-primary),
-  .market-table td.col-pos .pos-sub-text {
+  .market-table td.col-pos .pos-sub-text,
+  .stats-ranking-table td.col-pos .pos-tag:not(.pos-tag-primary),
+  .stats-ranking-table td.col-pos .pos-sub-text {
     display: none !important;
+  }
+
+  .stats-ranking-table td.col-pos .pos-tags-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .roster-table th.col-name,
