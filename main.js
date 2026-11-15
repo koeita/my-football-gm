@@ -833,13 +833,17 @@ function advanceCalendarDay(skipRender = false) {
       for (const p of (club.players || [])) {
         if (p.isRetired) continue;
         if (Array.isArray(p.valueHistory) && p.valueHistory.length > 0) {
-          const curVal = calculatePlayerMarketValue(p);
-          const curOvr = getPlayerOverallRating(p);
-          const lastPt = p.valueHistory[p.valueHistory.length - 1];
-          if (lastPt) {
-            lastPt.value = curVal;
-            lastPt.ovr = curOvr;
-            lastPt.age = p.age || lastPt.age;
+          if (p._mvSchema !== 2 && typeof ensurePlayerValueHistory === 'function') {
+            ensurePlayerValueHistory(p, club.name);
+          } else {
+            const curVal = calculatePlayerMarketValue(p);
+            const curOvr = getPlayerOverallRating(p);
+            const lastPt = p.valueHistory[p.valueHistory.length - 1];
+            if (lastPt) {
+              lastPt.value = curVal;
+              lastPt.ovr = curOvr;
+              lastPt.age = p.age || lastPt.age;
+            }
           }
         }
       }
@@ -5011,7 +5015,7 @@ function startNextSeason() {
           const ovr = getPlayerOverallRating(p);
           const pos = p.primaryPosition || p.pos || 'CM';
           histApps = randInt(16, 30);
-          const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+          const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (pos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM', 'MF'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055)))))));
           const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
           histGoals = pos === 'GK' ? 0 : Math.round(histApps * gRate);
           histAssists = pos === 'GK' ? 0 : Math.round(histApps * aRate);
@@ -5070,7 +5074,7 @@ function startNextSeason() {
         const ovr = getPlayerOverallRating(fp);
         const pos = fp.primaryPosition || fp.pos || 'CM';
         const estApps = randInt(14, 28);
-        const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+        const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (pos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM', 'MF'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055)))))));
         const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
         const estGoals = pos === 'GK' ? 0 : Math.round(estApps * gRate);
         const estAssists = pos === 'GK' ? 0 : Math.round(estApps * aRate);
@@ -7523,6 +7527,13 @@ function renderIncomingOffers() {
           if (p) { target = p; sellerClub = c; break; }
         }
       }
+      if (!target && typeof findTransferTargetWithSeller === 'function') {
+        const found = findTransferTargetWithSeller(offer.playerId);
+        if (found) {
+          target = found.player;
+          sellerClub = found.sellerClub;
+        }
+      }
       if (!target && Array.isArray(gameState.transferMarket)) {
         target = gameState.transferMarket.find(c => c.id === offer.playerId);
       }
@@ -7751,6 +7762,14 @@ function renderMarket() {
   }
 
   const euroClubMap = new Map();
+  const euroCompClubs = typeof getEuropeanCompetitionClubsWithPlayers === 'function'
+    ? getEuropeanCompetitionClubsWithPlayers()
+    : [];
+  for (const ec of euroCompClubs) {
+    if (ec && ec.id && !euroClubMap.has(ec.id)) {
+      euroClubMap.set(ec.id, ec);
+    }
+  }
   if (Array.isArray(gameState.euroTransferList)) {
     for (const p of gameState.euroTransferList) {
       if (!p) continue;
@@ -7811,6 +7830,13 @@ function renderMarket() {
       if (!p || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
       allEntries.push({ player: p, club: c, category: 'ENG_D2', isMyClub: Boolean(c.isPlayer) });
+    }
+  }
+  for (const c of euroCompClubs) {
+    for (const p of (c.players || [])) {
+      if (!p || p.isRetired || seenIds.has(p.id)) continue;
+      seenIds.add(p.id);
+      allEntries.push({ player: p, club: c, category: 'EUROPE', isMyClub: false });
     }
   }
   if (Array.isArray(gameState.euroTransferList)) {
@@ -7913,7 +7939,9 @@ function renderMarket() {
 
   const outgoingList = gameState.outgoingOffers || [];
   const activeScouts = gameState.activeScoutAssignments || [];
-  tbody.innerHTML = filtered.slice(0, 120).map(entry => {
+  const displayLimit = Math.max(120, mf.displayLimit || 120);
+  const displayedEntries = filtered.slice(0, displayLimit);
+  let rowsHtml = displayedEntries.map(entry => {
     const p = entry.player;
     const c = entry.club;
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
@@ -7987,6 +8015,23 @@ function renderMarket() {
       </tr>
     `;
   }).join('');
+  if (filtered.length > displayLimit) {
+    rowsHtml += `
+      <tr class="market-load-more-row">
+        <td colspan="10" style="text-align: center; padding: 12px 0;">
+          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-market-load-more">さらに表示 (+120名 / 残り ${filtered.length - displayLimit}名)</button>
+        </td>
+      </tr>
+    `;
+  }
+  tbody.innerHTML = rowsHtml;
+  const loadMoreBtn = document.getElementById('btn-market-load-more');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+      mf.displayLimit = displayLimit + 120;
+      renderMarket();
+    });
+  }
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 
@@ -8751,6 +8796,21 @@ function findPlayerWithContextById(playerId) {
       }
     }
   }
+  if (typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+    for (const euroClub of getEuropeanCompetitionClubsWithPlayers()) {
+      const found = (euroClub.players || []).find(p => p && p.id === playerId);
+      if (found) {
+        return {
+          player: found,
+          club: euroClub,
+          clubName: euroClub.name,
+          isMarket: true,
+          isPlayerClub: false,
+          isYouth: false
+        };
+      }
+    }
+  }
   if (Array.isArray(gameState.euroTransferList)) {
     const euroFound = gameState.euroTransferList.find(p => p && p.id === playerId);
     if (euroFound) {
@@ -8801,6 +8861,15 @@ function findPlayerWithContextById(playerId) {
         const vClub = refDef
           ? { ...refDef, shortCode: refDef.shortName || refDef.shortCode || 'EUR', isPlayer: false, isEuroVirtual: true }
           : { id: entry.clubId || 'ext_club', name: entry.clubName || '海外クラブ', shortName: 'EXT', shortCode: 'EXT', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isPlayer: false, isEuroVirtual: true };
+        const curW = typeof gameState.currentWeek === 'number' ? gameState.currentWeek : 0;
+        const domApps = curW > 0 ? Math.max(0, Math.round(curW * (basePow >= 80 ? 0.86 : 0.76))) : 0;
+        const domPos = entry.pos || 'MF';
+        const domGRate = (domPos === 'CF' || domPos === 'ST') ? 0.42 : (domPos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(domPos) ? 0.28 : (domPos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(domPos) ? 0.13 : (domPos === 'CM' || domPos === 'MF' ? 0.10 : (domPos === 'DM' ? 0.06 : (domPos === 'GK' ? 0 : 0.055)))))));
+        const domARate = domPos === 'GK' ? 0 : (domPos === 'AM' ? 0.20 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(domPos) ? 0.16 : 0.10));
+        const domGoals = domPos === 'GK' ? 0 : Math.round(domApps * domGRate);
+        const domAssists = domPos === 'GK' ? 0 : Math.round(domApps * domARate);
+        const totalApps = (entry.apps || 0) + domApps;
+        const avgRt = clamp(6.6 + (basePow - 72) * 0.035, 6.4, 7.8);
         const vPlayer = {
           id: entry.id,
           name: entry.name,
@@ -8817,11 +8886,11 @@ function findPlayerWithContextById(playerId) {
           salary: 3500,
           wage: 68,
           contractYears: 3,
-          appearances: entry.apps || 0,
-          goals: entry.goals || 0,
-          assists: entry.assists || 0,
-          totalRating: entry.totalRating || 0,
-          cleanSheets: entry.cleanSheets || 0,
+          appearances: totalApps,
+          goals: (entry.goals || 0) + domGoals,
+          assists: (entry.assists || 0) + domAssists,
+          totalRating: (entry.totalRating || 0) + Number((domApps * avgRt).toFixed(2)),
+          cleanSheets: (entry.cleanSheets || 0) + (domPos === 'GK' ? Math.round(domApps * 0.36) : 0),
           momCount: entry.momCount || 0,
           yellowCards: entry.yellowCards || 0,
           redCards: entry.redCards || 0,
@@ -9047,30 +9116,34 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     }
 
     const history = [];
+    const hadCareerStats = Boolean(p.careerStats && typeof p.careerStats.goals === 'number');
     const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
     const rawCareerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
 
     if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: rawCareerGoals, assists: 0 };
 
     let totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
-    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * 8) {
-      const minExpectedPastApps = pastSeasonsCount * (12 + (absHash % 10));
+    const minAppsPerYear = baseOvr >= 82 ? 35 : (baseOvr >= 75 ? 29 : (baseOvr >= 68 ? 22 : 15));
+    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * Math.max(12, minAppsPerYear - 5)) {
+      const minExpectedPastApps = pastSeasonsCount * (minAppsPerYear + (absHash % 9));
       totalPastApps = minExpectedPastApps;
       p.careerStats.appearances = totalPastApps + (p.appearances || 0);
     }
 
     let totalPastGoals = Math.max(0, rawCareerGoals - (p.goals || 0));
-    if (pastSeasonsCount > 0 && rawCareerGoals === 0 && primaryPos !== 'GK') {
-      let gRate = 0.04;
-      if (primaryPos === 'CB') gRate = 0.04;
-      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') gRate = 0.04;
-      else if (primaryPos === 'DM') gRate = 0.05;
-      else if (primaryPos === 'CM') gRate = 0.10;
-      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') gRate = 0.14;
-      else if (primaryPos === 'AM') gRate = 0.20;
-      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.24;
-      else if (primaryPos === 'CF') gRate = 0.38;
-      const jitterG = 0.75 + ((absHash % 13) / 25);
+    if (pastSeasonsCount > 0 && primaryPos !== 'GK' && (!hadCareerStats || (totalPastGoals === 0 && (pastSeasonsCount >= 2 || totalPastApps >= 18)))) {
+      const atkScale = clamp(0.76 + (baseOvr - 70) * 0.026, 0.65, 1.38);
+      const midScale = clamp(0.82 + (baseOvr - 70) * 0.018, 0.74, 1.24);
+      let gRate = 0.055;
+      if (primaryPos === 'CB' || primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB' || primaryPos === 'LWB' || primaryPos === 'RWB' || primaryPos === 'DF') gRate = 0.055;
+      else if (primaryPos === 'DM') gRate = 0.06;
+      else if (primaryPos === 'CM') gRate = 0.095 * midScale;
+      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM' || primaryPos === 'MF') gRate = 0.125 * midScale;
+      else if (primaryPos === 'AM') gRate = 0.21 * atkScale;
+      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.27 * atkScale;
+      else if (primaryPos === 'CF' || primaryPos === 'ST') gRate = 0.45 * atkScale;
+      else if (primaryPos === 'FW') gRate = 0.34 * atkScale;
+      const jitterG = 0.82 + ((absHash % 10) / 25); // 0.82 .. 1.18
       totalPastGoals = Math.max(0, Math.round(totalPastApps * gRate * jitterG));
       p.careerStats.goals = totalPastGoals + (p.goals || 0);
     }
@@ -9079,14 +9152,14 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     if (typeof p.careerStats.assists !== 'number' || (pastSeasonsCount > 0 && p.careerStats.assists === 0 && primaryPos !== 'GK')) {
       let aRate = 0.02;
       if (primaryPos === 'GK') aRate = 0;
-      else if (primaryPos === 'CB') aRate = 0.02;
-      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') aRate = 0.08;
+      else if (primaryPos === 'CB' || primaryPos === 'DF') aRate = 0.02;
+      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB' || primaryPos === 'LWB' || primaryPos === 'RWB') aRate = 0.08;
       else if (primaryPos === 'DM') aRate = 0.06;
-      else if (primaryPos === 'CM') aRate = 0.12;
+      else if (primaryPos === 'CM' || primaryPos === 'MF') aRate = 0.12;
       else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') aRate = 0.16;
       else if (primaryPos === 'AM') aRate = 0.20;
       else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') aRate = 0.18;
-      else if (primaryPos === 'CF') aRate = 0.10;
+      else if (primaryPos === 'CF' || primaryPos === 'ST' || primaryPos === 'FW') aRate = 0.10;
       const jitterA = 0.8 + ((absHash % 17) / 40);
       p.careerStats.assists = primaryPos === 'GK' ? 0 : Math.max(0, Math.round((totalPastApps + (p.appearances || 0)) * aRate * jitterA));
     }
@@ -9133,6 +9206,42 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     };
 
     if (pastSeasonsCount > 0) {
+      const curveMeta = (typeof getGrowthCurveMeta === 'function')
+        ? getGrowthCurveMeta(p.growthCurve)
+        : { peakAge: 27, riseSlope: 1.4, fallSlope: 1.2 };
+      const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
+        ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
+        : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
+      const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
+      const currentOffset = calcCurveOffset(curAge);
+
+      // 成熟期（21歳以上、または過去3シーズン以上）から決定論的にキャリアハイ年・準好調年を選出
+      const isAttackRole = (
+        primaryPos === 'CF' || primaryPos === 'ST' || primaryPos === 'LW' ||
+        primaryPos === 'RW' || primaryPos === 'WG' || primaryPos === 'AM' || primaryPos === 'FW'
+      );
+      const primeCandidates = [];
+      for (let i = 0; i < pastSeasonsCount; i++) {
+        if (debutBaseAge + i >= 21) primeCandidates.push(i);
+      }
+      let peakSeasonIdx = -1;
+      let subPeakSeasonIdx = -1;
+      if (primeCandidates.length >= 1) {
+        // 複数年ある場合はキャリア後半〜ピーク年齢近辺をやや優先して選出
+        const weightedCand = primeCandidates.filter(idx => {
+          const ageAt = debutBaseAge + idx;
+          return ageAt >= Math.min(curAge - 1, Math.max(22, curveMeta.peakAge - 4)) && ageAt <= curveMeta.peakAge + 3;
+        });
+        const pool = weightedCand.length > 0 ? weightedCand : primeCandidates;
+        peakSeasonIdx = pool[absHash % pool.length];
+        if (primeCandidates.length >= 3) {
+          const remaining = primeCandidates.filter(idx => idx !== peakSeasonIdx);
+          subPeakSeasonIdx = remaining[((absHash >>> 4) + 1) % remaining.length];
+        }
+      } else if (pastSeasonsCount >= 3) {
+        peakSeasonIdx = pastSeasonsCount - 1;
+      }
+
       // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分
       const appWeights = [];
       const goalWeights = [];
@@ -9143,11 +9252,28 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
       for (let i = 0; i < pastSeasonsCount; i++) {
         const ageAtSeason = debutBaseAge + i;
-        const maturity = ageAtSeason <= 19 ? 0.55 : (ageAtSeason <= 21 ? 0.82 : 1.0);
+        const maturity = ageAtSeason <= 19 ? 0.50 : (ageAtSeason <= 21 ? 0.78 : 1.0);
         const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
-        const aw = maturity * jitter;
-        const gw = maturity * (0.8 + (((absHash >> ((i + 3) % 8)) & 7) / 20));
-        const astw = maturity * (0.8 + (((absHash >> ((i + 5) % 8)) & 7) / 20));
+        const seasonSeed = (absHash ^ Math.imul(i + 1, 2654435761)) >>> 0;
+
+        let awMul = 1.0;
+        let gwMul = 0.64 + ((seasonSeed % 9) / 25); // 通常年は 0.64 .. 0.96
+        let astwMul = 0.82 + (((absHash >> ((i + 5) % 8)) & 7) / 20);
+
+        if (i === peakSeasonIdx) {
+          awMul = 1.18;
+          const peakBase = (isAttackRole && baseOvr >= 75) ? 1.56 : 1.35;
+          gwMul = peakBase + ((seasonSeed % 4) * 0.05); // 攻撃主力なら 1.56 .. 1.71 倍の明確なキャリアハイ年
+          astwMul *= 1.18;
+        } else if (i === subPeakSeasonIdx) {
+          awMul = 1.07;
+          gwMul = (isAttackRole && baseOvr >= 75) ? 1.24 : 1.14;
+          astwMul *= 1.08;
+        }
+
+        const aw = maturity * jitter * awMul;
+        const gw = maturity * gwMul;
+        const astw = maturity * astwMul;
         appWeights.push(aw);
         goalWeights.push(gw);
         assistWeights.push(astw);
@@ -9167,7 +9293,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const isLast = (i === pastSeasonsCount - 1);
 
         let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
-        apps = clamp(apps, 1, Math.min(38, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
+        apps = clamp(apps, 1, Math.min(50, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
         remApps = Math.max(0, remApps - apps);
 
         let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
@@ -9180,14 +9306,6 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         if (apps === 0) assists = 0;
         remAssists = Math.max(0, remAssists - assists);
 
-        const curveMeta = (typeof getGrowthCurveMeta === 'function')
-          ? getGrowthCurveMeta(p.growthCurve)
-          : { peakAge: 27, riseSlope: 1.4, fallSlope: 1.2 };
-        const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
-          ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
-          : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
-        const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
-        const currentOffset = calcCurveOffset(curAge);
         const pastOffset = calcCurveOffset(ageAtSeason);
         const ovrSeasonJitter = isLast ? 0 : (((absHash >> (i % 10)) % 5) - 2) * 0.4;
         const estOvr = clamp(Math.round(baseOvr + (pastOffset - currentOffset) + ovrSeasonJitter), 50, 95);
@@ -9361,6 +9479,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
   const currentVal = calculatePlayerMarketValue(p);
   const currentOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (p.ovr || 70);
   const currentAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 24;
+  const posVal = p.primaryPosition || p.pos || '';
 
   const historyData = ensurePlayerHistoryAndCareer(p, currentClubName);
   const { seasonHistory } = historyData;
@@ -9386,7 +9505,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
         goals: sh.goals || 0,
         assists: sh.assists || 0,
         avgRating: Number.isNaN(parsedAvg) ? null : parsedAvg,
-        pos: p.pos,
+        pos: posVal,
         careerApps: cumApps
       };
       const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2, perfStats);
@@ -9408,7 +9527,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     if (currentAge >= 18) {
       const debutAge = currentAge - 2;
       const debutOvr = Math.max(50, currentOvr - 4);
-      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: p.pos });
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: posVal });
       vHistory.push({
         label: `2年前 (${debutAge}歳)`,
         shortLabel: `2年前`,
@@ -9421,7 +9540,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
       });
       const midAge = currentAge - 1;
       const midOvr = Math.max(52, currentOvr - 2);
-      const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2, { careerApps: 18, pos: p.pos });
+      const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2, { careerApps: 18, pos: posVal });
       vHistory.push({
         label: `前年 (${midAge}歳)`,
         shortLabel: `前年`,
@@ -9435,7 +9554,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     } else if (currentAge >= 16) {
       const prevAge = currentAge - 1;
       const prevOvr = Math.max(48, currentOvr - 2);
-      const prevVal = calculateMarketValueFromOvrAndAge(prevOvr, prevAge, 3, { careerApps: 0, pos: p.pos });
+      const prevVal = calculateMarketValueFromOvrAndAge(prevOvr, prevAge, 3, { careerApps: 0, pos: posVal });
       vHistory.push({
         label: `前年 (${prevAge}歳)`,
         shortLabel: `前年`,
@@ -9453,7 +9572,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     if (firstH.age > 15) {
       const debutAge = firstH.age - 1;
       const debutOvr = Math.max(48, firstH.ovr - 3);
-      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 0, pos: p.pos });
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 0, pos: posVal });
       vHistory.unshift({
         label: `デビュー (${debutAge}歳)`,
         shortLabel: `デビュー`,
@@ -9480,6 +9599,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
   });
 
   p.valueHistory = vHistory;
+  p._mvSchema = 2;
   return vHistory;
 }
 
@@ -12058,12 +12178,17 @@ function initGame() {
   const marketFilterSort = document.getElementById('market-filter-sort');
   const marketFilterSearch = document.getElementById('market-filter-search');
 
+  const resetMarketAndRender = () => {
+    gameState.marketFilter.displayLimit = 120;
+    renderMarket();
+  };
+
   if (marketFilterCategory) {
     marketFilterCategory.addEventListener('change', (e) => {
       gameState.marketFilter.category = e.target.value;
       gameState.marketFilter.clubId = 'ALL';
       gameState.marketFilter.club = 'ALL';
-      renderMarket();
+      resetMarketAndRender();
     });
   }
 
@@ -12071,28 +12196,28 @@ function initGame() {
     marketFilterClub.addEventListener('change', (e) => {
       gameState.marketFilter.clubId = e.target.value;
       gameState.marketFilter.club = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterPos) {
     marketFilterPos.addEventListener('change', (e) => {
       gameState.marketFilter.position = e.target.value;
       gameState.marketFilter.pos = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterSort) {
     marketFilterSort.addEventListener('change', (e) => {
       gameState.marketFilter.sortKey = e.target.value;
       gameState.marketFilter.sort = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterSearch) {
     marketFilterSearch.addEventListener('input', (e) => {
       gameState.marketFilter.searchQuery = e.target.value.trim().toLowerCase();
       gameState.marketFilter.search = e.target.value.trim().toLowerCase();
-      renderMarket();
+      resetMarketAndRender();
     });
   }
 
@@ -12120,7 +12245,7 @@ function initGame() {
         gameState.marketFilter.sortKey = nextSort;
         gameState.marketFilter.sort = nextSort;
         if (marketFilterSort) marketFilterSort.value = nextSort;
-        renderMarket();
+        resetMarketAndRender();
       }
     });
   }

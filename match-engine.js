@@ -93,60 +93,117 @@ function applyOfficialAppearancesAndTraining(club, starters = [], playedSubs = [
 /**
  * カップ戦・欧州戦・2部背景進行用のスコアラー＆アシスター自動選定
  */
+/**
+ * ポジション別の現実的な得点確率と決定力・戦術に応じた重み付き得点者選出
+ */
+function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
+  if (!Array.isArray(starters) || starters.length === 0) return null;
+  const tactic = typeof normalizeTacticKey === 'function' ? normalizeTacticKey(rawTactic) : (rawTactic || 'balanced');
+  const candidates = starters.filter(p => {
+    if (!p) return false;
+    const pos = p.assignedPos || p.primaryPosition || p.pos;
+    return pos !== 'GK' && (typeof POS_ROLE_GROUP === 'undefined' || POS_ROLE_GROUP[pos] !== 'GK');
+  });
+  const pool = candidates.length > 0 ? candidates : starters;
+
+  const basePosWeight = {
+    CF: 22, ST: 22,
+    LW: 16, RW: 16, WG: 16,
+    AM: 13,
+    LM: 8.5, RM: 8.5, SM: 8.5,
+    CM: 6.0,
+    DM: 3.0,
+    CB: 3.5,
+    LB: 2.6, RB: 2.6, LWB: 2.6, RWB: 2.6, SB: 2.6
+  };
+
+  let totalWeight = 0;
+  const weights = pool.map(p => {
+    const pos = p.assignedPos || p.primaryPosition || p.pos || 'CM';
+    const roleGroup = (typeof POS_ROLE_GROUP !== 'undefined' && POS_ROLE_GROUP[pos]) ? POS_ROLE_GROUP[pos] : 'MF';
+    let w = basePosWeight[pos];
+    if (typeof w !== 'number') {
+      w = roleGroup === 'FW' ? 20 : (roleGroup === 'DF' ? 2.8 : 6.0);
+    }
+
+    if (tactic === 'counter') {
+      if (roleGroup === 'FW') w *= 1.15;
+      else if (pos === 'AM') w *= 1.05;
+    } else if (tactic === 'wingplay') {
+      if (['LW', 'RW', 'WG', 'LM', 'RM', 'SM', 'LWB', 'RWB'].includes(pos)) w *= 1.15;
+    } else if (tactic === 'gegenpress') {
+      if (roleGroup === 'FW') w *= 1.08;
+      else if (pos === 'AM' || pos === 'CM') w *= 1.05;
+    } else if (tactic === 'possession') {
+      if (pos === 'AM' || pos === 'CM') w *= 1.10;
+    }
+
+    const playerOvr = (typeof getPlayerOverallRating === 'function')
+      ? getPlayerOverallRating(p)
+      : (typeof p.ovr === 'number' ? p.ovr : 70);
+    const atkVal = typeof p.atk === 'number' ? p.atk : playerOvr;
+    const skillVal = playerOvr * 0.60 + atkVal * 0.40;
+    const attrFactor = Math.max(0.60, Math.min(1.45, 0.65 + (skillVal - 74) * 0.032));
+    const subMul = (typeof p._subWeightMul === 'number') ? p._subWeightMul : 1.0;
+    const finalW = Math.max(0.1, w * attrFactor * subMul);
+    totalWeight += finalW;
+    return finalW;
+  });
+
+  if (totalWeight <= 0) return pool[0];
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
 function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, options = {}) {
-  const { recordOfficial = true } = options;
+  const { recordOfficial = true, homeSubs = [], awaySubs = [] } = options;
   const homeStarters = ensureClubStartersForMatch(homeClub);
   const awayStarters = ensureClubStartersForMatch(awayClub);
 
-  const pickScorer = (starters) => {
-    const fwMf = starters.filter(p => ['CF', 'LW', 'RW', 'ST', 'AM', 'CM', 'LM', 'RM'].includes(p.assignedPos || p.pos));
-    const pool = fwMf.length > 0 ? fwMf : starters.slice(1);
-    return pool[Math.floor(Math.random() * pool.length)] || starters[0];
-  };
+  const pickScorer = (pool, club) => selectWeightedMatchScorer(pool, club && club.tactic);
 
-  const pickAssister = (starters, scorer) => {
+  const pickAssister = (pool, scorer) => {
     if (Math.random() > 0.72) return null;
-    const cands = starters.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
+    const cands = pool.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
     if (cands.length === 0) return null;
     const mfWg = cands.filter(p => ['AM', 'CM', 'LM', 'RM', 'DM', 'LW', 'RW', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
-    const pool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
-    return pool[Math.floor(Math.random() * pool.length)] || null;
+    const astPool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
+    return astPool[Math.floor(Math.random() * astPool.length)] || null;
   };
 
-  const applyGoalAndAssist = (p, assister) => {
-    if (!recordOfficial) return;
-    if (p) {
-      p.goals = (p.goals || 0) + 1;
-      if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: 0, assists: p.assists || 0 };
-      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+  const buildSideQuickScorers = (starters, subs, score, club) => {
+    const list = [];
+    for (let i = 0; i < score; i++) {
+      const minute = Math.floor(Math.random() * 88) + 2;
+      const activePool = (minute >= 65 && Array.isArray(subs) && subs.length > 0)
+        ? [...starters.slice(0, Math.max(6, 11 - subs.length)), ...subs]
+        : starters;
+      const p = pickScorer(activePool, club);
+      const assister = pickAssister(activePool, p);
+      if (recordOfficial) {
+        if (p) {
+          p.goals = (p.goals || 0) + 1;
+          if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: 0, assists: p.assists || 0 };
+          p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+        }
+        if (assister) {
+          assister.assists = (assister.assists || 0) + 1;
+          if (!assister.careerStats) assister.careerStats = { appearances: assister.appearances || 0, goals: assister.goals || 0, assists: 0 };
+          assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+        }
+      }
+      if (p) list.push({ minute, scorer: p, assister, name: p.name });
     }
-    if (assister) {
-      assister.assists = (assister.assists || 0) + 1;
-      if (!assister.careerStats) assister.careerStats = { appearances: assister.appearances || 0, goals: assister.goals || 0, assists: 0 };
-      assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
-    }
+    list.sort((a, b) => a.minute - b.minute);
+    return list;
   };
 
-  const homeScorers = [];
-  for (let i = 0; i < homeScore; i++) {
-    const p = pickScorer(homeStarters);
-    const assister = pickAssister(homeStarters, p);
-    const minute = Math.floor(Math.random() * 88) + 2;
-    applyGoalAndAssist(p, assister);
-    if (p) homeScorers.push({ minute, scorer: p, assister, name: p.name });
-  }
-
-  const awayScorers = [];
-  for (let i = 0; i < awayScore; i++) {
-    const p = pickScorer(awayStarters);
-    const assister = pickAssister(awayStarters, p);
-    const minute = Math.floor(Math.random() * 88) + 2;
-    applyGoalAndAssist(p, assister);
-    if (p) awayScorers.push({ minute, scorer: p, assister, name: p.name });
-  }
-
-  homeScorers.sort((a, b) => a.minute - b.minute);
-  awayScorers.sort((a, b) => a.minute - b.minute);
+  const homeScorers = buildSideQuickScorers(homeStarters, homeSubs, homeScore, homeClub);
+  const awayScorers = buildSideQuickScorers(awayStarters, awaySubs, awayScore, awayClub);
   return { homeScorers, awayScorers };
 }
 
@@ -266,7 +323,7 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
   applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial, applyTraining });
   applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial, applyTraining });
 
-  const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial });
+  const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial, homeSubs, awaySubs });
   const ratingRes = calculateAndAssignMatchRatings(
     homeClub, awayClub,
     homeStarters, awayStarters,
@@ -1737,27 +1794,13 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const homeSubs = homeSubRes.subsIn || [];
   const awaySubs = awaySubRes.subsIn || [];
 
+  const homeSubEvents = homeSubRes.subEvents || [];
+  const awaySubEvents = awaySubRes.subEvents || [];
+
   applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial: true, applyTraining: true });
   applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial: true, applyTraining: true });
 
-  const getScorer = (starters, rawTactic) => {
-    const tactic = normalizeTacticKey(rawTactic);
-    const fws = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
-    const mfs = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'MF');
-    const dfs = starters.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'DF');
-
-    const fwWeight = tactic === 'counter' ? 0.74 : (tactic === 'wingplay' ? 0.64 : (tactic === 'gegenpress' ? 0.62 : 0.55));
-    const r = Math.random();
-
-    if (r < fwWeight && fws.length > 0) {
-      return fws[randInt(0, fws.length - 1)];
-    } else if (mfs.length > 0) {
-      return mfs[randInt(0, mfs.length - 1)];
-    } else if (dfs.length > 0 && Math.random() < 0.25) {
-      return dfs[randInt(0, dfs.length - 1)];
-    }
-    return fws[0] || mfs[0] || starters[0];
-  };
+  const getScorer = (starters, rawTactic) => selectWeightedMatchScorer(starters, rawTactic);
 
   const getAssister = (starters, scorer, rawTactic) => {
     const tactic = normalizeTacticKey(rawTactic);
@@ -1792,38 +1835,37 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const hTacticNorm = normalizeTacticKey(homeClub.tactic);
   const aTacticNorm = normalizeTacticKey(awayClub.tactic);
 
-  const homeScorers = [];
-  for (let i = 0; i < homeScore; i++) {
-    const scorer = getScorer(homeStarters, hTacticNorm);
-    if (scorer) {
-      scorer.goals += 1;
-      if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(homeStarters, scorer, hTacticNorm);
-      if (assister) {
-        assister.assists = (assister.assists || 0) + 1;
-        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
-      }
+  const buildSideScorers = (sideStarters, sideSubEvents, sideScore, sideTactic, oppTactic) => {
+    const scorers = [];
+    for (let i = 0; i < sideScore; i++) {
       // 相手がゲーゲンプレスの場合、終盤（70〜89分）のスタミナ切れ失点が発生しやすい演出
-      const minute = (aTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
-      homeScorers.push({ scorer, assister, minute });
-    }
-  }
-
-  const awayScorers = [];
-  for (let i = 0; i < awayScore; i++) {
-    const scorer = getScorer(awayStarters, aTacticNorm);
-    if (scorer) {
-      scorer.goals += 1;
-      if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(awayStarters, scorer, aTacticNorm);
-      if (assister) {
-        assister.assists = (assister.assists || 0) + 1;
-        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+      const minute = (oppTactic === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
+      const subMap = new Map();
+      for (const ev of sideSubEvents) {
+        if (ev && ev.minute <= minute && ev.outPlayer && ev.inPlayer) {
+          subMap.set(ev.outPlayer.id, ev.inPlayer);
+        }
       }
-      const minute = (hTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
-      awayScorers.push({ scorer, assister, minute });
+      const activePitchPlayers = subMap.size > 0
+        ? sideStarters.map(p => (p && subMap.has(p.id)) ? subMap.get(p.id) : p)
+        : sideStarters;
+      const scorer = getScorer(activePitchPlayers, sideTactic);
+      if (scorer) {
+        scorer.goals += 1;
+        if (scorer.careerStats) scorer.careerStats.goals += 1;
+        const assister = getAssister(activePitchPlayers, scorer, sideTactic);
+        if (assister) {
+          assister.assists = (assister.assists || 0) + 1;
+          if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+        }
+        scorers.push({ scorer, assister, minute });
+      }
     }
-  }
+    return scorers;
+  };
+
+  const homeScorers = buildSideScorers(homeStarters, homeSubEvents, homeScore, hTacticNorm, aTacticNorm);
+  const awayScorers = buildSideScorers(awayStarters, awaySubEvents, awayScore, aTacticNorm, hTacticNorm);
 
   const allMatchGoals = homeScorers.concat(awayScorers);
 
@@ -2251,6 +2293,10 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     completed: true
   };
 
+  if (typeof advanceEuropeanTransferListMatchweek === 'function') {
+    advanceEuropeanTransferListMatchweek();
+  }
+
   const isFinalWeek = gameState.currentWeek === gameState.totalWeeks;
   const canEndSeasonNow = isFinalWeek && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
 
@@ -2448,6 +2494,9 @@ function ensureClubStartersForMatch(club) {
       if (ep && ep.fullName) usedNames.add(ep.fullName);
     });
 
+    const curW = (typeof gameState !== 'undefined' && typeof gameState.currentWeek === 'number') ? gameState.currentWeek : 0;
+    const isForeignClub = Boolean(targetClub.country && targetClub.country !== 'ENG');
+
     targetClub.players = positions.map((pos, idx) => {
       const matchEp = affiliatedEuro.find(ep => !usedEuroIds.has(ep.id) && (ep.pos === pos || POS_ROLE_GROUP[ep.pos] === POS_ROLE_GROUP[pos]));
       if (matchEp) {
@@ -2459,7 +2508,7 @@ function ensureClubStartersForMatch(club) {
       const offset = ((seedBase + idx * 7) % 7) - 3;
       const age = 21 + ((seedBase + idx * 5) % 11);
       const preferredFoot = (pos === 'LB' || pos === 'LW') ? 'Left' : (((seedBase + idx) % 5 === 0) ? 'Left' : 'Right');
-      return {
+      const newPlayer = {
         id: `${targetClub.id}_p${idx + 1}`,
         name: ident.displayName,
         fullName: ident.fullName,
@@ -2481,6 +2530,10 @@ function ensureClubStartersForMatch(club) {
         assists: 0,
         lastMatchRating: 6.7
       };
+      if (isForeignClub && curW > 0 && typeof applyInitialEuropeanDomesticStats === 'function') {
+        applyInitialEuropeanDomesticStats(newPlayer, curW);
+      }
+      return newPlayer;
     });
   }
   return targetClub.players.slice(0, 11);
