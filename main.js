@@ -1060,6 +1060,8 @@ function renderWeeklySchedule() {
     const isToday = idx === 0;
     const matchInfo = getCalendarDayPlayerMatch(day);
     const isMatch = Boolean(matchInfo && matchInfo.oppClub && !day.played);
+    const matchCompCode = (matchInfo && matchInfo.oppClub && matchInfo.compCode) ? matchInfo.compCode.toLowerCase() : '';
+    const matchCompClass = matchCompCode ? `match-comp-${matchCompCode}` : '';
 
     let eventHtml = '';
     if (matchInfo && matchInfo.oppClub) {
@@ -1083,7 +1085,7 @@ function renderWeeklySchedule() {
 
     const isClickable = isToday && isMatch;
     return `
-      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''} ${isClickable ? 'is-clickable' : ''}" ${isClickable ? 'role="button" tabindex="0" onclick="openMatchPrecheckModal()"' : ''} title="${isClickable ? 'タップで作戦確認・キックオフ' : ''}">
+      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''} ${matchCompClass} ${isClickable ? 'is-clickable' : ''}" ${isClickable ? 'role="button" tabindex="0" onclick="openMatchPrecheckModal()"' : ''} title="${isClickable ? 'タップで作戦確認・キックオフ' : ''}">
         <div class="day-card-header">
           <span class="day-card-date">${day.month}/${day.day} (${day.dayOfWeekName})</span>
           ${isToday ? '<span class="day-card-today-badge">TODAY</span>' : ''}
@@ -14163,7 +14165,7 @@ function renderMonthCalendar() {
         const oppClub = matchInfo.oppClub;
         const myMatch = matchInfo.match;
         const isPlayed = Boolean(d.played || (myMatch && myMatch.played));
-        matchClass = `has-match ${isPlayed ? 'match-played' : 'match-pending'}`;
+        matchClass = `has-match ${isPlayed ? 'match-played' : 'match-pending'} match-comp-${compCode.toLowerCase()}`;
         cellAttr = `data-cal-cup-day-index="${d.dayIndex}" role="button" tabindex="0" title="${matchInfo.title} ${oppClub.name}戦の対戦スカウティングレポート"`;
 
         let scoreBadge = '';
@@ -14214,9 +14216,10 @@ function renderMonthCalendar() {
 
         const isPlayed = match.played || (d.matchWeek <= gameState.currentWeek && match.homeScore !== null);
         const isNext = !isPlayed && (d.matchWeek === gameState.currentWeek + 1);
+        const leagueCompClass = `match-comp-${isPlayerInSecondDivision() ? 'eng-d2' : 'eng-d1'}`;
 
         if (isPlayed) {
-          matchClass = 'has-match match-played';
+          matchClass = `has-match match-played ${leagueCompClass}`;
           cellAttr = `data-cal-match-week="${d.matchWeek}" role="button" tabindex="0" title="第${d.matchWeek}節 ${oppClub.name}戦のサマリーを見る"`;
 
           const myScore = isHome ? match.homeScore : match.awayScore;
@@ -14242,7 +14245,7 @@ function renderMonthCalendar() {
             </div>
           `;
         } else {
-          matchClass = `has-match match-pending ${isNext ? 'match-next' : ''}`;
+          matchClass = `has-match match-pending ${isNext ? 'match-next' : ''} ${leagueCompClass}`;
           cellAttr = `data-cal-pending-week="${d.matchWeek}" role="button" tabindex="0" title="第${d.matchWeek}節 ${oppClub.name}戦の対戦プレビュー"`;
 
           matchInfoHtml = `
