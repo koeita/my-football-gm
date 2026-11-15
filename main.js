@@ -7476,6 +7476,7 @@ function renderTacticalBoard() {
  */
 function applyPitchNodeNameMarquee() {
   const btns = document.querySelectorAll('#pitch-nodes-layer .pitch-node-name-btn, #pitch-bench-list .pitch-node-name-btn, #pitch-reserves-list .pitch-node-name-btn');
+  const range = (typeof document !== 'undefined' && document.createRange) ? document.createRange() : null;
   btns.forEach(btn => {
     const viewportEl = btn.querySelector('.pitch-node-name-viewport') || btn;
     const textEl = btn.querySelector('.pitch-node-name-text');
@@ -7484,10 +7485,18 @@ function applyPitchNodeNameMarquee() {
     btn.style.removeProperty('--marquee-exit');
     btn.style.removeProperty('--marquee-enter');
     btn.style.removeProperty('--marquee-dur');
-    const boxW = viewportEl.clientWidth;
+    const boxRectW = viewportEl.getBoundingClientRect ? viewportEl.getBoundingClientRect().width : viewportEl.clientWidth;
+    const boxW = boxRectW > 0 ? boxRectW : viewportEl.clientWidth;
     if (boxW <= 0) return;
-    const textW = textEl.scrollWidth;
-    if (textW - boxW > 1) {
+    let textW = textEl.scrollWidth;
+    if (range) {
+      try {
+        range.selectNodeContents(textEl);
+        const rangeW = range.getBoundingClientRect().width;
+        if (rangeW > textW) textW = rangeW;
+      } catch (_) {}
+    }
+    if (textW - boxW > 0.5) {
       const exitDist = Math.ceil(textW + 4);
       const enterDist = Math.ceil(boxW + 4);
       const dur = Math.max(5.0, Math.min(9.5, 2.2 + (exitDist + enterDist) * 0.04)).toFixed(2);
@@ -7506,6 +7515,13 @@ if (typeof window !== 'undefined' && !window.__pitchMarqueeResizeBound) {
       applyPitchNodeNameMarquee();
     }
   });
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      if (typeof applyPitchNodeNameMarquee === 'function') {
+        applyPitchNodeNameMarquee();
+      }
+    }).catch(() => {});
+  }
 }
 
 /**
@@ -12316,6 +12332,9 @@ function initGame() {
     tacticalSideColumn.classList.toggle('sheet-open', targetState);
     if (benchSheetBackdrop) {
       benchSheetBackdrop.classList.toggle('active', targetState);
+    }
+    if (targetState && typeof applyPitchNodeNameMarquee === 'function') {
+      requestAnimationFrame(() => applyPitchNodeNameMarquee());
     }
   }
   window.toggleBenchSheet = toggleBenchSheet;
