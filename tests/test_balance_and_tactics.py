@@ -71,7 +71,7 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('state.managerDelegationEnabled === undefined ? true : Boolean(state.managerDelegationEnabled)', read_text('storage.js'))
         self.assertIn('randInt(22, 27)', self.match_js)
         self.assertIn('function optimizeClubBench(', self.models_js)
-        self.assertIn('optimizeClubBench(club);', self.models_js)
+        self.assertIn('optimizeClubBench(club', self.models_js)
 
     def test_7_non_league_matches_apply_sub_events_and_sub_fatigue(self):
         """リーグ以外の試合（WCT・欧州戦・国内カップ）でも交代イベントと途中出場疲労が反映されること"""

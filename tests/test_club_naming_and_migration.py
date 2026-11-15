@@ -96,8 +96,8 @@ class TestClubNamingAndMigration(unittest.TestCase):
         past_block = re.search(r'const PAST_CLUBS_BY_NATIONALITY = \{([\s\S]*?)\n  \};', self.models_js).group(1)
         self.assertNotIn('・', past_block)
 
-        fc_line = re.search(r'const foreignClubs = \[([^\]]+)\];', self.main_js).group(1)
-        self.assertNotIn('・', fc_line)
+        self.assertNotIn('const foreignClubs =', self.main_js)
+        self.assertIn('getEuropeanMajorClubDefinitions()', self.main_js)
 
         self.assertIn('const LEGACY_CLUB_NAME_MIGRATIONS =', self.storage_js)
         self.assertIn('const LEGACY_ID_COMPAT_MAP =', self.storage_js)

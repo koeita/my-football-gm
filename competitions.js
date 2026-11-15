@@ -256,13 +256,26 @@ function getAllBigFiveClubs() {
 // ==========================================
 // 2. 高速ダイジェスト試合エンジン（simQuickMatch）
 // ==========================================
-function simQuickMatch(homeClub, awayClub) {
+function prepareClubLineupForQuickMatch(club, compCategory = 'league') {
+  if (!club || club.isPlayer) return;
+  if (Array.isArray(club.players) && club.players.length >= 11 && typeof optimizeClubStarters === 'function') {
+    optimizeClubStarters(club, compCategory);
+  }
+}
+
+function simQuickMatch(homeClub, awayClub, compCategory = 'league') {
+  prepareClubLineupForQuickMatch(homeClub, compCategory);
+  prepareClubLineupForQuickMatch(awayClub, compCategory);
+
   const getPower = (c) => {
     if (c && Array.isArray(c.players) && c.players.length >= 11 && typeof getPlayerOverallRating === 'function') {
-      const starters = c.players.filter(p => p.isStarter && !p.isRetired);
-      const lineup = starters.length >= 11 ? starters.slice(0, 11) : c.players.slice(0, 11);
-      const avgOvr = Math.round(lineup.reduce((sum, p) => sum + getPlayerOverallRating(p), 0) / lineup.length);
-      if (avgOvr > 0) return avgOvr;
+      const starters = c.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+      const fallback = c.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+      const lineup = starters.length >= 11 ? starters.slice(0, 11) : (fallback.length >= 11 ? fallback.slice(0, 11) : c.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut)).slice(0, 11));
+      if (lineup.length > 0) {
+        const avgOvr = Math.round(lineup.reduce((sum, p) => sum + getPlayerOverallRating(p), 0) / lineup.length);
+        if (avgOvr > 0) return avgOvr;
+      }
     }
     if (c && c.basePower) {
       const isD2Uninit = String(c.id || '').startsWith('c') || c.division === 'd2';
@@ -303,8 +316,8 @@ function simQuickMatch(homeClub, awayClub) {
   return { homeScore, awayScore };
 }
 
-function simKnockoutMatch(homeClub, awayClub) {
-  const result = simQuickMatch(homeClub, awayClub);
+function simKnockoutMatch(homeClub, awayClub, compCategory = 'domesticCup') {
+  const result = simQuickMatch(homeClub, awayClub, compCategory);
   let { homeScore, awayScore } = result;
   let pkHome = null;
   let pkAway = null;
@@ -475,9 +488,11 @@ function initChampionshipLeague() {
     gameState.competitions.championship = {
       name: 'イングランド・セカンドディビジョン',
       shortName: 'ENG-D2',
+      currentWeek: 0,
       clubs: CHAMPIONSHIP_CLUBS_DEFINITIONS.map(c => {
         const clubObj = {
           ...c,
+          division: 'd2',
           played: 0,
           won: 0,
           drawn: 0,
@@ -491,7 +506,9 @@ function initChampionshipLeague() {
       })
     };
   } else {
+    gameState.competitions.championship.currentWeek = 0;
     gameState.competitions.championship.clubs.forEach(c => {
+      c.division = 'd2';
       c.played = 0;
       c.won = 0;
       c.drawn = 0;
@@ -503,22 +520,41 @@ function initChampionshipLeague() {
       ensurePlayableClubStructure(c);
     });
   }
+  if (typeof generateSeasonSchedule === 'function') {
+    gameState.competitions.championship.schedule = generateSeasonSchedule(gameState.competitions.championship.clubs);
+  }
 }
 
 function advanceChampionshipWeek() {
   const comp = gameState.competitions && gameState.competitions.championship;
-  if (!comp || !comp.clubs) return;
+  if (!comp || !Array.isArray(comp.clubs) || comp.clubs.length < 2) return;
 
-  const clubs = [...comp.clubs];
-  for (let i = clubs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [clubs[i], clubs[j]] = [clubs[j], clubs[i]];
+  if (!Array.isArray(comp.schedule) || comp.schedule.length === 0) {
+    if (typeof generateSeasonSchedule === 'function') {
+      comp.schedule = generateSeasonSchedule(comp.clubs);
+    }
   }
 
-  for (let i = 0; i < clubs.length; i += 2) {
-    const h = clubs[i];
-    const a = clubs[i + 1];
-    const res = simQuickMatch(h, a);
+  const weekIdx = typeof comp.currentWeek === 'number'
+    ? comp.currentWeek
+    : (comp.clubs[0] ? (comp.clubs[0].played || 0) : 0);
+  if (!Array.isArray(comp.schedule) || weekIdx >= comp.schedule.length) return;
+
+  const weekMatches = comp.schedule[weekIdx];
+  if (!Array.isArray(weekMatches)) return;
+  comp.currentWeek = weekIdx + 1;
+
+  for (const m of weekMatches) {
+    if (!m || m.played) continue;
+    const h = comp.clubs.find(c => c.id === m.homeId) || m.homeClub;
+    const a = comp.clubs.find(c => c.id === m.awayId) || m.awayClub;
+    if (!h || !a) continue;
+
+    const res = simQuickMatch(h, a, 'd2');
+    m.homeScore = res.homeScore;
+    m.awayScore = res.awayScore;
+    m.played = true;
+
     h.played++;
     a.played++;
     h.gf += res.homeScore;
@@ -549,6 +585,21 @@ function advanceChampionshipWeek() {
   }
 }
 
+function createKnockoutPairMatch(homeClub, awayClub) {
+  return {
+    homeId: homeClub.id,
+    awayId: awayClub.id,
+    homeClub: homeClub,
+    awayClub: awayClub,
+    homeScore: null,
+    awayScore: null,
+    pkHome: null,
+    pkAway: null,
+    winnerId: null,
+    played: false
+  };
+}
+
 // 国内2大カップ（一発勝負トーナメント）
 function generateKnockoutRound(clubs) {
   const pool = [...clubs];
@@ -560,18 +611,7 @@ function generateKnockoutRound(clubs) {
   const matches = [];
   for (let i = 0; i < pool.length; i += 2) {
     if (pool[i] && pool[i + 1]) {
-      matches.push({
-        homeId: pool[i].id,
-        awayId: pool[i + 1].id,
-        homeClub: pool[i],
-        awayClub: pool[i + 1],
-        homeScore: null,
-        awayScore: null,
-        pkHome: null,
-        pkAway: null,
-        winnerId: null,
-        played: false
-      });
+      matches.push(createKnockoutPairMatch(pool[i], pool[i + 1]));
     }
   }
   return matches;
@@ -579,10 +619,14 @@ function generateKnockoutRound(clubs) {
 
 function initDomesticCups() {
   const p1Clubs = gameState.clubs || [];
-  const p2Clubs = (gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS;
+  const p2Clubs = (gameState.competitions.championship && gameState.competitions.championship.clubs) || [];
+  const d2Player = p2Clubs.find(c => c && c.isPlayer) || null;
+  const d2Others = p2Clubs.filter(c => !d2Player || c.id !== d2Player.id);
+  const lgcD2 = d2Player ? [d2Player, ...d2Others.slice(0, 11)] : d2Others.slice(0, 12);
+  const natD2 = d2Player ? [d2Player, ...d2Others.slice(11, 22)] : d2Others.slice(12, 24);
 
-  // リーグ・トロフィー（L-CUP: 旧リーグ杯相当 44クラブ）: 優勝特典: 賞金 + ECS出場権
-  const lgcParticipants = [...p1Clubs, ...p2Clubs.slice(0, 12)];
+  // リーグ・トロフィー（L-CUP: 32クラブ）: 優勝特典: 賞金 + ECS出場権
+  const lgcParticipants = [...p1Clubs, ...lgcD2];
   gameState.competitions.leagueCup = {
     name: 'リーグ・トロフィー',
     enName: 'LEAGUE TROPHY',
@@ -599,8 +643,8 @@ function initDomesticCups() {
     prizeMoney: 10000 // £10.0M
   };
 
-  // ナショナル・カップ（N-CUP: 旧FA杯相当 44クラブ）: 優勝特典: 高額賞金 + EPC出場権
-  const natParticipants = [...p1Clubs, ...p2Clubs.slice(12, 24)];
+  // ナショナル・カップ（N-CUP: 32クラブ）: 優勝特典: 高額賞金 + EPC出場権
+  const natParticipants = [...p1Clubs, ...natD2];
   gameState.competitions.nationalCup = {
     name: 'ナショナル・カップ',
     enName: 'NATIONAL CUP',
@@ -759,6 +803,26 @@ function selectEuropeanCompetitionEntries() {
   return { clEntries, elEntries, eclEntries };
 }
 
+// 4ポット各9チーム・全36チームが各ポット2対戦（H1/A1）計8試合・重複なしで戦う確定済み8節基本テンプレート
+const SWISS_36_BASE_ROUNDS = [
+  [[7, 8], [14, 15], [23, 24], [1, 17], [5, 12], [20, 0], [2, 28], [3, 29], [33, 4], [35, 6], [25, 9], [10, 22], [16, 19], [11, 32], [13, 34], [31, 18], [21, 27], [30, 26]],
+  [[5, 6], [11, 12], [20, 21], [30, 31], [2, 9], [3, 10], [7, 14], [4, 19], [29, 0], [1, 27], [8, 34], [13, 25], [22, 15], [23, 16], [35, 17], [18, 33], [28, 24], [26, 32]],
+  [[8, 0], [10, 11], [13, 14], [18, 19], [21, 22], [33, 34], [12, 4], [15, 7], [25, 5], [26, 6], [30, 1], [31, 2], [32, 3], [24, 17], [27, 9], [16, 28], [20, 35], [23, 29]],
+  [[0, 1], [2, 3], [4, 5], [24, 25], [18, 7], [19, 8], [6, 32], [9, 21], [11, 23], [14, 26], [28, 10], [30, 12], [31, 13], [15, 27], [34, 16], [17, 29], [33, 20], [35, 22]],
+  [[0, 16], [6, 13], [1, 25], [22, 2], [23, 3], [24, 4], [5, 31], [27, 7], [28, 8], [26, 10], [15, 18], [17, 20], [9, 30], [29, 11], [12, 33], [14, 35], [32, 19], [34, 21]],
+  [[15, 16], [17, 9], [27, 28], [32, 33], [4, 11], [14, 6], [21, 1], [2, 26], [3, 18], [7, 22], [8, 23], [0, 35], [34, 5], [19, 12], [20, 13], [10, 31], [24, 30], [29, 25]],
+  [[1, 2], [3, 4], [6, 7], [9, 10], [19, 20], [25, 26], [29, 30], [31, 32], [34, 35], [17, 0], [13, 5], [16, 8], [18, 11], [12, 24], [21, 14], [33, 15], [22, 28], [27, 23]],
+  [[12, 13], [16, 17], [22, 23], [26, 18], [28, 29], [35, 27], [9, 1], [10, 2], [11, 3], [8, 15], [0, 24], [5, 20], [6, 21], [4, 30], [7, 33], [32, 14], [19, 34], [25, 31]]
+];
+
+function shuffleArrayInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 /**
  * 36チームのスイス方式リーグフェーズ（各チーム8試合：ホーム4、アウェイ4）の対戦スケジュールをポット抽選生成
  */
@@ -784,30 +848,54 @@ function createSwissLeaguePhase(participants, compName, enName, shortCode, prize
     sortedByPower.slice(27, 36)  // Pot 4
   ];
 
-  // 全8節（Matchday 1〜8）の対戦カードを事前生成
-  // 各節18試合 × 8節 ＝ 計144試合
+  // 全8節（Matchday 1〜8）の対戦カードをポット抽選生成
+  // 各節18試合 × 8節 ＝ 計144試合（全ポット2チームずつ・H4/A4・重複なし）
   const leagueSchedule = [];
-  for (let round = 1; round <= 8; round++) {
-    const shuffled = [...clubs];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  if (clubs.length === 36 && pots.every(p => p.length === 9)) {
+    const flatSlots = [];
+    for (let p = 0; p < 4; p++) {
+      const potCopy = shuffleArrayInPlace([...pots[p]]);
+      for (let k = 0; k < 9; k++) {
+        flatSlots.push(potCopy[k]);
+      }
     }
-
-    const matches = [];
-    for (let i = 0; i < shuffled.length; i += 2) {
-      if (!shuffled[i] || !shuffled[i + 1]) continue;
-      matches.push({
-        homeId: shuffled[i].id,
-        awayId: shuffled[i + 1].id,
-        homeClub: shuffled[i],
-        awayClub: shuffled[i + 1],
-        homeScore: null,
-        awayScore: null,
-        played: false
+    const roundOrder = shuffleArrayInPlace([0, 1, 2, 3, 4, 5, 6, 7]);
+    for (const rIdx of roundOrder) {
+      const pairs = SWISS_36_BASE_ROUNDS[rIdx];
+      const matches = pairs.map(([hSlot, aSlot]) => {
+        const hc = flatSlots[hSlot];
+        const ac = flatSlots[aSlot];
+        return {
+          homeId: hc.id,
+          awayId: ac.id,
+          homeClub: hc,
+          awayClub: ac,
+          homeScore: null,
+          awayScore: null,
+          played: false
+        };
       });
+      leagueSchedule.push(matches);
     }
-    leagueSchedule.push(matches);
+  } else {
+    // 36クラブ未満のフォールバック（簡易ラウンドロビン）
+    for (let round = 1; round <= 8; round++) {
+      const shuffled = shuffleArrayInPlace([...clubs]);
+      const matches = [];
+      for (let i = 0; i < shuffled.length; i += 2) {
+        if (!shuffled[i] || !shuffled[i + 1]) continue;
+        matches.push({
+          homeId: shuffled[i].id,
+          awayId: shuffled[i + 1].id,
+          homeClub: shuffled[i],
+          awayClub: shuffled[i + 1],
+          homeScore: null,
+          awayScore: null,
+          played: false
+        });
+      }
+      leagueSchedule.push(matches);
+    }
   }
 
   return {
@@ -1101,7 +1189,7 @@ function advanceEuroLeaguePhase(md) {
         playerMatch = m;
         playerComp = comp;
       } else {
-        const res = simQuickMatch(m.homeClub, m.awayClub);
+        const res = simQuickMatch(m.homeClub, m.awayClub, ek);
         m.homeScore = res.homeScore;
         m.awayScore = res.awayScore;
         m.played = true;
@@ -1149,17 +1237,47 @@ function advanceEuroLeaguePhase(md) {
   return { playerMatch, playerComp };
 }
 
-// 8節終了時：1〜8位ストレート進出、9〜24位プレーオフ（PO）生成
+function resolveCanonicalClubForKnockout(c) {
+  if (!c) return c;
+  if (c.id && typeof getClubById === 'function') {
+    const canonical = getClubById(c.id);
+    if (canonical && Array.isArray(canonical.players) && canonical.players.length > 0) {
+      return canonical;
+    }
+  }
+  return c;
+}
+
+// 8節終了時：1〜8位ストレート進出、9〜24位シード順プレーオフ（9-16位 vs 17-24位）生成
 function finalizeEuroLeaguePhaseToKnockout(comp) {
   if (!comp || comp.phase !== 'LEAGUE') return;
   comp.phase = 'PLAYOFF';
 
-  const sorted = [...comp.participants].sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
-  const top8 = sorted.slice(0, 8);
-  const playoffClubs = sorted.slice(8, 24); // 9〜24位（計16チーム）
+  const sorted = [...comp.participants].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0));
+  const top8 = sorted.slice(0, 8).map(resolveCanonicalClubForKnockout);
+  const playoffClubs = sorted.slice(8, 24).map(resolveCanonicalClubForKnockout); // 9〜24位（計16チーム）
 
   comp.top8Direct = top8;
-  comp.playoffs = generateKnockoutRound(playoffClubs);
+  const poMatches = [];
+  if (playoffClubs.length === 16) {
+    // 9-10 vs 23-24, 11-12 vs 21-22, 13-14 vs 19-20, 15-16 vs 17-18 のシードペア抽選（上位がホーム）
+    for (let g = 0; g < 8; g += 2) {
+      const oppA = 15 - g;
+      const oppB = 14 - g;
+      const swap = Math.random() < 0.5;
+      poMatches.push(createKnockoutPairMatch(playoffClubs[g], playoffClubs[swap ? oppB : oppA]));
+      poMatches.push(createKnockoutPairMatch(playoffClubs[g + 1], playoffClubs[swap ? oppA : oppB]));
+    }
+  } else {
+    const half = Math.floor(playoffClubs.length / 2);
+    for (let i = 0; i < half; i++) {
+      const awayIdx = playoffClubs.length - 1 - i;
+      if (playoffClubs[i] && playoffClubs[awayIdx]) {
+        poMatches.push(createKnockoutPairMatch(playoffClubs[i], playoffClubs[awayIdx]));
+      }
+    }
+  }
+  comp.playoffs = poMatches;
 }
 
 function finalizeEuroPlayoffToR16(comp) {
@@ -1167,10 +1285,28 @@ function finalizeEuroPlayoffToR16(comp) {
   if (comp.phase === 'KNOCKOUT' && comp.rounds && comp.rounds.R16 && comp.rounds.R16.length > 0) return;
   if (!comp.playoffs.every(m => m.played)) return;
 
-  const poWinners = comp.playoffs.map(m => m.winnerClub || (m.winnerId === m.homeId ? m.homeClub : m.awayClub)).filter(Boolean);
+  const poWinners = comp.playoffs
+    .map(m => resolveCanonicalClubForKnockout(m.winnerClub || (m.winnerId === m.homeId ? m.homeClub : m.awayClub)))
+    .filter(Boolean);
   if (poWinners.length >= 8 && comp.top8Direct) {
     comp.phase = 'KNOCKOUT';
-    comp.rounds.R16 = generateKnockoutRound([...comp.top8Direct, ...poWinners]);
+    const top8Resolved = comp.top8Direct.map(resolveCanonicalClubForKnockout);
+    const r16Matches = [];
+    if (top8Resolved.length === 8 && poWinners.length === 8) {
+      // Top8 (1-8位) がホームで PO勝者と対戦（1-2位 vs 15-18位勝者枠 等）
+      for (let g = 0; g < 8; g += 2) {
+        const oppPairBase = 6 - g; // g=0->6, g=2->4, g=4->2, g=6->0
+        const swap = Math.random() < 0.5;
+        r16Matches.push(createKnockoutPairMatch(top8Resolved[g], poWinners[oppPairBase + (swap ? 1 : 0)]));
+        r16Matches.push(createKnockoutPairMatch(top8Resolved[g + 1], poWinners[oppPairBase + (swap ? 0 : 1)]));
+      }
+    } else {
+      const count = Math.min(top8Resolved.length, poWinners.length);
+      for (let i = 0; i < count; i++) {
+        r16Matches.push(createKnockoutPairMatch(top8Resolved[i], poWinners[count - 1 - i]));
+      }
+    }
+    comp.rounds.R16 = r16Matches;
   }
 }
 
@@ -1194,7 +1330,7 @@ function advanceEuroPlayoffRound() {
         playerMatch = m;
         playerComp = comp;
       } else {
-        const res = simKnockoutMatch(m.homeClub, m.awayClub);
+        const res = simKnockoutMatch(m.homeClub, m.awayClub, ek);
         m.homeScore = res.homeScore;
         m.awayScore = res.awayScore;
         m.pkHome = res.pkHome;
@@ -1271,7 +1407,7 @@ function processCupMatchDay(compType, roundKey, skipSiblingEuro = false) {
     if (isHomePlayer || isAwayPlayer) {
       playerMatch = m;
     } else {
-      const res = simKnockoutMatch(m.homeClub, m.awayClub);
+      const res = simKnockoutMatch(m.homeClub, m.awayClub, compType);
       m.homeScore = res.homeScore;
       m.awayScore = res.awayScore;
       m.pkHome = res.pkHome;
@@ -1400,8 +1536,29 @@ function ensurePlayableClubStructure(club) {
 function dehydrateCompetitionsForSave(comps) {
   if (!comps || typeof comps !== 'object') return comps;
 
+  const engClubIds = new Set();
+  if (typeof gameState !== 'undefined') {
+    if (Array.isArray(gameState.clubs)) {
+      gameState.clubs.forEach(c => { if (c && c.id) engClubIds.add(c.id); });
+    }
+    const d2 = comps.championship && comps.championship.clubs;
+    if (Array.isArray(d2)) {
+      d2.forEach(c => { if (c && c.id) engClubIds.add(c.id); });
+    }
+  }
+
+  const foreignClubPlayers = {};
+  const collectForeignPlayers = (c) => {
+    if (!c || typeof c !== 'object' || !c.id) return;
+    if (engClubIds.has(c.id) || c.country === 'ENG') return;
+    if (Array.isArray(c.players) && c.players.length > 0 && !foreignClubPlayers[c.id]) {
+      foreignClubPlayers[c.id] = c.players;
+    }
+  };
+
   const slimClub = (c) => {
     if (!c || typeof c !== 'object') return c;
+    collectForeignPlayers(c);
     return {
       id: c.id,
       name: c.name,
@@ -1443,8 +1600,7 @@ function dehydrateCompetitionsForSave(comps) {
 
   const result = {};
   for (const [key, comp] of Object.entries(comps)) {
-    if (!comp || typeof comp !== 'object') {
-      result[key] = comp;
+    if (!comp || typeof comp !== 'object' || key === '_foreignClubPlayers') {
       continue;
     }
     // 2部リーグ正本（championship.clubs）は選手データをそのまま保持する
@@ -1459,6 +1615,9 @@ function dehydrateCompetitionsForSave(comps) {
     }
     if (Array.isArray(comp.participants)) {
       copy.participants = comp.participants.map(slimClub);
+    }
+    if (Array.isArray(comp.top8Direct)) {
+      copy.top8Direct = comp.top8Direct.map(slimClub);
     }
     if (Array.isArray(comp.matches)) {
       copy.matches = comp.matches.map(slimMatch);
@@ -1481,6 +1640,9 @@ function dehydrateCompetitionsForSave(comps) {
     }
     result[key] = copy;
   }
+  if (Object.keys(foreignClubPlayers).length > 0) {
+    result._foreignClubPlayers = foreignClubPlayers;
+  }
   return result;
 }
 
@@ -1488,28 +1650,71 @@ function dehydrateCompetitionsForSave(comps) {
 function rehydrateCompetitionsClubRefs() {
   if (!gameState || !gameState.competitions) return;
   const clubMap = new Map();
+  const engClubIds = new Set();
   if (Array.isArray(gameState.clubs)) {
-    gameState.clubs.forEach(c => { if (c && c.id) clubMap.set(c.id, c); });
+    gameState.clubs.forEach(c => { if (c && c.id) { clubMap.set(c.id, c); engClubIds.add(c.id); } });
   }
   const d2Clubs = gameState.competitions.championship && gameState.competitions.championship.clubs;
   if (Array.isArray(d2Clubs)) {
-    d2Clubs.forEach(c => { if (c && c.id) clubMap.set(c.id, c); });
+    d2Clubs.forEach(c => { if (c && c.id) { clubMap.set(c.id, c); engClubIds.add(c.id); } });
   }
+
+  const foreignPlayersMap = (gameState.competitions && gameState.competitions._foreignClubPlayers) || {};
+  const resolveClubRef = (rawClub, fallbackId) => {
+    const cid = (rawClub && rawClub.id) || fallbackId;
+    if (!cid) return rawClub;
+    if (clubMap.has(cid)) {
+      const existing = clubMap.get(cid);
+      if (!engClubIds.has(cid) && rawClub && Array.isArray(rawClub.players) && rawClub.players.length > 0 && (!Array.isArray(existing.players) || existing.players.length === 0)) {
+        existing.players = rawClub.players;
+      }
+      return existing;
+    }
+    if (rawClub && typeof rawClub === 'object') {
+      if ((!Array.isArray(rawClub.players) || rawClub.players.length === 0) && Array.isArray(foreignPlayersMap[cid])) {
+        rawClub.players = foreignPlayersMap[cid];
+      }
+      clubMap.set(cid, rawClub);
+      return rawClub;
+    }
+    return rawClub;
+  };
 
   const relinkMatch = (m) => {
     if (!m) return;
-    if (m.homeId && clubMap.has(m.homeId)) m.homeClub = clubMap.get(m.homeId);
-    if (m.awayId && clubMap.has(m.awayId)) m.awayClub = clubMap.get(m.awayId);
-    if (m.winnerId && clubMap.has(m.winnerId)) m.winnerClub = clubMap.get(m.winnerId);
+    if (m.homeClub || m.homeId) m.homeClub = resolveClubRef(m.homeClub, m.homeId);
+    if (m.awayClub || m.awayId) m.awayClub = resolveClubRef(m.awayClub, m.awayId);
+    if (m.winnerClub || m.winnerId) m.winnerClub = resolveClubRef(m.winnerClub, m.winnerId);
     const oHomeId = m.otherHomeId || (m.otherHomeClub && m.otherHomeClub.id);
     const oAwayId = m.otherAwayId || (m.otherAwayClub && m.otherAwayClub.id);
-    if (oHomeId && clubMap.has(oHomeId)) m.otherHomeClub = clubMap.get(oHomeId);
-    if (oAwayId && clubMap.has(oAwayId)) m.otherAwayClub = clubMap.get(oAwayId);
+    if (m.otherHomeClub || oHomeId) m.otherHomeClub = resolveClubRef(m.otherHomeClub, oHomeId);
+    if (m.otherAwayClub || oAwayId) m.otherAwayClub = resolveClubRef(m.otherAwayClub, oAwayId);
   };
 
   ['leagueCup', 'nationalCup', 'championsCup', 'europaCup', 'conferenceCup'].forEach(k => {
     const comp = gameState.competitions[k];
     if (!comp) return;
+    if (Array.isArray(comp.participants)) {
+      comp.participants = comp.participants.map(p => {
+        if (!p || !p.id) return p;
+        if (engClubIds.has(p.id)) {
+          const canonical = clubMap.get(p.id);
+          if (canonical) {
+            p.players = canonical.players;
+            p.manager = canonical.manager;
+            p.coaches = canonical.coaches;
+            p.formation = canonical.formation;
+            p.tactic = canonical.tactic;
+            p.basePower = canonical.basePower || p.basePower;
+          }
+          return p;
+        }
+        return resolveClubRef(p, p.id);
+      });
+    }
+    if (Array.isArray(comp.top8Direct)) {
+      comp.top8Direct = comp.top8Direct.map(c => resolveClubRef(c, c && c.id));
+    }
     if (Array.isArray(comp.leagueSchedule)) {
       comp.leagueSchedule.forEach(md => {
         if (Array.isArray(md)) md.forEach(relinkMatch);
@@ -1521,14 +1726,17 @@ function rehydrateCompetitionsClubRefs() {
         if (Array.isArray(arr)) arr.forEach(relinkMatch);
       });
     }
-    if (comp.winner && comp.winner.id && clubMap.has(comp.winner.id)) {
-      comp.winner = clubMap.get(comp.winner.id);
+    if (comp.winner) {
+      comp.winner = resolveClubRef(comp.winner, comp.winner.id);
     }
   });
 
   const pre = gameState.competitions.preseasonCup;
   if (pre && Array.isArray(pre.matches)) {
     pre.matches.forEach(relinkMatch);
+  }
+  if (gameState.competitions._foreignClubPlayers) {
+    delete gameState.competitions._foreignClubPlayers;
   }
 }
 
@@ -1578,9 +1786,11 @@ function processPromotionAndRelegation() {
 
   const relegatedIds = new Set(relegatedClubs.map(c => c.id));
   const newP1Clubs = p1Sorted.filter(c => !relegatedIds.has(c.id));
+  newP1Clubs.forEach(c => { c.division = 'd1'; });
 
   promotedClubs.forEach(pc => {
     ensurePlayableClubStructure(pc);
+    pc.division = 'd1';
     pc.tier = 'PROMOTED';
     pc.targetRank = 17;
     pc.targetLabel = '17位以内（残留）';
@@ -1592,7 +1802,9 @@ function processPromotionAndRelegation() {
 
   const promotedIds = new Set(promotedClubs.map(c => c.id));
   const newP2Clubs = p2Sorted.filter(c => !promotedIds.has(c.id));
+  newP2Clubs.forEach(c => { c.division = 'd2'; });
   relegatedClubs.forEach(rc => {
+    rc.division = 'd2';
     rc.tier = 'RELEGATED';
     rc.targetRank = 3;
     rc.targetLabel = '3位以内（1年でのD1昇格）';
@@ -1616,10 +1828,16 @@ function processPromotionAndRelegation() {
     gameState.competitions.championship = {
       name: 'イングランド・セカンドディビジョン',
       shortName: 'ENG-D2',
-      clubs: newP2Clubs
+      currentWeek: 0,
+      clubs: newP2Clubs,
+      schedule: typeof generateSeasonSchedule === 'function' ? generateSeasonSchedule(newP2Clubs) : []
     };
   } else {
     gameState.competitions.championship.clubs = newP2Clubs;
+    gameState.competitions.championship.currentWeek = 0;
+    if (typeof generateSeasonSchedule === 'function') {
+      gameState.competitions.championship.schedule = generateSeasonSchedule(newP2Clubs);
+    }
   }
 
   const result = {
@@ -1829,7 +2047,8 @@ function renderCupBracketHtml(compKey) {
   const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
   const roundNames = isEuroComp
     ? {
-        R16: '1回戦 / ベスト16',
+        PO: 'プレーオフ',
+        R16: 'ベスト16',
         QF: '準々決勝',
         SF: '準決勝',
         FINAL: '決勝'
@@ -1846,11 +2065,16 @@ function renderCupBracketHtml(compKey) {
     <div class="bracket-rounds-wrapper">
   `;
 
-  const keys = isEuroComp ? ['R16', 'QF', 'SF', 'FINAL'] : ['R32', 'R16', 'QF', 'SF', 'FINAL'];
+  const keys = isEuroComp ? ['PO', 'R16', 'QF', 'SF', 'FINAL'] : ['R32', 'R16', 'QF', 'SF', 'FINAL'];
   keys.forEach(rk => {
-    const matches = comp.rounds[rk] || [];
+    const matches = rk === 'PO'
+      ? (Array.isArray(comp.playoffs) ? comp.playoffs : [])
+      : (comp.rounds[rk] || []);
     const prevKey = keys.indexOf(rk) > 0 ? keys[keys.indexOf(rk) - 1] : null;
-    if (matches.length === 0 && rk !== keys[0] && (!prevKey || !comp.rounds[prevKey] || comp.rounds[prevKey].length === 0)) {
+    const prevMatches = prevKey
+      ? (prevKey === 'PO' ? (comp.playoffs || []) : (comp.rounds[prevKey] || []))
+      : [];
+    if (matches.length === 0 && rk !== keys[0] && prevMatches.length === 0) {
       return;
     }
 

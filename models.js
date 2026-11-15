@@ -126,8 +126,8 @@ function createManager(def, clubId = null, usedNames = null) {
 function getManagerBuyoutFee(manager) {
   if (!manager) return 0;
   const annual = (manager.weeklyWage || 80) * 52;
-  const years = Math.max(1, manager.contractYears || 1);
-  return Math.max(1000, Math.round(annual * 0.40 * years));
+  const years = typeof manager.contractYears === 'number' ? Math.max(0, manager.contractYears) : 1;
+  return years === 0 ? 0 : Math.max(1000, Math.round(annual * 0.40 * years));
 }
 
 function ensureCoachStats(coach, focusHint = null) {
@@ -2207,6 +2207,7 @@ function generateYouthAcademyCandidates() {
     const basePower = clamp(randInt(60, 68) + facilityBonus, 59, 73);
     const prospect = createPlayer(pos, basePower, false, usedNames, [16, 18], curve);
     prospect.salary = 800; // 最低年俸 £800K
+    prospect.wage = Math.max(10, Math.round(prospect.salary / 52));
     prospect.contractYears = 4;
     prospect.transferFee = 0;
     prospect.squadNumber = pickAvailableSquadNumber(pos, usedYouthNums);
@@ -2342,7 +2343,8 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
   const gkPlayers = club.players.filter(p => p.pos === 'GK' && isActiveSquadMember(p));
   if (gkPlayers.length === 0) {
     const youthGk = createPlayer('GK', 54, true, usedNames, [18, 19]);
-    youthGk.salary = 800;
+    youthGk.wage = 15;
+    youthGk.salary = 15 * 52;
     youthGk.contractYears = 3;
     club.players.push(youthGk);
     if (noticeLogs && club.isPlayer) {
@@ -2358,6 +2360,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     }) || 'CM';
     const youth = createPlayer(missingPos, 54, false, usedNames, [18, 19]);
     youth.salary = 800;
+    youth.wage = Math.max(10, Math.round(youth.salary / 52));
     youth.contractYears = 3;
     club.players.push(youth);
     if (noticeLogs && club.isPlayer) {
@@ -2446,6 +2449,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
  */
 function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
   ensurePlayerProficiencies(player);
+  const discCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compCategory) : compCategory;
   let score = 0;
 
   // 1. 負傷・出場停止・代表招集・レンタル放出除外ペナルティ
@@ -2453,7 +2457,7 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
   if (isInjured) {
     score -= 2000;
   }
-  if (typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(player, compCategory)) {
+  if (typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(player, discCat)) {
     score -= 8000;
   }
   if (player.onIntlDuty) {
@@ -2520,7 +2524,7 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
  * 所属全選手 (N人) から フォーメーション枠 (M=11枠) へ、
  * チーム全体の合計スコア（実効OVR・適性・健康度）が最大となる一意の配置を求める
  */
-function findOptimalAssignment(players, slots) {
+function findOptimalAssignment(players, slots, compCategory = 'league') {
   const N = players.length; // 候補選手数 (通常20〜25人)
   const M = slots.length;   // スロット数 (11枠)
   if (N < M) return null;
@@ -2530,7 +2534,7 @@ function findOptimalAssignment(players, slots) {
   const W = Array.from({ length: M }, () => new Float64Array(N));
   for (let j = 0; j < M; j++) {
     for (let i = 0; i < N; i++) {
-      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos);
+      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos, compCategory);
     }
   }
 
@@ -2602,19 +2606,20 @@ function findOptimalAssignment(players, slots) {
 /**
  * 選択されているフォーメーションで組める一番バランスのいい組み方を自動選定する
  */
-function optimizeClubStarters(club) {
+function optimizeClubStarters(club, compCategory = 'league') {
   if (!club.formation || !FORMATIONS[club.formation]) {
     club.formation = '4-3-3';
   }
   const formationDef = getClubFormationDef(club);
   const slots = formationDef.slots;
-  const availablePlayers = club.players.filter(p => !p.isRetired);
+  const availablePlayers = club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
 
   // 最適マッチングの実行
-  const assignment = findOptimalAssignment(availablePlayers, slots);
+  const assignment = findOptimalAssignment(availablePlayers, slots, compCategory);
 
   club.players.forEach(p => {
     p.isStarter = false;
+    p.isBench = false;
     p.assignedPos = null;
     p.slotIndex = null;
   });
@@ -2634,7 +2639,7 @@ function optimizeClubStarters(club) {
     }
   }
 
-  optimizeClubBench(club);
+  optimizeClubBench(club, compCategory);
   ensureValidSquadAndStarters(club);
 
   const avgEffOvr = starterCount > 0 ? Math.round(totalEffOvr / starterCount) : 0;
@@ -2648,10 +2653,11 @@ function optimizeClubBench(club, compCategory = 'league') {
   if (!club || !Array.isArray(club.players)) return;
   const benchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(club) : 9;
   const nonStarters = club.players.filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const discCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compCategory) : compCategory;
 
   const isUnavailable = (p) => {
     const injured = (p.injuryWeeks > 0) || (p.injuryDays > 0);
-    const suspended = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, compCategory);
+    const suspended = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(p, discCat);
     return injured || suspended || Boolean(p.onIntlDuty);
   };
 
@@ -2740,9 +2746,26 @@ function getSafeTransferBudget(club) {
   if (!club) return 0;
   const funds = typeof club.funds === 'number' ? club.funds : 0;
   const weeklyPayroll = getClubWeeklyPayroll(club);
-  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const hasState = typeof gameState !== 'undefined' && gameState;
+  const stadiumLv = (hasState && gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const stadiumMult = club.isPlayer ? (1 + (stadiumLv - 1) * 0.15) : 1.0;
-  const isD2Club = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) || club.division === 'd2';
+
+  const isCurrentD2 = club.isPlayer
+    ? (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision())
+    : (club.division === 'd2');
+  const rel = (hasState && gameState.isSeasonOver) ? gameState.lastPromotionRelegation : null;
+  let isEffectiveD2 = isCurrentD2;
+  if (rel) {
+    if (club.isPlayer) {
+      if (rel.isPlayerRelegated) isEffectiveD2 = true;
+      else if (rel.isPlayerPromoted) isEffectiveD2 = false;
+    } else {
+      if (Array.isArray(rel.relegatedIds) && rel.relegatedIds.includes(club.id)) isEffectiveD2 = true;
+      else if (Array.isArray(rel.promotedIds) && rel.promotedIds.includes(club.id)) isEffectiveD2 = false;
+    }
+  }
+
+  const isD2Club = isEffectiveD2;
   const gateUnit = isD2Club ? 0.055 : 0.085;
   const estHomeGate = Math.round(((club.supporters || 14000) * gateUnit) * stadiumMult);
   const estAwayTv = isD2Club ? 450 : 1600;
@@ -2753,8 +2776,8 @@ function getSafeTransferBudget(club) {
   const estMinLeaguePrize = isD2Club ? 1500 : 5000;
   const estGuaranteedEndRev = estSponsorBase + estMinLeaguePrize;
 
-  if (gameState.isSeasonOver) {
-    const totalMatches = isPlayerInSecondDivision() ? 46 : 38;
+  if (hasState && gameState.isSeasonOver) {
+    const totalMatches = isEffectiveD2 ? 46 : 38;
     const halfMatches = Math.floor(totalMatches / 2);
     const estNextLeagueRev = halfMatches * estHomeGate + halfMatches * estAwayTv + estGuaranteedEndRev;
     const nextAnnualPayroll = weeklyPayroll * 52;
@@ -2764,14 +2787,14 @@ function getSafeTransferBudget(club) {
     return Math.round(funds - requiredReserve);
   }
 
-  const paidWeeks = clamp(gameState.paidPayrollWeeks || 0, 0, 52);
+  const paidWeeks = clamp((hasState && gameState.paidPayrollWeeks) || 0, 0, 52);
   const remWeeks = Math.max(0, 52 - paidWeeks);
-  const totalWeeks = gameState.totalWeeks || (isPlayerInSecondDivision() ? 46 : 38);
-  const remMatches = Math.max(0, totalWeeks - (gameState.currentWeek || 0));
+  const totalWeeks = (hasState && gameState.totalWeeks) || (isCurrentD2 ? 46 : 38);
+  const remMatches = Math.max(0, totalWeeks - ((hasState && gameState.currentWeek) || 0));
   const remHome = Math.floor(remMatches / 2);
   const remAway = remMatches - remHome;
   const estRemLeagueRev = remHome * estHomeGate + remAway * estAwayTv + estGuaranteedEndRev;
-  const preseasonWeeksAhead = (gameState.currentWeek || 0) === 0 ? Math.min(remWeeks, 6) : 2;
+  const preseasonWeeksAhead = ((hasState && gameState.currentWeek) || 0) === 0 ? Math.min(remWeeks, 6) : 2;
   const netRemBurn = Math.max(0, (weeklyPayroll * remWeeks) - estRemLeagueRev);
   const requiredReserve = Math.max(weeklyPayroll * Math.min(remWeeks, 6), netRemBurn + (weeklyPayroll * preseasonWeeksAhead));
   return Math.round(funds - requiredReserve);
@@ -3014,6 +3037,14 @@ function ensurePlayerRealismFields(player, isStarterHint = false) {
  */
 function ensureClubRealismFields(club) {
   if (!club) return;
+  if (typeof club.basePower !== 'number') {
+    const defMatch = (typeof CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CLUB_DEFINITIONS) ? CLUB_DEFINITIONS.find(d => d.id === club.id) : null)
+      || (typeof CHAMPIONSHIP_CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CHAMPIONSHIP_CLUB_DEFINITIONS) ? CHAMPIONSHIP_CLUB_DEFINITIONS.find(d => d.id === club.id) : null)
+      || (typeof getEuropeanMajorClubDefinitions === 'function' ? getEuropeanMajorClubDefinitions().find(d => d.id === club.id) : null);
+    if (defMatch && typeof defMatch.basePower === 'number') {
+      club.basePower = defMatch.basePower;
+    }
+  }
   if (typeof club.reputation !== 'number') {
     const bp = typeof club.basePower === 'number' ? club.basePower : 70;
     const isD2 = club.division === 'd2' || club.tier === 'D2';
@@ -3369,7 +3400,7 @@ function evaluateClubNationalityRules(club) {
     MIN_BENCH_LIMIT: 3
   };
   const activePlayers = (club && Array.isArray(club.players))
-    ? club.players.filter(p => p && !p.isRetired && !p.isLoanOut)
+    ? club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut))
     : [];
 
   let seniorCount = 0;

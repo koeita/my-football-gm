@@ -4868,66 +4868,44 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 /* ==========================================
-   ユースアカデミー（新星の発掘・昇格審査）
+   ユースアカデミー（昇格候補フラットリスト）
    ========================================== */
-.youth-academy-panel {
-  border-top: 2px solid var(--accent-green);
-}
-
 .youth-candidates-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 820px) {
-  .youth-candidates-grid {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
 }
 
 .youth-card {
-  background-color: var(--bg-main);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--accent-green);
-  border-radius: 4px;
-  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
-.youth-card-header {
+.youth-card:last-child {
+  border-bottom: none;
+}
+
+.youth-card-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 8px;
 }
 
-.youth-identity {
+.youth-name-wrap {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.youth-pos-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.youth-name-btn {
-  font-size: 16px;
-  font-weight: 700;
+  min-width: 0;
 }
 
 .youth-meta-row {
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: #8b949e;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4935,57 +4913,65 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .youth-ovr-box {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--accent-green);
-  border-radius: 3px;
-  padding: 4px 10px;
-  text-align: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: right;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .youth-ovr-label {
   font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-muted);
+  font-size: 10px;
+  color: #8b949e;
   display: block;
 }
 
 .youth-ovr-val {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--accent-green);
 }
 
-.youth-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.youth-stat-pill {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 6px 8px;
+.youth-stats-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.youth-stat-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.youth-stat-cell-label {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.youth-stat-cell-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .youth-contract-note {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 7px 10px;
-  font-size: 11px;
-  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #8b949e;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .youth-actions-row {
@@ -4994,6 +4980,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.youth-empty-box {
+  padding: 16px 0;
+  font-size: 13px;
+  color: #8b949e;
+  line-height: 1.6;
 }
 
 /* ==========================================
