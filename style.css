@@ -17301,3 +17301,120 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   animation: pitch-name-marquee var(--marquee-dur, 6.5s) linear infinite !important;
   will-change: transform;
 }
+
+/* カレンダー・週間スケジュール 試合日の大会別背景色 */
+.day-card.match-comp-eng-d1,
+.day-card.match-comp-d1,
+.cal-day-cell.has-match.match-comp-eng-d1,
+.cal-day-cell.has-match.match-comp-d1 {
+  background: rgba(30, 58, 138, 0.36) !important;
+  border-color: rgba(56, 189, 248, 0.42) !important;
+}
+.day-card.match-comp-eng-d1:hover,
+.day-card.match-comp-d1:hover,
+.cal-day-cell.has-match.match-comp-eng-d1:hover,
+.cal-day-cell.has-match.match-comp-d1:hover {
+  background: rgba(30, 58, 138, 0.5) !important;
+}
+
+.day-card.match-comp-eng-d2,
+.day-card.match-comp-d2,
+.cal-day-cell.has-match.match-comp-eng-d2,
+.cal-day-cell.has-match.match-comp-d2 {
+  background: rgba(51, 65, 85, 0.48) !important;
+  border-color: rgba(148, 163, 184, 0.42) !important;
+}
+.day-card.match-comp-eng-d2:hover,
+.day-card.match-comp-d2:hover,
+.cal-day-cell.has-match.match-comp-eng-d2:hover,
+.cal-day-cell.has-match.match-comp-d2:hover {
+  background: rgba(51, 65, 85, 0.62) !important;
+}
+
+.day-card.match-comp-l-cup,
+.day-card.match-comp-lgc,
+.cal-day-cell.has-match.match-comp-l-cup,
+.cal-day-cell.has-match.match-comp-lgc {
+  background: rgba(2, 132, 199, 0.32) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+}
+.day-card.match-comp-l-cup:hover,
+.day-card.match-comp-lgc:hover,
+.cal-day-cell.has-match.match-comp-l-cup:hover,
+.cal-day-cell.has-match.match-comp-lgc:hover {
+  background: rgba(2, 132, 199, 0.45) !important;
+}
+
+.day-card.match-comp-n-cup,
+.day-card.match-comp-nat,
+.cal-day-cell.has-match.match-comp-n-cup,
+.cal-day-cell.has-match.match-comp-nat {
+  background: rgba(185, 28, 28, 0.34) !important;
+  border-color: rgba(248, 113, 113, 0.5) !important;
+}
+.day-card.match-comp-n-cup:hover,
+.day-card.match-comp-nat:hover,
+.cal-day-cell.has-match.match-comp-n-cup:hover,
+.cal-day-cell.has-match.match-comp-nat:hover {
+  background: rgba(185, 28, 28, 0.48) !important;
+}
+
+.day-card.match-comp-ect,
+.day-card.match-comp-cl,
+.cal-day-cell.has-match.match-comp-ect,
+.cal-day-cell.has-match.match-comp-cl {
+  background: rgba(15, 42, 86, 0.68) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+}
+.day-card.match-comp-ect:hover,
+.day-card.match-comp-cl:hover,
+.cal-day-cell.has-match.match-comp-ect:hover,
+.cal-day-cell.has-match.match-comp-cl:hover {
+  background: rgba(15, 42, 86, 0.84) !important;
+}
+
+.day-card.match-comp-epc,
+.day-card.match-comp-el,
+.cal-day-cell.has-match.match-comp-epc,
+.cal-day-cell.has-match.match-comp-el {
+  background: rgba(180, 83, 9, 0.34) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+.day-card.match-comp-epc:hover,
+.day-card.match-comp-el:hover,
+.cal-day-cell.has-match.match-comp-epc:hover,
+.cal-day-cell.has-match.match-comp-el:hover {
+  background: rgba(180, 83, 9, 0.48) !important;
+}
+
+.day-card.match-comp-ecs,
+.day-card.match-comp-ecl,
+.cal-day-cell.has-match.match-comp-ecs,
+.cal-day-cell.has-match.match-comp-ecl {
+  background: rgba(6, 95, 70, 0.46) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+}
+.day-card.match-comp-ecs:hover,
+.day-card.match-comp-ecl:hover,
+.cal-day-cell.has-match.match-comp-ecs:hover,
+.cal-day-cell.has-match.match-comp-ecl:hover {
+  background: rgba(6, 95, 70, 0.62) !important;
+}
+
+.day-card.match-comp-wct,
+.cal-day-cell.has-match.match-comp-wct {
+  background: rgba(109, 40, 217, 0.3) !important;
+  border-color: rgba(167, 139, 250, 0.45) !important;
+}
+.day-card.match-comp-wct:hover,
+.cal-day-cell.has-match.match-comp-wct:hover {
+  background: rgba(109, 40, 217, 0.44) !important;
+}
+
+/* TODAYの緑枠ハイライトは大会色ボーダーより優先して維持 */
+.day-card.is-today.is-matchday {
+  border-color: var(--accent-green) !important;
+}
+.cal-day-cell.is-current-day.has-match {
+  border-color: var(--accent-green) !important;
+}
