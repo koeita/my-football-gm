@@ -944,6 +944,7 @@ function advanceCalendarDay(skipRender = false) {
     if (gameState.hasStartedOnce) autoSaveDirty = true;
     if (!skipRender) {
       renderAll();
+      if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
     }
     return true;
   }
@@ -953,6 +954,7 @@ function advanceCalendarDay(skipRender = false) {
     stopAdvancingCalendar();
     processSeasonEnd(true);
     if (!skipRender) renderAll();
+    if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
     return true;
   }
 
@@ -1861,9 +1863,11 @@ function processSeasonEnd(isSkipped = false) {
 
   switchTab('market');
 
-  // 昇降格処理の実行（1部下位3クラブ降格、2部上位3クラブ昇格）
+  // 昇降格判定の実行（実際の1部・2部クラブ入れ替えは新シーズン開幕時に実施し、オフシーズン中は今季の最終順位表を保持する）
   const mustPromoteThisSeason = Boolean(wasInD2 && playerClub && playerClub.mustPromoteImmediate);
-  const promoRelResult = (typeof processPromotionAndRelegation === 'function') ? processPromotionAndRelegation() : null;
+  const promoRelResult = (typeof evaluatePromotionAndRelegation === 'function')
+    ? evaluatePromotionAndRelegation()
+    : ((typeof processPromotionAndRelegation === 'function') ? processPromotionAndRelegation() : null);
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
     showGmModal({
       category: 'BOARD OF DIRECTORS / CRITICAL WARNING',
@@ -4965,6 +4969,11 @@ function startNextSeason() {
   gameState.pendingMegaOffer = null;
   gameState.d1BackgroundSchedule = null;
 
+  // 新シーズン開始時に1部・2部の昇降格入れ替えを適用
+  if (typeof processPromotionAndRelegation === 'function') {
+    processPromotionAndRelegation();
+  }
+
   for (const club of getAllManagedLeagueClubs()) {
     club.played = 0;
     club.won = 0;
@@ -5412,7 +5421,7 @@ function renderAll() {
   markAllViewsDirty();
   renderActiveTabView(true);
   if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') {
-    scheduleAutoSave(400);
+    scheduleAutoSave(120);
   }
 }
 

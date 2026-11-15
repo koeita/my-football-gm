@@ -62,10 +62,22 @@ function flushPendingAutoSave() {
   }
 }
 
+let hasRequestedPersistentStorage = false;
+function requestPersistentStorageOnce() {
+  if (hasRequestedPersistentStorage) return;
+  hasRequestedPersistentStorage = true;
+  try {
+    if (typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.persist === 'function') {
+      navigator.storage.persist().catch(() => {});
+    }
+  } catch (e) {}
+}
+
 if (typeof window !== 'undefined' && !window.__autoSaveUnloadBound) {
   window.__autoSaveUnloadBound = true;
   window.addEventListener('pagehide', flushPendingAutoSave);
   window.addEventListener('beforeunload', flushPendingAutoSave);
+  window.addEventListener('freeze', flushPendingAutoSave);
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
@@ -179,8 +191,56 @@ function saveGameToStorage(force = false) {
     }));
     payload.state.lastWeekResults = slimMatchList(gameState.lastWeekResults);
     payload.state.matchHistory = slimMatchList(gameState.matchHistory);
+
+    // シリアライズ容量削減（元データ破壊なし）：
+    // 1) calendar 内の matchFixture は schedule と完全重複するため除外（ロード時に再結合）
+    if (Array.isArray(payload.state.calendar)) {
+      payload.state.calendar = payload.state.calendar.map(d => {
+        if (!d || typeof d !== 'object') return d;
+        if (!('matchFixture' in d)) return d;
+        const { matchFixture, ...rest } = d;
+        return rest;
+      });
+    }
+    // 2) 選手の attributes キャッシュは atk/def/sta/pos から再計算可能なため保存データから除外
+    const stripClubPlayerAttrs = (clubsArr, compressCpuHist = false) => {
+      if (!Array.isArray(clubsArr)) return clubsArr;
+      return clubsArr.map(c => {
+        if (!c || !Array.isArray(c.players)) return c;
+        return {
+          ...c,
+          players: c.players.map(p => {
+            if (!p || typeof p !== 'object') return p;
+            const { attributes, ...rest } = p;
+            if (compressCpuHist && !c.isPlayer) {
+              if (Array.isArray(rest.valueHistory) && rest.valueHistory.length > 1) {
+                rest.valueHistory = rest.valueHistory.slice(-1);
+              }
+              if (Array.isArray(rest.seasonHistory) && rest.seasonHistory.length > 1) {
+                rest.seasonHistory = rest.seasonHistory.slice(-1);
+              }
+            }
+            return rest;
+          })
+        };
+      });
+    };
+    payload.state.clubs = stripClubPlayerAttrs(gameState.clubs, false);
+    if (payload.state.competitions && payload.state.competitions.championship && Array.isArray(payload.state.competitions.championship.clubs)) {
+      payload.state.competitions.championship = {
+        ...payload.state.competitions.championship,
+        clubs: stripClubPlayerAttrs(payload.state.competitions.championship.clubs, false)
+      };
+    }
+
+    requestPersistentStorageOnce();
+
+    const tryWritePayload = (obj) => {
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(obj));
+    };
+
     try {
-      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+      tryWritePayload(payload);
     } catch (storageErr) {
       const isQuotaErr = storageErr && (
         storageErr.name === 'QuotaExceededError'
@@ -189,17 +249,46 @@ function saveGameToStorage(force = false) {
         || storageErr.code === 1014
       );
       if (!isQuotaErr) throw storageErr;
-      // 容量上限エラー時は履歴・ログを段階的に圧縮してリトライ
-      payload.state.matchHistory = payload.state.matchHistory.slice(-15);
+      // Stage 1: 試合履歴・ログを圧縮してリトライ
+      payload.state.matchHistory = payload.state.matchHistory.slice(-12);
       payload.state.lastWeekResults = [];
-      payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 30) : [];
+      payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 20) : [];
       if (Array.isArray(payload.state.calendar)) {
         payload.state.calendar = payload.state.calendar.map(d => {
           if (!d || !d.matchResult) return d;
           return { ...d, matchResult: { ...d.matchResult, scorers: [] } };
         });
       }
-      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+      try {
+        tryWritePayload(payload);
+      } catch (err2) {
+        // Stage 2: CPU選手の年度履歴・市場価値履歴を圧縮してリトライ
+        payload.state.clubs = stripClubPlayerAttrs(gameState.clubs, true);
+        if (payload.state.competitions && payload.state.competitions.championship && Array.isArray(payload.state.competitions.championship.clubs)) {
+          payload.state.competitions.championship = {
+            ...payload.state.competitions.championship,
+            clubs: stripClubPlayerAttrs(payload.state.competitions.championship.clubs, true)
+          };
+        }
+        const slimPool = (arr, limit) => Array.isArray(arr) ? arr.slice(0, limit).map(p => {
+          if (!p || typeof p !== 'object') return p;
+          const { attributes, valueHistory, seasonHistory, ...rest } = p;
+          return rest;
+        }) : arr;
+        payload.state.transferMarket = slimPool(payload.state.transferMarket, 60);
+        payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 40);
+        try {
+          tryWritePayload(payload);
+        } catch (err3) {
+          // Stage 3: 最終防衛ライン（履歴・ログ全削除、市場リスト最小化）
+          payload.state.matchHistory = [];
+          payload.state.dailyLogs = [];
+          payload.state.transferMarket = slimPool(payload.state.transferMarket, 35);
+          payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 25);
+          payload.state.youthCandidates = slimPool(payload.state.youthCandidates, 15);
+          tryWritePayload(payload);
+        }
+      }
     }
     autoSaveDirty = false;
     updateCareerRecordsFromCurrentState();
@@ -498,6 +587,14 @@ function loadGameFromStorage() {
       if (Array.isArray(d2Clubs) && typeof ensurePlayableClubStructure === 'function') {
         d2Clubs.forEach(c => ensurePlayableClubStructure(c));
       }
+    }
+    // セーブ時に省略した calendar[].matchFixture を schedule から再結合
+    if (Array.isArray(gameState.calendar) && Array.isArray(gameState.schedule)) {
+      gameState.calendar.forEach(d => {
+        if (d && d.isMatchDay && d.matchWeek && !d.matchFixture) {
+          d.matchFixture = gameState.schedule[d.matchWeek - 1] || null;
+        }
+      });
     }
     if (!Array.isArray(gameState.euroTransferList) || gameState.euroTransferList.length === 0) {
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
