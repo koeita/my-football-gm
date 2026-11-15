@@ -224,8 +224,8 @@ function saveGameToStorage(force = false) {
         selectedCompView: gameState.selectedCompView || 'league',
         selectedLeagueDivision: gameState.selectedLeagueDivision || null,
         selectedDomesticCup: gameState.selectedDomesticCup || 'leagueCup',
-        selectedEuropeanCup: gameState.selectedEuropeanCup || 'championsCup',
-        euroViewMode: gameState.euroViewMode || 'standings',
+        selectedEuroCup: gameState.selectedEuroCup || gameState.selectedEuropeanCup || 'championsCup',
+        selectedEuroSubtab: gameState.selectedEuroSubtab || gameState.euroViewMode || 'standings',
         competitionStats: gameState.competitionStats || {},
         statsCompView: gameState.statsCompView || 'league',
         statsLeagueDivision: gameState.statsLeagueDivision || null,
@@ -376,11 +376,41 @@ function saveGameToStorage(force = false) {
             clubs: stripClubPlayerAttrs(payload.state.competitions.championship.clubs, true)
           };
         }
-        const slimPool = (arr, limit) => Array.isArray(arr) ? arr.slice(0, limit).map(p => {
-          if (!p || typeof p !== 'object') return p;
-          const { attributes, valueHistory, seasonHistory, ...rest } = p;
-          return rest;
-        }) : arr;
+        const protectedIds = new Set();
+        if (Array.isArray(gameState.outgoingOffers)) {
+          gameState.outgoingOffers.forEach(o => { if (o && o.playerId) protectedIds.add(o.playerId); });
+        }
+        if (Array.isArray(gameState.targetShortlist)) {
+          gameState.targetShortlist.forEach(id => { if (id) protectedIds.add(id); });
+        }
+        if (Array.isArray(gameState.activeScoutAssignments)) {
+          gameState.activeScoutAssignments.forEach(a => { if (a && a.playerId) protectedIds.add(a.playerId); });
+        }
+        if (Array.isArray(gameState.preContractPlayers)) {
+          gameState.preContractPlayers.forEach(p => { if (p && p.id) protectedIds.add(p.id); });
+        }
+        if (gameState.scoutingIntel && typeof gameState.scoutingIntel === 'object') {
+          Object.keys(gameState.scoutingIntel).forEach(id => { if (id) protectedIds.add(id); });
+        }
+        const slimPool = (arr, limit) => {
+          if (!Array.isArray(arr)) return arr;
+          const important = [];
+          const others = [];
+          for (const p of arr) {
+            if (p && p.id && protectedIds.has(p.id)) {
+              important.push(p);
+            } else {
+              others.push(p);
+            }
+          }
+          const remainingSlots = Math.max(0, limit - important.length);
+          const selected = important.concat(others.slice(0, remainingSlots));
+          return selected.map(p => {
+            if (!p || typeof p !== 'object') return p;
+            const { attributes, valueHistory, seasonHistory, ...rest } = p;
+            return rest;
+          });
+        };
         payload.state.transferMarket = slimPool(payload.state.transferMarket, 60);
         payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 40);
         try {
@@ -653,10 +683,16 @@ function loadGameFromStorage() {
       playerIdCounter = savedCounter;
     }
     Object.assign(gameState, state);
+    if (!gameState.activeTab) gameState.activeTab = 'office';
+    if (!gameState.teamSubtab) gameState.teamSubtab = 'standings';
+    if (!gameState.rosterSubtab) gameState.rosterSubtab = 'board';
+    if (!gameState.marketSubtab) gameState.marketSubtab = 'market';
     if (!gameState.facilitiesSubtab) gameState.facilitiesSubtab = 'investment';
     if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
     if (!Array.isArray(gameState.outgoingOffers)) gameState.outgoingOffers = [];
     if (!gameState.offersSubtab) gameState.offersSubtab = 'incoming';
+    if (!gameState.selectedEuroCup && state.selectedEuropeanCup) gameState.selectedEuroCup = state.selectedEuropeanCup;
+    if (!gameState.selectedEuroSubtab && state.euroViewMode) gameState.selectedEuroSubtab = state.euroViewMode;
     if (!Array.isArray(gameState.targetShortlist)) gameState.targetShortlist = [];
     if (!Array.isArray(gameState.preContractPlayers)) gameState.preContractPlayers = [];
     if (!Array.isArray(gameState.matchHistory)) gameState.matchHistory = [];
@@ -855,6 +891,9 @@ function loadGameFromStorage() {
     if (gameState.intlBreakState === undefined) gameState.intlBreakState = null;
     gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
     gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);
+    if (typeof syncAllSubtabsDOM === 'function') {
+      syncAllSubtabsDOM();
+    }
     return true;
   } catch (e) {
     return false;
@@ -918,24 +957,30 @@ function updateCareerRecordsFromCurrentState() {
         rec.maxFunds = playerClub.funds;
       }
       if (gameState.isSeasonOver) {
-        const sorted = getSortedStandings();
+        const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+        const activeClubs = typeof getActivePlayerLeagueClubs === 'function'
+          ? getActivePlayerLeagueClubs()
+          : (gameState.clubs || []);
+        const sorted = isD2
+          ? [...activeClubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0))
+          : getSortedStandings();
         const rank = sorted.findIndex(c => c.id === playerClub.id) + 1;
-        if (rank > 0 && (!rec.bestRank || rank < rec.bestRank)) {
+        if (!isD2 && rank > 0 && (!rec.bestRank || rank < rec.bestRank)) {
           rec.bestRank = rank;
         }
         const seasonKey = `${gameState.gmName}_S${gameState.season}_${playerClub.id}`;
         if (rec.lastRecordedSeasonKey !== seasonKey) {
           rec.lastRecordedSeasonKey = seasonKey;
           rec.seasonsCompleted = (rec.seasonsCompleted || 0) + 1;
-          if (rank === 1) {
+          if (!isD2 && rank === 1) {
             rec.titlesWon = (rec.titlesWon || 0) + 1;
           }
           // シーズン得点王を記録
           let bestPlayer = null;
           let bestClubName = '';
-          for (const c of gameState.clubs) {
-            for (const p of c.players) {
-              if (!bestPlayer || p.goals > bestPlayer.goals) {
+          for (const c of activeClubs) {
+            for (const p of (c.players || [])) {
+              if (!bestPlayer || (p.goals || 0) > (bestPlayer.goals || 0)) {
                 bestPlayer = p;
                 bestClubName = c.name;
               }
@@ -970,16 +1015,22 @@ function openRecordsModal() {
   } catch (e) {}
 
   const summary = getSavedGameSummary();
-  const activeClub = summary && summary.parsed && summary.parsed.state
-    ? (summary.parsed.state.clubs.find(c => c.isPlayer) || getPlayerClub())
-    : getPlayerClub();
+  const st = summary && summary.parsed && summary.parsed.state ? summary.parsed.state : null;
+  const stD1 = st && Array.isArray(st.clubs) ? st.clubs : [];
+  const stD2 = st && st.competitions && st.competitions.championship && Array.isArray(st.competitions.championship.clubs)
+    ? st.competitions.championship.clubs
+    : [];
+  const activeClub = [...stD1, ...stD2].find(c => c && c.isPlayer) || getPlayerClub();
 
   const currentStats = activeClub
     ? `${activeClub.played}試合 ${activeClub.won}勝 ${activeClub.drawn}分 ${activeClub.lost}敗（勝点 ${activeClub.pts}）`
     : '記録なし';
 
   // 現在進行中または保存データの得点ランキング上位3名
-  const clubsSource = (summary && summary.parsed && summary.parsed.state && summary.parsed.state.clubs) || gameState.clubs || [];
+  const isSavedD2 = st ? stD2.some(c => c && c.isPlayer) : (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision());
+  const clubsSource = isSavedD2
+    ? (stD2.length > 0 ? stD2 : (typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : []))
+    : (stD1.length > 0 ? stD1 : (gameState.clubs || []));
   const allPlayers = [];
   for (const c of clubsSource) {
     for (const p of (c.players || [])) {

@@ -84,9 +84,7 @@ function checkAndShowManagerTrustCrisis() {
         onClick: () => {
           mgr.trust = 45;
           mgr.interventionStreak = 0;
-          gameState.activeYouthScouts = [];
-  gameState.youthScoutReports = [];
-  gameState.managerDelegationEnabled = true;
+          gameState.managerDelegationEnabled = true;
           applyManagerPreMatchDelegation(club, true);
           addDailyLog(`【緊急会談・和解】${mgr.name}監督に現場采配を一任することで合意し、信頼関係が修復に向かいました。`);
           renderAll();
@@ -142,7 +140,7 @@ function setBodyModalLock(locked) {
       document.documentElement.classList.add('modal-open');
     }
   } else {
-    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden)');
+    const openModals = document.querySelectorAll('.modal-overlay:not(.hidden), #gm-modal-overlay:not(.hidden)');
     if (openModals.length === 0) {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
@@ -528,6 +526,13 @@ function getCalendarDayPlayerMatch(day) {
     }
   }
 
+  const resolveMatchOpponent = (m, isHome) => {
+    const rawOpp = isHome ? m.awayClub : m.homeClub;
+    const oppId = isHome ? m.awayId : m.homeId;
+    const canonical = (oppId && typeof getClubById === 'function') ? getClubById(oppId) : null;
+    return (canonical && Array.isArray(canonical.players) && canonical.players.length > 0) ? canonical : rawOpp;
+  };
+
   // 2. カップ戦 / 欧州戦 / プレシーズン親善杯
   if (day.isCupMatchDay) {
     // プレシーズン親善杯（ワールド・チャレンジ・トロフィー）
@@ -538,7 +543,7 @@ function getCalendarDayPlayerMatch(day) {
         const m = comp.matches.find(x => x.round === roundNum);
         if (m) {
           const isHome = m.homeId === playerClub.id;
-          const oppClub = isHome ? m.awayClub : m.homeClub;
+          const oppClub = resolveMatchOpponent(m, isHome);
           return {
             type: 'preseasonCup',
             compKey: 'preseasonCup',
@@ -565,7 +570,7 @@ function getCalendarDayPlayerMatch(day) {
           const m = comp.leagueSchedule[md - 1].find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
           if (m) {
             const isHome = m.homeId === playerClub.id;
-            const oppClub = isHome ? m.awayClub : m.homeClub;
+            const oppClub = resolveMatchOpponent(m, isHome);
             return {
               type: 'euroLeague',
               compKey: ek,
@@ -591,7 +596,7 @@ function getCalendarDayPlayerMatch(day) {
           const m = comp.playoffs.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
           if (m) {
             const isHome = m.homeId === playerClub.id;
-            const oppClub = isHome ? m.awayClub : m.homeClub;
+            const oppClub = resolveMatchOpponent(m, isHome);
             return {
               type: 'euroPlayoff',
               compKey: ek,
@@ -616,7 +621,7 @@ function getCalendarDayPlayerMatch(day) {
       const m = roundMatches.find(x => x.homeId === playerClub.id || x.awayId === playerClub.id);
       if (m) {
         const isHome = m.homeId === playerClub.id;
-        const oppClub = isHome ? m.awayClub : m.homeClub;
+        const oppClub = resolveMatchOpponent(m, isHome);
         
         // ラウンド名称の正規化マッピング（R32は1回戦、R16は国内カップ戦なら2回戦、欧州なら決勝T 1回戦）
         let roundText = '';
@@ -658,7 +663,10 @@ function getCalendarDayPlayerMatch(day) {
 function isTodayMatchDayPending() {
   const day = getCurrentCalendarDay();
   if (!day || gameState.isSeasonOver || day.played) return false;
-  if (day.isMatchDay) return true;
+  if (day.isMatchDay) {
+    const matchInfo = getCalendarDayPlayerMatch(day);
+    return Boolean(matchInfo && !matchInfo.played);
+  }
   if (day.isCupMatchDay) {
     const matchInfo = getCalendarDayPlayerMatch(day);
     if (matchInfo && !matchInfo.played) return true;
@@ -718,6 +726,42 @@ function showToast(message, type = 'info') {
 }
 
 /**
+ * 指定のカレンダー日がプレイヤー自身の未消化カップ/欧州戦に該当するか判定する（他会場の先行消化は行わない）
+ */
+function hasPlayerCupMatchOnDay(day) {
+  if (!day || !day.isCupMatchDay || day.played || !gameState.competitions) return false;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return false;
+  const pId = playerClub.id;
+  const euroKeys = ['championsCup', 'europaCup', 'conferenceCup'];
+
+  if (day.cupCompType === 'preseasonCup') {
+    const pre = gameState.competitions.preseasonCup;
+    if (!pre || !Array.isArray(pre.matches)) return false;
+    const roundNum = Number(String(day.cupRoundKey || '').replace(/\D+/g, '')) || 1;
+    const m = pre.matches.find(x => Number(x.round) === roundNum);
+    return Boolean(m && !m.played);
+  }
+  if (day.cupCompType === 'euroLeaguePhase' || day.euroMd) {
+    const mdIdx = (day.euroMd || 1) - 1;
+    return euroKeys.some(ek => {
+      const comp = gameState.competitions[ek];
+      const roundMatches = comp && comp.leagueSchedule && comp.leagueSchedule[mdIdx];
+      return Array.isArray(roundMatches) && roundMatches.some(m => !m.played && (m.homeId === pId || m.awayId === pId));
+    });
+  }
+  if (day.cupCompType === 'euroPlayoff') {
+    return euroKeys.some(ek => {
+      const comp = gameState.competitions[ek];
+      return comp && Array.isArray(comp.playoffs) && comp.playoffs.some(m => !m.played && (m.homeId === pId || m.awayId === pId));
+    });
+  }
+  const comp = gameState.competitions[day.cupCompType];
+  const roundMatches = comp && comp.rounds && comp.rounds[day.cupRoundKey];
+  return Array.isArray(roundMatches) && roundMatches.some(m => !m.played && (m.homeId === pId || m.awayId === pId));
+}
+
+/**
  * カレンダーを1日進める処理（平日ルーティン / 負傷回復 / 移籍オファー判定）
  * @param {boolean} skipRender 高速連続進行時の個別render省略フラグ
  * @returns {boolean} 停止トリガーが発生したか（試合日・重要イベント・シーズン終了など）
@@ -742,9 +786,12 @@ function advanceCalendarDay(skipRender = false) {
   if (!nextDay || gameState.currentDayIndex >= gameState.calendar.length || (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches())) {
     stopAdvancingCalendar();
     if (!gameState.isSeasonOver) {
-      processSeasonEnd(true);
+      processSeasonEnd(Boolean(skipRender));
     }
-    if (!skipRender) renderAll();
+    if (!skipRender) {
+      renderAll();
+      if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
+    }
     return true;
   }
 
@@ -867,53 +914,42 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
-  // 2.5 カップ戦・2部リーグ・欧州リーグフェーズの日程消化処理
+  // 2.5 カップ戦・欧州大会の判定（自クラブの試合日ならキックオフまで他会場の消化を遅延）
   let isNextDayCupPlayerMatch = false;
   if (nextDay.isCupMatchDay && !nextDay.played) {
-    if (nextDay.cupCompType === 'euroLeaguePhase') {
+    if (hasPlayerCupMatchOnDay(nextDay)) {
+      isNextDayCupPlayerMatch = true;
+    } else if (nextDay.cupCompType === 'euroLeaguePhase') {
       if (typeof advanceEuroLeaguePhase === 'function') {
-        const euroRes = advanceEuroLeaguePhase(nextDay.euroMd);
-        if (euroRes && euroRes.playerMatch) {
-          isNextDayCupPlayerMatch = true;
-        } else {
-          nextDay.played = true;
-        }
+        advanceEuroLeaguePhase(nextDay.euroMd);
       }
+      nextDay.played = true;
     } else if (nextDay.cupCompType === 'euroPlayoff') {
       if (typeof advanceEuroPlayoffRound === 'function') {
-        const poRes = advanceEuroPlayoffRound();
-        if (poRes && poRes.playerMatch) {
-          isNextDayCupPlayerMatch = true;
-        } else {
-          nextDay.played = true;
-        }
+        advanceEuroPlayoffRound();
       }
+      nextDay.played = true;
     } else if (nextDay.cupCompType === 'preseasonCup') {
-      // プレシーズン親善杯（WCT）
-      isNextDayCupPlayerMatch = true;
+      nextDay.played = true;
     } else if (typeof processCupMatchDay === 'function') {
-      const cupRes = processCupMatchDay(nextDay.cupCompType, nextDay.cupRoundKey);
-      if (cupRes && cupRes.playerMatch) {
-        isNextDayCupPlayerMatch = true;
-      } else {
-        nextDay.played = true;
-      }
+      processCupMatchDay(nextDay.cupCompType, nextDay.cupRoundKey);
+      nextDay.played = true;
     }
   }
 
-  // 週末リーグ戦にあわせて他ディビジョンも進行
-  if (nextDay.isMatchDay && !nextDay.played) {
+  // プレイヤーのリーグ試合がない日程（空振りガード）に限り他ディビジョンを消化
+  if (nextDay.isMatchDay && !nextDay.played && !getCalendarDayPlayerMatch(nextDay)) {
     if (isPlayerInSecondDivision()) {
       advanceFirstDivisionBackgroundWeek();
     } else if (typeof advanceChampionshipWeek === 'function') {
       advanceChampionshipWeek();
-      // 1部38節に対し2部は全46節のため、ミッドウィーク開催節では2部をもう1節消化して46節に揃える
-      const d2Clubs = gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs;
-      const d2Played = d2Clubs && d2Clubs[0] ? (d2Clubs[0].played || 0) : 0;
+      const d2Comp = gameState.competitions && gameState.competitions.championship;
+      const d2Played = d2Comp ? (d2Comp.currentWeek || 0) : 0;
       if (nextDay.dayOfWeek !== 6 && d2Played < 46) {
         advanceChampionshipWeek();
       }
     }
+    nextDay.played = true;
   }
 
   // 3. 次の日の試合判定および重要オファー返答イベント判定
@@ -956,9 +992,11 @@ function advanceCalendarDay(skipRender = false) {
   // リーグ全節終了後に残っていた最後のカップ戦日（自クラブ不出場）を消化完了した場合
   if (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches() && !gameState.isSeasonOver) {
     stopAdvancingCalendar();
-    processSeasonEnd(true);
-    if (!skipRender) renderAll();
-    if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
+    processSeasonEnd(Boolean(skipRender));
+    if (!skipRender) {
+      renderAll();
+      if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
+    }
     return true;
   }
 
@@ -1293,10 +1331,14 @@ function acceptPendingMegaOffer() {
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === offer.playerId);
   if (target) {
-    playerClub.funds += offer.offerAmount;
+    const { netFee } = applySellOnRightsOnSale(playerClub, target, offer.offerAmount);
+    playerClub.funds += netFee;
     playerClub.players = playerClub.players.filter(p => p.id !== target.id);
+    if (typeof cancelOtherIncomingOffersForPlayer === 'function') {
+      cancelOtherIncomingOffersForPlayer(target.id, null, { clearModalOffers: false });
+    }
     ensureValidSquadAndStarters(playerClub);
-    gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(offer.offerAmount)} が即時加算されました。`;
+    gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(netFee)} が即時加算されました。`;
   }
 
   gameState.pendingMegaOffer = null;
@@ -1330,7 +1372,7 @@ function rejectPendingMegaOffer() {
  */
 function triggerInjuryEvent() {
   const playerClub = getPlayerClub();
-  const starters = playerClub.players.filter(p => p.isStarter && (p.injuryWeeks || 0) === 0);
+  const starters = playerClub.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
   if (starters.length === 0) return;
 
   const weighted = [];
@@ -1369,8 +1411,11 @@ function triggerInjuryEvent() {
           victim.injuryWeeks = weeks;
           victim.injuryDays = weeks * 7;
           const healthyBench = playerClub.players
-            .filter(p => !p.isStarter && (p.injuryWeeks || 0) === 0)
+            .filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0)
             .sort((a, b) => {
+              const aBench = a.isBench !== false ? 1 : 0;
+              const bBench = b.isBench !== false ? 1 : 0;
+              if (aBench !== bBench) return bBench - aBench;
               const aMatch = a.pos === victim.assignedPos ? 1 : 0;
               const bMatch = b.pos === victim.assignedPos ? 1 : 0;
               if (aMatch !== bMatch) return bMatch - aMatch;
@@ -1379,9 +1424,14 @@ function triggerInjuryEvent() {
           if (healthyBench.length > 0) {
             const sub = healthyBench[0];
             sub.isStarter = true;
+            sub.isBench = false;
+            sub.slotIndex = victim.slotIndex;
             sub.assignedPos = victim.assignedPos || victim.pos;
             victim.isStarter = false;
+            victim.isBench = true;
+            victim.slotIndex = null;
             victim.assignedPos = null;
+            ensureValidSquadAndStarters(playerClub);
           }
           renderAll();
         }
@@ -1396,15 +1446,25 @@ function triggerInjuryEvent() {
 function triggerYouthPromotionEvent() {
   const playerClub = getPlayerClub();
   const usedNames = new Set();
-  gameState.clubs.forEach(c => c.players.forEach(p => usedNames.add(p.name)));
+  getAllManagedLeagueClubs().forEach(c => (c.players || []).forEach(p => usedNames.add(p.name)));
 
   const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
   const curve = Math.random() < 0.45 ? 'early' : (Math.random() < 0.35 ? 'fragile' : 'standard');
   const prospect = createPlayer(pos, randInt(60, 68), false, usedNames, [17, 18], curve);
   prospect.salary = 800; // £800K
+  prospect.wage = Math.max(10, Math.round(prospect.salary / 52));
   prospect.contractYears = 4;
+  prospect.isYouth = false;
+  prospect.isYouthGraduate = true;
+  prospect.isHomegrown = true;
+  prospect.isStarter = false;
+  prospect.isBench = false;
+  prospect.assignedPos = null;
+  prospect.slotIndex = null;
+  prospect.squadNumber = null;
   const ovr = getPlayerOverallRating(prospect);
-  const isFull = playerClub.players.length >= MAX_SQUAD_SIZE;
+  const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+  const isFull = playerClub.players.length >= maxSquad;
 
   showGmModal({
     category: 'ACADEMY SCOUT REPORT',
@@ -1413,11 +1473,13 @@ function triggerYouthPromotionEvent() {
     detailHtml: `候補選手：[${prospect.pos}] ${prospect.name}（${prospect.age}歳）<br>能力値：総合 ${ovr}（攻撃 ${prospect.atk} / 守備 ${prospect.def} / スタミナ ${prospect.sta}） / 4年契約・年俸 ${formatMoney(prospect.salary)}`,
     actions: [
       {
-        label: isFull ? '所属枠上限（20名）のため昇格不可' : 'トップチームへ無料昇格させる（移籍金 £0）',
+        label: isFull ? `所属枠上限（${maxSquad}名）のため昇格不可` : 'トップチームへ無料昇格させる（移籍金 £0）',
         className: 'btn btn-primary',
         disabled: isFull,
         onClick: () => {
           playerClub.players.push(prospect);
+          ensureClubSquadNumbers(playerClub);
+          ensureValidSquadAndStarters(playerClub);
           renderAll();
         }
       },
@@ -1473,28 +1535,37 @@ function triggerSupporterPetitionEvent() {
  */
 function showGmModal({ category, title, description, detailHtml, actions }) {
   const overlay = document.getElementById('gm-modal-overlay');
-  document.getElementById('modal-category').textContent = category;
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-description').textContent = description;
-  document.getElementById('modal-detail-box').innerHTML = detailHtml;
+  if (!overlay) return;
+  const catEl = document.getElementById('modal-category');
+  const titleEl = document.getElementById('modal-title');
+  const descEl = document.getElementById('modal-description');
+  const detailEl = document.getElementById('modal-detail-box');
+  if (catEl) catEl.textContent = category;
+  if (titleEl) titleEl.textContent = title;
+  if (descEl) descEl.textContent = description;
+  if (detailEl) detailEl.innerHTML = detailHtml;
 
   const actionsContainer = document.getElementById('modal-actions');
-  actionsContainer.innerHTML = '';
+  if (actionsContainer) {
+    actionsContainer.innerHTML = '';
 
-  actions.forEach(act => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = act.className || 'btn btn-primary';
-    btn.textContent = act.label;
-    if (act.disabled) btn.disabled = true;
-    btn.addEventListener('click', () => {
-      overlay.classList.add('hidden');
-      if (act.onClick) act.onClick();
+    (actions || []).forEach(act => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = act.className || 'btn btn-primary';
+      btn.textContent = act.label;
+      if (act.disabled) btn.disabled = true;
+      btn.addEventListener('click', () => {
+        overlay.classList.add('hidden');
+        if (act.onClick) act.onClick();
+        if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
+      });
+      actionsContainer.appendChild(btn);
     });
-    actionsContainer.appendChild(btn);
-  });
+  }
 
   overlay.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 /**
@@ -1693,6 +1764,7 @@ function processSeasonEnd(isSkipped = false) {
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
+  const processedAgedIds = new Set();
   gameState.expiredMarketPool = [];
   const finishedSeasonNum = gameState.season || 1;
   const finishedBaseYear = 2025 + finishedSeasonNum;
@@ -1703,12 +1775,13 @@ function processSeasonEnd(isSkipped = false) {
     let remainingPoolCount = (club.players || []).filter(pl => pl && !pl.isRetired).length;
 
     for (const p of (club.players || [])) {
+      processedAgedIds.add(p.id);
       const seasonAge = p.age || 18;
       p.age += 1;
       p.injuryWeeks = 0;
       p.contractYears = Math.max(0, (p.contractYears || 1) - 1);
 
-      if (shouldPlayerRetire(p)) {
+      if (!p.preContract && !preContractIds.has(p.id) && shouldPlayerRetire(p)) {
         p.isRetired = true;
         p.isStarter = false;
         remainingPoolCount = Math.max(0, remainingPoolCount - 1);
@@ -1792,6 +1865,7 @@ function processSeasonEnd(isSkipped = false) {
         }
         p.contractYears = randInt(2, 4);
         p.salary = calculatePlayerSalary(p.pos, p.atk, p.def, p.sta, p.age);
+        p.wage = Math.max(1, Math.round(p.salary / 52));
       }
 
       if (club.isPlayer) {
@@ -1843,11 +1917,39 @@ function processSeasonEnd(isSkipped = false) {
     }
   }
 
+  // 海外クラブ・欧州リスト経由で事前合意（preContract）締結済みの内定選手もシーズン末に加齢・成長を反映する
+  if (Array.isArray(gameState.preContractPlayers)) {
+    for (const pp of gameState.preContractPlayers) {
+      if (!pp || processedAgedIds.has(pp.id)) continue;
+      processedAgedIds.add(pp.id);
+      pp.age = (pp.age || 18) + 1;
+      pp.injuryWeeks = 0;
+      const { dAtk, dDef, dSta } = computeStatGrowth(pp, false);
+      const oldAtk = pp.atk;
+      const oldDef = pp.def;
+      const oldSta = pp.sta;
+      pp.atk = clamp(pp.atk + dAtk, 1, 99);
+      pp.def = clamp(pp.def + dDef, 1, 99);
+      pp.sta = clamp(pp.sta + dSta, 1, 99);
+      pp.attributes = null;
+      getPlayerFiveAttributes(pp);
+      pp.lastDiff = {
+        atk: pp.atk - oldAtk,
+        def: pp.def - oldDef,
+        sta: pp.sta - oldSta
+      };
+    }
+  }
+
   generateTransferMarket();
   generateYouthAcademyCandidates();
   playerRetirementLogs.push(
     `[ユースアカデミー] 今季のユース昇格候補2名（16〜18歳）が選出されました（「クラブ経営・施設投資」タブから昇格審査が可能）`
   );
+
+  if (typeof ageAndRenewCoachingStaffAtSeasonEnd === 'function') {
+    ageAndRenewCoachingStaffAtSeasonEnd(playerRetirementLogs);
+  }
 
   gameState.lastSettlement = {
     season: gameState.season,
@@ -2149,19 +2251,28 @@ function triggerPreContractDepartures() {
   if (Math.random() > 0.03) return false;
 
   const target = eligible[randInt(0, eligible.length - 1)];
-  const foreignClubs = ['バイエルン R', 'レアルマドリード W', 'パリ B', 'インテル B', 'バルセロナ G', 'ユヴェントス W', 'ドルトムント Y'];
-  const foreignClub = foreignClubs[randInt(0, foreignClubs.length - 1)];
+  let pickedDest = null;
+  if (typeof getEuropeanMajorClubDefinitions === 'function') {
+    const eliteEuro = getEuropeanMajorClubDefinitions().filter(c => (c.basePower || 75) >= 80);
+    if (eliteEuro.length > 0) pickedDest = eliteEuro[randInt(0, eliteEuro.length - 1)];
+  }
+  if (!pickedDest && Array.isArray(gameState.europeanMegaClubs) && gameState.europeanMegaClubs.length > 0) {
+    pickedDest = gameState.europeanMegaClubs[randInt(0, gameState.europeanMegaClubs.length - 1)];
+  }
+  const foreignClubName = pickedDest ? pickedDest.name : 'マドリード W';
+  const foreignClubId = pickedDest ? pickedDest.id : 'es01';
 
   target.preContractDeparture = {
-    toClubName: foreignClub,
+    toClubId: foreignClubId,
+    toClubName: foreignClubName,
     effectiveSeason: (gameState.season || 1) + 1
   };
   target.contractRefused = true; // 今季中のこれ以上の更新は不可に
   gameState.hasPreContractDepartureThisSeason = true;
 
-  addDailyLog(`【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClub} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
+  addDailyLog(`【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClubName} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
   if (typeof showToast === 'function') {
-    showToast(`【事前合意流出】${target.name}が来季${foreignClub}へのフリー移籍に事前合意しました`);
+    showToast(`【事前合意流出】${target.name}が来季${foreignClubName}へのフリー移籍に事前合意しました`);
   }
   return true;
 }
@@ -2269,6 +2380,86 @@ function openTransferNegotiationModal(candidateId) {
   const modalEl = document.getElementById('negotiation-modal');
   if (modalEl) modalEl.classList.remove('hidden');
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+}
+
+/**
+ * 交渉モーダル内の資金・キャッシュフロー警告状態を計算する
+ */
+function computeNegotiationCashflowWarning(session, playerClubOverride = null, targetOverride = null) {
+  if (!session) return { visible: false, isCritical: false, text: '' };
+  const playerClub = playerClubOverride || (typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+  if (!playerClub) return { visible: false, isCritical: false, text: '' };
+
+  const isRenewal = session.mode === 'renewal';
+  let target = targetOverride;
+  if (!target) {
+    if (isRenewal) {
+      target = (playerClub.players || []).find(p => p.id === session.playerId) || null;
+    } else if (typeof findTransferTargetWithSeller === 'function') {
+      const resolved = findTransferTargetWithSeller(session.playerId);
+      target = resolved ? resolved.player : null;
+    }
+  }
+  if (!target) return { visible: false, isCritical: false, text: '' };
+
+  const safeBgt = getSafeTransferBudget(playerClub);
+  if (isRenewal) {
+    const curAnnual = target.salary || ((target.wage || 15) * 52);
+    const addWeekly = Math.max(0, Math.round(((session.offeredSalary || curAnnual) - curAnnual) / 52));
+    const estReserveImpact = addWeekly * 20;
+    if (estReserveImpact > 0 && (safeBgt - estReserveImpact) < 0) {
+      return {
+        visible: true,
+        isCritical: false,
+        text: `キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。`
+      };
+    }
+    return { visible: false, isCritical: false, text: '' };
+  }
+
+  const dType = session.dealType || 'buy';
+  const instYears = session.installmentYears || 1;
+  const feeCost = dType === 'buy'
+    ? (typeof getTransferUpfrontAmount === 'function' ? getTransferUpfrontAmount(session.offeredFee || 0, instYears) : (session.offeredFee || 0))
+    : 0;
+  let weeklyAdd = 0;
+  if (dType === 'loan') {
+    weeklyAdd = Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100));
+  } else if (dType === 'pre_contract') {
+    weeklyAdd = 0;
+  } else {
+    weeklyAdd = session.offeredWage || Math.round((session.offeredSalary || 0) / 52) || 20;
+  }
+  const totalImpact = feeCost + (weeklyAdd * 12);
+  if (dType === 'buy' && feeCost > playerClub.funds) {
+    const feeLabel = instYears > 1
+      ? `必要頭金（${formatMoney(feeCost)} / ${instYears}年分割）`
+      : `提示移籍金（${formatMoney(feeCost)}）`;
+    return {
+      visible: true,
+      isCritical: true,
+      text: `資金不足：${feeLabel} が現在資金（${formatMoney(playerClub.funds)}）を超えています。`
+    };
+  }
+  if (dType !== 'pre_contract' && totalImpact > safeBgt) {
+    return {
+      visible: true,
+      isCritical: false,
+      text: `破産予防アラート：移籍金頭金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。`
+    };
+  }
+  return { visible: false, isCritical: false, text: '' };
+}
+
+function refreshNegCashflowWarning(bodyEl = null) {
+  const root = bodyEl || document.getElementById('neg-modal-body');
+  if (!root || !gameState.negotiationSession) return;
+  const warnBox = root.querySelector('#neg-cashflow-warning-box');
+  if (!warnBox) return;
+  const st = computeNegotiationCashflowWarning(gameState.negotiationSession);
+  warnBox.textContent = st.text;
+  warnBox.classList.toggle('hidden', !st.visible);
+  warnBox.classList.toggle('is-critical', Boolean(st.isCritical));
 }
 
 /**
@@ -2787,50 +2978,7 @@ function renderNegotiationModal() {
     `;
   }
 
-  const getNegCashflowWarningState = () => {
-    const safeBgt = getSafeTransferBudget(playerClub);
-    if (isRenewal) {
-      const curAnnual = target.salary || ((target.wage || 15) * 52);
-      const addWeekly = Math.max(0, Math.round(((session.offeredSalary || curAnnual) - curAnnual) / 52));
-      const estReserveImpact = addWeekly * 20;
-      if (estReserveImpact > 0 && (safeBgt - estReserveImpact) < 0) {
-        return {
-          visible: true,
-          isCritical: false,
-          text: `キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。`
-        };
-      }
-      return { visible: false, isCritical: false, text: '' };
-    }
-    const dType = session.dealType || 'buy';
-    const feeCost = dType === 'buy' ? (session.offeredFee || 0) : 0;
-    let weeklyAdd = 0;
-    if (dType === 'loan') {
-      weeklyAdd = Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100));
-    } else if (dType === 'pre_contract') {
-      weeklyAdd = 0;
-    } else {
-      weeklyAdd = session.offeredWage || Math.round((session.offeredSalary || 0) / 52) || 20;
-    }
-    const totalImpact = feeCost + (weeklyAdd * 12);
-    if (dType === 'buy' && feeCost > playerClub.funds) {
-      return {
-        visible: true,
-        isCritical: true,
-        text: `資金不足：提示移籍金（${formatMoney(feeCost)}）が現在資金（${formatMoney(playerClub.funds)}）を超えています。`
-      };
-    }
-    if (dType !== 'pre_contract' && totalImpact > safeBgt) {
-      return {
-        visible: true,
-        isCritical: false,
-        text: `破産予防アラート：移籍金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。`
-      };
-    }
-    return { visible: false, isCritical: false, text: '' };
-  };
-
-  const initWarn = getNegCashflowWarningState();
+  const initWarn = computeNegotiationCashflowWarning(session, playerClub, target);
   let natRuleWarnHtml = '';
   if (!isRenewal && typeof evaluateClubNationalityRules === 'function') {
     const natEval = evaluateClubNationalityRules(playerClub);
@@ -2888,18 +3036,6 @@ function renderNegotiationModal() {
       </div>
     `;
 
-    const refreshCashflowWarning = () => {
-      const warnBox = bodyEl.querySelector('#neg-cashflow-warning-box');
-      if (!warnBox) return;
-      const st = getNegCashflowWarningState();
-      warnBox.textContent = st.text;
-      warnBox.classList.toggle('hidden', !st.visible);
-      warnBox.classList.toggle('is-critical', Boolean(st.isCritical));
-    };
-    bodyEl.addEventListener('input', () => {
-      setTimeout(refreshCashflowWarning, 0);
-    });
-
     // 取引種別タブのイベント登録
     bodyEl.querySelectorAll('.btn-dealtype').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -2956,6 +3092,62 @@ function renderNegotiationModal() {
 /**
  * 交渉モーダルで「オファー提示」をクリックした際の合意/保留/決裂判定ロジック
  */
+function getTransferUpfrontAmount(fee, installmentYears = 1) {
+  const numericFee = Math.max(0, Number(fee) || 0);
+  const inst = Math.max(1, parseInt(installmentYears, 10) || 1);
+  return inst > 1 ? Math.round(numericFee / inst) : numericFee;
+}
+
+function validateCpuSellerDeparture(sellerClub, target) {
+  if (!sellerClub || sellerClub.isPlayer || sellerClub.isEuroVirtual || !Array.isArray(sellerClub.players)) {
+    return { ok: true, reason: '' };
+  }
+  const activePlayers = sellerClub.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const remainingActive = activePlayers.filter(p => p.id !== target.id);
+  if (remainingActive.length < 11) {
+    return { ok: false, reason: `${sellerClub.name} は実働選手が11名未満になるため、この選手の放出を認められません。` };
+  }
+  if (target.pos === 'GK' && remainingActive.filter(p => p.pos === 'GK').length === 0) {
+    return { ok: false, reason: `${sellerClub.name} は代替GKがいなくなるため、このGKの放出を認められません。` };
+  }
+  return { ok: true, reason: '' };
+}
+
+function applySellOnRightsOnSale(playerClub, target, grossFee) {
+  const numericFee = Math.max(0, Number(grossFee) || 0);
+  if (!Array.isArray(gameState.sellOnRights) || !target || numericFee <= 0) {
+    return { netFee: numericFee, sellOnFee: 0, beneficiaryName: null };
+  }
+  const idx = gameState.sellOnRights.findIndex(r => r && r.playerId === target.id && (r.pct || 0) > 0);
+  if (idx === -1) {
+    return { netFee: numericFee, sellOnFee: 0, beneficiaryName: null };
+  }
+  const right = gameState.sellOnRights[idx];
+  const pct = clamp(Number(right.pct) || 0, 0, 50);
+  const sellOnFee = Math.round(numericFee * (pct / 100));
+  const netFee = Math.max(0, numericFee - sellOnFee);
+  gameState.sellOnRights.splice(idx, 1);
+  if (target.contractClauses) {
+    target.contractClauses.sellOnPct = 0;
+  }
+
+  let beneficiaryName = null;
+  if (sellOnFee > 0 && right.beneficiaryClubId) {
+    const benClub = typeof getClubById === 'function' ? getClubById(right.beneficiaryClubId) : null;
+    if (benClub && !benClub.isPlayer) {
+      benClub.funds = (benClub.funds || 0) + sellOnFee;
+      beneficiaryName = benClub.name;
+    } else if (typeof findEuropeanClubDefinitionById === 'function') {
+      const euroBen = findEuropeanClubDefinitionById(right.beneficiaryClubId);
+      if (euroBen) beneficiaryName = euroBen.name;
+    }
+  }
+  if (sellOnFee > 0 && typeof addDailyLog === 'function') {
+    addDailyLog(`【セルオン条項精算】${target.name} の移籍金 ${formatMoney(numericFee)} のうち ${pct}%（${formatMoney(sellOnFee)}）が ${beneficiaryName || '前所属クラブ'} へ分配されました（純手取り: ${formatMoney(netFee)}）。`);
+  }
+  return { netFee, sellOnFee, beneficiaryName };
+}
+
 function submitNegotiationOffer() {
   const session = gameState.negotiationSession;
   if (!session || session.completed) return;
@@ -3031,14 +3223,30 @@ function submitNegotiationOffer() {
 
   const dealType = session.dealType || 'buy';
 
-  if (dealType === 'buy' && playerClub.funds < session.offeredFee) {
+  if (dealType === 'buy' || dealType === 'loan') {
+    const sellerCheck = validateCpuSellerDeparture(sellerClub, target);
+    if (!sellerCheck.ok) {
+      session.statusType = 'error';
+      session.statusMessage = `【交渉不可】${sellerCheck.reason}`;
+      renderNegotiationModal();
+      return;
+    }
+  }
+
+  const instYearsReq = session.installmentYears || 1;
+  const upfrontRequired = getTransferUpfrontAmount(session.offeredFee, instYearsReq);
+  if (dealType === 'buy' && playerClub.funds < upfrontRequired) {
     session.statusType = 'error';
-    session.statusMessage = `【資金不足】提示移籍金（${formatMoney(session.offeredFee)}）が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。移籍金を調整してください。`;
+    const feeLabel = instYearsReq > 1
+      ? `必要頭金（${formatMoney(upfrontRequired)} / ${instYearsReq}年分割）`
+      : `提示移籍金（${formatMoney(session.offeredFee)}）`;
+    session.statusMessage = `【資金不足】${feeLabel} が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。移籍金または支払方法を調整してください。`;
     renderNegotiationModal();
     return;
   }
 
   let willAgree = false;
+  let rejectionReason = null;
   let demandedFee = session.demandedFee;
   let offeredFee = session.offeredFee;
   let offeredWage = session.offeredWage || Math.round(session.offeredSalary / 52) || 20;
@@ -3056,12 +3264,11 @@ function submitNegotiationOffer() {
     if (isStarPlayer || isKeyRegular || isExpiring) {
       // 主力・スター・契約最終年の選手は所属元クラブがレンタル放出を拒否
       willAgree = false;
-      const rejectReason = isStarPlayer
+      rejectionReason = isStarPlayer
         ? 'チームの絶対的主力選手（OVR78以上）のため、レンタル放出は一切認められません。'
         : (isKeyRegular
           ? '現在レギュラー先発陣として不可欠な戦力のため、レンタル放出は認められません。'
           : '契約最終年（残り1年以下）の選手のため、フリー流出防止の観点からレンタルは不可（完全移籍のみ）です。');
-      offerObj.rejectionReason = rejectReason;
     } else {
       const requiredCoverage = session.demandedLoanCoverage || 85;
       willAgree = session.loanCoveragePercent >= requiredCoverage;
@@ -3116,6 +3323,7 @@ function submitNegotiationOffer() {
     releaseClause: session.releaseClause || null,
     buyOptionFee: session.buyOptionFee || null,
     willAgree: willAgree,
+    rejectionReason: rejectionReason,
     status: 'pending',
     pendingDays: 5,
     createdDayIndex: gameState.currentDayIndex,
@@ -3210,8 +3418,9 @@ function acceptCpuCounterOffer(offerId) {
   if (!offer || offer.status !== 'cpu_counter') return;
 
   const playerClub = getPlayerClub();
-  if (playerClub && playerClub.funds < offer.counterFee) {
-    alert(`資金が不足しています（必要額: ${formatMoney(offer.counterFee)} / クラブ資金: ${formatMoney(playerClub.funds)}）`);
+  const upfrontCounter = getTransferUpfrontAmount(offer.counterFee, offer.installmentYears || 1);
+  if (playerClub && playerClub.funds < upfrontCounter) {
+    alert(`資金が不足しています（必要頭金: ${formatMoney(upfrontCounter)} / クラブ資金: ${formatMoney(playerClub.funds)}）`);
     return;
   }
 
@@ -3239,9 +3448,18 @@ function completeOutgoingTransferSigning(offerId) {
     alert(`チーム上限枠（${MAX_SQUAD_SIZE}名）に達しているため契約締結できません。選手を放出して枠を空けてください。`);
     return;
   }
+  if (dealType === 'pre_contract') {
+    const retainedCount = playerClub.players.filter(pl => pl && (pl.contractYears || 0) > 1 && !pl.preContractDeparture && !(pl.loanStatus && pl.loanStatus.isLoan)).length;
+    const incomingPreCount = (gameState.preContractPlayers || []).length;
+    if ((retainedCount + incomingPreCount) >= MAX_SQUAD_SIZE) {
+      alert(`来季残留見込み選手と事前合意内定選手の合計が上限枠（${MAX_SQUAD_SIZE}名）に達しているため締結できません。`);
+      return;
+    }
+  }
 
-  if (dealType === 'buy' && playerClub.funds < offer.offeredFee) {
-    alert(`移籍金（${formatMoney(offer.offeredFee)}）に対して資金が不足しています（現在資金: ${formatMoney(playerClub.funds)}）。`);
+  const upfrontFeeRequired = getTransferUpfrontAmount(offer.offeredFee, offer.installmentYears || 1);
+  if (dealType === 'buy' && playerClub.funds < upfrontFeeRequired) {
+    alert(`頭金（${formatMoney(upfrontFeeRequired)}）に対して資金が不足しています（現在資金: ${formatMoney(playerClub.funds)}）。`);
     return;
   }
 
@@ -3258,6 +3476,17 @@ function completeOutgoingTransferSigning(offerId) {
     offer.status = 'cancelled';
     renderAll();
     return;
+  }
+
+  if (dealType === 'buy' || dealType === 'loan') {
+    const sellerCheck = validateCpuSellerDeparture(sellerClub, target);
+    if (!sellerCheck.ok) {
+      alert(sellerCheck.reason);
+      offer.status = 'cancelled';
+      updateMarketBadges();
+      renderAll();
+      return;
+    }
   }
 
   if (dealType === 'pre_contract') {
@@ -3335,6 +3564,9 @@ function completeOutgoingTransferSigning(offerId) {
       sellerClub.funds = (sellerClub.funds || 0) + offer.offeredFee;
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
       ensureValidSquadAndStarters(sellerClub);
+      if (typeof autoSelectStarters === 'function') {
+        autoSelectStarters(sellerClub);
+      }
     }
     cleanupMarketPools(target.id);
     target.isEuroListed = false;
@@ -3361,6 +3593,9 @@ function completeOutgoingTransferSigning(offerId) {
     if (sellerClub && !sellerClub.isEuroVirtual && Array.isArray(sellerClub.players)) {
       sellerClub.players = sellerClub.players.filter(p => p.id !== target.id);
       ensureValidSquadAndStarters(sellerClub);
+      if (typeof autoSelectStarters === 'function') {
+        autoSelectStarters(sellerClub);
+      }
     }
     cleanupMarketPools(target.id);
     target.isEuroListed = false;
@@ -3512,8 +3747,8 @@ function triggerIncomingTransferOffer(force = false) {
     if (Math.random() > 0.14) return false;
   }
 
-  // オファー対象候補：主力選手、得点上位、高OVR選手
-  const candidates = [...playerClub.players].filter(p => !p.isRetired);
+  // オファー対象候補：自クラブ所有の現役選手（レンタル加入・レンタル放出中は除外）
+  const candidates = [...playerClub.players].filter(p => p && !p.isRetired && !(p.loanStatus && (p.loanStatus.isLoan || p.loanStatus.isLoanOut)));
   if (candidates.length === 0) return false;
 
   // 既にオファー受信中の選手は除外
@@ -3663,6 +3898,94 @@ function updateIncomingOffersExpiry() {
 }
 
 
+/**
+ * 受信オファー受諾・逆提示合意時の退団可否（レンタル放出中除外・最低11名＆GK必須）を検証する
+ */
+function validatePlayerDeparture(playerClub, target, { isLoanTransfer = false } = {}) {
+  if (!playerClub || !target || target.isRetired) {
+    return { ok: false, reason: '対象選手が在籍していません。' };
+  }
+  if (target.loanStatus && target.loanStatus.isLoan) {
+    return { ok: false, reason: '他クラブから期限付き移籍（レンタル加入）中の選手は売却・再レンタルできません。' };
+  }
+  const isCurrentlyLoanedOut = Boolean(target.loanStatus && target.loanStatus.isLoanOut);
+  if (isLoanTransfer && isCurrentlyLoanedOut) {
+    return { ok: false, reason: 'この選手はすでに他クラブへレンタル放出中です。' };
+  }
+  if (!isCurrentlyLoanedOut) {
+    const activePlayers = (playerClub.players || []).filter(
+      p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut)
+    );
+    const remainingActive = activePlayers.filter(p => p.id !== target.id);
+    if (remainingActive.length < 11) {
+      return { ok: false, reason: '実働選手（レンタル放出中を除く）が11名未満になるため、これ以上選手を放出できません。' };
+    }
+    if (target.pos === 'GK' && remainingActive.filter(p => p.pos === 'GK').length === 0) {
+      return { ok: false, reason: '実働GKがいなくなるため、このGKを放出できません。' };
+    }
+  }
+  return { ok: true, reason: '' };
+}
+
+/**
+ * 同一選手に対する他の未処理オファーを取り消す
+ */
+function cancelOtherIncomingOffersForPlayer(playerId, exceptOfferId = null, { clearModalOffers = true } = {}) {
+  if (Array.isArray(gameState.incomingOffers)) {
+    gameState.incomingOffers.forEach(o => {
+      if (o && o.id !== exceptOfferId && o.playerId === playerId && (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed')) {
+        o.status = 'cancelled';
+      }
+    });
+  }
+  if (clearModalOffers) {
+    if (gameState.pendingMegaOffer && gameState.pendingMegaOffer.playerId === playerId) {
+      gameState.pendingMegaOffer = null;
+    }
+    if (gameState.incomingTransferOffer && gameState.incomingTransferOffer.playerId === playerId) {
+      gameState.incomingTransferOffer = null;
+    }
+  }
+}
+
+/**
+ * 完全移籍売却の資金・所属更新を共通実行する
+ */
+function completeIncomingSaleToBuyer(playerClub, target, buyerClubId, fee, wageMultiplier = 1.3) {
+  const numericFee = Math.max(0, Number(fee) || 0);
+  const { netFee } = applySellOnRightsOnSale(playerClub, target, numericFee);
+  playerClub.funds += netFee;
+  playerClub.players = playerClub.players.filter(p => p.id !== target.id);
+
+  if (buyerClubId) {
+    const buyer = typeof getClubById === 'function'
+      ? getClubById(buyerClubId)
+      : (Array.isArray(gameState.clubs) ? gameState.clubs.find(c => c.id === buyerClubId) : null);
+    if (buyer && !buyer.isPlayer) {
+      buyer.funds = Math.max(0, (buyer.funds || 0) - numericFee);
+      target.isStarter = false;
+      target.isBench = false;
+      target.assignedPos = null;
+      target.slotIndex = null;
+      target.loanStatus = null;
+      target.isLoanListed = false;
+      target.transferListed = false;
+      target.contractYears = 4;
+      target.wage = Math.max(10, Math.round((target.wage || 20) * wageMultiplier));
+      target.salary = target.wage * 52;
+      const buyerLimit = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+      if (Array.isArray(buyer.players) && buyer.players.length < buyerLimit && !buyer.players.some(p => p.id === target.id)) {
+        buyer.players.push(target);
+      }
+      ensureValidSquadAndStarters(buyer);
+      if (typeof autoSelectStarters === 'function') {
+        autoSelectStarters(buyer);
+      }
+    }
+  }
+  ensureValidSquadAndStarters(playerClub);
+}
+
 function acceptIncomingOffer(offerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
   const playerClub = getPlayerClub();
@@ -3671,6 +3994,7 @@ function acceptIncomingOffer(offerId) {
   const idx = gameState.incomingOffers.findIndex(o => o.id === offerId);
   if (idx === -1) return;
   const offer = gameState.incomingOffers[idx];
+  if (offer.status !== 'pending' && offer.status !== 'counter_agreed') return;
 
   const target = playerClub.players.find(p => p.id === offer.playerId);
   if (!target) {
@@ -3680,9 +4004,14 @@ function acceptIncomingOffer(offerId) {
     return;
   }
 
-  // チーム人数が11人以下の場合は売却不可
-  if (playerClub.players.length <= 11) {
-    alert('チーム人数が11名以下のため、これ以上選手を売却できません。');
+  const check = validatePlayerDeparture(playerClub, target, { isLoanTransfer: Boolean(offer.isLoanOffer) });
+  if (!check.ok) {
+    if (target.loanStatus && (target.loanStatus.isLoan || (offer.isLoanOffer && target.loanStatus.isLoanOut))) {
+      offer.status = 'cancelled';
+      updateMarketBadges();
+      renderAll();
+    }
+    alert(check.reason);
     return;
   }
 
@@ -3690,13 +4019,17 @@ function acceptIncomingOffer(offerId) {
   if (offer.isLoanOffer) {
     target.loanStatus = {
       isLoanOut: true,
+      toClubId: offer.buyerClubId || null,
       toClubName: offer.buyerClubName,
       returnYear: (gameState.season || 1) + 1
     };
     target.isStarter = false;
+    target.isBench = false;
     target.assignedPos = null;
     target.slotIndex = null;
+    target.isLoanListed = false;
     offer.status = 'accepted';
+    cancelOtherIncomingOffersForPlayer(target.id, offer.id, { clearModalOffers: false });
     ensureValidSquadAndStarters(playerClub);
 
     addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
@@ -3709,14 +4042,14 @@ function acceptIncomingOffer(offerId) {
   }
 
   // 通常売却確定処理
-  playerClub.funds += (offer.offerFee || offer.counterFee || 0);
-  playerClub.players = playerClub.players.filter(p => p.id !== target.id);
-  ensureValidSquadAndStarters(playerClub);
+  const saleFee = offer.offerFee || offer.counterFee || 0;
+  completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, saleFee, 1.3);
 
-  // 履歴としてステータス更新
+  // 履歴としてステータス更新・他オファー取り消し
   offer.status = 'accepted';
+  cancelOtherIncomingOffersForPlayer(target.id, offer.id);
 
-  addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(offer.offerFee || offer.counterFee)}）。`);
+  addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(saleFee)}）。`);
   if (typeof showToast === 'function') {
     showToast(`【売却完了】${target.name}を${offer.buyerClubName}へ売却しました`);
   }
@@ -3792,6 +4125,7 @@ function openCounterOfferModal(offerId) {
 
   updateCounterOfferModalCalculation(offer.offerFee, 1.20);
   modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 /**
@@ -3827,6 +4161,7 @@ function closeCounterOfferModal() {
   const modalEl = document.getElementById('counter-offer-modal');
   if (modalEl) modalEl.classList.add('hidden');
   activeCounterOfferId = null;
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -3901,6 +4236,7 @@ function openIncomingOfferModal() {
 
   renderIncomingOfferBody(offer);
   modalEl.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 /**
@@ -3982,36 +4318,26 @@ function acceptIncomingOfferModal() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  const targetIdx = playerClub.players.findIndex(p => p.id === offer.playerId);
-  if (targetIdx === -1) {
+  const target = playerClub.players.find(p => p.id === offer.playerId);
+  if (!target) {
     closeIncomingOfferModal();
     return;
   }
 
-  const target = playerClub.players.splice(targetIdx, 1)[0];
-  playerClub.funds += offer.offerFee;
-
-  // 相手クラブが国内クラブでトップ枠に空きがあれば相手へ移籍
-  if (offer.buyerClubId) {
-    const buyer = gameState.clubs.find(c => c.id === offer.buyerClubId);
-    if (buyer) {
-      buyer.funds = Math.max(0, buyer.funds - offer.offerFee);
-      target.isStarter = false;
-      target.assignedPos = null;
-      target.contractYears = 4;
-      target.wage = Math.round(target.wage * 1.3);
-      target.salary = target.wage * 52;
-      buyer.players.push(target);
-      ensureValidSquadAndStarters(buyer);
-    }
+  const check = validatePlayerDeparture(playerClub, target);
+  if (!check.ok) {
+    alert(check.reason);
+    return;
   }
 
-  ensureValidSquadAndStarters(playerClub);
+  completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, offer.offerFee, 1.3);
+  cancelOtherIncomingOffersForPlayer(target.id, null);
 
   showToast(`[移籍成立] ${target.name} を ${offer.buyerClubName} へ売却しました（移籍金 +${formatMoney(offer.offerFee)}）`, 'success');
   addDailyLog(`【移籍成立】${target.pos} #${offer.squadNumber} ${target.name} が ${offer.buyerClubName} へ完全移籍（売却益: ${formatMoney(offer.offerFee)}）`);
 
   closeIncomingOfferModal();
+  updateMarketBadges();
   renderAll();
 }
 
@@ -4048,9 +4374,15 @@ function counterDemandIncomingOffer() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  const targetIdx = playerClub.players.findIndex(p => p.id === offer.playerId);
-  if (targetIdx === -1) {
+  const target = playerClub.players.find(p => p.id === offer.playerId);
+  if (!target) {
     closeIncomingOfferModal();
+    return;
+  }
+
+  const check = validatePlayerDeparture(playerClub, target);
+  if (!check.ok) {
+    alert(check.reason);
     return;
   }
 
@@ -4058,23 +4390,8 @@ function counterDemandIncomingOffer() {
 
   if (isSuccess) {
     // 合意・売却
-    const target = playerClub.players.splice(targetIdx, 1)[0];
-    playerClub.funds += offer.counterFee;
-
-    if (offer.buyerClubId) {
-      const buyer = gameState.clubs.find(c => c.id === offer.buyerClubId);
-      if (buyer) {
-        buyer.funds = Math.max(0, buyer.funds - offer.counterFee);
-        target.isStarter = false;
-        target.assignedPos = null;
-        target.contractYears = 4;
-        target.wage = Math.round(target.wage * 1.4);
-        target.salary = target.wage * 52;
-        buyer.players.push(target);
-        ensureValidSquadAndStarters(buyer);
-      }
-    }
-    ensureValidSquadAndStarters(playerClub);
+    completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, offer.counterFee, 1.4);
+    cancelOtherIncomingOffersForPlayer(target.id, null);
 
     addDailyLog(`【移籍成立・増額逆提案】${offer.buyerClubName} が当クラブの増額要求を快諾！ ${target.name} を ${formatMoney(offer.counterFee)} で超高額売却しました！`);
 
@@ -4082,13 +4399,11 @@ function counterDemandIncomingOffer() {
       success: true,
       message: `当クラブGMの強気な増額カウンターに対し、<strong>${offer.buyerClubName}</strong> 会長は即座に条件を呑み、要求通りの移籍金 <strong>${formatMoney(offer.counterFee)}</strong> での獲得を正式受託しました！<br>クラブ資金に <strong>+${formatMoney(offer.counterFee)}</strong> が入金され、${target.name} の移籍手続きが完了しました。`
     });
+    updateMarketBadges();
     renderAll();
   } else {
     // 相手クラブ撤退・破談
-    const target = playerClub.players[targetIdx];
-    if (target) {
-      target.megaOfferRejected = true;
-    }
+    target.megaOfferRejected = true;
     addDailyLog(`【交渉決裂】${offer.buyerClubName} は当クラブの増額要求（${formatMoney(offer.counterFee)}）を法外として交渉から即座に撤退しました。`);
 
     renderIncomingOfferBody(offer, {
@@ -4108,6 +4423,7 @@ function closeIncomingOfferModal() {
     modalEl.classList.add('hidden');
   }
   gameState.incomingTransferOffer = null;
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   renderAll();
 }
 
@@ -4269,8 +4585,15 @@ function closeNegotiationModal() {
   if (modalEl) {
     modalEl.classList.add('hidden');
   }
-  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.negotiationSession = null;
+
+  const profModal = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  if (profModal && !profModal.classList.contains('hidden') && gameState.profileModalPlayerId) {
+    if (typeof openPlayerProfileModal === 'function') {
+      openPlayerProfileModal(gameState.profileModalPlayerId);
+    }
+  }
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -4294,19 +4617,57 @@ function releaseRosterPlayer(playerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
+  if (!playerClub) return;
   const target = playerClub.players.find(p => p.id === playerId);
   if (!target) return;
 
-  if (playerClub.players.length <= 11) {
+  if (target.loanStatus && (target.loanStatus.isLoan || target.loanStatus.isLoanOut)) {
+    alert('レンタル契約中の選手は自由契約（解雇）にできません。');
     return;
   }
-  if (target.pos === 'GK' && playerClub.players.filter(p => p.pos === 'GK').length <= 1) {
+
+  const activePlayers = playerClub.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const remainingActive = activePlayers.filter(p => p.id !== playerId);
+  if (remainingActive.length < 11) {
+    alert('実働選手が11名未満になるため、これ以上自由契約にできません。');
+    return;
+  }
+  if (target.pos === 'GK' && remainingActive.filter(p => p.pos === 'GK').length === 0) {
+    alert('実働GKがいなくなるため、このGKを自由契約にできません。');
     return;
   }
 
   playerClub.players = playerClub.players.filter(p => p.id !== playerId);
   if (gameState.selectedPlayerId === playerId) {
     gameState.selectedPlayerId = null;
+  }
+
+  if (typeof cancelOtherIncomingOffersForPlayer === 'function') {
+    cancelOtherIncomingOffersForPlayer(target.id, null);
+  }
+  target.lastClubName = playerClub.name;
+  target.lastClubId = playerClub.id;
+  target.clubId = null;
+  target.isFreeAgent = true;
+  target.contractYears = 0;
+  target.transferFee = 0;
+  target.isStarter = false;
+  target.isBench = false;
+  target.assignedPos = null;
+  target.slotIndex = null;
+  target.isLoanListed = false;
+  target.transferListed = false;
+  target.preContractDeparture = null;
+  target.contractRefused = false;
+  if (typeof gameState.isSeasonOver === 'boolean' && gameState.isSeasonOver) {
+    target._generatedInOffseasonOfSeason = gameState.season || 1;
+  }
+  if (!Array.isArray(gameState.transferMarket)) gameState.transferMarket = [];
+  if (!gameState.transferMarket.some(p => p && p.id === target.id)) {
+    gameState.transferMarket.push(target);
+  }
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【自由契約・退団】#${target.squadNumber || '-'} ${target.name} が自由契約となり、フリー市場へ移籍可能選手として登録されました。`);
   }
 
   ensureValidSquadAndStarters(playerClub);
@@ -4381,7 +4742,8 @@ function promoteYouthCandidate(candidateId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
-  if (!playerClub || playerClub.players.length >= MAX_SQUAD_SIZE) return;
+  const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+  if (!playerClub || playerClub.players.length >= maxSquad) return;
 
   const idx = (gameState.youthCandidates || []).findIndex(y => y.id === candidateId);
   if (idx === -1) return;
@@ -4391,17 +4753,23 @@ function promoteYouthCandidate(candidateId) {
   prospect.isYouthGraduate = true;
   prospect.isHomegrown = true;
   prospect.isStarter = false;
+  prospect.isBench = false;
   prospect.assignedPos = null;
   prospect.slotIndex = null;
   prospect.squadNumber = null;
   prospect.salary = 800; // 最低年俸 £800K
+  prospect.wage = Math.max(10, Math.round(prospect.salary / 52));
   prospect.contractYears = 4;
 
   playerClub.players.push(prospect);
   ensureClubSquadNumbers(playerClub);
+  ensureValidSquadAndStarters(playerClub);
   gameState.youthCandidates.splice(idx, 1);
 
-  gameState.facilityFeedback = `【ユース昇格完了】${prospect.pos} ${prospect.name}（${prospect.age}歳 / OVR ${getPlayerOverallRating(prospect)}）とプロ契約（移籍金 £0・年俸 £800K）を締結しトップチームへ登録しました。`;
+  const msg = `【ユース昇格完了】${prospect.pos} ${prospect.name}（${prospect.age}歳 / OVR ${getPlayerOverallRating(prospect)}）とプロ契約（移籍金 £0・年俸 £800K）を締結しトップチームへ登録しました。`;
+  gameState.facilityFeedback = msg;
+  addDailyLog(msg);
+  if (typeof showToast === 'function') showToast(`${prospect.name}がトップチームに昇格しました`);
   renderAll();
 }
 
@@ -4422,7 +4790,10 @@ function dismissYouthCandidate(candidateId) {
     playerClub.funds += 300;
   }
 
-  gameState.facilityFeedback = `【ユース昇格見送り】${prospect.pos} ${prospect.name}（${prospect.age}歳）のトップ昇格を見送り、他クラブ移籍に伴う育成補償金 +£300K を受領しました。`;
+  const msg = `【ユース昇格見送り】${prospect.pos} ${prospect.name}（${prospect.age}歳）のトップ昇格を見送り、他クラブ移籍に伴う育成補償金 +£300K を受領しました。`;
+  gameState.facilityFeedback = msg;
+  addDailyLog(msg);
+  if (typeof showToast === 'function') showToast(`${prospect.name}の昇格を見送り補償金+£300Kを獲得しました`);
   renderAll();
 }
 
@@ -4645,8 +5016,8 @@ function swapBenchOrReservePlayers(playerAId, playerBId) {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  const pA = playerClub.players.find(p => p.id === playerAId && !p.isStarter);
-  const pB = playerClub.players.find(p => p.id === playerBId && !p.isStarter);
+  const pA = playerClub.players.find(p => p && p.id === playerAId && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const pB = playerClub.players.find(p => p && p.id === playerBId && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   if (!pA || !pB) return;
 
   const tempBench = pA.isBench;
@@ -4664,7 +5035,7 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
-  const benchPlayer = playerClub.players.find(p => p.id === benchPlayerId && !p.isStarter);
+  const benchPlayer = playerClub.players.find(p => p && p.id === benchPlayerId && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   if (!benchPlayer) return;
 
   const formationDef = getClubFormationDef(playerClub);
@@ -4673,10 +5044,11 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
   if (resolvedSlotIdx !== null && formationDef.slots[resolvedSlotIdx]) {
     const slotDef = formationDef.slots[resolvedSlotIdx];
     const currentStarter = playerClub.players.find(p => p.isStarter && p.slotIndex === resolvedSlotIdx);
+    const incomingWasOnBench = benchPlayer.isBench !== false;
 
     if (currentStarter) {
       currentStarter.isStarter = false;
-      currentStarter.isBench = true;
+      currentStarter.isBench = incomingWasOnBench;
       currentStarter.slotIndex = null;
       currentStarter.assignedPos = null;
     }
@@ -4705,8 +5077,15 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
   if (gameState.isGameOver || gameState.isSimulating) return;
 
   const playerClub = getPlayerClub();
+  if (!playerClub) return;
   const target = playerClub.players.find(p => p.id === playerId && p.isStarter);
   if (!target || !POS_ROLE_GROUP[newSlotPos]) return;
+
+  const formationDef = typeof getClubFormationDef === 'function' ? getClubFormationDef(playerClub) : null;
+  const slots = (formationDef && Array.isArray(formationDef.slots)) ? formationDef.slots : [];
+  if (slots.length > 0 && !slots.some(sl => sl && sl.pos === newSlotPos)) {
+    return;
+  }
 
   const oldSlot = target.assignedPos || target.pos;
   if (oldSlot === newSlotPos) return;
@@ -4720,6 +5099,15 @@ function changeStarterAssignedPos(playerId, newSlotPos) {
     target.slotIndex = swapPartner.slotIndex;
     swapPartner.slotIndex = tempSlotIndex;
     swapPartner.assignedPos = oldSlot;
+  } else if (slots.length > 0) {
+    const occupiedIndices = new Set(
+      playerClub.players.filter(p => p.isStarter && p.id !== target.id && Number.isInteger(p.slotIndex)).map(p => p.slotIndex)
+    );
+    const openSlotIdx = slots.findIndex((sl, idx) => sl && sl.pos === newSlotPos && !occupiedIndices.has(idx));
+    if (openSlotIdx === -1) return;
+    target.slotIndex = openSlotIdx;
+  } else {
+    return;
   }
   target.assignedPos = newSlotPos;
   notifyGmManualIntervention('配置変更');
@@ -4735,10 +5123,10 @@ function togglePlayerStarter(playerId) {
 
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === playerId);
-  if (!target) return;
+  if (!target || target.isRetired || (target.loanStatus && target.loanStatus.isLoanOut)) return;
 
-  const starters = playerClub.players.filter(p => p.isStarter);
-  const bench = playerClub.players.filter(p => !p.isStarter);
+  const starters = playerClub.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const bench = playerClub.players.filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   notifyGmManualIntervention('選手起用');
 
   if (target.isStarter) {
@@ -4746,16 +5134,22 @@ function togglePlayerStarter(playerId) {
     const slotToFill = target.assignedPos || target.pos;
     const slotIdxToFill = target.slotIndex;
     bench.sort((a, b) => {
+      const aBench = a.isBench !== false ? 1 : 0;
+      const bBench = b.isBench !== false ? 1 : 0;
+      if (aBench !== bBench) return bBench - aBench;
       const aMatch = (a.preferredPosition || a.pos) === slotToFill ? 1 : 0;
       const bMatch = (b.preferredPosition || b.pos) === slotToFill ? 1 : 0;
       if (aMatch !== bMatch) return bMatch - aMatch;
       return getPlayerOverallRating(b) - getPlayerOverallRating(a);
     });
     const promoted = bench[0];
+    const promotedWasOnBench = promoted.isBench !== false;
     promoted.isStarter = true;
+    promoted.isBench = false;
     promoted.slotIndex = slotIdxToFill;
     promoted.assignedPos = slotToFill;
     target.isStarter = false;
+    target.isBench = promotedWasOnBench;
     target.slotIndex = null;
     target.assignedPos = null;
   } else {
@@ -4769,10 +5163,13 @@ function togglePlayerStarter(playerId) {
       const demoted = sameSlotStarters[0];
       const inheritedSlot = demoted.assignedPos || demoted.pos;
       const inheritedSlotIdx = demoted.slotIndex;
+      const targetWasOnBench = target.isBench !== false;
       demoted.isStarter = false;
+      demoted.isBench = targetWasOnBench;
       demoted.slotIndex = null;
       demoted.assignedPos = null;
       target.isStarter = true;
+      target.isBench = false;
       target.slotIndex = inheritedSlotIdx;
       target.assignedPos = inheritedSlot;
     }
@@ -4792,6 +5189,10 @@ function startNextSeason() {
 
   const playerClub = getPlayerClub();
 
+  const finishedSeasonNumForOut = gameState.season || 1;
+  const finishedBaseYearForOut = 2025 + finishedSeasonNumForOut;
+  const finishedYearStrForOut = `${finishedBaseYearForOut}-${String((finishedBaseYearForOut + 1) % 100).padStart(2, '0')}`;
+
   // 1. レンタル加入選手の所属元クラブへの返却（元の週給・契約年数を復元して元クラブへ戻す）
   const loanInPlayers = playerClub.players.filter(p => p.loanStatus && p.loanStatus.isLoan);
   if (loanInPlayers.length > 0) {
@@ -4801,23 +5202,80 @@ function startNextSeason() {
       const fromName = (p.loanStatus && p.loanStatus.fromClubName) ? p.loanStatus.fromClubName : '所属元';
       const restoredWage = (p.loanStatus && p.loanStatus.originalWage) ? p.loanStatus.originalWage : (p.wage || 20);
       const restoredYears = Math.max(1, (p.loanStatus && p.loanStatus.originalContractYears) ? p.loanStatus.originalContractYears - 1 : 2);
+
+      const seasonAge = Math.max(15, (p.age || 18) - 1);
+      if (!Array.isArray(p.seasonHistory)) {
+        const savedAge = p.age;
+        p.age = seasonAge;
+        ensurePlayerHistoryAndCareer(p, playerClub.name);
+        p.age = savedAge;
+      }
+      if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStrForOut)) {
+        const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+        p.seasonHistory.push({
+          seasonYear: finishedYearStrForOut,
+          clubName: playerClub.name,
+          age: seasonAge,
+          appearances: p.appearances || 0,
+          goals: p.goals || 0,
+          assists: p.assists || 0,
+          avgRating: prevAvg,
+          ovr: getPlayerOverallRating(p)
+        });
+      }
+
       p.wage = restoredWage;
       p.salary = restoredWage * 52;
       p.contractYears = restoredYears;
       p.loanStatus = null;
+      p.loanTerms = null;
+      p.isFreeAgent = false;
       p.isStarter = false;
       p.isBench = false;
       p.assignedPos = null;
       p.slotIndex = null;
+      p.appearances = 0;
+      p.goals = 0;
+      p.assists = 0;
+      p.totalRating = 0;
+      p.cleanSheets = 0;
+      p.momCount = 0;
+      p.yellowCards = 0;
+      p.redCards = 0;
 
       const parentClub = fromId ? getClubById(fromId) : null;
       if (parentClub && !parentClub.isPlayer && Array.isArray(parentClub.players) && parentClub.players.length < MAX_SQUAD_SIZE) {
         if (!parentClub.players.some(x => x.id === p.id)) {
+          p.clubId = parentClub.id;
           parentClub.players.push(p);
+          ensureClubSquadNumbers(parentClub);
           ensureValidSquadAndStarters(parentClub);
         }
-      } else if (Array.isArray(gameState.transferMarket) && !gameState.transferMarket.some(x => x.id === p.id)) {
-        gameState.transferMarket.push(p);
+      } else {
+        const euroCompClub = (fromId && typeof getEuropeanCompetitionClubsWithPlayers === 'function')
+          ? getEuropeanCompetitionClubsWithPlayers().find(c => c && c.id === fromId)
+          : null;
+        const euroDef = (fromId && typeof findEuropeanClubDefinitionById === 'function')
+          ? findEuropeanClubDefinitionById(fromId)
+          : null;
+        if (euroCompClub || euroDef) {
+          const euroClub = euroCompClub || euroDef;
+          p.clubId = euroClub.id;
+          p.euroClubId = euroClub.id;
+          p.isEuroListed = true;
+          p.isFreeAgent = false;
+          if (euroCompClub && Array.isArray(euroCompClub.players) && euroCompClub.players.length < MAX_SQUAD_SIZE && !euroCompClub.players.some(x => x && x.id === p.id)) {
+            euroCompClub.players.push(p);
+          }
+          if (!Array.isArray(gameState.euroTransferList)) gameState.euroTransferList = [];
+          if (!gameState.euroTransferList.some(x => x && x.id === p.id)) {
+            gameState.euroTransferList.unshift(p);
+          }
+        } else if (Array.isArray(gameState.transferMarket) && !gameState.transferMarket.some(x => x && x.id === p.id)) {
+          p.clubId = null;
+          p.isFreeAgent = true;
+          gameState.transferMarket.push(p);
+        }
       }
       addDailyLog(`【レンタル満了・復帰】#${p.squadNumber || '-'} ${p.name} の1年間期限付き移籍が満了し、${fromName}へ復帰しました。`);
     });
@@ -4836,16 +5294,70 @@ function startNextSeason() {
   const departingPlayers = playerClub.players.filter(p => p.preContractDeparture);
   if (departingPlayers.length > 0) {
     departingPlayers.forEach(p => {
-      addDailyLog(`【フリー退団】#${p.squadNumber || '-'} ${p.name} が事前合意に基づき ${p.preContractDeparture.toClubName} へ移籍金£0で移籍しました。`);
+      const destId = p.preContractDeparture.toClubId || null;
+      const destName = p.preContractDeparture.toClubName || '海外クラブ';
+      const seasonAge = Math.max(15, (p.age || 18) - 1);
+      if (!Array.isArray(p.seasonHistory)) {
+        const savedAge = p.age;
+        p.age = seasonAge;
+        ensurePlayerHistoryAndCareer(p, playerClub.name);
+        p.age = savedAge;
+      }
+      if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStrForOut)) {
+        const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
+        p.seasonHistory.push({
+          seasonYear: finishedYearStrForOut,
+          clubName: playerClub.name,
+          age: seasonAge,
+          appearances: p.appearances || 0,
+          goals: p.goals || 0,
+          assists: p.assists || 0,
+          avgRating: prevAvg,
+          ovr: getPlayerOverallRating(p)
+        });
+      }
+      p.lastClubName = playerClub.name;
+      p.lastClubId = playerClub.id;
+      p.preContractDeparture = null;
+      p.contractRefused = false;
+      p.isStarter = false;
+      p.isBench = false;
+      p.assignedPos = null;
+      p.slotIndex = null;
+      p.isFreeAgent = false;
+      p.contractYears = randInt(2, 4);
+      p.appearances = 0;
+      p.goals = 0;
+      p.assists = 0;
+      p.totalRating = 0;
+      p.cleanSheets = 0;
+      p.momCount = 0;
+      p.yellowCards = 0;
+      p.redCards = 0;
+
+      const destClub = destId ? getClubById(destId) : null;
+      if (destClub && !destClub.isPlayer && Array.isArray(destClub.players) && destClub.players.length < MAX_SQUAD_SIZE) {
+        const destUsedNums = new Set(destClub.players.map(x => x.squadNumber).filter(Boolean));
+        p.clubId = destClub.id;
+        p.squadNumber = pickAvailableSquadNumber(p.pos, destUsedNums);
+        destClub.players.push(p);
+        ensureValidSquadAndStarters(destClub);
+      } else {
+        p.isEuroListed = true;
+        p.euroClubId = destId || 'es01';
+        p.clubId = p.euroClubId;
+        if (!Array.isArray(gameState.euroTransferList)) gameState.euroTransferList = [];
+        if (!gameState.euroTransferList.some(x => x && x.id === p.id)) {
+          gameState.euroTransferList.unshift(p);
+        }
+      }
+      addDailyLog(`【フリー退団】#${p.squadNumber || '-'} ${p.name} が事前合意に基づき ${destName} へ移籍金£0で移籍しました。`);
     });
-    playerClub.players = playerClub.players.filter(p => !p.preContractDeparture);
+    playerClub.players = playerClub.players.filter(p => !departingPlayers.includes(p));
   }
 
-  // 4. 契約残り0年のまま更新されなかった選手、または交渉決裂で流出確定した選手はフリー移籍でチームを離脱
-  const finishedSeasonNumForOut = gameState.season || 1;
-  const finishedBaseYearForOut = 2025 + finishedSeasonNumForOut;
-  const finishedYearStrForOut = `${finishedBaseYearForOut}-${String((finishedBaseYearForOut + 1) % 100).padStart(2, '0')}`;
-  const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 || p.contractRefused);
+  // 4. 契約残り0年のまま更新されなかった選手はフリー移籍でチームを離脱（※残契約年数がある選手は交渉決裂でも強制放出しない）
+  const expiredPlayers = playerClub.players.filter(p => p.contractYears <= 0 && !(p.loanStatus && p.loanStatus.isLoan));
   if (expiredPlayers.length > 0) {
     expiredPlayers.forEach(p => {
       const seasonAge = Math.max(15, (p.age || 18) - 1);
@@ -4891,18 +5403,30 @@ function startNextSeason() {
       }
       addDailyLog(`【契約満了・退団】#${p.squadNumber || '-'} ${p.name} が契約満了により退団し、無所属（フリーエージェント）となりました。`);
     });
-    playerClub.players = playerClub.players.filter(p => p.contractYears > 0 && !p.contractRefused);
+    playerClub.players = playerClub.players.filter(p => p.contractYears > 0);
   }
+  playerClub.players.forEach(p => { if (p) p.contractRefused = false; });
 
   // 5. 事前合意内定選手（preContractPlayers）の正式合流（元クラブ・市場から確実に除去して二重所属を防止）
   if (Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.length > 0) {
     const usedNums = new Set(playerClub.players.map(p => p.squadNumber).filter(Boolean));
     gameState.preContractPlayers.forEach(p => {
+      if (!p || p.isRetired) return;
       for (const otherClub of getAllManagedLeagueClubs()) {
         if (otherClub.id === playerClub.id || !Array.isArray(otherClub.players)) continue;
         if (otherClub.players.some(x => x.id === p.id)) {
           otherClub.players = otherClub.players.filter(x => x.id !== p.id);
           ensureValidSquadAndStarters(otherClub);
+          if (typeof autoSelectStarters === 'function') {
+            autoSelectStarters(otherClub);
+          }
+        }
+      }
+      if (typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+        for (const euroClub of getEuropeanCompetitionClubsWithPlayers()) {
+          if (Array.isArray(euroClub.players) && euroClub.players.some(x => x && x.id === p.id)) {
+            euroClub.players = euroClub.players.filter(x => x && x.id !== p.id);
+          }
         }
       }
       if (Array.isArray(gameState.transferMarket)) {
@@ -4925,11 +5449,21 @@ function startNextSeason() {
       p.preContract = null;
       p.isFreeAgent = false;
       p.isStarter = false;
+      p.isBench = false;
       p.assignedPos = null;
       p.slotIndex = null;
-      if (!playerClub.players.some(existing => existing.id === p.id) && playerClub.players.length < MAX_SQUAD_SIZE) {
+      if (playerClub.players.some(existing => existing.id === p.id)) return;
+      if (playerClub.players.length < MAX_SQUAD_SIZE) {
         playerClub.players.push(p);
         addDailyLog(`【事前合意新戦力合流】内定していた ${p.pos} #${p.squadNumber} ${p.name} が来季契約に基づき正式合流しました！（契約${p.contractYears}年 / 週給${formatWage(p.wage)}）`);
+      } else {
+        p.isFreeAgent = true;
+        p.contractYears = 0;
+        p.clubId = null;
+        if (Array.isArray(gameState.transferMarket) && !gameState.transferMarket.some(x => x.id === p.id)) {
+          gameState.transferMarket.push(p);
+        }
+        addDailyLog(`【編成枠超過による合流見送り】${p.name} の加入時点で登録枠（${MAX_SQUAD_SIZE}名）に空きがなかったため、フリー移籍扱いとなりました。`);
       }
     });
     gameState.preContractPlayers = [];
@@ -4976,6 +5510,18 @@ function startNextSeason() {
   // 新シーズン開始時に1部・2部の昇降格入れ替えを適用
   if (typeof processPromotionAndRelegation === 'function') {
     processPromotionAndRelegation();
+  }
+
+  // 契約満了のまま新シーズンを迎えた自クラブ監督の単年自動更新／高齢勇退処理
+  if (playerClub && playerClub.manager) {
+    const pMgr = playerClub.manager;
+    if ((pMgr.age || 45) >= 72) {
+      addDailyLog(`監督人事：${pMgr.name}監督（${pMgr.age}歳）が勇退し、監督が退任しました。経営タブから後任監督を招聘してください。`);
+      playerClub.manager = null;
+    } else if ((pMgr.contractYears || 0) <= 0) {
+      pMgr.contractYears = 1;
+      addDailyLog(`監督契約更新：${pMgr.name}監督との契約を1年自動延長しました（残契約：1年）`);
+    }
   }
 
   for (const club of getAllManagedLeagueClubs()) {
@@ -5440,13 +5986,17 @@ function renderHeader() {
   const payroll = getClubTotalPayroll(playerClub);
   const squadCount = playerClub.players.length;
 
+  const setHeaderText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
   const headerClubEl = document.getElementById('header-club-name');
   if (headerClubEl) {
     headerClubEl.innerHTML = `${getClubEmblemSvg(playerClub, 24, 'header-club-emblem')}<span>${playerClub.name}</span>`;
   }
-  document.getElementById('header-gm-name').textContent = gameState.gmName;
-  document.getElementById('header-target-rank').textContent = `目標：${playerClub.targetLabel || '4位以内'}`;
-  document.getElementById('header-season').textContent = `${gameState.season}年目`;
+  setHeaderText('header-gm-name', gameState.gmName);
+  setHeaderText('header-target-rank', `目標：${playerClub.targetLabel || '4位以内'}`);
+  setHeaderText('header-season', `${gameState.season}年目`);
 
   // 日付・曜日表示
   const dateEl = document.getElementById('header-date');
@@ -5455,24 +6005,26 @@ function renderHeader() {
   }
 
   if (gameState.isGameOver) {
-    document.getElementById('header-matchweek').textContent = 'GM解任 (GAME OVER)';
+    setHeaderText('header-matchweek', 'GM解任 (GAME OVER)');
   } else if (gameState.isSeasonOver) {
-    document.getElementById('header-matchweek').textContent = 'オフシーズン (移籍・契約)';
+    setHeaderText('header-matchweek', 'オフシーズン (移籍・契約)');
   } else if (gameState.currentWeek === 0 && (!currentDay || !currentDay.isMatchDay)) {
-    document.getElementById('header-matchweek').textContent = 'PRE-SEASON';
+    setHeaderText('header-matchweek', 'PRE-SEASON');
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
-    document.getElementById('header-matchweek').textContent = `第${nextWeek}節 / 全${gameState.totalWeeks}節`;
+    setHeaderText('header-matchweek', `第${nextWeek}節 / 全${gameState.totalWeeks}節`);
   }
 
   const fundsEl = document.getElementById('header-funds');
-  fundsEl.textContent = formatMoney(playerClub.funds);
-  if (playerClub.funds < 0) {
-    fundsEl.classList.remove('accent-gold');
-    fundsEl.classList.add('text-danger');
-  } else {
-    fundsEl.classList.remove('text-danger');
-    fundsEl.classList.add('accent-gold');
+  if (fundsEl) {
+    fundsEl.textContent = formatMoney(playerClub.funds);
+    if (playerClub.funds < 0) {
+      fundsEl.classList.remove('accent-gold');
+      fundsEl.classList.add('text-danger');
+    } else {
+      fundsEl.classList.remove('text-danger');
+      fundsEl.classList.add('accent-gold');
+    }
   }
 
   const weeklyPayroll = getClubWeeklyPayroll(playerClub);
@@ -5493,10 +6045,10 @@ function renderHeader() {
     payrollEl.textContent = `${formatWage(weeklyPayroll)}`;
     payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
   }
-  document.getElementById('header-squad-size').textContent = `SQUAD: ${squadCount}名`;
-  document.getElementById('header-supporters').textContent = `${playerClub.supporters.toLocaleString()}人`;
+  setHeaderText('header-squad-size', `SQUAD: ${squadCount}名`);
+  setHeaderText('header-supporters', `${playerClub.supporters.toLocaleString()}人`);
 
-  document.getElementById('tab-badge-roster').textContent = `${squadCount}名`;
+  setHeaderText('tab-badge-roster', `${squadCount}名`);
 
   // 移籍市場バッジ：受信オファーがある場合は赤色強調「〇件打診」、通常時は全流通選手数
   const marketBadge = document.getElementById('tab-badge-market');
@@ -5524,20 +6076,22 @@ function renderHeader() {
 
 
   const financeBadge = document.getElementById('header-finance-badge');
-  financeBadge.className = 'finance-status-badge';
+  if (financeBadge) {
+    financeBadge.className = 'finance-status-badge';
 
-  if (gameState.isGameOver) {
-    financeBadge.textContent = '債務超過（解任）';
-    financeBadge.classList.add('status-danger');
-  } else if (playerClub.funds < 0) {
-    financeBadge.textContent = '債務超過';
-    financeBadge.classList.add('status-danger');
-  } else if (safeBudget < 0) {
-    financeBadge.textContent = '予算超過注意';
-    financeBadge.classList.add('status-warning');
-  } else {
-    financeBadge.textContent = '健全';
-    financeBadge.classList.add('status-healthy');
+    if (gameState.isGameOver) {
+      financeBadge.textContent = '債務超過（解任）';
+      financeBadge.classList.add('status-danger');
+    } else if (playerClub.funds < 0) {
+      financeBadge.textContent = '債務超過';
+      financeBadge.classList.add('status-danger');
+    } else if (safeBudget < 0) {
+      financeBadge.textContent = '予算超過注意';
+      financeBadge.classList.add('status-warning');
+    } else {
+      financeBadge.textContent = '健全';
+      financeBadge.classList.add('status-healthy');
+    }
   }
 
   // アクションボタン群の制御
@@ -5648,46 +6202,60 @@ function renderSeasonSettlement() {
     ? `目標（${s.targetLabel}）達成！理事会ボーナス +${formatMoney(s.targetBonus)}`
     : `目標（${s.targetLabel}）未達`;
 
-  document.getElementById('summary-headline').textContent =
-    `${s.season}年目シーズン終了・決算報告（最終順位：第${s.rank}位 ／ ${targetStatusText}）`;
+  const headlineEl = document.getElementById('summary-headline');
+  if (headlineEl) {
+    headlineEl.textContent =
+      `${s.season}年目シーズン終了・決算報告（最終順位：第${s.rank}位 ／ ${targetStatusText}）`;
+  }
 
   const settledNote = s.offseasonPayrollSettled > 0
     ? ` ／ オフ残週給与精算(${s.remPayrollWeeks || 0}週分) -${formatMoney(s.offseasonPayrollSettled)}`
     : '';
-  document.getElementById('summary-reward-text').textContent =
-    `収入加算：順位賞金 +${formatMoney(s.prize)} ／ 年間スポンサー・放映権 +${formatMoney(s.sponsorIncome)}${s.targetBonus > 0 ? ` ／ 目標達成ボーナス +${formatMoney(s.targetBonus)}` : ''}（計 +${formatMoney(s.totalIncome)}）${settledNote}`;
+  const rewardTextEl = document.getElementById('summary-reward-text');
+  if (rewardTextEl) {
+    rewardTextEl.textContent =
+      `収入加算：順位賞金 +${formatMoney(s.prize)} ／ 年間スポンサー・放映権 +${formatMoney(s.sponsorIncome)}${s.targetBonus > 0 ? ` ／ 目標達成ボーナス +${formatMoney(s.targetBonus)}` : ''}（計 +${formatMoney(s.totalIncome)}）${settledNote}`;
+  }
 
   const projEl = document.getElementById('summary-payroll-projection');
   const deficitWarning = playerClub.funds < 0
     ? ' 【警告：現在債務超過です。選手売却・放出で黒字化してから開幕してください】'
     : (safeBudget < 0 ? ' 【注意：週給規模が試合収入見込みを上回っています。過剰補強に注意】' : '');
-  projEl.textContent =
-    `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） ➜ 実質補強可能予算（安全枠）：${formatMoney(safeBudget)}${deficitWarning}`;
-  projEl.className = (playerClub.funds < 0 || safeBudget < 0) ? 'mono text-danger' : 'mono accent-green';
+  if (projEl) {
+    projEl.textContent =
+      `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） ➜ 実質補強可能予算（安全枠）：${formatMoney(safeBudget)}${deficitWarning}`;
+    projEl.className = (playerClub.funds < 0 || safeBudget < 0) ? 'mono text-danger' : 'mono accent-green';
+  }
 
-  const expiringPlayers = playerClub.players.filter(p => p.contractYears <= 0);
+  const expiringPlayers = playerClub.players.filter(p => p && p.contractYears <= 0 && !(p.loanStatus && p.loanStatus.isLoan) && !p.preContractDeparture);
   const contractWarnEl = document.getElementById('summary-contract-warning');
-  if (expiringPlayers.length > 0) {
-    const names = expiringPlayers.map(p => `${p.pos} ${p.name}`).join('、');
-    contractWarnEl.textContent = `【要確認】契約満了選手（${expiringPlayers.length}名）：${names} — 残留させる場合は「所属選手・戦術・契約」タブで「契約延長」を行ってください（未更新のまま開幕するとフリー移籍で退団します）。`;
-    contractWarnEl.classList.remove('hidden');
-  } else {
-    contractWarnEl.textContent = '';
-    contractWarnEl.classList.add('hidden');
+  if (contractWarnEl) {
+    if (expiringPlayers.length > 0) {
+      const names = expiringPlayers.map(p => `${p.pos} ${p.name}`).join('、');
+      contractWarnEl.textContent = `【要確認】契約満了選手（${expiringPlayers.length}名）：${names} — 残留させる場合は「所属選手・戦術・契約」タブで「契約延長」を行ってください（未更新のまま開幕するとフリー移籍で退団します）。`;
+      contractWarnEl.classList.remove('hidden');
+    } else {
+      contractWarnEl.textContent = '';
+      contractWarnEl.classList.add('hidden');
+    }
   }
 
   const retireEl = document.getElementById('summary-retirement-log');
-  if (s.retirementLogs.length === 0) {
-    retireEl.innerHTML = '<div class="text-muted">今シーズンの現役引退選手はいません。</div>';
-  } else {
-    retireEl.innerHTML = s.retirementLogs.map(line => `<div>${line}</div>`).join('');
+  if (retireEl) {
+    if (s.retirementLogs.length === 0) {
+      retireEl.innerHTML = '<div class="text-muted">今シーズンの現役引退選手はいません。</div>';
+    } else {
+      retireEl.innerHTML = s.retirementLogs.map(line => `<div>${line}</div>`).join('');
+    }
   }
 
   const agingEl = document.getElementById('summary-aging-log');
-  agingEl.innerHTML = s.agingLogs.map(item => {
-    const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-    return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳/${item.growthLabel}</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
-  }).join('');
+  if (agingEl) {
+    agingEl.innerHTML = s.agingLogs.map(item => {
+      const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
+      return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳/${item.growthLabel}</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+    }).join('');
+  }
 
   if (!s._modalShown && !gameState.isGameOver && !gameState.pendingManagerCrisis) {
     s._modalShown = true;
@@ -6705,7 +7273,7 @@ function renderTacticalBoard() {
 
   if (!benchListEl) return;
 
-  const allNonStarters = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+  const allNonStarters = playerClub.players.filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   const effectiveBenchLimit = typeof getEffectiveBenchLimit === 'function' ? getEffectiveBenchLimit(playerClub) : 9;
   const benchPlayers = allNonStarters.filter(p => p.isBench !== false).slice(0, effectiveBenchLimit);
   const reservePlayers = allNonStarters.filter(p => !benchPlayers.some(bp => bp.id === p.id));
@@ -7005,10 +7573,14 @@ function renderRoster() {
   const stats = getTeamStarterStats(playerClub);
   const payroll = getClubTotalPayroll(playerClub);
 
-  document.getElementById('team-total-atk').textContent = Math.round(stats.totalAtk);
-  document.getElementById('team-total-def').textContent = Math.round(stats.totalDef);
-  document.getElementById('team-avg-sta').textContent = stats.avgSta;
-  document.getElementById('roster-total-payroll').textContent = formatMoney(payroll);
+  const totalAtkEl = document.getElementById('team-total-atk');
+  const totalDefEl = document.getElementById('team-total-def');
+  const avgStaEl = document.getElementById('team-avg-sta');
+  const totalPayEl = document.getElementById('roster-total-payroll');
+  if (totalAtkEl) totalAtkEl.textContent = Math.round(stats.totalAtk);
+  if (totalDefEl) totalDefEl.textContent = Math.round(stats.totalDef);
+  if (avgStaEl) avgStaEl.textContent = stats.avgSta;
+  if (totalPayEl) totalPayEl.textContent = formatMoney(payroll);
 
   if (typeof evaluateClubNationalityRules === 'function') {
     const natEval = evaluateClubNationalityRules(playerClub);
@@ -7053,11 +7625,15 @@ function renderRoster() {
   });
   const tacticDef = TACTICS_DEFINITIONS[currentTactic];
   if (tacticDef) {
-    document.getElementById('current-tactic-badge').textContent = tacticDef.badge;
-    document.getElementById('current-tactic-desc').textContent = tacticDef.desc;
+    const badge = document.getElementById('current-tactic-badge');
+    const desc = document.getElementById('current-tactic-desc');
+    if (badge) badge.textContent = tacticDef.badge;
+    if (desc) desc.textContent = tacticDef.desc;
   }
 
-  const gkCount = playerClub.players.filter(p => p.pos === 'GK').length;
+  const activeRosterPlayers = playerClub.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const activeRosterCount = activeRosterPlayers.length;
+  const gkCount = activeRosterPlayers.filter(p => p.pos === 'GK').length;
 
   const sortedPlayers = [...playerClub.players].sort((a, b) => {
     const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
@@ -7068,6 +7644,7 @@ function renderRoster() {
   });
 
   const tbody = document.getElementById('roster-tbody');
+  if (!tbody) return;
   tbody.innerHTML = sortedPlayers.map(p => {
     const rowClasses = [];
     if (!p.isStarter) rowClasses.push('row-bench');
@@ -7090,12 +7667,16 @@ function renderRoster() {
     const defDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.def) : '';
     const staDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.sta) : '';
 
-    const canRelease = playerClub.players.length > 11 && !(p.pos === 'GK' && gkCount <= 1) && !gameState.isGameOver;
-    const releaseBtnLabel = canRelease ? '自由契約' : '必須枠';
+    const isLoanIn = Boolean(p.loanStatus && p.loanStatus.isLoan);
+    const isLoanOut = Boolean(p.loanStatus && p.loanStatus.isLoanOut);
+    const canRelease = !isLoanIn && !isLoanOut && activeRosterCount > 11 && !(p.pos === 'GK' && gkCount <= 1) && !gameState.isGameOver;
+    const releaseBtnLabel = (isLoanIn || isLoanOut) ? 'レンタル中' : (canRelease ? '自由契約' : '必須枠');
 
-    const canExtend = p.contractYears <= 2 && !gameState.isGameOver;
+    const canExtend = p.contractYears <= 2 && !isLoanIn && !p.preContractDeparture && !gameState.isGameOver;
     let extendBtnHtml = '';
-    if (p.contractRefused) {
+    if (isLoanIn) {
+      extendBtnHtml = '';
+    } else if (p.contractRefused) {
       extendBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled title="交渉決裂のためオフシーズンにフリー流出確定">交渉決裂</button>`;
     } else if (canExtend) {
       extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
@@ -7159,9 +7740,15 @@ function renderRoster() {
 
     let contractClass = '';
     let contractText = `${p.contractYears}年`;
-    if (p.contractRefused) {
+    if (isLoanIn) {
+      contractClass = '';
+      contractText = 'レンタル中';
+    } else if (p.contractRefused) {
       contractClass = 'contract-expired';
       contractText = '決裂(流出)';
+    } else if (p.preContractDeparture) {
+      contractClass = 'contract-expired';
+      contractText = '流出確定';
     } else if (p.contractYears <= 0) {
       contractClass = 'contract-expired';
       contractText = '満了(0年)';
@@ -7328,6 +7915,7 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
     renderCoachingStaffPanel();
   } else if (subtabKey === 'youth') {
     renderYouthSquad();
+    renderFacilitiesAndYouth();
   }
 }
 
@@ -7473,7 +8061,7 @@ function renderShortlist() {
 /**
  * オファー切り替えタブ処理 ('incoming' | 'outgoing')
  */
-function switchOffersTab(tabKey) {
+function switchOffersTab(tabKey, shouldRender = true) {
   if (!tabKey) tabKey = 'incoming';
   gameState.offersSubtab = tabKey;
 
@@ -7482,7 +8070,18 @@ function switchOffersTab(tabKey) {
   if (btnIncoming) btnIncoming.classList.toggle('active', tabKey === 'incoming');
   if (btnOutgoing) btnOutgoing.classList.toggle('active', tabKey === 'outgoing');
 
-  renderIncomingOffers();
+  if (shouldRender) renderIncomingOffers();
+}
+
+/**
+ * セーブデータ読込時・新規開始時に全タブのサブタブDOM状態を gameState に同期する
+ */
+function syncAllSubtabsDOM() {
+  if (typeof switchTeamSubtab === 'function') switchTeamSubtab(gameState.teamSubtab || 'standings', false);
+  if (typeof switchRosterSubtab === 'function') switchRosterSubtab(gameState.rosterSubtab || 'board', false);
+  if (typeof switchMarketSubtab === 'function') switchMarketSubtab(gameState.marketSubtab || 'market', false);
+  if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment', false);
+  if (typeof switchOffersTab === 'function') switchOffersTab(gameState.offersSubtab || 'incoming', false);
 }
 
 /**
@@ -7670,6 +8269,9 @@ function renderIncomingOffers() {
     } else if (offer.status === 'counter_rejected') {
       deadlineBadge = `<span class="offer-deadline-badge mono text-danger" style="opacity: 0.8;">交渉決裂（相手撤退）</span>`;
       actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">上乗せ不合意・相手クラブ撤退</span>`;
+    } else if (offer.status === 'cancelled') {
+      deadlineBadge = `<span class="offer-deadline-badge mono text-muted" style="opacity: 0.8;">取消済み</span>`;
+      actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">他クラブとの成立等により無効化</span>`;
     } else if (offer.status === 'expired') {
       deadlineBadge = `<span class="offer-deadline-badge mono text-muted" style="opacity: 0.8;">期限切れ</span>`;
       actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">回答期限切れ</span>`;
@@ -8427,7 +9029,7 @@ function renderGmDuties() {
   const starters = playerClub.players.filter(p => p.isStarter);
   const injuredStarters = starters.filter(p => p.injuryWeeks > 0);
   const expiringPlayers = playerClub.players
-    .filter(p => p.contractYears <= 2 && !p.contractRefused)
+    .filter(p => p && p.contractYears <= 2 && !p.contractRefused && !(p.loanStatus && p.loanStatus.isLoan) && !p.preContractDeparture)
     .sort((a, b) => a.contractYears - b.contractYears || getPlayerOverallRating(b) - getPlayerOverallRating(a));
   const urgentExpiring = expiringPlayers.filter(p => p.contractYears <= 1 || p.megaOfferRejected);
   const outOfPosStarters = starters.filter(p => getPositionFitInfo(p, p.assignedPos || p.pos).type === 'out');
@@ -8506,11 +9108,12 @@ function renderGmDuties() {
   );
 
   let optionalDuty = null;
-  if (canPromote && youthSquad.length > 0) {
+  const candidatesCount = (gameState.youthCandidates || []).length;
+  if (canPromote && (youthSquad.length > 0 || candidatesCount > 0)) {
     optionalDuty = {
       level: 'optional',
       badge: '任意',
-      title: `ユース昇格（${youthSquad.length}名在籍）`,
+      title: candidatesCount > 0 ? `ユース昇格審査（候補${candidatesCount}名）` : `ユース昇格（${youthSquad.length}名在籍）`,
       desc: 'アカデミー有望株をトップチームへ昇格登録できます。',
       btnText: 'ユース一覧へ',
       action: 'goto-youth'
@@ -8693,83 +9296,79 @@ function renderFacilitiesAndYouth() {
     if (candidates.length === 0) {
       youthGrid.innerHTML = `
         <div class="youth-empty-box">
-          今季のユースアカデミー昇格候補に対する審査（昇格または見送り）はすべて完了しています。<br />
-          次のオフシーズン突入時に、アカデミーから新たな16〜18歳の有望株2名が選出されます。
+          今季のユースアカデミー昇格候補に対する審査はすべて完了しています。<br>
+          次のオフシーズン開始時に、新たな若手有望株2名が選出されます。
         </div>
       `;
-      return;
+    } else {
+      const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+      const isSquadFull = playerClub.players.length >= maxSquad;
+
+      youthGrid.innerHTML = candidates.map(y => {
+        const ovr = getPlayerOverallRating(y);
+        const rawNat = y.nationality || 'England';
+        const traits = Array.isArray(y.traits) ? y.traits : [];
+
+        return `
+          <div class="youth-card">
+            <div class="youth-card-top">
+              <div class="youth-name-wrap">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  ${getPlayerAvatarHtml(y, playerClub, 'avatar-md')}
+                  ${formatPlayerPositionsHtml(y)}
+                  <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="クリックで選手詳細プロフィールを表示">
+                    ${y.name}
+                  </button>
+                </div>
+                <div class="youth-meta-row">
+                  <span>${rawNat}</span>
+                  <span>|</span>
+                  <span><strong>${y.age}歳</strong>（昇格候補）</span>
+                  <span>|</span>
+                  <span>${y.height}cm / ${y.preferredFoot}</span>
+                </div>
+              </div>
+              <div class="youth-ovr-box">
+                <span class="youth-ovr-label">OVR</span>
+                <span class="youth-ovr-val ${getOvrTierClass(ovr)}">${ovr}</span>
+              </div>
+            </div>
+
+            <div class="youth-stats-strip">
+              <div class="youth-stat-cell">
+                <span class="youth-stat-cell-label">攻撃</span>
+                <span class="youth-stat-cell-val ${getOvrTextClass(y.atk)}">${y.atk}</span>
+              </div>
+              <div class="youth-stat-cell">
+                <span class="youth-stat-cell-label">守備</span>
+                <span class="youth-stat-cell-val ${getOvrTextClass(y.def)}">${y.def}</span>
+              </div>
+              <div class="youth-stat-cell">
+                <span class="youth-stat-cell-label">体力</span>
+                <span class="youth-stat-cell-val ${getOvrTextClass(y.sta)}">${y.sta}</span>
+              </div>
+            </div>
+
+            ${traits.length > 0 ? `<div class="profile-traits-wrap">${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}</div>` : ''}
+
+            <div class="youth-contract-note">
+              <span>昇格: <strong>£0 / 年俸 £800K（4年）</strong></span>
+              <span>見送り時: <strong class="accent-gold">補償金 +£300K</strong></span>
+            </div>
+
+            <div class="youth-actions-row">
+              <button type="button" class="btn btn-primary btn-sm" data-promote-youth="${y.id}" ${!isSquadFull && !gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
+                ${isSquadFull ? `所属枠上限 (${maxSquad}名)` : 'トップチーム昇格（£0 / 年俸£800K）'}
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss-youth="${y.id}" ${!gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
+                見送り（補償金 +£300K）
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(youthGrid);
     }
-
-    const isSquadFull = playerClub.players.length >= MAX_SQUAD_SIZE;
-
-    youthGrid.innerHTML = candidates.map(y => {
-      const ovr = getPlayerOverallRating(y);
-      const growthLabel = getGrowthCurveLabel(y.growthCurve);
-      const rawNat = y.nationality || 'England';
-      const flagEmoji = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
-      const traits = Array.isArray(y.traits) ? y.traits : [];
-
-      return `
-        <div class="youth-card">
-          <div class="youth-card-top">
-            <div class="youth-name-wrap">
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                ${getPlayerAvatarHtml(y, playerClub, 'avatar-md')}
-                ${formatPlayerPositionsHtml(y)}
-                <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="クリックで選手詳細プロフィールを表示">
-                  ${y.name}
-                </button>
-              </div>
-              <div class="youth-meta-row">
-                <span>${flagEmoji} ${rawNat}</span>
-                <span>|</span>
-                <span><strong>${y.age}歳</strong>（ユース有望株）</span>
-                <span>|</span>
-                <span>身長 ${y.height}cm / ${y.preferredFoot}</span>
-              </div>
-            </div>
-            <div class="youth-ovr-box">
-              <span class="youth-ovr-label">CURRENT OVR</span>
-              <span class="youth-ovr-val ${getOvrTierClass(ovr)}">${ovr}</span>
-            </div>
-          </div>
-
-          <div class="youth-stats-strip">
-            <div class="youth-stat-cell">
-              <span class="youth-stat-cell-label">ATK（攻撃）</span>
-              <span class="youth-stat-cell-val ${getOvrTextClass(y.atk)}">${y.atk}</span>
-            </div>
-            <div class="youth-stat-cell">
-              <span class="youth-stat-cell-label">DEF（守備）</span>
-              <span class="youth-stat-cell-val ${getOvrTextClass(y.def)}">${y.def}</span>
-            </div>
-            <div class="youth-stat-cell">
-              <span class="youth-stat-cell-label">STA（体力）</span>
-              <span class="youth-stat-cell-val ${getOvrTextClass(y.sta)}">${y.sta}</span>
-            </div>
-          </div>
-
-          <div class="profile-traits-wrap">
-            ${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}
-          </div>
-
-          <div class="youth-contract-note">
-            <span>昇格条件：<strong>移籍金 £0 / 年俸 £800K（4年契約）</strong></span>
-            <span>見送り時：<strong>育成補償金 +£300K</strong></span>
-          </div>
-
-          <div class="youth-actions-row">
-            <button type="button" class="btn btn-primary btn-sm" data-promote-youth="${y.id}" ${!isSquadFull && !gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
-              ${isSquadFull ? '所属枠上限 (20名)' : 'トップチーム昇格（£0 / 年俸£800K）'}
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-dismiss-youth="${y.id}" ${!gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
-              見送り（他クラブへ放出）
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(youthGrid);
   }
 }
 
@@ -9796,14 +10395,18 @@ let lastProfileOpenScrollY = 0;
 let lastProfileOpenContainerScrolls = [];
 
 function openPlayerProfileModal(playerId) {
-  // プロフィールを開く直前のスクロール位置（画面全体＆主要ビュー）を保存
-  lastProfileOpenScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-  lastProfileOpenContainerScrolls = [];
-  document.querySelectorAll('.tab-view, .table-container, .main-scroll-container, #view-roster, #view-market, #view-team, #view-office').forEach(el => {
-    if (el && el.scrollTop > 0) {
-      lastProfileOpenContainerScrolls.push({ el, top: el.scrollTop });
-    }
-  });
+  const existingModalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+  const isAlreadyOpen = existingModalEl && !existingModalEl.classList.contains('hidden');
+  if (!isAlreadyOpen) {
+    // プロフィールを開く直前のスクロール位置（画面全体＆主要ビュー）を保存
+    lastProfileOpenScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    lastProfileOpenContainerScrolls = [];
+    document.querySelectorAll('.tab-view, .table-container, .main-scroll-container, #view-roster, #view-market, #view-team, #view-office').forEach(el => {
+      if (el && el.scrollTop > 0) {
+        lastProfileOpenContainerScrolls.push({ el, top: el.scrollTop });
+      }
+    });
+  }
 
   const ctx = findPlayerWithContextById(playerId);
   if (!ctx) return;
@@ -10744,7 +11347,7 @@ function confirmIntroAndStartGame() {
   gameState.gmName = rawName.length > 0 ? rawName : 'L. Vance';
 
   const overlay = document.getElementById('intro-modal-overlay');
-  overlay.classList.add('hidden');
+  if (overlay) overlay.classList.add('hidden');
   setBodyModalLock(false);
   gameState.hasStartedOnce = true;
 
@@ -10794,9 +11397,11 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   syncManagerDelegationButtonUI();
   gameState.activeTab = 'office';
   document.body.dataset.activeTab = 'office';
+  gameState.teamSubtab = 'standings';
   gameState.rosterSubtab = 'board';
   gameState.facilitiesSubtab = 'investment';
   gameState.marketSubtab = 'market';
+  gameState.offersSubtab = 'incoming';
   gameState.lastWeekResults = [];
   gameState.matchHistory = [];
   gameState.competitionStats = {};
@@ -10871,6 +11476,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     const club = {
       id: def.id,
       name: def.name,
+      division: 'd1',
+      basePower: def.basePower,
       isPlayer,
       funds: def.initialFunds,
       supporters: def.supporters,
@@ -10934,6 +11541,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   ];
   generateTransferMarket();
   generateYouthAcademyCandidates();
+  syncAllSubtabsDOM();
   switchTab('office');
 }
 
@@ -11475,11 +12083,14 @@ function initTacticalDragAndDrop() {
       }
     } else if (finalMatch.type === 'bench-list' && source.type === 'starter') {
       const playerClub = getPlayerClub();
-      const benchPlayers = playerClub.players.filter(p => !p.isStarter && !p.isRetired);
+      const benchPlayers = playerClub.players.filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
       if (benchPlayers.length > 0) {
         const formationDef = getClubFormationDef(playerClub);
         const slotDef = formationDef.slots[source.slotIndex];
         const sorted = [...benchPlayers].sort((a, b) => {
+          const aBench = a.isBench !== false ? 1 : 0;
+          const bBench = b.isBench !== false ? 1 : 0;
+          if (aBench !== bBench) return bBench - aBench;
           const aFit = getPositionFitInfo(a, slotDef.pos).factor;
           const bFit = getPositionFitInfo(b, slotDef.pos).factor;
           if (aFit !== bFit) return bFit - aFit;
@@ -11524,8 +12135,10 @@ function initGame() {
   if (btnPlayNext) {
     btnPlayNext.addEventListener('click', () => openMatchPrecheckModal());
   }
-  document.getElementById('btn-skip-season').addEventListener('click', skipToSeasonEnd);
-  document.getElementById('btn-next-season').addEventListener('click', startNextSeason);
+  const btnSkipSeason = document.getElementById('btn-skip-season');
+  if (btnSkipSeason) btnSkipSeason.addEventListener('click', skipToSeasonEnd);
+  const btnNextSeason = document.getElementById('btn-next-season');
+  if (btnNextSeason) btnNextSeason.addEventListener('click', startNextSeason);
   const btnRestart = document.getElementById('btn-restart-game');
   if (btnRestart) {
     btnRestart.addEventListener('click', () => {
@@ -11538,16 +12151,19 @@ function initGame() {
   }
 
   // GM就任モーダル内のイベント（フィルタータグ・クラブ選択・詳細同期）
-  document.getElementById('club-filter-tags').addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-filter-tag');
-    if (btn && btn.dataset.filter) {
-      introClubFilter = btn.dataset.filter;
-      document.querySelectorAll('#club-filter-tags .btn-filter-tag').forEach(b => {
-        b.classList.toggle('active', b === btn);
-      });
-      renderIntroClubList();
-    }
-  });
+  const clubFilterTags = document.getElementById('club-filter-tags');
+  if (clubFilterTags) {
+    clubFilterTags.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-filter-tag');
+      if (btn && btn.dataset.filter) {
+        introClubFilter = btn.dataset.filter;
+        document.querySelectorAll('#club-filter-tags .btn-filter-tag').forEach(b => {
+          b.classList.toggle('active', b === btn);
+        });
+        renderIntroClubList();
+      }
+    });
+  }
 
   // スライダー切り替えボタン（前へ・次へ）
   const btnPrevClub = document.getElementById('btn-prev-club');
@@ -11609,22 +12225,23 @@ function initGame() {
     }
   });
 
-  document.getElementById('btn-confirm-intro').addEventListener('click', confirmIntroAndStartGame);
-  document.getElementById('btn-cancel-intro').addEventListener('click', () => {
-    document.getElementById('intro-modal-overlay').classList.add('hidden');
-    setBodyModalLock(false);
-  });
+  const btnConfirmIntro = document.getElementById('btn-confirm-intro');
+  if (btnConfirmIntro) btnConfirmIntro.addEventListener('click', confirmIntroAndStartGame);
+  const btnCancelIntro = document.getElementById('btn-cancel-intro');
+  if (btnCancelIntro) {
+    btnCancelIntro.addEventListener('click', () => {
+      const overlayEl = document.getElementById('intro-modal-overlay');
+      if (overlayEl) overlayEl.classList.add('hidden');
+      setBodyModalLock(false);
+    });
+  }
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
-    const onSelectTab = (e) => {
+    btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
       if (tab) {
         switchTab(tab);
       }
-    };
-    btn.addEventListener('click', onSelectTab);
-    btn.addEventListener('touchend', (e) => {
-      onSelectTab(e);
     });
   });
 
@@ -11826,81 +12443,87 @@ function initGame() {
   bindBenchOrReservesProfileClick(document.getElementById('pitch-bench-list'));
   bindBenchOrReservesProfileClick(document.getElementById('pitch-reserves-list'));
 
-  document.getElementById('tactics-btn-group').addEventListener('click', (e) => {
-    const infoBtn = e.target.closest('[data-tactic-info]');
-    if (infoBtn && infoBtn.dataset.tacticInfo) {
-      e.stopPropagation();
-      e.preventDefault();
-      showTacticInfoPopup(infoBtn.dataset.tacticInfo);
-      return;
-    }
+  const tacticsBtnGroup = document.getElementById('tactics-btn-group');
+  if (tacticsBtnGroup) {
+    tacticsBtnGroup.addEventListener('click', (e) => {
+      const infoBtn = e.target.closest('[data-tactic-info]');
+      if (infoBtn && infoBtn.dataset.tacticInfo) {
+        e.stopPropagation();
+        e.preventDefault();
+        showTacticInfoPopup(infoBtn.dataset.tacticInfo);
+        return;
+      }
 
-    const tacticBtn = e.target.closest('.btn-tactic');
-    if (tacticBtn && tacticBtn.dataset.tactic) {
-      setTeamTactic(tacticBtn.dataset.tactic);
-    }
-  });
+      const tacticBtn = e.target.closest('.btn-tactic');
+      if (tacticBtn && tacticBtn.dataset.tactic) {
+        setTeamTactic(tacticBtn.dataset.tactic);
+      }
+    });
+  }
 
-  document.getElementById('roster-tbody').addEventListener('click', (e) => {
-    const profileBtn = e.target.closest('[data-profile-id]');
-    if (profileBtn) {
-      e.stopPropagation();
-      openPlayerProfileModal(profileBtn.dataset.profileId);
-      return;
-    }
+  const rosterTbodyEl = document.getElementById('roster-tbody');
+  if (rosterTbodyEl) {
+    rosterTbodyEl.addEventListener('click', (e) => {
+      const profileBtn = e.target.closest('[data-profile-id]');
+      if (profileBtn) {
+        e.stopPropagation();
+        openPlayerProfileModal(profileBtn.dataset.profileId);
+        return;
+      }
 
-    if (e.target.closest('.slot-select')) {
-      e.stopPropagation();
-      return;
-    }
+      if (e.target.closest('.slot-select')) {
+        e.stopPropagation();
+        return;
+      }
 
-    const starterBtn = e.target.closest('.btn-starter-toggle');
-    if (starterBtn) {
-      e.stopPropagation();
-      togglePlayerStarter(starterBtn.dataset.starterId);
-      return;
-    }
+      const starterBtn = e.target.closest('.btn-starter-toggle');
+      if (starterBtn) {
+        e.stopPropagation();
+        togglePlayerStarter(starterBtn.dataset.starterId);
+        return;
+      }
 
-    const loanListBtn = e.target.closest('.btn-loan-listing');
-    if (loanListBtn) {
-      e.stopPropagation();
-      toggleLoanListing(loanListBtn.dataset.loanListId);
-      return;
-    }
+      const loanListBtn = e.target.closest('.btn-loan-listing');
+      if (loanListBtn) {
+        e.stopPropagation();
+        toggleLoanListing(loanListBtn.dataset.loanListId);
+        return;
+      }
 
-    const extendBtn = e.target.closest('.btn-extend-contract');
-    if (extendBtn) {
-      e.stopPropagation();
-      extendPlayerContract(extendBtn.dataset.extendId);
-      return;
-    }
+      const extendBtn = e.target.closest('.btn-extend-contract');
+      if (extendBtn) {
+        e.stopPropagation();
+        extendPlayerContract(extendBtn.dataset.extendId);
+        return;
+      }
 
-    const demoteBtn = e.target.closest('.btn-demote-youth');
-    if (demoteBtn) {
-      e.stopPropagation();
-      demotePlayerToYouth(demoteBtn.dataset.demoteId);
-      return;
-    }
+      const demoteBtn = e.target.closest('.btn-demote-youth');
+      if (demoteBtn) {
+        e.stopPropagation();
+        demotePlayerToYouth(demoteBtn.dataset.demoteId);
+        return;
+      }
 
-    const releaseBtn = e.target.closest('.btn-release-player');
-    if (releaseBtn) {
-      e.stopPropagation();
-      releaseRosterPlayer(releaseBtn.dataset.releaseId);
-      return;
-    }
+      const releaseBtn = e.target.closest('.btn-release-player');
+      if (releaseBtn) {
+        e.stopPropagation();
+        releaseRosterPlayer(releaseBtn.dataset.releaseId);
+        return;
+      }
 
-    const tr = e.target.closest('tr[data-player-id]');
-    if (tr) {
-      handleRosterClick(tr.dataset.playerId);
-    }
-  });
+      const tr = e.target.closest('tr[data-player-id]');
+      if (tr) {
+        handleRosterClick(tr.dataset.playerId);
+      }
+    });
 
-  document.getElementById('roster-tbody').addEventListener('change', (e) => {
-    const selectEl = e.target.closest('.slot-select');
-    if (selectEl) {
-      changeStarterAssignedPos(selectEl.dataset.slotPlayerId, selectEl.value);
-    }
-  });
+    rosterTbodyEl.addEventListener('change', (e) => {
+      const selectEl = e.target.closest('.slot-select');
+      if (selectEl) {
+        changeStarterAssignedPos(selectEl.dataset.slotPlayerId, selectEl.value);
+      }
+    });
+  }
 
   // 移籍サブタブバー切り替えイベント
   const marketSubnav = document.getElementById('market-subnav-bar');
@@ -11925,7 +12548,9 @@ function initGame() {
   }
 
   // 移籍市場テーブル内 クリックイベント（ダイレクト交渉・送信オファー遷移・詳細・ショートリストトグル）
-  document.getElementById('market-tbody').addEventListener('click', (e) => {
+  const marketTbodyEl = document.getElementById('market-tbody');
+  if (marketTbodyEl) {
+    marketTbodyEl.addEventListener('click', (e) => {
     const gotoOffersBtn = e.target.closest('[data-goto-offers]');
     if (gotoOffersBtn) {
       e.stopPropagation();
@@ -11965,18 +12590,19 @@ function initGame() {
       openPlayerProfileModal(profileBtn.dataset.profileId);
       return;
     }
-    const offerBtn = e.target.closest('.btn-offer-transfer');
-    if (offerBtn) {
-      e.stopPropagation();
-      const playerId = offerBtn.dataset.offerId || offerBtn.dataset.offerPlayerId;
-      openTransferNegotiationModal(playerId);
-      return;
-    }
-    const signBtn = e.target.closest('.btn-sign-player');
-    if (signBtn) {
-      signMarketPlayer(signBtn.dataset.signId);
-    }
-  });
+      const offerBtn = e.target.closest('.btn-offer-transfer');
+      if (offerBtn) {
+        e.stopPropagation();
+        const playerId = offerBtn.dataset.offerId || offerBtn.dataset.offerPlayerId;
+        openTransferNegotiationModal(playerId);
+        return;
+      }
+      const signBtn = e.target.closest('.btn-sign-player');
+      if (signBtn) {
+        signMarketPlayer(signBtn.dataset.signId);
+      }
+    });
+  }
 
   // 獲得ターゲットリスト（SHORTLIST）テーブル内 クリックイベント
   const shortlistTbody = document.getElementById('shortlist-tbody');
@@ -12146,8 +12772,8 @@ function initGame() {
     });
   }
 
-  // アカデミー施設・ユース候補リストのイベント（トップ昇格・見送り・詳細表示）
-  const youthListEl = document.getElementById('youth-list');
+  // アカデミー施設・ユース昇格候補グリッドのイベント（トップ昇格・見送り・詳細表示）
+  const youthListEl = document.getElementById('youth-candidates-grid') || document.getElementById('youth-list');
   if (youthListEl) {
     youthListEl.addEventListener('click', (e) => {
       const promoteBtn = e.target.closest('[data-promote-youth]');
@@ -12439,6 +13065,12 @@ function initGame() {
         const bv = parseInt(e.target.value, 10) || 0;
         session.buyOptionFee = bv > 0 ? bv : null;
       }
+      if (e.target.id === 'neg-loan-slider') {
+        session.loanCoveragePercent = parseInt(e.target.value, 10) || 100;
+      }
+      if (typeof refreshNegCashflowWarning === 'function') {
+        refreshNegCashflowWarning(negModalBody);
+      }
     });
 
     negModalBody.addEventListener('click', (e) => {
@@ -12606,16 +13238,14 @@ function initGame() {
   // 編成サブタブ（作戦ボード / 選手一覧 / 戦術）の切り替え
   const rosterSubnav = document.getElementById('roster-subnav-bar');
   if (rosterSubnav) {
-    const onSelectSubtab = (e) => {
+    rosterSubnav.addEventListener('click', (e) => {
       const btn = e.target.closest('.roster-subtab-btn');
       if (!btn) return;
       const subtabKey = btn.dataset.subtab;
       if (subtabKey) {
         switchRosterSubtab(subtabKey);
       }
-    };
-    rosterSubnav.addEventListener('click', onSelectSubtab);
-    rosterSubnav.addEventListener('touchend', onSelectSubtab);
+    });
   }
 
   // モバイルでのプルダウンリロード（Pull-to-refresh）防止および誤リロード防止の初期化
@@ -12999,6 +13629,11 @@ function renderManagerManagementPanel() {
           </div>
         </div>
         <div class="manager-current-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+          ${(mgr.contractYears || 0) <= 1 ? `
+            <button type="button" class="btn btn-secondary mono" id="btn-extend-manager-contract" style="font-weight: 700; padding: 10px 16px;">
+              契約延長 (+2年)
+            </button>
+          ` : ''}
           <button type="button" class="btn btn-primary mono" id="btn-open-change-manager" style="font-weight: 700; padding: 10px 18px;">
             監督交代 (違約金 £${buyoutFee.toLocaleString()}k)
           </button>
@@ -13022,12 +13657,195 @@ function renderManagerManagementPanel() {
 
   container.innerHTML = currentCardHtml;
 
+  const extendBtn = document.getElementById('btn-extend-manager-contract');
+  if (extendBtn) {
+    extendBtn.addEventListener('click', () => {
+      extendPlayerManagerContract();
+    });
+  }
+
   // イベント登録：「監督を交代する」ボタンで後任選択モーダルを開く
   const changeBtn = document.getElementById('btn-open-change-manager');
   if (changeBtn) {
     changeBtn.addEventListener('click', () => {
       openManagerHireModal();
     });
+  }
+}
+
+/**
+ * 現監督との契約を延長する
+ */
+function extendPlayerManagerContract() {
+  const club = getPlayerClub();
+  if (!club || !club.manager) return false;
+  const mgr = club.manager;
+  const curYears = typeof mgr.contractYears === 'number' ? Math.max(0, mgr.contractYears) : 1;
+  const newYears = Math.min(5, curYears + 2);
+  if (newYears <= curYears) return false;
+
+  const ok = window.confirm(`${mgr.name}監督との契約を延長しますか？\n（延長後契約: ${newYears}年 / 週給: £${mgr.weeklyWage}k）`);
+  if (!ok) return false;
+
+  mgr.contractYears = newYears;
+  mgr.trust = clamp((mgr.trust || 75) + 5, 0, 100);
+  addDailyLog(`監督契約更新：${mgr.name}監督と契約を延長しました（残契約：${newYears}年）`);
+  renderAll();
+  if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
+  return true;
+}
+
+/**
+ * シーズン終了時の監督・コーチ陣の加齢および監督契約満了更新
+ */
+function ageAndRenewCoachingStaffAtSeasonEnd(playerRetirementLogs = []) {
+  const agedStaffIds = new Set();
+  const managedClubs = typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []);
+  if (!Array.isArray(gameState.freeManagers)) gameState.freeManagers = [];
+
+  const usedStaffNames = new Set();
+  for (const c of managedClubs) {
+    if (!c) continue;
+    if (c.manager && c.manager.name) usedStaffNames.add(c.manager.name);
+    if (c.coaches) {
+      (c.coaches.attacking || []).forEach(x => { if (x && x.name) usedStaffNames.add(x.name); });
+      (c.coaches.defending || []).forEach(x => { if (x && x.name) usedStaffNames.add(x.name); });
+      if (c.coaches.goalkeeping && c.coaches.goalkeeping.name) usedStaffNames.add(c.coaches.goalkeeping.name);
+      if (c.coaches.fitness && c.coaches.fitness.name) usedStaffNames.add(c.coaches.fitness.name);
+    }
+  }
+  gameState.freeManagers.forEach(m => { if (m && m.name) usedStaffNames.add(m.name); });
+  if (gameState.freeCoaches && typeof gameState.freeCoaches === 'object') {
+    ['attacking', 'defending', 'goalkeeping', 'fitness'].forEach(cat => {
+      (gameState.freeCoaches[cat] || []).forEach(co => { if (co && co.name) usedStaffNames.add(co.name); });
+    });
+  }
+
+  const createReplacementFreeManager = () => {
+    const db = (typeof MANAGERS_DATABASE !== 'undefined' && Array.isArray(MANAGERS_DATABASE) && MANAGERS_DATABASE.length > 0)
+      ? MANAGERS_DATABASE
+      : [{ nationality: 'England', age: 44, preferredFormation: '4-3-3', preferredTactic: 'possession', weeklyWage: 80, bio: '現代的な戦術眼と指導力でチームを牽引する指揮官。' }];
+    const tpl = db[randInt(0, db.length - 1)];
+    return createManager({ ...tpl, age: randInt(39, 53), contractYears: 3 }, null, usedStaffNames);
+  };
+
+  const createReplacementFreeCoach = (cat) => {
+    const db = (typeof COACHES_DATABASE !== 'undefined' && COACHES_DATABASE[cat] && COACHES_DATABASE[cat].length > 0)
+      ? COACHES_DATABASE[cat]
+      : [{ rank: 'B', nationality: 'England', age: 42, weeklyWage: 20 }];
+    const tpl = db[randInt(0, db.length - 1)];
+    return createCoach({ ...tpl, age: randInt(36, 51) }, cat, usedStaffNames);
+  };
+
+  for (const club of managedClubs) {
+    if (!club) continue;
+    const mgr = club.manager;
+    if (mgr && !agedStaffIds.has(mgr.id)) {
+      agedStaffIds.add(mgr.id);
+      mgr.age = (mgr.age || 45) + 1;
+      if (typeof mgr.contractYears !== 'number' || Number.isNaN(mgr.contractYears)) {
+        mgr.contractYears = 2;
+      }
+      mgr.contractYears = Math.max(0, mgr.contractYears - 1);
+
+      if (club.isPlayer) {
+        if (mgr.age >= 72) {
+          mgr.contractYears = 0;
+          playerRetirementLogs.push(
+            `勇退：${mgr.name}監督（${mgr.age}歳）が高齢のため新シーズン開幕前に勇退予定です（経営タブより後任監督を招聘できます）`
+          );
+        } else if (mgr.contractYears === 0) {
+          playerRetirementLogs.push(
+            `契約満了：${mgr.name}監督（${mgr.age}歳）の契約が満了しました（経営タブから契約延長、または違約金 £0 で監督交代が可能です）`
+          );
+        }
+      } else {
+        const mustReplace = mgr.age >= 70;
+        const expired = mgr.contractYears <= 0;
+        if (mustReplace || expired) {
+          const keepCurrent = !mustReplace && (mgr.trust || 70) >= 65 && Math.random() < 0.72;
+          if (keepCurrent) {
+            mgr.contractYears = randInt(2, 3);
+            mgr.trust = clamp((mgr.trust || 75) + 3, 40, 100);
+          } else {
+            let candidateIdx = gameState.freeManagers.findIndex(m => m && (m.age || 45) < 67);
+            if (candidateIdx === -1) {
+              gameState.freeManagers.push(createReplacementFreeManager());
+              candidateIdx = gameState.freeManagers.length - 1;
+            }
+            const nextMgr = gameState.freeManagers.splice(candidateIdx, 1)[0];
+            if (nextMgr) {
+              if (!agedStaffIds.has(nextMgr.id)) {
+                agedStaffIds.add(nextMgr.id);
+                nextMgr.age = (nextMgr.age || 45) + 1;
+              }
+              nextMgr.contractYears = randInt(2, 4);
+              nextMgr.trust = 80;
+              club.manager = nextMgr;
+              club.formation = nextMgr.preferredFormation || club.formation || '4-3-3';
+              club.tactic = typeof normalizeTacticKey === 'function'
+                ? normalizeTacticKey(nextMgr.preferredTactic || club.tactic)
+                : (nextMgr.preferredTactic || club.tactic);
+              if (!mustReplace && mgr.age < 70) {
+                mgr.contractYears = 2;
+                mgr.trust = 70;
+                gameState.freeManagers.push(mgr);
+              }
+            } else {
+              mgr.contractYears = randInt(2, 3);
+            }
+          }
+        }
+      }
+    }
+
+    if (club.coaches && typeof club.coaches === 'object') {
+      const coachEntries = [
+        ...(Array.isArray(club.coaches.attacking) ? club.coaches.attacking : []),
+        ...(Array.isArray(club.coaches.defending) ? club.coaches.defending : []),
+        club.coaches.goalkeeping,
+        club.coaches.fitness
+      ].filter(Boolean);
+      for (const co of coachEntries) {
+        if (!agedStaffIds.has(co.id)) {
+          agedStaffIds.add(co.id);
+          co.age = (co.age || 42) + 1;
+        }
+      }
+    }
+  }
+
+  gameState.freeManagers = gameState.freeManagers.filter(m => {
+    if (!m) return false;
+    if (!agedStaffIds.has(m.id)) {
+      agedStaffIds.add(m.id);
+      m.age = (m.age || 45) + 1;
+    }
+    return m.age < 70;
+  });
+  while (gameState.freeManagers.length < 6) {
+    const rep = createReplacementFreeManager();
+    agedStaffIds.add(rep.id);
+    gameState.freeManagers.push(rep);
+  }
+
+  if (gameState.freeCoaches && typeof gameState.freeCoaches === 'object') {
+    for (const cat of ['attacking', 'defending', 'goalkeeping', 'fitness']) {
+      const arr = Array.isArray(gameState.freeCoaches[cat]) ? gameState.freeCoaches[cat] : [];
+      gameState.freeCoaches[cat] = arr.filter(co => {
+        if (!co) return false;
+        if (!agedStaffIds.has(co.id)) {
+          agedStaffIds.add(co.id);
+          co.age = (co.age || 42) + 1;
+        }
+        return co.age < 68;
+      });
+      while (gameState.freeCoaches[cat].length < 2) {
+        const repCo = createReplacementFreeCoach(cat);
+        agedStaffIds.add(repCo.id);
+        gameState.freeCoaches[cat].push(repCo);
+      }
+    }
   }
 }
 
@@ -13390,6 +14208,7 @@ function openCoachHireModal(category, slotIndex) {
       </div>
     `;
     modal.classList.remove('hidden');
+    if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
   } else {
     let coachSpecFilter = 'ALL';
     const renderCoachList = () => {
@@ -13465,12 +14284,14 @@ function openCoachHireModal(category, slotIndex) {
     };
     renderCoachList();
     modal.classList.remove('hidden');
+    if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
   }
 }
 
 function closeCoachHireModal() {
   const modal = document.getElementById('coach-hire-modal');
   if (modal) modal.classList.add('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 function hireCoach(category, slotIndex, coachId) {
@@ -13896,8 +14717,9 @@ function renderSeasonSchedule() {
     return;
   }
 
-  // カレンダーの日程マッピング（第1節〜第38節）
+  // カレンダーの日程マッピング（第1節〜最終節）
   const matchDays = (gameState.calendar || []).filter(d => d.isMatchDay);
+  const totalWeeks = gameState.totalWeeks || gameState.schedule.length || (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision() ? 46 : 38);
 
   let playedCount = 0;
   let wonCount = 0;
@@ -13929,11 +14751,15 @@ function renderSeasonSchedule() {
     // 月の区切りヘッダーの挿入
     if (monthNum && monthNum !== lastMonth) {
       lastMonth = monthNum;
+      const finalWeekDay = matchDays[gameState.schedule.length - 1] || null;
+      const isFinalWeekMonth = finalWeekDay
+        ? (finalWeekDay.month === monthNum && finalWeekDay.year === (dayInfo ? dayInfo.year : finalWeekDay.year))
+        : (monthNum === 5);
       let monthComment = '';
       if (monthNum === 8) monthComment = '開幕節 / 夏の移籍市場中';
       else if (monthNum === 9) monthComment = '夏の移籍市場閉幕 (9/1)';
       else if (monthNum === 1) monthComment = '冬の移籍市場OPEN (1/1〜1/31)';
-      else if (monthNum === 5) monthComment = 'シーズン最終節 (MATCHWEEK 38)';
+      else if (isFinalWeekMonth) monthComment = `シーズン最終節 (MATCHWEEK ${totalWeeks})`;
 
       cardsHtml.push(`
         <div class="schedule-month-divider">
@@ -14008,7 +14834,7 @@ function renderSeasonSchedule() {
 
   // 上部バッジ更新
   const playedCountEl = document.getElementById('schedule-played-count');
-  if (playedCountEl) playedCountEl.textContent = `${playedCount} / 38節`;
+  if (playedCountEl) playedCountEl.textContent = `${playedCount} / ${totalWeeks}節`;
   const recordEl = document.getElementById('schedule-record-badge');
   if (recordEl) recordEl.textContent = `${wonCount}勝 ${drawnCount}分 ${lostCount}敗`;
 }
@@ -14078,8 +14904,25 @@ function openPastMatchSummaryModal(weekNum) {
     title.textContent = `第${weekNum}節 公式戦サマリー${dateStr}`;
   }
 
+  const hydrateClubPlayersForSummary = (clubObj) => {
+    if (!clubObj || (Array.isArray(clubObj.players) && clubObj.players.length > 0)) return clubObj;
+    let realClub = typeof getClubById === 'function' ? getClubById(clubObj.id) : null;
+    if (!realClub && typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+      realClub = getEuropeanCompetitionClubsWithPlayers().find(c => c && c.id === clubObj.id) || null;
+    }
+    if (realClub && Array.isArray(realClub.players)) {
+      return { ...clubObj, players: realClub.players, formation: clubObj.formation || realClub.formation };
+    }
+    return clubObj;
+  };
+  const renderMatchData = {
+    ...matchData,
+    homeClub: hydrateClubPlayersForSummary(matchData.homeClub),
+    awayClub: hydrateClubPlayersForSummary(matchData.awayClub)
+  };
+
   // 試合直後のサマリーと完全に同一のHTMLを出力
-  body.innerHTML = buildMatchSummaryHtml(matchData);
+  body.innerHTML = buildMatchSummaryHtml(renderMatchData);
 
   if (typeof bindSummarySubnavEvents === 'function') {
     bindSummarySubnavEvents(body);
@@ -14183,8 +15026,9 @@ function updateScheduleSummaryBadges() {
     }
   }
 
+  const totalWeeks = gameState.totalWeeks || (Array.isArray(gameState.schedule) && gameState.schedule.length > 0 ? gameState.schedule.length : (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision() ? 46 : 38));
   const playedCountEl = document.getElementById('schedule-played-count');
-  if (playedCountEl) playedCountEl.textContent = `${playedCount} / 38節`;
+  if (playedCountEl) playedCountEl.textContent = `${playedCount} / ${totalWeeks}節`;
   const recordEl = document.getElementById('schedule-record-badge');
   if (recordEl) recordEl.textContent = `${wonCount}勝 ${drawnCount}分 ${lostCount}敗`;
 }
@@ -14510,10 +15354,23 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
 
   if (title) title.textContent = titleText;
 
-  // 順位算出（国内リーグ所属クラブのみ順位表示）
-  const sortedClubs = [...gameState.clubs].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-  const myRank = sortedClubs.findIndex(c => c.id === playerClub.id) + 1;
-  const oppRank = sortedClubs.findIndex(c => c.id === oppClub.id) + 1;
+  // 順位算出（国内1部・2部リーグ所属クラブの順位表示）
+  const d1Sorted = [...(gameState.clubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0));
+  const d2Clubs = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
+    ? gameState.competitions.championship.clubs
+    : [];
+  const d2Sorted = [...d2Clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0));
+
+  const findLeagueRankInfo = (clubObj) => {
+    if (!clubObj) return { rank: 0, divLabel: '' };
+    const idx1 = d1Sorted.findIndex(c => c && c.id === clubObj.id);
+    if (idx1 !== -1) return { rank: idx1 + 1, divLabel: 'ENG-D1' };
+    const idx2 = d2Sorted.findIndex(c => c && c.id === clubObj.id);
+    if (idx2 !== -1) return { rank: idx2 + 1, divLabel: 'ENG-D2' };
+    return { rank: 0, divLabel: '' };
+  };
+  const myRankInfo = findLeagueRankInfo(playerClub);
+  const oppRankInfo = findLeagueRankInfo(oppClub);
 
   // 戦術情報
   const tacticKey = oppClub.defaultTactic || oppClub.tactic || 'possession';
@@ -14605,9 +15462,11 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
     `;
   }).join('');
 
-  const myMetaText = myRank > 0 ? `現在 ${myRank}位 (${playerClub.pts || 0}pt)` : `OVR ${playerClub.avgOvr || '-'}`;
-  const oppMetaText = oppRank > 0
-    ? `現在 ${oppRank}位 (${oppClub.pts || 0}pt)`
+  const myMetaText = myRankInfo.rank > 0
+    ? `${myRankInfo.divLabel !== oppRankInfo.divLabel && myRankInfo.divLabel ? `${myRankInfo.divLabel} ` : ''}現在 ${myRankInfo.rank}位 (${playerClub.pts || 0}pt)`
+    : `OVR ${playerClub.avgOvr || '-'}`;
+  const oppMetaText = oppRankInfo.rank > 0
+    ? `${myRankInfo.divLabel !== oppRankInfo.divLabel && oppRankInfo.divLabel ? `${oppRankInfo.divLabel} ` : ''}現在 ${oppRankInfo.rank}位 (${oppClub.pts || 0}pt)`
     : `${oppClub.leagueName || oppClub.country || '海外クラブ'} (OVR ${oppClub.avgOvr || avgOvr})`;
   const homeTeamIsPlayer = (match && match.homeId) ? (match.homeId === playerClub.id) : isHome;
   const awayTeamIsPlayer = !homeTeamIsPlayer;
@@ -14968,11 +15827,82 @@ function handleBoardRelegationRestart(newClubId) {
   const nextClub = allClubs.find(c => c && c.id === newClubId);
   if (!nextClub) return;
 
+  const wasD2 = isPlayerInSecondDivision();
   allClubs.forEach(c => { if (c) c.isPlayer = (c.id === nextClub.id); });
   gameState.selectedClubId = nextClub.id;
-  gameState.playerDivision = (nextClub.division === 'd2' || nextClub.tier === 'D2') ? 'd2' : 'd1';
+
+  const d2Comp = gameState.competitions && gameState.competitions.championship;
+  const d2Clubs = (d2Comp && Array.isArray(d2Comp.clubs)) ? d2Comp.clubs : [];
+  const isNextD2 = d2Clubs.some(c => c && c.id === nextClub.id);
+  nextClub.division = isNextD2 ? 'd2' : 'd1';
+  gameState.playerDivision = nextClub.division;
+  gameState.selectedLeagueDivision = nextClub.division;
   nextClub.boardConfidence = 75;
   gameState.pendingBoardCrisis = false;
+
+  if (wasD2 !== isNextD2 && Array.isArray(gameState.calendar)) {
+    if (isNextD2 && d2Comp) {
+      d2Clubs.forEach(c => {
+        if (typeof ensurePlayableClubStructure === 'function') ensurePlayableClubStructure(c);
+      });
+      if (!Array.isArray(d2Comp.schedule) || d2Comp.schedule.length === 0) {
+        d2Comp.schedule = generateSeasonSchedule(d2Clubs);
+      }
+      gameState.schedule = d2Comp.schedule;
+    } else if (!isNextD2 && Array.isArray(gameState.clubs)) {
+      gameState.schedule = generateSeasonSchedule(gameState.clubs);
+    }
+
+    const totalWeeks = Array.isArray(gameState.schedule) ? gameState.schedule.length : (isNextD2 ? 46 : 38);
+    const completedWeeks = Math.min(totalWeeks, Math.max(0, nextClub.played || 0));
+    for (let wIdx = 0; wIdx < completedWeeks && wIdx < gameState.schedule.length; wIdx++) {
+      (gameState.schedule[wIdx] || []).forEach(m => { if (m) m.played = true; });
+    }
+    gameState.totalWeeks = totalWeeks;
+    gameState.currentWeek = completedWeeks;
+
+    // 現在日以降の未消化リーグ日程をクリアし、残り節をシーズン末までに均等再配置する
+    const startIdx = Math.max(0, (gameState.currentDayIndex || 0) + 1);
+    for (let i = startIdx; i < gameState.calendar.length; i++) {
+      const d = gameState.calendar[i];
+      if (d && d.isMatchDay && !d.played) {
+        d.isMatchDay = false;
+        d.matchWeek = null;
+        d.matchFixture = null;
+      }
+    }
+    const remWeeks = [];
+    for (let w = completedWeeks + 1; w <= totalWeeks; w++) remWeeks.push(w);
+    if (remWeeks.length > 0) {
+      const endIdx = Math.max(startIdx, gameState.calendar.length - 7);
+      let candidateDays = [];
+      for (let i = startIdx; i <= endIdx; i++) {
+        const d = gameState.calendar[i];
+        if (d && !d.isCupMatchDay && !d.isMatchDay && (d.dayOfWeek === 6 || d.dayOfWeek === 0 || d.dayOfWeek === 3)) {
+          candidateDays.push(i);
+        }
+      }
+      if (candidateDays.length < remWeeks.length) {
+        candidateDays = [];
+        for (let i = startIdx; i < gameState.calendar.length; i++) {
+          const d = gameState.calendar[i];
+          if (d && !d.isCupMatchDay && !d.isMatchDay) candidateDays.push(i);
+        }
+      }
+      const step = candidateDays.length / remWeeks.length;
+      remWeeks.forEach((wNum, idx) => {
+        const dayPos = candidateDays[Math.min(candidateDays.length - 1, Math.floor(idx * step))];
+        const d = gameState.calendar[dayPos];
+        if (d) {
+          d.isMatchDay = true;
+          d.matchWeek = wNum;
+          d.matchFixture = gameState.schedule[wNum - 1] || null;
+          d.played = false;
+        }
+      });
+    }
+  }
+
   addDailyLog(`【新天地就任】${nextClub.name} の新GMに就任し、クラブ再建の指揮を執ることになりました！`);
   showToast(`${nextClub.name} のGMに就任しました！`, 'info');
   markAllViewsDirty();

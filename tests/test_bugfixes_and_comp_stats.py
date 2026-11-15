@@ -56,8 +56,9 @@ class TestBugfixesAndCompStats(unittest.TestCase):
         """出場数の二重加算が排除され、大会別個人スタッツのUI・集計・保存が統合されていること"""
         self.assertIn('id="stats-comp-segment-nav"', self.html)
         self.assertIn('id="stats-comp-subnav-row"', self.html)
-        for comp in ['league', 'domestic', 'europe', 'preseason']:
+        for comp in ['league', 'domestic', 'europe']:
             self.assertIn(f'data-stats-comp="{comp}"', self.html)
+        self.assertNotIn('data-stats-comp="preseason"', self.html)
 
         self.assertIn('function applyOfficialAppearancesAndTraining(', self.main_js)
         self.assertIn('function recordCompetitionPlayerMatchStats(', self.main_js)

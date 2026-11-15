@@ -1,5 +1,27 @@
 # 開発ログ：僕のサッカークラブ（GM）
 
+## 全体デバッグ：実行時エラー、進行ロジック、データ整合性の不具合修正 (fix-comprehensive-debug)
+- **概要**:
+  - **1. 実行時エラー防止・DOM安全化・イベント整理**:
+    - `main.js` において `advanceCalendarDay` 内部に誤ってネスト定義されていた `hasPlayerCupMatchOnDay` をトップレベル関数へ分離し、グローバルスコープ参照とカップ戦/欧州戦の試合日判定を正常化。
+    - `showGmModal`、`renderHeader`、`renderSeasonSettlement`、`renderRoster`、`confirmIntroAndStartGame`、`initGame` などの未ガード `document.getElementById` 参照に null ガードを導入し、要素不在時のクラッシュを防止。
+    - `renderNegotiationModal` 内の入力リスナー重複登録を撤廃して `initGame` 側および `computeNegotiationCashflowWarning` / `refreshNegCashflowWarning` へ集約し、タブの重複 `touchend` 登録を削除、各モーダルの `setBodyModalLock` 制御および交渉モーダル終了時の背面プロフィール再描画（スクロール位置維持）を統一。
+  - **2. 大会・日程・試合進行・シーズン移行ロジックの修正**:
+    - `simQuickMatch` / `simKnockoutMatch` に `prepareClubLineupForQuickMatch` および正本クラブ解決（`resolveCanonicalClubForKnockout`）を導入し、ノックアウト戦・クイック試合での編成と対戦ペア生成（`createKnockoutPairMatch` / `shuffleArrayInPlace`）を整頓。
+    - `setupNewGame` の1部クラブ生成時および `ensureClubRealismFields` に `basePower` の設定・後方互換補完を追加し、PK戦勝率やクラブ戦力評価の固定値フォールバックを解消。
+    - `match-engine.js`（`playCurrentCupMatchday` の欧州POログおよび `buildMatchSummaryHtml`）において、アウェイ戦でのPKスコア逆転表記およびノックアウト戦結果ピルの色判定を是正。
+    - 2部（全46節）プレイ時の `renderSeasonSchedule`（最終節月ヘッダーの動的判定 `isFinalWeekMonth` および総節数表示）・`updateScheduleSummaryBadges`・`renderFixtureScoutingModal`（2部順位参照とラベル表示）における `38節` ハードコードおよび「海外クラブ」誤表示を修正。
+    - `advanceCalendarDay` の `processSeasonEnd(Boolean(skipRender))` 伝播とセーブ処理の不整合を修正。
+  - **3. 移籍・契約・財政・育成・指導陣整合性の修正**:
+    - 移籍交渉の頭金基準判定（`getTransferUpfrontAmount`）、売却時のセルオン分配（`applySellOnRightsOnSale`）、売却・解雇・事前合意離脱時の最低実働11名＆GK最低1名保護（`validateCpuSellerDeparture` / `validatePlayerDeparture`）、重複受信オファーの自動キャンセル（`cancelOtherIncomingOffersForPlayer`）および共通売却確定（`completeIncomingSaleToBuyer`）を整備。
+    - 解雇・契約延長時の週給（`wage`）同期、レンタル・事前合意流出確定選手の契約満了警告対象除外とオフシーズン返却処理（欧州コンペクラブ・`euroTransferList` 含む）を修正。
+    - `processSeasonEnd` に全クラブおよびフリープールの監督・コーチ加齢、監督 `contractYears` 減算・CPU契約更新/交代（`ageAndRenewCoachingStaffAtSeasonEnd`）、プレイヤー監督契約延長機能（`extendPlayerManagerContract`）と契約満了時違約金 £0 化（`getManagerBuyoutFee`）を追加。
+    - `changeStarterAssignedPos` のフォーメーション外変更・無効上書きを防止し、ユース昇格候補UI（`#youth-candidates-panel` 等）の整理と編成整合を実施。
+  - **4. セーブ・ロード互換性およびテスト整合**:
+    - `storage.js` の欧州カップ状態保存キー（`selectedEuroCup` / `selectedEuroSubtab`、旧キーフォールバック付き）修正、`slimPool` における進行中オファー・獲得候補・スカウト・事前合意選手の保護、2部所属時の個人記録参照および過去試合サマリー（`openPastMatchSummaryModal`）の選手一覧補完を追加。
+    - `models.js` の `getSafeTransferBudget` における来季昇降格予定を踏まえたディビジョン判定を適正化し、現行UI・仕様に追従していなかった既存単体テストの検証条件を更新。
+- **変更ファイル**: `index.html`, `style.css`, `models.js`, `competitions.js`, `match-engine.js`, `storage.js`, `main.js`, `tests/test_balance_and_tactics.py`, `tests/test_bugfixes_and_comp_stats.py`, `tests/test_club_naming_and_migration.py`, `tests/test_managers_and_youth_scouting.py`, `tests/test_phase1.py`, `DEVLOG.md`
+
 ## バグ修正＆大会別個人スタッツ集計機能の実装 (fix-match-stats-and-comp-rankings)
 - **概要**:
   - **1. 枠内シュート数が総シュート数を上回る不具合の修正**:
