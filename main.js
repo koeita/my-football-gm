@@ -667,6 +667,15 @@ function isTodayMatchDayPending() {
 }
 
 /**
+ * 現在のカレンダー日以降（当日含む）に未消化のカップ戦・欧州コンペが残っているか判定
+ */
+function hasRemainingCupMatches() {
+  if (!Array.isArray(gameState.calendar)) return false;
+  const curIdx = Math.max(0, gameState.currentDayIndex || 0);
+  return gameState.calendar.some((d, idx) => idx >= curIdx && d && d.isCupMatchDay && !d.played);
+}
+
+/**
  * 日々の進行ミニログを追加（直近5件を保持）
  */
 function addDailyLog(message) {
@@ -729,8 +738,8 @@ function advanceCalendarDay(skipRender = false) {
   gameState.currentDayIndex++;
   const nextDay = getCurrentCalendarDay();
 
-  // シーズンカレンダーの終了判定
-  if (!nextDay || gameState.currentDayIndex >= gameState.calendar.length || gameState.currentWeek >= gameState.totalWeeks) {
+  // シーズンカレンダーの終了判定（リーグ戦全節完了 かつ 残りのカップ戦・欧州コンペ完了時のみ終了）
+  if (!nextDay || gameState.currentDayIndex >= gameState.calendar.length || (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches())) {
     stopAdvancingCalendar();
     if (!gameState.isSeasonOver) {
       processSeasonEnd(true);
@@ -936,6 +945,14 @@ function advanceCalendarDay(skipRender = false) {
     if (!skipRender) {
       renderAll();
     }
+    return true;
+  }
+
+  // リーグ全節終了後に残っていた最後のカップ戦日（自クラブ不出場）を消化完了した場合
+  if (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches() && !gameState.isSeasonOver) {
+    stopAdvancingCalendar();
+    processSeasonEnd(true);
+    if (!skipRender) renderAll();
     return true;
   }
 

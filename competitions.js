@@ -1793,22 +1793,31 @@ function renderCupBracketHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.rounds) return '<p class="empty-state">大会データがありません</p>';
 
-  const roundNames = {
-    R32: '1回戦 / ベスト32',
-    R16: '2回戦 / ベスト16',
-    QF: '準々決勝',
-    SF: '準決勝',
-    FINAL: '決勝'
-  };
+  const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
+  const roundNames = isEuroComp
+    ? {
+        R16: '1回戦 / ベスト16',
+        QF: '準々決勝',
+        SF: '準決勝',
+        FINAL: '決勝'
+      }
+    : {
+        R32: '1回戦 / ベスト32',
+        R16: '2回戦 / ベスト16',
+        QF: '準々決勝',
+        SF: '準決勝',
+        FINAL: '決勝'
+      };
 
   let html = `<div class="cup-bracket-container">
     <div class="bracket-rounds-wrapper">
   `;
 
-  const keys = ['R32', 'R16', 'QF', 'SF', 'FINAL'];
+  const keys = isEuroComp ? ['R16', 'QF', 'SF', 'FINAL'] : ['R32', 'R16', 'QF', 'SF', 'FINAL'];
   keys.forEach(rk => {
     const matches = comp.rounds[rk] || [];
-    if (matches.length === 0 && rk !== 'R32' && rk !== 'R16' && (!comp.rounds[keys[keys.indexOf(rk) - 1]] || comp.rounds[keys[keys.indexOf(rk) - 1]].length === 0)) {
+    const prevKey = keys.indexOf(rk) > 0 ? keys[keys.indexOf(rk) - 1] : null;
+    if (matches.length === 0 && rk !== keys[0] && (!prevKey || !comp.rounds[prevKey] || comp.rounds[prevKey].length === 0)) {
       return;
     }
 
