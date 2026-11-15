@@ -2500,7 +2500,7 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 4px;
 }
 
@@ -7974,7 +7974,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 4px;
 }
 
@@ -8000,9 +8000,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .pitch-node-num {
   flex-shrink: 0;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   line-height: 1.15;
+  color: #cbd5e1;
 }
 
 .pitch-node-name-viewport {
