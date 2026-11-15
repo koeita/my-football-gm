@@ -1532,14 +1532,45 @@ function rehydrateCompetitionsClubRefs() {
   }
 }
 
-// 昇降格処理
-function processPromotionAndRelegation() {
+// 昇降格判定のみ（シーズン終了時はクラブ配列を入れ替えず、最終順位表の整合性を保持する）
+function evaluatePromotionAndRelegation() {
   const p1Sorted = typeof getSortedStandings === 'function' ? getSortedStandings() : [...gameState.clubs].sort((a,b) => (b.pts||0) - (a.pts||0));
   const p2Sorted = [...((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS)]
     .sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
 
   const relegatedClubs = p1Sorted.slice(Math.max(0, p1Sorted.length - 3));
   const promotedClubs = p2Sorted.slice(0, 3);
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : gameState.clubs.find(c => c.isPlayer);
+  const isPlayerRelegated = Boolean(playerClub && relegatedClubs.some(c => c.id === playerClub.id));
+  const isPlayerPromoted = Boolean(playerClub && promotedClubs.some(c => c.id === playerClub.id));
+
+  const result = {
+    relegated: relegatedClubs.map(c => c.name),
+    promoted: promotedClubs.map(c => c.name),
+    relegatedIds: relegatedClubs.map(c => c.id),
+    promotedIds: promotedClubs.map(c => c.id),
+    isPlayerRelegated,
+    isPlayerPromoted
+  };
+
+  gameState.lastPromotionRelegation = result;
+  return result;
+}
+
+// 昇降格処理（新シーズン開幕時に1部・2部のクラブ入れ替えを実行）
+function processPromotionAndRelegation() {
+  const p1Sorted = typeof getSortedStandings === 'function' ? getSortedStandings() : [...gameState.clubs].sort((a,b) => (b.pts||0) - (a.pts||0));
+  const p2Sorted = [...((gameState.competitions && gameState.competitions.championship && gameState.competitions.championship.clubs) || CHAMPIONSHIP_CLUBS_DEFINITIONS)]
+    .sort((a, b) => (b.pts||0) - (a.pts||0) || (b.gd||0) - (a.gd||0) || (b.gf||0) - (a.gf||0));
+
+  const savedRel = gameState.lastPromotionRelegation;
+  const relegatedClubs = (savedRel && Array.isArray(savedRel.relegatedIds) && savedRel.relegatedIds.length === 3)
+    ? p1Sorted.filter(c => savedRel.relegatedIds.includes(c.id))
+    : p1Sorted.slice(Math.max(0, p1Sorted.length - 3));
+  const promotedClubs = (savedRel && Array.isArray(savedRel.promotedIds) && savedRel.promotedIds.length === 3)
+    ? p2Sorted.filter(c => savedRel.promotedIds.includes(c.id))
+    : p2Sorted.slice(0, 3);
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : gameState.clubs.find(c => c.isPlayer);
   const isPlayerRelegated = Boolean(playerClub && relegatedClubs.some(c => c.id === playerClub.id));
@@ -1594,6 +1625,8 @@ function processPromotionAndRelegation() {
   const result = {
     relegated: relegatedClubs.map(c => c.name),
     promoted: promotedClubs.map(c => c.name),
+    relegatedIds: relegatedClubs.map(c => c.id),
+    promotedIds: promotedClubs.map(c => c.id),
     isPlayerRelegated,
     isPlayerPromoted
   };
@@ -1885,6 +1918,7 @@ window.advanceEuroLeaguePhase = advanceEuroLeaguePhase;
 window.finalizeEuroLeaguePhaseToKnockout = finalizeEuroLeaguePhaseToKnockout;
 window.advanceEuroPlayoffRound = advanceEuroPlayoffRound;
 window.finalizeEuroPlayoffToR16 = finalizeEuroPlayoffToR16;
+window.evaluatePromotionAndRelegation = evaluatePromotionAndRelegation;
 window.processPromotionAndRelegation = processPromotionAndRelegation;
 window.ensurePlayableClubStructure = ensurePlayableClubStructure;
 window.rehydrateCompetitionsClubRefs = rehydrateCompetitionsClubRefs;
