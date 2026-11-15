@@ -801,6 +801,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   const comp = gameState.competitions && gameState.competitions[compType];
   if (!comp || !comp.rounds || !comp.rounds[roundKey]) {
     currentDay.played = true;
+    if (gameState.currentWeek >= gameState.totalWeeks && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches())) {
+      processSeasonEnd(skipAnimation);
+      renderAll();
+      return;
+    }
     startAdvancingToNextMatch();
     return;
   }
@@ -814,6 +819,11 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       processCupMatchDay(compType, roundKey);
     }
     currentDay.played = true;
+    if (gameState.currentWeek >= gameState.totalWeeks && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches())) {
+      processSeasonEnd(skipAnimation);
+      renderAll();
+      return;
+    }
     startAdvancingToNextMatch();
     return;
   }
@@ -911,12 +921,20 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     awayScorers
   };
 
+  const canEndSeasonAfterCup = gameState.currentWeek >= gameState.totalWeeks && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
+
   if (skipAnimation) {
+    if (canEndSeasonAfterCup) {
+      processSeasonEnd(true);
+    }
     renderAll();
     return;
   }
 
   openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+    if (canEndSeasonAfterCup) {
+      processSeasonEnd(false);
+    }
     renderAll();
   }, { quickSummary });
 }
@@ -2234,9 +2252,10 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   };
 
   const isFinalWeek = gameState.currentWeek === gameState.totalWeeks;
+  const canEndSeasonNow = isFinalWeek && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
 
   if (skipAnimation) {
-    if (isFinalWeek) {
+    if (canEndSeasonNow) {
       processSeasonEnd(true);
     }
     renderAll();
@@ -2245,7 +2264,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
 
   if (playerMatchData) {
     openMatchEventModal(playerMatchData, playerHomeScorers, playerAwayScorers, () => {
-      if (isFinalWeek) {
+      if (canEndSeasonNow) {
         processSeasonEnd(false);
       } else {
         checkPostMatchEvents();
@@ -2253,7 +2272,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
       renderAll();
     }, { quickSummary });
   } else {
-    if (isFinalWeek) {
+    if (canEndSeasonNow) {
       processSeasonEnd(false);
     } else {
       checkPostMatchEvents();
