@@ -1984,18 +1984,18 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
   });
 
   const sLv = Math.max(1, scoutingLv);
-  const targetCount = 28 + (sLv - 1) * 5;
-  // 欧州定義クラブの basePower (69〜86) はチームOVRスケールのため、createPlayer 内部基準 (-10) に変換
-  const maxGenPower = Math.min(77, 71 + (sLv - 1) * 2);
-  const maxEuroOvrCap = Math.min(88, 83 + (sLv - 1) * 2);
+  const targetCount = 50 + (sLv - 1) * 10;
+  // 欧州主要クラブ（ESP/ITA/GER/FRA等）からクラブ実力相応の主力〜スター候補も市場に流通させる
+  const maxGenPower = Math.min(84, 78 + (sLv - 1) * 2);
+  const maxEuroOvrCap = Math.min(90, 85 + (sLv - 1));
 
   const euroList = [...preservedPreContracts];
   for (let i = 0; i < targetCount; i++) {
     const clubDef = euroClubs[randInt(0, euroClubs.length - 1)];
     const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
     const clubTeamOvr = clubDef.basePower || 76;
-    const rawGenPower = clamp(clubTeamOvr - 10 + randInt(-2, 2), 58, maxGenPower);
-    const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 81 : 77));
+    const rawGenPower = clamp(clubTeamOvr - 6 + randInt(-4, 3), 62, maxGenPower);
+    const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 84 : 79));
     const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && clubDef.country) ? COUNTRY_CODE_TO_NATIONALITY[clubDef.country] : null;
     const euroNat = mappedNat ? pickWeightedNationality(0.60, mappedNat) : null;
     const isEuroStarter = rawGenPower >= 72 || i < 14;

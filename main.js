@@ -7917,7 +7917,9 @@ function renderMarket() {
 
   const outgoingList = gameState.outgoingOffers || [];
   const activeScouts = gameState.activeScoutAssignments || [];
-  tbody.innerHTML = filtered.slice(0, 120).map(entry => {
+  const displayLimit = Math.max(120, mf.displayLimit || 120);
+  const displayedEntries = filtered.slice(0, displayLimit);
+  let rowsHtml = displayedEntries.map(entry => {
     const p = entry.player;
     const c = entry.club;
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
@@ -7991,6 +7993,23 @@ function renderMarket() {
       </tr>
     `;
   }).join('');
+  if (filtered.length > displayLimit) {
+    rowsHtml += `
+      <tr class="market-load-more-row">
+        <td colspan="10" style="text-align: center; padding: 12px 0;">
+          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-market-load-more">さらに表示 (+120名 / 残り ${filtered.length - displayLimit}名)</button>
+        </td>
+      </tr>
+    `;
+  }
+  tbody.innerHTML = rowsHtml;
+  const loadMoreBtn = document.getElementById('btn-market-load-more');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+      mf.displayLimit = displayLimit + 120;
+      renderMarket();
+    });
+  }
   if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(tbody);
 }
 
@@ -12122,12 +12141,17 @@ function initGame() {
   const marketFilterSort = document.getElementById('market-filter-sort');
   const marketFilterSearch = document.getElementById('market-filter-search');
 
+  const resetMarketAndRender = () => {
+    gameState.marketFilter.displayLimit = 120;
+    renderMarket();
+  };
+
   if (marketFilterCategory) {
     marketFilterCategory.addEventListener('change', (e) => {
       gameState.marketFilter.category = e.target.value;
       gameState.marketFilter.clubId = 'ALL';
       gameState.marketFilter.club = 'ALL';
-      renderMarket();
+      resetMarketAndRender();
     });
   }
 
@@ -12135,28 +12159,28 @@ function initGame() {
     marketFilterClub.addEventListener('change', (e) => {
       gameState.marketFilter.clubId = e.target.value;
       gameState.marketFilter.club = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterPos) {
     marketFilterPos.addEventListener('change', (e) => {
       gameState.marketFilter.position = e.target.value;
       gameState.marketFilter.pos = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterSort) {
     marketFilterSort.addEventListener('change', (e) => {
       gameState.marketFilter.sortKey = e.target.value;
       gameState.marketFilter.sort = e.target.value;
-      renderMarket();
+      resetMarketAndRender();
     });
   }
   if (marketFilterSearch) {
     marketFilterSearch.addEventListener('input', (e) => {
       gameState.marketFilter.searchQuery = e.target.value.trim().toLowerCase();
       gameState.marketFilter.search = e.target.value.trim().toLowerCase();
-      renderMarket();
+      resetMarketAndRender();
     });
   }
 
@@ -12184,7 +12208,7 @@ function initGame() {
         gameState.marketFilter.sortKey = nextSort;
         gameState.marketFilter.sort = nextSort;
         if (marketFilterSort) marketFilterSort.value = nextSort;
-        renderMarket();
+        resetMarketAndRender();
       }
     });
   }
