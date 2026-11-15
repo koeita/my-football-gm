@@ -1197,13 +1197,21 @@ function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 7
   const isProdigy = isStarter && approxPower >= 78 && age <= 19;
   const activeYears = isProdigy ? Math.max(1, age - 16) : Math.max(0, age - 18);
   if (activeYears === 0) {
-    const apps = isStarter ? randInt(4, 14) : randInt(0, 6);
-    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, apps > 5 ? 3 : 1) : 0;
+    const apps = isStarter ? randInt(8, 22) : randInt(2, 10);
+    const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, apps > 8 ? 4 : 1) : 0;
     return { appearances: apps, goals };
   }
 
-  const appsPerYear = randInt(16, 32);
-  const totalApps = activeYears * appsPerYear + randInt(0, 12);
+  let appsPerYear = randInt(16, 28);
+  let cupBonus = randInt(0, 4);
+  if (approxPower >= 80 || (isStarter && approxPower >= 74)) {
+    appsPerYear = randInt(28, 38);
+    cupBonus = randInt(2, 8);
+  } else if (approxPower >= 72 || isStarter) {
+    appsPerYear = randInt(22, 34);
+    cupBonus = randInt(1, 6);
+  }
+  const totalApps = activeYears * appsPerYear + cupBonus;
 
   let goalRate = 0.03;
   if (pos === 'GK') goalRate = 0;
@@ -1928,7 +1936,8 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 81 : 77));
     const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && clubDef.country) ? COUNTRY_CODE_TO_NATIONALITY[clubDef.country] : null;
     const euroNat = mappedNat ? pickWeightedNationality(0.60, mappedNat) : null;
-    const p = createPlayer(pos, rawGenPower, i < 8, usedNames, [18, 32], null, euroNat);
+    const isEuroStarter = rawGenPower >= 72 || i < 14;
+    const p = createPlayer(pos, rawGenPower, isEuroStarter, usedNames, [18, 32], null, euroNat);
     p.squadNumber = randInt(2, 30);
     p.contractYears = (i % 4 === 0) ? 1 : randInt(1, 4);
     p.isFreeAgent = false;
@@ -1936,12 +1945,61 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     p.euroClubId = clubDef.id;
     p.clubId = clubDef.id;
     capGeneratedPlayerOvr(p, clubOvrCap);
+    // 現在のシーズン進行度に応じた自国リーグ・カップ出場数を反映
+    const curW = (typeof gameState !== 'undefined' && typeof gameState.currentWeek === 'number') ? gameState.currentWeek : 0;
+    if (curW > 0) {
+      const pOvr = getPlayerOverallRating(p);
+      const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
+      const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
+      const gRate = pos === 'CF' ? 0.40 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['CM', 'LM', 'RM', 'SM'].includes(pos) ? 0.11 : (pos === 'GK' ? 0 : 0.04))));
+      const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
+      const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
+      const estAssists = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * aRate * (0.75 + Math.random() * 0.5)));
+      const avgRt = clamp(6.5 + (pOvr - 68) * 0.038, 6.2, 7.9);
+      p.appearances = estApps;
+      p.goals = estGoals;
+      p.assists = estAssists;
+      p.totalRating = Number((estApps * avgRt).toFixed(2));
+      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+      p.careerStats.appearances = (p.careerStats.appearances || 0) + estApps;
+      p.careerStats.goals = (p.careerStats.goals || 0) + estGoals;
+      p.careerStats.assists = (p.careerStats.assists || 0) + estAssists;
+    }
     p.transferFee = calculateTransferFee(p);
     euroList.push(p);
   }
 
   euroList.sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
   gameState.euroTransferList = euroList;
+}
+
+/**
+ * 欧州4大リーグ移籍リスト選手の自国リーグ出場数を週次で自然進行させる
+ */
+function advanceEuropeanTransferListMatchweek() {
+  if (typeof gameState === 'undefined' || !Array.isArray(gameState.euroTransferList)) return;
+  for (const p of gameState.euroTransferList) {
+    if (!p || p.isRetired) continue;
+    const ovr = getPlayerOverallRating(p);
+    const playProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
+    if (Math.random() > playProb) continue;
+
+    const pos = p.primaryPosition || p.pos || 'CM';
+    const gProb = pos === 'CF' ? 0.40 : (['LW', 'RW', 'WG'].includes(pos) ? 0.27 : (pos === 'AM' ? 0.20 : (['CM', 'LM', 'RM', 'SM'].includes(pos) ? 0.10 : (pos === 'GK' ? 0 : 0.03))));
+    const aProb = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.12 : 0.05)));
+    const g = (pos !== 'GK' && Math.random() < gProb) ? 1 : 0;
+    const a = (pos !== 'GK' && Math.random() < aProb) ? 1 : 0;
+    const rt = clamp(6.3 + (ovr - 68) * 0.035 + (g * 0.65) + (a * 0.4) + (Math.random() * 0.8 - 0.35), 5.8, 9.2);
+
+    p.appearances = (p.appearances || 0) + 1;
+    p.goals = (p.goals || 0) + g;
+    p.assists = (p.assists || 0) + a;
+    p.totalRating = Number(((p.totalRating || 0) + rt).toFixed(2));
+    if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
+    p.careerStats.goals = (p.careerStats.goals || 0) + g;
+    p.careerStats.assists = (p.careerStats.assists || 0) + a;
+  }
 }
 
 /**

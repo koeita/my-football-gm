@@ -2251,6 +2251,10 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     completed: true
   };
 
+  if (typeof advanceEuropeanTransferListMatchweek === 'function') {
+    advanceEuropeanTransferListMatchweek();
+  }
+
   const isFinalWeek = gameState.currentWeek === gameState.totalWeeks;
   const canEndSeasonNow = isFinalWeek && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
 

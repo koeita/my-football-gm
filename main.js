@@ -8801,6 +8801,15 @@ function findPlayerWithContextById(playerId) {
         const vClub = refDef
           ? { ...refDef, shortCode: refDef.shortName || refDef.shortCode || 'EUR', isPlayer: false, isEuroVirtual: true }
           : { id: entry.clubId || 'ext_club', name: entry.clubName || '海外クラブ', shortName: 'EXT', shortCode: 'EXT', primaryColor: '#1e3a8a', secondaryColor: '#f8fafc', isPlayer: false, isEuroVirtual: true };
+        const curW = typeof gameState.currentWeek === 'number' ? gameState.currentWeek : 0;
+        const domApps = curW > 0 ? Math.max(0, Math.round(curW * (basePow >= 80 ? 0.86 : 0.76))) : 0;
+        const domPos = entry.pos || 'MF';
+        const domGRate = domPos === 'CF' ? 0.38 : (['LW', 'RW', 'WG'].includes(domPos) ? 0.26 : (domPos === 'AM' ? 0.20 : (['CM', 'LM', 'RM', 'SM'].includes(domPos) ? 0.10 : (domPos === 'GK' ? 0 : 0.04))));
+        const domARate = domPos === 'GK' ? 0 : (domPos === 'AM' ? 0.20 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(domPos) ? 0.16 : 0.10));
+        const domGoals = domPos === 'GK' ? 0 : Math.round(domApps * domGRate);
+        const domAssists = domPos === 'GK' ? 0 : Math.round(domApps * domARate);
+        const totalApps = (entry.apps || 0) + domApps;
+        const avgRt = clamp(6.6 + (basePow - 72) * 0.035, 6.4, 7.8);
         const vPlayer = {
           id: entry.id,
           name: entry.name,
@@ -8817,11 +8826,11 @@ function findPlayerWithContextById(playerId) {
           salary: 3500,
           wage: 68,
           contractYears: 3,
-          appearances: entry.apps || 0,
-          goals: entry.goals || 0,
-          assists: entry.assists || 0,
-          totalRating: entry.totalRating || 0,
-          cleanSheets: entry.cleanSheets || 0,
+          appearances: totalApps,
+          goals: (entry.goals || 0) + domGoals,
+          assists: (entry.assists || 0) + domAssists,
+          totalRating: (entry.totalRating || 0) + Number((domApps * avgRt).toFixed(2)),
+          cleanSheets: (entry.cleanSheets || 0) + (domPos === 'GK' ? Math.round(domApps * 0.36) : 0),
           momCount: entry.momCount || 0,
           yellowCards: entry.yellowCards || 0,
           redCards: entry.redCards || 0,
@@ -9053,8 +9062,9 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: rawCareerGoals, assists: 0 };
 
     let totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
-    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * 8) {
-      const minExpectedPastApps = pastSeasonsCount * (12 + (absHash % 10));
+    const minAppsPerYear = baseOvr >= 82 ? 30 : (baseOvr >= 75 ? 25 : (baseOvr >= 68 ? 20 : 14));
+    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * Math.max(12, minAppsPerYear - 5)) {
+      const minExpectedPastApps = pastSeasonsCount * (minAppsPerYear + (absHash % 9));
       totalPastApps = minExpectedPastApps;
       p.careerStats.appearances = totalPastApps + (p.appearances || 0);
     }
@@ -9167,7 +9177,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const isLast = (i === pastSeasonsCount - 1);
 
         let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
-        apps = clamp(apps, 1, Math.min(38, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
+        apps = clamp(apps, 1, Math.min(42, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
         remApps = Math.max(0, remApps - apps);
 
         let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
