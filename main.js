@@ -5011,7 +5011,7 @@ function startNextSeason() {
           const ovr = getPlayerOverallRating(p);
           const pos = p.primaryPosition || p.pos || 'CM';
           histApps = randInt(16, 30);
-          const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+          const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (pos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM', 'MF'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055)))))));
           const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
           histGoals = pos === 'GK' ? 0 : Math.round(histApps * gRate);
           histAssists = pos === 'GK' ? 0 : Math.round(histApps * aRate);
@@ -5070,7 +5070,7 @@ function startNextSeason() {
         const ovr = getPlayerOverallRating(fp);
         const pos = fp.primaryPosition || fp.pos || 'CM';
         const estApps = randInt(14, 28);
-        const gRate = pos === 'CF' ? 0.35 : (['LW', 'RW', 'AM'].includes(pos) ? 0.22 : (pos === 'GK' ? 0 : 0.08));
+        const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (pos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM', 'MF'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055)))))));
         const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.18 : 0.08);
         const estGoals = pos === 'GK' ? 0 : Math.round(estApps * gRate);
         const estAssists = pos === 'GK' ? 0 : Math.round(estApps * aRate);
@@ -8804,7 +8804,7 @@ function findPlayerWithContextById(playerId) {
         const curW = typeof gameState.currentWeek === 'number' ? gameState.currentWeek : 0;
         const domApps = curW > 0 ? Math.max(0, Math.round(curW * (basePow >= 80 ? 0.86 : 0.76))) : 0;
         const domPos = entry.pos || 'MF';
-        const domGRate = domPos === 'CF' ? 0.38 : (['LW', 'RW', 'WG'].includes(domPos) ? 0.26 : (domPos === 'AM' ? 0.20 : (['CM', 'LM', 'RM', 'SM'].includes(domPos) ? 0.10 : (domPos === 'GK' ? 0 : 0.04))));
+        const domGRate = (domPos === 'CF' || domPos === 'ST') ? 0.42 : (domPos === 'FW' ? 0.34 : (['LW', 'RW', 'WG'].includes(domPos) ? 0.28 : (domPos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(domPos) ? 0.13 : (domPos === 'CM' || domPos === 'MF' ? 0.10 : (domPos === 'DM' ? 0.06 : (domPos === 'GK' ? 0 : 0.055)))))));
         const domARate = domPos === 'GK' ? 0 : (domPos === 'AM' ? 0.20 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(domPos) ? 0.16 : 0.10));
         const domGoals = domPos === 'GK' ? 0 : Math.round(domApps * domGRate);
         const domAssists = domPos === 'GK' ? 0 : Math.round(domApps * domARate);
@@ -9056,6 +9056,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     }
 
     const history = [];
+    const hadCareerStats = Boolean(p.careerStats && typeof p.careerStats.goals === 'number');
     const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
     const rawCareerGoals = p.careerStats ? Math.max(p.goals || 0, p.careerStats.goals || 0) : (p.goals || 0);
 
@@ -9070,17 +9071,17 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     }
 
     let totalPastGoals = Math.max(0, rawCareerGoals - (p.goals || 0));
-    if (pastSeasonsCount > 0 && rawCareerGoals === 0 && primaryPos !== 'GK') {
-      let gRate = 0.04;
-      if (primaryPos === 'CB') gRate = 0.04;
-      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') gRate = 0.04;
-      else if (primaryPos === 'DM') gRate = 0.05;
+    if (pastSeasonsCount > 0 && primaryPos !== 'GK' && (!hadCareerStats || (totalPastGoals === 0 && (pastSeasonsCount >= 2 || totalPastApps >= 18)))) {
+      let gRate = 0.055;
+      if (primaryPos === 'CB' || primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB' || primaryPos === 'LWB' || primaryPos === 'RWB' || primaryPos === 'DF') gRate = 0.055;
+      else if (primaryPos === 'DM') gRate = 0.06;
       else if (primaryPos === 'CM') gRate = 0.10;
-      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') gRate = 0.14;
-      else if (primaryPos === 'AM') gRate = 0.20;
-      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.24;
-      else if (primaryPos === 'CF') gRate = 0.38;
-      const jitterG = 0.75 + ((absHash % 13) / 25);
+      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM' || primaryPos === 'MF') gRate = 0.13;
+      else if (primaryPos === 'AM') gRate = 0.22;
+      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.28;
+      else if (primaryPos === 'CF' || primaryPos === 'ST') gRate = baseOvr >= 80 ? 0.45 : 0.42;
+      else if (primaryPos === 'FW') gRate = 0.34;
+      const jitterG = 0.78 + ((absHash % 13) / 25);
       totalPastGoals = Math.max(0, Math.round(totalPastApps * gRate * jitterG));
       p.careerStats.goals = totalPastGoals + (p.goals || 0);
     }
@@ -9089,14 +9090,14 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     if (typeof p.careerStats.assists !== 'number' || (pastSeasonsCount > 0 && p.careerStats.assists === 0 && primaryPos !== 'GK')) {
       let aRate = 0.02;
       if (primaryPos === 'GK') aRate = 0;
-      else if (primaryPos === 'CB') aRate = 0.02;
-      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB') aRate = 0.08;
+      else if (primaryPos === 'CB' || primaryPos === 'DF') aRate = 0.02;
+      else if (primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB' || primaryPos === 'LWB' || primaryPos === 'RWB') aRate = 0.08;
       else if (primaryPos === 'DM') aRate = 0.06;
-      else if (primaryPos === 'CM') aRate = 0.12;
+      else if (primaryPos === 'CM' || primaryPos === 'MF') aRate = 0.12;
       else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM') aRate = 0.16;
       else if (primaryPos === 'AM') aRate = 0.20;
       else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') aRate = 0.18;
-      else if (primaryPos === 'CF') aRate = 0.10;
+      else if (primaryPos === 'CF' || primaryPos === 'ST' || primaryPos === 'FW') aRate = 0.10;
       const jitterA = 0.8 + ((absHash % 17) / 40);
       p.careerStats.assists = primaryPos === 'GK' ? 0 : Math.max(0, Math.round((totalPastApps + (p.appearances || 0)) * aRate * jitterA));
     }
@@ -9156,7 +9157,8 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const maturity = ageAtSeason <= 19 ? 0.55 : (ageAtSeason <= 21 ? 0.82 : 1.0);
         const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
         const aw = maturity * jitter;
-        const gw = maturity * (0.8 + (((absHash >> ((i + 3) % 8)) & 7) / 20));
+        const seasonSeed = (absHash ^ Math.imul(i + 1, 2654435761)) >>> 0;
+        const gw = maturity * (0.60 + ((seasonSeed % 17) / 20));
         const astw = maturity * (0.8 + (((absHash >> ((i + 5) % 8)) & 7) / 20));
         appWeights.push(aw);
         goalWeights.push(gw);

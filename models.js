@@ -1213,18 +1213,19 @@ function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 7
   }
   const totalApps = activeYears * appsPerYear + cupBonus;
 
-  let goalRate = 0.03;
+  let goalRate = 0.055;
   if (pos === 'GK') goalRate = 0;
-  else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB') goalRate = 0.04;
+  else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB' || pos === 'LWB' || pos === 'RWB') goalRate = 0.055;
   else if (pos === 'DM') goalRate = 0.06;
-  else if (pos === 'CM' || pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.12;
+  else if (pos === 'CM') goalRate = 0.10;
+  else if (pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.13;
   else if (pos === 'AM') goalRate = 0.22;
   else if (pos === 'LW' || pos === 'RW' || pos === 'WG') goalRate = 0.28;
-  else if (pos === 'CF') goalRate = 0.42;
+  else if (pos === 'CF' || pos === 'ST') goalRate = approxPower >= 80 ? 0.45 : 0.42;
 
   const totalGoals = pos === 'GK'
     ? 0
-    : Math.max(0, Math.round(totalApps * goalRate * (0.75 + Math.random() * 0.5)));
+    : Math.max(0, Math.round(totalApps * goalRate * (0.85 + Math.random() * 0.4)));
 
   let assistRate = 0.02;
   if (pos === 'GK') assistRate = 0;
@@ -1951,7 +1952,7 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
       const pOvr = getPlayerOverallRating(p);
       const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
       const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
-      const gRate = pos === 'CF' ? 0.40 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['CM', 'LM', 'RM', 'SM'].includes(pos) ? 0.11 : (pos === 'GK' ? 0 : 0.04))));
+      const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
       const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
       const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
       const estAssists = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * aRate * (0.75 + Math.random() * 0.5)));
@@ -1985,7 +1986,7 @@ function advanceEuropeanTransferListMatchweek() {
     if (Math.random() > playProb) continue;
 
     const pos = p.primaryPosition || p.pos || 'CM';
-    const gProb = pos === 'CF' ? 0.40 : (['LW', 'RW', 'WG'].includes(pos) ? 0.27 : (pos === 'AM' ? 0.20 : (['CM', 'LM', 'RM', 'SM'].includes(pos) ? 0.10 : (pos === 'GK' ? 0 : 0.03))));
+    const gProb = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
     const aProb = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.12 : 0.05)));
     const g = (pos !== 'GK' && Math.random() < gProb) ? 1 : 0;
     const a = (pos !== 'GK' && Math.random() < aProb) ? 1 : 0;
