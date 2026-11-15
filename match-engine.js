@@ -3953,6 +3953,9 @@ function openMatchPrecheckModal() {
  * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
  */
 function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, options = {}) {
+  if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') {
+    saveGameToStorage(false);
+  }
   clearMatchLiveTimers();
   gameState.isSimulating = true;
 

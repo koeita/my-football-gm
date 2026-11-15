@@ -7,6 +7,107 @@
 const SAVE_STORAGE_KEY = 'my_football_gm_save_v1';
 const RECORDS_STORAGE_KEY = 'my_football_gm_records_v1';
 const SETTINGS_STORAGE_KEY = 'my_football_gm_settings_v1';
+const IDB_DB_NAME = 'my_football_gm_idb_v1';
+const IDB_STORE_NAME = 'saves';
+
+let __idbCachedSave = null;
+let __idbHydratePromise = null;
+
+function openSaveIdb() {
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof indexedDB === 'undefined') {
+        reject(new Error('IndexedDB unavailable'));
+        return;
+      }
+      const req = indexedDB.open(IDB_DB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
+          db.createObjectStore(IDB_STORE_NAME);
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = (e) => reject(e.target.error || new Error('IDB open error'));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function writeSaveToIndexedDB(payload) {
+  try {
+    const cloned = JSON.parse(JSON.stringify(payload));
+    __idbCachedSave = cloned;
+    return openSaveIdb().then(db => new Promise((resolve) => {
+      try {
+        const tx = db.transaction(IDB_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(IDB_STORE_NAME);
+        store.put(cloned, SAVE_STORAGE_KEY);
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = () => { db.close(); resolve(false); };
+        tx.onabort = () => { db.close(); resolve(false); };
+      } catch (e) {
+        try { db.close(); } catch (_) {}
+        resolve(false);
+      }
+    })).catch(() => false);
+  } catch (e) {
+    return Promise.resolve(false);
+  }
+}
+
+function readSaveFromIndexedDB() {
+  return openSaveIdb().then(db => new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE_NAME, 'readonly');
+      const store = tx.objectStore(IDB_STORE_NAME);
+      const req = store.get(SAVE_STORAGE_KEY);
+      req.onsuccess = () => {
+        const res = req.result || null;
+        if (res && res.state && Array.isArray(res.state.clubs)) {
+          __idbCachedSave = res;
+        }
+        db.close();
+        resolve(res);
+      };
+      req.onerror = () => { db.close(); resolve(null); };
+    } catch (e) {
+      try { db.close(); } catch (_) {}
+      resolve(null);
+    }
+  })).catch(() => null);
+}
+
+function deleteSaveFromIndexedDB() {
+  __idbCachedSave = null;
+  return openSaveIdb().then(db => new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE_NAME, 'readwrite');
+      tx.objectStore(IDB_STORE_NAME).delete(SAVE_STORAGE_KEY);
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = () => { db.close(); resolve(false); };
+    } catch (e) {
+      try { db.close(); } catch (_) {}
+      resolve(false);
+    }
+  })).catch(() => false);
+}
+
+function hydrateSaveFromIndexedDBAsync() {
+  if (__idbHydratePromise) return __idbHydratePromise;
+  __idbHydratePromise = readSaveFromIndexedDB().then((idbData) => {
+    __idbHydratePromise = null;
+    if (idbData && typeof updateContinueButtonUI === 'function') {
+      updateContinueButtonUI();
+    }
+    return idbData;
+  }).catch(() => {
+    __idbHydratePromise = null;
+    return null;
+  });
+  return __idbHydratePromise;
+}
 
 const appSettings = {
   soundVolume: 70,
@@ -234,13 +335,17 @@ function saveGameToStorage(force = false) {
     }
 
     requestPersistentStorageOnce();
+    // モバイルブラウザでの容量制限・消失対策としてIndexedDBにもデュアル保存
+    writeSaveToIndexedDB(payload);
 
     const tryWritePayload = (obj) => {
       localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(obj));
     };
 
+    let localStorageSaved = false;
     try {
       tryWritePayload(payload);
+      localStorageSaved = true;
     } catch (storageErr) {
       const isQuotaErr = storageErr && (
         storageErr.name === 'QuotaExceededError'
@@ -261,6 +366,7 @@ function saveGameToStorage(force = false) {
       }
       try {
         tryWritePayload(payload);
+        localStorageSaved = true;
       } catch (err2) {
         // Stage 2: CPU選手の年度履歴・市場価値履歴を圧縮してリトライ
         payload.state.clubs = stripClubPlayerAttrs(gameState.clubs, true);
@@ -279,6 +385,7 @@ function saveGameToStorage(force = false) {
         payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 40);
         try {
           tryWritePayload(payload);
+          localStorageSaved = true;
         } catch (err3) {
           // Stage 3: 最終防衛ライン（履歴・ログ全削除、市場リスト最小化）
           payload.state.matchHistory = [];
@@ -286,13 +393,22 @@ function saveGameToStorage(force = false) {
           payload.state.transferMarket = slimPool(payload.state.transferMarket, 35);
           payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 25);
           payload.state.youthCandidates = slimPool(payload.state.youthCandidates, 15);
-          tryWritePayload(payload);
+          try {
+            tryWritePayload(payload);
+            localStorageSaved = true;
+          } catch (err4) {
+            // localStorageが完全満杯でもIndexedDB側には保存を試みている
+            localStorageSaved = false;
+          }
         }
       }
     }
-    autoSaveDirty = false;
-    updateCareerRecordsFromCurrentState();
-    return true;
+    if (localStorageSaved || __idbCachedSave) {
+      autoSaveDirty = false;
+      updateCareerRecordsFromCurrentState();
+      return true;
+    }
+    return false;
   } catch (e) {
     console.error('[saveGameToStorage] Failed to save game:', e);
     if (!hasShownStorageQuotaWarning && typeof addDailyLog === 'function') {
@@ -306,9 +422,27 @@ function saveGameToStorage(force = false) {
 
 function getSavedGameSummary() {
   try {
-    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    let lsParsed = null;
+    try {
+      const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p && p.state && Array.isArray(p.state.clubs)) {
+          lsParsed = p;
+        }
+      }
+    } catch (e) {}
+
+    const idbParsed = (__idbCachedSave && __idbCachedSave.state && Array.isArray(__idbCachedSave.state.clubs))
+      ? __idbCachedSave
+      : null;
+
+    let parsed = null;
+    if (lsParsed && idbParsed) {
+      parsed = ((idbParsed.savedAt || 0) > (lsParsed.savedAt || 0)) ? idbParsed : lsParsed;
+    } else {
+      parsed = lsParsed || idbParsed;
+    }
     if (!parsed || !parsed.state || !Array.isArray(parsed.state.clubs)) return null;
     const st = parsed.state;
     const d2Clubs = st.competitions && st.competitions.championship && st.competitions.championship.clubs;
@@ -756,6 +890,7 @@ function showMainMenuScreen() {
   if (appEl) appEl.classList.add('app-hidden');
   document.body.classList.add('main-menu-active');
   updateContinueButtonUI();
+  hydrateSaveFromIndexedDBAsync();
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 }
 
@@ -953,6 +1088,7 @@ function closeSettingsModal() {
 
 function initMainMenuAndModals() {
   loadSettingsFromStorage();
+  hydrateSaveFromIndexedDBAsync();
 
   const btnContinue = document.getElementById('btn-menu-continue');
   if (btnContinue) {
@@ -1059,6 +1195,7 @@ function initMainMenuAndModals() {
         localStorage.removeItem(SAVE_STORAGE_KEY);
         localStorage.removeItem(RECORDS_STORAGE_KEY);
       } catch (e) {}
+      deleteSaveFromIndexedDB();
       updateContinueButtonUI();
       closeSettingsModal();
     });
