@@ -827,35 +827,38 @@ function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2, per
 
   let baseVal = 0;
   if (safeOvr < 60) {
-    baseVal = 200 + Math.max(0, safeOvr - 50) * 30; // 200k..500k
+    baseVal = 200 + Math.max(0, safeOvr - 50) * 25; // 200k..425k
   } else if (safeOvr <= 64) {
     const t = (safeOvr - 60) / 4;
-    baseVal = 500 + t * 900; // 500k..1400k (£0.5M〜£1.4M)
+    baseVal = 450 + t * 750; // 450k..1200k (£0.45M〜£1.2M)
   } else if (safeOvr <= 69) {
     const t = (safeOvr - 65) / 4;
-    baseVal = 1500 + t * 2500; // 1500k..4000k (£1.5M〜£4.0M)
+    baseVal = 1300 + t * 1500; // 1300k..2800k (£1.3M〜£2.8M)
   } else if (safeOvr <= 74) {
     const t = (safeOvr - 70) / 4;
-    baseVal = 5000 + t * 10000; // 5000k..15000k (£5.0M〜£15.0M)
+    baseVal = 3000 + t * 6000; // 3000k..9000k (£3.0M〜£9.0M)
   } else if (safeOvr <= 79) {
     const t = (safeOvr - 75) / 4;
-    baseVal = 16000 + t * 19000; // 16000k..35000k (£16.0M〜£35.0M)
+    baseVal = 10500 + t * 11500; // 10500k..22000k (£10.5M〜£22.0M)
   } else if (safeOvr <= 84) {
     const t = (safeOvr - 80) / 4;
-    baseVal = 40000 + t * 35000; // 40000k..75000k (£40.0M〜£75.0M)
+    baseVal = 24000 + t * 22000; // 24000k..46000k (£24.0M〜£46.0M)
+  } else if (safeOvr <= 87) {
+    const t = (safeOvr - 85) / 2;
+    baseVal = 50000 + t * 26000; // 50000k..76000k (£50.0M〜£76.0M)
   } else {
-    // OVR 85以上（ワールドクラス）：£75.0M 〜 £175.0M（年齢・活躍補正込みで最大£250.0M）
-    const extra = Math.min(10, safeOvr - 85); // 85..95
-    const t = extra / 10;
-    baseVal = 75000 + t * 100000; // 75000k..175000k (£75.0M〜£175.0M)
+    // OVR 88以上（ワールドクラス）：£84.0M 〜 £145.0M（年齢・活躍補正込みで£90M超えは世界の一握りに限定）
+    const extra = Math.min(7, safeOvr - 88); // 88..95
+    const t = extra / 7;
+    baseVal = 84000 + t * 61000; // 84000k..145000k (£84.0M〜£145.0M)
   }
 
-  // 年齢補正：若手プレミアムと29歳以降の明確な下落カーブ
+  // 年齢補正：若手プレミアムを過度に膨らませず、29歳以降の明確な下落カーブを維持
   let ageFactor = 1.0;
-  if (safeAge <= 19) ageFactor = 1.35;
-  else if (safeAge <= 21) ageFactor = 1.25;
-  else if (safeAge <= 23) ageFactor = 1.15;
-  else if (safeAge <= 25) ageFactor = 1.06;
+  if (safeAge <= 19) ageFactor = 1.18;
+  else if (safeAge <= 21) ageFactor = 1.12;
+  else if (safeAge <= 23) ageFactor = 1.06;
+  else if (safeAge <= 25) ageFactor = 1.02;
   else if (safeAge <= 28) ageFactor = 1.00;
   else if (safeAge === 29) ageFactor = 0.86;
   else if (safeAge === 30) ageFactor = 0.72;
@@ -872,33 +875,43 @@ function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2, per
   } else if (safeContractYears === 2) {
     contractFactor = 0.98;
   } else if (safeContractYears >= 4) {
-    contractFactor = 1.05;
+    contractFactor = 1.03;
   }
 
-  // 年別成績（出場数・平均評価点・G/A貢献）に基づく活躍度補正
+  // ポジションによる市場相場補正（攻撃陣は高く、守備陣・GKは控えめ）
+  const rawPos = (perfStats && typeof perfStats === 'object' && perfStats.pos) ? String(perfStats.pos).toUpperCase() : '';
+  let posFactor = 1.0;
+  if (rawPos === 'GK') {
+    posFactor = 0.85;
+  } else if (rawPos === 'CB' || rawPos === 'LB' || rawPos === 'RB' || rawPos === 'LWB' || rawPos === 'RWB' || rawPos === 'SB' || rawPos === 'DF') {
+    posFactor = 0.94;
+  } else if (rawPos === 'CF' || rawPos === 'ST' || rawPos === 'LW' || rawPos === 'RW' || rawPos === 'WG' || rawPos === 'AM' || rawPos === 'FW') {
+    posFactor = 1.05;
+  }
+
+  // 年別成績（出場数・平均評価点・G/A貢献）に基づく活躍度補正（上限を抑えてOVR超えの暴騰を防止）
   let perfFactor = 1.0;
   if (perfStats && typeof perfStats === 'object') {
     const apps = typeof perfStats.appearances === 'number' ? perfStats.appearances : null;
     const avgR = typeof perfStats.avgRating === 'number' && !Number.isNaN(perfStats.avgRating) ? perfStats.avgRating : null;
     const goals = typeof perfStats.goals === 'number' ? perfStats.goals : 0;
     const assists = typeof perfStats.assists === 'number' ? perfStats.assists : 0;
-    const pos = perfStats.pos || '';
 
     let mod = 0;
     if (avgR !== null && (apps === null || apps > 0)) {
-      mod += clamp((avgR - 6.75) * 0.14, -0.14, 0.16);
+      mod += clamp((avgR - 6.75) * 0.11, -0.11, 0.10);
     }
     if (apps !== null) {
-      if (apps === 0) mod -= 0.14;
-      else if (apps <= 8) mod -= 0.08;
-      else if (apps >= 28) mod += 0.05;
+      if (apps === 0) mod -= 0.10;
+      else if (apps <= 8) mod -= 0.05;
+      else if (apps >= 28) mod += 0.03;
     }
-    if (pos !== 'GK' && apps !== null && apps >= 10) {
+    if (rawPos !== 'GK' && apps !== null && apps >= 10) {
       const gaRate = (goals + assists * 0.8) / apps;
-      if (gaRate >= 0.65) mod += 0.08;
-      else if (gaRate >= 0.35) mod += 0.04;
+      if (gaRate >= 0.65) mod += 0.05;
+      else if (gaRate >= 0.35) mod += 0.025;
     }
-    perfFactor = clamp(1.0 + mod, 0.78, 1.24);
+    perfFactor = clamp(1.0 + mod, 0.82, 1.14);
   }
 
   // プロ通算出場実績に基づく未証明ディスカウント（実戦実績ゼロでの超高額評価を防止）
@@ -910,8 +923,8 @@ function calculateMarketValueFromOvrAndAge(ovr, age = 25, contractYears = 2, per
     else if (cApps < 25) careerFactor = 0.80 + ((cApps - 10) / 15) * 0.20;
   }
 
-  const fee = Math.round((baseVal * ageFactor * contractFactor * perfFactor * careerFactor) / 100) * 100;
-  return clamp(fee, 200, 250000);
+  const fee = Math.round((baseVal * ageFactor * contractFactor * posFactor * perfFactor * careerFactor) / 100) * 100;
+  return clamp(fee, 200, 220000);
 }
 
 function calculatePlayerMarketValue(player) {
@@ -939,8 +952,13 @@ function calculatePlayerMarketValue(player) {
     : 0;
   const careerApps = Math.max(careerStatApps, histAppsSum + curApps, curApps);
 
-  let perfStats = { careerApps, pos: player.primaryPosition || player.pos || '' };
-  if (curApps >= 5) {
+  const posStr = player.primaryPosition || player.pos || '';
+  const lastSh = (Array.isArray(player.seasonHistory) && player.seasonHistory.length > 0)
+    ? player.seasonHistory[player.seasonHistory.length - 1]
+    : null;
+  let perfStats = { careerApps, pos: posStr };
+
+  if (curApps >= 15 || (curApps >= 5 && !lastSh)) {
     const avgR = (typeof player.totalRating === 'number' && curApps > 0)
       ? (player.totalRating / curApps)
       : null;
@@ -949,23 +967,53 @@ function calculatePlayerMarketValue(player) {
       goals: player.goals || 0,
       assists: player.assists || 0,
       avgRating: avgR,
-      pos: player.primaryPosition || player.pos || '',
+      pos: posStr,
       careerApps
     };
-  } else if (Array.isArray(player.seasonHistory) && player.seasonHistory.length > 0) {
-    // 開幕前（0試合）や序盤（5試合未満）は直近の過去シーズン実績を引き継いで連続性を保つ
-    const lastSh = player.seasonHistory[player.seasonHistory.length - 1];
-    if (lastSh) {
-      const parsedR = parseFloat(lastSh.avgRating);
-      perfStats = {
-        appearances: typeof lastSh.appearances === 'number' ? lastSh.appearances : curApps,
-        goals: lastSh.goals || 0,
-        assists: lastSh.assists || 0,
-        avgRating: Number.isNaN(parsedR) ? null : parsedR,
-        pos: player.primaryPosition || player.pos || '',
-        careerApps
-      };
+  } else if (curApps >= 1 && lastSh) {
+    // 序盤（1〜14試合）は過去直近シーズンと今季実績を出場比率でブレンドし、開幕直後の急落・急騰を抑制
+    const wCur = curApps / 15;
+    const wPrev = 1 - wCur;
+    const curAvgR = (typeof player.totalRating === 'number' && curApps > 0)
+      ? (player.totalRating / curApps)
+      : null;
+    const parsedPrevR = parseFloat(lastSh.avgRating);
+    const hasPrevR = !Number.isNaN(parsedPrevR);
+
+    const prevApps = typeof lastSh.appearances === 'number' ? lastSh.appearances : curApps;
+    const prevGaDenom = Math.max(1, prevApps);
+    const blendedGoalRate = wPrev * ((lastSh.goals || 0) / prevGaDenom) + wCur * ((player.goals || 0) / curApps);
+    const blendedAssistRate = wPrev * ((lastSh.assists || 0) / prevGaDenom) + wCur * ((player.assists || 0) / curApps);
+    const projectedApps = clamp(Math.round(prevApps * wPrev + Math.min(38, curApps * 2.1) * wCur), 1, 38);
+
+    let blendedAvgR = null;
+    if (curAvgR !== null && hasPrevR) {
+      blendedAvgR = wPrev * parsedPrevR + wCur * curAvgR;
+    } else if (curAvgR !== null) {
+      blendedAvgR = curAvgR;
+    } else if (hasPrevR) {
+      blendedAvgR = parsedPrevR;
     }
+
+    perfStats = {
+      appearances: projectedApps,
+      goals: Math.round(blendedGoalRate * projectedApps),
+      assists: Math.round(blendedAssistRate * projectedApps),
+      avgRating: blendedAvgR,
+      pos: posStr,
+      careerApps
+    };
+  } else if (lastSh) {
+    // 開幕前（0試合）は直近の過去シーズン実績を引き継いで連続性を保つ
+    const parsedR = parseFloat(lastSh.avgRating);
+    perfStats = {
+      appearances: typeof lastSh.appearances === 'number' ? lastSh.appearances : curApps,
+      goals: lastSh.goals || 0,
+      assists: lastSh.assists || 0,
+      avgRating: Number.isNaN(parsedR) ? null : parsedR,
+      pos: posStr,
+      careerApps
+    };
   }
   return calculateMarketValueFromOvrAndAge(ovr, age, contractYears, perfStats);
 }
@@ -1205,27 +1253,31 @@ function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 7
   let appsPerYear = randInt(16, 28);
   let cupBonus = randInt(0, 4);
   if (approxPower >= 80 || (isStarter && approxPower >= 74)) {
-    appsPerYear = randInt(28, 38);
-    cupBonus = randInt(2, 8);
+    appsPerYear = randInt(32, 44);
+    cupBonus = randInt(3, 10);
   } else if (approxPower >= 72 || isStarter) {
-    appsPerYear = randInt(22, 34);
-    cupBonus = randInt(1, 6);
+    appsPerYear = randInt(25, 36);
+    cupBonus = randInt(2, 6);
   }
   const totalApps = activeYears * appsPerYear + cupBonus;
+
+  // 攻撃的ポジションほど能力（approxPower）に応じた得点力差を明確化（公式戦キャリア平均ペースとして算出）
+  const atkScale = clamp(0.76 + (approxPower - 70) * 0.026, 0.65, 1.38);
+  const midScale = clamp(0.82 + (approxPower - 70) * 0.018, 0.74, 1.24);
 
   let goalRate = 0.055;
   if (pos === 'GK') goalRate = 0;
   else if (pos === 'CB' || pos === 'LB' || pos === 'RB' || pos === 'SB' || pos === 'LWB' || pos === 'RWB') goalRate = 0.055;
   else if (pos === 'DM') goalRate = 0.06;
-  else if (pos === 'CM') goalRate = 0.10;
-  else if (pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.13;
-  else if (pos === 'AM') goalRate = 0.22;
-  else if (pos === 'LW' || pos === 'RW' || pos === 'WG') goalRate = 0.28;
-  else if (pos === 'CF' || pos === 'ST') goalRate = approxPower >= 80 ? 0.45 : 0.42;
+  else if (pos === 'CM') goalRate = 0.095 * midScale;
+  else if (pos === 'LM' || pos === 'RM' || pos === 'SM') goalRate = 0.125 * midScale;
+  else if (pos === 'AM') goalRate = 0.21 * atkScale;
+  else if (pos === 'LW' || pos === 'RW' || pos === 'WG') goalRate = 0.27 * atkScale;
+  else if (pos === 'CF' || pos === 'ST') goalRate = 0.45 * atkScale;
 
   const totalGoals = pos === 'GK'
     ? 0
-    : Math.max(0, Math.round(totalApps * goalRate * (0.85 + Math.random() * 0.4)));
+    : Math.max(0, Math.round(totalApps * goalRate * (0.85 + Math.random() * 0.35)));
 
   let assistRate = 0.02;
   if (pos === 'GK') assistRate = 0;
@@ -1694,14 +1746,23 @@ function createSquad(basePower, usedNames, options = {}) {
     }
   }
 
-  // 25人シニア登録ルールに初期状態で違反しないよう、控え選手から最低4名をU-21（18〜21歳）として生成
+  // 25人シニア登録ルールに初期状態で違反しないよう、控え選手全体から均等に最低4名をU-21（18〜21歳）として生成し、
+  // スタメンは主力世代（22〜31歳）中心・若手一極集中にならない年齢分布とする
   const benchIndices = [];
   slots.forEach((s, idx) => { if (!s.isStarter) benchIndices.push(idx); });
-  const u21SlotSet = new Set(benchIndices.slice(-4));
+  const u21SlotSet = new Set();
+  [1, 3, 5, benchIndices.length - 1].forEach(bi => {
+    if (bi >= 0 && bi < benchIndices.length) u21SlotSet.add(benchIndices[bi]);
+  });
+  for (let i = benchIndices.length - 1; i >= 0 && u21SlotSet.size < Math.min(4, benchIndices.length); i--) {
+    u21SlotSet.add(benchIndices[i]);
+  }
 
   let benchAssigned = 0;
   slots.forEach((slot, idx) => {
-    const ageRange = u21SlotSet.has(idx) ? [18, 21] : null;
+    const ageRange = u21SlotSet.has(idx)
+      ? [18, 21]
+      : (slot.isStarter ? (Math.random() < 0.85 ? [22, 31] : [19, 33]) : [20, 33]);
     const p = createPlayer(slot.pos, basePower, slot.isStarter, usedNames, ageRange, null, nats[idx]);
     p.squadNumber = pickAvailableSquadNumber(slot.pos, usedNumbers);
     if (!slot.isStarter) {

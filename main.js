@@ -833,13 +833,17 @@ function advanceCalendarDay(skipRender = false) {
       for (const p of (club.players || [])) {
         if (p.isRetired) continue;
         if (Array.isArray(p.valueHistory) && p.valueHistory.length > 0) {
-          const curVal = calculatePlayerMarketValue(p);
-          const curOvr = getPlayerOverallRating(p);
-          const lastPt = p.valueHistory[p.valueHistory.length - 1];
-          if (lastPt) {
-            lastPt.value = curVal;
-            lastPt.ovr = curOvr;
-            lastPt.age = p.age || lastPt.age;
+          if (p._mvSchema !== 2 && typeof ensurePlayerValueHistory === 'function') {
+            ensurePlayerValueHistory(p, club.name);
+          } else {
+            const curVal = calculatePlayerMarketValue(p);
+            const curOvr = getPlayerOverallRating(p);
+            const lastPt = p.valueHistory[p.valueHistory.length - 1];
+            if (lastPt) {
+              lastPt.value = curVal;
+              lastPt.ovr = curOvr;
+              lastPt.age = p.age || lastPt.age;
+            }
           }
         }
       }
@@ -9063,7 +9067,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: rawCareerGoals, assists: 0 };
 
     let totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
-    const minAppsPerYear = baseOvr >= 82 ? 30 : (baseOvr >= 75 ? 25 : (baseOvr >= 68 ? 20 : 14));
+    const minAppsPerYear = baseOvr >= 82 ? 35 : (baseOvr >= 75 ? 29 : (baseOvr >= 68 ? 22 : 15));
     if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * Math.max(12, minAppsPerYear - 5)) {
       const minExpectedPastApps = pastSeasonsCount * (minAppsPerYear + (absHash % 9));
       totalPastApps = minExpectedPastApps;
@@ -9072,16 +9076,18 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
     let totalPastGoals = Math.max(0, rawCareerGoals - (p.goals || 0));
     if (pastSeasonsCount > 0 && primaryPos !== 'GK' && (!hadCareerStats || (totalPastGoals === 0 && (pastSeasonsCount >= 2 || totalPastApps >= 18)))) {
+      const atkScale = clamp(0.76 + (baseOvr - 70) * 0.026, 0.65, 1.38);
+      const midScale = clamp(0.82 + (baseOvr - 70) * 0.018, 0.74, 1.24);
       let gRate = 0.055;
       if (primaryPos === 'CB' || primaryPos === 'LB' || primaryPos === 'RB' || primaryPos === 'SB' || primaryPos === 'LWB' || primaryPos === 'RWB' || primaryPos === 'DF') gRate = 0.055;
       else if (primaryPos === 'DM') gRate = 0.06;
-      else if (primaryPos === 'CM') gRate = 0.10;
-      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM' || primaryPos === 'MF') gRate = 0.13;
-      else if (primaryPos === 'AM') gRate = 0.22;
-      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.28;
-      else if (primaryPos === 'CF' || primaryPos === 'ST') gRate = baseOvr >= 80 ? 0.45 : 0.42;
-      else if (primaryPos === 'FW') gRate = 0.34;
-      const jitterG = 0.78 + ((absHash % 13) / 25);
+      else if (primaryPos === 'CM') gRate = 0.095 * midScale;
+      else if (primaryPos === 'LM' || primaryPos === 'RM' || primaryPos === 'SM' || primaryPos === 'MF') gRate = 0.125 * midScale;
+      else if (primaryPos === 'AM') gRate = 0.21 * atkScale;
+      else if (primaryPos === 'LW' || primaryPos === 'RW' || primaryPos === 'WG') gRate = 0.27 * atkScale;
+      else if (primaryPos === 'CF' || primaryPos === 'ST') gRate = 0.45 * atkScale;
+      else if (primaryPos === 'FW') gRate = 0.34 * atkScale;
+      const jitterG = 0.82 + ((absHash % 10) / 25); // 0.82 .. 1.18
       totalPastGoals = Math.max(0, Math.round(totalPastApps * gRate * jitterG));
       p.careerStats.goals = totalPastGoals + (p.goals || 0);
     }
@@ -9144,6 +9150,42 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     };
 
     if (pastSeasonsCount > 0) {
+      const curveMeta = (typeof getGrowthCurveMeta === 'function')
+        ? getGrowthCurveMeta(p.growthCurve)
+        : { peakAge: 27, riseSlope: 1.4, fallSlope: 1.2 };
+      const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
+        ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
+        : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
+      const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
+      const currentOffset = calcCurveOffset(curAge);
+
+      // 成熟期（21歳以上、または過去3シーズン以上）から決定論的にキャリアハイ年・準好調年を選出
+      const isAttackRole = (
+        primaryPos === 'CF' || primaryPos === 'ST' || primaryPos === 'LW' ||
+        primaryPos === 'RW' || primaryPos === 'WG' || primaryPos === 'AM' || primaryPos === 'FW'
+      );
+      const primeCandidates = [];
+      for (let i = 0; i < pastSeasonsCount; i++) {
+        if (debutBaseAge + i >= 21) primeCandidates.push(i);
+      }
+      let peakSeasonIdx = -1;
+      let subPeakSeasonIdx = -1;
+      if (primeCandidates.length >= 1) {
+        // 複数年ある場合はキャリア後半〜ピーク年齢近辺をやや優先して選出
+        const weightedCand = primeCandidates.filter(idx => {
+          const ageAt = debutBaseAge + idx;
+          return ageAt >= Math.min(curAge - 1, Math.max(22, curveMeta.peakAge - 4)) && ageAt <= curveMeta.peakAge + 3;
+        });
+        const pool = weightedCand.length > 0 ? weightedCand : primeCandidates;
+        peakSeasonIdx = pool[absHash % pool.length];
+        if (primeCandidates.length >= 3) {
+          const remaining = primeCandidates.filter(idx => idx !== peakSeasonIdx);
+          subPeakSeasonIdx = remaining[((absHash >>> 4) + 1) % remaining.length];
+        }
+      } else if (pastSeasonsCount >= 3) {
+        peakSeasonIdx = pastSeasonsCount - 1;
+      }
+
       // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分
       const appWeights = [];
       const goalWeights = [];
@@ -9154,12 +9196,28 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
       for (let i = 0; i < pastSeasonsCount; i++) {
         const ageAtSeason = debutBaseAge + i;
-        const maturity = ageAtSeason <= 19 ? 0.55 : (ageAtSeason <= 21 ? 0.82 : 1.0);
+        const maturity = ageAtSeason <= 19 ? 0.50 : (ageAtSeason <= 21 ? 0.78 : 1.0);
         const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
-        const aw = maturity * jitter;
         const seasonSeed = (absHash ^ Math.imul(i + 1, 2654435761)) >>> 0;
-        const gw = maturity * (0.60 + ((seasonSeed % 17) / 20));
-        const astw = maturity * (0.8 + (((absHash >> ((i + 5) % 8)) & 7) / 20));
+
+        let awMul = 1.0;
+        let gwMul = 0.64 + ((seasonSeed % 9) / 25); // 通常年は 0.64 .. 0.96
+        let astwMul = 0.82 + (((absHash >> ((i + 5) % 8)) & 7) / 20);
+
+        if (i === peakSeasonIdx) {
+          awMul = 1.18;
+          const peakBase = (isAttackRole && baseOvr >= 75) ? 1.56 : 1.35;
+          gwMul = peakBase + ((seasonSeed % 4) * 0.05); // 攻撃主力なら 1.56 .. 1.71 倍の明確なキャリアハイ年
+          astwMul *= 1.18;
+        } else if (i === subPeakSeasonIdx) {
+          awMul = 1.07;
+          gwMul = (isAttackRole && baseOvr >= 75) ? 1.24 : 1.14;
+          astwMul *= 1.08;
+        }
+
+        const aw = maturity * jitter * awMul;
+        const gw = maturity * gwMul;
+        const astw = maturity * astwMul;
         appWeights.push(aw);
         goalWeights.push(gw);
         assistWeights.push(astw);
@@ -9179,7 +9237,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const isLast = (i === pastSeasonsCount - 1);
 
         let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
-        apps = clamp(apps, 1, Math.min(42, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
+        apps = clamp(apps, 1, Math.min(50, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
         remApps = Math.max(0, remApps - apps);
 
         let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
@@ -9192,14 +9250,6 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         if (apps === 0) assists = 0;
         remAssists = Math.max(0, remAssists - assists);
 
-        const curveMeta = (typeof getGrowthCurveMeta === 'function')
-          ? getGrowthCurveMeta(p.growthCurve)
-          : { peakAge: 27, riseSlope: 1.4, fallSlope: 1.2 };
-        const calcCurveOffset = (a) => (a <= curveMeta.peakAge)
-          ? -Math.max(0, curveMeta.peakAge - a) * curveMeta.riseSlope
-          : -Math.max(0, a - curveMeta.peakAge) * curveMeta.fallSlope;
-        const curAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 22;
-        const currentOffset = calcCurveOffset(curAge);
         const pastOffset = calcCurveOffset(ageAtSeason);
         const ovrSeasonJitter = isLast ? 0 : (((absHash >> (i % 10)) % 5) - 2) * 0.4;
         const estOvr = clamp(Math.round(baseOvr + (pastOffset - currentOffset) + ovrSeasonJitter), 50, 95);
@@ -9373,6 +9423,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
   const currentVal = calculatePlayerMarketValue(p);
   const currentOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (p.ovr || 70);
   const currentAge = typeof p.age === 'number' && !Number.isNaN(p.age) ? p.age : 24;
+  const posVal = p.primaryPosition || p.pos || '';
 
   const historyData = ensurePlayerHistoryAndCareer(p, currentClubName);
   const { seasonHistory } = historyData;
@@ -9398,7 +9449,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
         goals: sh.goals || 0,
         assists: sh.assists || 0,
         avgRating: Number.isNaN(parsedAvg) ? null : parsedAvg,
-        pos: p.pos,
+        pos: posVal,
         careerApps: cumApps
       };
       const approxVal = calculateMarketValueFromOvrAndAge(shOvr, shAge, 2, perfStats);
@@ -9420,7 +9471,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     if (currentAge >= 18) {
       const debutAge = currentAge - 2;
       const debutOvr = Math.max(50, currentOvr - 4);
-      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: p.pos });
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: posVal });
       vHistory.push({
         label: `2年前 (${debutAge}歳)`,
         shortLabel: `2年前`,
@@ -9433,7 +9484,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
       });
       const midAge = currentAge - 1;
       const midOvr = Math.max(52, currentOvr - 2);
-      const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2, { careerApps: 18, pos: p.pos });
+      const midVal = calculateMarketValueFromOvrAndAge(midOvr, midAge, 2, { careerApps: 18, pos: posVal });
       vHistory.push({
         label: `前年 (${midAge}歳)`,
         shortLabel: `前年`,
@@ -9447,7 +9498,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     } else if (currentAge >= 16) {
       const prevAge = currentAge - 1;
       const prevOvr = Math.max(48, currentOvr - 2);
-      const prevVal = calculateMarketValueFromOvrAndAge(prevOvr, prevAge, 3, { careerApps: 0, pos: p.pos });
+      const prevVal = calculateMarketValueFromOvrAndAge(prevOvr, prevAge, 3, { careerApps: 0, pos: posVal });
       vHistory.push({
         label: `前年 (${prevAge}歳)`,
         shortLabel: `前年`,
@@ -9465,7 +9516,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
     if (firstH.age > 15) {
       const debutAge = firstH.age - 1;
       const debutOvr = Math.max(48, firstH.ovr - 3);
-      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 0, pos: p.pos });
+      const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 0, pos: posVal });
       vHistory.unshift({
         label: `デビュー (${debutAge}歳)`,
         shortLabel: `デビュー`,
@@ -9492,6 +9543,7 @@ function ensurePlayerValueHistory(p, currentClubName) {
   });
 
   p.valueHistory = vHistory;
+  p._mvSchema = 2;
   return vHistory;
 }
 

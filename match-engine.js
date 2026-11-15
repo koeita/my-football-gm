@@ -107,14 +107,14 @@ function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
   const pool = candidates.length > 0 ? candidates : starters;
 
   const basePosWeight = {
-    CF: 34, ST: 34,
-    LW: 18, RW: 18, WG: 18,
-    AM: 14,
-    LM: 7.5, RM: 7.5, SM: 7.5,
-    CM: 4.5,
-    DM: 2.2,
-    CB: 2.8,
-    LB: 2.3, RB: 2.3, LWB: 2.3, RWB: 2.3, SB: 2.3
+    CF: 22, ST: 22,
+    LW: 16, RW: 16, WG: 16,
+    AM: 13,
+    LM: 8.5, RM: 8.5, SM: 8.5,
+    CM: 6.0,
+    DM: 3.0,
+    CB: 3.5,
+    LB: 2.6, RB: 2.6, LWB: 2.6, RWB: 2.6, SB: 2.6
   };
 
   let totalWeight = 0;
@@ -123,7 +123,7 @@ function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
     const roleGroup = (typeof POS_ROLE_GROUP !== 'undefined' && POS_ROLE_GROUP[pos]) ? POS_ROLE_GROUP[pos] : 'MF';
     let w = basePosWeight[pos];
     if (typeof w !== 'number') {
-      w = roleGroup === 'FW' ? 26 : (roleGroup === 'DF' ? 2.4 : 6);
+      w = roleGroup === 'FW' ? 20 : (roleGroup === 'DF' ? 2.8 : 6.0);
     }
 
     if (tactic === 'counter') {
@@ -138,11 +138,14 @@ function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
       if (pos === 'AM' || pos === 'CM') w *= 1.10;
     }
 
-    const fin = (p.attributes && typeof p.attributes.finishing === 'number')
-      ? p.attributes.finishing
-      : (typeof p.atk === 'number' ? p.atk : 70);
-    const attrFactor = Math.max(0.75, Math.min(1.40, 0.75 + (fin - 65) * 0.015));
-    const finalW = Math.max(0.1, w * attrFactor);
+    const playerOvr = (typeof getPlayerOverallRating === 'function')
+      ? getPlayerOverallRating(p)
+      : (typeof p.ovr === 'number' ? p.ovr : 70);
+    const atkVal = typeof p.atk === 'number' ? p.atk : playerOvr;
+    const skillVal = playerOvr * 0.60 + atkVal * 0.40;
+    const attrFactor = Math.max(0.60, Math.min(1.45, 0.65 + (skillVal - 74) * 0.032));
+    const subMul = (typeof p._subWeightMul === 'number') ? p._subWeightMul : 1.0;
+    const finalW = Math.max(0.1, w * attrFactor * subMul);
     totalWeight += finalW;
     return finalW;
   });
@@ -157,55 +160,50 @@ function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
 }
 
 function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, options = {}) {
-  const { recordOfficial = true } = options;
+  const { recordOfficial = true, homeSubs = [], awaySubs = [] } = options;
   const homeStarters = ensureClubStartersForMatch(homeClub);
   const awayStarters = ensureClubStartersForMatch(awayClub);
 
-  const pickScorer = (starters, club) => selectWeightedMatchScorer(starters, club && club.tactic);
+  const pickScorer = (pool, club) => selectWeightedMatchScorer(pool, club && club.tactic);
 
-  const pickAssister = (starters, scorer) => {
+  const pickAssister = (pool, scorer) => {
     if (Math.random() > 0.72) return null;
-    const cands = starters.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
+    const cands = pool.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
     if (cands.length === 0) return null;
     const mfWg = cands.filter(p => ['AM', 'CM', 'LM', 'RM', 'DM', 'LW', 'RW', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
-    const pool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
-    return pool[Math.floor(Math.random() * pool.length)] || null;
+    const astPool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
+    return astPool[Math.floor(Math.random() * astPool.length)] || null;
   };
 
-  const applyGoalAndAssist = (p, assister) => {
-    if (!recordOfficial) return;
-    if (p) {
-      p.goals = (p.goals || 0) + 1;
-      if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: 0, assists: p.assists || 0 };
-      p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+  const buildSideQuickScorers = (starters, subs, score, club) => {
+    const list = [];
+    for (let i = 0; i < score; i++) {
+      const minute = Math.floor(Math.random() * 88) + 2;
+      const activePool = (minute >= 65 && Array.isArray(subs) && subs.length > 0)
+        ? [...starters.slice(0, Math.max(6, 11 - subs.length)), ...subs]
+        : starters;
+      const p = pickScorer(activePool, club);
+      const assister = pickAssister(activePool, p);
+      if (recordOfficial) {
+        if (p) {
+          p.goals = (p.goals || 0) + 1;
+          if (!p.careerStats) p.careerStats = { appearances: p.appearances || 0, goals: 0, assists: p.assists || 0 };
+          p.careerStats.goals = (p.careerStats.goals || 0) + 1;
+        }
+        if (assister) {
+          assister.assists = (assister.assists || 0) + 1;
+          if (!assister.careerStats) assister.careerStats = { appearances: assister.appearances || 0, goals: assister.goals || 0, assists: 0 };
+          assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+        }
+      }
+      if (p) list.push({ minute, scorer: p, assister, name: p.name });
     }
-    if (assister) {
-      assister.assists = (assister.assists || 0) + 1;
-      if (!assister.careerStats) assister.careerStats = { appearances: assister.appearances || 0, goals: assister.goals || 0, assists: 0 };
-      assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
-    }
+    list.sort((a, b) => a.minute - b.minute);
+    return list;
   };
 
-  const homeScorers = [];
-  for (let i = 0; i < homeScore; i++) {
-    const p = pickScorer(homeStarters, homeClub);
-    const assister = pickAssister(homeStarters, p);
-    const minute = Math.floor(Math.random() * 88) + 2;
-    applyGoalAndAssist(p, assister);
-    if (p) homeScorers.push({ minute, scorer: p, assister, name: p.name });
-  }
-
-  const awayScorers = [];
-  for (let i = 0; i < awayScore; i++) {
-    const p = pickScorer(awayStarters, awayClub);
-    const assister = pickAssister(awayStarters, p);
-    const minute = Math.floor(Math.random() * 88) + 2;
-    applyGoalAndAssist(p, assister);
-    if (p) awayScorers.push({ minute, scorer: p, assister, name: p.name });
-  }
-
-  homeScorers.sort((a, b) => a.minute - b.minute);
-  awayScorers.sort((a, b) => a.minute - b.minute);
+  const homeScorers = buildSideQuickScorers(homeStarters, homeSubs, homeScore, homeClub);
+  const awayScorers = buildSideQuickScorers(awayStarters, awaySubs, awayScore, awayClub);
   return { homeScorers, awayScorers };
 }
 
@@ -325,7 +323,7 @@ function simulateAndRecordQuickMatchPlayerStats(compKey, homeClub, awayClub, hom
   applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial, applyTraining });
   applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial, applyTraining });
 
-  const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial });
+  const { homeScorers, awayScorers } = generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, { recordOfficial, homeSubs, awaySubs });
   const ratingRes = calculateAndAssignMatchRatings(
     homeClub, awayClub,
     homeStarters, awayStarters,
@@ -1796,6 +1794,9 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const homeSubs = homeSubRes.subsIn || [];
   const awaySubs = awaySubRes.subsIn || [];
 
+  const homeSubEvents = homeSubRes.subEvents || [];
+  const awaySubEvents = awaySubRes.subEvents || [];
+
   applyOfficialAppearancesAndTraining(homeClub, homeStarters, homeSubs, { recordOfficial: true, applyTraining: true });
   applyOfficialAppearancesAndTraining(awayClub, awayStarters, awaySubs, { recordOfficial: true, applyTraining: true });
 
@@ -1834,38 +1835,37 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const hTacticNorm = normalizeTacticKey(homeClub.tactic);
   const aTacticNorm = normalizeTacticKey(awayClub.tactic);
 
-  const homeScorers = [];
-  for (let i = 0; i < homeScore; i++) {
-    const scorer = getScorer(homeStarters, hTacticNorm);
-    if (scorer) {
-      scorer.goals += 1;
-      if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(homeStarters, scorer, hTacticNorm);
-      if (assister) {
-        assister.assists = (assister.assists || 0) + 1;
-        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
-      }
+  const buildSideScorers = (sideStarters, sideSubEvents, sideScore, sideTactic, oppTactic) => {
+    const scorers = [];
+    for (let i = 0; i < sideScore; i++) {
       // 相手がゲーゲンプレスの場合、終盤（70〜89分）のスタミナ切れ失点が発生しやすい演出
-      const minute = (aTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
-      homeScorers.push({ scorer, assister, minute });
-    }
-  }
-
-  const awayScorers = [];
-  for (let i = 0; i < awayScore; i++) {
-    const scorer = getScorer(awayStarters, aTacticNorm);
-    if (scorer) {
-      scorer.goals += 1;
-      if (scorer.careerStats) scorer.careerStats.goals += 1;
-      const assister = getAssister(awayStarters, scorer, aTacticNorm);
-      if (assister) {
-        assister.assists = (assister.assists || 0) + 1;
-        if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+      const minute = (oppTactic === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
+      const subMap = new Map();
+      for (const ev of sideSubEvents) {
+        if (ev && ev.minute <= minute && ev.outPlayer && ev.inPlayer) {
+          subMap.set(ev.outPlayer.id, ev.inPlayer);
+        }
       }
-      const minute = (hTacticNorm === 'gegenpress' && Math.random() < 0.45) ? randInt(70, 89) : randInt(5, 89);
-      awayScorers.push({ scorer, assister, minute });
+      const activePitchPlayers = subMap.size > 0
+        ? sideStarters.map(p => (p && subMap.has(p.id)) ? subMap.get(p.id) : p)
+        : sideStarters;
+      const scorer = getScorer(activePitchPlayers, sideTactic);
+      if (scorer) {
+        scorer.goals += 1;
+        if (scorer.careerStats) scorer.careerStats.goals += 1;
+        const assister = getAssister(activePitchPlayers, scorer, sideTactic);
+        if (assister) {
+          assister.assists = (assister.assists || 0) + 1;
+          if (assister.careerStats) assister.careerStats.assists = (assister.careerStats.assists || 0) + 1;
+        }
+        scorers.push({ scorer, assister, minute });
+      }
     }
-  }
+    return scorers;
+  };
+
+  const homeScorers = buildSideScorers(homeStarters, homeSubEvents, homeScore, hTacticNorm, aTacticNorm);
+  const awayScorers = buildSideScorers(awayStarters, awaySubEvents, awayScore, aTacticNorm, hTacticNorm);
 
   const allMatchGoals = homeScorers.concat(awayScorers);
 
