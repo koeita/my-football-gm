@@ -2494,6 +2494,9 @@ function ensureClubStartersForMatch(club) {
       if (ep && ep.fullName) usedNames.add(ep.fullName);
     });
 
+    const curW = (typeof gameState !== 'undefined' && typeof gameState.currentWeek === 'number') ? gameState.currentWeek : 0;
+    const isForeignClub = Boolean(targetClub.country && targetClub.country !== 'ENG');
+
     targetClub.players = positions.map((pos, idx) => {
       const matchEp = affiliatedEuro.find(ep => !usedEuroIds.has(ep.id) && (ep.pos === pos || POS_ROLE_GROUP[ep.pos] === POS_ROLE_GROUP[pos]));
       if (matchEp) {
@@ -2505,7 +2508,7 @@ function ensureClubStartersForMatch(club) {
       const offset = ((seedBase + idx * 7) % 7) - 3;
       const age = 21 + ((seedBase + idx * 5) % 11);
       const preferredFoot = (pos === 'LB' || pos === 'LW') ? 'Left' : (((seedBase + idx) % 5 === 0) ? 'Left' : 'Right');
-      return {
+      const newPlayer = {
         id: `${targetClub.id}_p${idx + 1}`,
         name: ident.displayName,
         fullName: ident.fullName,
@@ -2527,6 +2530,10 @@ function ensureClubStartersForMatch(club) {
         assists: 0,
         lastMatchRating: 6.7
       };
+      if (isForeignClub && curW > 0 && typeof applyInitialEuropeanDomesticStats === 'function') {
+        applyInitialEuropeanDomesticStats(newPlayer, curW);
+      }
+      return newPlayer;
     });
   }
   return targetClub.players.slice(0, 11);

@@ -2009,22 +2009,7 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     // 現在のシーズン進行度に応じた自国リーグ・カップ出場数を反映
     const curW = (typeof gameState !== 'undefined' && typeof gameState.currentWeek === 'number') ? gameState.currentWeek : 0;
     if (curW > 0) {
-      const pOvr = getPlayerOverallRating(p);
-      const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
-      const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
-      const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
-      const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
-      const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
-      const estAssists = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * aRate * (0.75 + Math.random() * 0.5)));
-      const avgRt = clamp(6.5 + (pOvr - 68) * 0.038, 6.2, 7.9);
-      p.appearances = estApps;
-      p.goals = estGoals;
-      p.assists = estAssists;
-      p.totalRating = Number((estApps * avgRt).toFixed(2));
-      if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
-      p.careerStats.appearances = (p.careerStats.appearances || 0) + estApps;
-      p.careerStats.goals = (p.careerStats.goals || 0) + estGoals;
-      p.careerStats.assists = (p.careerStats.assists || 0) + estAssists;
+      applyInitialEuropeanDomesticStats(p, curW);
     }
     p.transferFee = calculateTransferFee(p);
     euroList.push(p);
@@ -2035,15 +2020,42 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
 }
 
 /**
- * 欧州4大リーグ移籍リスト選手の自国リーグ出場数を週次で自然進行させる
+ * 途中週に生成された他国クラブ選手へ、現在週までの自国リーグ出場数・成績を初期反映する
+ */
+function applyInitialEuropeanDomesticStats(p, curW) {
+  if (!p || !curW || curW <= 0) return;
+  const pos = p.primaryPosition || p.pos || 'CM';
+  const pOvr = getPlayerOverallRating(p);
+  const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
+  const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
+  const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
+  const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
+  const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
+  const estAssists = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * aRate * (0.75 + Math.random() * 0.5)));
+  const avgRt = clamp(6.5 + (pOvr - 68) * 0.038, 6.2, 7.9);
+  p.appearances = (p.appearances || 0) + estApps;
+  p.goals = (p.goals || 0) + estGoals;
+  p.assists = (p.assists || 0) + estAssists;
+  p.totalRating = Number(((p.totalRating || 0) + estApps * avgRt).toFixed(2));
+  if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+  p.careerStats.appearances = (p.careerStats.appearances || 0) + estApps;
+  p.careerStats.goals = (p.careerStats.goals || 0) + estGoals;
+  p.careerStats.assists = (p.careerStats.assists || 0) + estAssists;
+}
+
+/**
+ * 欧州4大リーグ移籍リストおよび欧州コンペ出場他国クラブ選手の自国リーグ出場数を週次で自然進行させる
  */
 function advanceEuropeanTransferListMatchweek() {
-  if (typeof gameState === 'undefined' || !Array.isArray(gameState.euroTransferList)) return;
-  for (const p of gameState.euroTransferList) {
-    if (!p || p.isRetired) continue;
+  if (typeof gameState === 'undefined') return;
+  const processedIds = new Set();
+
+  const stepPlayerMatchweek = (p) => {
+    if (!p || p.isRetired || !p.id || processedIds.has(p.id)) return;
+    processedIds.add(p.id);
     const ovr = getPlayerOverallRating(p);
     const playProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
-    if (Math.random() > playProb) continue;
+    if (Math.random() > playProb) return;
 
     const pos = p.primaryPosition || p.pos || 'CM';
     const gProb = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
@@ -2060,6 +2072,19 @@ function advanceEuropeanTransferListMatchweek() {
     p.careerStats.appearances = (p.careerStats.appearances || 0) + 1;
     p.careerStats.goals = (p.careerStats.goals || 0) + g;
     p.careerStats.assists = (p.careerStats.assists || 0) + a;
+  };
+
+  if (Array.isArray(gameState.euroTransferList)) {
+    for (const p of gameState.euroTransferList) {
+      stepPlayerMatchweek(p);
+    }
+  }
+  if (typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+    for (const c of getEuropeanCompetitionClubsWithPlayers()) {
+      for (const p of (c.players || [])) {
+        stepPlayerMatchweek(p);
+      }
+    }
   }
 }
 
