@@ -6253,7 +6253,7 @@ function renderSeasonSettlement() {
   if (agingEl) {
     agingEl.innerHTML = s.agingLogs.map(item => {
       const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-      return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳/${item.growthLabel}</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+      return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
     }).join('');
   }
 
@@ -7679,10 +7679,6 @@ function renderRoster() {
     const playerClub = getPlayerClub();
   const isYouth = (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
   const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
-  const growthLabel = isYouth ? '未確定（育成中）' : getGrowthCurveLabel(p.growthCurve);
-  const normGrowthId = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve) : (p.growthCurve || 'standard');
-  const growthClass = isYouth ? 'growth-unknown' : `growth-${normGrowthId}`;
-    const growthBadge = `<span class="growth-pill ${growthClass}">${growthLabel}</span>`;
 
     const atkDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.atk) : '';
     const defDiff = p.lastDiff ? formatDiffHtml(p.lastDiff.def) : '';
@@ -8019,6 +8015,8 @@ function renderShortlist() {
     if (!ctx) continue;
     const { player: p, clubName } = ctx;
     const ovr = getPlayerOverallRating(p);
+    const isMyClub = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
+    const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, isMyClub) : { isScouted: true, ovrDisplay: `${ovr}`, ovrMin: ovr, ovrMax: ovr };
     const fee = calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
@@ -8058,7 +8056,9 @@ function renderShortlist() {
         <td class="col-team" title="${clubName}"><span class="team-cell-wrap">${getClubEmblemSvg(ctx.club || clubName, 18, 'market-club-emblem')}<span class="team-name-text">${clubName}</span></span></td>
         <td class="col-num">${p.age}歳</td>
         <td class="col-num">${footBadge}</td>
-        <td class="col-num"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}">${ovr}</span></td>
+        <td class="col-num">${scoutView.isScouted
+          ? `<span class="ovr-cell-badge ${getOvrTierClass(ovr)}">${ovr}</span>`
+          : `<span class="ovr-cell-badge" style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
         <td class="col-num accent-gold mono"><strong>${formatMoney(fee)}</strong></td>
         <td class="col-num mono">${formatWage(p.wage || 20)}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
@@ -8575,7 +8575,7 @@ function renderMarket() {
     const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
     const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
     const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
-    const feeDisplay = p.isFreeAgent ? formatMoney(0) : (scoutView.feeKnown ? formatMoney(fee) : `~${formatMoney(Math.round(fee * 0.9 / 100) * 100)}`);
+    const feeDisplay = formatMoney(fee);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid #2ecc71;">自クラブ所属</span>' : '';
@@ -8630,7 +8630,7 @@ function renderMarket() {
           ? `<span class="ovr-cell-badge ${getOvrTierClass(getPlayerOverallRating(p))}">${scoutView.ovrDisplay}</span>`
           : `<span class="ovr-cell-badge" style="white-space:nowrap;"><span class="${getOvrTextClass(scoutView.ovrMin)}">${scoutView.ovrMin}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(scoutView.ovrMax)}">${scoutView.ovrMax}</span></span>`}</td>
         <td class="col-num accent-gold mono"><strong>${feeDisplay}</strong></td>
-        <td class="col-num mono">${scoutView.isScouted ? formatWage(p.wage) : '??'}</td>
+        <td class="col-num mono">${formatWage(p.wage)}</td>
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.isFreeAgent ? '無所属' : `${p.contractYears}年`}</td>
         <td class="col-action">
           ${actionBtnHtml}
@@ -8780,7 +8780,7 @@ function renderYouthScoutingPanel() {
               <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${y.potential === 'S' ? 'stat-rank-S' : (y.potential === 'A' ? 'stat-rank-A' : 'stat-rank-B')}" style="font-size:14px; font-weight:900;">POT ${y.potential || 'B'}</span></span>
             </div>
             <div class="mono text-muted" style="font-size:10.5px;">
-              ${flag} ${nat} | ${y.age}歳 | ${y.scoutRegionName || '発掘'} | ${getGrowthCurveLabel(y.growthCurve)}
+              ${flag} ${nat} | ${y.age}歳 | ${y.scoutRegionName || '発掘'}
             </div>
             <div class="staff-stats-chips" style="margin-top:0;">
               <span class="staff-stat-chip">ATK <strong>${y.atk}</strong></span>
@@ -9534,7 +9534,7 @@ function findPlayerWithContextById(playerId) {
  * 選手カード用の六角形レーダーチャートSVGを生成する
  * 頂点順（時計回り・上から）：決定力、ドリブル、パス、守備、スピード、スタミナ
  */
-function buildPlayerHexagonChartSvg(attrs) {
+function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
   const axes = [
     { key: 'finishing', label: '決定力', val: attrs.finishing || 50, angleDeg: -90 },
     { key: 'dribbling', label: 'ドリブル', val: attrs.dribbling || 50, angleDeg: -30 },
@@ -9542,7 +9542,14 @@ function buildPlayerHexagonChartSvg(attrs) {
     { key: 'defending', label: '守備',     val: attrs.defending || 50, angleDeg: 90 },
     { key: 'pace',      label: 'スピード', val: attrs.pace      || 50, angleDeg: 150 },
     { key: 'stamina',   label: 'スタミナ', val: attrs.stamina   || 50, angleDeg: -150 }
-  ];
+  ].map(a => {
+    const r = scoutRanges && scoutRanges[a.key] ? scoutRanges[a.key] : null;
+    if (r) {
+      const midVal = Math.round((r.min + r.max) / 2);
+      return { ...a, val: midVal, min: r.min, max: r.max, isRange: true, displayVal: `${r.min}~${r.max}` };
+    }
+    return { ...a, isRange: false, displayVal: `${a.val}` };
+  });
 
   const cx = 160;
   const cy = 116;
@@ -9572,6 +9579,18 @@ function buildPlayerHexagonChartSvg(attrs) {
     const pt = getPoint(a.angleDeg, maxR);
     return `<line x1="${cx}" y1="${cy}" x2="${pt.x}" y2="${pt.y}" class="hex-axis-line" />`;
   }).join('');
+
+  // 未調査時の上限推定ポリゴン（幅の可視化）
+  const hasAnyRange = axes.some(a => a.isRange);
+  let rangeMaxPolyHtml = '';
+  if (hasAnyRange) {
+    const maxPts = axes.map(a => {
+      const ratio = clamp((a.max || a.val) / 100, 0.12, 1.0);
+      const pt = getPoint(a.angleDeg, maxR * ratio);
+      return `${pt.x},${pt.y}`;
+    }).join(' ');
+    rangeMaxPolyHtml = `<polygon points="${maxPts}" fill="rgba(46, 204, 113, 0.10)" stroke="rgba(46, 204, 113, 0.42)" stroke-width="1" stroke-dasharray="3 2" />`;
+  }
 
   // 選手の能力値ポリゴンと頂点ドット
   const valPoints = axes.map(a => {
@@ -9638,7 +9657,7 @@ function buildPlayerHexagonChartSvg(attrs) {
     return `
       <g class="hex-label-group">
         <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
-        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.val}</text>
+        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.displayVal}</text>
       </g>
     `;
   }).join('');
@@ -9648,6 +9667,7 @@ function buildPlayerHexagonChartSvg(attrs) {
       <svg viewBox="0 0 320 232" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
         ${gridPolygons}
         ${axisLines}
+        ${rangeMaxPolyHtml}
         <polygon points="${dataPolyPts}" class="hex-data-polygon" />
         ${dataDots}
         ${labelsSvg}
@@ -10444,6 +10464,17 @@ function openPlayerProfileModal(playerId) {
   const subPosList = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
   const baseOvr = getPlayerOverallRating(p);
   const effOvr = getEffectivePlayerRating(p);
+  const playerClub = getPlayerClub();
+  const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const isMyClubPlayer = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
+  const scoutView = (isMyClubPlayer || isYouth || isCandidate)
+    ? { isScouted: true, scoutLevel: 2, ovrDisplay: `${baseOvr}`, ovrMin: baseOvr, ovrMax: baseOvr }
+    : (typeof getPlayerScoutedView === 'function'
+      ? getPlayerScoutedView(p, false)
+      : { isScouted: true, scoutLevel: 2, ovrDisplay: `${baseOvr}`, ovrMin: baseOvr, ovrMax: baseOvr });
+  const ovrDisplayText = scoutView.isScouted ? `${baseOvr}` : `${scoutView.ovrMin}~${scoutView.ovrMax}`;
+  const ovrColorSeed = scoutView.isScouted ? baseOvr : Math.round((scoutView.ovrMin + scoutView.ovrMax) / 2);
+
   const headerFootEl = document.getElementById('profile-header-foot');
   if (headerFootEl) {
     headerFootEl.innerHTML = formatFootBadge(p);
@@ -10452,17 +10483,12 @@ function openPlayerProfileModal(playerId) {
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
     if (valEl) {
-      valEl.textContent = baseOvr;
-      valEl.className = `profile-header-ovr-val ${getOvrTierClass(baseOvr)}`;
+      valEl.textContent = ovrDisplayText;
+      valEl.className = `profile-header-ovr-val ${getOvrTierClass(ovrColorSeed)}`;
       valEl.style.background = 'none';
+      valEl.style.fontSize = scoutView.isScouted ? '' : '20px';
     }
   }
-  const playerClub = getPlayerClub();
-  const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
-
-  const growthLabel = getGrowthCurveLabel(p.growthCurve || p.growthType);
-  const normGrowthId = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve || p.growthType) : (p.growthCurve || p.growthType || 'standard');
-  const growthClass = `growth-${normGrowthId}`;
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : 'N/A';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
@@ -10574,11 +10600,23 @@ function openPlayerProfileModal(playerId) {
   }
 
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
-  const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs);
+  let scoutAttrRanges = null;
+  if (!scoutView.isScouted) {
+    const attrSpread = scoutView.scoutLevel === 1 ? 3 : 7;
+    const baseSeed = String(p.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 0);
+    scoutAttrRanges = {};
+    ['finishing', 'dribbling', 'passing', 'defending', 'pace', 'stamina'].forEach((k, idx) => {
+      const realVal = attrs[k] || 50;
+      const shift = ((baseSeed + idx * 13) % (attrSpread + 1)) - Math.floor(attrSpread / 2);
+      const minV = clamp(realVal - attrSpread + shift, 20, realVal);
+      const maxV = clamp(Math.max(minV + (scoutView.scoutLevel === 1 ? 3 : 6), realVal + attrSpread + shift), realVal, 99);
+      scoutAttrRanges[k] = { min: minV, max: maxV };
+    });
+  }
+  const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs, scoutAttrRanges);
 
   // ポジション特訓・適性強化セクション（イーフト仕様：自クラブ選手のみに表示）
   let trainingSectionHtml = '';
-  const isMyClubPlayer = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
   if (isMyClubPlayer && !isCandidate && primaryPos !== 'GK') {
     const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primaryPos];
     if (!majors.includes(primaryPos)) majors.push(primaryPos);
@@ -10716,6 +10754,9 @@ function openPlayerProfileModal(playerId) {
   const yearlyRowsHtml = allRowsData.map(r => {
     const ratInfo = getRatingTierInfo(r.avgRating);
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
+    const isCurRow = r.isCurrent || r.seasonYear === curSeasonStr;
+    const rowOvrDisp = (!scoutView.isScouted && isCurRow) ? ovrDisplayText : r.ovr;
+    const rowOvrSeed = (!scoutView.isScouted && isCurRow) ? ovrColorSeed : r.ovr;
     return `
     <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
       <td class="mono">${r.seasonYear}</td>
@@ -10725,7 +10766,7 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
       <td class="col-num yearly-table-rat ${ratInfo.textClass} font-bold">${ratDisp}</td>
-      <td class="col-num yearly-table-ovr ${getOvrTierClass(r.ovr)}">${r.ovr}</td>
+      <td class="col-num yearly-table-ovr ${getOvrTierClass(rowOvrSeed)}">${rowOvrDisp}</td>
     </tr>
   `;
   }).join('');
@@ -10790,7 +10831,7 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
               <span class="ui-kv-label" style="margin-top: 0;">能力チャート</span>
-              <span class="profile-ovr-badge ${getOvrTierClass(baseOvr)}" style="background:none;">OVR ${baseOvr}</span>
+              <span class="profile-ovr-badge ${getOvrTierClass(ovrColorSeed)}" style="background:none;">OVR ${ovrDisplayText}</span>
             </div>
             ${hexagonChartHtml}
             <div class="ui-kv-list" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
@@ -10866,16 +10907,24 @@ function openPlayerProfileModal(playerId) {
                     <span class="ui-plate-val accent-green">${formatMoney(estMarketValue)}</span>
                   </div>
                 </div>
-                ${!isMyClubPlayer && !isCandidate ? `
-                  <div style="margin-top: 10px; display: flex; gap: 8px;">
+                ${!isMyClubPlayer && !isCandidate ? (() => {
+                  const activeScout = (gameState.activeScoutAssignments || []).find(a => a.playerId === p.id);
+                  const scoutActionBtn = !scoutView.isScouted
+                    ? (activeScout
+                      ? `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="padding: 9px 12px; opacity: 0.75;">調査中(${activeScout.daysRemaining}日)</button>`
+                      : `<button type="button" class="btn btn-secondary btn-sm mono" data-profile-scout-dispatch="${p.id}" style="padding: 9px 12px; font-weight: 700;">調査派遣</button>`)
+                    : '';
+                  return `
+                  <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    ${scoutActionBtn}
                     <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
                       ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
                       ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
                     </button>
-                  </div>
-                ` : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
+                  </div>`;
+                })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
                   <div style="margin-top: 10px;">
                     <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
                       ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
@@ -10929,7 +10978,7 @@ function openPlayerProfileModal(playerId) {
                 </div>
                 <div class="ui-stat-plate">
                   <span class="ui-plate-label">実効OVR</span>
-                  <span class="ui-plate-val ${getOvrTierClass(effOvr)}" style="background:none;">${effOvr}</span>
+                  <span class="ui-plate-val ${getOvrTierClass(scoutView.isScouted ? effOvr : ovrColorSeed)}" style="background:none;">${scoutView.isScouted ? effOvr : ovrDisplayText}</span>
                 </div>
               </div>
             </div>
@@ -11074,6 +11123,23 @@ function openPlayerProfileModal(playerId) {
       btnDirectRenewal.addEventListener('click', (e) => {
         e.stopPropagation();
         openContractNegotiationModal(btnDirectRenewal.dataset.profileDirectRenewal);
+      });
+    }
+    const btnProfileScout = bodyEl.querySelector('[data-profile-scout-dispatch]');
+    if (btnProfileScout) {
+      btnProfileScout.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pid = btnProfileScout.dataset.profileScoutDispatch;
+        if (typeof assignScoutToPlayer === 'function') {
+          const res = assignScoutToPlayer(pid);
+          if (res && res.ok) {
+            if (typeof showToast === 'function') showToast(`${p.name} のスカウト調査を開始しました`, 'success');
+            if (typeof renderMarket === 'function') renderMarket();
+            openPlayerProfileModal(pid);
+          } else if (res && res.reason === 'limit') {
+            if (typeof showToast === 'function') showToast(`同時調査枠（最大${res.max || 1}名）がいっぱいです`, 'warning');
+          }
+        }
       });
     }
     const btnProfileSl = bodyEl.querySelector('[data-profile-shortlist-toggle]');
