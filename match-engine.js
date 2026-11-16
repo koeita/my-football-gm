@@ -2399,20 +2399,23 @@ function clearMatchLiveTimers() {
  * クラブの国コード等から NATIONALITY_NAME_DATABASE の国籍キーへ解決
  */
 function resolveClubCountryToNationality(countryCode, clubId = '') {
-  const code = String(countryCode || '').toUpperCase();
+  const raw = String(countryCode || '').trim();
+  const code = raw.toUpperCase();
+  if (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined') {
+    if (COUNTRY_CODE_TO_NATIONALITY[raw]) return COUNTRY_CODE_TO_NATIONALITY[raw];
+    if (COUNTRY_CODE_TO_NATIONALITY[code]) return COUNTRY_CODE_TO_NATIONALITY[code];
+  }
   const map = {
-    ENG: 'England',
-    ESP: 'Spain',
-    GER: 'Germany',
-    ITA: 'Italy',
-    FRA: 'France',
-    NED: 'Netherlands',
-    POR: 'Portugal',
-    BEL: 'Belgium',
-    BRA: 'Brazil',
-    ARG: 'Argentina',
-    CRO: 'Croatia',
-    JPN: 'Japan'
+    ENG: 'England', SCO: 'Scotland', WAL: 'Wales', IRL: 'Ireland',
+    ESP: 'Spain', GER: 'Germany', ITA: 'Italy', FRA: 'France',
+    NED: 'Netherlands', POR: 'Portugal', BEL: 'Belgium', CRO: 'Croatia',
+    AUT: 'Austria', SUI: 'Switzerland', DEN: 'Denmark', NOR: 'Norway',
+    SWE: 'Sweden', TUR: 'Turkey', GRE: 'Greece', UKR: 'Ukraine',
+    POL: 'Poland', CZE: 'Czechia', SRB: 'Serbia', HUN: 'Hungary',
+    ROU: 'Romania', BUL: 'Bulgaria', SVK: 'Slovakia', SVN: 'Slovenia',
+    CYP: 'Cyprus', AZE: 'Azerbaijan', ISR: 'Israel', ISL: 'Iceland',
+    FIN: 'Finland', BRA: 'Brazil', ARG: 'Argentina', URU: 'Uruguay',
+    COL: 'Colombia', JPN: 'Japan', KOR: 'SouthKorea', USA: 'USA'
   };
   if (map[code]) return map[code];
   const cid = String(clubId || '').toLowerCase();
@@ -2430,11 +2433,18 @@ function generateDeterministicAlphabetPlayerIdentity(seedBase, slotIdx, homeNati
   const natList = (typeof NATIONALITIES !== 'undefined' && Array.isArray(NATIONALITIES) && NATIONALITIES.length > 0)
     ? NATIONALITIES
     : Object.keys(NATIONALITY_NAME_DATABASE);
-  const isHomeNat = (slotIdx % 3 !== 2);
-  const rawNat = isHomeNat
-    ? homeNationality
-    : natList[(seedBase + slotIdx * 11) % natList.length];
-  const natKey = NATIONALITY_NAME_DATABASE[rawNat] ? rawNat : 'England';
+  const homeKey = NATIONALITY_NAME_DATABASE[homeNationality] ? homeNationality : 'England';
+  const leagueProf = (typeof LEAGUE_NATIONALITY_PROFILES !== 'undefined') ? LEAGUE_NATIONALITY_PROFILES[homeKey] : null;
+  const homeRatio = (leagueProf && typeof leagueProf.homeRatio === 'number') ? leagueProf.homeRatio : 0.65;
+  let s = ((seedBase * 1103515245 + slotIdx * 2654435761 + 12345) >>> 0);
+  const detRng = () => {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+  const rawNat = (typeof pickWeightedNationality === 'function')
+    ? pickWeightedNationality(homeRatio, homeKey, homeKey, detRng)
+    : ((slotIdx % 3 !== 2) ? homeKey : natList[(seedBase + slotIdx * 11) % natList.length]);
+  const natKey = NATIONALITY_NAME_DATABASE[rawNat] ? rawNat : homeKey;
   const natData = NATIONALITY_NAME_DATABASE[natKey] || NATIONALITY_NAME_DATABASE.England;
   const firstPool = natData.firstNames;
   const lastPool = natData.lastNames;
