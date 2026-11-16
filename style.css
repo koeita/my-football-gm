@@ -17239,10 +17239,10 @@ body {
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
-.hex-label-val.ovr-tier-elite { fill: #7dd3fc; font-weight: 900; }
-.hex-label-val.ovr-tier-high  { fill: #34d399; }
-.hex-label-val.ovr-tier-mid   { fill: #fbbf24; }
-.hex-label-val.ovr-tier-low   { fill: #f87171; }
+.hex-label-val.ovr-tier-elite, .hex-label-val tspan.ovr-tier-elite { fill: #7dd3fc; font-weight: 900; }
+.hex-label-val.ovr-tier-high, .hex-label-val tspan.ovr-tier-high  { fill: #34d399; }
+.hex-label-val.ovr-tier-mid, .hex-label-val tspan.ovr-tier-mid   { fill: #fbbf24; }
+.hex-label-val.ovr-tier-low, .hex-label-val tspan.ovr-tier-low   { fill: #f87171; }
 
 .hex-data-dot.ovr-tier-elite { fill: #7dd3fc; }
 .hex-data-dot.ovr-tier-high  { fill: #34d399; }

@@ -2492,7 +2492,9 @@ function renderNegotiationModal() {
   const negScoutView = (isRenewal || typeof getPlayerScoutedView !== 'function')
     ? { isScouted: true, ovrMin: ovr, ovrMax: ovr }
     : getPlayerScoutedView(target, false);
-  const negOvrText = negScoutView.isScouted ? `${ovr}` : `${negScoutView.ovrMin}~${negScoutView.ovrMax}`;
+  const negOvrHtml = negScoutView.isScouted
+    ? `${ovr}`
+    : buildOvrRangeHtml(negScoutView.ovrMin, negScoutView.ovrMax);
   const negOvrSeed = negScoutView.isScouted ? ovr : Math.round((negScoutView.ovrMin + negScoutView.ovrMax) / 2);
   const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
   const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
@@ -2507,8 +2509,13 @@ function renderNegotiationModal() {
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
     if (valEl) {
-      valEl.textContent = negOvrText;
-      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(negOvrSeed) : ''}`;
+      if (negScoutView.isScouted) {
+        valEl.textContent = ovr;
+        valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(negOvrSeed) : ''}`;
+      } else {
+        valEl.innerHTML = negOvrHtml;
+        valEl.className = 'profile-header-ovr-val';
+      }
       valEl.style.background = 'none';
       valEl.style.fontSize = negScoutView.isScouted ? '' : '18px';
     }
@@ -7582,6 +7589,14 @@ function getOvrTextClass(ovr) {
   return 'tier-text-low';
 }
 
+function buildOvrRangeHtml(minVal, maxVal, isExact = false, exactVal = null) {
+  if (isExact) {
+    const v = exactVal !== null && exactVal !== undefined ? exactVal : minVal;
+    return `<span class="${getOvrTextClass(v)}">${v}</span>`;
+  }
+  return `<span style="white-space:nowrap;"><span class="${getOvrTextClass(minVal)}">${minVal}</span><span style="color:#ffffff;font-weight:600;margin:0 1px;">~</span><span class="${getOvrTextClass(maxVal)}">${maxVal}</span></span>`;
+}
+
 function getRatingTierInfo(val) {
   const num = typeof val === 'number' ? val : parseFloat(val);
   if (Number.isNaN(num)) {
@@ -8239,9 +8254,11 @@ function renderIncomingOffers() {
                   const sv = (target && typeof getPlayerScoutedView === 'function')
                     ? getPlayerScoutedView(target, isMyNow || offer.status === 'signed')
                     : { isScouted: isMyNow || offer.status === 'signed', ovrMin: Math.max(45, (offer.ovr || 70) - 5), ovrMax: Math.min(99, (offer.ovr || 70) + 5) };
-                  const ovrTxt = sv.isScouted ? `${offer.ovr}` : `${sv.ovrMin}~${sv.ovrMax}`;
-                  const ovrSeed = sv.isScouted ? offer.ovr : Math.round((sv.ovrMin + sv.ovrMax) / 2);
-                  return `<span class="ovr-cell-badge ${getOvrTierClass(ovrSeed)}">OVR ${ovrTxt}</span>`;
+                  const ovrHtml = sv.isScouted
+                    ? `${offer.ovr}`
+                    : buildOvrRangeHtml(sv.ovrMin, sv.ovrMax);
+                  const ovrBadgeClass = sv.isScouted ? getOvrTierClass(offer.ovr) : '';
+                  return `<span class="ovr-cell-badge ${ovrBadgeClass}">OVR ${ovrHtml}</span>`;
                 })()}
               </div>
             </div>
@@ -9681,10 +9698,14 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
       anchor = 'end';
     }
 
+    const valSvgHtml = a.isRange
+      ? `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val"><tspan class="${getOvrTierClass(a.min)}">${a.min}</tspan><tspan fill="#ffffff">~</tspan><tspan class="${getOvrTierClass(a.max)}">${a.max}</tspan></text>`
+      : `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.displayVal}</text>`;
+
     return `
       <g class="hex-label-group">
         <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
-        <text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.displayVal}</text>
+        ${valSvgHtml}
       </g>
     `;
   }).join('');
@@ -10500,6 +10521,7 @@ function openPlayerProfileModal(playerId) {
       ? getPlayerScoutedView(p, false)
       : { isScouted: true, scoutLevel: 2, ovrDisplay: `${baseOvr}`, ovrMin: baseOvr, ovrMax: baseOvr });
   const ovrDisplayText = scoutView.isScouted ? `${baseOvr}` : `${scoutView.ovrMin}~${scoutView.ovrMax}`;
+  const ovrDisplayHtml = scoutView.isScouted ? `${baseOvr}` : buildOvrRangeHtml(scoutView.ovrMin, scoutView.ovrMax);
   const ovrColorSeed = scoutView.isScouted ? baseOvr : Math.round((scoutView.ovrMin + scoutView.ovrMax) / 2);
 
   const headerFootEl = document.getElementById('profile-header-foot');
@@ -10510,8 +10532,13 @@ function openPlayerProfileModal(playerId) {
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
     if (valEl) {
-      valEl.textContent = ovrDisplayText;
-      valEl.className = `profile-header-ovr-val ${getOvrTierClass(ovrColorSeed)}`;
+      if (scoutView.isScouted) {
+        valEl.textContent = baseOvr;
+        valEl.className = `profile-header-ovr-val ${getOvrTierClass(baseOvr)}`;
+      } else {
+        valEl.innerHTML = ovrDisplayHtml;
+        valEl.className = 'profile-header-ovr-val';
+      }
       valEl.style.background = 'none';
       valEl.style.fontSize = scoutView.isScouted ? '' : '20px';
     }
@@ -10781,10 +10808,10 @@ function openPlayerProfileModal(playerId) {
   const getYearlyRowOvrInfo = (r, rIdx) => {
     const isCurRow = r.isCurrent || r.seasonYear === curSeasonStr;
     if (scoutView.isScouted) {
-      return { disp: r.ovr, seed: r.ovr };
+      return { html: `${r.ovr}`, cls: getOvrTierClass(r.ovr) };
     }
     if (isCurRow) {
-      return { disp: ovrDisplayText, seed: ovrColorSeed };
+      return { html: ovrDisplayHtml, cls: '' };
     }
     const trueRowOvr = typeof r.ovr === 'number' ? r.ovr : baseOvr;
     const spread = scoutView.scoutLevel === 1 ? 2 : 5;
@@ -10792,7 +10819,7 @@ function openPlayerProfileModal(playerId) {
     const shift = ((hash + rIdx * 7) % (spread + 1)) - Math.floor(spread / 2);
     const rMin = clamp(trueRowOvr - spread + shift, 45, trueRowOvr);
     const rMax = clamp(Math.max(rMin + (scoutView.scoutLevel === 1 ? 2 : 4), trueRowOvr + spread + shift), trueRowOvr, 99);
-    return { disp: `${rMin}~${rMax}`, seed: Math.round((rMin + rMax) / 2) };
+    return { html: buildOvrRangeHtml(rMin, rMax), cls: '' };
   };
 
   const yearlyRowsHtml = allRowsData.map((r, rIdx) => {
@@ -10808,7 +10835,7 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
       <td class="col-num yearly-table-rat ${ratInfo.textClass} font-bold">${ratDisp}</td>
-      <td class="col-num yearly-table-ovr ${getOvrTierClass(ovrInfo.seed)}">${ovrInfo.disp}</td>
+      <td class="col-num yearly-table-ovr ${ovrInfo.cls}">${ovrInfo.html}</td>
     </tr>
   `;
   }).join('');
@@ -10831,7 +10858,7 @@ function openPlayerProfileModal(playerId) {
           <span class="fotmob-col-stat">${r.appearances}</span>
           <span class="fotmob-col-stat ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</span>
           <span class="fotmob-col-stat ${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</span>
-          <span class="fotmob-col-ovr ${getOvrTierClass(ovrInfo.seed)}" style="background:none;">${ovrInfo.disp}</span>
+          <span class="fotmob-col-ovr ${ovrInfo.cls}" style="background:none;">${ovrInfo.html}</span>
           <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratInfo.pillClass}">${ratDisp}</span></span>
         </div>
       </div>
@@ -10874,7 +10901,7 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box profile-box-hexagon">
             <div class="profile-box-header">
               <span class="ui-kv-label" style="margin-top: 0;">能力チャート</span>
-              <span class="profile-ovr-badge ${getOvrTierClass(ovrColorSeed)}" style="background:none;">OVR ${ovrDisplayText}</span>
+              <span class="profile-ovr-badge ${scoutView.isScouted ? getOvrTierClass(baseOvr) : ''}" style="background:none;">OVR ${ovrDisplayHtml}</span>
             </div>
             ${hexagonChartHtml}
             <div class="ui-kv-list" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
@@ -11021,7 +11048,7 @@ function openPlayerProfileModal(playerId) {
                 </div>
                 <div class="ui-stat-plate">
                   <span class="ui-plate-label">実効OVR</span>
-                  <span class="ui-plate-val ${getOvrTierClass(scoutView.isScouted ? effOvr : ovrColorSeed)}" style="background:none;">${scoutView.isScouted ? effOvr : ovrDisplayText}</span>
+                  <span class="ui-plate-val ${scoutView.isScouted ? getOvrTierClass(effOvr) : ''}" style="background:none;">${scoutView.isScouted ? effOvr : ovrDisplayHtml}</span>
                 </div>
               </div>
             </div>
@@ -15583,8 +15610,10 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
     const sv = typeof getPlayerScoutedView === 'function'
       ? getPlayerScoutedView(p, false)
       : { isScouted: true, ovrMin: p.calculatedOvr, ovrMax: p.calculatedOvr };
-    const oppOvrDisp = sv.isScouted ? `${p.calculatedOvr}` : `${sv.ovrMin}~${sv.ovrMax}`;
-    const oppOvrSeed = sv.isScouted ? p.calculatedOvr : Math.round((sv.ovrMin + sv.ovrMax) / 2);
+    const oppOvrHtml = sv.isScouted
+      ? `${p.calculatedOvr}`
+      : buildOvrRangeHtml(sv.ovrMin, sv.ovrMax);
+    const oppOvrCls = sv.isScouted ? getOvrTierClass(p.calculatedOvr) : '';
     return `
       <tr style="${isKey ? 'background:rgba(245,158,11,0.08);' : ''}">
         <td class="mono" style="font-weight:700; width:44px;"><span class="pos-badge pos-${roleGroup.toLowerCase()}">${pos}</span></td>
@@ -15595,7 +15624,7 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
           </div>
         </td>
         <td class="mono" style="color:var(--text-muted); width:44px;">${p.age}歳</td>
-        <td class="mono" style="width:66px; text-align:right; white-space:nowrap;"><span class="ovr-cell-badge ${getOvrTierClass(oppOvrSeed)}" style="font-size:12px;">${oppOvrDisp}</span></td>
+        <td class="mono" style="width:66px; text-align:right; white-space:nowrap;"><span class="ovr-cell-badge ${oppOvrCls}" style="font-size:12px;">${oppOvrHtml}</span></td>
       </tr>
     `;
   }).join('');
