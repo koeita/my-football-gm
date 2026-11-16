@@ -16704,11 +16704,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .fotmob-col-ovr {
-  width: 40px;
+  min-width: 48px;
+  width: auto;
   text-align: center;
   font-size: 13px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .fotmob-col-rat {
   width: 48px;
@@ -16810,11 +16813,14 @@ body {
     font-variant-numeric: tabular-nums;
   }
   .fotmob-col-ovr {
-    width: 28px;
+    min-width: 42px;
+    width: auto;
     text-align: center;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .fotmob-col-rat {
     width: 38px;

@@ -10778,27 +10778,27 @@ function openPlayerProfileModal(playerId) {
   }
   const careerAvgRating = ratedAppsSum > 0 ? (weightedRatingSum / ratedAppsSum).toFixed(2) : 'N/A';
 
+  const getYearlyRowOvrInfo = (r, rIdx) => {
+    const isCurRow = r.isCurrent || r.seasonYear === curSeasonStr;
+    if (scoutView.isScouted) {
+      return { disp: r.ovr, seed: r.ovr };
+    }
+    if (isCurRow) {
+      return { disp: ovrDisplayText, seed: ovrColorSeed };
+    }
+    const trueRowOvr = typeof r.ovr === 'number' ? r.ovr : baseOvr;
+    const spread = scoutView.scoutLevel === 1 ? 2 : 5;
+    const hash = String(p.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 13, 0);
+    const shift = ((hash + rIdx * 7) % (spread + 1)) - Math.floor(spread / 2);
+    const rMin = clamp(trueRowOvr - spread + shift, 45, trueRowOvr);
+    const rMax = clamp(Math.max(rMin + (scoutView.scoutLevel === 1 ? 2 : 4), trueRowOvr + spread + shift), trueRowOvr, 99);
+    return { disp: `${rMin}~${rMax}`, seed: Math.round((rMin + rMax) / 2) };
+  };
+
   const yearlyRowsHtml = allRowsData.map((r, rIdx) => {
     const ratInfo = getRatingTierInfo(r.avgRating);
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
-    const isCurRow = r.isCurrent || r.seasonYear === curSeasonStr;
-    let rowOvrDisp = r.ovr;
-    let rowOvrSeed = r.ovr;
-    if (!scoutView.isScouted) {
-      if (isCurRow) {
-        rowOvrDisp = ovrDisplayText;
-        rowOvrSeed = ovrColorSeed;
-      } else {
-        const trueRowOvr = typeof r.ovr === 'number' ? r.ovr : baseOvr;
-        const spread = scoutView.scoutLevel === 1 ? 2 : 5;
-        const hash = String(p.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 13, 0);
-        const shift = ((hash + rIdx * 7) % (spread + 1)) - Math.floor(spread / 2);
-        const rMin = clamp(trueRowOvr - spread + shift, 45, trueRowOvr);
-        const rMax = clamp(Math.max(rMin + (scoutView.scoutLevel === 1 ? 2 : 4), trueRowOvr + spread + shift), trueRowOvr, 99);
-        rowOvrDisp = `${rMin}~${rMax}`;
-        rowOvrSeed = Math.round((rMin + rMax) / 2);
-      }
-    }
+    const ovrInfo = getYearlyRowOvrInfo(r, rIdx);
     return `
     <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
       <td class="mono">${r.seasonYear}</td>
@@ -10808,15 +10808,16 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
       <td class="col-num yearly-table-rat ${ratInfo.textClass} font-bold">${ratDisp}</td>
-      <td class="col-num yearly-table-ovr ${getOvrTierClass(rowOvrSeed)}">${rowOvrDisp}</td>
+      <td class="col-num yearly-table-ovr ${getOvrTierClass(ovrInfo.seed)}">${ovrInfo.disp}</td>
     </tr>
   `;
   }).join('');
 
-  const yearlyFotmobRows = allRowsData.map(r => {
+  const yearlyFotmobRows = allRowsData.map((r, rIdx) => {
     const ratInfo = getRatingTierInfo(r.avgRating);
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
     const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 22, 'fotmob-yearly-emblem') : '';
+    const ovrInfo = getYearlyRowOvrInfo(r, rIdx);
     return `
       <div class="fotmob-yearly-row ${r.isCurrent ? 'is-current' : ''}">
         <div class="fotmob-yearly-left">
@@ -10830,7 +10831,7 @@ function openPlayerProfileModal(playerId) {
           <span class="fotmob-col-stat">${r.appearances}</span>
           <span class="fotmob-col-stat ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</span>
           <span class="fotmob-col-stat ${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</span>
-          <span class="fotmob-col-ovr ${getOvrTierClass(r.ovr)}" style="background:none;">${r.ovr}</span>
+          <span class="fotmob-col-ovr ${getOvrTierClass(ovrInfo.seed)}" style="background:none;">${ovrInfo.disp}</span>
           <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratInfo.pillClass}">${ratDisp}</span></span>
         </div>
       </div>
