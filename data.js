@@ -1664,14 +1664,179 @@ const NATIONALITY_NAME_DATABASE = {
       'Yamazaki', 'Mori', 'Abe', 'Ikeda', 'Hashimoto', 'Yamashita', 'Ishikawa', 'Nakajima', 'Maeda', 'Fujiwara',
       'Ogawa', 'Goto', 'Okada', 'Hasegawa', 'Murakami', 'Endo', 'Aoki'
     ]
+  },
+  Scotland: {
+    firstNames: ['Callum', 'Andrew', 'Scott', 'Liam', 'Kieran', 'Ryan', 'Lewis', 'Craig', 'Fraser', 'Aaron', 'Ross', 'Stuart', 'Ewan', 'Grant', 'Jamie'],
+    lastNames: ['Robertson', 'McGregor', 'McGinn', 'McTominay', 'Tierney', 'Christie', 'Armstrong', 'Fraser', 'Hendry', 'Campbell', 'Stewart', 'Murray', 'MacLeod', 'Ferguson', 'Douglas', 'Gordon']
+  },
+  Wales: {
+    firstNames: ['Gareth', 'Aaron', 'Ben', 'Harry', 'Daniel', 'Joe', 'Ethan', 'Brennan', 'David', 'Tom', 'Owen', 'Morgan', 'Connor', 'Rhys'],
+    lastNames: ['Bale', 'Ramsey', 'Davies', 'Wilson', 'James', 'Rodon', 'Ampadu', 'Johnson', 'Brooks', 'Williams', 'Roberts', 'Evans', 'Thomas', 'Hughes', 'Griffiths']
+  },
+  Ireland: {
+    firstNames: ['Seamus', 'Evan', 'Caoimhin', 'Nathan', 'Josh', 'Chiedozie', 'Callum', 'Jason', 'Adam', 'Shane', 'Robbie', 'Conor', 'Dara', 'Troy'],
+    lastNames: ['Coleman', 'Ferguson', 'Kelleher', 'Collins', 'Cullen', 'Ogbene', 'Knight', 'Idah', 'Duffy', 'Brady', 'Doherty', 'Byrne', 'Murphy', 'Kelly', 'OConnor']
+  },
+  Austria: {
+    firstNames: ['David', 'Marcel', 'Konrad', 'Christoph', 'Marko', 'Xaver', 'Stefan', 'Philipp', 'Michael', 'Patrick', 'Kevin', 'Florian', 'Maximilian', 'Lukas'],
+    lastNames: ['Alaba', 'Sabitzer', 'Laimer', 'Baumgartner', 'Arnautovic', 'Schlager', 'Posch', 'Lienhart', 'Gregoritsch', 'Wimmer', 'Danso', 'Grillitsch', 'Wober', 'Bauer', 'Gruber']
+  },
+  Switzerland: {
+    firstNames: ['Granit', 'Manuel', 'Yann', 'Breel', 'Remo', 'Denis', 'Fabian', 'Ruben', 'Noah', 'Michel', 'Silvan', 'Dan', 'Gregor', 'Nico'],
+    lastNames: ['Xhaka', 'Akanji', 'Sommer', 'Embolo', 'Freuler', 'Zakaria', 'Schar', 'Vargas', 'Okafor', 'Aebischer', 'Widmer', 'Ndoye', 'Kobel', 'Elvedi', 'Rodriguez']
+  },
+  Denmark: {
+    firstNames: ['Christian', 'Pierre', 'Kasper', 'Rasmus', 'Joakim', 'Andreas', 'Mikkel', 'Jonas', 'Morten', 'Jesper', 'Yussuf', 'Simon', 'Mathias', 'Victor'],
+    lastNames: ['Eriksen', 'Hojbjerg', 'Schmeichel', 'Hojlund', 'Maehle', 'Christensen', 'Damsgaard', 'Wind', 'Hjulmand', 'Lindstrom', 'Poulsen', 'Kjaer', 'Jensen', 'Andersen', 'Nielsen']
+  },
+  Norway: {
+    firstNames: ['Erling', 'Martin', 'Alexander', 'Sander', 'Kristoffer', 'Julian', 'Oscar', 'Morten', 'Patrick', 'Jorgen', 'Fredrik', 'Birger', 'Andreas', 'Antonio'],
+    lastNames: ['Haaland', 'Odegaard', 'Sorloth', 'Berge', 'Ajer', 'Ryerson', 'Bobb', 'Thorsby', 'Berg', 'Strand', 'Aursnes', 'Meling', 'Schjelderup', 'Nusa', 'Solbakken']
+  },
+  Sweden: {
+    firstNames: ['Alexander', 'Viktor', 'Dejan', 'Emil', 'Victor', 'Anthony', 'Jesper', 'Hugo', 'Lucas', 'Ludwig', 'Robin', 'Mattias', 'Carl', 'Jens'],
+    lastNames: ['Isak', 'Gyokeres', 'Kulusevski', 'Forsberg', 'Lindelof', 'Elanga', 'Karlstrom', 'Larsson', 'Bergvall', 'Augustinsson', 'Olsen', 'Svanberg', 'Starfelt', 'Cajuste', 'Johansson']
+  },
+  Turkey: {
+    firstNames: ['Hakan', 'Arda', 'Kenan', 'Orkun', 'Ferdi', 'Kerem', 'Baris', 'Merih', 'Caglar', 'Mert', 'Ismail', 'Salih', 'Yusuf', 'Emre', 'Altay'],
+    lastNames: ['Calhanoglu', 'Guler', 'Yildiz', 'Kokcu', 'Kadioglu', 'Akturkoglu', 'Yilmaz', 'Demiral', 'Soyuncu', 'Muldur', 'Yuksek', 'Ozcan', 'Yazici', 'Bayindir', 'Demir']
+  },
+  Greece: {
+    firstNames: ['Vangelis', 'Kostas', 'Konstantinos', 'Fotis', 'Christos', 'Odysseas', 'Dimitris', 'Petros', 'Georgios', 'Tasos', 'Lazaros', 'Pantelis', 'Manolis', 'Andreas'],
+    lastNames: ['Pavlidis', 'Tsimikas', 'Mavropanos', 'Ioannidis', 'Tzolis', 'Vlachodimos', 'Pelkas', 'Mantalos', 'Masouras', 'Bakasetas', 'Rota', 'Hatzidiakos', 'Siopis', 'Koulierakis', 'Papadopoulos']
+  },
+  Ukraine: {
+    firstNames: ['Mykhailo', 'Oleksandr', 'Artem', 'Heorhiy', 'Viktor', 'Illia', 'Vitalii', 'Anatoliy', 'Ruslan', 'Taras', 'Mykola', 'Roman', 'Andriy', 'Yukhym'],
+    lastNames: ['Mudryk', 'Zinchenko', 'Dovbyk', 'Sudakov', 'Tsygankov', 'Zabarnyi', 'Mykolenko', 'Trubin', 'Malinovskyi', 'Stepanenko', 'Shaparenko', 'Yaremchuk', 'Lunin', 'Konoplia', 'Matviienko']
+  },
+  Poland: {
+    firstNames: ['Robert', 'Piotr', 'Wojciech', 'Jakub', 'Nicola', 'Sebastian', 'Matty', 'Jan', 'Przemyslaw', 'Krzysztof', 'Karol', 'Bartosz', 'Lukasz', 'Kacper'],
+    lastNames: ['Lewandowski', 'Zielinski', 'Szczesny', 'Kiwior', 'Zalewski', 'Szymanski', 'Cash', 'Bednarek', 'Frankowski', 'Piatek', 'Swiderski', 'Bereszynski', 'Skorupski', 'Urbanski', 'Kowalski']
+  },
+  Czechia: {
+    firstNames: ['Tomas', 'Patrik', 'Vladimir', 'Adam', 'Ladislav', 'Ondrej', 'Antonin', 'Jindrich', 'David', 'Martin', 'Lukas', 'Jan', 'Matej', 'Vaclav'],
+    lastNames: ['Soucek', 'Schick', 'Coufal', 'Hlozek', 'Krejci', 'Lingr', 'Barak', 'Stanek', 'Doudera', 'Vitik', 'Provod', 'Kuchta', 'Kovar', 'Cerny', 'Novak']
+  },
+  Serbia: {
+    firstNames: ['Dusan', 'Aleksandar', 'Sergej', 'Nikola', 'Luka', 'Strahinja', 'Filip', 'Predrag', 'Sasa', 'Ivan', 'Andrija', 'Nemanja', 'Milos', 'Djordje'],
+    lastNames: ['Vlahovic', 'Mitrovic', 'Milinkovic', 'Milenkovic', 'Jovic', 'Pavlovic', 'Kostic', 'Rajkovic', 'Lukic', 'Ilic', 'Zivkovic', 'Gudelj', 'Veljkovic', 'Petrovic', 'Samardzic']
+  },
+  Hungary: {
+    firstNames: ['Dominik', 'Roland', 'Milos', 'Willi', 'Peter', 'Barnabas', 'Daniel', 'Andras', 'Attila', 'Loic', 'Bendeguz', 'Adam', 'Zsolt', 'Botond'],
+    lastNames: ['Szoboszlai', 'Sallai', 'Kerkez', 'Orban', 'Gulacsi', 'Varga', 'Gazdag', 'Schafer', 'Szalai', 'Nego', 'Bolla', 'Nagy', 'Kalmar', 'Balogh', 'Kovacs']
+  },
+  Romania: {
+    firstNames: ['Radu', 'Nicolae', 'Dennis', 'Valentin', 'Razvan', 'Andrei', 'Marius', 'Florin', 'Nicusor', 'Denis', 'Ianis', 'George', 'Alexandru', 'Darius'],
+    lastNames: ['Dragusin', 'Stanciu', 'Man', 'Mihaila', 'Marin', 'Ratiu', 'Nita', 'Bancu', 'Dragus', 'Hagi', 'Puscas', 'Cicaldau', 'Olaru', 'Burca', 'Popescu']
+  },
+  Bulgaria: {
+    firstNames: ['Kiril', 'Ilia', 'Georgi', 'Valentin', 'Viktor', 'Dimitar', 'Martin', 'Filip', 'Ivan', 'Radoslav', 'Aleksandar', 'Simeon', 'Stanislav', 'Ivaylo'],
+    lastNames: ['Despodov', 'Gruev', 'Kostadinov', 'Antov', 'Popov', 'Mitov', 'Minchev', 'Krastev', 'Turitsov', 'Kirilov', 'Kolev', 'Petkov', 'Shopov', 'Chochev', 'Ivanov']
+  },
+  Slovakia: {
+    firstNames: ['Milan', 'Stanislav', 'David', 'Ondrej', 'Juraj', 'Lukas', 'Martin', 'Tomas', 'Peter', 'Norbert', 'Robert', 'Denis', 'Ivan', 'Laszlo'],
+    lastNames: ['Skriniar', 'Lobotka', 'Hancko', 'Duda', 'Kucka', 'Haraslin', 'Dubravka', 'Suslov', 'Pekarik', 'Gyomber', 'Bozenik', 'Vavro', 'Schranz', 'Benes', 'Kovac']
+  },
+  Slovenia: {
+    firstNames: ['Jan', 'Benjamin', 'Jaka', 'Adam', 'Timi', 'Petar', 'Erik', 'Andraz', 'Zan', 'Sandi', 'Vanja', 'Jon', 'Miha', 'David'],
+    lastNames: ['Oblak', 'Sesko', 'Bijol', 'Cerin', 'Elsnik', 'Stojanovic', 'Janza', 'Sporar', 'Karnicnik', 'Lovric', 'Drkusic', 'Stankovic', 'Blazic', 'Brezec', 'Novak']
+  },
+  Cyprus: {
+    firstNames: ['Ioannis', 'Kostas', 'Grigoris', 'Pieros', 'Andreas', 'Nikolas', 'Alex', 'Charalampos', 'Stelios', 'Marinos', 'Konstantinos', 'Demetris'],
+    lastNames: ['Pittas', 'Artymatas', 'Kastanos', 'Sotiriou', 'Karamanolis', 'Ioannou', 'Gogic', 'Charalampous', 'Andreou', 'Tzionis', 'Laifis', 'Mall']
+  },
+  Azerbaijan: {
+    firstNames: ['Emin', 'Mahir', 'Ramil', 'Toral', 'Elvin', 'Bahlul', 'Renat', 'Shahrudin', 'Musa', 'Aleksey', 'Abbas', 'Coşqun'],
+    lastNames: ['Makhmudov', 'Emreli', 'Sheydaev', 'Bayramov', 'Jafarquliyev', 'Mustafazada', 'Dadashov', 'Magomedaliyev', 'Gurbanli', 'Isaev', 'Huseynov', 'Diniyev']
+  },
+  Israel: {
+    firstNames: ['Manor', 'Oscar', 'Liel', 'Dor', 'Omri', 'Eli', 'Miguel', 'Mohammad', 'Neta', 'Sean', 'Tai', 'Anan'],
+    lastNames: ['Solomon', 'Gloukh', 'Abada', 'Turgeman', 'Gandelman', 'Dasa', 'Vitor', 'AbuFani', 'Lavi', 'Goldberg', 'Baribo', 'Khalaili']
+  },
+  Iceland: {
+    firstNames: ['Gylfi', 'Albert', 'Hakon', 'Orri', 'Johann', 'Sverrir', 'Victor', 'Andri', 'Jon', 'Mikael', 'Isak', 'Kolbeinn'],
+    lastNames: ['Sigurdsson', 'Gudmundsson', 'Haraldsson', 'Oskarsson', 'Berg', 'Ingason', 'Palsson', 'Gudjohnsen', 'Thorsteinsson', 'Ellertsson', 'Johannesson', 'Finnsson']
+  },
+  Finland: {
+    firstNames: ['Lukas', 'Teemu', 'Joel', 'Glen', 'Robin', 'Oliver', 'Robert', 'Rasmus', 'Fredrik', 'Ilmari', 'Benjamin', 'Kaan'],
+    lastNames: ['Hradecky', 'Pukki', 'Pohjanpalo', 'Kamara', 'Lod', 'Antman', 'Taylor', 'Schuller', 'Jensen', 'Niskanen', 'Kallman', 'Kairinen']
+  },
+  Uruguay: {
+    firstNames: ['Federico', 'Darwin', 'Ronald', 'Manuel', 'Rodrigo', 'Jose', 'Nahitan', 'Mathias', 'Facundo', 'Giorgian', 'Nicolas', 'Sergio', 'Maximiliano', 'Agustin'],
+    lastNames: ['Valverde', 'Nunez', 'Araujo', 'Ugarte', 'Bentancur', 'Gimenez', 'Nandez', 'Olivera', 'Pellistri', 'DeArrascaeta', 'DeLaCruz', 'Rochet', 'Araujo', 'Canobbio', 'Suarez']
+  },
+  Colombia: {
+    firstNames: ['Luis', 'James', 'Jhon', 'Daniel', 'Jefferson', 'Richard', 'Davinson', 'Camilo', 'Johan', 'Rafael', 'Mateus', 'Jorge', 'Yaser', 'Juan'],
+    lastNames: ['Diaz', 'Rodriguez', 'Arias', 'Munoz', 'Lerma', 'Rios', 'Sanchez', 'Vargas', 'Mojica', 'Borre', 'Uribe', 'Carrascal', 'Asprilla', 'Lucumi', 'Cuesta']
+  },
+  Ecuador: {
+    firstNames: ['Moises', 'Piero', 'Pervis', 'Enner', 'Kendry', 'Willian', 'Felix', 'Angelo', 'Jeremy', 'Alan', 'Gonzalo', 'Kevin'],
+    lastNames: ['Caicedo', 'Hincapie', 'Estupinan', 'Valencia', 'Paez', 'Pacho', 'Torres', 'Preciado', 'Sarmiento', 'Franco', 'Plata', 'Rodriguez']
+  },
+  Chile: {
+    firstNames: ['Alexis', 'Ben', 'Dario', 'Gabriel', 'Paulo', 'Guillermo', 'Erick', 'Rodrigo', 'Victor', 'Marcelino', 'Eduardo', 'Brayan'],
+    lastNames: ['Sanchez', 'Brereton', 'Osorio', 'Suazo', 'Diaz', 'Maripan', 'Pulgar', 'Echeverria', 'Davila', 'Nunez', 'Vargas', 'Cortes']
+  },
+  Nigeria: {
+    firstNames: ['Victor', 'Ademola', 'Alex', 'Wilfred', 'Samuel', 'Ola', 'Calvin', 'Frank', 'Taiwo', 'Kelechi', 'Moses', 'Raphael', 'Stanley', 'Semi'],
+    lastNames: ['Osimhen', 'Lookman', 'Iwobi', 'Ndidi', 'Chukwueze', 'Aina', 'Bassey', 'Onyeka', 'Awoniyi', 'Iheanacho', 'Simon', 'Onyedika', 'Nwabali', 'Ajayi', 'Boniface']
+  },
+  Senegal: {
+    firstNames: ['Sadio', 'Nicolas', 'Pape', 'Idrissa', 'Kalidou', 'Ismaila', 'Iliman', 'Habib', 'Lamine', 'Moussa', 'Edouard', 'Boulaye', 'Pathé', 'Krépin'],
+    lastNames: ['Mane', 'Jackson', 'Sarr', 'Gueye', 'Koulibaly', 'Sarr', 'Ndiaye', 'Diallo', 'Camara', 'Niakhate', 'Mendy', 'Dia', 'Ciss', 'Diatta', 'Diouf']
+  },
+  Morocco: {
+    firstNames: ['Achraf', 'Brahim', 'Youssef', 'Sofyan', 'Nayef', 'Noussair', 'Azzedine', 'Hakim', 'Bilal', 'Yassine', 'Abde', 'Amine', 'Soufiane', 'Eliesse'],
+    lastNames: ['Hakimi', 'Diaz', 'EnNesyri', 'Amrabat', 'Aguerd', 'Mazraoui', 'Ounahi', 'Ziyech', 'ElKhannouss', 'Bounou', 'Ezzalzouli', 'Adli', 'Rahimi', 'BenSeghir', 'Saiss']
+  },
+  IvoryCoast: {
+    firstNames: ['Sébastien', 'Franck', 'Simon', 'Nicolas', 'Oumar', 'Evan', 'Odilon', 'Seko', 'Ibrahim', 'Jean', 'Wilfried', 'Karim', 'Yahia', 'Amad'],
+    lastNames: ['Haller', 'Kessie', 'Adingra', 'Pepe', 'Diakite', 'Ndicka', 'Kossounou', 'Fofana', 'Sangare', 'Seri', 'Zaha', 'Konate', 'Fofana', 'Diallo', 'Boly']
+  },
+  Ghana: {
+    firstNames: ['Mohammed', 'Thomas', 'Jordan', 'Antoine', 'Tariq', 'Inaki', 'Abdul', 'Kamaldeen', 'Ernest', 'Alexander', 'Salis', 'Gideon', 'Lawrence', 'Osman'],
+    lastNames: ['Kudus', 'Partey', 'Ayew', 'Semenyo', 'Lamptey', 'Williams', 'Fatawu', 'Sulemana', 'Nuamah', 'Djiku', 'Samed', 'Mensah', 'AtiZigi', 'Bukari', 'Salisu']
+  },
+  Egypt: {
+    firstNames: ['Mohamed', 'Omar', 'Mostafa', 'Trezeguet', 'Emam', 'Marwan', 'Hamdy', 'Ahmed', 'Ramy', 'Zizo', 'Nabil', 'Ibrahim'],
+    lastNames: ['Salah', 'Marmoush', 'Mohamed', 'Hassan', 'Ashour', 'Attia', 'Fathy', 'Hegazi', 'Rabia', 'Sayed', 'Donga', 'Adel']
+  },
+  Cameroon: {
+    firstNames: ['Bryan', 'Andre', 'Carlos', 'Vincent', 'Frank', 'nouhou', 'Christopher', 'Jean', 'Georges', 'Christian', 'Karl', 'Arthur'],
+    lastNames: ['Mbeumo', 'Onana', 'Baleba', 'Aboubakar', 'Anguissa', 'Tolo', 'Wooh', 'Castelletto', 'Nkoudou', 'Bassogog', 'Toko', 'Avom']
+  },
+  SouthKorea: {
+    firstNames: ['Heungmin', 'Kangin', 'Minjae', 'Heechan', 'Jaesung', 'Inbeom', 'Youngwoo', 'Hyunjun', 'Seungho', 'Jisoo', 'Guesung', 'Hyeonwoo'],
+    lastNames: ['Son', 'Lee', 'Kim', 'Hwang', 'Lee', 'Hwang', 'Seol', 'Yang', 'Paik', 'Kim', 'Cho', 'Jo', 'Park', 'Jung', 'Bae']
+  },
+  Australia: {
+    firstNames: ['Mathew', 'Harry', 'Jackson', 'Riley', 'Craig', 'Cameron', 'Aiden', 'Jordan', 'Kusini', 'Nestory', 'Connor', 'Keanu'],
+    lastNames: ['Ryan', 'Souttar', 'Irvine', 'McGree', 'Goodwin', 'Burgess', 'ONeill', 'Bos', 'Yengi', 'Irankunda', 'Metcalfe', 'Baccus']
+  },
+  USA: {
+    firstNames: ['Christian', 'Weston', 'Tyler', 'Antonee', 'Giovanni', 'Folarin', 'Timothy', 'Yunus', 'Chris', 'Brenden', 'Ricardo', 'Matt', 'Josh', 'Johnny'],
+    lastNames: ['Pulisic', 'McKennie', 'Adams', 'Robinson', 'Reyna', 'Balogun', 'Weah', 'Musah', 'Richards', 'Aaronson', 'Pepi', 'Turner', 'Sargent', 'Cardoso', 'Dest']
+  },
+  Mexico: {
+    firstNames: ['Santiago', 'Edson', 'Raul', 'Hirving', 'Johan', 'Cesar', 'Luis', 'Orbelin', 'Julian', 'Jorge', 'Roberto', 'Alexis'],
+    lastNames: ['Gimenez', 'Alvarez', 'Jimenez', 'Lozano', 'Vasquez', 'Montes', 'Chavez', 'Pineda', 'Quinones', 'Sanchez', 'Alvarado', 'Vega']
+  },
+  Canada: {
+    firstNames: ['Alphonso', 'Jonathan', 'Stephen', 'Tajon', 'Alistair', 'Moise', 'Cyle', 'Ismael', 'Liam', 'Derek', 'Maxime', 'Jacob'],
+    lastNames: ['Davies', 'David', 'Eustaquio', 'Buchanan', 'Johnston', 'Bombito', 'Larin', 'Kone', 'Millar', 'Cornelius', 'Crepeau', 'Shaffelburg']
   }
 };
 
-// 国籍リスト（欧州主要国・南米・アジア）
+// 国籍リスト（欧州全クラブ母国＋南米・アフリカ・アジア・北中米・オセアニア：全52カ国）
 const NATIONALITIES = [
-  'England', 'France', 'Spain', 'Germany', 'Italy',
-  'Netherlands', 'Portugal', 'Brazil', 'Argentina', 'Belgium',
-  'Croatia', 'Japan'
+  'England', 'Scotland', 'Wales', 'Ireland',
+  'France', 'Spain', 'Germany', 'Italy', 'Netherlands', 'Portugal', 'Belgium', 'Croatia',
+  'Austria', 'Switzerland', 'Denmark', 'Norway', 'Sweden', 'Turkey', 'Greece', 'Ukraine',
+  'Poland', 'Czechia', 'Serbia', 'Hungary', 'Romania', 'Bulgaria', 'Slovakia', 'Slovenia',
+  'Cyprus', 'Azerbaijan', 'Israel', 'Iceland', 'Finland',
+  'Brazil', 'Argentina', 'Uruguay', 'Colombia', 'Ecuador', 'Chile',
+  'Nigeria', 'Senegal', 'Morocco', 'IvoryCoast', 'Ghana', 'Egypt', 'Cameroon',
+  'Japan', 'SouthKorea', 'Australia', 'USA', 'Mexico', 'Canada'
 ];
 
 /**
@@ -1679,6 +1844,9 @@ const NATIONALITIES = [
  */
 const NATIONALITY_FLAG_SVG = {
   England: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect x="7" width="4" height="12" fill="#cf142b"/><rect y="4" width="18" height="4" fill="#cf142b"/></svg>',
+  Scotland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#005eb8"/><path d="M0,0 L18,12 M18,0 L0,12" stroke="#ffffff" stroke-width="2.4"/></svg>',
+  Wales: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#ffffff"/><rect y="6" width="18" height="6" fill="#00ab39"/><path d="M5,8 Q9,3 13,7 Q10,9 5,8 Z" fill="#d30731"/></svg>',
+  Ireland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#169b62"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#ff883e"/></svg>',
   France: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#002395"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#ed2939"/></svg>',
   Spain: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="3" fill="#aa151b"/><rect y="3" width="18" height="6" fill="#f1bf00"/><rect y="9" width="18" height="3" fill="#aa151b"/><rect x="3.5" y="4.5" width="2" height="3" fill="#aa151b" rx="0.5"/></svg>',
   Germany: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#000000"/><rect y="4" width="18" height="4" fill="#dd0000"/><rect y="8" width="18" height="4" fill="#ffce00"/></svg>',
@@ -1689,7 +1857,44 @@ const NATIONALITY_FLAG_SVG = {
   Argentina: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#74acdf"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#74acdf"/><circle cx="9" cy="6" r="1.3" fill="#f6b40e"/><circle cx="9" cy="6" r="0.6" fill="#85340a"/></svg>',
   Belgium: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#000000"/><rect x="6" width="6" height="12" fill="#ffd90c"/><rect x="12" width="6" height="12" fill="#ed2939"/></svg>',
   Croatia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ff0000"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#171796"/><rect x="7.5" y="4.2" width="3" height="3.6" fill="#ff0000" stroke="#ffffff" stroke-width="0.3"/><rect x="8.3" y="4.2" width="0.7" height="1.8" fill="#ffffff"/><rect x="9.8" y="4.2" width="0.7" height="1.8" fill="#ffffff"/><rect x="7.5" y="6" width="0.8" height="1.8" fill="#ffffff"/><rect x="9" y="6" width="0.8" height="1.8" fill="#ffffff"/></svg>',
-  Japan: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><circle cx="9" cy="6" r="3.2" fill="#bc002d"/></svg>'
+  Japan: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><circle cx="9" cy="6" r="3.2" fill="#bc002d"/></svg>',
+  Austria: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ed2939"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#ed2939"/></svg>',
+  Switzerland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#d52b1e"/><rect x="7.6" y="2.6" width="2.8" height="6.8" fill="#ffffff"/><rect x="5.6" y="4.6" width="6.8" height="2.8" fill="#ffffff"/></svg>',
+  Denmark: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#c60c30"/><rect x="5" width="2.2" height="12" fill="#ffffff"/><rect y="4.9" width="18" height="2.2" fill="#ffffff"/></svg>',
+  Norway: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ba0c2f"/><rect x="4.6" width="3" height="12" fill="#ffffff"/><rect y="4.5" width="18" height="3" fill="#ffffff"/><rect x="5.3" width="1.6" height="12" fill="#00205b"/><rect y="5.2" width="18" height="1.6" fill="#00205b"/></svg>',
+  Sweden: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#006aa7"/><rect x="5" width="2.4" height="12" fill="#fecc00"/><rect y="4.8" width="18" height="2.4" fill="#fecc00"/></svg>',
+  Turkey: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#e30a17"/><circle cx="7.2" cy="6" r="2.8" fill="#ffffff"/><circle cx="8" cy="6" r="2.2" fill="#e30a17"/><circle cx="10.8" cy="6" r="0.9" fill="#ffffff"/></svg>',
+  Greece: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#0d5eaf"/><rect y="1.4" width="18" height="1.3" fill="#ffffff"/><rect y="4" width="18" height="1.3" fill="#ffffff"/><rect y="6.6" width="18" height="1.3" fill="#ffffff"/><rect y="9.2" width="18" height="1.3" fill="#ffffff"/><rect width="7" height="6.6" fill="#0d5eaf"/><rect x="2.8" width="1.4" height="6.6" fill="#ffffff"/><rect y="2.6" width="7" height="1.4" fill="#ffffff"/></svg>',
+  Ukraine: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#0057b7"/><rect y="6" width="18" height="6" fill="#ffd700"/></svg>',
+  Poland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#ffffff"/><rect y="6" width="18" height="6" fill="#dc143c"/></svg>',
+  Czechia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#ffffff"/><rect y="6" width="18" height="6" fill="#d7141a"/><polygon points="0,0 8.5,6 0,12" fill="#11457e"/></svg>',
+  Serbia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#c6363c"/><rect y="4" width="18" height="4" fill="#0c4076"/><rect y="8" width="18" height="4" fill="#ffffff"/><rect x="4.5" y="3.8" width="2.4" height="3.6" rx="0.8" fill="#ffffff" stroke="#e4b429" stroke-width="0.5"/></svg>',
+  Hungary: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#cd2a3e"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#436f4d"/></svg>',
+  Romania: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#002b7f"/><rect x="6" width="6" height="12" fill="#fcd116"/><rect x="12" width="6" height="12" fill="#ce1126"/></svg>',
+  Bulgaria: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ffffff"/><rect y="4" width="18" height="4" fill="#00966e"/><rect y="8" width="18" height="4" fill="#d62612"/></svg>',
+  Slovakia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ffffff"/><rect y="4" width="18" height="4" fill="#0b4ea2"/><rect y="8" width="18" height="4" fill="#ee1c25"/><rect x="4.2" y="3.8" width="2.6" height="3.6" rx="0.8" fill="#ee1c25" stroke="#ffffff" stroke-width="0.4"/></svg>',
+  Slovenia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ffffff"/><rect y="4" width="18" height="4" fill="#005da4"/><rect y="8" width="18" height="4" fill="#ed1c24"/><rect x="3.8" y="3" width="2.2" height="2.6" rx="0.5" fill="#005da4" stroke="#ffffff" stroke-width="0.3"/></svg>',
+  Cyprus: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><ellipse cx="9" cy="5.4" rx="3.4" ry="1.8" fill="#d57800"/><path d="M6.2,8.4 L11.8,9.2 M11.8,8.4 L6.2,9.2" stroke="#4e5b31" stroke-width="0.8"/></svg>',
+  Azerbaijan: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#00b5e2"/><rect y="4" width="18" height="4" fill="#ef3340"/><rect y="8" width="18" height="4" fill="#509e2f"/><circle cx="8.6" cy="6" r="1.4" fill="#ffffff"/><circle cx="9.1" cy="6" r="1.1" fill="#ef3340"/></svg>',
+  Israel: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect y="1.4" width="18" height="1.8" fill="#0038b8"/><rect y="8.8" width="18" height="1.8" fill="#0038b8"/><polygon points="9,4 10.8,7.2 7.2,7.2" fill="none" stroke="#0038b8" stroke-width="0.7"/><polygon points="9,8 10.8,4.8 7.2,4.8" fill="none" stroke="#0038b8" stroke-width="0.7"/></svg>',
+  Iceland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#02529c"/><rect x="4.6" width="3" height="12" fill="#ffffff"/><rect y="4.5" width="18" height="3" fill="#ffffff"/><rect x="5.3" width="1.6" height="12" fill="#dc1e35"/><rect y="5.2" width="18" height="1.6" fill="#dc1e35"/></svg>',
+  Finland: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect x="4.8" width="2.8" height="12" fill="#002f6c"/><rect y="4.6" width="18" height="2.8" fill="#002f6c"/></svg>',
+  Uruguay: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect y="1.5" width="18" height="1.3" fill="#0038a8"/><rect y="4.2" width="18" height="1.3" fill="#0038a8"/><rect y="6.9" width="18" height="1.3" fill="#0038a8"/><rect y="9.6" width="18" height="1.3" fill="#0038a8"/><rect width="7" height="6.4" fill="#ffffff"/><circle cx="3.5" cy="3.2" r="1.6" fill="#fcd116"/></svg>',
+  Colombia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#fcd116"/><rect y="6" width="18" height="3" fill="#003893"/><rect y="9" width="18" height="3" fill="#ce1126"/></svg>',
+  Ecuador: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#ffdd00"/><rect y="6" width="18" height="3" fill="#034ea2"/><rect y="9" width="18" height="3" fill="#ed1c24"/><circle cx="9" cy="6" r="1.4" fill="#7c5c2e"/></svg>',
+  Chile: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="6" fill="#ffffff"/><rect y="6" width="18" height="6" fill="#d52b1e"/><rect width="6.5" height="6" fill="#0039a6"/><circle cx="3.25" cy="3" r="1.1" fill="#ffffff"/></svg>',
+  Nigeria: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#008751"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#008751"/></svg>',
+  Senegal: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#00853f"/><rect x="6" width="6" height="12" fill="#fdef42"/><rect x="12" width="6" height="12" fill="#e31b23"/><circle cx="9" cy="6" r="1.1" fill="#00853f"/></svg>',
+  Morocco: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#c1272d"/><polygon points="9,3.5 10.6,8 6.8,5.3 11.2,5.3 7.4,8" fill="none" stroke="#006233" stroke-width="0.7"/></svg>',
+  IvoryCoast: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#f77f00"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#009e60"/></svg>',
+  Ghana: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#cf0921"/><rect y="4" width="18" height="4" fill="#fcd20f"/><rect y="8" width="18" height="4" fill="#006b3f"/><circle cx="9" cy="6" r="1.1" fill="#000000"/></svg>',
+  Egypt: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="4" fill="#ce1126"/><rect y="4" width="18" height="4" fill="#ffffff"/><rect y="8" width="18" height="4" fill="#000000"/><rect x="8" y="4.8" width="2" height="2.4" fill="#c09300"/></svg>',
+  Cameroon: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#007a5e"/><rect x="6" width="6" height="12" fill="#ce1126"/><rect x="12" width="6" height="12" fill="#fcd116"/><circle cx="9" cy="6" r="1.1" fill="#fcd116"/></svg>',
+  SouthKorea: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><circle cx="9" cy="6" r="2.8" fill="#cd2e3a"/><path d="M6.2,6 A2.8,2.8 0 0,0 11.8,6 A1.4,1.4 0 0,0 9,6 A1.4,1.4 0 0,1 6.2,6 Z" fill="#0047a0"/></svg>',
+  Australia: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#00008b"/><rect width="7" height="5" fill="#012169"/><rect x="2.9" width="1.2" height="5" fill="#ffffff"/><rect y="1.9" width="7" height="1.2" fill="#ffffff"/><rect x="3.1" width="0.8" height="5" fill="#c8102e"/><rect y="2.1" width="7" height="0.8" fill="#c8102e"/><circle cx="13" cy="3.5" r="0.7" fill="#ffffff"/><circle cx="14.5" cy="6" r="0.7" fill="#ffffff"/><circle cx="13" cy="8.5" r="0.7" fill="#ffffff"/><circle cx="3.5" cy="8.5" r="1.1" fill="#ffffff"/></svg>',
+  USA: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#ffffff"/><rect y="0" width="18" height="1.7" fill="#b22234"/><rect y="3.4" width="18" height="1.7" fill="#b22234"/><rect y="6.8" width="18" height="1.7" fill="#b22234"/><rect y="10.2" width="18" height="1.8" fill="#b22234"/><rect width="8" height="6.8" fill="#3c3b6e"/></svg>',
+  Mexico: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="6" height="12" fill="#006847"/><rect x="6" width="6" height="12" fill="#ffffff"/><rect x="12" width="6" height="12" fill="#ce1126"/><circle cx="9" cy="6" r="1.3" fill="#6b4e2e"/></svg>',
+  Canada: '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="4.5" height="12" fill="#ff0000"/><rect x="4.5" width="9" height="12" fill="#ffffff"/><rect x="13.5" width="4.5" height="12" fill="#ff0000"/><polygon points="9,3.2 10.2,6 11.4,5.6 10.6,7.4 9.3,7.4 9.3,8.8 8.7,8.8 8.7,7.4 7.4,7.4 6.6,5.6 7.8,6" fill="#ff0000"/></svg>'
 };
 
 const NATIONALITY_FLAG_FALLBACK_SVG = '<svg class="profile-flag-icon" viewBox="0 0 18 12" width="18" height="12" aria-hidden="true"><rect width="18" height="12" fill="#2b3137"/><circle cx="9" cy="6" r="4.2" fill="none" stroke="#8b949e" stroke-width="0.9"/><ellipse cx="9" cy="6" rx="2" ry="4.2" fill="none" stroke="#8b949e" stroke-width="0.7"/><line x1="4.8" y1="6" x2="13.2" y2="6" stroke="#8b949e" stroke-width="0.7"/></svg>';
@@ -1925,7 +2130,15 @@ const SPONSOR_TEMPLATES = [
 const NATIONAL_TEAM_STRENGTHS = {
   England: 84, France: 86, Spain: 85, Germany: 83, Brazil: 85,
   Argentina: 86, Portugal: 84, Italy: 82, Netherlands: 82, Belgium: 80,
-  Japan: 78, Croatia: 80, Uruguay: 80, Colombia: 79, Denmark: 77
+  Japan: 78, Croatia: 80, Uruguay: 80, Colombia: 79, Denmark: 78,
+  Scotland: 76, Wales: 75, Ireland: 73, Austria: 77, Switzerland: 79,
+  Norway: 77, Sweden: 76, Turkey: 77, Greece: 75, Ukraine: 77,
+  Poland: 76, Czechia: 75, Serbia: 76, Hungary: 75, Romania: 73,
+  Bulgaria: 69, Slovakia: 73, Slovenia: 74, Cyprus: 65, Azerbaijan: 65,
+  Israel: 71, Iceland: 71, Finland: 71, Ecuador: 77, Chile: 75,
+  Nigeria: 77, Senegal: 78, Morocco: 80, IvoryCoast: 77, Ghana: 74,
+  Egypt: 76, Cameroon: 75, SouthKorea: 77, Australia: 74, USA: 76,
+  Mexico: 76, Canada: 75
 };
 
 // PSR（収益性と持続可能性に関する規則）許容赤字上限（3シーズン累積：£35.0M = 35000 £K）
@@ -1948,20 +2161,107 @@ const SQUAD_NATIONALITY_RULES = {
   MARKET_HOME_RATIO: 0.35     // フリー市場の自国籍比率
 };
 
-// 欧州クラブ国コード → 選手国籍マッピング
+// 欧州クラブ国コード・日本語国名 → 選手国籍マッピング（全32クラブ国コード対応）
 const COUNTRY_CODE_TO_NATIONALITY = {
-  ENG: 'England',
-  ESP: 'Spain',
-  ITA: 'Italy',
-  GER: 'Germany',
-  FRA: 'France',
-  POR: 'Portugal',
-  NED: 'Netherlands',
-  BEL: 'Belgium',
-  CRO: 'Croatia',
-  JPN: 'Japan',
-  BRA: 'Brazil',
-  ARG: 'Argentina'
+  ENG: 'England', SCO: 'Scotland', WAL: 'Wales', IRL: 'Ireland',
+  ESP: 'Spain', ITA: 'Italy', GER: 'Germany', FRA: 'France',
+  POR: 'Portugal', NED: 'Netherlands', BEL: 'Belgium', CRO: 'Croatia',
+  AUT: 'Austria', SUI: 'Switzerland', DEN: 'Denmark', NOR: 'Norway',
+  SWE: 'Sweden', TUR: 'Turkey', GRE: 'Greece', UKR: 'Ukraine',
+  POL: 'Poland', CZE: 'Czechia', SRB: 'Serbia', HUN: 'Hungary',
+  ROU: 'Romania', BUL: 'Bulgaria', SVK: 'Slovakia', SVN: 'Slovenia',
+  CYP: 'Cyprus', AZE: 'Azerbaijan', ISR: 'Israel', ISL: 'Iceland',
+  FIN: 'Finland', BRA: 'Brazil', ARG: 'Argentina', URU: 'Uruguay',
+  COL: 'Colombia', ECU: 'Ecuador', CHI: 'Chile', NGA: 'Nigeria',
+  SEN: 'Senegal', MAR: 'Morocco', CIV: 'IvoryCoast', GHA: 'Ghana',
+  EGY: 'Egypt', CMR: 'Cameroon', JPN: 'Japan', KOR: 'SouthKorea',
+  AUS: 'Australia', USA: 'USA', MEX: 'Mexico', CAN: 'Canada',
+  'イングランド': 'England', 'スペイン': 'Spain', 'イタリア': 'Italy',
+  'ドイツ': 'Germany', 'フランス': 'France'
+};
+
+// 現実の外国籍選手供給比率に近いデフォルト重み（主にイングランド1部/グローバル市場基準）
+const NATIONALITY_DEFAULT_WEIGHTS = {
+  England: 28,
+  Brazil: 11, France: 11, Spain: 9, Portugal: 8, Netherlands: 7, Argentina: 7,
+  Scotland: 6, Ireland: 6, Wales: 5, Germany: 5, Belgium: 5, Denmark: 5,
+  Italy: 4, Norway: 4, Sweden: 4, Nigeria: 4, Morocco: 3.5, Senegal: 3.5,
+  IvoryCoast: 3, Ghana: 3, Colombia: 3, Uruguay: 3, USA: 3,
+  Croatia: 2.5, Switzerland: 2.5, Austria: 2.5, Poland: 2.5, Ukraine: 2,
+  Cameroon: 2, Ecuador: 2, Japan: 2, SouthKorea: 2, Australia: 2, Canada: 2, Mexico: 2,
+  Serbia: 2, Turkey: 1.5, Greece: 1.5, Czechia: 1.5, Hungary: 1.5, Egypt: 1.5, Chile: 1.5,
+  Romania: 1, Slovakia: 1, Slovenia: 1, Finland: 1, Iceland: 1, Israel: 1, Bulgaria: 0.8,
+  Cyprus: 0.4, Azerbaijan: 0.4
+};
+
+// リーグ・国別の自国比率および外国籍地域の現実的傾向プロファイル
+const LEAGUE_NATIONALITY_PROFILES = {
+  ENG: {
+    homeRatio: 0.48,
+    foreignBoosts: { Scotland: 1.4, Ireland: 1.4, Wales: 1.5, Brazil: 1.2, France: 1.2, Portugal: 1.15, Netherlands: 1.15 }
+  },
+  ENG_D2: {
+    homeRatio: 0.75,
+    foreignBoosts: { Scotland: 2.4, Ireland: 2.5, Wales: 2.4, Australia: 1.8, USA: 1.5, Canada: 1.5, Netherlands: 1.3, Denmark: 1.3, Sweden: 1.2, Norway: 1.2, France: 1.1 }
+  },
+  Spain: {
+    homeRatio: 0.62,
+    foreignBoosts: { Argentina: 2.4, Brazil: 2.0, Uruguay: 2.4, Colombia: 2.0, France: 1.6, Portugal: 1.6, Morocco: 1.6, Chile: 1.5, Ecuador: 1.4, Mexico: 1.4, Belgium: 1.2, Croatia: 1.2, Serbia: 1.2, Japan: 1.1 }
+  },
+  Italy: {
+    homeRatio: 0.56,
+    foreignBoosts: { Argentina: 2.2, Brazil: 1.8, France: 1.6, Netherlands: 1.5, Croatia: 1.6, Serbia: 1.8, Poland: 1.6, Switzerland: 1.5, Belgium: 1.4, Spain: 1.3, Portugal: 1.3, Nigeria: 1.4, Morocco: 1.3, Denmark: 1.3, Norway: 1.3, Uruguay: 1.4, Colombia: 1.4 }
+  },
+  Germany: {
+    homeRatio: 0.56,
+    foreignBoosts: { Austria: 2.6, Switzerland: 2.4, France: 1.6, Netherlands: 1.6, Turkey: 2.0, Poland: 1.6, Croatia: 1.6, Denmark: 1.6, Belgium: 1.4, Norway: 1.4, Sweden: 1.3, Czechia: 1.5, Hungary: 1.6, USA: 1.6, Japan: 1.7, SouthKorea: 1.4 }
+  },
+  France: {
+    homeRatio: 0.58,
+    foreignBoosts: { Morocco: 2.5, Senegal: 2.5, IvoryCoast: 2.5, Cameroon: 2.2, Brazil: 1.7, Portugal: 1.6, Belgium: 1.6, Spain: 1.3, Argentina: 1.4, Switzerland: 1.4, Netherlands: 1.2, Nigeria: 1.4, Ghana: 1.4, Japan: 1.2 }
+  },
+  Portugal: {
+    homeRatio: 0.60,
+    foreignBoosts: { Brazil: 3.6, Argentina: 1.6, Uruguay: 1.6, Colombia: 1.6, Spain: 1.8, France: 1.2, Japan: 1.5, SouthKorea: 1.2, Nigeria: 1.3, Ghana: 1.3 }
+  },
+  Netherlands: {
+    homeRatio: 0.64,
+    foreignBoosts: { Belgium: 2.2, Germany: 1.6, Denmark: 1.8, Sweden: 1.6, Norway: 1.6, Brazil: 1.5, Morocco: 1.8, USA: 1.5, Mexico: 1.4, Japan: 1.4, Croatia: 1.2 }
+  },
+  Belgium: {
+    homeRatio: 0.60,
+    foreignBoosts: { France: 2.0, Netherlands: 2.0, Morocco: 1.8, Senegal: 1.6, IvoryCoast: 1.6, Nigeria: 1.5, Ghana: 1.4, Japan: 1.6, Denmark: 1.4, Norway: 1.3, Ecuador: 1.4 }
+  },
+  Scotland: {
+    homeRatio: 0.64,
+    foreignBoosts: { England: 3.5, Ireland: 2.5, Wales: 1.8, Australia: 1.8, Japan: 1.6, Netherlands: 1.4, Norway: 1.4, Sweden: 1.4, USA: 1.4, Canada: 1.3, Portugal: 1.2, Croatia: 1.2 }
+  },
+  Turkey: {
+    homeRatio: 0.62,
+    foreignBoosts: { Brazil: 2.0, Argentina: 1.5, Germany: 1.8, Netherlands: 1.5, France: 1.4, Portugal: 1.5, Serbia: 1.6, Croatia: 1.5, Nigeria: 1.7, Senegal: 1.6, Ghana: 1.5, Morocco: 1.5, Poland: 1.4 }
+  },
+  Austria: { homeRatio: 0.66, foreignBoosts: { Germany: 2.5, Switzerland: 1.8, Croatia: 1.8, Serbia: 1.8, Slovenia: 1.6, Hungary: 1.6, Poland: 1.4, Denmark: 1.3, IvoryCoast: 1.3 } },
+  Switzerland: { homeRatio: 0.64, foreignBoosts: { France: 1.8, Germany: 1.8, Italy: 1.6, Serbia: 1.6, Croatia: 1.5, IvoryCoast: 1.4, Senegal: 1.3, Brazil: 1.3 } },
+  Denmark: { homeRatio: 0.68, foreignBoosts: { Sweden: 2.4, Norway: 2.4, Iceland: 2.0, Finland: 1.6, Germany: 1.4, Netherlands: 1.4, Nigeria: 1.6, Ghana: 1.4 } },
+  Norway: { homeRatio: 0.72, foreignBoosts: { Sweden: 2.4, Denmark: 2.4, Iceland: 2.0, Finland: 1.5, Nigeria: 1.5, Ghana: 1.4, IvoryCoast: 1.3 } },
+  Sweden: { homeRatio: 0.70, foreignBoosts: { Denmark: 2.4, Norway: 2.4, Finland: 2.0, Iceland: 1.8, Nigeria: 1.5, Ghana: 1.4, Serbia: 1.3 } },
+  Greece: { homeRatio: 0.62, foreignBoosts: { Brazil: 1.8, Argentina: 1.7, Spain: 1.8, Portugal: 1.7, Serbia: 1.8, Croatia: 1.5, France: 1.3, Cyprus: 2.0, Nigeria: 1.3 } },
+  Ukraine: { homeRatio: 0.76, foreignBoosts: { Brazil: 2.8, Croatia: 1.5, Poland: 1.5, Georgia: 1.0, Nigeria: 1.3, Israel: 1.3 } },
+  Poland: { homeRatio: 0.70, foreignBoosts: { Slovakia: 2.0, Czechia: 2.0, Ukraine: 1.8, Spain: 1.6, Portugal: 1.5, Germany: 1.4, Serbia: 1.4, Croatia: 1.4 } },
+  Czechia: { homeRatio: 0.74, foreignBoosts: { Slovakia: 3.0, Poland: 1.6, Serbia: 1.5, Croatia: 1.4, Nigeria: 1.5, IvoryCoast: 1.4, Ukraine: 1.4 } },
+  Serbia: { homeRatio: 0.74, foreignBoosts: { Croatia: 1.5, Slovenia: 1.5, Hungary: 1.3, Brazil: 1.6, Ghana: 1.5, Nigeria: 1.5, SouthKorea: 1.3 } },
+  Croatia: { homeRatio: 0.72, foreignBoosts: { Slovenia: 2.0, Serbia: 1.6, Austria: 1.4, Brazil: 1.5, Nigeria: 1.4, Japan: 1.3 } },
+  Hungary: { homeRatio: 0.70, foreignBoosts: { Serbia: 1.8, Slovakia: 1.8, Romania: 1.6, Croatia: 1.6, Brazil: 1.6, Ukraine: 1.5, Nigeria: 1.4 } },
+  Romania: { homeRatio: 0.72, foreignBoosts: { Bulgaria: 1.6, Hungary: 1.5, Serbia: 1.6, Italy: 1.4, Spain: 1.4, Portugal: 1.4, Brazil: 1.5, IvoryCoast: 1.3 } },
+  Bulgaria: { homeRatio: 0.70, foreignBoosts: { Brazil: 2.5, Serbia: 1.8, Romania: 1.6, Greece: 1.5, Netherlands: 1.3, Nigeria: 1.3 } },
+  Slovakia: { homeRatio: 0.72, foreignBoosts: { Czechia: 2.8, Poland: 1.8, Hungary: 1.6, Serbia: 1.6, Croatia: 1.4, Nigeria: 1.3 } },
+  Slovenia: { homeRatio: 0.72, foreignBoosts: { Croatia: 2.6, Serbia: 2.0, Austria: 1.6, Italy: 1.4, Brazil: 1.3 } },
+  Cyprus: { homeRatio: 0.56, foreignBoosts: { Greece: 3.5, Brazil: 2.0, Portugal: 2.0, Spain: 1.8, Serbia: 1.6, Argentina: 1.5, France: 1.3 } },
+  Azerbaijan: { homeRatio: 0.68, foreignBoosts: { Turkey: 2.2, Brazil: 2.0, Serbia: 1.6, Croatia: 1.5, France: 1.3, Colombia: 1.4, Morocco: 1.3 } },
+  Israel: { homeRatio: 0.74, foreignBoosts: { Brazil: 1.8, Serbia: 1.6, Croatia: 1.5, Nigeria: 1.6, Ghana: 1.4, France: 1.3, Spain: 1.3 } },
+  Ireland: { homeRatio: 0.78, foreignBoosts: { England: 3.5, Scotland: 2.2, Wales: 1.8, Nigeria: 1.3 } },
+  Iceland: { homeRatio: 0.80, foreignBoosts: { Denmark: 2.4, Norway: 2.0, Sweden: 2.0, England: 1.5, Finland: 1.4 } },
+  Finland: { homeRatio: 0.76, foreignBoosts: { Sweden: 2.4, Norway: 1.8, Denmark: 1.8, Nigeria: 1.4, Ghana: 1.3, Brazil: 1.3 } }
 };
 
 // ユーススカウト派遣先地域定義
@@ -1981,8 +2281,8 @@ const YOUTH_SCOUT_REGIONS = {
     name: '英国・アイルランド',
     cost: 500,
     days: 16,
-    nationalities: ['England', 'Croatia'],
-    homeProb: 0.72,
+    nationalities: ['Scotland', 'Wales', 'Ireland'],
+    homeProb: 0.70,
     potentialBonus: 1,
     desc: '闘志とフィジカルに優れた英国圏の原石をバランス良く発掘。'
   },
@@ -1992,26 +2292,26 @@ const YOUTH_SCOUT_REGIONS = {
     cost: 850,
     days: 21,
     nationalities: ['Spain', 'Portugal'],
-    homeProb: 0.15,
+    homeProb: 0.12,
     potentialBonus: 2,
     desc: '技術と戦術眼に優れた技巧派MF/WGの発掘率が高い。'
   },
   central_europe: {
     id: 'central_europe',
-    name: '中欧 (GER/FRA/NED)',
+    name: '中欧・北欧 (GER/FRA/NED/DEN)',
     cost: 900,
     days: 21,
-    nationalities: ['Germany', 'France', 'Netherlands', 'Belgium'],
-    homeProb: 0.10,
+    nationalities: ['Germany', 'France', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Denmark', 'Norway', 'Sweden'],
+    homeProb: 0.08,
     potentialBonus: 2,
     desc: '欧州主要育成国から完成度の高い万能タレントを発掘。'
   },
   south_america: {
     id: 'south_america',
-    name: '南米 (BRA/ARG)',
+    name: '南米 (BRA/ARG/URU/COL)',
     cost: 1200,
     days: 28,
-    nationalities: ['Brazil', 'Argentina', 'Uruguay', 'Colombia'],
+    nationalities: ['Brazil', 'Argentina', 'Uruguay', 'Colombia', 'Ecuador', 'Chile'],
     homeProb: 0.05,
     potentialBonus: 4,
     desc: '費用と日数は掛かるが、最高ランク（S/A）の天才アタッカー発掘率が最も高い。'

@@ -1455,7 +1455,7 @@ function getStatTierClass(val) {
  * 9ポジション＋複数適性＋詳細プロフィールに対応した選手1名を生成
  */
 function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = null, forcedCurve = null, forcedNationality = null) {
-  const nationality = forcedNationality || NATIONALITIES[randInt(0, NATIONALITIES.length - 1)];
+  const nationality = forcedNationality || (typeof pickWeightedNationality === 'function' ? pickWeightedNationality(0.28, 'England', 'ENG') : NATIONALITIES[randInt(0, NATIONALITIES.length - 1)]);
   const nameData = generatePlayerName(nationality, usedNames);
   const age = customAgeRange ? randInt(customAgeRange[0], customAgeRange[1]) : randInt(18, 33);
   const growthCurve = forcedCurve || pickRandomGrowthCurve();
@@ -1720,6 +1720,7 @@ function createSquad(basePower, usedNames, options = {}) {
   const homeNat = (rules && rules.HOME_NATIONALITY) || 'England';
   const homeRatio = typeof options.homeRatio === 'number' ? options.homeRatio : (rules ? rules.D1_HOME_RATIO : 0.48);
   const minHomeCount = typeof options.minHomeCount === 'number' ? options.minHomeCount : (rules ? rules.D1_MIN_HOME_COUNT : 10);
+  const leagueProfileKey = options.leagueProfileKey || ((homeNat === 'England' && homeRatio >= 0.70) ? 'ENG_D2' : homeNat);
 
   const slots = [];
   for (const group of SQUAD_COMPOSITION) {
@@ -1729,7 +1730,7 @@ function createSquad(basePower, usedNames, options = {}) {
   }
 
   // 国籍リストを事前に決定し、最低自国籍人数を保証
-  const nats = slots.map(() => pickWeightedNationality(homeRatio, homeNat));
+  const nats = slots.map(() => pickWeightedNationality(homeRatio, homeNat, leagueProfileKey));
   let homeCount = nats.filter(n => n === homeNat).length;
   if (homeCount < minHomeCount) {
     const nonHomeIndices = [];
@@ -1995,8 +1996,13 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
     const clubTeamOvr = clubDef.basePower || 76;
     const rawGenPower = clamp(clubTeamOvr - 4 + randInt(-4, 5), 64, maxGenPower);
     const clubOvrCap = Math.min(maxEuroOvrCap, clubTeamOvr >= 83 ? maxEuroOvrCap : (clubTeamOvr >= 78 ? 86 : 81));
-    const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && clubDef.country) ? COUNTRY_CODE_TO_NATIONALITY[clubDef.country] : null;
-    const euroNat = mappedNat ? pickWeightedNationality(0.60, mappedNat) : null;
+    const rawCountry = clubDef.country || '';
+    const mappedNat = (typeof COUNTRY_CODE_TO_NATIONALITY !== 'undefined' && rawCountry)
+      ? (COUNTRY_CODE_TO_NATIONALITY[rawCountry] || COUNTRY_CODE_TO_NATIONALITY[String(rawCountry).toUpperCase()] || null)
+      : (typeof resolveClubCountryToNationality === 'function' ? resolveClubCountryToNationality(rawCountry, clubDef.id) : null);
+    const leagueProf = (typeof LEAGUE_NATIONALITY_PROFILES !== 'undefined' && mappedNat) ? LEAGUE_NATIONALITY_PROFILES[mappedNat] : null;
+    const euroHomeRatio = leagueProf && typeof leagueProf.homeRatio === 'number' ? leagueProf.homeRatio : 0.62;
+    const euroNat = mappedNat ? pickWeightedNationality(euroHomeRatio, mappedNat, mappedNat) : null;
     const isEuroStarter = rawGenPower >= 72 || i < 14;
     const p = createPlayer(pos, rawGenPower, isEuroStarter, usedNames, [18, 32], null, euroNat);
     p.squadNumber = randInt(2, 30);
@@ -3353,18 +3359,41 @@ function updateBoardConfidenceAfterMatch(club, compCategory, won, drawn) {
 /**
  * 指定確率 homeRatio で自国籍（homeNat）を抽選し、それ以外は他国から均等抽選する
  */
-function pickWeightedNationality(homeRatio = 0.48, homeNat = null) {
+function pickWeightedNationality(homeRatio = 0.48, homeNat = null, leagueProfileKey = null, rng = Math.random) {
   const rules = typeof SQUAD_NATIONALITY_RULES !== 'undefined' ? SQUAD_NATIONALITY_RULES : null;
   const targetHome = homeNat || (rules && rules.HOME_NATIONALITY) || 'England';
   const natList = (typeof NATIONALITIES !== 'undefined' && Array.isArray(NATIONALITIES) && NATIONALITIES.length > 0)
     ? NATIONALITIES
     : ['England', 'France', 'Spain', 'Germany', 'Italy', 'Netherlands', 'Portugal', 'Brazil', 'Argentina', 'Belgium', 'Croatia', 'Japan'];
-  if (Math.random() < homeRatio) {
+  if (rng() < homeRatio) {
     return targetHome;
   }
   const others = natList.filter(n => n !== targetHome);
   if (others.length === 0) return targetHome;
-  return others[randInt(0, others.length - 1)];
+
+  const baseWeights = (typeof NATIONALITY_DEFAULT_WEIGHTS !== 'undefined') ? NATIONALITY_DEFAULT_WEIGHTS : {};
+  const profKey = leagueProfileKey || targetHome;
+  const leagueProf = (typeof LEAGUE_NATIONALITY_PROFILES !== 'undefined' && profKey) ? LEAGUE_NATIONALITY_PROFILES[profKey] : null;
+  const boosts = (leagueProf && leagueProf.foreignBoosts) ? leagueProf.foreignBoosts : {};
+
+  let totalWeight = 0;
+  const weights = others.map(n => {
+    const base = typeof baseWeights[n] === 'number' ? baseWeights[n] : 1;
+    const mult = typeof boosts[n] === 'number' ? boosts[n] : 1;
+    const w = Math.max(0.05, base * mult);
+    totalWeight += w;
+    return w;
+  });
+
+  if (totalWeight <= 0) {
+    return others[Math.floor(rng() * others.length)];
+  }
+  let roll = rng() * totalWeight;
+  for (let i = 0; i < others.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return others[i];
+  }
+  return others[others.length - 1];
 }
 
 /**
