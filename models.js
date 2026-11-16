@@ -3150,7 +3150,7 @@ function getPlayerScoutedView(player, isPlayerClub = false) {
       atkDisplay: `${player.atk}`,
       defDisplay: `${player.def}`,
       staDisplay: `${player.sta}`,
-      curveDisplay: typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準',
+      curveDisplay: '',
       feeKnown: true
     };
   }
@@ -3168,7 +3168,7 @@ function getPlayerScoutedView(player, isPlayerClub = false) {
       atkDisplay: `${player.atk}`,
       defDisplay: `${player.def}`,
       staDisplay: `${player.sta}`,
-      curveDisplay: typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準',
+      curveDisplay: '',
       feeKnown: true
     };
   }
@@ -3186,14 +3186,14 @@ function getPlayerScoutedView(player, isPlayerClub = false) {
   return {
     isScouted: false,
     scoutLevel: lv,
-    ovrDisplay: `${minOvr}〜${maxOvr}`,
+    ovrDisplay: `${minOvr}~${maxOvr}`,
     ovrMin: minOvr,
     ovrMax: maxOvr,
-    atkDisplay: lv === 1 ? `${atkMin}〜${atkMax}` : '??',
-    defDisplay: lv === 1 ? `${defMin}〜${defMax}` : '??',
-    staDisplay: lv === 1 ? `${staMin}〜${staMax}` : '??',
-    curveDisplay: lv === 1 ? (typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(player.growthCurve) : '標準') : '未判明',
-    feeKnown: lv >= 1
+    atkDisplay: `${atkMin}~${atkMax}`,
+    defDisplay: `${defMin}~${defMax}`,
+    staDisplay: `${staMin}~${staMax}`,
+    curveDisplay: '',
+    feeKnown: true
   };
 }
 

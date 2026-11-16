@@ -8300,9 +8300,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     display: none !important;
   }
 
-  /* --- 選手市場（モバイル：メインポジションのみ表示＆適性列幅の最適化） --- */
+  /* --- 選手市場・獲得ターゲット（モバイル：メインポジションのみ表示＆適性列幅の最適化） --- */
   .market-table th.col-pos,
-  .market-table td.col-pos {
+  .market-table td.col-pos,
+  .shortlist-table th.col-pos,
+  .shortlist-table td.col-pos {
     width: 42px !important;
     min-width: 42px !important;
     max-width: 42px !important;
@@ -8312,14 +8314,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     white-space: nowrap !important;
   }
 
-  .market-table td.col-pos .pos-tags-wrap {
+  .market-table td.col-pos .pos-tags-wrap,
+  .shortlist-table td.col-pos .pos-tags-wrap {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 100% !important;
   }
 
-  .market-table td.col-pos .pos-tag {
+  .market-table td.col-pos .pos-tag,
+  .shortlist-table td.col-pos .pos-tag {
     font-size: 10px !important;
     min-width: auto !important;
     line-height: 1.1 !important;
@@ -8328,6 +8332,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .market-table td.col-pos .pos-tag:not(.pos-tag-primary),
   .market-table td.col-pos .pos-sub-text,
+  .shortlist-table td.col-pos .pos-tag:not(.pos-tag-primary),
+  .shortlist-table td.col-pos .pos-sub-text,
   .stats-ranking-table td.col-pos .pos-tag:not(.pos-tag-primary),
   .stats-ranking-table td.col-pos .pos-sub-text {
     display: none !important;
@@ -16698,11 +16704,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .fotmob-col-ovr {
-  width: 40px;
+  min-width: 48px;
+  width: auto;
   text-align: center;
   font-size: 13px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .fotmob-col-rat {
   width: 48px;
@@ -16804,11 +16813,14 @@ body {
     font-variant-numeric: tabular-nums;
   }
   .fotmob-col-ovr {
-    width: 28px;
+    min-width: 42px;
+    width: auto;
     text-align: center;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .fotmob-col-rat {
     width: 38px;
@@ -17227,10 +17239,10 @@ body {
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
-.hex-label-val.ovr-tier-elite { fill: #7dd3fc; font-weight: 900; }
-.hex-label-val.ovr-tier-high  { fill: #34d399; }
-.hex-label-val.ovr-tier-mid   { fill: #fbbf24; }
-.hex-label-val.ovr-tier-low   { fill: #f87171; }
+.hex-label-val.ovr-tier-elite, .hex-label-val tspan.ovr-tier-elite { fill: #7dd3fc; font-weight: 900; }
+.hex-label-val.ovr-tier-high, .hex-label-val tspan.ovr-tier-high  { fill: #34d399; }
+.hex-label-val.ovr-tier-mid, .hex-label-val tspan.ovr-tier-mid   { fill: #fbbf24; }
+.hex-label-val.ovr-tier-low, .hex-label-val tspan.ovr-tier-low   { fill: #f87171; }
 
 .hex-data-dot.ovr-tier-elite { fill: #7dd3fc; }
 .hex-data-dot.ovr-tier-high  { fill: #34d399; }
