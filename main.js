@@ -2335,8 +2335,10 @@ function openTransferNegotiationModal(candidateId) {
   let statusMessage = '';
 
   if (repBlocked) {
+    const svRep = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(target, false) : { isScouted: true, ovrMin: baseOvr, ovrMax: baseOvr };
+    const repOvrTxt = svRep.isScouted ? `${baseOvr}` : `${svRep.ovrMin}~${svRep.ovrMax}`;
     statusType = 'error';
-    statusMessage = `【クラブの格・実績不足】${target.name}（OVR ${baseOvr}）は「欧州トップレベルの舞台や格上のクラブでのプレーを望んでいる」として、交渉のテーブルに着くことを拒否しました。`;
+    statusMessage = `【クラブの格・実績不足】${target.name}（OVR ${repOvrTxt}）は「欧州トップレベルの舞台や格上のクラブでのプレーを望んでいる」として、交渉のテーブルに着くことを拒否しました。`;
   } else if (isRefused) {
     statusType = 'error';
     statusMessage = `【移籍交渉決裂済】2回連続で合意に至らなかったため、${clubName}および代理人は今ウィンドウでの交渉を打ち切りました。`;
@@ -2487,6 +2489,11 @@ function renderNegotiationModal() {
   if (!target) return;
 
   const ovr = getPlayerOverallRating(target);
+  const negScoutView = (isRenewal || typeof getPlayerScoutedView !== 'function')
+    ? { isScouted: true, ovrMin: ovr, ovrMax: ovr }
+    : getPlayerScoutedView(target, false);
+  const negOvrText = negScoutView.isScouted ? `${ovr}` : `${negScoutView.ovrMin}~${negScoutView.ovrMax}`;
+  const negOvrSeed = negScoutView.isScouted ? ovr : Math.round((negScoutView.ovrMin + negScoutView.ovrMax) / 2);
   const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
   const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
 
@@ -2500,9 +2507,10 @@ function renderNegotiationModal() {
   if (headerOvrEl) {
     const valEl = headerOvrEl.querySelector('.profile-header-ovr-val');
     if (valEl) {
-      valEl.textContent = ovr;
-      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(ovr) : ''}`;
+      valEl.textContent = negOvrText;
+      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(negOvrSeed) : ''}`;
       valEl.style.background = 'none';
+      valEl.style.fontSize = negScoutView.isScouted ? '' : '18px';
     }
   }
 
@@ -8014,10 +8022,13 @@ function renderShortlist() {
     const ctx = findPlayerWithContextById(id);
     if (!ctx) continue;
     const { player: p, clubName } = ctx;
+    if (typeof ensurePlayerHistoryAndCareer === 'function' && (!Array.isArray(p.seasonHistory) || p.seasonHistory.length === 0)) {
+      ensurePlayerHistoryAndCareer(p, clubName);
+    }
     const ovr = getPlayerOverallRating(p);
     const isMyClub = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, isMyClub) : { isScouted: true, ovrDisplay: `${ovr}`, ovrMin: ovr, ovrMax: ovr };
-    const fee = calculateTransferFee(p);
+    const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
     const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
@@ -8223,7 +8234,15 @@ function renderIncomingOffers() {
               </div>
               <div class="offer-player-tags">
                 <span>${offer.playerAge}歳</span>
-                <span class="ovr-cell-badge ${getOvrTierClass(offer.ovr)}">OVR ${offer.ovr}</span>
+                ${(() => {
+                  const isMyNow = Boolean(playerClub && playerClub.players && playerClub.players.some(x => x.id === offer.playerId));
+                  const sv = (target && typeof getPlayerScoutedView === 'function')
+                    ? getPlayerScoutedView(target, isMyNow || offer.status === 'signed')
+                    : { isScouted: isMyNow || offer.status === 'signed', ovrMin: Math.max(45, (offer.ovr || 70) - 5), ovrMax: Math.min(99, (offer.ovr || 70) + 5) };
+                  const ovrTxt = sv.isScouted ? `${offer.ovr}` : `${sv.ovrMin}~${sv.ovrMax}`;
+                  const ovrSeed = sv.isScouted ? offer.ovr : Math.round((sv.ovrMin + sv.ovrMax) / 2);
+                  return `<span class="ovr-cell-badge ${getOvrTierClass(ovrSeed)}">OVR ${ovrTxt}</span>`;
+                })()}
               </div>
             </div>
           </div>
@@ -8498,24 +8517,29 @@ function renderMarket() {
   });
 
   // 並び替え（ソート）
+  const sortKey = mf.sortKey || mf.sort || 'ovr-desc';
+  const getSortOvr = (entry) => {
+    const p = entry.player;
+    if (entry.isMyClub || typeof getPlayerScoutedView !== 'function') return getPlayerOverallRating(p);
+    const sv = getPlayerScoutedView(p, false);
+    return sv.isScouted ? getPlayerOverallRating(p) : (sv.ovrMin + sv.ovrMax) / 2;
+  };
+  const getSortValue = (entry) => {
+    const p = entry.player;
+    return typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  };
   filtered.sort((a, b) => {
     const pA = a.player;
     const pB = b.player;
-    const ovrA = getPlayerOverallRating(pA);
-    const ovrB = getPlayerOverallRating(pB);
-    const feeA = pA.isFreeAgent ? 0 : calculateTransferFee(pA);
-    const feeB = pB.isFreeAgent ? 0 : calculateTransferFee(pB);
-
-    const sortKey = mf.sortKey || mf.sort || 'ovr-desc';
     switch (sortKey) {
       case 'ovr-desc':
-        return ovrB - ovrA;
+        return getSortOvr(b) - getSortOvr(a);
       case 'ovr-asc':
-        return ovrA - ovrB;
+        return getSortOvr(a) - getSortOvr(b);
       case 'fee-desc':
-        return feeB - feeA;
+        return getSortValue(b) - getSortValue(a);
       case 'fee-asc':
-        return feeA - feeB;
+        return getSortValue(a) - getSortValue(b);
       case 'wage-desc':
         return (pB.wage || 0) - (pA.wage || 0);
       case 'wage-asc':
@@ -8567,6 +8591,9 @@ function renderMarket() {
   let rowsHtml = displayedEntries.map(entry => {
     const p = entry.player;
     const c = entry.club;
+    if (typeof ensurePlayerHistoryAndCareer === 'function' && (!Array.isArray(p.seasonHistory) || p.seasonHistory.length === 0)) {
+      ensurePlayerHistoryAndCareer(p, c.name);
+    }
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
     const isScoutingNow = activeScouts.find(a => a.playerId === p.id);
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
@@ -8574,7 +8601,7 @@ function renderMarket() {
     const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
     const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
     const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
-    const fee = p.isFreeAgent ? 0 : calculateTransferFee(p);
+    const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const feeDisplay = formatMoney(fee);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
     const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
@@ -10751,12 +10778,27 @@ function openPlayerProfileModal(playerId) {
   }
   const careerAvgRating = ratedAppsSum > 0 ? (weightedRatingSum / ratedAppsSum).toFixed(2) : 'N/A';
 
-  const yearlyRowsHtml = allRowsData.map(r => {
+  const yearlyRowsHtml = allRowsData.map((r, rIdx) => {
     const ratInfo = getRatingTierInfo(r.avgRating);
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
     const isCurRow = r.isCurrent || r.seasonYear === curSeasonStr;
-    const rowOvrDisp = (!scoutView.isScouted && isCurRow) ? ovrDisplayText : r.ovr;
-    const rowOvrSeed = (!scoutView.isScouted && isCurRow) ? ovrColorSeed : r.ovr;
+    let rowOvrDisp = r.ovr;
+    let rowOvrSeed = r.ovr;
+    if (!scoutView.isScouted) {
+      if (isCurRow) {
+        rowOvrDisp = ovrDisplayText;
+        rowOvrSeed = ovrColorSeed;
+      } else {
+        const trueRowOvr = typeof r.ovr === 'number' ? r.ovr : baseOvr;
+        const spread = scoutView.scoutLevel === 1 ? 2 : 5;
+        const hash = String(p.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 13, 0);
+        const shift = ((hash + rIdx * 7) % (spread + 1)) - Math.floor(spread / 2);
+        const rMin = clamp(trueRowOvr - spread + shift, 45, trueRowOvr);
+        const rMax = clamp(Math.max(rMin + (scoutView.scoutLevel === 1 ? 2 : 4), trueRowOvr + spread + shift), trueRowOvr, 99);
+        rowOvrDisp = `${rMin}~${rMax}`;
+        rowOvrSeed = Math.round((rMin + rMax) / 2);
+      }
+    }
     return `
     <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
       <td class="mono">${r.seasonYear}</td>
@@ -10903,7 +10945,7 @@ function openPlayerProfileModal(playerId) {
                     <span class="ui-plate-val">${p.contractYears}年</span>
                   </div>
                   <div class="ui-stat-plate is-highlight profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示" style="cursor: pointer;">
-                    <span class="ui-plate-label">${isMarket ? '移籍金 ▶' : '市場価値 ▶'}</span>
+                    <span class="ui-plate-label">市場価値 ▶</span>
                     <span class="ui-plate-val accent-green">${formatMoney(estMarketValue)}</span>
                   </div>
                 </div>
@@ -15537,6 +15579,11 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
     const isKey = p.calculatedOvr === maxOvr;
     const pos = p.primaryPosition || p.assignedPos || p.pos || 'MF';
     const roleGroup = (typeof POS_ROLE_GROUP !== 'undefined' && POS_ROLE_GROUP[pos]) ? POS_ROLE_GROUP[pos] : 'MF';
+    const sv = typeof getPlayerScoutedView === 'function'
+      ? getPlayerScoutedView(p, false)
+      : { isScouted: true, ovrMin: p.calculatedOvr, ovrMax: p.calculatedOvr };
+    const oppOvrDisp = sv.isScouted ? `${p.calculatedOvr}` : `${sv.ovrMin}~${sv.ovrMax}`;
+    const oppOvrSeed = sv.isScouted ? p.calculatedOvr : Math.round((sv.ovrMin + sv.ovrMax) / 2);
     return `
       <tr style="${isKey ? 'background:rgba(245,158,11,0.08);' : ''}">
         <td class="mono" style="font-weight:700; width:44px;"><span class="pos-badge pos-${roleGroup.toLowerCase()}">${pos}</span></td>
@@ -15547,7 +15594,7 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
           </div>
         </td>
         <td class="mono" style="color:var(--text-muted); width:44px;">${p.age}歳</td>
-        <td class="mono" style="width:58px; text-align:right;"><span class="ovr-cell-badge ${getOvrTierClass(p.calculatedOvr)}" style="font-size:12px;">${p.calculatedOvr}</span></td>
+        <td class="mono" style="width:66px; text-align:right; white-space:nowrap;"><span class="ovr-cell-badge ${getOvrTierClass(oppOvrSeed)}" style="font-size:12px;">${oppOvrDisp}</span></td>
       </tr>
     `;
   }).join('');

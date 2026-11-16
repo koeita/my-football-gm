@@ -8300,9 +8300,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     display: none !important;
   }
 
-  /* --- 選手市場（モバイル：メインポジションのみ表示＆適性列幅の最適化） --- */
+  /* --- 選手市場・獲得ターゲット（モバイル：メインポジションのみ表示＆適性列幅の最適化） --- */
   .market-table th.col-pos,
-  .market-table td.col-pos {
+  .market-table td.col-pos,
+  .shortlist-table th.col-pos,
+  .shortlist-table td.col-pos {
     width: 42px !important;
     min-width: 42px !important;
     max-width: 42px !important;
@@ -8312,14 +8314,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     white-space: nowrap !important;
   }
 
-  .market-table td.col-pos .pos-tags-wrap {
+  .market-table td.col-pos .pos-tags-wrap,
+  .shortlist-table td.col-pos .pos-tags-wrap {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 100% !important;
   }
 
-  .market-table td.col-pos .pos-tag {
+  .market-table td.col-pos .pos-tag,
+  .shortlist-table td.col-pos .pos-tag {
     font-size: 10px !important;
     min-width: auto !important;
     line-height: 1.1 !important;
@@ -8328,6 +8332,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .market-table td.col-pos .pos-tag:not(.pos-tag-primary),
   .market-table td.col-pos .pos-sub-text,
+  .shortlist-table td.col-pos .pos-tag:not(.pos-tag-primary),
+  .shortlist-table td.col-pos .pos-sub-text,
   .stats-ranking-table td.col-pos .pos-tag:not(.pos-tag-primary),
   .stats-ranking-table td.col-pos .pos-sub-text {
     display: none !important;
