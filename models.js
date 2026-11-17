@@ -1761,8 +1761,13 @@ function createSquad(basePower, usedNames, options = {}) {
   const slots = [];
   for (const group of SQUAD_COMPOSITION) {
     for (let i = 0; i < group.total; i++) {
-      slots.push({ pos: group.pos, isStarter: i < group.starters });
+      slots.push({ pos: group.pos, isStarter: i < group.starters, isExtraYouth: false });
     }
+  }
+  // レンタル運用・ターンオーバー用のU-21若手/控え枠を8名追加（計35名構成・シニア25名枠を遵守）
+  const extraYouthPositions = ['CB', 'LB', 'RB', 'CM', 'AM', 'LW', 'RW', 'CF'];
+  for (const ePos of extraYouthPositions) {
+    slots.push({ pos: ePos, isStarter: false, isExtraYouth: true });
   }
 
   // 国籍リストを事前に決定し、最低自国籍人数を保証
@@ -1783,15 +1788,19 @@ function createSquad(basePower, usedNames, options = {}) {
     }
   }
 
-  // 25人シニア登録ルールに初期状態で違反しないよう、控え選手全体から均等に最低4名をU-21（18〜21歳）として生成し、
+  // 25人シニア登録ルールに初期状態で違反しないよう、追加若手8名を含めU-21（18〜21歳）を最低11名確保し、
   // スタメンは主力世代（22〜31歳）中心・若手一極集中にならない年齢分布とする
   const benchIndices = [];
-  slots.forEach((s, idx) => { if (!s.isStarter) benchIndices.push(idx); });
   const u21SlotSet = new Set();
+  slots.forEach((s, idx) => {
+    if (!s.isStarter) benchIndices.push(idx);
+    if (s.isExtraYouth) u21SlotSet.add(idx);
+  });
   [1, 3, 5, benchIndices.length - 1].forEach(bi => {
     if (bi >= 0 && bi < benchIndices.length) u21SlotSet.add(benchIndices[bi]);
   });
-  for (let i = benchIndices.length - 1; i >= 0 && u21SlotSet.size < Math.min(4, benchIndices.length); i--) {
+  const minU21Count = Math.max(4, slots.length - 23);
+  for (let i = benchIndices.length - 1; i >= 0 && u21SlotSet.size < Math.min(minU21Count, benchIndices.length); i--) {
     u21SlotSet.add(benchIndices[i]);
   }
 
@@ -1800,7 +1809,8 @@ function createSquad(basePower, usedNames, options = {}) {
     const ageRange = u21SlotSet.has(idx)
       ? [18, 21]
       : (slot.isStarter ? (Math.random() < 0.85 ? [22, 31] : [19, 33]) : [20, 33]);
-    const p = createPlayer(slot.pos, basePower, slot.isStarter, usedNames, ageRange, null, nats[idx]);
+    const slotBasePower = slot.isExtraYouth ? Math.max(52, basePower - randInt(5, 9)) : basePower;
+    const p = createPlayer(slot.pos, slotBasePower, slot.isStarter, usedNames, ageRange, null, nats[idx]);
     p.squadNumber = pickAvailableSquadNumber(slot.pos, usedNumbers);
     if (!slot.isStarter) {
       p.isBench = benchAssigned < 9;
