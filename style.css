@@ -5595,7 +5595,30 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .filter-search-wrap {
   flex: 1;
-  min-width: 160px;
+  min-width: 190px;
+}
+
+.filter-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-search-row .market-search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.market-table thead th[data-sort-col] {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.market-table thead th.is-sorted {
+  color: #2ecc71;
 }
 
 .market-search-input {
@@ -15809,6 +15832,11 @@ body {
   }
   .market-filter-bar .filter-group.filter-search-wrap {
     grid-column: 1 / -1 !important;
+  }
+  .market-filter-bar .filter-search-row {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
   }
   .market-filter-bar .market-search-input {
     width: 100% !important;
