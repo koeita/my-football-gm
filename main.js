@@ -4737,6 +4737,11 @@ function releaseRosterPlayer(playerId) {
     return;
   }
 
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(target) : '-';
+  if (!window.confirm(`#${target.squadNumber || '-'} ${target.name}（${target.pos} / ${target.age}歳 / OVR ${ovr}）を自由契約（退団）にしますか？\n※この操作は取り消せません。`)) {
+    return;
+  }
+
   playerClub.players = playerClub.players.filter(p => p.id !== playerId);
   if (gameState.selectedPlayerId === playerId) {
     gameState.selectedPlayerId = null;
