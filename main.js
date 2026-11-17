@@ -2180,7 +2180,7 @@ function openContractNegotiationModal(playerId) {
     statusMessage = `【交渉打ち切り済】2回連続の条件不一致により、#${target.squadNumber || '-'} ${target.name} の代理人は契約延長交渉を打ち切りました。オフシーズンにフリー移籍での退団が確定しています。`;
   } else if (failCount === 1) {
     statusType = 'warn';
-    statusMessage = `【再交渉（残りチャンス1回）】前回の提示額に不満を示し、要求年俸が ${formatMoney(demandedSalary)} に引き上げられています。今回合意できない場合は交渉決裂（フリー流出確定）となります。`;
+    statusMessage = `【再交渉（残りチャンス1回）】前回の提示額に不満を示し、要求週給が ${formatWage(Math.max(5, Math.round(demandedSalary / 52)))} に引き上げられています。今回合意できない場合は交渉決裂（フリー流出確定）となります。`;
   }
 
   gameState.negotiationSession = {
@@ -2686,9 +2686,13 @@ function renderNegotiationModal() {
     }
   }
 
-  // スライダー範囲の算出
+  // スライダー範囲の算出（UIは週給 £1K単位で操作し、内部年俸と整合）
   const minSalary = Math.max(500, Math.round((session.demandedSalary * 0.65) / 50) * 50);
   const maxSalary = Math.max(minSalary + 1000, Math.round((session.demandedSalary * 1.55) / 50) * 50);
+  const curDemandedWage = Math.max(5, Math.round((session.demandedSalary || 500) / 52));
+  const curOfferedWage = session.offeredWage || Math.max(5, Math.round((session.offeredSalary || 500) / 52));
+  const minWage = Math.max(10, Math.round(minSalary / 52));
+  const maxWage = Math.max(minWage + 20, Math.round(maxSalary / 52));
 
   const minFee = isRenewal ? 0 : Math.max(300, Math.round((session.demandedFee * 0.65) / 100) * 100);
   const maxFee = isRenewal ? 0 : Math.max(minFee + 2000, Math.round((session.demandedFee * 1.45) / 100) * 100);
@@ -2708,12 +2712,12 @@ function renderNegotiationModal() {
     dealControlsHtml = `
       <div class="neg-control-group">
         <div class="neg-control-header">
-          <span class="neg-control-label">提示年俸</span>
-          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+          <span class="neg-control-label">提示週給</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatWage(curOfferedWage)}</span>
         </div>
         <div class="neg-slider-row">
-          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
-          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''} title="単位：£1K/週">
         </div>
       </div>
 
@@ -2803,12 +2807,12 @@ function renderNegotiationModal() {
 
       <div class="neg-control-group">
         <div class="neg-control-header">
-          <span class="neg-control-label">来季提示年俸</span>
-          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+          <span class="neg-control-label">来季提示週給</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatWage(curOfferedWage)}</span>
         </div>
         <div class="neg-slider-row">
-          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
-          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''} title="単位：£1K/週">
         </div>
         <div class="text-muted" style="font-size: 11px; display: flex; justify-content: flex-end;">
           <span>合流時期: <strong class="accent-green">来季7月1日付で合流</strong></span>
@@ -2846,12 +2850,12 @@ function renderNegotiationModal() {
 
       <div class="neg-control-group">
         <div class="neg-control-header">
-          <span class="neg-control-label">提示年俸</span>
-          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+          <span class="neg-control-label">提示週給</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatWage(curOfferedWage)}</span>
         </div>
         <div class="neg-slider-row">
-          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
-          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''} title="単位：£1K/週">
         </div>
       </div>
 
@@ -2887,12 +2891,12 @@ function renderNegotiationModal() {
 
       <div class="neg-control-group">
         <div class="neg-control-header">
-          <span class="neg-control-label">提示年俸</span>
-          <span class="neg-control-val" id="neg-offered-salary-display">${formatMoney(session.offeredSalary)}</span>
+          <span class="neg-control-label">提示週給</span>
+          <span class="neg-control-val" id="neg-offered-salary-display">${formatWage(curOfferedWage)}</span>
         </div>
         <div class="neg-slider-row">
-          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''}>
-          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minSalary}" max="${maxSalary}" step="50" value="${session.offeredSalary}" ${session.completed ? 'disabled' : ''} title="単位：£1K (1000 = £1.0M)">
+          <input type="range" id="neg-salary-slider" class="neg-slider" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''}>
+          <input type="number" id="neg-salary-input" class="neg-num-input" min="${minWage}" max="${maxWage}" step="1" value="${curOfferedWage}" ${session.completed ? 'disabled' : ''} title="単位：£1K/週">
         </div>
       </div>
 
@@ -2970,8 +2974,8 @@ function renderNegotiationModal() {
     demandRowsHtml = `
       <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
         <div class="ui-stat-plate is-gold">
-          <span class="ui-plate-label">要求年俸</span>
-          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+          <span class="ui-plate-label">要求週給</span>
+          <span class="ui-plate-val accent-gold">${formatWage(curDemandedWage)}</span>
         </div>
         <div class="ui-stat-plate is-highlight">
           <span class="ui-plate-label">要求期間</span>
@@ -2981,7 +2985,7 @@ function renderNegotiationModal() {
       <div class="ui-kv-list">
         <div class="ui-kv-row">
           <div class="ui-kv-label accent-gold-bar">現在契約</div>
-          <div class="ui-kv-content mono" style="font-size:12px;">${formatMoney(target.salary)} · 残${target.contractYears || 0}年</div>
+          <div class="ui-kv-content mono" style="font-size:12px;">${formatWage(target.wage || Math.round((target.salary || 500) / 52))} · 残${target.contractYears || 0}年</div>
         </div>
         <div class="ui-kv-row">
           <div class="ui-kv-label">今季成績</div>
@@ -3014,8 +3018,8 @@ function renderNegotiationModal() {
     demandRowsHtml = `
       <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
         <div class="ui-stat-plate is-gold">
-          <span class="ui-plate-label">要求年俸</span>
-          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+          <span class="ui-plate-label">要求週給</span>
+          <span class="ui-plate-val accent-gold">${formatWage(curDemandedWage)}</span>
         </div>
         <div class="ui-stat-plate is-highlight">
           <span class="ui-plate-label">移籍金負担</span>
@@ -3034,8 +3038,8 @@ function renderNegotiationModal() {
     demandRowsHtml = `
       <div class="ui-plate-grid cols-2" style="margin-bottom:8px;">
         <div class="ui-stat-plate is-gold">
-          <span class="ui-plate-label">希望年俸</span>
-          <span class="ui-plate-val accent-gold">${formatMoney(session.demandedSalary)}</span>
+          <span class="ui-plate-label">希望週給</span>
+          <span class="ui-plate-val accent-gold">${formatWage(curDemandedWage)}</span>
         </div>
         <div class="ui-stat-plate is-highlight">
           <span class="ui-plate-label">移籍金負担</span>
@@ -3058,8 +3062,8 @@ function renderNegotiationModal() {
           <span class="ui-plate-val accent-gold">${formatMoney(session.demandedFee)}</span>
         </div>
         <div class="ui-stat-plate is-highlight">
-          <span class="ui-plate-label">要求年俸</span>
-          <span class="ui-plate-val accent-green">${formatMoney(session.demandedSalary)}</span>
+          <span class="ui-plate-label">要求週給</span>
+          <span class="ui-plate-val accent-green">${formatWage(curDemandedWage)}</span>
         </div>
       </div>
       <div class="ui-kv-list">
@@ -3271,8 +3275,8 @@ function submitNegotiationOffer() {
 
       session.completed = true;
       session.statusType = 'success';
-      session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（年俸 ${formatMoney(session.offeredSalary)} ／ ${session.offeredYears}年契約）に快く合意し、契約更新サインを完了しました！（残契約：${newContractYears}年）`;
-      gameState.facilityFeedback = `【契約更新合意】#${target.squadNumber || '-'} ${target.name} と年俸 ${formatMoney(session.offeredSalary)}（${session.offeredYears}年契約締結 / 残り${newContractYears}年）で契約を更新しました。`;
+      session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（週給 ${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))} ／ ${session.offeredYears}年契約）に快く合意し、契約更新サインを完了しました！（残契約：${newContractYears}年）`;
+      gameState.facilityFeedback = `【契約更新合意】#${target.squadNumber || '-'} ${target.name} と週給 ${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))}（${session.offeredYears}年契約締結 / 残り${newContractYears}年）で契約を更新しました。`;
       renderNegotiationModal();
       renderAll();
       return;
@@ -3286,15 +3290,17 @@ function submitNegotiationOffer() {
       target.contractYears = Math.min(target.contractYears, 1);
       session.completed = true;
       session.statusType = 'error';
-      session.statusMessage = `【交渉決裂・打ち切り】2度目の低額オファー（提示 ${formatMoney(session.offeredSalary)}）に対し、#${target.squadNumber || '-'} ${target.name} 陣営が態度を硬化させ交渉打ち切りを通告しました。オフシーズンにフリー移籍での退団が確定しました。`;
+      session.statusMessage = `【交渉決裂・打ち切り】2度目の低額オファー（提示 ${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))}）に対し、#${target.squadNumber || '-'} ${target.name} 陣営が態度を硬化させ交渉打ち切りを通告しました。オフシーズンにフリー移籍での退団が確定しました。`;
       gameState.facilityFeedback = `【契約交渉決裂】#${target.squadNumber || '-'} ${target.name} との契約延長交渉が決裂しました（オフにフリー流出確定）。`;
     } else {
       const raisedSalary = Math.round((session.demandedSalary * 1.08) / 50) * 50;
+      const raisedWage = Math.max(5, Math.round(raisedSalary / 52));
       target.demandedSalary = raisedSalary;
       session.demandedSalary = raisedSalary;
       session.offeredSalary = raisedSalary;
+      session.offeredWage = raisedWage;
       session.statusType = 'warn';
-      session.statusMessage = `【不満・保留（要求引き上げ ／ 残り交渉機会1回）】代理人：「提示額（${formatMoney(session.offeredSalary)}）は当方の評価と乖離しています。」態度が硬化し、要求年俸が ${formatMoney(raisedSalary)} へ引き上げられました。次回の提示で合意できない場合、交渉は決裂します。`;
+      session.statusMessage = `【不満・保留（要求引き上げ ／ 残り交渉機会1回）】代理人：「提示額（${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))}）は当方の評価と乖離しています。」態度が硬化し、要求週給が ${formatWage(raisedWage)} へ引き上げられました。次回の提示で合意できない場合、交渉は決裂します。`;
     }
 
     renderNegotiationModal();
@@ -13433,16 +13439,18 @@ function initGame() {
       if (!session || session.completed) return;
 
       if (e.target.id === 'neg-salary-slider' || e.target.id === 'neg-salary-input') {
-        const val = Math.max(100, parseInt(e.target.value, 10) || session.demandedSalary);
-        session.offeredSalary = val;
+        const demandedWage = Math.max(5, Math.round((session.demandedSalary || 500) / 52));
+        const wageVal = Math.max(5, parseInt(e.target.value, 10) || demandedWage);
+        session.offeredWage = wageVal;
+        session.offeredSalary = wageVal === demandedWage ? session.demandedSalary : wageVal * 52;
         const slider = document.getElementById('neg-salary-slider');
         const numInput = document.getElementById('neg-salary-input');
         const disp = document.getElementById('neg-offered-salary-display');
         const ratioEl = document.getElementById('neg-salary-ratio-text');
-        if (slider && e.target !== slider) slider.value = val;
-        if (numInput && e.target !== numInput) numInput.value = val;
-        if (disp) disp.textContent = formatMoney(val);
-        if (ratioEl) ratioEl.textContent = `${Math.round((val / Math.max(1, session.demandedSalary)) * 100)}%`;
+        if (slider && e.target !== slider) slider.value = wageVal;
+        if (numInput && e.target !== numInput) numInput.value = wageVal;
+        if (disp) disp.textContent = formatWage(wageVal);
+        if (ratioEl) ratioEl.textContent = `${Math.round((session.offeredSalary / Math.max(1, session.demandedSalary)) * 100)}%`;
       }
 
       if (e.target.id === 'neg-fee-slider' || e.target.id === 'neg-fee-input') {
