@@ -8739,7 +8739,7 @@ function renderMarket() {
     }
     if (mf.clubId && mf.clubId !== 'ALL' && c.id !== mf.clubId) return false;
     if (mf.position !== 'ALL') {
-      const matchPrimary = p.pos === mf.position || p.primaryPosition === mf.position;
+      const matchPrimary = p.pos === mf.position || p.primaryPosition === mf.position || (Array.isArray(p.majorPositions) && p.majorPositions.includes(mf.position));
       const matchSecondary = Array.isArray(p.secondaryPositions) && p.secondaryPositions.includes(mf.position);
       if (!matchPrimary && !matchSecondary) return false;
     }
