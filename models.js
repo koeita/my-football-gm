@@ -2494,7 +2494,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 /**
  * スロットと選手の最適マッチング用スコア計算
  */
-function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
+function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', options = {}) {
   ensurePlayerProficiencies(player);
   const discCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compCategory) : compCategory;
   let score = 0;
@@ -2563,6 +2563,24 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
     score += (player.sta - 70) * 0.05;
   }
 
+  // 5. CPUクラブ向け大会別ターンオーバー＆過密出場抑制（控え・若手起用と現実的な試合数維持）
+  if (options && options.isCpuTurnover) {
+    const apps = typeof player.appearances === 'number' ? player.appearances : 0;
+    const isDomesticCup = (compCategory === 'faCup' || compCategory === 'leagueCup' || compCategory === 'domesticCup');
+    if (isDomesticCup) {
+      score -= Math.min(28, apps * 0.65);
+      if (apps <= 12) {
+        score += 10;
+      }
+    }
+    if (apps >= 40) {
+      score -= Math.min(50, (apps - 39) * 2.2);
+    }
+    if (apps >= 52) {
+      score -= 25;
+    }
+  }
+
   return score;
 }
 
@@ -2571,7 +2589,7 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
  * 所属全選手 (N人) から フォーメーション枠 (M=11枠) へ、
  * チーム全体の合計スコア（実効OVR・適性・健康度）が最大となる一意の配置を求める
  */
-function findOptimalAssignment(players, slots, compCategory = 'league') {
+function findOptimalAssignment(players, slots, compCategory = 'league', options = {}) {
   const N = players.length; // 候補選手数 (通常20〜25人)
   const M = slots.length;   // スロット数 (11枠)
   if (N < M) return null;
@@ -2581,7 +2599,7 @@ function findOptimalAssignment(players, slots, compCategory = 'league') {
   const W = Array.from({ length: M }, () => new Float64Array(N));
   for (let j = 0; j < M; j++) {
     for (let i = 0; i < N; i++) {
-      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos, compCategory);
+      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos, compCategory, options);
     }
   }
 
@@ -2662,7 +2680,7 @@ function optimizeClubStarters(club, compCategory = 'league') {
   const availablePlayers = club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
 
   // 最適マッチングの実行
-  const assignment = findOptimalAssignment(availablePlayers, slots, compCategory);
+  const assignment = findOptimalAssignment(availablePlayers, slots, compCategory, { isCpuTurnover: !club.isPlayer });
 
   club.players.forEach(p => {
     p.isStarter = false;
