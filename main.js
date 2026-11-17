@@ -246,6 +246,64 @@ const gameState = {
 
 
 
+const MAX_POSITION_TRAINING_PER_PLAYER = 2;
+
+const POSITION_TRAINING_ADJACENT_MAP = {
+  CB: ['LB', 'RB', 'DM'],
+  LB: ['CB', 'RB', 'DM', 'LM', 'LW'],
+  RB: ['CB', 'LB', 'DM', 'RM', 'RW'],
+  SB: ['CB', 'LB', 'RB', 'DM', 'LM', 'RM'],
+  DM: ['CB', 'LB', 'RB', 'CM', 'AM'],
+  CM: ['DM', 'AM', 'LM', 'RM'],
+  LM: ['LB', 'CM', 'AM', 'RM', 'LW'],
+  RM: ['RB', 'CM', 'AM', 'LM', 'RW'],
+  SM: ['LB', 'RB', 'CM', 'AM', 'LM', 'RM', 'LW', 'RW'],
+  AM: ['CM', 'LM', 'RM', 'LW', 'RW', 'CF'],
+  LW: ['LM', 'AM', 'RW', 'CF'],
+  RW: ['RM', 'AM', 'LW', 'CF'],
+  WG: ['LM', 'RM', 'AM', 'LW', 'RW', 'CF'],
+  CF: ['AM', 'LW', 'RW'],
+  ST: ['AM', 'LW', 'RW']
+};
+
+function getMaxConcurrentPositionTrainingSlots() {
+  const trLv = (typeof gameState !== 'undefined' && gameState.facilities && typeof gameState.facilities.training === 'number')
+    ? gameState.facilities.training
+    : 1;
+  if (trLv >= 5) return 4;
+  if (trLv >= 3) return 3;
+  return 2;
+}
+
+function getActivePositionTrainingCount(club) {
+  if (!club || !Array.isArray(club.players)) return 0;
+  return club.players.filter(pl => pl && pl.positionTraining && pl.positionTraining.active && pl.positionTraining.targetPos).length;
+}
+
+function getEligiblePositionTrainingTargets(player) {
+  ensurePlayerProficiencies(player);
+  const normPos = (pos) => (pos === 'LWB') ? 'LB' : ((pos === 'RWB') ? 'RB' : (pos === 'ST' ? 'CF' : pos));
+  const primary = normPos(player.primaryPosition || player.preferredPosition || player.pos);
+  const mains = (Array.isArray(player.mainPositions) ? player.mainPositions : [primary]).map(normPos);
+  if (!mains.includes(primary)) mains.push(primary);
+  const subs = (Array.isArray(player.subPositions) ? player.subPositions : []).map(normPos);
+
+  const upgradeCandidates = [...new Set(subs.filter(pos => !mains.includes(pos) && pos !== 'GK'))];
+
+  const allFieldPositions = ['CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF'];
+  const allowedNewSet = new Set();
+  for (const knownPos of [...mains, ...subs]) {
+    const adj = POSITION_TRAINING_ADJACENT_MAP[knownPos];
+    if (Array.isArray(adj)) {
+      adj.forEach(p => allowedNewSet.add(p));
+    }
+  }
+  const newSubCandidates = allFieldPositions.filter(
+    pos => allowedNewSet.has(pos) && !mains.includes(pos) && !subs.includes(pos)
+  );
+  return { upgradeCandidates, newSubCandidates };
+}
+
 /**
  * 選手のポジション特訓（適性習得・本適性昇格）を開始する
  */
@@ -254,21 +312,40 @@ function startPlayerPositionTraining(playerId, targetPos) {
   if (!playerClub) return false;
   const player = playerClub.players.find(p => p.id === playerId);
   if (!player) return false;
-
-  ensurePlayerProficiencies(player);
   const primary = player.primaryPosition || player.preferredPosition || player.pos;
-  const mains = Array.isArray(player.mainPositions) ? player.mainPositions : [primary];
-  const subs = Array.isArray(player.subPositions) ? player.subPositions : [];
+  if (primary === 'GK') return false;
 
-  const normTarget = (targetPos === 'LWB') ? 'LB' : ((targetPos === 'RWB') ? 'RB' : targetPos);
-  const isAlreadyMajor = mains.some(m => ((m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m)) === normTarget);
-
-  if (isAlreadyMajor) {
-    return false; // 既に本適性の場合はトレーニング不可
+  const completedCount = player.positionTrainingCount || 0;
+  if (completedCount >= MAX_POSITION_TRAINING_PER_PLAYER) {
+    if (typeof showToast === 'function') {
+      showToast(`${player.name} のポジション特訓は生涯上限（${MAX_POSITION_TRAINING_PER_PLAYER}回）に達しています`, 'warning');
+    }
+    return false;
   }
 
-  const isAlreadySub = subs.some(s => ((s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s)) === normTarget);
-  const mode = isAlreadySub ? 'major' : 'sub';
+  const isAlreadyTrainingThisPlayer = Boolean(player.positionTraining && player.positionTraining.active);
+  const activeCount = getActivePositionTrainingCount(playerClub);
+  const maxSlots = getMaxConcurrentPositionTrainingSlots();
+  if (!isAlreadyTrainingThisPlayer && activeCount >= maxSlots) {
+    if (typeof showToast === 'function') {
+      showToast(`同時特訓枠の上限（${activeCount}/${maxSlots}名）に達しています。練習場Lvを上げるか他の特訓を完了・中止してください`, 'warning');
+    }
+    return false;
+  }
+
+  const normTarget = (targetPos === 'LWB') ? 'LB' : ((targetPos === 'RWB') ? 'RB' : targetPos);
+  const { upgradeCandidates, newSubCandidates } = getEligiblePositionTrainingTargets(player);
+  let mode = null;
+  if (upgradeCandidates.includes(normTarget)) {
+    mode = 'major';
+  } else if (newSubCandidates.includes(normTarget)) {
+    mode = 'sub';
+  } else {
+    if (typeof showToast === 'function') {
+      showToast('現在の適性からこのポジションは習得できません', 'warning');
+    }
+    return false;
+  }
 
   player.positionTraining = {
     targetPos: normTarget,
@@ -818,10 +895,12 @@ function advanceCalendarDay(skipRender = false) {
           }
         }
       }
-      // ポジション特訓の平日練習進行（平日1日あたり +2%）
+      // ポジション特訓の平日練習進行（平日1日あたり基本 +2%、若手ほど速くベテランは緩やか）
       if (club.isPlayer && p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
         const cEff = typeof getClubCoachingEffects === 'function' ? getClubCoachingEffects(club) : { analysisBonus: 0 };
-        const dailyTrainStep = 2 + Math.round((cEff.analysisBonus || 0) * 3);
+        const baseTrainStep = 2 + Math.round((cEff.analysisBonus || 0) * 3);
+        const ageMod = (p.age <= 23) ? 1 : ((p.age >= 30) ? -1 : 0);
+        const dailyTrainStep = Math.max(1, baseTrainStep + ageMod);
         p.positionTraining.progress = Math.min(100, (p.positionTraining.progress || 0) + dailyTrainStep);
         if (p.positionTraining.progress >= 100) {
           const tPos = p.positionTraining.targetPos;
@@ -845,6 +924,7 @@ function advanceCalendarDay(skipRender = false) {
           }
           p.majorPositions = p.mainPositions;
           p.secondaryPositions = p.subPositions;
+          p.positionTrainingCount = (p.positionTrainingCount || 0) + 1;
           p.positionTraining = null;
         }
       }
@@ -10669,22 +10749,16 @@ function openPlayerProfileModal(playerId) {
   }
   const hexagonChartHtml = buildPlayerHexagonChartSvg(attrs, scoutAttrRanges);
 
-  // ポジション特訓・適性強化セクション（イーフト仕様：自クラブ選手のみに表示）
+  // ポジション特訓・適性強化セクション（自クラブ選手のみに表示）
   let trainingSectionHtml = '';
   if (isMyClubPlayer && !isCandidate && primaryPos !== 'GK') {
-    const majors = Array.isArray(p.majorPositions) ? [...p.majorPositions] : [primaryPos];
-    if (!majors.includes(primaryPos)) majors.push(primaryPos);
-    const subs = Array.isArray(p.secondaryPositions) ? p.secondaryPositions : [];
-
-    // LB/LWB, RB/RWBを同一化して選択肢を整理
-    const allPositions = ['CB', 'LB', 'RB', 'DM', 'CM', 'LM', 'RM', 'AM', 'LW', 'RW', 'CF'];
-    const normMajors = majors.map(m => (m === 'LWB') ? 'LB' : ((m === 'RWB') ? 'RB' : m));
-    const normSubs = subs.map(s => (s === 'LWB') ? 'LB' : ((s === 'RWB') ? 'RB' : s));
-
-    // 1. 薄適性から本適性への昇格対象
-    const upgradeCandidates = [...new Set(normSubs.filter(pos => !normMajors.includes(pos)))];
-    // 2. 新規薄適性の習得対象
-    const newSubCandidates = allPositions.filter(pos => !normMajors.includes(pos) && !normSubs.includes(pos));
+    const { upgradeCandidates, newSubCandidates } = getEligiblePositionTrainingTargets(p);
+    const completedTrainCount = p.positionTrainingCount || 0;
+    const maxTrainSlots = getMaxConcurrentPositionTrainingSlots();
+    const activeTrainCount = getActivePositionTrainingCount(playerClub);
+    const limitReached = completedTrainCount >= MAX_POSITION_TRAINING_PER_PLAYER;
+    const slotFull = activeTrainCount >= maxTrainSlots;
+    const speedHint = p.age <= 23 ? '若手補正: 習得速め' : (p.age >= 30 ? 'ベテラン補正: 習得緩やか' : '標準ペース');
 
     if (p.positionTraining && p.positionTraining.active && p.positionTraining.targetPos) {
       const tPos = p.positionTraining.targetPos;
@@ -10704,9 +10778,20 @@ function openPlayerProfileModal(playerId) {
                 <div class="training-prog-fill" style="width: ${prog}%;"></div>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:6px;">
-                <span class="text-muted" style="font-size: 10px;">平日練習・試合出場で進行</span>
+                <span class="text-muted mono" style="font-size: 10px;">同時枠 ${activeTrainCount}/${maxTrainSlots} · 完了 ${completedTrainCount}/${MAX_POSITION_TRAINING_PER_PLAYER} · ${speedHint}</span>
                 <button type="button" class="btn btn-secondary btn-sm btn-cancel-training" data-player-id="${p.id}" style="padding: 4px 10px; font-size: 11px; white-space: nowrap;">特訓中止</button>
               </div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (limitReached) {
+      trainingSectionHtml = `
+        <div class="ui-kv-row">
+          <div class="ui-kv-label accent-gold-bar">適性特訓</div>
+          <div class="ui-kv-content">
+            <div class="text-muted mono" style="font-size: 11px; line-height: 1.4;">
+              生涯習得上限に到達済み（完了 ${completedTrainCount}/${MAX_POSITION_TRAINING_PER_PLAYER}）
             </div>
           </div>
         </div>
@@ -10716,12 +10801,12 @@ function openPlayerProfileModal(playerId) {
       const getPosDisplay = (pos) => (pos === 'LB' ? 'LB / LWB' : (pos === 'RB' ? 'RB / RWB' : pos));
       if (upgradeCandidates.length > 0) {
         optionsHtml += `<optgroup label="本適性へ昇格（能力低下なし）">` +
-          upgradeCandidates.map(pos => `<option value="${pos}">[本適性昇格] ${getPosDisplay(pos)}</option>`).join('') +
+          upgradeCandidates.map(pos => `<option value="${pos}">本適性昇格: ${getPosDisplay(pos)}</option>`).join('') +
           `</optgroup>`;
       }
       if (newSubCandidates.length > 0) {
-        optionsHtml += `<optgroup label="薄適性を新規習得">` +
-          newSubCandidates.map(pos => `<option value="${pos}">[薄適性習得] ${getPosDisplay(pos)}</option>`).join('') +
+        optionsHtml += `<optgroup label="近接ポジションを新規習得">` +
+          newSubCandidates.map(pos => `<option value="${pos}">薄適性習得: ${getPosDisplay(pos)}</option>`).join('') +
           `</optgroup>`;
       }
 
@@ -10731,13 +10816,13 @@ function openPlayerProfileModal(playerId) {
           <div class="ui-kv-content">
             <div class="profile-training-box" style="margin-top: 0;">
               <div class="training-select-row">
-                <select class="form-select form-select-sm training-pos-select" id="training-target-select-${p.id}" style="padding: 5px 8px; font-size: 11.5px; flex: 1; min-width: 0; background: #1a222d; color: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
+                <select class="form-select form-select-sm training-pos-select" id="training-target-select-${p.id}" ${slotFull ? 'disabled' : ''} style="padding: 5px 8px; font-size: 11.5px; flex: 1; min-width: 0; background: #1a222d; color: #fff; border: 1px solid var(--border-color); border-radius: 4px;">
                   ${optionsHtml}
                 </select>
-                <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" style="padding: 5px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">特訓開始</button>
+                <button type="button" class="btn btn-accent btn-sm btn-start-training" data-player-id="${p.id}" ${slotFull ? 'disabled' : ''} style="padding: 5px 12px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0;">${slotFull ? '枠満杯' : '特訓開始'}</button>
               </div>
-              <div class="text-muted" style="font-size: 10px; margin-top: 5px; line-height: 1.35;">
-                ※ 練習や公式戦出場で、未習得ポジションの習得や本適性への昇格が可能
+              <div class="text-muted mono" style="font-size: 10px; margin-top: 5px; line-height: 1.35;">
+                同時枠 <span style="color:${slotFull ? '#f87171' : '#2ecc71'}; font-weight:700;">${activeTrainCount}/${maxTrainSlots}</span> · 生涯特訓 ${completedTrainCount}/${MAX_POSITION_TRAINING_PER_PLAYER} · ${speedHint}
               </div>
             </div>
           </div>
