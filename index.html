@@ -863,7 +863,19 @@
                 <option value="ALL">全カテゴリー</option>
                 <option value="ENG_D1">イングランド1部 (ENG-D1)</option>
                 <option value="ENG_D2">イングランド2部 (ENG-D2)</option>
-                <option value="EUROPE">欧州主要クラブ (リスト)</option>
+                <optgroup label="欧州主要リーグ (国別)">
+                  <option value="EUR_ESP">スペイン (ESP)</option>
+                  <option value="EUR_ITA">イタリア (ITA)</option>
+                  <option value="EUR_GER">ドイツ (GER)</option>
+                  <option value="EUR_FRA">フランス (FRA)</option>
+                  <option value="EUR_POR">ポルトガル (POR)</option>
+                  <option value="EUR_NED">オランダ (NED)</option>
+                  <option value="EUR_BEL">ベルギー (BEL)</option>
+                  <option value="EUR_SCO">スコットランド (SCO)</option>
+                  <option value="EUR_TUR">トルコ (TUR)</option>
+                  <option value="EUR_OTHER">その他欧州諸国</option>
+                  <option value="EUROPE">欧州全体</option>
+                </optgroup>
                 <option value="FREE_AGENT">無所属 (フリー)</option>
               </select>
             </div>
@@ -893,20 +905,70 @@
             </div>
 
             <div class="filter-group">
+              <label class="filter-label mono">AGE:</label>
+              <select id="market-filter-age" class="market-select mono">
+                <option value="ALL">全年齢</option>
+                <option value="U21">U-21 (21歳以下)</option>
+                <option value="U23">U-23 (23歳以下)</option>
+                <option value="PRIME">24〜29歳</option>
+                <option value="VET">30歳以上</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label mono">STATUS:</label>
+              <select id="market-filter-status" class="market-select mono">
+                <option value="ALL">すべて</option>
+                <option value="EXPIRING">契約残1年</option>
+                <option value="FREE">無所属のみ</option>
+                <option value="SCOUTED">調査完了のみ</option>
+                <option value="HG">HG資格 (England)</option>
+                <option value="AFFORDABLE">実質移籍予算内</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
               <label class="filter-label mono">SORT:</label>
               <select id="market-filter-sort" class="market-select mono">
-                <option value="ovr-desc">OVR 高い順</option>
-                <option value="fee-desc">市場価値 高い順</option>
-                <option value="fee-asc">市場価値 安い順</option>
-                <option value="wage-desc">週給 高い順</option>
-                <option value="age-asc">年齢 若い順</option>
-                <option value="contract-asc">契約残 少ない順</option>
+                <optgroup label="総合・市場価値">
+                  <option value="ovr-desc">OVR 高い順</option>
+                  <option value="ovr-asc">OVR 低い順</option>
+                  <option value="fee-desc">市場価値 高い順</option>
+                  <option value="fee-asc">市場価値 安い順</option>
+                </optgroup>
+                <optgroup label="契約・年齢">
+                  <option value="wage-desc">週給 高い順</option>
+                  <option value="wage-asc">週給 安い順</option>
+                  <option value="age-asc">年齢 若い順</option>
+                  <option value="age-desc">年齢 高い順</option>
+                  <option value="contract-asc">契約残 少ない順</option>
+                  <option value="contract-desc">契約残 多い順</option>
+                </optgroup>
+                <optgroup label="各能力値（推定含む）">
+                  <option value="attr-finishing-desc">決定力 高い順</option>
+                  <option value="attr-dribbling-desc">ドリブル 高い順</option>
+                  <option value="attr-passing-desc">パス 高い順</option>
+                  <option value="attr-defending-desc">守備 高い順</option>
+                  <option value="attr-pace-desc">スピード 高い順</option>
+                  <option value="attr-stamina-desc">スタミナ 高い順</option>
+                </optgroup>
+                <optgroup label="今季成績・調査">
+                  <option value="goals-desc">今季得点 多い順</option>
+                  <option value="assists-desc">今季アシスト 多い順</option>
+                  <option value="rating-desc">平均評価 高い順</option>
+                  <option value="apps-desc">出場数 多い順</option>
+                  <option value="scouted-desc">調査完了優先</option>
+                  <option value="shortlist-desc">獲得候補優先</option>
+                </optgroup>
               </select>
             </div>
 
             <div class="filter-group filter-search-wrap">
               <label class="filter-label mono">SEARCH:</label>
-              <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名検索...">
+              <div class="filter-search-row">
+                <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名・クラブ検索...">
+                <button type="button" id="btn-market-filter-reset" class="btn btn-secondary btn-sm mono" style="white-space:nowrap;flex-shrink:0;">リセット</button>
+              </div>
             </div>
           </div>
 
@@ -917,12 +979,12 @@
                   <th class="col-pos">適性</th>
                   <th class="col-name">選手名</th>
                   <th class="col-team">所属クラブ</th>
-                  <th class="col-num">年齢</th>
+                  <th class="col-num" data-sort-col="age">年齢</th>
                   <th class="col-num">利き足</th>
-                  <th class="col-num">OVR</th>
-                  <th class="col-num">市場価値</th>
-                  <th class="col-num">週給</th>
-                  <th class="col-num">契約残</th>
+                  <th class="col-num" data-sort-col="ovr">OVR</th>
+                  <th class="col-num" data-sort-col="fee">市場価値</th>
+                  <th class="col-num" data-sort-col="wage">週給</th>
+                  <th class="col-num" data-sort-col="contract">契約残</th>
                   <th class="col-action">交渉 / 候補</th>
                 </tr>
               </thead>

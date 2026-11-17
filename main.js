@@ -232,6 +232,8 @@ const gameState = {
     category: 'ALL',
     clubId: 'ALL',
     position: 'ALL',
+    ageRange: 'ALL',
+    statusFilter: 'ALL',
     sortKey: 'ovr-desc',
     searchQuery: ''
   },
@@ -8482,6 +8484,62 @@ function renderIncomingOffers() {
 }
 
 
+function resolveEuroClubMarketBucket(club) {
+  const raw = club && club.country ? String(club.country).trim() : '';
+  const up = raw.toUpperCase();
+  if (up === 'ESP' || raw === 'スペイン') return 'EUR_ESP';
+  if (up === 'ITA' || raw === 'イタリア') return 'EUR_ITA';
+  if (up === 'GER' || raw === 'ドイツ') return 'EUR_GER';
+  if (up === 'FRA' || raw === 'フランス') return 'EUR_FRA';
+  if (up === 'POR' || raw === 'ポルトガル') return 'EUR_POR';
+  if (up === 'NED' || raw === 'オランダ') return 'EUR_NED';
+  if (up === 'BEL' || raw === 'ベルギー') return 'EUR_BEL';
+  if (up === 'SCO' || raw === 'スコットランド') return 'EUR_SCO';
+  if (up === 'TUR' || raw === 'トルコ') return 'EUR_TUR';
+  return 'EUR_OTHER';
+}
+
+function getMarketSortableAttrValue(player, attrKey, isMyClub) {
+  const attrs = typeof getPlayerFiveAttributes === 'function'
+    ? getPlayerFiveAttributes(player)
+    : { finishing: player.atk || 50, dribbling: player.atk || 50, passing: 60, defending: player.def || 50, pace: player.sta || 50, stamina: player.sta || 50 };
+  const realVal = attrs[attrKey] || 50;
+  if (isMyClub || typeof getPlayerScoutedView !== 'function') return realVal;
+  const sv = getPlayerScoutedView(player, false);
+  if (sv && sv.isScouted) return realVal;
+  const attrSpread = (sv && sv.scoutLevel === 1) ? 3 : 7;
+  const attrIndexMap = { finishing: 0, dribbling: 1, passing: 2, defending: 3, pace: 4, stamina: 5 };
+  const idx = attrIndexMap[attrKey] || 0;
+  const baseSeed = String(player.id || 'p').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 17, 0);
+  const shift = ((baseSeed + idx * 13) % (attrSpread + 1)) - Math.floor(attrSpread / 2);
+  const minV = clamp(realVal - attrSpread + shift, 20, realVal);
+  const maxV = clamp(Math.max(minV + ((sv && sv.scoutLevel === 1) ? 3 : 6), realVal + attrSpread + shift), realVal, 99);
+  return (minV + maxV) / 2;
+}
+
+function updateMarketSortHeaderIndicators(sortKey) {
+  const headerLabels = { age: '年齢', ovr: 'OVR', fee: '市場価値', wage: '週給', contract: '契約残' };
+  const keyMap = {
+    'age-asc': ['age', '▲'], 'age-desc': ['age', '▼'],
+    'ovr-desc': ['ovr', '▼'], 'ovr-asc': ['ovr', '▲'],
+    'fee-desc': ['fee', '▼'], 'fee-asc': ['fee', '▲'],
+    'wage-desc': ['wage', '▼'], 'wage-asc': ['wage', '▲'],
+    'contract-asc': ['contract', '▲'], 'contract-desc': ['contract', '▼']
+  };
+  const active = keyMap[sortKey] || null;
+  document.querySelectorAll('.market-table thead th[data-sort-col]').forEach(th => {
+    const col = th.dataset.sortCol;
+    const baseLabel = headerLabels[col] || th.textContent.replace(/[▲▼\s]+$/g, '');
+    if (active && active[0] === col) {
+      th.classList.add('is-sorted');
+      th.textContent = `${baseLabel} ${active[1]}`;
+    } else {
+      th.classList.remove('is-sorted');
+      th.textContent = baseLabel;
+    }
+  });
+}
+
 function renderMarket() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
@@ -8489,6 +8547,9 @@ function renderMarket() {
   const squadCount = playerClub.players.length;
   const mf = gameState.marketFilter;
   if (!mf.category) mf.category = 'ALL';
+  if (!mf.ageRange) mf.ageRange = 'ALL';
+  if (!mf.statusFilter) mf.statusFilter = 'ALL';
+  if (!mf.sortKey) mf.sortKey = mf.sort || 'ovr-desc';
 
   const d1Clubs = Array.isArray(gameState.clubs) ? gameState.clubs : [];
   const d2Clubs = (gameState.competitions && gameState.competitions.championship && Array.isArray(gameState.competitions.championship.clubs))
@@ -8498,6 +8559,18 @@ function renderMarket() {
   const catSelect = document.getElementById('market-filter-category');
   if (catSelect && catSelect.value !== mf.category) {
     catSelect.value = mf.category;
+  }
+  const ageSelect = document.getElementById('market-filter-age');
+  if (ageSelect && ageSelect.value !== mf.ageRange) {
+    ageSelect.value = mf.ageRange;
+  }
+  const statusSelect = document.getElementById('market-filter-status');
+  if (statusSelect && statusSelect.value !== mf.statusFilter) {
+    statusSelect.value = mf.statusFilter;
+  }
+  const sortSelect = document.getElementById('market-filter-sort');
+  if (sortSelect && sortSelect.value !== mf.sortKey) {
+    sortSelect.value = mf.sortKey;
   }
 
   const euroClubMap = new Map();
@@ -8539,9 +8612,13 @@ function renderMarket() {
         d2Clubs.map(c => `<option value="${c.id}">${c.name}${c.isPlayer ? ' (自チーム)' : ''}</option>`).join('') +
         `</optgroup>`;
     }
-    if ((mf.category === 'ALL' || mf.category === 'EUROPE') && activeEuroClubs.length > 0) {
-      clubOptionsHtml += `<optgroup label="欧州主要クラブ (リストアップ)">` +
-        activeEuroClubs.map(c => `<option value="${c.id}">[${c.country}] ${c.name}</option>`).join('') +
+    const isEuroCat = mf.category === 'EUROPE' || String(mf.category).startsWith('EUR_');
+    const filteredEuroClubs = isEuroCat && mf.category !== 'EUROPE'
+      ? activeEuroClubs.filter(c => resolveEuroClubMarketBucket(c) === mf.category)
+      : activeEuroClubs;
+    if ((mf.category === 'ALL' || isEuroCat) && filteredEuroClubs.length > 0) {
+      clubOptionsHtml += `<optgroup label="欧州主要クラブ">` +
+        filteredEuroClubs.map(c => `<option value="${c.id}">[${c.country}] ${c.name}</option>`).join('') +
         `</optgroup>`;
     }
     const cacheKey = `${mf.category}_${d1Clubs.length}_${d2Clubs.length}_${activeEuroClubs.length}`;
@@ -8572,10 +8649,11 @@ function renderMarket() {
     }
   }
   for (const c of euroCompClubs) {
+    const eBucket = resolveEuroClubMarketBucket(c);
     for (const p of (c.players || [])) {
       if (!p || p.isRetired || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
-      allEntries.push({ player: p, club: c, category: 'EUROPE', isMyClub: false });
+      allEntries.push({ player: p, club: c, category: 'EUROPE', euroBucket: eBucket, isMyClub: false });
     }
   }
   if (Array.isArray(gameState.euroTransferList)) {
@@ -8584,7 +8662,7 @@ function renderMarket() {
       if (!p || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
       const eClub = euroClubMap.get(p.euroClubId || p.clubId) || fallbackEuroStub;
-      allEntries.push({ player: p, club: eClub, category: 'EUROPE', isMyClub: false });
+      allEntries.push({ player: p, club: eClub, category: 'EUROPE', euroBucket: resolveEuroClubMarketBucket(eClub), isMyClub: false });
     }
   }
   if (Array.isArray(gameState.transferMarket)) {
@@ -8596,15 +8674,45 @@ function renderMarket() {
     }
   }
 
+  const safeBudget = getSafeTransferBudget(playerClub);
   let filtered = allEntries.filter(entry => {
     const p = entry.player;
     const c = entry.club;
-    if (mf.category && mf.category !== 'ALL' && entry.category !== mf.category) return false;
+    if (mf.category && mf.category !== 'ALL') {
+      if (String(mf.category).startsWith('EUR_')) {
+        if (entry.category !== 'EUROPE' || entry.euroBucket !== mf.category) return false;
+      } else if (entry.category !== mf.category) {
+        return false;
+      }
+    }
     if (mf.clubId && mf.clubId !== 'ALL' && c.id !== mf.clubId) return false;
     if (mf.position !== 'ALL') {
       const matchPrimary = p.pos === mf.position || p.primaryPosition === mf.position;
       const matchSecondary = Array.isArray(p.secondaryPositions) && p.secondaryPositions.includes(mf.position);
       if (!matchPrimary && !matchSecondary) return false;
+    }
+    if (mf.ageRange && mf.ageRange !== 'ALL') {
+      const age = p.age || 25;
+      if (mf.ageRange === 'U21' && age > 21) return false;
+      if (mf.ageRange === 'U23' && age > 23) return false;
+      if (mf.ageRange === 'PRIME' && (age < 24 || age > 29)) return false;
+      if (mf.ageRange === 'VET' && age < 30) return false;
+    }
+    if (mf.statusFilter && mf.statusFilter !== 'ALL') {
+      if (mf.statusFilter === 'EXPIRING' && (p.isFreeAgent || p.contractYears !== 1)) return false;
+      if (mf.statusFilter === 'FREE' && !p.isFreeAgent) return false;
+      if (mf.statusFilter === 'SCOUTED') {
+        const sv = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true };
+        if (!sv || !sv.isScouted) return false;
+      }
+      if (mf.statusFilter === 'HG') {
+        const isHg = typeof isPlayerHomegrown === 'function' ? isPlayerHomegrown(p) : (p.nationality === 'England');
+        if (!isHg) return false;
+      }
+      if (mf.statusFilter === 'AFFORDABLE') {
+        const askFee = p.isFreeAgent ? 0 : (typeof calculateTransferFee === 'function' ? calculateTransferFee(p) : 0);
+        if (askFee > safeBudget) return false;
+      }
     }
     if (mf.searchQuery && mf.searchQuery.trim().length > 0) {
       const query = mf.searchQuery.trim().toLowerCase();
@@ -8625,6 +8733,13 @@ function renderMarket() {
     const p = entry.player;
     return typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
   };
+  const getScoutTier = (entry) => {
+    if (entry.isMyClub) return 3;
+    const intel = gameState.scoutingIntel && gameState.scoutingIntel[entry.player.id];
+    return intel && typeof intel.level === 'number' ? intel.level : 0;
+  };
+  const getAvgRatingNum = (p) => ((p.appearances || 0) > 0 && p.totalRating > 0) ? (p.totalRating / p.appearances) : 0;
+
   filtered.sort((a, b) => {
     const pA = a.player;
     const pB = b.player;
@@ -8646,16 +8761,40 @@ function renderMarket() {
       case 'age-desc':
         return pB.age - pA.age;
       case 'contract-asc':
-        return pA.contractYears - pB.contractYears || feeA - feeB;
+        return (pA.isFreeAgent ? 0 : (pA.contractYears || 0)) - (pB.isFreeAgent ? 0 : (pB.contractYears || 0)) || getSortValue(a) - getSortValue(b);
       case 'contract-desc':
-        return pB.contractYears - pA.contractYears || feeB - feeA;
+        return (pB.isFreeAgent ? 0 : (pB.contractYears || 0)) - (pA.isFreeAgent ? 0 : (pA.contractYears || 0)) || getSortValue(b) - getSortValue(a);
+      case 'attr-finishing-desc':
+      case 'attr-dribbling-desc':
+      case 'attr-passing-desc':
+      case 'attr-defending-desc':
+      case 'attr-pace-desc':
+      case 'attr-stamina-desc': {
+        const attrKey = sortKey.replace('attr-', '').replace('-desc', '');
+        return getMarketSortableAttrValue(pB, attrKey, b.isMyClub) - getMarketSortableAttrValue(pA, attrKey, a.isMyClub) || getSortOvr(b) - getSortOvr(a);
+      }
+      case 'goals-desc':
+        return (pB.goals || 0) - (pA.goals || 0) || getSortOvr(b) - getSortOvr(a);
+      case 'assists-desc':
+        return (pB.assists || 0) - (pA.assists || 0) || getSortOvr(b) - getSortOvr(a);
+      case 'rating-desc':
+        return getAvgRatingNum(pB) - getAvgRatingNum(pA) || (pB.appearances || 0) - (pA.appearances || 0);
+      case 'apps-desc':
+        return (pB.appearances || 0) - (pA.appearances || 0) || getSortOvr(b) - getSortOvr(a);
+      case 'scouted-desc':
+        return getScoutTier(b) - getScoutTier(a) || getSortOvr(b) - getSortOvr(a);
+      case 'shortlist-desc': {
+        const sA = isInShortlist(pA.id) ? 1 : 0;
+        const sB = isInShortlist(pB.id) ? 1 : 0;
+        return sB - sA || getSortOvr(b) - getSortOvr(a);
+      }
       default:
-        return ovrB - ovrA;
+        return getSortOvr(b) - getSortOvr(a);
     }
   });
+  updateMarketSortHeaderIndicators(sortKey);
 
   // サマリーバーの更新（現在資金 ＋ 実質移籍予算を併記）
-  const safeBudget = getSafeTransferBudget(playerClub);
   const safeColorCls = safeBudget < 0 ? 'text-danger' : 'accent-green';
   const summaryEl = document.getElementById('market-pos-summary');
   if (summaryEl) {
@@ -11681,6 +11820,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     category: 'ALL',
     clubId: 'ALL',
     position: 'ALL',
+    ageRange: 'ALL',
+    statusFilter: 'ALL',
     sortKey: 'ovr-desc',
     searchQuery: ''
   };
@@ -13046,8 +13187,11 @@ function initGame() {
   const marketFilterCategory = document.getElementById('market-filter-category');
   const marketFilterClub = document.getElementById('market-filter-club');
   const marketFilterPos = document.getElementById('market-filter-pos');
+  const marketFilterAge = document.getElementById('market-filter-age');
+  const marketFilterStatus = document.getElementById('market-filter-status');
   const marketFilterSort = document.getElementById('market-filter-sort');
   const marketFilterSearch = document.getElementById('market-filter-search');
+  const btnMarketFilterReset = document.getElementById('btn-market-filter-reset');
 
   const resetMarketAndRender = () => {
     gameState.marketFilter.displayLimit = 120;
@@ -13077,6 +13221,18 @@ function initGame() {
       resetMarketAndRender();
     });
   }
+  if (marketFilterAge) {
+    marketFilterAge.addEventListener('change', (e) => {
+      gameState.marketFilter.ageRange = e.target.value;
+      resetMarketAndRender();
+    });
+  }
+  if (marketFilterStatus) {
+    marketFilterStatus.addEventListener('change', (e) => {
+      gameState.marketFilter.statusFilter = e.target.value;
+      resetMarketAndRender();
+    });
+  }
   if (marketFilterSort) {
     marketFilterSort.addEventListener('change', (e) => {
       gameState.marketFilter.sortKey = e.target.value;
@@ -13091,25 +13247,40 @@ function initGame() {
       resetMarketAndRender();
     });
   }
+  if (btnMarketFilterReset) {
+    btnMarketFilterReset.addEventListener('click', () => {
+      gameState.marketFilter = {
+        category: 'ALL',
+        clubId: 'ALL',
+        position: 'ALL',
+        ageRange: 'ALL',
+        statusFilter: 'ALL',
+        sortKey: 'ovr-desc',
+        searchQuery: '',
+        displayLimit: 120
+      };
+      if (marketFilterSearch) marketFilterSearch.value = '';
+      renderMarket();
+    });
+  }
 
   // 移籍市場テーブルのヘッダークリックによる直感的ソート対応
   const marketTableHead = document.querySelector('.market-table thead');
   if (marketTableHead) {
-    marketTableHead.style.cursor = 'pointer';
     marketTableHead.addEventListener('click', (e) => {
-      const th = e.target.closest('th');
+      const th = e.target.closest('th[data-sort-col]');
       if (!th) return;
-      const txt = th.textContent.trim();
+      const col = th.dataset.sortCol;
       let nextSort = null;
-      if (txt.includes('OVR')) {
+      if (col === 'ovr') {
         nextSort = gameState.marketFilter.sortKey === 'ovr-desc' ? 'ovr-asc' : 'ovr-desc';
-      } else if (txt.includes('移籍金') || txt.includes('市場価値')) {
+      } else if (col === 'fee') {
         nextSort = gameState.marketFilter.sortKey === 'fee-desc' ? 'fee-asc' : 'fee-desc';
-      } else if (txt.includes('週給')) {
+      } else if (col === 'wage') {
         nextSort = gameState.marketFilter.sortKey === 'wage-desc' ? 'wage-asc' : 'wage-desc';
-      } else if (txt.includes('年齢')) {
+      } else if (col === 'age') {
         nextSort = gameState.marketFilter.sortKey === 'age-asc' ? 'age-desc' : 'age-asc';
-      } else if (txt.includes('契約残')) {
+      } else if (col === 'contract') {
         nextSort = gameState.marketFilter.sortKey === 'contract-asc' ? 'contract-desc' : 'contract-asc';
       }
       if (nextSort) {
