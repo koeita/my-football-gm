@@ -2024,10 +2024,7 @@ function processSeasonEnd(isSkipped = false) {
   }
 
   generateTransferMarket();
-  generateYouthAcademyCandidates();
-  playerRetirementLogs.push(
-    `[ユースアカデミー] 今季のユース昇格候補2名（16〜18歳）が選出されました（「クラブ経営・施設投資」タブから昇格審査が可能）`
-  );
+  gameState.youthCandidates = [];
 
   if (typeof ageAndRenewCoachingStaffAtSeasonEnd === 'function') {
     ageAndRenewCoachingStaffAtSeasonEnd(playerRetirementLogs);
@@ -9392,12 +9389,11 @@ function renderGmDuties() {
   );
 
   let optionalDuty = null;
-  const candidatesCount = (gameState.youthCandidates || []).length;
-  if (canPromote && (youthSquad.length > 0 || candidatesCount > 0)) {
+  if (canPromote && youthSquad.length > 0) {
     optionalDuty = {
       level: 'optional',
       badge: '任意',
-      title: candidatesCount > 0 ? `ユース昇格審査（候補${candidatesCount}名）` : `ユース昇格（${youthSquad.length}名在籍）`,
+      title: `ユース昇格（${youthSquad.length}名在籍）`,
       desc: 'アカデミー有望株をトップチームへ昇格登録できます。',
       btnText: 'ユース一覧へ',
       action: 'goto-youth'
@@ -9565,94 +9561,6 @@ function renderFacilitiesAndYouth() {
 
   if (typeof renderBoardPsrSponsorPanel === 'function') {
     renderBoardPsrSponsorPanel(playerClub);
-  }
-
-  // ユースアカデミー（若手昇格候補2名）描画
-  const candidates = gameState.youthCandidates || [];
-  const countEl = document.getElementById('youth-candidates-count');
-  if (countEl) countEl.textContent = `${candidates.length}名`;
-
-  const capEl = document.getElementById('youth-squad-capacity');
-  if (capEl) capEl.textContent = `${playerClub.players.length} / ${MAX_SQUAD_SIZE}名`;
-
-  const youthGrid = document.getElementById('youth-candidates-grid');
-  if (youthGrid) {
-    if (candidates.length === 0) {
-      youthGrid.innerHTML = `
-        <div class="youth-empty-box">
-          今季のユースアカデミー昇格候補に対する審査はすべて完了しています。<br>
-          次のオフシーズン開始時に、新たな若手有望株2名が選出されます。
-        </div>
-      `;
-    } else {
-      const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
-      const isSquadFull = playerClub.players.length >= maxSquad;
-
-      youthGrid.innerHTML = candidates.map(y => {
-        const ovr = getPlayerOverallRating(y);
-        const rawNat = y.nationality || 'England';
-        const traits = Array.isArray(y.traits) ? y.traits : [];
-
-        return `
-          <div class="youth-card">
-            <div class="youth-card-top">
-              <div class="youth-name-wrap">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                  ${getPlayerAvatarHtml(y, playerClub, 'avatar-md')}
-                  ${formatPlayerPositionsHtml(y)}
-                  <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="クリックで選手詳細プロフィールを表示">
-                    ${y.name}
-                  </button>
-                </div>
-                <div class="youth-meta-row">
-                  <span>${rawNat}</span>
-                  <span>|</span>
-                  <span><strong>${y.age}歳</strong>（昇格候補）</span>
-                  <span>|</span>
-                  <span>${y.height}cm / ${y.preferredFoot}</span>
-                </div>
-              </div>
-              <div class="youth-ovr-box">
-                <span class="youth-ovr-label">OVR</span>
-                <span class="youth-ovr-val ${getOvrTierClass(ovr)}">${ovr}</span>
-              </div>
-            </div>
-
-            <div class="youth-stats-strip">
-              <div class="youth-stat-cell">
-                <span class="youth-stat-cell-label">攻撃</span>
-                <span class="youth-stat-cell-val ${getOvrTextClass(y.atk)}">${y.atk}</span>
-              </div>
-              <div class="youth-stat-cell">
-                <span class="youth-stat-cell-label">守備</span>
-                <span class="youth-stat-cell-val ${getOvrTextClass(y.def)}">${y.def}</span>
-              </div>
-              <div class="youth-stat-cell">
-                <span class="youth-stat-cell-label">体力</span>
-                <span class="youth-stat-cell-val ${getOvrTextClass(y.sta)}">${y.sta}</span>
-              </div>
-            </div>
-
-            ${traits.length > 0 ? `<div class="profile-traits-wrap">${traits.map(t => `<span class="profile-trait-tag">${t}</span>`).join('')}</div>` : ''}
-
-            <div class="youth-contract-note">
-              <span>昇格: <strong>£0 / 年俸 £800K（4年）</strong></span>
-              <span>見送り時: <strong class="accent-gold">補償金 +£300K</strong></span>
-            </div>
-
-            <div class="youth-actions-row">
-              <button type="button" class="btn btn-primary btn-sm" data-promote-youth="${y.id}" ${!isSquadFull && !gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
-                ${isSquadFull ? `所属枠上限 (${maxSquad}名)` : 'トップチーム昇格（£0 / 年俸£800K）'}
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" data-dismiss-youth="${y.id}" ${!gameState.isGameOver && !gameState.isSimulating ? '' : 'disabled'}>
-                見送り（補償金 +£300K）
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-      if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(youthGrid);
-    }
   }
 }
 
@@ -11923,7 +11831,6 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
     { date: '8/1 (土)', message: '新シーズン開幕！GMに就任し、初戦に向けてスカッドが始動しました。' }
   ];
   generateTransferMarket();
-  generateYouthAcademyCandidates();
   syncAllSubtabsDOM();
   switchTab('office');
 }
@@ -13147,31 +13054,6 @@ function initGame() {
       if (releaseBtn && releaseBtn.dataset.releaseId) {
         e.stopPropagation();
         releaseYouthPlayer(releaseBtn.dataset.releaseId);
-        return;
-      }
-      const profileBtn = e.target.closest('[data-profile-id]');
-      if (profileBtn) {
-        e.stopPropagation();
-        openPlayerProfileModal(profileBtn.dataset.profileId);
-        return;
-      }
-    });
-  }
-
-  // アカデミー施設・ユース昇格候補グリッドのイベント（トップ昇格・見送り・詳細表示）
-  const youthListEl = document.getElementById('youth-candidates-grid') || document.getElementById('youth-list');
-  if (youthListEl) {
-    youthListEl.addEventListener('click', (e) => {
-      const promoteBtn = e.target.closest('[data-promote-youth]');
-      if (promoteBtn && promoteBtn.dataset.promoteYouth) {
-        e.stopPropagation();
-        promoteYouthCandidate(promoteBtn.dataset.promoteYouth);
-        return;
-      }
-      const dismissBtn = e.target.closest('[data-dismiss-youth]');
-      if (dismissBtn && dismissBtn.dataset.dismissYouth) {
-        e.stopPropagation();
-        dismissYouthCandidate(dismissBtn.dataset.dismissYouth);
         return;
       }
       const profileBtn = e.target.closest('[data-profile-id]');
