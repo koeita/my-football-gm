@@ -3380,6 +3380,40 @@ body {
   background-color: rgba(46, 204, 113, 0.14);
   color: var(--accent-green);
   border: 1px solid var(--accent-green);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-trait-tag.is-selected {
+  background-color: rgba(46, 204, 113, 0.28) !important;
+  color: #ffffff !important;
+}
+
+.profile-trait-detail {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--accent-green);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-trait-detail.hidden {
+  display: none;
+}
+
+.profile-trait-detail-title {
+  color: var(--accent-green);
+  font-size: 11.5px;
+}
+
+.profile-trait-detail-desc {
+  color: var(--text-muted);
 }
 
 .profile-metrics-row {
