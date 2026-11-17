@@ -855,6 +855,27 @@ function loadGameFromStorage() {
       gameState.d2PowerCalibratedV1 = true;
     }
 
+    // 過去のシーズン跨ぎで欧州選手（euroTransferList 等）の今季出場数が累積した異常値を現在週ベースへ補正
+    const curLoadWeek = Math.max(0, gameState.currentWeek || 0);
+    const maxAllowedEuroApps = curLoadWeek === 0 ? 0 : Math.min(44, Math.min(38, curLoadWeek) + 4);
+    const clampEuroPlayerSeasonApps = (ep) => {
+      if (!ep || typeof ep.appearances !== 'number' || ep.appearances <= maxAllowedEuroApps) return;
+      const oldApps = ep.appearances;
+      const ratio = maxAllowedEuroApps > 0 ? (maxAllowedEuroApps / oldApps) : 0;
+      ep.appearances = maxAllowedEuroApps;
+      if (typeof ep.goals === 'number') ep.goals = Math.round(ep.goals * ratio);
+      if (typeof ep.assists === 'number') ep.assists = Math.round(ep.assists * ratio);
+      if (typeof ep.totalRating === 'number') ep.totalRating = Number((ep.totalRating * ratio).toFixed(2));
+    };
+    if (Array.isArray(gameState.euroTransferList)) {
+      gameState.euroTransferList.forEach(clampEuroPlayerSeasonApps);
+    }
+    if (typeof getEuropeanCompetitionClubsWithPlayers === 'function') {
+      getEuropeanCompetitionClubsWithPlayers().forEach(ec => {
+        (ec.players || []).forEach(clampEuroPlayerSeasonApps);
+      });
+    }
+
     // 全所属選手およびユースの疲労度・評価点・リアリティデータ互換性補完（1部・2部両方）
     getAllManagedLeagueClubs().forEach(c => {
       if (typeof ensureClubRealismFields === 'function') {

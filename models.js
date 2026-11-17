@@ -2066,10 +2066,12 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
  */
 function applyInitialEuropeanDomesticStats(p, curW) {
   if (!p || !curW || curW <= 0) return;
+  if ((p.appearances || 0) > 0) return;
   const pos = p.primaryPosition || p.pos || 'CM';
   const pOvr = getPlayerOverallRating(p);
   const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
-  const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
+  const effectiveW = Math.min(curW, 38);
+  const estApps = Math.max(1, Math.min(42, effectiveW + 2, Math.round(effectiveW * playProb + (pOvr >= 78 ? randInt(0, 2) : 0))));
   const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
   const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
   const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
@@ -2091,10 +2093,13 @@ function applyInitialEuropeanDomesticStats(p, curW) {
 function advanceEuropeanTransferListMatchweek() {
   if (typeof gameState === 'undefined') return;
   const processedIds = new Set();
+  const curW = Math.max(1, gameState.currentWeek || 1);
+  const maxSeasonApps = Math.min(44, Math.min(38, curW) + 4);
 
   const stepPlayerMatchweek = (p) => {
     if (!p || p.isRetired || !p.id || processedIds.has(p.id)) return;
     processedIds.add(p.id);
+    if ((p.appearances || 0) >= maxSeasonApps) return;
     const ovr = getPlayerOverallRating(p);
     const playProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
     if (Math.random() > playProb) return;
@@ -2489,7 +2494,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 /**
  * スロットと選手の最適マッチング用スコア計算
  */
-function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
+function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', options = {}) {
   ensurePlayerProficiencies(player);
   const discCat = typeof resolveDisciplineCategory === 'function' ? resolveDisciplineCategory(compCategory) : compCategory;
   let score = 0;
@@ -2558,6 +2563,24 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
     score += (player.sta - 70) * 0.05;
   }
 
+  // 5. CPUクラブ向け大会別ターンオーバー＆過密出場抑制（控え・若手起用と現実的な試合数維持）
+  if (options && options.isCpuTurnover) {
+    const apps = typeof player.appearances === 'number' ? player.appearances : 0;
+    const isDomesticCup = (compCategory === 'faCup' || compCategory === 'leagueCup' || compCategory === 'domesticCup');
+    if (isDomesticCup) {
+      score -= Math.min(28, apps * 0.65);
+      if (apps <= 12) {
+        score += 10;
+      }
+    }
+    if (apps >= 40) {
+      score -= Math.min(50, (apps - 39) * 2.2);
+    }
+    if (apps >= 52) {
+      score -= 25;
+    }
+  }
+
   return score;
 }
 
@@ -2566,7 +2589,7 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league') {
  * 所属全選手 (N人) から フォーメーション枠 (M=11枠) へ、
  * チーム全体の合計スコア（実効OVR・適性・健康度）が最大となる一意の配置を求める
  */
-function findOptimalAssignment(players, slots, compCategory = 'league') {
+function findOptimalAssignment(players, slots, compCategory = 'league', options = {}) {
   const N = players.length; // 候補選手数 (通常20〜25人)
   const M = slots.length;   // スロット数 (11枠)
   if (N < M) return null;
@@ -2576,7 +2599,7 @@ function findOptimalAssignment(players, slots, compCategory = 'league') {
   const W = Array.from({ length: M }, () => new Float64Array(N));
   for (let j = 0; j < M; j++) {
     for (let i = 0; i < N; i++) {
-      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos, compCategory);
+      W[j][i] = calculateSlotPlayerScore(players[i], slots[j].pos, compCategory, options);
     }
   }
 
@@ -2657,7 +2680,7 @@ function optimizeClubStarters(club, compCategory = 'league') {
   const availablePlayers = club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
 
   // 最適マッチングの実行
-  const assignment = findOptimalAssignment(availablePlayers, slots, compCategory);
+  const assignment = findOptimalAssignment(availablePlayers, slots, compCategory, { isCpuTurnover: !club.isPlayer });
 
   club.players.forEach(p => {
     p.isStarter = false;
