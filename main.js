@@ -8155,6 +8155,7 @@ function renderShortlist() {
     return;
   }
 
+  const activeScouts = gameState.activeScoutAssignments || [];
   const rows = [];
   for (const id of ids) {
     const ctx = findPlayerWithContextById(id);
@@ -8191,7 +8192,17 @@ function renderShortlist() {
       }
     } else {
       offerBtnHtml = `<button type="button" class="btn btn-primary btn-sm btn-formal-offer market-offer-slot-btn" data-formal-offer-id="${p.id}" ${p.negotiationFailed ? 'disabled' : ''}>交渉</button>`;
-    }    const footBadge = formatFootBadge(p);
+    }
+    let scoutBtnHtml = '';
+    if (!isMyClub && !scoutView.isScouted) {
+      const isScoutingNow = activeScouts.find(a => a.playerId === p.id);
+      if (isScoutingNow) {
+        scoutBtnHtml = `<button type="button" class="btn btn-sm btn-disabled mono market-scout-slot-btn" disabled style="opacity:0.75;">調査中(${isScoutingNow.daysRemaining}日)</button>`;
+      } else {
+        scoutBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-scout-dispatch mono market-scout-slot-btn" data-scout-player-id="${p.id}" title="スカウトを派遣して能力・契約条件を解明">調査</button>`;
+      }
+    }
+    const footBadge = formatFootBadge(p);
 
     rows.push(`
       <tr>
@@ -8213,7 +8224,7 @@ function renderShortlist() {
         <td class="col-num ${isBargain ? 'contract-expiring' : ''}">${p.contractYears}年</td>
         <td class="col-action" style="white-space: nowrap;">
           <div class="market-action-group">
-            ${offerBtnHtml}
+            ${scoutBtnHtml}${offerBtnHtml}
             <button type="button" class="btn btn-outline btn-sm btn-shortlist-remove" data-shortlist-remove="${p.id}" title="ターゲットリストから除外">解除</button>
           </div>
         </td>
@@ -11381,10 +11392,12 @@ function openPlayerProfileModal(playerId) {
           const res = assignScoutToPlayer(pid);
           if (res && res.ok) {
             if (typeof showToast === 'function') showToast(`${p.name} のスカウト調査を開始しました`, 'success');
+            if (typeof updateMarketBadges === 'function') updateMarketBadges();
             if (typeof renderMarket === 'function') renderMarket();
+            if (typeof renderShortlist === 'function') renderShortlist();
             openPlayerProfileModal(pid);
-          } else if (res && res.reason === 'limit') {
-            if (typeof showToast === 'function') showToast(`同時調査枠（最大${res.max || 1}名）がいっぱいです`, 'warning');
+          } else if (res && (res.reason === 'slots_full' || res.reason === 'limit')) {
+            if (typeof showToast === 'function') showToast(`同時調査枠（最大${res.maxSlots || res.max || 2}名）がいっぱいです`, 'warning');
           }
         }
       });
@@ -12903,7 +12916,9 @@ function initGame() {
       const res = typeof assignScoutToPlayer === 'function' ? assignScoutToPlayer(pid) : { ok: false };
       if (res.ok) {
         showToast(`スカウトを派遣しました（調査完了まで約${res.totalDays}日）`, 'info');
+        updateMarketBadges();
         renderMarket();
+        renderShortlist();
         scheduleAutoSave();
       } else if (res.reason === 'slots_full') {
         showToast(`スカウト派遣枠が上限（${res.maxSlots}名）に達しています。スカウト網Lvを上げると枠が増えます。`, 'warning');
@@ -12951,6 +12966,23 @@ function initGame() {
         e.stopPropagation();
         switchMarketSubtab('offers');
         switchOffersTab(gotoOffersBtn.dataset.gotoOffers || 'outgoing');
+        return;
+      }
+
+      const scoutBtn = e.target.closest('[data-scout-player-id]');
+      if (scoutBtn) {
+        e.stopPropagation();
+        const pid = scoutBtn.dataset.scoutPlayerId;
+        const res = typeof assignScoutToPlayer === 'function' ? assignScoutToPlayer(pid) : { ok: false };
+        if (res.ok) {
+          showToast(`スカウトを派遣しました（調査完了まで約${res.totalDays}日）`, 'info');
+          updateMarketBadges();
+          renderMarket();
+          renderShortlist();
+          scheduleAutoSave();
+        } else if (res.reason === 'slots_full') {
+          showToast(`スカウト派遣枠が上限（${res.maxSlots}名）に達しています。スカウト網Lvを上げると枠が増えます。`, 'warning');
+        }
         return;
       }
 

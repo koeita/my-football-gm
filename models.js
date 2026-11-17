@@ -3277,6 +3277,12 @@ function assignScoutToPlayer(playerId) {
   if (!gameState.scoutingIntel[playerId]) {
     gameState.scoutingIntel[playerId] = { progress: 0, level: 0, discoveredAtDay: null };
   }
+  if (!Array.isArray(gameState.targetShortlist)) {
+    gameState.targetShortlist = [];
+  }
+  if (!gameState.targetShortlist.includes(playerId)) {
+    gameState.targetShortlist.push(playerId);
+  }
   return { ok: true, totalDays };
 }
 
