@@ -620,7 +620,17 @@ function getPositionFitInfo(p, slotPos) {
   }
 
   // 2. サブ適性（実装値 0.92 に統一）
+  const traits = Array.isArray(p.traits) ? p.traits : [];
+  const hasUtility = traits.includes('万能ユーティリティ');
+  const hasBothFoot = traits.includes('両足のスペシャリスト');
+  const isOppositeFlank = (
+    (['LW', 'LM', 'LB'].includes(normSlot) && normMains.concat(normSubs).some(x => ['RW', 'RM', 'RB'].includes(x))) ||
+    (['RW', 'RM', 'RB'].includes(normSlot) && normMains.concat(normSubs).some(x => ['LW', 'LM', 'LB'].includes(x)))
+  );
+
   if (normSubs.includes(normSlot)) {
+    if (hasUtility) return { type: 'sub', factor: 0.97, label: 'サブ適性' };
+    if (hasBothFoot && isOppositeFlank) return { type: 'sub', factor: 0.96, label: 'サブ適性' };
     return { type: 'sub', factor: 0.92, label: 'サブ適性' };
   }
 
@@ -639,11 +649,12 @@ function getPositionFitInfo(p, slotPos) {
   });
 
   if (isNear && normSlot !== 'GK' && !playerAllNorm.includes('GK')) {
-    return { type: 'semi', factor: 0.85, label: '近接不適性' };
+    const semiFactor = hasUtility ? 0.91 : (hasBothFoot && isOppositeFlank ? 0.89 : 0.85);
+    return { type: 'semi', factor: semiFactor, label: '近接不適性' };
   }
 
   // 4. 完全不適性（70%発揮・重度ペナルティ）
-  return { type: 'out', factor: 0.70, label: '完全不適性' };
+  return { type: 'out', factor: hasUtility ? 0.78 : 0.70, label: '完全不適性' };
 }
 
 /**
@@ -1184,6 +1195,31 @@ function generatePlayerHeight(pos) {
     default:
       return randInt(172, 186);
   }
+}
+
+/**
+ * 選手特徴の定性的効果定義（数値の上昇幅は表示しない）
+ */
+const PLAYER_TRAIT_DEFINITIONS = {
+  '万能ユーティリティ': '本適性以外のポジションに配置された際の能力低下を緩和します。',
+  '両足のスペシャリスト': '左右の足による精度差がなく、逆サイド配置時の適応力と決定力・パス精度を高めます。',
+  '空中戦の覇者': 'ハイボールやクロスに対する競り合いに強く、前線・最終ラインの空中戦能力を高めます。',
+  'スピードスター': '爆発的な加速力と突破力で、カウンターやサイドアタック時の攻撃力を引き上げます。',
+  '高精度キッカー': '正確無比なキックとパス精度で、攻撃の組み立てとチャンス創出に貢献します。',
+  'チャンスメイカー': '決定的なパスやドリブル突破で味方の得点機を演出し、チームの攻撃力を高めます。',
+  '決定力の鬼': 'ゴール前での高いシュート精度により、得点期待値と決定力を引き上げます。',
+  'ラインブレイカー': 'DFラインの背後へ抜け出す動きに優れ、前線での得点機会とカウンター時の脅威を高めます。',
+  '鉄壁の対人守備': '1対1のデュエルと粘り強いマークで、相手の攻撃を封じ込め守備を安定させます。',
+  '守護神の反射神経': '鋭い反応速度によるビッグセーブで失点を防ぎ、ゴール前の守備力を高めます。',
+  '無尽蔵のスタミナ': '豊富な運動量とタフネスにより、試合出場による疲労の蓄積を軽減します。',
+  'ビルドアップの起点': '後方・中盤からの落ち着いた配球でプレスを回避し、ポゼッション時の攻守を安定させます。',
+  '戦術理解度◎': '戦術やフォーメーションへの適応力が高く、試合での攻守両面の連携を底上げします。',
+  'ハードワーカー': '攻守の切り替えと献身的なプレスで、チームの守備強度とプレッシング性能を高めます。',
+  '冷静沈着': 'プレッシャーのかかる場面でも実力を安定して発揮し、攻守のパフォーマンスを支えます。'
+};
+
+function getPlayerTraitDescription(traitName) {
+  return PLAYER_TRAIT_DEFINITIONS[traitName] || '選手固有のプレイスタイルとして試合でのパフォーマンスに影響します。';
 }
 
 /**

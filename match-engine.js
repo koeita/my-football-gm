@@ -438,13 +438,15 @@ function applyPostMatchPlayerFatigue(club, playedStarters = null, playedSubs = [
 
   starters.forEach(p => {
     const staFactor = clamp(1.12 - (((p.sta || 70) - 65) * 0.006), 0.85, 1.18);
-    const fatigueDelta = Math.round(randInt(22, 27) * staFactor * drainMult);
+    const traitFatigueMult = (Array.isArray(p.traits) && p.traits.includes('無尽蔵のスタミナ')) ? 0.80 : 1.0;
+    const fatigueDelta = Math.round(randInt(22, 27) * staFactor * drainMult * traitFatigueMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
   });
 
   (playedSubs || []).forEach(p => {
     const staFactor = clamp(1.10 - (((p.sta || 70) - 65) * 0.005), 0.85, 1.15);
-    const fatigueDelta = Math.round(randInt(10, 15) * staFactor * drainMult);
+    const traitFatigueMult = (Array.isArray(p.traits) && p.traits.includes('無尽蔵のスタミナ')) ? 0.80 : 1.0;
+    const fatigueDelta = Math.round(randInt(10, 15) * staFactor * drainMult * traitFatigueMult);
     p.fatigue = clamp((p.fatigue || 0) + fatigueDelta, 0, 100);
   });
 
@@ -1237,7 +1239,44 @@ function getTeamStarterStats(club) {
 
     totalAtk += pAtk;
     totalDef += pDef;
-    totalSta += p.sta;
+    const traits = Array.isArray(p.traits) ? p.traits : [];
+    if (traits.length > 0) {
+      let traitAtkMult = 1.0;
+      let traitDefMult = 1.0;
+      if (traits.includes('決定力の鬼')) traitAtkMult *= 1.04;
+      if (traits.includes('スピードスター')) traitAtkMult *= (tactic === 'counter' || tactic === 'wingplay') ? 1.04 : 1.02;
+      if (traits.includes('チャンスメイカー')) traitAtkMult *= 1.03;
+      if (traits.includes('高精度キッカー')) traitAtkMult *= 1.025;
+      if (traits.includes('ラインブレイカー') && (roleGroup === 'FW' || slot === 'AM')) {
+        traitAtkMult *= (tactic === 'counter' ? 1.055 : 1.035);
+      }
+      if (traits.includes('空中戦の覇者')) {
+        if (slot === 'CF' || roleGroup === 'FW') traitAtkMult *= (tactic === 'wingplay' ? 1.06 : 1.04);
+        if (slot === 'CB') traitDefMult *= 1.04;
+      }
+      if (traits.includes('両足のスペシャリスト')) traitAtkMult *= 1.02;
+      if (traits.includes('鉄壁の対人守備')) traitDefMult *= 1.04;
+      if (traits.includes('守護神の反射神経') && slot === 'GK') traitDefMult *= 1.06;
+      if (traits.includes('ビルドアップの起点')) {
+        traitDefMult *= (tactic === 'possession' ? 1.03 : 1.015);
+        if (tactic === 'possession') traitAtkMult *= 1.03;
+      }
+      if (traits.includes('戦術理解度◎')) {
+        traitAtkMult *= 1.02;
+        traitDefMult *= 1.02;
+      }
+      if (traits.includes('ハードワーカー')) {
+        traitDefMult *= (tactic === 'gegenpress' ? 1.05 : 1.03);
+        if (tactic === 'gegenpress') traitAtkMult *= 1.02;
+      }
+      if (traits.includes('冷静沈着')) {
+        traitAtkMult *= 1.02;
+        traitDefMult *= 1.02;
+      }
+      totalAtk += pAtk * (traitAtkMult - 1.0);
+      totalDef += pDef * (traitDefMult - 1.0);
+    }
+    totalSta += traits.includes('無尽蔵のスタミナ') ? Math.min(99, p.sta + 3) : p.sta;
   }
 
   // フォーメーション構造特性によるボーナス

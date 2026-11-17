@@ -11041,8 +11041,9 @@ function openPlayerProfileModal(playerId) {
                 <div class="ui-kv-label">選手特徴</div>
                 <div class="ui-kv-content">
                   <div class="profile-traits-wrap">
-                    ${traits.map(t => `<span class="profile-trait-tag is-active-trait">${t}</span>`).join('')}
+                    ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">${t}</button>`).join('')}
                   </div>
+                  <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
                 </div>
               </div>
             </div>
@@ -13302,7 +13303,34 @@ function initGame() {
   // モーダルは右上の「×」ボタン（#btn-close-profile-modal）または Esc キーのみで閉じる仕様を徹底（オーバーレイ背景クリックでの誤クローズを抑止）
   const profileModalOverlay = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   if (profileModalOverlay) {
-    // 背景クリックによる自動クローズは行わない
+    profileModalOverlay.addEventListener('click', (e) => {
+      const traitBtn = e.target.closest('.profile-trait-tag[data-trait-name]');
+      if (!traitBtn) return;
+      const traitName = traitBtn.dataset.traitName;
+      const bodyEl = profileModalOverlay.querySelector('.profile-traits-wrap')?.parentElement;
+      const detailEl = bodyEl ? bodyEl.querySelector('#profile-trait-detail') : document.getElementById('profile-trait-detail');
+      if (!detailEl) return;
+
+      const isAlreadySelected = traitBtn.classList.contains('is-selected') && !detailEl.classList.contains('hidden');
+      profileModalOverlay.querySelectorAll('.profile-trait-tag[data-trait-name]').forEach(btn => {
+        btn.classList.remove('is-selected');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+
+      if (isAlreadySelected) {
+        detailEl.classList.add('hidden');
+        detailEl.innerHTML = '';
+        return;
+      }
+
+      traitBtn.classList.add('is-selected');
+      traitBtn.setAttribute('aria-expanded', 'true');
+      const desc = typeof getPlayerTraitDescription === 'function'
+        ? getPlayerTraitDescription(traitName)
+        : '試合でのパフォーマンスに影響します。';
+      detailEl.innerHTML = `<strong class="profile-trait-detail-title">${traitName}</strong><span class="profile-trait-detail-desc">${desc}</span>`;
+      detailEl.classList.remove('hidden');
+    });
   }
 
   // 契約更新・移籍獲得交渉モーダルのイベント
