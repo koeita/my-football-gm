@@ -2066,10 +2066,12 @@ function generateEuropeanTransferList(existingUsedNames = null, scoutingLv = 1) 
  */
 function applyInitialEuropeanDomesticStats(p, curW) {
   if (!p || !curW || curW <= 0) return;
+  if ((p.appearances || 0) > 0) return;
   const pos = p.primaryPosition || p.pos || 'CM';
   const pOvr = getPlayerOverallRating(p);
   const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
-  const estApps = Math.max(1, Math.min(curW + 4, Math.round(curW * playProb + (pOvr >= 78 ? randInt(0, 3) : 0))));
+  const effectiveW = Math.min(curW, 38);
+  const estApps = Math.max(1, Math.min(42, effectiveW + 2, Math.round(effectiveW * playProb + (pOvr >= 78 ? randInt(0, 2) : 0))));
   const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
   const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
   const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
@@ -2091,10 +2093,13 @@ function applyInitialEuropeanDomesticStats(p, curW) {
 function advanceEuropeanTransferListMatchweek() {
   if (typeof gameState === 'undefined') return;
   const processedIds = new Set();
+  const curW = Math.max(1, gameState.currentWeek || 1);
+  const maxSeasonApps = Math.min(44, Math.min(38, curW) + 4);
 
   const stepPlayerMatchweek = (p) => {
     if (!p || p.isRetired || !p.id || processedIds.has(p.id)) return;
     processedIds.add(p.id);
+    if ((p.appearances || 0) >= maxSeasonApps) return;
     const ovr = getPlayerOverallRating(p);
     const playProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
     if (Math.random() > playProb) return;

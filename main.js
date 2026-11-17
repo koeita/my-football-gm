@@ -5739,6 +5739,50 @@ function startNextSeason() {
     }
   }
 
+  // 欧州主要クラブ（euroTransferList）の選手もシーズン終了記録を保存し、今季出場数・成績をリセットする
+  if (Array.isArray(gameState.euroTransferList)) {
+    const prevSeasonNum = Math.max(1, (gameState.season || 2) - 1);
+    const prevBaseYear = 2025 + prevSeasonNum;
+    const prevYearStr = `${prevBaseYear}-${String((prevBaseYear + 1) % 100).padStart(2, '0')}`;
+    for (const ep of gameState.euroTransferList) {
+      if (!ep) continue;
+      const eDef = (typeof findEuropeanClubDefinitionById === 'function') ? findEuropeanClubDefinitionById(ep.euroClubId || ep.clubId) : null;
+      const eClubName = (eDef && eDef.name) ? eDef.name : '欧州主要クラブ';
+      if (!Array.isArray(ep.seasonHistory)) {
+        const savedSeason = gameState.season;
+        gameState.season = prevSeasonNum;
+        ensurePlayerHistoryAndCareer(ep, eClubName);
+        gameState.season = savedSeason;
+      }
+      if (!ep.seasonHistory.some(r => r && r.seasonYear === prevYearStr)) {
+        const histApps = Math.min(44, ep.appearances || 0);
+        const prevAvg = histApps > 0 && ep.totalRating > 0 ? (ep.totalRating / (ep.appearances || histApps)).toFixed(2) : '-';
+        ep.seasonHistory.push({
+          seasonYear: prevYearStr,
+          clubName: eClubName,
+          age: ep.age || 25,
+          appearances: histApps,
+          goals: ep.goals || 0,
+          assists: ep.assists || 0,
+          avgRating: prevAvg,
+          ovr: getPlayerOverallRating(ep)
+        });
+      }
+      if (ep.seasonHistory.length > 3) {
+        ep.seasonHistory = ep.seasonHistory.slice(-3);
+      }
+      ep.age = (ep.age || 25) + 1;
+      ep.appearances = 0;
+      ep.goals = 0;
+      ep.assists = 0;
+      ep.totalRating = 0;
+      ep.cleanSheets = 0;
+      ep.momCount = 0;
+      ep.yellowCards = 0;
+      ep.redCards = 0;
+    }
+  }
+
   const inD2 = isPlayerInSecondDivision();
   const activeClubs = getActivePlayerLeagueClubs();
   gameState.totalWeeks = inD2 ? 46 : 38;
