@@ -785,6 +785,9 @@ function addDailyLog(message) {
  * 画面右上にトースト通知をポップアップ表示
  */
 function showToast(message, type = 'info') {
+  if (type !== 'error' && type !== 'warn' && type !== 'warning') return;
+  const gmOverlay = document.getElementById('gm-modal-overlay');
+  if (gmOverlay && !gmOverlay.classList.contains('hidden')) return;
   let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
@@ -1134,7 +1137,7 @@ function advanceCalendarDay(skipRender = false) {
   } else if (!nextDay.isTransferDeadline) {
     gameState.pendingDeadlineOffer = false;
   }
-  if (gameState.pendingBoardCrisis && !gameState.isGameOver) {
+  if (gameState.pendingBoardCrisis && !gameState.isGameOver && !isFastForwardingSeason) {
     stopAdvancingCalendar();
     if (typeof openBoardCrisisModal === 'function') openBoardCrisisModal();
     return true;
@@ -1325,9 +1328,14 @@ function renderWeeklySchedule() {
 function skipToSeasonEnd() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
   stopAdvancingCalendar();
+  gmModalQueue.length = 0;
+  const existingGmOverlay = document.getElementById('gm-modal-overlay');
+  if (existingGmOverlay) existingGmOverlay.classList.add('hidden');
+  isFastForwardingSeason = true;
 
-  let safetyGuard = 0;
-  while (!gameState.isSeasonOver && safetyGuard < 500) {
+  try {
+    let safetyGuard = 0;
+    while (!gameState.isSeasonOver && safetyGuard < 500) {
     safetyGuard++;
     const curDay = getCurrentCalendarDay();
     if (!curDay) {
@@ -1348,7 +1356,10 @@ function skipToSeasonEnd() {
       }
     }
     if (gameState.isSeasonOver) break;
-    advanceCalendarDay(true);
+      advanceCalendarDay(true);
+    }
+  } finally {
+    isFastForwardingSeason = false;
   }
   renderAll();
 }
@@ -1362,7 +1373,7 @@ function checkPostMatchEvents() {
   }
   // 第19節（前半戦終了・冬の移籍ウインドウ）は欧州メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
   if (gameState.currentWeek === Math.floor(gameState.totalWeeks / 2)) {
-    triggerMegaOfferEvent(true);
+    triggerMegaOfferEvent(!isFastForwardingSeason);
     return;
   }
 
@@ -1387,6 +1398,85 @@ function checkPostMatchEvents() {
   }
 }
 
+function syncPendingMegaOfferToIncomingOffers() {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!gameState || !playerClub) return;
+  if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
+
+  const offer = gameState.pendingMegaOffer;
+  if (!offer) {
+    for (const inc of gameState.incomingOffers) {
+      if (inc && inc.isMegaOfferEvent && (inc.status === 'pending' || inc.status === 'negotiating' || inc.status === 'counter_agreed')) {
+        inc.status = 'cancelled';
+      }
+    }
+    return;
+  }
+
+  const target = (playerClub.players || []).find(p => p.id === offer.playerId);
+  if (!target) {
+    for (const inc of gameState.incomingOffers) {
+      if (inc && inc.isMegaOfferEvent && (inc.status === 'pending' || inc.status === 'negotiating' || inc.status === 'counter_agreed')) {
+        inc.status = 'cancelled';
+      }
+    }
+    gameState.pendingMegaOffer = null;
+    return;
+  }
+
+  if (!offer.offerAmount || offer.offerAmount <= 0) {
+    const feeFromContract = typeof calculateTransferFee === 'function' ? calculateTransferFee(target) : 0;
+    const marketVal = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(target) : 0;
+    const baseValue = Math.max(feeFromContract || 0, Math.round((marketVal || 0) * 0.85), 600);
+    offer.offerAmount = Math.max(1000, Math.round((baseValue * 2.0) / 100) * 100);
+  }
+
+  const linkedId = offer.linkedOfferId || `mega_${target.id}_${String(offer.megaClubName || 'club').replace(/\s+/g, '')}`;
+  offer.linkedOfferId = linkedId;
+
+  let linked = gameState.incomingOffers.find(o =>
+    o && (o.id === linkedId || (o.isMegaOfferEvent && o.playerId === target.id && o.status !== 'accepted' && o.status !== 'rejected' && o.status !== 'cancelled'))
+  );
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(target) : (offer.ovr || 75);
+  const counterFee = Math.max(1200, Math.round((offer.offerAmount * 1.2) / 100) * 100);
+  if (!linked) {
+    const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+    linked = {
+      id: linkedId,
+      isMegaClub: true,
+      isMegaOfferEvent: true,
+      buyerClubId: null,
+      buyerClubName: offer.megaClubName,
+      buyerClubCountry: offer.megaClubCountry || '欧州',
+      playerId: target.id,
+      playerName: target.name,
+      playerPos: target.pos,
+      squadNumber: target.squadNumber || offer.squadNumber || 9,
+      playerAge: target.age,
+      ovr,
+      wage: target.wage || Math.round((target.salary || 1000) / 52),
+      preferredFoot: target.preferredFoot || 'Right',
+      baseFee: offer.offerAmount,
+      offerFee: offer.offerAmount,
+      counterFee,
+      daysLeft: 14,
+      dateStr: curDay ? curDay.formattedDate : '',
+      status: 'pending'
+    };
+    gameState.incomingOffers.unshift(linked);
+  } else {
+    linked.id = linkedId;
+    linked.isMegaClub = true;
+    linked.isMegaOfferEvent = true;
+    if (!linked.offerFee || linked.offerFee <= 0 || linked.status === 'pending') {
+      linked.offerFee = offer.offerAmount;
+    }
+    if (linked.status === 'counter_agreed' && linked.offerFee > 0) {
+      offer.offerAmount = linked.offerFee;
+    }
+  }
+}
+
 /**
  * 欧州大陸メガクラブ（EUROPEAN_MEGA_CLUBS）からの強奪オファーを生成し、GMタスク（CRITICAL）へ登録
  */
@@ -1394,7 +1484,15 @@ function triggerMegaOfferEvent(autoOpenModal = false) {
   const playerClub = getPlayerClub();
   if (!playerClub || playerClub.players.length <= 12) return;
 
-  const candidates = [...playerClub.players].sort((a, b) => {
+  const eligiblePlayers = playerClub.players.filter(p =>
+    p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoan) && !(p.loanStatus && p.loanStatus.isLoanOut) && !p.preContractDeparture
+  );
+  if (eligiblePlayers.length === 0) return;
+
+  const contractedPool = eligiblePlayers.filter(p => (p.contractYears || 0) > 0);
+  const candidatePool = contractedPool.length > 0 ? contractedPool : eligiblePlayers;
+
+  const candidates = [...candidatePool].sort((a, b) => {
     const scoreA = getPlayerOverallRating(a) + a.goals * 4 + (a.appearances > 0 ? (a.totalRating / a.appearances) * 3 : 0);
     const scoreB = getPlayerOverallRating(b) + b.goals * 4 + (b.appearances > 0 ? (b.totalRating / b.appearances) * 3 : 0);
     return scoreB - scoreA;
@@ -1404,13 +1502,17 @@ function triggerMegaOfferEvent(autoOpenModal = false) {
   if (!target) return;
 
   const megaClubObj = gameState.europeanMegaClubs[randInt(0, gameState.europeanMegaClubs.length - 1)];
-  const baseValue = calculateTransferFee(target);
-  // 通常の1.8倍〜2.4倍の破格オファー（ポンド建て）
-  const offerAmount = Math.round((baseValue * (1.8 + Math.random() * 0.6)) / 100) * 100;
+  const feeFromContract = typeof calculateTransferFee === 'function' ? calculateTransferFee(target) : 0;
+  const marketVal = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(target) : 0;
+  const baseValue = Math.max(feeFromContract || 0, Math.round((marketVal || 0) * 0.85), 600);
+  // 通常の1.8倍〜2.4倍の破格オファー（ポンド建て、£0防止のため下限£1,000K保証）
+  const offerAmount = Math.max(1000, Math.round((baseValue * (1.8 + Math.random() * 0.6)) / 100) * 100);
   const ovr = getPlayerOverallRating(target);
   const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : 'N/A';
+  const linkedOfferId = `mega_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
   gameState.pendingMegaOffer = {
+    linkedOfferId,
     playerId: target.id,
     playerName: target.name,
     playerPos: target.pos,
@@ -1425,6 +1527,7 @@ function triggerMegaOfferEvent(autoOpenModal = false) {
     offerAmount
   };
 
+  syncPendingMegaOfferToIncomingOffers();
   renderAll();
 
   if (autoOpenModal) {
@@ -1494,14 +1597,22 @@ function acceptPendingMegaOffer() {
     const { netFee } = applySellOnRightsOnSale(playerClub, target, offer.offerAmount);
     playerClub.funds += netFee;
     playerClub.players = playerClub.players.filter(p => p.id !== target.id);
+    const linkedInc = Array.isArray(gameState.incomingOffers)
+      ? gameState.incomingOffers.find(o => o && (o.id === offer.linkedOfferId || (o.isMegaOfferEvent && o.playerId === target.id && o.status !== 'rejected' && o.status !== 'cancelled')))
+      : null;
+    if (linkedInc) {
+      linkedInc.status = 'accepted';
+      linkedInc.offerFee = offer.offerAmount;
+    }
     if (typeof cancelOtherIncomingOffersForPlayer === 'function') {
-      cancelOtherIncomingOffersForPlayer(target.id, null, { clearModalOffers: false });
+      cancelOtherIncomingOffersForPlayer(target.id, linkedInc ? linkedInc.id : null, { clearModalOffers: false });
     }
     ensureValidSquadAndStarters(playerClub);
     gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(netFee)} が即時加算されました。`;
   }
 
   gameState.pendingMegaOffer = null;
+  updateMarketBadges();
   renderAll();
 }
 
@@ -1524,7 +1635,15 @@ function rejectPendingMegaOffer() {
     gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求週給が £${reqWage}k/週 に上昇・契約延長交渉が可能）。`;
   }
 
+  if (Array.isArray(gameState.incomingOffers)) {
+    for (const inc of gameState.incomingOffers) {
+      if (inc && (inc.id === offer.linkedOfferId || (inc.isMegaOfferEvent && inc.playerId === offer.playerId))) {
+        inc.status = 'rejected';
+      }
+    }
+  }
   gameState.pendingMegaOffer = null;
+  updateMarketBadges();
   renderAll();
 }
 
@@ -1695,6 +1814,7 @@ function triggerSupporterPetitionEvent() {
  * イベント・秘書ブリーフィング用モーダルダイアログの表示制御（キュー対応）
  */
 const gmModalQueue = [];
+let isFastForwardingSeason = false;
 
 function flushNextGmModalOrUnlock() {
   if (gmModalQueue.length > 0) {
@@ -1718,8 +1838,11 @@ function closeGmModal(clearQueue = false) {
 
 function showGmModal(opts, fromQueue = false) {
   if (!opts || typeof opts !== 'object') return;
+  if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;
   const overlay = document.getElementById('gm-modal-overlay');
   if (!overlay) return;
+  const toastContainer = document.getElementById('toast-container');
+  if (toastContainer) toastContainer.innerHTML = '';
 
   if (!fromQueue && !overlay.classList.contains('hidden')) {
     if (gmModalQueue.length < 8) {
@@ -1734,6 +1857,7 @@ function showGmModal(opts, fromQueue = false) {
   const titleEl = document.getElementById('modal-title');
   const descEl = document.getElementById('modal-description');
   const detailEl = document.getElementById('modal-detail-box');
+  const dialogueCard = document.getElementById('gm-vn-dialogue-card');
 
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
   if (secBox) {
@@ -1741,40 +1865,77 @@ function showGmModal(opts, fromQueue = false) {
       secBox.innerHTML = '';
       secBox.classList.add('hidden');
     } else {
-      const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '';
-      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${avatarHtml}</div>`;
+      const bustHtml = typeof getSecretaryBustHtml === 'function'
+        ? getSecretaryBustHtml(sec, 'secretary-bust-canvas')
+        : (typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '');
+      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
   }
 
   if (catEl) {
     if (!hideSecretary && sec) {
-      catEl.innerHTML = `<span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      catEl.innerHTML = `<span class="gm-vn-pill-badge"><span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
     } else {
-      catEl.textContent = category || '';
+      catEl.innerHTML = category ? `<span class="gm-vn-pill-badge">${escapeCommHtml(category)}</span>` : '';
     }
   }
   if (titleEl) titleEl.textContent = title || '';
-  if (descEl) descEl.textContent = description || '';
+  if (descEl) {
+    descEl.textContent = description || '';
+    descEl.classList.remove('gm-vn-speech-anim');
+    void descEl.offsetWidth;
+    descEl.classList.add('gm-vn-speech-anim');
+  }
   if (detailEl) detailEl.innerHTML = detailHtml || '';
 
   const actionsContainer = document.getElementById('modal-actions');
+  const choicePromptEl = document.getElementById('gm-vn-choice-prompt');
+  let singleTapNextBtn = null;
   if (actionsContainer) {
     actionsContainer.innerHTML = '';
+    const actList = actions || [];
+    const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
+    actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
+    if (choicePromptEl) {
+      if (actList.length >= 2 && !isSingleNextPrompt) {
+        choicePromptEl.textContent = opts.choicePrompt || 'GM としてご判断ください';
+        choicePromptEl.classList.remove('hidden');
+      } else {
+        choicePromptEl.classList.add('hidden');
+      }
+    }
 
-    (actions || []).forEach(act => {
+    actList.forEach(act => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = act.className || 'btn btn-primary';
-      btn.textContent = act.label;
+      if (isSingleNextPrompt) {
+        btn.className = 'gm-vn-next-prompt-btn';
+        btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+        singleTapNextBtn = btn;
+      } else {
+        btn.className = act.className || 'btn btn-primary';
+        btn.textContent = act.label;
+      }
       if (act.disabled) btn.disabled = true;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         overlay.classList.add('hidden');
         if (act.onClick) act.onClick();
         flushNextGmModalOrUnlock();
       });
       actionsContainer.appendChild(btn);
     });
+  }
+
+  if (dialogueCard) {
+    dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
+    dialogueCard.onclick = singleTapNextBtn
+      ? (e) => {
+          if (e.target.closest('button, a, #modal-detail-box')) return;
+          singleTapNextBtn.click();
+        }
+      : null;
   }
 
   overlay.classList.remove('hidden');
@@ -1791,7 +1952,7 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
-    : [{ label: '確認して閉じる', className: 'btn btn-primary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
+    : [{ label: 'タップで次へ', isNextPrompt: true, onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
   showGmModal({
     category: topic,
     title,
@@ -1835,11 +1996,11 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
     : `Season ${gameState.season} 新体制始動`;
 
   let speech = '';
-  if (sec.tone === 'energetic') {
+  if (sec.tone === 'active') {
     speech = isFirstCareer
       ? `GM、${playerClub.name}へのご着任おめでとうございます！7月1日より移籍市場が解禁されました。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
       : `GM、Season ${gameState.season}の開幕です！移籍市場もオープンしています。${mgrName}監督の補強希望「${wishPosText}」を確認して動き出しましょう。`;
-  } else if (sec.tone === 'analytical') {
+  } else if (sec.tone === 'calm') {
     speech = isFirstCareer
       ? `GM、着任初日の確認です。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
       : `GM、Season ${gameState.season}の基準日が開始しました。安全移籍予算と目標順位を確認の上、${mgrName}監督が求める「${wishPosText}」の精査を推奨します。`;
@@ -2278,6 +2439,7 @@ function processSeasonEnd(isSkipped = false) {
     : ((typeof processPromotionAndRelegation === 'function') ? processPromotionAndRelegation() : null);
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
     showGmModal({
+      allowDuringSkip: true,
       category: 'BOARD OF DIRECTORS / CRITICAL WARNING',
       title: '【緊急通告】セカンドディビジョン（ENG-D2）への降格処分と最後通告',
       description: `今シーズンの成績不振により、当クラブはイングランド・セカンドディビジョン（ENG-D2）への降格が決定いたしました。理事会は極めて遺憾の意を表明するとともに、来季1年での「ファーストディビジョン（ENG-D1）復帰（3位以内自動昇格）」を絶対厳命といたします。達成できなかった場合は即時解任となります。`,
@@ -2294,6 +2456,7 @@ function processSeasonEnd(isSkipped = false) {
     });
   } else if (promoRelResult && promoRelResult.isPlayerPromoted) {
     showGmModal({
+      allowDuringSkip: true,
       category: 'BOARD OF DIRECTORS / PROMOTION ACHIEVED',
       title: '【祝・1部昇格達成】ファーストディビジョン（ENG-D1）への復帰決定！',
       description: `見事セカンドディビジョン（ENG-D2）を ${playerRank}位 で勝ち抜き、来季からのイングランド・ファーストディビジョン（ENG-D1）昇格が決定しました！理事会およびサポーターはあなたの手腕を高く称賛しています。`,
@@ -2311,6 +2474,7 @@ function processSeasonEnd(isSkipped = false) {
   } else if (mustPromoteThisSeason && (!promoRelResult || !promoRelResult.isPlayerPromoted)) {
     gameState.isGameOver = true;
     showGmModal({
+      allowDuringSkip: true,
       category: 'BOARD OF DIRECTORS / DISMISSAL NOTICE',
       title: '【GM解任通告】1年でのファーストディビジョン復帰失敗',
       description: `セカンドディビジョン ${playerRank}位 に終わり、理事会より厳命されていた「1年でのファーストディビジョン（ENG-D1）復帰」を達成できませんでした。本日付でGM契約解除（ゲームオーバー）となります。`,
@@ -2326,6 +2490,24 @@ function processSeasonEnd(isSkipped = false) {
       ]
     });
     return;
+  }
+
+  // シーズン内の未締結オファーを期限切れとして整理
+  if (Array.isArray(gameState.outgoingOffers)) {
+    for (const o of gameState.outgoingOffers) {
+      if (!o) continue;
+      if ((o.dealType === 'buy' || o.dealType === 'loan' || !o.dealType) && (o.status === 'pending' || o.status === 'cpu_counter' || o.status === 'agreed')) {
+        o.status = 'expired';
+      }
+    }
+  }
+  if (Array.isArray(gameState.incomingOffers)) {
+    for (const o of gameState.incomingOffers) {
+      if (!o) continue;
+      if (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') {
+        o.status = 'expired';
+      }
+    }
   }
 
   // シーズン終了時も海外メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
@@ -2520,9 +2702,6 @@ function triggerLoanListingOffers() {
 
   gameState.incomingOffers.unshift(loanOffer);
   addDailyLog(`【レンタル打診】${buyerName} からレンタル放出リストの ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し、1年間の期限付き移籍（給与100%相手負担）の打診が届きました！`);
-  if (typeof showToast === 'function') {
-    showToast(`【レンタル打診】${buyerName}より${target.name}へのレンタルオファーが届きました`);
-  }
   return true;
 }
 
@@ -2573,9 +2752,6 @@ function triggerPreContractDepartures() {
   gameState.hasPreContractDepartureThisSeason = true;
 
   addDailyLog(`【事前合意流出】契約最終年の主力 #${target.squadNumber || '-'} ${target.name} が ${foreignClubName} と来季の事前合意（ボスマン移籍）に署名しました。今シーズン終了後に移籍金£0で退団します！`);
-  if (typeof showToast === 'function') {
-    showToast(`【事前合意流出】${target.name}が来季${foreignClubName}へのフリー移籍に事前合意しました`);
-  }
   return true;
 }
 
@@ -3718,9 +3894,6 @@ function submitNegotiationOffer() {
 
   session.statusMessage = `【オファー送信完了】${offerObj.sellerClubName}へ ${target.name}の${typeName}を正式提示しました。約5日後に回答が届きます。`;
   addDailyLog(`【オファー提示】${offerObj.sellerClubName}の ${target.pos} ${target.name} へ${typeName}を送信しました（回答待ち）。`);
-  if (typeof showToast === 'function') {
-    showToast(`${target.name}へ${typeName}を提示しました（送信オファータブで確認可能）`);
-  }
 
   closeNegotiationModal();
   updateMarketBadges();
@@ -3732,31 +3905,62 @@ function updateOutgoingOffersExpiry() {
 
   let hadResponseToday = false;
   const respondedItems = [];
+  const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  const isWindowOpenNow = curDay ? Boolean(curDay.windowOpen) : isTransferWindowCurrentlyOpen();
 
   for (const offer of gameState.outgoingOffers) {
+    const dealType = offer.dealType || 'buy';
+    const windowClosedForDeal = (dealType === 'buy' || dealType === 'loan') && !isWindowOpenNow;
+
+    if (offer.status === 'agreed') {
+      if (typeof offer.agreedDaysLeft !== 'number') offer.agreedDaysLeft = 5;
+      offer.agreedDaysLeft -= 1;
+      if (offer.agreedDaysLeft <= 0 || windowClosedForDeal) {
+        offer.status = 'expired';
+        offer.resolvedDayIndex = gameState.currentDayIndex;
+        addDailyLog(`【オファー失効】${offer.sellerClubName} との ${offer.playerName} 獲得合意は契約確定期限${windowClosedForDeal ? '（移籍市場閉幕）' : ''}により失効しました。`);
+      }
+      continue;
+    }
+
+    if (offer.status === 'cpu_counter') {
+      offer.pendingDays = (offer.pendingDays ?? 1) - 1;
+      if (offer.pendingDays <= 0 || windowClosedForDeal) {
+        offer.status = 'expired';
+        offer.resolvedDayIndex = gameState.currentDayIndex;
+        addDailyLog(`【逆提示失効】${offer.sellerClubName} からの ${offer.playerName} 増額提示は回答期限経過${windowClosedForDeal ? '（移籍市場閉幕）' : ''}により失効しました。`);
+      }
+      continue;
+    }
+
     if (offer.status !== 'pending') continue;
+
+    if (windowClosedForDeal) {
+      offer.status = 'expired';
+      offer.resolvedDayIndex = gameState.currentDayIndex;
+      addDailyLog(`【オファー失効】移籍市場閉幕に伴い、${offer.sellerClubName} への ${offer.playerName} 獲得オファーは失効しました。`);
+      continue;
+    }
 
     offer.pendingDays = (offer.pendingDays || 1) - 1;
     if (offer.pendingDays <= 0) {
       offer.resolvedDayIndex = gameState.currentDayIndex;
       if (offer.willAgree) {
         offer.status = 'agreed';
+        offer.agreedDaysLeft = 5;
         hadResponseToday = true;
         respondedItems.push({ offer, outcome: '合意', color: '#2ecc71', fee: offer.offeredFee });
-        addDailyLog(`【オファー合意！】${offer.sellerClubName} および ${offer.playerName} が移籍条件（移籍金 ${formatMoney(offer.offeredFee)}）に合意しました！「オファー」タブより契約を確定できます。`);
+        addDailyLog(`【オファー合意！】${offer.sellerClubName} および ${offer.playerName} が移籍条件（移籍金 ${formatMoney(offer.offeredFee)}）に合意しました！「オファー」タブより5日以内に契約を確定してください。`);
         if (typeof addInboxMessage === 'function') {
           addInboxMessage({
             senderType: 'board',
             senderName: '強化・移籍部門',
             title: `オファー合意：${offer.playerName}（${offer.sellerClubName}）`,
-            body: `${offer.sellerClubName}および${offer.playerName}との条件交渉（移籍金 ${formatMoney(offer.offeredFee)}）が合意に達しました。オファー一覧から正式契約を確定してください。`,
+            body: `${offer.sellerClubName}および${offer.playerName}との条件交渉（移籍金 ${formatMoney(offer.offeredFee)}）が合意に達しました。5日以内にオファー一覧から正式契約を確定してください。`,
             actionType: 'goto-market-offers',
             actionLabel: 'オファー画面へ',
             actionPayload: 'outgoing'
           });
-        }
-        if (typeof showToast === 'function') {
-          showToast(`【オファー合意】${offer.playerName}の獲得交渉が合意に達しました！`);
         }
       } else {
         // 相手クラブからの上乗せ逆オファー（条件吊り上げ）の判定
@@ -3781,9 +3985,6 @@ function updateOutgoingOffersExpiry() {
               actionPayload: 'outgoing'
             });
           }
-          if (typeof showToast === 'function') {
-            showToast(`【増額要求】${offer.sellerClubName}より移籍金 ${formatMoney(offer.counterFee)} の逆提示が届きました`);
-          }
         } else {
           offer.status = 'rejected';
           hadResponseToday = true;
@@ -3800,9 +4001,6 @@ function updateOutgoingOffersExpiry() {
               actionLabel: '移籍市場へ',
               actionPayload: null
             });
-          }
-          if (typeof showToast === 'function') {
-            showToast(`【オファー拒絶】${offer.sellerClubName}は${offer.dealType === 'loan' ? 'レンタル' : ''}オファーを拒絶しました`);
           }
         }
       }
@@ -3846,9 +4044,6 @@ function updateOutgoingOffersExpiry() {
 }
 
 /**
- * 合意済みの送信オファーの契約締結を完了する（資金支払いと選手加入）
- */
-/**
  * 相手クラブからの増額逆提示を承認して合意状態にする
  */
 function acceptCpuCounterOffer(offerId) {
@@ -3857,6 +4052,15 @@ function acceptCpuCounterOffer(offerId) {
 
   const offer = gameState.outgoingOffers.find(o => o.id === offerId);
   if (!offer || offer.status !== 'cpu_counter') return;
+
+  const dealType = offer.dealType || 'buy';
+  if ((dealType === 'buy' || dealType === 'loan') && !isTransferWindowCurrentlyOpen()) {
+    offer.status = 'expired';
+    alert('移籍ウィンドウ期間外のため、この交渉は失効しました。');
+    updateMarketBadges();
+    renderAll();
+    return;
+  }
 
   const playerClub = getPlayerClub();
   const upfrontCounter = getTransferUpfrontAmount(offer.counterFee, offer.installmentYears || 1);
@@ -3867,10 +4071,8 @@ function acceptCpuCounterOffer(offerId) {
 
   offer.offeredFee = offer.counterFee;
   offer.status = 'agreed';
-  addDailyLog(`【増額要求受諾】${offer.sellerClubName} の提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を受け入れ、獲得合意に達しました！「契約を確定して加入」より正式契約を行えます。`);
-  if (typeof showToast === 'function') {
-    showToast(`${offer.sellerClubName}の増額提示を承認しました`);
-  }
+  offer.agreedDaysLeft = 5;
+  addDailyLog(`【増額要求受諾】${offer.sellerClubName} の提示条件（移籍金 ${formatMoney(offer.offeredFee)}）を受け入れ、獲得合意に達しました！5日以内に「契約を確定して加入」より正式契約を行ってください。`);
   updateMarketBadges();
   renderAll();
 }
@@ -3884,6 +4086,13 @@ function completeOutgoingTransferSigning(offerId) {
   if (!offer || offer.status !== 'agreed') return;
 
   const dealType = offer.dealType || 'buy';
+  if ((dealType === 'buy' || dealType === 'loan') && !isTransferWindowCurrentlyOpen()) {
+    offer.status = 'expired';
+    alert('移籍ウィンドウ期間外のため、この合意は失効しました。');
+    updateMarketBadges();
+    renderAll();
+    return;
+  }
 
   if (dealType !== 'pre_contract' && playerClub.players.length >= MAX_SQUAD_SIZE) {
     alert(`チーム上限枠（${MAX_SQUAD_SIZE}名）に達しているため契約締結できません。選手を放出して枠を空けてください。`);
@@ -3953,9 +4162,6 @@ function completeOutgoingTransferSigning(offerId) {
 
     offer.status = 'signed';
     addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
-    if (typeof showToast === 'function') {
-      showToast(`【事前合意】${target.name}の来季加入内定が成立しました！`);
-    }
     updateMarketBadges();
     renderAll();
     return;
@@ -4145,9 +4351,6 @@ function completeOutgoingTransferSigning(offerId) {
         highlight: true
       });
     }
-    if (typeof showToast === 'function') {
-      showToast(`【レンタル加入】${target.name}が1年ローンで加入しました！`);
-    }
   } else if (dealType === 'free_agent') {
     addDailyLog(`【無所属獲得】${target.pos} #${target.squadNumber} ${target.name} が移籍金£0で正式加入！背番号は #${target.squadNumber} です。`);
     if (typeof addNewsItem === 'function') {
@@ -4158,9 +4361,6 @@ function completeOutgoingTransferSigning(offerId) {
         highlight: true
       });
     }
-    if (typeof showToast === 'function') {
-      showToast(`【フリー獲得】${target.name}が正式加入しました！`);
-    }
   } else {
     addDailyLog(`【新戦力加入】${target.pos} #${target.squadNumber} ${target.name} と正式契約を締結！背番号は #${target.squadNumber} です。`);
     if (typeof addNewsItem === 'function') {
@@ -4170,9 +4370,6 @@ function completeOutgoingTransferSigning(offerId) {
         body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）の完全移籍加入を完了した。`,
         highlight: true
       });
-    }
-    if (typeof showToast === 'function') {
-      showToast(`【獲得完了】${target.name}がクラブに正式加入しました！`);
     }
   }
 
@@ -4293,7 +4490,6 @@ function triggerIncomingTransferOffer(force = false) {
 
   gameState.incomingOffers.push(newOffer);
   stopAdvancingCalendar();
-  showToast(`【買取オファー着信】${buyerClubName} から ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診が届きました！`, 'info');
   addDailyLog(`【オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診（回答期限: 5日）`);
   if (typeof addInboxMessage === 'function') {
     addInboxMessage({
@@ -4364,19 +4560,19 @@ function updateIncomingOffersExpiry() {
         if (isAgreed) {
           offer.status = 'counter_agreed';
           offer.offerFee = offer.demandedFee || offer.counterFee;
-          offer.daysLeft = 3; // 合意後、回答期限3日
-          addDailyLog(`【上乗せ合意！】${offer.buyerClubName} が ${offer.playerName} の要求移籍金 ${formatMoney(offer.offerFee)} を受け入れました！`);
-          if (typeof showToast === 'function') {
-            showToast(`【上乗せ合意】${offer.buyerClubName}が要求額を承認しました！`);
+          offer.daysLeft = offer.isMegaOfferEvent ? Math.max(offer.daysLeft || 7, 7) : 3; // 合意後、回答期限3日
+          if (offer.isMegaOfferEvent && gameState.pendingMegaOffer && gameState.pendingMegaOffer.linkedOfferId === offer.id) {
+            gameState.pendingMegaOffer.offerAmount = offer.offerFee;
           }
+          addDailyLog(`【上乗せ合意！】${offer.buyerClubName} が ${offer.playerName} の要求移籍金 ${formatMoney(offer.offerFee)} を受け入れました！`);
           active.push(offer);
         } else {
           // 決裂・相手撤退（履歴として残す）
           offer.status = 'counter_rejected';
-          addDailyLog(`【交渉決裂】${offer.buyerClubName} は ${offer.playerName} の増額要求に応じずオファーを撤回しました。`);
-          if (typeof showToast === 'function') {
-            showToast(`【交渉決裂】${offer.buyerClubName}はオファーを撤回しました`);
+          if (offer.isMegaOfferEvent && gameState.pendingMegaOffer && gameState.pendingMegaOffer.linkedOfferId === offer.id) {
+            gameState.pendingMegaOffer = null;
           }
+          addDailyLog(`【交渉決裂】${offer.buyerClubName} は ${offer.playerName} の増額要求に応じずオファーを撤回しました。`);
           active.push(offer);
         }
         continue;
@@ -4387,6 +4583,11 @@ function updateIncomingOffersExpiry() {
     }
 
     if (offer.status === 'pending' || offer.status === 'counter_agreed') {
+      if (offer.isMegaOfferEvent && gameState.pendingMegaOffer && gameState.pendingMegaOffer.linkedOfferId === offer.id) {
+        offer.daysLeft = Math.max(offer.daysLeft || 7, 7);
+        active.push(offer);
+        continue;
+      }
       offer.daysLeft -= 1;
       if (offer.daysLeft <= 0) {
         offer.status = 'expired';
@@ -4544,9 +4745,6 @@ function acceptIncomingOffer(offerId) {
     ensureValidSquadAndStarters(playerClub);
 
     addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
-    if (typeof showToast === 'function') {
-      showToast(`【レンタル】${target.name}が${offer.buyerClubName}へレンタル移籍しました`);
-    }
     updateMarketBadges();
     renderAll();
     return;
@@ -4558,6 +4756,9 @@ function acceptIncomingOffer(offerId) {
 
   // 履歴としてステータス更新・他オファー取り消し
   offer.status = 'accepted';
+  if (offer.isMegaOfferEvent && gameState.pendingMegaOffer && (gameState.pendingMegaOffer.linkedOfferId === offer.id || gameState.pendingMegaOffer.playerId === target.id)) {
+    gameState.pendingMegaOffer = null;
+  }
   cancelOtherIncomingOffersForPlayer(target.id, offer.id);
 
   addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(saleFee)}）。`);
@@ -4568,9 +4769,6 @@ function acceptIncomingOffer(offerId) {
       body: `${offer.buyerClubName}は${playerClub.name}から${target.name}を移籍金 ${formatMoney(saleFee)} で獲得することで合意した。`,
       highlight: true
     });
-  }
-  if (typeof showToast === 'function') {
-    showToast(`【売却完了】${target.name}を${offer.buyerClubName}へ売却しました`);
   }
 
   updateMarketBadges();
@@ -4587,11 +4785,20 @@ function rejectIncomingOffer(offerId) {
   if (!offer) return;
 
   offer.status = 'rejected';
+  if (offer.isMegaOfferEvent && gameState.pendingMegaOffer && (gameState.pendingMegaOffer.linkedOfferId === offer.id || gameState.pendingMegaOffer.playerId === offer.playerId)) {
+    const playerClub = getPlayerClub();
+    const target = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+    if (target) {
+      playerClub.supporters += 250;
+      target.megaOfferRejected = true;
+      target.contractYears = Math.min(target.contractYears || 2, 2);
+      const baseDemand = calculatePlayerDemandSalary(target);
+      target.demandedSalary = Math.round((baseDemand * 1.12) / 50) * 50;
+    }
+    gameState.pendingMegaOffer = null;
+  }
 
   addDailyLog(`【オファー拒絶】${offer.buyerClubName} からの ${offer.playerName} への獲得打診を拒絶しました。`);
-  if (typeof showToast === 'function') {
-    showToast(`${offer.buyerClubName}からのオファーを拒絶しました`);
-  }
   updateMarketBadges();
   renderAll();
 }
@@ -4726,9 +4933,6 @@ function submitCounterOffer() {
   offer.pendingDays = 2; // 2日後に相手から合意または決裂の回答
 
   addDailyLog(`【上乗せ提示】${offer.buyerClubName}へ ${offer.playerName}の移籍金 ${formatMoney(demandedFee)}（+${Math.round((ratio - 1) * 100)}%）を提示しました。回答待ちとなります。`);
-  if (typeof showToast === 'function') {
-    showToast(`${offer.buyerClubName}へ移籍金 ${formatMoney(demandedFee)} の上乗せ要求を提示しました`);
-  }
 
   closeCounterOfferModal();
   updateMarketBadges();
@@ -4928,7 +5132,6 @@ function acceptIncomingOfferModal() {
   completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, offer.offerFee, 1.3);
   cancelOtherIncomingOffersForPlayer(target.id, null);
 
-  showToast(`[移籍成立] ${target.name} を ${offer.buyerClubName} へ売却しました（移籍金 +${formatMoney(offer.offerFee)}）`, 'success');
   addDailyLog(`【移籍成立】${target.pos} #${offer.squadNumber} ${target.name} が ${offer.buyerClubName} へ完全移籍（売却益: ${formatMoney(offer.offerFee)}）`);
   if (typeof addNewsItem === 'function') {
     addNewsItem({
@@ -4960,7 +5163,6 @@ function rejectIncomingOfferModal() {
     }
   }
 
-  showToast(`[オファー拒否] ${offer.buyerClubName} からの買取オファーを拒否し、${offer.playerName} を残留させました。`, 'info');
   addDailyLog(`【オファー拒否】${offer.buyerClubName} からの打診を拒絶。${offer.playerName} の残留を決定`);
 
   closeIncomingOfferModal();
@@ -6086,6 +6288,20 @@ function startNextSeason() {
   gameState.selectedPlayerId = null;
   gameState.selectedSlotIndex = null;
   gameState.pendingMegaOffer = null;
+  if (Array.isArray(gameState.incomingOffers)) {
+    for (const o of gameState.incomingOffers) {
+      if (o && (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed')) {
+        o.status = 'expired';
+      }
+    }
+  }
+  if (Array.isArray(gameState.outgoingOffers)) {
+    for (const o of gameState.outgoingOffers) {
+      if (o && (o.status === 'pending' || o.status === 'cpu_counter' || o.status === 'agreed')) {
+        o.status = 'expired';
+      }
+    }
+  }
   gameState.d1BackgroundSchedule = null;
 
   // 新シーズン開始時に1部・2部の昇降格入れ替えを適用
@@ -8581,6 +8797,7 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
  * 移籍サブタブのバッジ件数表示を更新
  */
 function updateMarketBadges() {
+  if (typeof syncPendingMegaOfferToIncomingOffers === 'function') syncPendingMegaOfferToIncomingOffers();
   const shortlistCount = (gameState.targetShortlist || []).length;
   
   // アクティブなオファー件数（未完了かつ期限内のもののみカウント）
@@ -8764,6 +8981,7 @@ function syncAllSubtabsDOM() {
  * オファーリスト（受信オファー / 送信オファー）描画
  */
 function renderIncomingOffers() {
+  if (typeof syncPendingMegaOfferToIncomingOffers === 'function') syncPendingMegaOfferToIncomingOffers();
   const container = document.getElementById('incoming-offers-container');
   if (!container) return;
 
@@ -8829,10 +9047,11 @@ function renderIncomingOffers() {
           <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">拒否・交渉終了</button>
         `;
       } else if (offer.status === 'agreed') {
-        statusBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">合意！ 契約確定待ち</span>`;
+        const remAgreeDays = Math.max(1, offer.agreedDaysLeft ?? 5);
+        statusBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">合意済 · 確定まで残り${remAgreeDays}日</span>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-outgoing-sign="${offer.id}" style="font-weight: 700;">契約を確定して加入 (SIGN)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">見送り (CANCEL)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-outgoing-sign="${offer.id}" style="font-weight: 700;">契約を確定して加入</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-outgoing-cancel="${offer.id}">見送り</button>
         `;
       } else if (offer.status === 'signed') {
         statusBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.9;">加入完了</span>`;
@@ -8844,6 +9063,12 @@ function renderIncomingOffers() {
         statusBadge = `<span class="offer-deadline-badge mono text-danger" style="border: 1px solid rgba(231, 76, 60, 0.4); background: rgba(231, 76, 60, 0.1);">交渉決裂（相手拒絶）</span>`;
         actionButtons = `
           <span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">オファーは拒絶されました</span>
+          <button type="button" class="btn btn-outline btn-sm btn-outgoing-remove" data-outgoing-remove="${offer.id}" style="font-size: 11px; padding: 2px 8px; opacity: 0.7;" title="この履歴を一覧から消去">履歴削除</button>
+        `;
+      } else if (offer.status === 'expired') {
+        statusBadge = `<span class="offer-deadline-badge mono text-muted">期限切れ</span>`;
+        actionButtons = `
+          <span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">確定期限切れにより交渉失効</span>
           <button type="button" class="btn btn-outline btn-sm btn-outgoing-remove" data-outgoing-remove="${offer.id}" style="font-size: 11px; padding: 2px 8px; opacity: 0.7;" title="この履歴を一覧から消去">履歴削除</button>
         `;
       } else {
@@ -8989,7 +9214,7 @@ function renderIncomingOffers() {
       <div class="incoming-offer-card-item ${offer.isMegaClub ? 'is-mega' : ''}">
         <div class="offer-card-header">
           <div class="offer-club-badge">
-            <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle;">${offer.isMegaClub ? '★ ' : ''}${getClubEmblemSvg(offer.buyerClubName, 18, 'offer-club-emblem')}<strong>${offer.buyerClubName}</strong> (${offer.buyerClubCountry})</span>
+            <span style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;vertical-align:middle;">${offer.isMegaClub ? '<span class="accent-gold" style="font-weight:700;white-space:nowrap;flex-shrink:0;">欧州名門</span>' : ''}${getClubEmblemSvg(offer.buyerClubName, 18, 'offer-club-emblem')}<strong style="white-space:nowrap;">${offer.buyerClubName}</strong><span style="white-space:nowrap;">(${offer.buyerClubCountry})</span></span>
           </div>
           <div>
             ${deadlineBadge}
@@ -9803,6 +10028,7 @@ function renderGmDuties() {
   }
 
   const duties = [];
+  if (typeof syncPendingMegaOfferToIncomingOffers === 'function') syncPendingMegaOfferToIncomingOffers();
 
   // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
   if (gameState.pendingMegaOffer) {
@@ -17185,9 +17411,6 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
     actionLabel: '作戦ボードで起用'
   });
 
-  if (typeof showToast === 'function') {
-    showToast(`${mgr.name}監督の補強希望を達成！（監督信頼度 +${trustBonus}）`, 'success');
-  }
   if (typeof showSecretaryModal === 'function') {
     const wishDetailRows = [
       `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">加入選手</span><span class="gm-modal-flat-val accent-green">${escapeCommHtml(signedPlayer.name)} (${escapeCommHtml(signedPlayer.pos)} / OVR ${ovr})</span></div>`,
