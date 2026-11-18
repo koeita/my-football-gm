@@ -4609,44 +4609,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
-  .gm-task-card {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    padding: 10px 12px !important;
-    overflow: hidden !important;
-  }
-  .gm-task-main {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-  .gm-task-header-row {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-  .gm-task-desc {
-    white-space: normal !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    word-break: break-word !important;
-    line-height: 1.4 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  .gm-task-action-wrap {
-    width: 100% !important;
-    justify-content: flex-end !important;
-  }
 }
 
 /* ==========================================
@@ -7086,45 +7048,21 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     gap: 8px !important;
   }
 
-  .office-action-controls {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    padding: 10px !important;
-  }
-
-  .btn-advance-large {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    min-height: 46px !important;
-  }
-
-  .btn-advance-sub {
-    width: 100% !important;
-    min-height: 38px !important;
-  }
-
-  #btn-skip-season {
-    grid-column: auto !important;
-    width: 100% !important;
-    min-height: 38px !important;
-    display: inline-flex !important;
+  .gm-tasks-footer-bar {
+    display: flex !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
-    justify-content: center !important;
-    padding: 4px 8px !important;
-    font-size: 11.5px !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    padding: 8px 0 0 !important;
   }
 
-  #btn-pause-advance {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    min-height: 46px !important;
-  }
-
-  #btn-restart-game,
-  #btn-next-season {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
+  .gm-tasks-footer-left {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
   }
 
   /* モバイル表示時：ユースチームテーブル（攻撃・守備・週給も網羅し、スクロールなしで1画面収容） */
@@ -15110,78 +15048,458 @@ body {
   box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25) !important;
 }
 
-/* 8. 業務タスクパネルとタスクカードのUnslop（高級感あるダークカードと明瞭なコントラスト） */
+/* 8. 業務一覧・秘書・進行ボタン統合パネル */
 .gm-tasks-panel {
   background: #14171c !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  box-shadow: none !important;
+  gap: 10px !important;
 }
 
-.gm-duty-card {
-  background: #181c22 !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-  transition: transform 0.15s ease, border-color 0.15s ease !important;
+.gm-tasks-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.gm-duty-card:hover {
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  background: #1b2027 !important;
+.office-action-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-.duty-priority-badge {
-  border-radius: 4px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.03em !important;
-  padding: 3px 8px !important;
+.btn-office-primary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: none;
+  background: #2ecc71;
+  color: #081c10;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
 }
 
-.btn-duty-action {
-  background: rgba(34, 197, 94, 0.15) !important;
-  border: 1px solid rgba(34, 197, 94, 0.4) !important;
-  color: #22c55e !important;
-  font-weight: 700 !important;
-  border-radius: 6px !important;
-  transition: all 0.15s ease !important;
+.btn-office-primary-cta:hover:not(:disabled) {
+  background: #38d97c;
 }
 
-.btn-duty-action:hover {
-  background: #22c55e !important;
-  color: #091e11 !important;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3) !important;
+.btn-office-primary-cta:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
-/* 9. メインアクションバー（次戦へ進める / 翌日へ）のUnslop */
-.office-action-section {
-  margin: 12px 0 !important;
+.btn-office-primary-cta:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
-.btn-advance-large {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-  letter-spacing: 0.03em !important;
+.btn-office-primary-cta.is-matchday {
+  background: #f59e0b;
+  color: #161002;
 }
 
-.btn-advance-large:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+.btn-office-primary-cta.is-matchday:hover:not(:disabled) {
+  background: #fbbf24;
 }
 
-.btn-advance-sub {
-  border-radius: 10px !important;
-  background: #181c22 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #f1f5f9 !important;
-  transition: all 0.15s ease !important;
+.btn-office-primary-cta.is-pause {
+  background: #f39c12;
+  color: #161002;
 }
 
-.btn-advance-sub:hover {
-  background: #20252d !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+.btn-office-primary-cta.is-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.secretary-avatar-trigger {
+  position: relative;
+  padding: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #1d2229;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+  transition: border-color 0.15s ease;
+}
+
+.secretary-avatar-trigger:hover {
+  border-color: #2ecc71;
+}
+
+.secretary-avatar-trigger .secretary-avatar-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.secretary-swap-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #14171c;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duty-header-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.duty-header-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gm-tasks-panel .gm-tasks-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.secretary-inline-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duty-header-status-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.duty-bars-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.duty-bar-pip {
+  width: 3.5px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.duty-bar-pip.bar-critical {
+  background: #ef4444;
+}
+
+.duty-bar-pip.bar-recommended {
+  background: #f59e0b;
+}
+
+.duty-bar-pip.bar-optional {
+  background: #2ecc71;
+}
+
+.gm-tasks-panel .gm-tasks-count-badge {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* クリック可能な業務リスト項目（ぼくプロ準拠・フラットモダン構造） */
+.gm-tasks-panel .gm-tasks-grid {
+  gap: 8px;
+}
+
+.gm-tasks-panel .gm-task-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 1px;
+  background: #1a1e24;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.gm-tasks-panel .gm-task-card.duty-critical {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.gm-tasks-panel .gm-task-card.duty-recommended {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.26);
+}
+
+.gm-tasks-panel .gm-task-card.duty-optional {
+  background: rgba(46, 204, 113, 0.07);
+  border-color: rgba(46, 204, 113, 0.24);
+}
+
+.gm-tasks-panel .gm-task-card:hover:not(.is-disabled) {
+  filter: brightness(1.08);
+}
+
+.gm-tasks-panel .gm-task-card.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gm-tasks-panel .gm-task-card.is-mini {
+  padding: 8px 12px;
+}
+
+.duty-icon-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 40px;
+}
+
+.duty-icon-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.duty-critical .duty-icon-circle {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.duty-recommended .duty-icon-circle {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.duty-optional .duty-icon-circle {
+  background: rgba(46, 204, 113, 0.2);
+  color: #6ee7b7;
+}
+
+.duty-icon-pill {
+  margin-top: -7px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px #14171c;
+}
+
+.duty-critical .duty-icon-pill {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.duty-recommended .duty-icon-pill {
+  background: #eab308;
+  color: #161202;
+}
+
+.duty-optional .duty-icon-pill {
+  background: #2ecc71;
+  color: #07190e;
+}
+
+.gm-tasks-panel .gm-task-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gm-tasks-panel .gm-task-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f9fafb;
+  line-height: 1.3;
+}
+
+.gm-tasks-panel .gm-task-desc {
+  margin: 0;
+  font-size: 11.5px;
+  color: #9ca3af;
+  line-height: 1.4;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gm-task-warning-line {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f87171;
+  line-height: 1.35;
+}
+
+.gm-task-chevron {
+  flex-shrink: 0;
+  color: #6b7280;
+  transition: color 0.14s ease, transform 0.14s ease;
+}
+
+.gm-task-card:hover:not(.is-disabled) .gm-task-chevron {
+  color: #e5e7eb;
+  transform: translateX(2px);
+}
+
+.gm-tasks-mini-summary {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+.gm-tasks-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 0 !important;
+  margin-top: 2px;
+  background: transparent !important;
+  border: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.gm-tasks-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-office-footer-util {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d1d5db;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-office-footer-util:hover:not(:disabled) {
+  border-color: rgba(46, 204, 113, 0.55);
+  color: #ffffff;
+}
+
+.btn-office-footer-util:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.btn-office-footer-util.is-muted {
+  background: transparent;
+  color: #8b949e;
+  border-color: transparent;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.btn-office-footer-util.is-muted:hover:not(:disabled) {
+  color: #e5e7eb;
+  border-color: transparent;
+}
+
+.secretary-modal-live-brief {
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid #2ecc71;
+  background: rgba(46, 204, 113, 0.06);
+}
+
+.secretary-live-brief-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc71;
+  margin-bottom: 3px;
+}
+
+@media (max-width: 480px) {
+  .gm-tasks-panel {
+    padding: 12px 12px 10px !important;
+  }
+  .btn-office-primary-cta {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .gm-tasks-panel .gm-tasks-title {
+    font-size: 16.5px;
+  }
+  .secretary-avatar-trigger {
+    width: 44px;
+    height: 44px;
+  }
+  .secretary-avatar-trigger .secretary-avatar-box {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 /* ===========================================================================
@@ -16653,13 +16971,20 @@ body {
   padding: 2px 7px !important;
 }
 
-/* 4. 経営タブ・業務タスク・施設カードのフラット化 */
-.gm-task-card {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-left: 3px solid rgba(255, 255, 255, 0.2) !important;
-  border-radius: 0 !important;
+/* 4. 経営タブ・施設カードのフラット化（業務一覧カードは専用スタイルを使用） */
+.secretary-select-meta-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.secretary-selected-mark {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc71;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .board-psr-card {
   background: transparent !important;
@@ -17616,10 +17941,12 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 .secretary-briefing-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 4px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 4px;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .secretary-avatar-box {
@@ -18016,6 +18343,8 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .secretary-select-row.selected {
   background-color: rgba(46, 204, 113, 0.08);
+  box-shadow: inset 3px 0 0 #2ecc71;
+  padding-left: 10px;
 }
 
 .comm-empty-msg {
@@ -18026,13 +18355,6 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 @media (max-width: 768px) {
-  .secretary-briefing-bar {
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  .btn-change-secretary {
-    margin-left: auto;
-  }
   .wish-candidate-row {
     flex-direction: column;
     align-items: flex-start;

@@ -6737,6 +6737,7 @@ function renderHeader() {
   // アクションボタン群の制御
   const btnAdvanceDay = document.getElementById('btn-advance-day');
   const btnAdvanceToMatch = document.getElementById('btn-advance-to-match');
+  const btnHeaderKickoff = document.getElementById('btn-header-kickoff');
   const btnPlayMatch = document.getElementById('btn-play-match');
   const btnPauseAdvance = document.getElementById('btn-pause-advance');
   const btnPlayNext = document.getElementById('btn-play-next');
@@ -6750,12 +6751,14 @@ function renderHeader() {
 
   if (btnAdvanceDay) btnAdvanceDay.disabled = isBusy || isMatchPending || isAdvancing;
   if (btnAdvanceToMatch) btnAdvanceToMatch.disabled = isBusy || isMatchPending || isAdvancing;
+  if (btnHeaderKickoff) btnHeaderKickoff.disabled = isBusy || isAdvancing;
   if (btnPlayMatch) btnPlayMatch.disabled = isBusy || isAdvancing;
   if (btnSkipSeason) btnSkipSeason.disabled = isBusy || isAdvancing;
 
   if (gameState.isGameOver) {
     if (btnAdvanceDay) btnAdvanceDay.classList.add('hidden');
     if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
+    if (btnHeaderKickoff) btnHeaderKickoff.classList.add('hidden');
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
@@ -6765,6 +6768,7 @@ function renderHeader() {
   } else if (gameState.isSeasonOver) {
     if (btnAdvanceDay) btnAdvanceDay.classList.add('hidden');
     if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
+    if (btnHeaderKickoff) btnHeaderKickoff.classList.add('hidden');
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
@@ -6774,6 +6778,7 @@ function renderHeader() {
   } else if (isAdvancing) {
     if (btnAdvanceDay) btnAdvanceDay.classList.add('hidden');
     if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
+    if (btnHeaderKickoff) btnHeaderKickoff.classList.add('hidden');
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.remove('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
@@ -6788,13 +6793,13 @@ function renderHeader() {
     if (btnSkipSeason) btnSkipSeason.classList.remove('hidden');
 
     if (isMatchPending) {
-      // 本日未消化の試合日：業務タスク下の旧キックオフボタンはなくし（非表示）、MATCHDAYパネル側でキックオフを提供
       if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.add('hidden');
+      if (btnHeaderKickoff) btnHeaderKickoff.classList.remove('hidden');
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
     } else {
-      // 通常平日、または本日の試合消化済み：次の試合まで進めるボタンのみをメイン表示
       if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
+      if (btnHeaderKickoff) btnHeaderKickoff.classList.add('hidden');
       if (btnAdvanceToMatch) btnAdvanceToMatch.classList.remove('hidden');
       if (btnAdvanceDay) btnAdvanceDay.classList.remove('hidden');
     }
@@ -9728,6 +9733,41 @@ function renderYouthScoutingPanel() {
 }
 
 /**
+ * 業務タスク種別に応じたSVGアイコンを返す（絵文字禁止対応）
+ */
+function getGmDutyIconSvg(actionKey, level) {
+  if (actionKey === 'open-mega-offer' || actionKey === 'goto-market-offers') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><polyline points="3 7 12 13 21 7"></polyline></svg>';
+  }
+  if (actionKey === 'restart-game' || level === 'critical' && actionKey === 'goto-roster-table') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+  }
+  if (actionKey === 'start-next-season') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+  }
+  if (actionKey === 'goto-pitch' || actionKey === 'play-match') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="12" y1="4" x2="12" y2="20"></line><circle cx="12" cy="12" r="2.5"></circle></svg>';
+  }
+  if (actionKey === 'goto-roster-table') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>';
+  }
+  if (actionKey === 'goto-youth') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+  }
+  if (actionKey === 'goto-facilities') {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path><path d="M9 9v.01"></path><path d="M9 12v.01"></path><path d="M9 15v.01"></path></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+}
+
+function buildGmDutyBarsHtml(levels) {
+  const arr = Array.isArray(levels) && levels.length > 0 ? levels : ['critical', 'recommended', 'optional'];
+  return arr.slice(0, 5).map(lv => `<span class="duty-bar-pip bar-${lv}" aria-hidden="true"></span>`).join('');
+}
+
+const DUTY_CHEVRON_SVG = '<svg class="gm-task-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+/**
  * GM業務タスク一覧（必須 CRITICAL / 推奨 RECOMMENDED / 任意 OPTIONAL）を描画する
  */
 function renderGmDuties() {
@@ -9771,10 +9811,10 @@ function renderGmDuties() {
     if (targetExists) {
       duties.push({
         level: 'critical',
-        badge: '緊急オファー / CRITICAL',
-        title: `${offer.megaClubName}から #${offer.squadNumber} ${offer.playerName} に対し 移籍金${formatMoney(offer.offerAmount)} の正式オファーが届きました`,
-        desc: `${offer.megaClubCountry}の名門「${offer.megaClubName}」が主力 ${offer.playerPos} #${offer.squadNumber} ${offer.playerName}（OVR ${offer.ovr}）の獲得を要請しています。受諾（+${formatMoney(offer.offerAmount)}）か拒否（戦力維持）か決断してください。`,
-        btnText: 'オファー対応',
+        badge: '緊急',
+        title: `${offer.megaClubName}から公式オファー`,
+        desc: `#${offer.squadNumber} ${offer.playerName}（OVR ${offer.ovr}）に対し移籍金 ${formatMoney(offer.offerAmount)} の提示`,
+        warningText: '対応するまで日程を進行できません',
         action: 'open-mega-offer'
       });
     } else {
@@ -9782,36 +9822,34 @@ function renderGmDuties() {
     }
   }
 
-  // 0.5 債務超過・ゲームオーバー警告（本部以外のUI崩れを防ぐため業務タスクに表示）
+  // 0.5 債務超過・ゲームオーバー警告
   if (gameState.isGameOver) {
     duties.push({
       level: 'critical',
-      badge: 'ゲームオーバー',
+      badge: '解任',
       title: '債務超過によるGM解任',
-      desc: `資金 ${formatMoney(playerClub.funds)} の債務超過によりGM解任となりました。`,
-      btnText: '最初からやり直す',
+      desc: `資金 ${formatMoney(playerClub.funds)} の債務超過によりキャリア終了となりました`,
       action: 'restart-game'
     });
   } else if (playerClub.funds < 0) {
     duties.push({
       level: 'critical',
-      badge: '警告：債務超過',
+      badge: '重要',
       title: '赤字解消・人件費削減',
-      desc: `資金 ${formatMoney(playerClub.funds)} の赤字です。次季開幕までに黒字化しないと解任となります。`,
-      btnText: '契約・編成へ',
+      desc: `資金 ${formatMoney(playerClub.funds)} の赤字です`,
+      warningText: '次季開幕までに黒字化しないと解任となります',
       action: 'goto-roster-table'
     });
   }
 
-  // 1. 必須タスク（CRITICAL / 赤）
+  // 1. 必須タスク（CRITICAL）
   let criticalDuty = null;
   if (gameState.isSeasonOver) {
     criticalDuty = {
       level: 'critical',
       badge: '重要',
       title: '新シーズン開幕手続き',
-      desc: '補強や契約更新、ユース昇格を終えたら新シーズンを開幕してください。',
-      btnText: '次シーズン開幕',
+      desc: '補強や契約更新、ユース昇格を終えて新シーズンへ進みます',
       action: 'start-next-season'
     };
   } else if (nextMatchInfo && nextMatchInfo.type !== 'league') {
@@ -9821,8 +9859,7 @@ function renderGmDuties() {
       level: 'critical',
       badge: '重要',
       title: `${nextMatchInfo.title} vs ${oppName} (${venue})`,
-      desc: 'スタメンと戦術陣形を確認し、キックオフへ進みます。',
-      btnText: '作戦確認',
+      desc: 'スタメンと戦術陣形を確認します',
       action: 'goto-pitch'
     };
   } else {
@@ -9842,25 +9879,22 @@ function renderGmDuties() {
       level: 'critical',
       badge: '重要',
       title: `第${nextWeek}節 ${opponentText}`,
-      desc: 'スタメンと戦術陣形を確認し、キックオフへ進みます。',
-      btnText: '作戦確認',
+      desc: 'スタメンと戦術陣形を確認します',
       action: 'goto-pitch'
     };
   }
   duties.push(criticalDuty);
 
-  // 2. 推奨タスク（RECOMMENDED）：期限内のアクティブな受信オファーのみ対象
-  const activeIncomingOffers = (gameState.incomingOffers || []).filter(o => 
+  // 2. 推奨タスク（RECOMMENDED）
+  const activeIncomingOffers = (gameState.incomingOffers || []).filter(o =>
     (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)
   );
   if (activeIncomingOffers.length > 0) {
-    const firstOffer = activeIncomingOffers[0];
     duties.push({
       level: 'recommended',
       badge: '推奨',
-      title: `移籍オファー (${activeIncomingOffers.length}件)`,
-      desc: '他クラブからの獲得打診。条件を精査して受諾・交渉・拒否を選択。',
-      btnText: 'オファー確認',
+      title: `移籍オファー着信（${activeIncomingOffers.length}件）`,
+      desc: '他クラブからの獲得打診。受諾・上乗せ要求・拒否を選択できます',
       action: 'goto-market-offers'
     });
   }
@@ -9880,17 +9914,17 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `負傷者交代（${injuredStarters.length}名）`,
-      desc: `${injuredStarters[0].name} らが負傷離脱中。控え選手と交代してください。`,
-      btnText: '作戦ボードへ',
+      desc: `${injuredStarters[0].fullName || injuredStarters[0].name} らが負傷離脱中`,
+      warningText: '控え選手と交代してください',
       action: 'goto-pitch'
     };
   } else if (lowTrustManager) {
     recommendedDuty = {
       level: 'recommended',
       badge: '要注意',
-      title: `監督との戦術的軋轢（信頼度 ${lowTrustManager.trust}%）`,
-      desc: `${lowTrustManager.name}監督との信頼関係が悪化し、チームの連携が低下しています。采配一任への切り替えまたは監督人事の見直しを検討してください。`,
-      btnText: '作戦ボードへ',
+      title: `監督信頼低下（信頼度 ${lowTrustManager.trust}%）`,
+      desc: `${lowTrustManager.name}監督との連携が低下中`,
+      warningText: '采配一任や監督人事の見直しが必要です',
       action: 'goto-pitch'
     };
   } else if (urgentExpiring.length > 0) {
@@ -9899,8 +9933,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `契約更新（${urgentExpiring.length}名）`,
-      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らの契約満了が迫っています。`,
-      btnText: '契約一覧へ',
+      desc: `${topTarget.fullName || topTarget.name} らの契約満了が迫っています`,
       action: 'goto-roster-table'
     };
   } else if (outOfPosStarters.length > 0) {
@@ -9908,8 +9941,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `適性外配置の調整（${outOfPosStarters.length}枠）`,
-      desc: `${outOfPosStarters[0].name} が不適性ポジションです。配置を調整してください。`,
-      btnText: '作戦ボードへ',
+      desc: `${outOfPosStarters[0].fullName || outOfPosStarters[0].name} が不適性配置です`,
       action: 'goto-pitch'
     };
   } else if (expiringPlayers.length > 0) {
@@ -9918,8 +9950,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: `早期契約更新（${expiringPlayers.length}名）`,
-      desc: `#${topTarget.squadNumber || '-'} ${topTarget.name} らと契約延長が可能です。`,
-      btnText: '契約一覧へ',
+      desc: `${topTarget.fullName || topTarget.name} らと契約延長を行えます`,
       action: 'goto-roster-table'
     };
   } else {
@@ -9927,8 +9958,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '推奨',
       title: '戦術・状態確認',
-      desc: 'スタメン全員が適性枠かつ健康です。次戦に向けた微調整を行えます。',
-      btnText: '作戦ボード確認',
+      desc: '次戦に向けて選手起用や戦術を微調整します',
       action: 'goto-pitch'
     };
   }
@@ -9951,8 +9981,7 @@ function renderGmDuties() {
       level: 'optional',
       badge: '任意',
       title: `ユース昇格（${youthSquad.length}名在籍）`,
-      desc: 'アカデミー有望株をトップチームへ昇格登録できます。',
-      btnText: 'ユース一覧へ',
+      desc: 'アカデミー有望株をトップチームへ昇格登録できます',
       action: 'goto-youth'
     };
   } else if (playerClub.funds >= minUpgradeCost && minUpgradeCost !== Infinity) {
@@ -9960,35 +9989,43 @@ function renderGmDuties() {
       level: 'optional',
       badge: '任意',
       title: '施設投資の検討',
-      desc: `クラブ資金を活用し、スタジアムや育成施設の改修が可能です。`,
-      btnText: '施設投資へ',
+      desc: 'クラブ資金でスタジアムや育成施設を改修できます',
       action: 'goto-facilities'
     };
   } else {
-    const totalMarketPlayers = (gameState.clubs || []).reduce((sum, c) => sum + (c.players ? c.players.length : 0), 0);
     optionalDuty = {
       level: 'optional',
       badge: '任意',
       title: '移籍市場スカウト',
-      desc: '移籍リストから即戦力や若手有望株をスカウトできます。',
-      btnText: '移籍市場へ',
+      desc: '即戦力や若手有望株を移籍市場から調査・獲得できます',
       action: 'goto-market'
     };
   }
   duties.push(optionalDuty);
 
+  const levels = duties.map(d => d.level);
+  window._lastGmDutySummary = { count: duties.length, levels };
+
   const countBadgeEl = document.getElementById('gm-tasks-count-badge');
   if (countBadgeEl) {
-    countBadgeEl.textContent = `${duties.length}件`;
+    countBadgeEl.textContent = `残り ${duties.length}`;
+  }
+  const barsEl = document.getElementById('gm-tasks-bars');
+  if (barsEl) {
+    barsEl.innerHTML = buildGmDutyBarsHtml(levels);
   }
 
   const isCollapsed = Boolean(gameState.gmTasksCollapsed);
+  const toggleBtn = document.getElementById('btn-toggle-gm-tasks');
   const toggleBtnText = document.getElementById('gm-tasks-toggle-text');
   const toggleBtnIcon = document.getElementById('gm-tasks-toggle-icon');
   const miniSummaryEl = document.getElementById('gm-tasks-mini-summary');
 
-  if (toggleBtnText) toggleBtnText.textContent = isCollapsed ? '全タスク表示' : '折りたたむ';
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+  if (toggleBtnText) toggleBtnText.textContent = isCollapsed ? 'すべて表示' : '折りたたむ';
   if (toggleBtnIcon) toggleBtnIcon.textContent = isCollapsed ? '▼' : '▲';
+
+  const isLocked = gameState.isGameOver || gameState.isSimulating;
 
   // 折りたたみ時の1行サマリー表示
   if (miniSummaryEl) {
@@ -9996,13 +10033,16 @@ function renderGmDuties() {
       const topDuty = duties[0];
       miniSummaryEl.classList.remove('hidden');
       miniSummaryEl.innerHTML = `
-        <div class="mini-summary-content">
-          <span class="duty-priority-badge badge-${topDuty.level}">${topDuty.badge}</span>
-          <span class="mini-summary-title"><strong>${topDuty.title}</strong></span>
+        <div class="gm-task-card duty-${topDuty.level} is-mini ${isLocked && topDuty.action !== 'restart-game' ? 'is-disabled' : ''}" role="button" tabindex="0" data-duty-action="${topDuty.action}" aria-disabled="${isLocked && topDuty.action !== 'restart-game' ? 'true' : 'false'}">
+          <div class="duty-icon-stack">
+            <span class="duty-icon-circle">${getGmDutyIconSvg(topDuty.action, topDuty.level)}</span>
+            <span class="duty-icon-pill">${topDuty.badge}</span>
+          </div>
+          <div class="gm-task-main">
+            <div class="gm-task-title">${topDuty.title}</div>
+          </div>
+          ${DUTY_CHEVRON_SVG}
         </div>
-        <button type="button" class="btn btn-sm btn-duty-action ${topDuty.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${topDuty.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
-          ${topDuty.btnText}
-        </button>
       `;
     } else {
       miniSummaryEl.classList.add('hidden');
@@ -10013,22 +10053,23 @@ function renderGmDuties() {
     listEl.classList.add('hidden');
   } else {
     listEl.classList.remove('hidden');
-    listEl.innerHTML = duties.map(d => `
-      <div class="gm-task-card duty-${d.level}">
-        <div class="gm-task-main">
-          <div class="gm-task-header-row">
-            <span class="duty-priority-badge badge-${d.level}">${d.badge}</span>
-            <strong class="gm-task-title">${d.title}</strong>
+    listEl.innerHTML = duties.map(d => {
+      const disabledRow = isLocked && d.action !== 'restart-game';
+      return `
+        <div class="gm-task-card duty-${d.level} ${disabledRow ? 'is-disabled' : ''}" role="button" tabindex="0" data-duty-action="${d.action}" aria-disabled="${disabledRow ? 'true' : 'false'}">
+          <div class="duty-icon-stack">
+            <span class="duty-icon-circle">${getGmDutyIconSvg(d.action, d.level)}</span>
+            <span class="duty-icon-pill">${d.badge}</span>
           </div>
-          <p class="gm-task-desc">${d.desc}</p>
+          <div class="gm-task-main">
+            <div class="gm-task-title">${d.title}</div>
+            <p class="gm-task-desc">${d.desc}</p>
+            ${d.warningText ? `<p class="gm-task-warning-line">${d.warningText}</p>` : ''}
+          </div>
+          ${DUTY_CHEVRON_SVG}
         </div>
-        <div class="gm-task-action-wrap">
-          <button type="button" class="btn btn-sm btn-duty-action ${d.level === 'critical' ? 'btn-primary' : 'btn-secondary'}" data-duty-action="${d.action}" ${gameState.isGameOver || gameState.isSimulating ? 'disabled' : ''}>
-            ${d.btnText}
-          </button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 }
 
@@ -12973,6 +13014,10 @@ function initGame() {
   if (btnAdvanceToMatch) {
     btnAdvanceToMatch.addEventListener('click', startAdvancingToNextMatch);
   }
+  const btnHeaderKickoff = document.getElementById('btn-header-kickoff');
+  if (btnHeaderKickoff) {
+    btnHeaderKickoff.addEventListener('click', () => openMatchPrecheckModal());
+  }
   const btnPlayMatch = document.getElementById('btn-play-match');
   if (btnPlayMatch) {
     btnPlayMatch.addEventListener('click', () => openMatchPrecheckModal());
@@ -13795,25 +13840,26 @@ function initGame() {
     });
   }
 
-  const gmTasksMiniSummary = document.getElementById('gm-tasks-mini-summary');
-  if (gmTasksMiniSummary) {
-    gmTasksMiniSummary.addEventListener('click', (e) => {
+  const bindDutyActivate = (container) => {
+    if (!container) return;
+    container.addEventListener('click', (e) => {
       const actionBtn = e.target.closest('[data-duty-action]');
       if (actionBtn && actionBtn.dataset.dutyAction) {
         handleGmDutyAction(actionBtn.dataset.dutyAction);
       }
     });
-  }
-
-  const gmTasksList = document.getElementById('gm-tasks-list');
-  if (gmTasksList) {
-    gmTasksList.addEventListener('click', (e) => {
-      const actionBtn = e.target.closest('[data-duty-action]');
-      if (actionBtn && actionBtn.dataset.dutyAction) {
-        handleGmDutyAction(actionBtn.dataset.dutyAction);
+    container.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const actionBtn = e.target.closest('[data-duty-action]');
+        if (actionBtn && actionBtn.dataset.dutyAction) {
+          e.preventDefault();
+          handleGmDutyAction(actionBtn.dataset.dutyAction);
+        }
       }
     });
-  }
+  };
+  bindDutyActivate(document.getElementById('gm-tasks-mini-summary'));
+  bindDutyActivate(document.getElementById('gm-tasks-list'));
 
   if (typeof initOfficeCommAndSecretaryEvents === 'function') {
     initOfficeCommAndSecretaryEvents();
@@ -15455,7 +15501,32 @@ function openInitialStaffSetupModal(club) {
     const state = window._preseasonStaffSetup;
     const titleEl = document.getElementById('staff-setup-title');
     if (state.step === 1) {
-      if (titleEl) titleEl.textContent = '監督・秘書の選任 (1 / 2)';
+      if (titleEl) titleEl.textContent = '担当秘書の選任 (1 / 3)';
+      const secretaries = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
+        ? SECRETARIES_DATABASE
+        : [];
+      const secretariesHtml = secretaries.map(sec => buildSecretarySelectRowHtml(
+        sec,
+        sec.id === state.selectedSecretaryId,
+        'data-init-sec-id',
+        52
+      )).join('');
+
+      body.innerHTML = `
+        <div class="flat-section-label mono">サポート秘書</div>
+        <div style="display: flex; flex-direction: column;">${secretariesHtml}</div>
+      `;
+      if (confirmBtn) confirmBtn.textContent = '次へ：監督を選ぶ ▶';
+      if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(body);
+
+      body.querySelectorAll('[data-init-sec-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+          state.selectedSecretaryId = e.currentTarget.dataset.initSecId;
+          renderModalContent();
+        });
+      });
+    } else if (state.step === 2) {
+      if (titleEl) titleEl.textContent = '監督の選任 (2 / 3)';
       const managersHtml = state.candidates.map((m, idx) => {
         const isSelected = idx === state.selectedManagerIdx;
         const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-md', 44) : '';
@@ -15489,54 +15560,31 @@ function openInitialStaffSetupModal(club) {
         `;
       }).join('');
 
-      const secretaries = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
-        ? SECRETARIES_DATABASE
-        : [];
-      const secretariesHtml = secretaries.map(sec => {
-        const isSel = sec.id === state.selectedSecretaryId;
-        const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 40) : '';
-        return `
-          <div class="secretary-select-row ${isSel ? 'selected' : ''}" data-init-sec-id="${sec.id}">
-            <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
-            <div style="flex: 1; min-width: 0;">
-              <div class="flat-row-header">
-                <div class="flat-row-title-wrap">
-                  <span class="flat-row-title" style="font-size:13px; color: ${isSel ? 'var(--accent-green)' : '#ffffff'};">${sec.name}</span>
-                  <span class="secretary-role-text">${sec.roleLabel}</span>
-                </div>
-                <span class="secretary-spec-text mono">${sec.specialty}</span>
-              </div>
-              <div class="flat-row-meta">${sec.bio}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
       body.innerHTML = `
-        <div class="flat-section-label mono">ヘッドコーチ（監督）</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span class="flat-section-label mono" style="margin:0;">ヘッドコーチ（監督）</span>
+          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-back-to-sec-step">◀ 秘書選択へ戻る</button>
+        </div>
         <div style="display: flex; flex-direction: column;">${managersHtml}</div>
-        ${secretaries.length > 0 ? `
-          <div class="flat-section-label mono" style="margin-top: 10px;">担当秘書</div>
-          <div style="display: flex; flex-direction: column;">${secretariesHtml}</div>
-        ` : ''}
       `;
       if (confirmBtn) confirmBtn.textContent = '次へ：コーチを選ぶ ▶';
       if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(body);
 
+      const backToSecBtn = document.getElementById('btn-back-to-sec-step');
+      if (backToSecBtn) {
+        backToSecBtn.addEventListener('click', () => {
+          state.step = 1;
+          renderModalContent();
+        });
+      }
       body.querySelectorAll('.staff-candidate-card').forEach(card => {
         card.addEventListener('click', (e) => {
           state.selectedManagerIdx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
           renderModalContent();
         });
       });
-      body.querySelectorAll('[data-init-sec-id]').forEach(row => {
-        row.addEventListener('click', (e) => {
-          state.selectedSecretaryId = e.currentTarget.dataset.initSecId;
-          renderModalContent();
-        });
-      });
     } else {
-      if (titleEl) titleEl.textContent = 'コーチの選任 (2 / 2)';
+      if (titleEl) titleEl.textContent = 'コーチの選任 (3 / 3)';
       const catMeta = [
         { cat: 'attacking', role: 'オフェンスコーチ' },
         { cat: 'defending', role: 'ディフェンスコーチ' },
@@ -15589,7 +15637,7 @@ function openInitialStaffSetupModal(club) {
       const backBtn = document.getElementById('btn-back-to-mgr-step');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
-          state.step = 1;
+          state.step = 2;
           renderModalContent();
         });
       }
@@ -15614,6 +15662,11 @@ function openInitialStaffSetupModal(club) {
       const state = window._preseasonStaffSetup;
       if (state.step === 1) {
         state.step = 2;
+        renderModalContent();
+        return;
+      }
+      if (state.step === 2) {
+        state.step = 3;
         renderModalContent();
         return;
       }
@@ -17433,7 +17486,7 @@ function simulateCpuTransferNewsDaily(dayObj) {
 }
 
 /**
- * 本部画面上部の秘書ブリーフィングバーを描画
+ * 本部画面上部の秘書アバター ＆ 業務一覧ヘッダーを描画
  */
 function renderSecretaryBriefing() {
   const container = document.getElementById('secretary-briefing-bar');
@@ -17442,20 +17495,27 @@ function renderSecretaryBriefing() {
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
   if (!sec) return;
 
-  const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 44) : '';
-  const speech = typeof getSecretaryBriefingText === 'function' ? getSecretaryBriefingText(playerClub) : '';
+  const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 46) : '';
+  const summary = window._lastGmDutySummary || { count: 3, levels: ['critical', 'recommended', 'optional'] };
+  const barsHtml = typeof buildGmDutyBarsHtml === 'function' ? buildGmDutyBarsHtml(summary.levels) : '';
 
   container.innerHTML = `
-    <div class="secretary-avatar-box">${avatarHtml}</div>
-    <div class="secretary-briefing-main">
-      <div class="secretary-briefing-meta">
-        <span class="secretary-name-text">${escapeCommHtml(sec.name)}</span>
-        <span class="secretary-role-text">${escapeCommHtml(sec.roleLabel)}</span>
-        <span class="secretary-spec-text mono">${escapeCommHtml(sec.specialty)}</span>
+    <button type="button" class="secretary-avatar-trigger" id="btn-open-secretary-modal" title="${escapeCommHtml(`${sec.fullName || sec.name}（${sec.roleLabel}）：秘書ブリーフィング確認・交代`)}">
+      <span class="secretary-avatar-box">${avatarHtml}</span>
+      <span class="secretary-swap-dot" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+      </span>
+    </button>
+    <div class="duty-header-stack">
+      <div class="duty-header-title-line">
+        <h2 class="gm-tasks-title">業務一覧</h2>
+        <span class="secretary-inline-name">${escapeCommHtml(sec.name)}</span>
       </div>
-      <p class="secretary-briefing-speech">${escapeCommHtml(speech)}</p>
+      <div class="duty-header-status-line">
+        <span class="duty-bars-indicator" id="gm-tasks-bars">${barsHtml}</span>
+        <span class="gm-tasks-count-badge" id="gm-tasks-count-badge">残り ${summary.count}</span>
+      </div>
     </div>
-    <button type="button" class="btn-change-secretary mono" id="btn-open-secretary-modal">担当変更</button>
   `;
 
   if (typeof renderAvatarCanvases === 'function') {
@@ -17467,6 +17527,29 @@ function renderSecretaryBriefing() {
   }
 }
 
+/**
+ * 秘書選択候補行の共通HTMLを生成（ゲーム開始時選任＆交代モーダル共用）
+ */
+function buildSecretarySelectRowHtml(sec, isSelected, dataAttrName, avatarSize = 48) {
+  const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', avatarSize) : '';
+  return `
+    <div class="secretary-select-row ${isSelected ? 'selected' : ''}" ${dataAttrName}="${sec.id}">
+      <div class="secretary-avatar-box" style="width:${avatarSize}px;height:${avatarSize}px;">${avatarHtml}</div>
+      <div style="flex:1; min-width:0;">
+        <div class="flat-row-header">
+          <span class="flat-row-title" style="font-size:14.5px; color:${isSelected ? 'var(--accent-green)' : '#ffffff'};">${escapeCommHtml(sec.fullName || sec.name)}</span>
+          ${isSelected ? '<span class="secretary-selected-mark">選択中</span>' : ''}
+        </div>
+        <div class="secretary-select-meta-line">
+          <span class="secretary-role-text">${escapeCommHtml(sec.roleLabel)}</span>
+          <span class="secretary-spec-text mono">· ${escapeCommHtml(sec.specialty)}</span>
+        </div>
+        <div class="flat-row-meta" style="margin-top:3px;">${escapeCommHtml(sec.bio)}</div>
+      </div>
+    </div>
+  `;
+}
+
 function openSecretarySelectModal() {
   const modal = document.getElementById('secretary-select-modal');
   const body = document.getElementById('secretary-modal-body');
@@ -17475,30 +17558,21 @@ function openSecretarySelectModal() {
   const list = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
     ? SECRETARIES_DATABASE
     : [];
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const activeSec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
   const activeId = activeSec ? activeSec.id : '';
+  const liveBrief = typeof getSecretaryBriefingText === 'function' ? getSecretaryBriefingText(playerClub) : '';
 
   body.innerHTML = `
+    ${activeSec && liveBrief ? `
+      <div class="secretary-modal-live-brief">
+        <div class="secretary-live-brief-label">${escapeCommHtml(activeSec.name)} からの状況報告</div>
+        <p class="secretary-briefing-speech">${escapeCommHtml(liveBrief)}</p>
+      </div>
+    ` : ''}
+    <div class="flat-section-label mono" style="margin-bottom:4px;">担当秘書の交代</div>
     <div style="display:flex; flex-direction:column;">
-      ${list.map(sec => {
-        const isSelected = sec.id === activeId;
-        const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 48) : '';
-        return `
-          <div class="secretary-select-row ${isSelected ? 'selected' : ''}" data-select-secretary-id="${sec.id}">
-            <div class="secretary-avatar-box">${avatarHtml}</div>
-            <div style="flex:1; min-width:0;">
-              <div class="flat-row-header">
-                <div class="flat-row-title-wrap">
-                  <span class="flat-row-title" style="color:${isSelected ? 'var(--accent-green)' : '#ffffff'};">${escapeCommHtml(sec.fullName || sec.name)}</span>
-                  <span class="secretary-role-text">${escapeCommHtml(sec.roleLabel)}</span>
-                </div>
-                <span class="secretary-spec-text mono">${escapeCommHtml(sec.specialty)}</span>
-              </div>
-              <div class="flat-row-meta">${escapeCommHtml(sec.bio)}</div>
-            </div>
-          </div>
-        `;
-      }).join('')}
+      ${list.map(sec => buildSecretarySelectRowHtml(sec, sec.id === activeId, 'data-select-secretary-id', 48)).join('')}
     </div>
   `;
 
