@@ -741,6 +741,9 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     };
 
     currentDay.played = true;
+    if (typeof generateCupMatchNews === 'function') {
+      generateCupMatchNews(comp.name, oppClub, isHome, myScore, oppScore, userWon, `第${euroMd}節`);
+    }
 
     if (skipAnimation) {
       renderAll();
@@ -849,6 +852,9 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     };
 
     currentDay.played = true;
+    if (typeof generateCupMatchNews === 'function') {
+      generateCupMatchNews(comp.name, oppClub, isHome, myScore, oppScore, userWon, 'プレーオフ');
+    }
 
     if (skipAnimation) {
       renderAll();
@@ -988,6 +994,9 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   };
 
   const canEndSeasonAfterCup = gameState.currentWeek >= gameState.totalWeeks && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
+  if (typeof generateCupMatchNews === 'function') {
+    generateCupMatchNews(comp.name, oppClub, isHome, myScore, oppScore, userWon, cupRoundTitle);
+  }
 
   if (skipAnimation) {
     if (canEndSeasonAfterCup) {
@@ -1135,6 +1144,9 @@ function playCurrentMatchday(skipAnimation = false, quickSummary = false) {
     const oppScore = playerMatch.isPlayerHome ? playerMatch.awayScore : playerMatch.homeScore;
     const res = myScore > oppScore ? '勝利' : (myScore < oppScore ? '敗戦' : '引分');
     addDailyLog(`【第${playerMatch.week}節】vs ${opp.name} (${playerMatch.isPlayerHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${res}！`);
+  }
+  if (typeof generateMatchweekNews === 'function') {
+    generateMatchweekNews(playerMatch ? playerMatch.week : gameState.currentWeek);
   }
 
   renderAll();

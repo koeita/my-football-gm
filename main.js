@@ -243,7 +243,14 @@ const gameState = {
   sellOnRights: [],
   intlBreakState: null,
   pendingBoardCrisis: false,
-  pendingDeadlineOffer: false
+  pendingDeadlineOffer: false,
+  secretaryId: 'sec_claire',
+  inboxMessages: [],
+  newsFeed: [],
+  managerWishes: null,
+  officeCommTab: 'messages',
+  inboxCategoryFilter: 'ALL',
+  expandedMessageId: null
 };
 
 
@@ -977,10 +984,15 @@ function advanceCalendarDay(skipRender = false) {
         }
       }
     }
+    if (typeof sendMonthlyBoardReport === 'function') {
+      sendMonthlyBoardReport(nextDay);
+    }
+    if (nextDay.month === 1 && typeof generateAndSendManagerWishReport === 'function') {
+      generateAndSendManagerWishReport('冬の移籍市場開幕');
+    }
   }
 
   // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新
-    // 2. 移籍ウィンドウ期間中のイベント判定・オファー更新
   const incomingResponded = updateIncomingOffersExpiry();
   const outgoingResponded = updateOutgoingOffersExpiry();
   let eventTriggered = false;
@@ -993,6 +1005,9 @@ function advanceCalendarDay(skipRender = false) {
     const preContractFired = triggerPreContractDepartures();
     if (offerFired || loanFired || preContractFired) {
       eventTriggered = true;
+    }
+    if (typeof simulateCpuTransferNewsDaily === 'function') {
+      simulateCpuTransferNewsDaily(nextDay);
     }
   }
 
@@ -1052,6 +1067,18 @@ function advanceCalendarDay(skipRender = false) {
   if (nextDay.isTransferDeadline && !gameState.pendingDeadlineOffer) {
     gameState.pendingDeadlineOffer = true;
     addDailyLog('【デッドラインデイ】本日は移籍市場最終日！駆け込みオファーや交渉が活発化しています。');
+    if (typeof addInboxMessage === 'function') {
+      const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: '秘書' };
+      addInboxMessage({
+        senderType: 'secretary',
+        senderName: sec.name,
+        title: '移籍市場最終日（デッドラインデイ）のお知らせ',
+        body: '本日をもって移籍ウィンドウが閉幕いたします。進行中の獲得オファーの締結漏れや、他クラブからの買取打診に対する最終判断がないかご確認ください。',
+        actionType: 'goto-market-offers',
+        actionLabel: 'オファーを確認',
+        actionPayload: null
+      });
+    }
     eventTriggered = true;
   } else if (!nextDay.isTransferDeadline) {
     gameState.pendingDeadlineOffer = false;
@@ -3470,6 +3497,17 @@ function updateOutgoingOffersExpiry() {
         offer.status = 'agreed';
         hadResponseToday = true;
         addDailyLog(`【オファー合意！】${offer.sellerClubName} および ${offer.playerName} が移籍条件（移籍金 ${formatMoney(offer.offeredFee)}）に合意しました！「オファー」タブより契約を確定できます。`);
+        if (typeof addInboxMessage === 'function') {
+          addInboxMessage({
+            senderType: 'board',
+            senderName: '強化・移籍部門',
+            title: `オファー合意：${offer.playerName}（${offer.sellerClubName}）`,
+            body: `${offer.sellerClubName}および${offer.playerName}との条件交渉（移籍金 ${formatMoney(offer.offeredFee)}）が合意に達しました。オファー一覧から正式契約を確定してください。`,
+            actionType: 'goto-market-offers',
+            actionLabel: 'オファー画面へ',
+            actionPayload: 'outgoing'
+          });
+        }
         if (typeof showToast === 'function') {
           showToast(`【オファー合意】${offer.playerName}の獲得交渉が合意に達しました！`);
         }
@@ -3484,6 +3522,17 @@ function updateOutgoingOffersExpiry() {
           offer.pendingDays = 3; // 逆オファーへの回答期限
           hadResponseToday = true;
           addDailyLog(`【相手からの増額要求】${offer.sellerClubName} から ${offer.playerName} の移籍金引き上げ要求（${formatMoney(offer.counterFee)}）が届きました。「オファー」タブより承認または拒否を選択してください。`);
+          if (typeof addInboxMessage === 'function') {
+            addInboxMessage({
+              senderType: 'board',
+              senderName: '強化・移籍部門',
+              title: `移籍金増額の逆提示：${offer.playerName}`,
+              body: `${offer.sellerClubName}から${offer.playerName}の移籍金として ${formatMoney(offer.counterFee)} の逆提示が届きました。期限内に承認または拒否をご選択ください。`,
+              actionType: 'goto-market-offers',
+              actionLabel: 'オファー画面へ',
+              actionPayload: 'outgoing'
+            });
+          }
           if (typeof showToast === 'function') {
             showToast(`【増額要求】${offer.sellerClubName}より移籍金 ${formatMoney(offer.counterFee)} の逆提示が届きました`);
           }
@@ -3492,6 +3541,17 @@ function updateOutgoingOffersExpiry() {
           hadResponseToday = true;
           const reasonMsg = offer.rejectionReason ? `（理由: ${offer.rejectionReason}）` : '';
           addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への${offer.dealType === 'loan' ? 'レンタルオファー' : 'オファー'}を拒絶しました。${reasonMsg}`);
+          if (typeof addInboxMessage === 'function') {
+            addInboxMessage({
+              senderType: 'board',
+              senderName: '強化・移籍部門',
+              title: `交渉決裂：${offer.playerName}`,
+              body: `${offer.sellerClubName}は${offer.playerName}へのオファーを拒絶しました。${reasonMsg}`,
+              actionType: 'goto-market',
+              actionLabel: '移籍市場へ',
+              actionPayload: null
+            });
+          }
           if (typeof showToast === 'function') {
             showToast(`【オファー拒絶】${offer.sellerClubName}は${offer.dealType === 'loan' ? 'レンタル' : ''}オファーを拒絶しました`);
           }
@@ -3796,19 +3856,47 @@ function completeOutgoingTransferSigning(offerId) {
 
   if (dealType === 'loan') {
     addDailyLog(`【レンタル加入】${target.pos} #${target.squadNumber} ${target.name} が1年間の期限付き移籍（レンタル）で加入！週給負担率: ${offer.loanCoveragePercent}%。`);
+    if (typeof addNewsItem === 'function') {
+      addNewsItem({
+        category: '移籍',
+        headline: `${playerClub.name}が${target.pos} ${target.name}を期限付き移籍で獲得`,
+        body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳）の1年間レンタル加入を正式発表した。`,
+        highlight: true
+      });
+    }
     if (typeof showToast === 'function') {
       showToast(`【レンタル加入】${target.name}が1年ローンで加入しました！`);
     }
   } else if (dealType === 'free_agent') {
     addDailyLog(`【無所属獲得】${target.pos} #${target.squadNumber} ${target.name} が移籍金£0で正式加入！背番号は #${target.squadNumber} です。`);
+    if (typeof addNewsItem === 'function') {
+      addNewsItem({
+        category: '移籍',
+        headline: `${playerClub.name}がフリーの${target.pos} ${target.name}と契約`,
+        body: `${playerClub.name}は無所属だった${target.name}（OVR ${getPlayerOverallRating(target)}）を移籍金なしで獲得した。`,
+        highlight: true
+      });
+    }
     if (typeof showToast === 'function') {
       showToast(`【フリー獲得】${target.name}が正式加入しました！`);
     }
   } else {
     addDailyLog(`【新戦力加入】${target.pos} #${target.squadNumber} ${target.name} と正式契約を締結！背番号は #${target.squadNumber} です。`);
+    if (typeof addNewsItem === 'function') {
+      addNewsItem({
+        category: '移籍',
+        headline: `${playerClub.name}が${target.pos} ${target.name}を${formatMoney(offer.offeredFee)}で獲得`,
+        body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）の完全移籍加入を完了した。`,
+        highlight: true
+      });
+    }
     if (typeof showToast === 'function') {
       showToast(`【獲得完了】${target.name}がクラブに正式加入しました！`);
     }
+  }
+
+  if (typeof checkAndRewardManagerWishOnSigning === 'function') {
+    checkAndRewardManagerWishOnSigning(target, dealType);
   }
 
   updateMarketBadges();
@@ -3926,6 +4014,17 @@ function triggerIncomingTransferOffer(force = false) {
   stopAdvancingCalendar();
   showToast(`【買取オファー着信】${buyerClubName} から ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診が届きました！`, 'info');
   addDailyLog(`【オファー着信】${buyerClubName} から ${target.pos} #${target.squadNumber || '-'} ${target.name} に対し 移籍金${formatMoney(offerFee)} の獲得打診（回答期限: 5日）`);
+  if (typeof addInboxMessage === 'function') {
+    addInboxMessage({
+      senderType: 'board',
+      senderName: '強化・移籍部門',
+      title: `買取オファー着信：${target.name}（${buyerClubName}）`,
+      body: `${buyerClubName}から${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対し、移籍金 ${formatMoney(offerFee)} の正式オファーが届きました。回答期限は5日間です。`,
+      actionType: 'goto-market-offers',
+      actionLabel: 'オファーを確認',
+      actionPayload: 'incoming'
+    });
+  }
   updateMarketBadges();
   renderAll();
   return true;
@@ -4151,6 +4250,14 @@ function acceptIncomingOffer(offerId) {
   cancelOtherIncomingOffersForPlayer(target.id, offer.id);
 
   addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(saleFee)}）。`);
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: '移籍',
+      headline: `${playerClub.name}の${target.pos} ${target.name}が${offer.buyerClubName}へ移籍`,
+      body: `${offer.buyerClubName}は${playerClub.name}から${target.name}を移籍金 ${formatMoney(saleFee)} で獲得することで合意した。`,
+      highlight: true
+    });
+  }
   if (typeof showToast === 'function') {
     showToast(`【売却完了】${target.name}を${offer.buyerClubName}へ売却しました`);
   }
@@ -4436,6 +4543,14 @@ function acceptIncomingOfferModal() {
 
   showToast(`[移籍成立] ${target.name} を ${offer.buyerClubName} へ売却しました（移籍金 +${formatMoney(offer.offerFee)}）`, 'success');
   addDailyLog(`【移籍成立】${target.pos} #${offer.squadNumber} ${target.name} が ${offer.buyerClubName} へ完全移籍（売却益: ${formatMoney(offer.offerFee)}）`);
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: '移籍',
+      headline: `${playerClub.name}の${target.pos} ${target.name}が${offer.buyerClubName}へ完全移籍`,
+      body: `${offer.buyerClubName}は${playerClub.name}から${target.name}を移籍金 ${formatMoney(offer.offerFee)} で獲得した。`,
+      highlight: true
+    });
+  }
 
   closeIncomingOfferModal();
   updateMarketBadges();
@@ -5781,6 +5896,17 @@ function startNextSeason() {
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: `Season ${gameState.season} (${inD2 ? 'ENG-D2' : 'ENG-D1'}) が開幕しました！目標順位達成に向けてチームを指揮しましょう。` }
   ];
+  if (typeof generateAndSendManagerWishReport === 'function') {
+    generateAndSendManagerWishReport(`Season ${gameState.season} 開幕`);
+  }
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: 'リーグ',
+      headline: `Season ${gameState.season} ${inD2 ? 'ENG-D2' : 'ENG-D1'} が開幕、移籍市場もオープン`,
+      body: `${playerClub.name}は目標「${playerClub.targetLabel || '上位進出'}」を掲げ新シーズンへ臨む。`,
+      highlight: true
+    });
+  }
   switchTab('office');
   renderAll();
 }
@@ -6034,8 +6160,10 @@ function renderActiveTabView(force = false) {
   dirtyViews[active] = false;
 
   if (active === 'office') {
+    if (typeof renderSecretaryBriefing === 'function') renderSecretaryBriefing();
     renderWeeklySchedule();
     renderGmDuties();
+    if (typeof renderOfficeCommPanel === 'function') renderOfficeCommPanel();
     renderMatchLog();
   } else if (active === 'team') {
     if (gameState.teamSubtab === 'schedule') {
@@ -11866,7 +11994,16 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: '新シーズン開幕！GMに就任し、初戦に向けてスカッドが始動しました。' }
   ];
+  gameState.inboxMessages = [];
+  gameState.newsFeed = [];
+  gameState.managerWishes = null;
+  gameState.officeCommTab = 'messages';
+  gameState.inboxCategoryFilter = 'ALL';
+  gameState.expandedMessageId = null;
   generateTransferMarket();
+  if (typeof ensureInitialOfficeMessagesAndNews === 'function') {
+    ensureInitialOfficeMessagesAndNews();
+  }
   syncAllSubtabsDOM();
   switchTab('office');
 }
@@ -13297,6 +13434,10 @@ function initGame() {
     });
   }
 
+  if (typeof initOfficeCommAndSecretaryEvents === 'function') {
+    initOfficeCommAndSecretaryEvents();
+  }
+
   // クラブ施設投資（アップグレードボタン＆インフォポップアップ表示）のイベント
   const facilitiesGrid = document.getElementById('facilities-grid');
   if (facilitiesGrid) {
@@ -13594,6 +13735,11 @@ function initGame() {
       const coachModal = document.getElementById('coach-hire-modal');
       if (coachModal && !coachModal.classList.contains('hidden')) {
         closeCoachHireModal();
+        return;
+      }
+      const secModal = document.getElementById('secretary-select-modal');
+      if (secModal && !secModal.classList.contains('hidden')) {
+        closeSecretarySelectModal();
         return;
       }
       const infoPopup = document.getElementById('info-popup-modal');
@@ -14451,7 +14597,18 @@ function hireNewManager(managerId) {
   }
 
   const tacticLabel = getManagerTacticLabel(newMgr.preferredTactic);
-  addDailyLog(`[監督人事] ${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
+  addDailyLog(`${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
+  if (typeof generateAndSendManagerWishReport === 'function') {
+    generateAndSendManagerWishReport(`${newMgr.name}監督 就任時`);
+  }
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: '監督',
+      headline: `${club.name}の新監督に${newMgr.name}氏が就任`,
+      body: `${club.name}は${newMgr.name}氏（得意: ${newMgr.preferredFormation} / ${tacticLabel}）を新指揮官として迎え入れた。`,
+      highlight: true
+    });
+  }
   renderAll();
   return true;
 }
@@ -14879,6 +15036,7 @@ function openInitialStaffSetupModal(club) {
   window._preseasonStaffSetup = {
     step: 1,
     selectedManagerIdx: 0,
+    selectedSecretaryId: gameState.secretaryId || 'sec_claire',
     selectedCoachIdx: { attacking: 0, defending: 0, goalkeeping: 0, fitness: 0 },
     candidates: managerCandidates,
     coachCandidates,
@@ -14889,7 +15047,7 @@ function openInitialStaffSetupModal(club) {
     const state = window._preseasonStaffSetup;
     const titleEl = document.getElementById('staff-setup-title');
     if (state.step === 1) {
-      if (titleEl) titleEl.textContent = '監督の選任 (1 / 2)';
+      if (titleEl) titleEl.textContent = '監督・秘書の選任 (1 / 2)';
       const managersHtml = state.candidates.map((m, idx) => {
         const isSelected = idx === state.selectedManagerIdx;
         const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-md', 44) : '';
@@ -14923,12 +15081,49 @@ function openInitialStaffSetupModal(club) {
         `;
       }).join('');
 
-      body.innerHTML = `<div style="display: flex; flex-direction: column;">${managersHtml}</div>`;
+      const secretaries = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
+        ? SECRETARIES_DATABASE
+        : [];
+      const secretariesHtml = secretaries.map(sec => {
+        const isSel = sec.id === state.selectedSecretaryId;
+        const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 40) : '';
+        return `
+          <div class="secretary-select-row ${isSel ? 'selected' : ''}" data-init-sec-id="${sec.id}">
+            <div class="staff-avatar-wrap" style="flex-shrink: 0;">${avatarHtml}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div class="flat-row-header">
+                <div class="flat-row-title-wrap">
+                  <span class="flat-row-title" style="font-size:13px; color: ${isSel ? 'var(--accent-green)' : '#ffffff'};">${sec.name}</span>
+                  <span class="secretary-role-text">${sec.roleLabel}</span>
+                </div>
+                <span class="secretary-spec-text mono">${sec.specialty}</span>
+              </div>
+              <div class="flat-row-meta">${sec.bio}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      body.innerHTML = `
+        <div class="flat-section-label mono">ヘッドコーチ（監督）</div>
+        <div style="display: flex; flex-direction: column;">${managersHtml}</div>
+        ${secretaries.length > 0 ? `
+          <div class="flat-section-label mono" style="margin-top: 10px;">担当秘書</div>
+          <div style="display: flex; flex-direction: column;">${secretariesHtml}</div>
+        ` : ''}
+      `;
       if (confirmBtn) confirmBtn.textContent = '次へ：コーチを選ぶ ▶';
+      if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(body);
 
       body.querySelectorAll('.staff-candidate-card').forEach(card => {
         card.addEventListener('click', (e) => {
           state.selectedManagerIdx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
+          renderModalContent();
+        });
+      });
+      body.querySelectorAll('[data-init-sec-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+          state.selectedSecretaryId = e.currentTarget.dataset.initSecId;
           renderModalContent();
         });
       });
@@ -15022,6 +15217,9 @@ function openInitialStaffSetupModal(club) {
         fitness: state.coachCandidates.fitness[state.selectedCoachIdx.fitness || 0] || null
       };
       const playerClub = club || getPlayerClub();
+      if (state.selectedSecretaryId) {
+        gameState.secretaryId = state.selectedSecretaryId;
+      }
       if (playerClub && selectedMgr) {
         playerClub.manager = selectedMgr;
         playerClub.formation = selectedMgr.preferredFormation;
@@ -15035,6 +15233,14 @@ function openInitialStaffSetupModal(club) {
         syncManagerDelegationButtonUI();
         addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
         addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
+        gameState.inboxMessages = [];
+        gameState.newsFeed = [];
+        if (typeof ensureInitialOfficeMessagesAndNews === 'function') {
+          ensureInitialOfficeMessagesAndNews();
+        }
+        if (typeof generateAndSendManagerWishReport === 'function') {
+          generateAndSendManagerWishReport('プレシーズン指導体制発足');
+        }
       }
       modal.classList.add('hidden');
       setBodyModalLock(false);
@@ -16304,3 +16510,848 @@ function handleBoardRelegationRestart(newClubId) {
   renderAll();
   scheduleAutoSave();
 }
+
+// ==========================================================================
+// 秘書役ブリーフィング・メッセージ受信箱・ニュース・監督補強希望システム
+// ==========================================================================
+
+function escapeCommHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function getCurrentCommDateLabel() {
+  const day = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  if (day) {
+    return `${day.month}/${day.day} (${day.dayOfWeekName})`;
+  }
+  return `S${gameState.season || 1}`;
+}
+
+/**
+ * 受信箱にメッセージを追加する（最大40件保持）
+ */
+function addInboxMessage({
+  senderType = 'secretary',
+  senderName = null,
+  title = '',
+  body = '',
+  actionType = null,
+  actionLabel = '',
+  actionPayload = null,
+  candidatePlayers = null
+}) {
+  if (!Array.isArray(gameState.inboxMessages)) {
+    gameState.inboxMessages = [];
+  }
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett' };
+  const resolvedSenderName = senderName || (senderType === 'secretary' ? sec.name : 'クラブ事務局');
+  const msg = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    date: getCurrentCommDateLabel(),
+    dayIndex: gameState.currentDayIndex || 0,
+    season: gameState.season || 1,
+    senderType,
+    senderName: resolvedSenderName,
+    title,
+    body,
+    read: false,
+    actionType,
+    actionLabel,
+    actionPayload,
+    candidatePlayers: Array.isArray(candidatePlayers) ? candidatePlayers : null
+  };
+  gameState.inboxMessages.unshift(msg);
+  if (gameState.inboxMessages.length > 40) {
+    gameState.inboxMessages = gameState.inboxMessages.slice(0, 40);
+  }
+  return msg;
+}
+
+function markInboxMessageRead(msgId) {
+  if (!Array.isArray(gameState.inboxMessages)) return;
+  const target = gameState.inboxMessages.find(m => m && m.id === msgId);
+  if (target && !target.read) {
+    target.read = true;
+  }
+}
+
+function markAllInboxMessagesRead() {
+  if (!Array.isArray(gameState.inboxMessages)) return;
+  gameState.inboxMessages.forEach(m => {
+    if (m) m.read = true;
+  });
+  renderOfficeCommPanel();
+  if (typeof renderSecretaryBriefing === 'function') renderSecretaryBriefing();
+  if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+}
+
+/**
+ * ニュースフィードに記事を追加する（最大40件保持）
+ */
+function addNewsItem({ category = 'リーグ', headline = '', body = '', highlight = false }) {
+  if (!Array.isArray(gameState.newsFeed)) {
+    gameState.newsFeed = [];
+  }
+  const item = {
+    id: `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    date: getCurrentCommDateLabel(),
+    dayIndex: gameState.currentDayIndex || 0,
+    season: gameState.season || 1,
+    category,
+    headline,
+    body,
+    highlight: Boolean(highlight)
+  };
+  gameState.newsFeed.unshift(item);
+  if (gameState.newsFeed.length > 40) {
+    gameState.newsFeed = gameState.newsFeed.slice(0, 40);
+  }
+  return item;
+}
+
+/**
+ * 初回起動・新規キャリア・旧セーブ補完時の初期メッセージ＆ニュースを生成
+ */
+function ensureInitialOfficeMessagesAndNews() {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub) return;
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', roleLabel: 'チーフセクレタリー' };
+
+  if (!Array.isArray(gameState.inboxMessages)) gameState.inboxMessages = [];
+  if (!Array.isArray(gameState.newsFeed)) gameState.newsFeed = [];
+
+  if (gameState.inboxMessages.length === 0) {
+    const divLabel = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) ? 'ENG-D2' : 'ENG-D1';
+    addInboxMessage({
+      senderType: 'secretary',
+      senderName: sec.name,
+      title: `GM就任のご挨拶と業務開始のご案内`,
+      body: `${gameState.gmName || 'GM'}様、${playerClub.name}へのご就任おめでとうございます。${sec.roleLabel}を務めます${sec.name}です。今シーズンのクラブ目標は「${playerClub.targetLabel || '上位進出'}」（${divLabel}）となっております。日々の進行や重要な報告はすべて私から共有いたします。`,
+      actionType: 'goto-pitch',
+      actionLabel: '作戦ボードを確認'
+    });
+  }
+
+  if (gameState.newsFeed.length === 0) {
+    const divLabel = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) ? 'ENG-D2' : 'ENG-D1';
+    addNewsItem({
+      category: 'リーグ',
+      headline: `${playerClub.name}が新GMに${gameState.gmName || 'L. Vance'}氏を迎えて始動`,
+      body: `${divLabel}所属の${playerClub.name}は新体制でプレシーズンおよび夏の移籍市場に突入した。目標「${playerClub.targetLabel || '上位進出'}」へ向けた補強と戦術整備に注目が集まる。`,
+      highlight: true
+    });
+  }
+}
+
+/**
+ * 監督からの補強希望（手薄なポジション＋推薦選手2〜3名）を算出し受信箱へ送付
+ */
+function generateAndSendManagerWishReport(contextLabel = '補強方針ミーティング') {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub || !playerClub.manager || typeof evaluateManagerReinforcementWishes !== 'function') return null;
+
+  const wish = evaluateManagerReinforcementWishes(playerClub);
+  if (!wish) return null;
+  gameState.managerWishes = wish;
+
+  const mgr = playerClub.manager;
+  const posListText = wish.positions.join('・');
+  const reasonText = (wish.reasons || []).join(' ／ ');
+  const candSummary = (wish.candidates && wish.candidates.length > 0)
+    ? `スカウトデータも踏まえ、予算内で獲得を狙える具体的な推薦選手を${wish.candidates.length}名ピックアップしました。`
+    : '現有予算に合う対象選手が見つかり次第、移籍市場タブからご検討ください。';
+
+  addInboxMessage({
+    senderType: 'manager',
+    senderName: `${mgr.name} 監督`,
+    title: `補強要望：${posListText}の戦力強化（${contextLabel}）`,
+    body: `私の得意布陣（${wish.formation}）を最大限に機能させるため、${posListText}の補強を希望します。理由：${reasonText}。${candSummary}`,
+    actionType: 'goto-market',
+    actionLabel: '移籍市場を開く',
+    candidatePlayers: wish.candidates || []
+  });
+
+  return wish;
+}
+
+/**
+ * 選手獲得成立時に、監督の補強希望（推薦選手または希望ポジション本適性）を達成したか判定し信頼度を上昇させる
+ */
+function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const wish = gameState.managerWishes;
+  if (!playerClub || !playerClub.manager || !signedPlayer || !wish || wish.fulfilled) return false;
+
+  const mgr = playerClub.manager;
+  const normPos = (pos) => (pos === 'LWB' ? 'LB' : (pos === 'RWB' ? 'RB' : (pos === 'ST' ? 'CF' : pos)));
+  if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(signedPlayer);
+  const mains = (Array.isArray(signedPlayer.mainPositions) && signedPlayer.mainPositions.length > 0
+    ? signedPlayer.mainPositions
+    : [signedPlayer.primaryPosition || signedPlayer.pos]).map(normPos);
+
+  const isRecommended = Array.isArray(wish.candidates) && wish.candidates.some(c => c && c.playerId === signedPlayer.id);
+  const matchedPos = (wish.positions || []).find(tp => mains.includes(tp));
+  if (!isRecommended && !matchedPos) return false;
+
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(signedPlayer) : 70;
+  if (!isRecommended && ovr < 64) return false;
+
+  const trustBonus = isRecommended ? 10 : 6;
+  const prevTrust = typeof mgr.trust === 'number' ? mgr.trust : 80;
+  mgr.trust = clamp(prevTrust + trustBonus, 0, 100);
+  wish.fulfilled = true;
+  wish.fulfilledPlayerName = signedPlayer.name;
+  wish.fulfilledByRecommendation = isRecommended;
+
+  const bonusLabel = isRecommended ? '推薦選手のピンポイント獲得' : `希望ポジション(${matchedPos})の補強`;
+  addDailyLog(`【監督信頼度+${trustBonus}】${mgr.name}監督が ${signedPlayer.name} の獲得（${bonusLabel}）を歓迎しています（信頼度 ${mgr.trust}%）。`);
+  addInboxMessage({
+    senderType: 'manager',
+    senderName: `${mgr.name} 監督`,
+    title: `補強への謝意：${signedPlayer.name} の加入を歓迎`,
+    body: isRecommended
+      ? `私が推薦した ${signedPlayer.name}（${signedPlayer.pos} / OVR ${ovr}）の獲得に尽力いただきありがとうございます。構想に完璧に合致する戦力です。（監督信頼度 +${trustBonus} ➔ ${mgr.trust}%）`
+      : `要望していた ${matchedPos} への ${signedPlayer.name}（OVR ${ovr}）獲得ありがとうございます。チーム競争力と層の厚みが大きく改善しました。（監督信頼度 +${trustBonus} ➔ ${mgr.trust}%）`,
+    actionType: 'goto-pitch',
+    actionLabel: '作戦ボードで起用'
+  });
+
+  if (typeof showToast === 'function') {
+    showToast(`${mgr.name}監督の補強希望を達成！（監督信頼度 +${trustBonus}）`, 'success');
+  }
+  return true;
+}
+
+/**
+ * 毎月1日の理事会月次経営・目標評価レポート送信
+ */
+function sendMonthlyBoardReport(dayObj) {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub || !dayObj) return;
+  if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(playerClub);
+
+  const inD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const table = inD2 && gameState.competitions && gameState.competitions.championship
+    ? [...gameState.competitions.championship.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0))
+    : (typeof getSortedStandings === 'function' ? getSortedStandings() : []);
+  const rankIdx = table.findIndex(c => c && c.id === playerClub.id);
+  const rankText = rankIdx >= 0 ? `現在${rankIdx + 1}位` : '開幕準備中';
+  const targetText = playerClub.targetLabel || '上位進出';
+  const boardConf = typeof playerClub.boardConfidence === 'number' ? playerClub.boardConfidence : 75;
+  const safeBudget = typeof getSafeTransferBudget === 'function' ? getSafeTransferBudget(playerClub) : (playerClub.funds || 0);
+  const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(playerClub) : { total3YrNet: 0, isBreach: false };
+
+  let statusComment = '現行の方針は安定しており、理事会は引き続きGMの手腕を信頼しています。';
+  if (boardConf < 40) {
+    statusComment = '直近の成績および目標順位との乖離に対し、理事会内に強い危機感が広がっています。早急な立て直しを求めます。';
+  } else if (psr.isBreach || (playerClub.funds || 0) < 0) {
+    statusComment = '財務収支およびPSR基準に警戒水準が灯っています。人件費圧縮や選手売却による収支改善をご検討ください。';
+  } else if (rankIdx >= 0 && rankIdx + 1 <= (playerClub.targetRank || 8)) {
+    statusComment = '目標圏内を維持する順調な推移です。この調子でシーズンを戦い抜くことを期待しています。';
+  }
+
+  addInboxMessage({
+    senderType: 'board',
+    senderName: 'クラブ理事会',
+    title: `${dayObj.month}月度 クラブ経営・戦績評価レポート`,
+    body: `${rankText}（目標: ${targetText}） ／ 理事会信頼度 ${boardConf}% ／ 保有資金 ${formatMoney(playerClub.funds)}（安全移籍予算 ${formatMoney(safeBudget)}） ／ 3年PSR通算 ${formatMoney(psr.total3YrNet)}。${statusComment}`,
+    actionType: 'goto-facilities',
+    actionLabel: '経営・財務を確認'
+  });
+}
+
+/**
+ * リーグ節終了時の自動ニュース生成（首位動向・番狂わせ・連勝・得点ランキング）
+ */
+function generateMatchweekNews(weekNum) {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub) return;
+
+  const results = Array.isArray(gameState.lastWeekResults) ? gameState.lastWeekResults : [];
+  const inD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const divCode = inD2 ? 'ENG-D2' : 'ENG-D1';
+  const table = inD2 && gameState.competitions && gameState.competitions.championship
+    ? [...gameState.competitions.championship.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0))
+    : (typeof getSortedStandings === 'function' ? getSortedStandings() : []);
+
+  // 1. 自クラブの試合結果ハイライト
+  const pm = results.find(r => r && r.isPlayerMatch);
+  if (pm) {
+    const opp = pm.isPlayerHome ? pm.awayClub : pm.homeClub;
+    const myScore = pm.isPlayerHome ? pm.homeScore : pm.awayScore;
+    const oppScore = pm.isPlayerHome ? pm.awayScore : pm.homeScore;
+    const myRank = table.findIndex(c => c && c.id === playerClub.id) + 1;
+    const rankSuffix = myRank > 0 ? `順位は${myRank}位となった。` : '';
+    if (myScore - oppScore >= 3) {
+      addNewsItem({
+        category: 'リーグ',
+        headline: `${playerClub.name}が${opp.name}に${myScore}-${oppScore}の快勝`,
+        body: `${divCode}第${weekNum}節で${playerClub.name}が攻撃陣爆発の${myScore}得点で圧勝。${rankSuffix}`,
+        highlight: true
+      });
+    } else if (oppScore - myScore >= 3) {
+      addNewsItem({
+        category: 'リーグ',
+        headline: `${playerClub.name}、${opp.name}に${myScore}-${oppScore}と痛恨の大敗`,
+        body: `${divCode}第${weekNum}節は守備陣が崩れ手痛い敗戦となった。${rankSuffix}`,
+        highlight: true
+      });
+    }
+  }
+
+  // 2. 首位交代・首位快走ニュース
+  if (table.length >= 2 && weekNum >= 2) {
+    const leader = table[0];
+    const second = table[1];
+    const prevLeaderId = gameState._lastNewsLeaderId || null;
+    if (prevLeaderId && prevLeaderId !== leader.id) {
+      addNewsItem({
+        category: 'リーグ',
+        headline: `${divCode}首位交代：${leader.name}が勝点${leader.pts}でトップ浮上`,
+        body: `第${weekNum}節の結果、${leader.name}が2位${second.name}（勝点${second.pts}）を抑えて首位に立った。`,
+        highlight: leader.isPlayer
+      });
+    } else if (weekNum % 4 === 0) {
+      const gap = (leader.pts || 0) - (second.pts || 0);
+      addNewsItem({
+        category: 'リーグ',
+        headline: `${divCode}第${weekNum}節終了：${leader.name}が勝点${leader.pts}で首位維持`,
+        body: `2位${second.name}との勝点差は${gap}。中盤戦から終盤へ向けて激しい上位争いが続いている。`,
+        highlight: leader.isPlayer
+      });
+    }
+    gameState._lastNewsLeaderId = leader.id;
+  }
+
+  // 3. 他会場の大勝・番狂わせニュース（1試合ピックアップ）
+  const otherMatches = results.filter(r => r && !r.isPlayerMatch && r.homeClub && r.awayClub);
+  let upsetMatch = null;
+  let blowoutMatch = null;
+  for (const r of otherMatches) {
+    const hPow = r.homeClub.basePower || 70;
+    const aPow = r.awayClub.basePower || 70;
+    if (r.homeScore > r.awayScore && aPow - hPow >= 6) {
+      upsetMatch = { winner: r.homeClub, loser: r.awayClub, wScore: r.homeScore, lScore: r.awayScore };
+      break;
+    }
+    if (r.awayScore > r.homeScore && hPow - aPow >= 6) {
+      upsetMatch = { winner: r.awayClub, loser: r.homeClub, wScore: r.awayScore, lScore: r.homeScore };
+      break;
+    }
+    if (!blowoutMatch && Math.abs(r.homeScore - r.awayScore) >= 3) {
+      const wHome = r.homeScore > r.awayScore;
+      blowoutMatch = {
+        winner: wHome ? r.homeClub : r.awayClub,
+        loser: wHome ? r.awayClub : r.homeClub,
+        wScore: wHome ? r.homeScore : r.awayScore,
+        lScore: wHome ? r.awayScore : r.homeScore
+      };
+    }
+  }
+  if (upsetMatch) {
+    addNewsItem({
+      category: 'リーグ',
+      headline: `番狂わせ：${upsetMatch.winner.name}が格上${upsetMatch.loser.name}を${upsetMatch.wScore}-${upsetMatch.lScore}で撃破`,
+      body: `${divCode}第${weekNum}節で${upsetMatch.winner.name}が金星を挙げ、リーグ順位表に波乱を呼んだ。`
+    });
+  } else if (blowoutMatch) {
+    addNewsItem({
+      category: 'リーグ',
+      headline: `${blowoutMatch.winner.name}が${blowoutMatch.loser.name}に${blowoutMatch.wScore}-${blowoutMatch.lScore}で大勝`,
+      body: `${divCode}第${weekNum}節、${blowoutMatch.winner.name}が圧巻の攻撃力を披露した。`
+    });
+  }
+
+  // 4. 5節ごとの得点ランキング速報
+  if (weekNum >= 5 && weekNum % 5 === 0) {
+    const allClubs = inD2 && gameState.competitions && gameState.competitions.championship
+      ? gameState.competitions.championship.clubs
+      : (gameState.clubs || []);
+    let topScorer = null;
+    let topClub = null;
+    for (const c of allClubs) {
+      for (const p of (c.players || [])) {
+        if (p && (p.goals || 0) > (topScorer ? (topScorer.goals || 0) : 0)) {
+          topScorer = p;
+          topClub = c;
+        }
+      }
+    }
+    if (topScorer && topClub && (topScorer.goals || 0) >= 3) {
+      addNewsItem({
+        category: 'リーグ',
+        headline: `得点王争い：${topClub.name}の${topScorer.name}が今季${topScorer.goals}得点で首位`,
+        body: `第${weekNum}節終了時点で${topScorer.name}が${divCode}の得点ランキングトップを走っている。`,
+        highlight: topClub.isPlayer
+      });
+    }
+  }
+}
+
+/**
+ * カップ戦・欧州コンペ（WCT/ECT/EPC/ECS/国内カップ）のニュース生成
+ */
+function generateCupMatchNews(compName, oppClub, isHome, myScore, oppScore, userWon, roundTitle) {
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub || !oppClub) return;
+  const venue = isHome ? 'ホーム' : 'アウェイ';
+  const resultLabel = userWon ? '勝利' : (myScore === oppScore ? '引き分け' : '敗戦');
+  addNewsItem({
+    category: 'カップ',
+    headline: `${compName} ${roundTitle}：${playerClub.name}、${oppClub.name}に${myScore}-${oppScore}で${resultLabel}`,
+    body: `${venue}で迎えた${compName} ${roundTitle}の一戦は${myScore}-${oppScore}で決着した。`,
+    highlight: userWon
+  });
+}
+
+/**
+ * 移籍市場期間中の他クラブ間・欧州クラブ移籍ニュースを自動生成
+ */
+function simulateCpuTransferNewsDaily(dayObj) {
+  if (!dayObj || !dayObj.windowOpen) return;
+  if (Math.random() > 0.16) return;
+
+  const managedClubs = (typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []))
+    .filter(c => c && !c.isPlayer && Array.isArray(c.players) && c.players.length > 20);
+  if (managedClubs.length < 2) return;
+
+  const buyer = managedClubs[randInt(0, managedClubs.length - 1)];
+  const sellers = managedClubs.filter(c => c.id !== buyer.id);
+  const seller = sellers[randInt(0, sellers.length - 1)];
+  if (!buyer || !seller) return;
+
+  const candidates = seller.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.age || 25) <= 32);
+  if (candidates.length === 0) return;
+
+  // バイヤーの予算とチーム水準に合う注目選手を選択
+  const sorted = [...candidates].sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+  const pool = sorted.slice(0, Math.min(6, sorted.length));
+  const target = pool[randInt(0, pool.length - 1)];
+  if (!target) return;
+
+  const fee = typeof calculateTransferFee === 'function' ? calculateTransferFee(target) : (target.transferFee || 5000);
+  const ovr = getPlayerOverallRating(target);
+  const pos = target.primaryPosition || target.pos || 'CM';
+
+  // 半数は欧州クラブへの流出・獲得ニュース、半数は国内クラブ間の実際の選手移動
+  const euroPool = Array.isArray(gameState.europeanMegaClubs) ? gameState.europeanMegaClubs : [];
+  if (euroPool.length > 0 && Math.random() < 0.45 && Array.isArray(gameState.euroTransferList) && gameState.euroTransferList.length > 0) {
+    const ep = gameState.euroTransferList[randInt(0, Math.min(12, gameState.euroTransferList.length - 1))];
+    const mega = euroPool[randInt(0, euroPool.length - 1)];
+    if (ep && mega && (buyer.funds || 0) >= fee && buyer.players.length < (typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50)) {
+      const epFee = typeof calculateTransferFee === 'function' ? calculateTransferFee(ep) : 12000;
+      const epOvr = getPlayerOverallRating(ep);
+      if ((buyer.funds || 0) >= epFee) {
+        gameState.euroTransferList = gameState.euroTransferList.filter(x => x && x.id !== ep.id);
+        buyer.funds -= epFee;
+        ep.isEuroListed = false;
+        ep.euroClubId = null;
+        ep.clubId = buyer.id;
+        ep.isStarter = false;
+        ep.contractYears = 4;
+        buyer.players.push(ep);
+        ensureValidSquadAndStarters(buyer);
+        addNewsItem({
+          category: '移籍',
+          headline: `大型補強：${buyer.name}が${ep.pos || 'MF'} ${ep.name}を${formatMoney(epFee)}で獲得`,
+          body: `${buyer.name}は欧州市場から${ep.name}（${ep.age}歳 / OVR ${epOvr}）の獲得を完了。ライバルクラブの戦力増強に市場が沸いている。`,
+          highlight: epOvr >= 80
+        });
+        return;
+      }
+    }
+  }
+
+  if ((buyer.funds || 0) >= fee && buyer.players.length < (typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50) && seller.players.length > 18) {
+    seller.players = seller.players.filter(p => p && p.id !== target.id);
+    seller.funds = (seller.funds || 0) + fee;
+    buyer.funds -= fee;
+    target.clubId = buyer.id;
+    target.isStarter = false;
+    target.isBench = false;
+    target.assignedPos = null;
+    target.slotIndex = null;
+    target.contractYears = 4;
+    buyer.players.push(target);
+    ensureValidSquadAndStarters(seller);
+    ensureValidSquadAndStarters(buyer);
+    if (typeof autoSelectStarters === 'function') {
+      autoSelectStarters(seller);
+      autoSelectStarters(buyer);
+    }
+    addNewsItem({
+      category: '移籍',
+      headline: `移籍成立：${buyer.name}が${seller.name}から${pos} ${target.name}を獲得`,
+      body: `移籍金は${formatMoney(fee)}。${target.name}（${target.age}歳 / OVR ${ovr}）は4年契約で新天地へ合流する。`,
+      highlight: ovr >= 79
+    });
+  }
+}
+
+/**
+ * 本部画面上部の秘書ブリーフィングバーを描画
+ */
+function renderSecretaryBriefing() {
+  const container = document.getElementById('secretary-briefing-bar');
+  if (!container) return;
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  if (!sec) return;
+
+  const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 44) : '';
+  const speech = typeof getSecretaryBriefingText === 'function' ? getSecretaryBriefingText(playerClub) : '';
+
+  container.innerHTML = `
+    <div class="secretary-avatar-box">${avatarHtml}</div>
+    <div class="secretary-briefing-main">
+      <div class="secretary-briefing-meta">
+        <span class="secretary-name-text">${escapeCommHtml(sec.name)}</span>
+        <span class="secretary-role-text">${escapeCommHtml(sec.roleLabel)}</span>
+        <span class="secretary-spec-text mono">${escapeCommHtml(sec.specialty)}</span>
+      </div>
+      <p class="secretary-briefing-speech">${escapeCommHtml(speech)}</p>
+    </div>
+    <button type="button" class="btn-change-secretary mono" id="btn-open-secretary-modal">担当変更</button>
+  `;
+
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(container);
+  }
+  const changeBtn = document.getElementById('btn-open-secretary-modal');
+  if (changeBtn) {
+    changeBtn.addEventListener('click', openSecretarySelectModal);
+  }
+}
+
+function openSecretarySelectModal() {
+  const modal = document.getElementById('secretary-select-modal');
+  const body = document.getElementById('secretary-modal-body');
+  if (!modal || !body) return;
+
+  const list = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
+    ? SECRETARIES_DATABASE
+    : [];
+  const activeSec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  const activeId = activeSec ? activeSec.id : '';
+
+  body.innerHTML = `
+    <div style="display:flex; flex-direction:column;">
+      ${list.map(sec => {
+        const isSelected = sec.id === activeId;
+        const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 48) : '';
+        return `
+          <div class="secretary-select-row ${isSelected ? 'selected' : ''}" data-select-secretary-id="${sec.id}">
+            <div class="secretary-avatar-box">${avatarHtml}</div>
+            <div style="flex:1; min-width:0;">
+              <div class="flat-row-header">
+                <div class="flat-row-title-wrap">
+                  <span class="flat-row-title" style="color:${isSelected ? 'var(--accent-green)' : '#ffffff'};">${escapeCommHtml(sec.fullName || sec.name)}</span>
+                  <span class="secretary-role-text">${escapeCommHtml(sec.roleLabel)}</span>
+                </div>
+                <span class="secretary-spec-text mono">${escapeCommHtml(sec.specialty)}</span>
+              </div>
+              <div class="flat-row-meta">${escapeCommHtml(sec.bio)}</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(body);
+  }
+
+  body.querySelectorAll('[data-select-secretary-id]').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const secId = e.currentTarget.dataset.selectSecretaryId;
+      selectSecretary(secId);
+    });
+  });
+
+  modal.classList.remove('hidden');
+  setBodyModalLock(true);
+}
+
+function closeSecretarySelectModal() {
+  const modal = document.getElementById('secretary-select-modal');
+  if (modal) modal.classList.add('hidden');
+  setBodyModalLock(false);
+}
+
+function selectSecretary(secId) {
+  const list = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
+    ? SECRETARIES_DATABASE
+    : [];
+  const found = list.find(s => s.id === secId);
+  if (!found) return;
+  gameState.secretaryId = found.id;
+  closeSecretarySelectModal();
+  addDailyLog(`担当秘書を ${found.name}（${found.roleLabel}）へ変更しました。`);
+  if (typeof showToast === 'function') {
+    showToast(`担当秘書が ${found.name} に交代しました`, 'info');
+  }
+  renderSecretaryBriefing();
+  if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+}
+
+/**
+ * メッセージ受信箱とニュースの統合パネル描画
+ */
+function renderOfficeCommPanel() {
+  const inboxListEl = document.getElementById('office-inbox-list');
+  const newsListEl = document.getElementById('office-news-list');
+  const controlsEl = document.getElementById('office-inbox-controls');
+  const unreadBadgeEl = document.getElementById('office-unread-badge');
+  const newsBadgeEl = document.getElementById('office-news-badge');
+  const tabMessagesBtn = document.getElementById('office-comm-tab-messages');
+  const tabNewsBtn = document.getElementById('office-comm-tab-news');
+  if (!inboxListEl || !newsListEl) return;
+
+  const msgs = Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages : [];
+  const news = Array.isArray(gameState.newsFeed) ? gameState.newsFeed : [];
+  const activeTab = gameState.officeCommTab === 'news' ? 'news' : 'messages';
+  const unreadCount = msgs.filter(m => m && !m.read).length;
+
+  if (unreadBadgeEl) {
+    unreadBadgeEl.textContent = `${unreadCount}`;
+    unreadBadgeEl.classList.toggle('has-unread', unreadCount > 0);
+  }
+  if (newsBadgeEl) {
+    newsBadgeEl.textContent = `${news.length}`;
+  }
+  if (tabMessagesBtn) {
+    tabMessagesBtn.classList.toggle('active', activeTab === 'messages');
+    tabMessagesBtn.setAttribute('aria-selected', activeTab === 'messages' ? 'true' : 'false');
+  }
+  if (tabNewsBtn) {
+    tabNewsBtn.classList.toggle('active', activeTab === 'news');
+    tabNewsBtn.setAttribute('aria-selected', activeTab === 'news' ? 'true' : 'false');
+  }
+  if (controlsEl) {
+    controlsEl.classList.toggle('hidden', activeTab !== 'messages');
+  }
+
+  document.querySelectorAll('#inbox-filter-bar .btn-inbox-filter').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.inboxFilter === (gameState.inboxCategoryFilter || 'ALL'));
+  });
+
+  if (activeTab === 'messages') {
+    inboxListEl.classList.remove('hidden');
+    newsListEl.classList.add('hidden');
+
+    const catFilter = gameState.inboxCategoryFilter || 'ALL';
+    const filtered = msgs.filter(m => m && (catFilter === 'ALL' || m.senderType === catFilter));
+
+    if (filtered.length === 0) {
+      inboxListEl.innerHTML = '<div class="comm-empty-msg">該当するメッセージはありません。</div>';
+      return;
+    }
+
+    const senderClassMap = {
+      manager: 'comm-sender-manager',
+      scout: 'comm-sender-scout',
+      board: 'comm-sender-board',
+      secretary: 'comm-sender-secretary'
+    };
+
+    inboxListEl.innerHTML = filtered.slice(0, 25).map(m => {
+      const isExpanded = gameState.expandedMessageId === m.id;
+      const senderClass = senderClassMap[m.senderType] || 'comm-sender-secretary';
+
+      let candHtml = '';
+      if (isExpanded && Array.isArray(m.candidatePlayers) && m.candidatePlayers.length > 0) {
+        const rows = m.candidatePlayers.map(c => {
+          const inList = typeof isInShortlist === 'function' && isInShortlist(c.playerId);
+          const feeLabel = c.isFreeAgent ? '移籍金 £0' : `推定 ${formatMoney(c.estimatedFee)}`;
+          return `
+            <div class="wish-candidate-row">
+              <div class="wish-candidate-info">
+                <span class="wish-candidate-pos mono">${escapeCommHtml(c.pos)}</span>
+                <span class="wish-candidate-name">${escapeCommHtml(c.name)}</span>
+                <span class="wish-candidate-meta mono">OVR ${c.ovr} · ${c.age}歳 · ${escapeCommHtml(c.clubName)}</span>
+                <span class="wish-candidate-fee mono">${feeLabel}</span>
+              </div>
+              <div class="wish-candidate-actions">
+                <button type="button" class="btn btn-secondary btn-sm mono" data-msg-profile="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">詳細</button>
+                <button type="button" class="btn btn-primary btn-sm mono" data-msg-negotiate="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">交渉</button>
+                <button type="button" class="btn btn-secondary btn-sm mono" data-msg-shortlist="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">${inList ? '候補解除' : '候補追加'}</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        candHtml = `<div class="wish-candidates-list">${rows}</div>`;
+      }
+
+      const actionBtnHtml = (isExpanded && m.actionType && m.actionLabel)
+        ? `<div class="inbox-row-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-msg-action="${escapeCommHtml(m.actionType)}" data-msg-payload="${escapeCommHtml(m.actionPayload || '')}" style="white-space:nowrap;flex-shrink:0;">${escapeCommHtml(m.actionLabel)}</button></div>`
+        : '';
+
+      return `
+        <div class="inbox-row ${m.read ? 'is-read' : 'is-unread'} ${isExpanded ? 'is-expanded' : ''}" data-inbox-msg-id="${escapeCommHtml(m.id)}">
+          <div class="inbox-row-head">
+            <div class="inbox-row-left">
+              <span class="${m.read ? 'inbox-read-spacer' : 'inbox-unread-dot'}" aria-hidden="true"></span>
+              <span class="comm-sender-label ${senderClass}">${escapeCommHtml(m.senderName)}</span>
+              <span class="inbox-row-title">${escapeCommHtml(m.title)}</span>
+            </div>
+            <span class="comm-date-text mono">${escapeCommHtml(m.date)}</span>
+          </div>
+          ${isExpanded ? `
+            <div class="inbox-row-detail">
+              <p class="inbox-row-body">${escapeCommHtml(m.body)}</p>
+              ${candHtml}
+              ${actionBtnHtml}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  } else {
+    inboxListEl.classList.add('hidden');
+    newsListEl.classList.remove('hidden');
+
+    if (news.length === 0) {
+      newsListEl.innerHTML = '<div class="comm-empty-msg">現在表示できるニュースはありません。</div>';
+      return;
+    }
+
+    const catClassMap = {
+      '移籍': 'comm-cat-transfer',
+      'リーグ': 'comm-cat-league',
+      'カップ': 'comm-cat-cup',
+      '監督': 'comm-cat-manager'
+    };
+
+    newsListEl.innerHTML = news.slice(0, 25).map(n => {
+      const catClass = catClassMap[n.category] || 'comm-cat-league';
+      return `
+        <div class="news-row ${n.highlight ? 'is-highlight' : ''}">
+          <div class="news-row-head">
+            <div class="news-row-left">
+              <span class="comm-sender-label ${catClass}">${escapeCommHtml(n.category)}</span>
+              <span class="news-row-headline">${escapeCommHtml(n.headline)}</span>
+            </div>
+            <span class="comm-date-text mono">${escapeCommHtml(n.date)}</span>
+          </div>
+          ${n.body ? `<p class="news-row-body">${escapeCommHtml(n.body)}</p>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function handleInboxMessageAction(actionType, payload) {
+  if (!actionType) return;
+  if (actionType === 'open-player-profile' && payload) {
+    if (typeof openPlayerProfileModal === 'function') {
+      openPlayerProfileModal(payload);
+    }
+    return;
+  }
+  if (actionType === 'goto-market-offers') {
+    switchTab('market');
+    switchMarketSubtab('offers');
+    if (payload === 'outgoing' || payload === 'incoming') {
+      gameState.offersSubtab = payload;
+      renderIncomingOffers();
+    }
+    return;
+  }
+  if (typeof handleGmDutyAction === 'function') {
+    handleGmDutyAction(actionType);
+  }
+}
+
+function initOfficeCommAndSecretaryEvents() {
+  const tabMessages = document.getElementById('office-comm-tab-messages');
+  const tabNews = document.getElementById('office-comm-tab-news');
+  if (tabMessages) {
+    tabMessages.addEventListener('click', () => {
+      gameState.officeCommTab = 'messages';
+      renderOfficeCommPanel();
+    });
+  }
+  if (tabNews) {
+    tabNews.addEventListener('click', () => {
+      gameState.officeCommTab = 'news';
+      renderOfficeCommPanel();
+    });
+  }
+
+  const filterBar = document.getElementById('inbox-filter-bar');
+  if (filterBar) {
+    filterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-inbox-filter]');
+      if (!btn || !btn.dataset.inboxFilter) return;
+      gameState.inboxCategoryFilter = btn.dataset.inboxFilter;
+      renderOfficeCommPanel();
+    });
+  }
+
+  const markAllBtn = document.getElementById('btn-mark-all-read');
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', markAllInboxMessagesRead);
+  }
+
+  const inboxListEl = document.getElementById('office-inbox-list');
+  if (inboxListEl) {
+    inboxListEl.addEventListener('click', (e) => {
+      const profBtn = e.target.closest('[data-msg-profile]');
+      if (profBtn) {
+        e.stopPropagation();
+        if (typeof openPlayerProfileModal === 'function') {
+          openPlayerProfileModal(profBtn.dataset.msgProfile);
+        }
+        return;
+      }
+      const negBtn = e.target.closest('[data-msg-negotiate]');
+      if (negBtn) {
+        e.stopPropagation();
+        if (typeof openTransferNegotiationModal === 'function') {
+          openTransferNegotiationModal(negBtn.dataset.msgNegotiate);
+        }
+        return;
+      }
+      const slBtn = e.target.closest('[data-msg-shortlist]');
+      if (slBtn) {
+        e.stopPropagation();
+        if (typeof toggleShortlist === 'function') {
+          toggleShortlist(slBtn.dataset.msgShortlist);
+          renderOfficeCommPanel();
+        }
+        return;
+      }
+      const actBtn = e.target.closest('[data-msg-action]');
+      if (actBtn) {
+        e.stopPropagation();
+        handleInboxMessageAction(actBtn.dataset.msgAction, actBtn.dataset.msgPayload || '');
+        return;
+      }
+      const row = e.target.closest('[data-inbox-msg-id]');
+      if (row && row.dataset.inboxMsgId) {
+        const msgId = row.dataset.inboxMsgId;
+        markInboxMessageRead(msgId);
+        gameState.expandedMessageId = (gameState.expandedMessageId === msgId) ? null : msgId;
+        renderOfficeCommPanel();
+        renderSecretaryBriefing();
+      }
+    });
+  }
+
+  const closeSecBtn = document.getElementById('btn-close-secretary-modal');
+  if (closeSecBtn) {
+    closeSecBtn.addEventListener('click', closeSecretarySelectModal);
+  }
+  const secModal = document.getElementById('secretary-select-modal');
+  if (secModal) {
+    secModal.addEventListener('click', (e) => {
+      if (e.target === secModal) closeSecretarySelectModal();
+    });
+  }
+}
+

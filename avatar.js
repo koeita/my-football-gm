@@ -312,6 +312,9 @@ function getAvatarKitColors(player, club) {
   if (club && Array.isArray(club.kitColors) && club.kitColors.length >= 2) {
     return [club.kitColors[0], club.kitColors[1]];
   }
+  if (player && player.isSecretary) {
+    return Array.isArray(player.kitColors) && player.kitColors.length >= 2 ? player.kitColors : ['#1e293b', '#38bdf8'];
+  }
   if (player && player.isManager) {
     return ['#222a35', '#ffffff'];
   }
@@ -449,6 +452,29 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
     px(15, 26, 2, 1);
     set('#b91c1c');
     px(15, 27, 2, 5);
+  } else if (roleType === 'secretary') {
+    // 秘書専用：オフィスジャケット＋白インナー＋スカーフ/ネクタイアクセント
+    set('#f8fafc');
+    px(13, 25, 6, 3);
+    px(14, 28, 4, 4);
+    set(shadeHex(kitMain, 16));
+    px(11, 25, 2, 2); px(19, 25, 2, 2);
+    px(12, 27, 2, 2); px(18, 27, 2, 2);
+    px(13, 29, 1, 3); px(18, 29, 1, 3);
+    if (genes.isFemale) {
+      // 襟元リボン・スカーフアクセント
+      set(kitAccent);
+      px(14, 26, 4, 1);
+      px(15, 27, 2, 2);
+      set(shadeHex(kitAccent, -24));
+      px(14, 27, 1, 1); px(17, 27, 1, 1);
+    } else {
+      // シックなアクセントネクタイ
+      set(shadeHex(kitAccent, -20));
+      px(15, 26, 2, 1);
+      set(kitAccent);
+      px(15, 27, 2, 5);
+    }
   } else {
     // 襟元（Collar）ストライプ
     set(kitAccent);
@@ -490,8 +516,10 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   // 立体感シェーディング：右側・顎エッジ・顎下の影
   set(skin.shadow);
   px(21, 10, 1, 10);  // 右頬の縦シャドウ
-  px(20, 20, 1, 1);   // 顎右角シャドウ
-  px(11, 20, 1, 1);   // 顎左角シャドウ
+  if (!genes.isFemale) {
+    px(20, 20, 1, 1);   // 顎右角シャドウ
+    px(11, 20, 1, 1);   // 顎左角シャドウ
+  }
   px(12, 21, 1, 1); px(19, 21, 1, 1); // 顎下角
   px(13, 22, 6, 1);   // 顎底辺の境界シャドウ
 
@@ -547,14 +575,21 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
 
   // 10. 【口】
   // 顎から2px上（Y=19）に、引き締まった横2〜3pxの直線ライン
-  set('#7a3328');
-  px(14, 19, 4, 1); // 直線リップ
+  if (genes.isFemale) {
+    set('#1e293b');
+    px(10, 13, 1, 1); px(21, 13, 1, 1); // 目尻のまつ毛アクセント
+    set('#b84a5a');
+    px(14, 19, 4, 1);
+  } else {
+    set('#7a3328');
+    px(14, 19, 4, 1); // 直線リップ
+  }
   // 下唇の立体シャドウ
   set(skin.shadow);
   px(15, 20, 2, 1);
 
   // 11. 【髭（Facial Hair）】
-  const facial = genes.facialHair || 'none';
+  const facial = genes.isFemale ? 'none' : (genes.facialHair || 'none');
   const beardColor = hair.base;
   const beardShadow = hair.shadow;
 
@@ -581,7 +616,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
     px(13, 22, 6, 1);
     set('#7a3328');
     px(14, 19, 4, 1); // 髭の間から覗く口
-  } else if (age >= 28) {
+  } else if (age >= 28 && !genes.isFemale) {
     // 大人の選手：薄い無精髭のシャドウ
     ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
     px(11, 18, 10, 3);
@@ -732,6 +767,7 @@ const PLAYER_AVATAR_LOOKUP = new Map();
 let sharedAvatarCanvas = null;
 
 function resolveAvatarRoleType(player) {
+  if (player && player.isSecretary) return 'secretary';
   if (player && player.isManager) return 'manager';
   if (player && player.isCoach) return 'coach';
   return 'player';
@@ -741,7 +777,7 @@ function getAvatarCacheKey(genes, kit, age, roleType = 'player') {
   const ageBand = age >= 34 ? 'g' : age >= 31 ? 's' : age >= 28 ? 'm' : 'y';
   return [
     genes.skinColor, genes.hairStyle, genes.hairColor, genes.facialHair,
-    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand, roleType
+    genes.accessories, genes.eyeVariant, kit[0], kit[1], ageBand, roleType, genes.isFemale ? 'f' : 'm'
   ].join('|');
 }
 
@@ -917,3 +953,28 @@ function getCoachAvatarHtml(coach, extraClass = 'avatar-sm', canvasSize = 48) {
   const kit = getCoachKitColors(coach.category);
   return getPlayerAvatarHtml({ ...coach, id: coach.id || `coach_${coach.name || 'x'}`, isCoach: true }, { kitColors: kit }, extraClass, canvasSize);
 }
+
+/**
+ * 秘書役アバターの生成（オフィスジャケットのドット絵）
+ */
+function generateSecretaryAvatar(secretary, targetCanvas = null, canvasSize = 48) {
+  if (!secretary) return null;
+  const kit = Array.isArray(secretary.kitColors) && secretary.kitColors.length >= 2
+    ? secretary.kitColors
+    : ['#1e293b', '#38bdf8'];
+  return generatePlayerAvatar({ ...secretary, isSecretary: true }, targetCanvas, { kitColors: kit }, canvasSize);
+}
+
+function getSecretaryAvatarHtml(secretary, extraClass = 'avatar-md', canvasSize = 48) {
+  if (!secretary) return '';
+  const kit = Array.isArray(secretary.kitColors) && secretary.kitColors.length >= 2
+    ? secretary.kitColors
+    : ['#1e293b', '#38bdf8'];
+  return getPlayerAvatarHtml(
+    { ...secretary, id: secretary.id || `sec_${secretary.name || 'x'}`, isSecretary: true },
+    { kitColors: kit },
+    extraClass,
+    canvasSize
+  );
+}
+

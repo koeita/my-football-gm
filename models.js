@@ -3343,10 +3343,25 @@ function advanceScoutingProgressDaily() {
       intel.progress = 100;
       intel.discoveredAtDay = gameState.currentDayIndex || 0;
       gameState.scoutingIntel[task.playerId] = intel;
-      if (typeof findTransferTargetWithSeller === 'function' && typeof addDailyLog === 'function') {
+      if (typeof findTransferTargetWithSeller === 'function') {
         const res = findTransferTargetWithSeller(task.playerId);
         const pName = res && res.player ? res.player.name : task.playerId;
-        addDailyLog(`【スカウト報告】${pName} の詳細調査が完了し、全能力・成長曲線・契約条件が判明しました。`);
+        const pPos = res && res.player ? (res.player.primaryPosition || res.player.pos || '') : '';
+        const pOvr = res && res.player && typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(res.player) : null;
+        if (typeof addDailyLog === 'function') {
+          addDailyLog(`【スカウト報告】${pName} の詳細調査が完了し、全能力・成長曲線・契約条件が判明しました。`);
+        }
+        if (typeof addInboxMessage === 'function') {
+          addInboxMessage({
+            senderType: 'scout',
+            senderName: 'チーフスカウト',
+            title: `詳細スカウト完了：${pPos ? pPos + ' ' : ''}${pName}`,
+            body: `${pName}${pOvr ? `（OVR ${pOvr}）` : ''}の詳細調査が完了し、全能力値と獲得条件が判明しました。選手プロフィールから交渉や獲得候補の確認が行えます。`,
+            actionType: 'open-player-profile',
+            actionLabel: '選手詳細を見る',
+            actionPayload: task.playerId
+          });
+        }
       }
     } else {
       gameState.scoutingIntel[task.playerId] = intel;
@@ -3744,6 +3759,18 @@ function advanceYouthScoutingDaily() {
         const suffix = task.daysRemaining === 0 ? '（任期満了・帰還）' : `（定期報告 #${task.reportsDelivered}）`;
         addDailyLog(`【ユース定期スカウト報告】${reg.name}からレポートが届き、${foundNames.join('・')} を発掘しました！${suffix}`);
       }
+      if (typeof addInboxMessage === 'function' && foundNames.length > 0) {
+        const suffix = task.daysRemaining === 0 ? '今回の報告をもって派遣期間を満了しました。' : '引き続き現地での発掘を継続します。';
+        addInboxMessage({
+          senderType: 'scout',
+          senderName: `ユーススカウト（${reg.name}）`,
+          title: `ユース発掘レポート到着（${foundNames.length}名）`,
+          body: `${reg.name}での視察により、${foundNames.join('、')} を新たに発掘しました。${suffix}ユース画面からアカデミー入団またはトップ昇格の判断を行ってください。`,
+          actionType: 'goto-youth',
+          actionLabel: 'ユース画面を確認',
+          actionPayload: null
+        });
+      }
       if (typeof showToast === 'function') {
         showToast(`ユーススカウト報告（${reg.name}）：${foundNames[0]}`, 'success');
       }
@@ -3818,3 +3845,309 @@ function dismissYouthScoutReport(playerId) {
   gameState.youthScoutReports.splice(idx, 1);
   return true;
 }
+
+// ==========================================================================
+// 11. 秘書役ブリーフィング ＆ 監督からの補強希望分析
+// ==========================================================================
+
+/**
+ * 現在担当中の秘書オブジェクトを返す
+ */
+function getActiveSecretary() {
+  const list = (typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE))
+    ? SECRETARIES_DATABASE
+    : [];
+  if (list.length === 0) {
+    return {
+      id: 'sec_claire',
+      name: 'C. Bennett',
+      fullName: 'Claire Bennett',
+      nationality: 'England',
+      age: 27,
+      roleLabel: 'チーフセクレタリー',
+      specialty: '財務・日程管理',
+      tone: 'polite',
+      kitColors: ['#1e293b', '#38bdf8'],
+      bio: 'クラブの財務管理とスケジュール調整を統括するチーフ秘書。',
+      avatarData: { skinColor: 'fair', hairStyle: 'long', hairColor: 'blond', facialHair: 'none', accessories: 'glasses', eyeVariant: 2, isFemale: true }
+    };
+  }
+  const secId = (typeof gameState !== 'undefined' && gameState.secretaryId) ? gameState.secretaryId : list[0].id;
+  return list.find(s => s.id === secId) || list[0];
+}
+
+/**
+ * 秘書の口調・現在状況に応じた進行ブリーフィング文を生成
+ */
+function getSecretaryBriefingText(club) {
+  const sec = getActiveSecretary();
+  const tone = sec.tone || 'polite';
+  const curDay = (typeof getCurrentCalendarDay === 'function') ? getCurrentCalendarDay() : null;
+  const isMatchPending = (typeof isTodayMatchDayPending === 'function') ? isTodayMatchDayPending() : false;
+  const unreadCount = (typeof gameState !== 'undefined' && Array.isArray(gameState.inboxMessages))
+    ? gameState.inboxMessages.filter(m => m && !m.read).length
+    : 0;
+  const activeOffers = (typeof gameState !== 'undefined' && Array.isArray(gameState.incomingOffers))
+    ? gameState.incomingOffers.filter(o => o && (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0))
+    : [];
+  const wish = (typeof gameState !== 'undefined') ? gameState.managerWishes : null;
+  const injuredStarters = club && Array.isArray(club.players)
+    ? club.players.filter(p => p && p.isStarter && (p.injuryWeeks || 0) > 0)
+    : [];
+  const expiringCount = club && Array.isArray(club.players)
+    ? club.players.filter(p => p && p.contractYears <= 1 && !p.contractRefused && !(p.loanStatus && p.loanStatus.isLoan)).length
+    : 0;
+
+  if (typeof gameState !== 'undefined' && gameState.isGameOver) {
+    return tone === 'active'
+      ? '理事会から厳しい決定が下りました。次のキャリアへ再出発の準備を整えましょう。'
+      : (tone === 'calm'
+        ? '残念ながら現行体制での継続は困難となりました。記録を確認し、新たな一歩をご検討ください。'
+        : '残念なお知らせですが、債務超過により解任通告が届いております。');
+  }
+
+  if (club && (club.funds || 0) < 0) {
+    return tone === 'active'
+      ? `クラブ資金が赤字（${typeof formatMoney === 'function' ? formatMoney(club.funds) : club.funds}）です。選手売却や給与整理を急ぎましょう。`
+      : (tone === 'calm'
+        ? `資金繰りがマイナス圏に入っています。次季開幕前の黒字転換へ向けた財務対策が最優先です。`
+        : `現在クラブ資金が赤字となっております。契約・放出による早急な収支改善をご検討ください。`);
+  }
+
+  if (typeof gameState !== 'undefined' && gameState.isSeasonOver) {
+    return tone === 'active'
+      ? 'オフシーズンに入りました。契約更新と移籍市場の補強を終えたら、新シーズン開幕へ進みましょう。'
+      : (tone === 'calm'
+        ? 'シーズン総括の時期です。契約満了選手の整理と来季に向けた補強完了後、新シーズンへ移行できます。'
+        : '全日程お疲れさまでした。オフシーズンの契約更新や補強が整いましたら、新シーズン開幕へお進みください。');
+  }
+
+  if (isMatchPending) {
+    const mInfo = curDay && typeof getCalendarDayPlayerMatch === 'function' ? getCalendarDayPlayerMatch(curDay) : null;
+    const mTitle = mInfo ? mInfo.title : '公式戦';
+    if (injuredStarters.length > 0) {
+      return tone === 'active'
+        ? `本日は ${mTitle} の試合日ですが、スタメンに負傷者（${injuredStarters[0].name}）がいます。キックオフ前に交代を確認してください。`
+        : `本日は ${mTitle} です。スタメンに負傷中の選手が含まれておりますので、編成をご確認のうえ試合へお臨みください。`;
+    }
+    return tone === 'active'
+      ? `本日は ${mTitle} の試合日です。作戦ボードで準備が整っていれば、いつでもキックオフできます。`
+      : (tone === 'calm'
+        ? `本日 ${mTitle} を迎えます。相手の戦術とスタメンの疲労状態を見極めた上で試合へ進みましょう。`
+        : `本日は ${mTitle} の試合日です。スタメンと戦術の最終確認がお済みでしたら、キックオフへお進みください。`);
+  }
+
+  if (activeOffers.length > 0) {
+    return tone === 'active'
+      ? `他クラブから ${activeOffers.length}件の移籍オファーが来ています。期限切れになる前に移籍タブから回答しましょう。`
+      : `他クラブより ${activeOffers.length}件の獲得打診が届いております。条件をご確認のうえご判断ください。`;
+  }
+
+  if (curDay && curDay.isTransferDeadline) {
+    return tone === 'active'
+      ? '本日は移籍市場の最終日です。やり残した獲得交渉や放出がないか、最後のチェックを行いましょう。'
+      : '本日をもって移籍ウィンドウが閉幕いたします。駆け込みの補強案件があればお早めにご対応ください。';
+  }
+
+  if (wish && !wish.fulfilled && Array.isArray(wish.positions) && wish.positions.length > 0 && curDay && curDay.windowOpen) {
+    const posStr = wish.positions.join('・');
+    return tone === 'active'
+      ? `移籍市場が開いています。監督からは ${posStr} の補強希望が届いていますので、メッセージ欄で推薦選手を確認しましょう。`
+      : (tone === 'calm'
+        ? `市場開放中です。監督が求める ${posStr} の戦力補強に応えられれば、現場の信頼も大きく高まります。`
+        : `移籍市場が開いております。監督より ${posStr} の補強要望書が提出されておりますので、受信箱をご確認ください。`);
+  }
+
+  if (unreadCount > 0) {
+    return tone === 'active'
+      ? `未読メッセージが ${unreadCount}件届いています。重要な報告を見落とさないよう受信箱をチェックしましょう。`
+      : (tone === 'calm'
+        ? `未確認の通達が ${unreadCount}件ございます。時間のあるうちに目を通しておくことをお勧めします。`
+        : `未読のメッセージが ${unreadCount}件届いております。下部の受信箱より内容をご確認ください。`);
+  }
+
+  if (expiringCount > 0) {
+    return tone === 'active'
+      ? `契約残り1年以下の選手が ${expiringCount}名います。主力の流出を防ぐため早めの延長交渉が安心です。`
+      : `契約満了が近い選手が ${expiringCount}名在籍しております。編成画面より契約状況をご確認ください。`;
+  }
+
+  return tone === 'active'
+    ? '現在の緊急案件はありません。戦術の確認やスカウト指示を終えたら、日程を次戦へ進めましょう。'
+    : (tone === 'calm'
+      ? 'クラブ運営は安定して推移しています。次戦への調整と中長期のスカウティングを着実に進めましょう。'
+      : '大きな懸案事項はございません。次戦に向けて準備が整いましたら、日程を進めてまいりましょう。');
+}
+
+/**
+ * 監督の得意フォーメーション・現有戦力を分析し、手薄なポジションと具体的な推薦選手（2〜3名）を算出する
+ */
+function evaluateManagerReinforcementWishes(club) {
+  if (!club || !club.manager) return null;
+  const mgr = club.manager;
+  const formKey = (mgr.preferredFormation && typeof FORMATIONS !== 'undefined' && FORMATIONS[mgr.preferredFormation])
+    ? mgr.preferredFormation
+    : (club.formation && typeof FORMATIONS !== 'undefined' && FORMATIONS[club.formation] ? club.formation : '4-3-3');
+  const formDef = (typeof FORMATIONS !== 'undefined' && FORMATIONS[formKey]) ? FORMATIONS[formKey] : null;
+  if (!formDef || !Array.isArray(formDef.slots)) return null;
+
+  const activePlayers = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const normPos = (pos) => (pos === 'LWB' ? 'LB' : (pos === 'RWB' ? 'RB' : (pos === 'ST' ? 'CF' : pos)));
+
+  // 陣形内の各必要ポジション枠数
+  const slotCounts = {};
+  formDef.slots.forEach(sl => {
+    const np = normPos(sl.pos);
+    slotCounts[np] = (slotCounts[np] || 0) + 1;
+  });
+
+  // 自チームの平均スタメンOVRを基準値として算出
+  const starterOvrs = activePlayers.filter(p => p.isStarter).map(p => getPlayerOverallRating(p));
+  const avgTeamOvr = starterOvrs.length > 0
+    ? Math.round(starterOvrs.reduce((a, b) => a + b, 0) / starterOvrs.length)
+    : (club.basePower || 72);
+
+  // 各必要ポジションの手薄度スコアを算出
+  const needScores = [];
+  for (const [pos, reqSlots] of Object.entries(slotCounts)) {
+    const specialists = activePlayers.filter(p => {
+      ensurePlayerProficiencies(p);
+      const mains = (p.mainPositions || [p.pos]).map(normPos);
+      return mains.includes(pos);
+    }).sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+
+    const bestPlayer = specialists[0] || null;
+    const bestOvr = bestPlayer ? getPlayerOverallRating(bestPlayer) : 55;
+    const count = specialists.length;
+    const targetDepth = reqSlots * 2; // スタメン枠あたり2名（控え込み）が理想
+
+    let score = 0;
+    let reason = '';
+    if (count < reqSlots) {
+      score += 50 + (reqSlots - count) * 20;
+      reason = `本職が${count}名のみ（必要枠${reqSlots}）で絶対数が不足`;
+    } else if (count < targetDepth) {
+      score += 24 + (targetDepth - count) * 8;
+      reason = `控え層を含め選手層が薄い（本職${count}名）`;
+    }
+    if (bestOvr < avgTeamOvr - 2) {
+      score += (avgTeamOvr - bestOvr) * 4;
+      reason = reason || `主力水準（平均OVR ${avgTeamOvr}）に対して質が不足（最高OVR ${bestOvr}）`;
+    }
+    if (bestPlayer && (bestPlayer.age || 25) >= 31) {
+      score += 10;
+      reason = reason || `主力の高齢化（${bestPlayer.name} ${bestPlayer.age}歳）に伴い後継が必要`;
+    }
+    if (bestPlayer && (bestPlayer.contractYears || 2) <= 1) {
+      score += 8;
+    }
+    if (pos === 'GK' && count >= 2 && bestOvr >= avgTeamOvr - 3) {
+      score = Math.max(0, score - 20);
+    }
+
+    if (score > 0 || count <= reqSlots) {
+      needScores.push({ pos, score, count, reqSlots, bestOvr, reason: reason || `${pos}の戦力底上げを希望` });
+    }
+  }
+
+  needScores.sort((a, b) => b.score - a.score);
+  const topNeeds = needScores.slice(0, 2);
+  if (topNeeds.length === 0) {
+    topNeeds.push({ pos: 'CM', score: 10, count: 2, reqSlots: 2, bestOvr: avgTeamOvr, reason: '中盤の層を厚くしローテーション力を高めたい' });
+  }
+  const targetPositions = topNeeds.map(n => n.pos);
+
+  // 市場プールから予算・格に合う推薦選手を最大3名選定
+  const safeBudget = typeof getSafeTransferBudget === 'function' ? getSafeTransferBudget(club) : (club.funds || 20000);
+  const maxFeeBudget = Math.max(2500, Math.round(Math.max(safeBudget, (club.funds || 0) * 0.75) * 1.15));
+  const clubRep = club.reputation || 4500;
+  const maxRepOvr = clubRep >= 5800 ? 92 : (clubRep >= 4200 ? 84 : 81);
+  const minTargetOvr = clamp(avgTeamOvr - 3, 60, 82);
+  const maxTargetOvr = clamp(Math.min(maxRepOvr, avgTeamOvr + 7), minTargetOvr + 3, 90);
+
+  const poolCandidates = [];
+  const seenIds = new Set();
+  const pushIfEligible = (p, clubName, isFree = false) => {
+    if (!p || !p.id || seenIds.has(p.id) || p.isRetired) return;
+    if (p.preContract && p.preContract.toClubId === club.id) return;
+    ensurePlayerProficiencies(p);
+    const mains = (p.mainPositions || [p.pos]).map(normPos);
+    const matchedPos = targetPositions.find(tp => mains.includes(tp));
+    if (!matchedPos) return;
+
+    const ovr = getPlayerOverallRating(p);
+    if (ovr < minTargetOvr || ovr > maxTargetOvr) return;
+    const estFee = isFree ? 0 : (typeof calculateTransferFee === 'function' ? calculateTransferFee(p) : (p.transferFee || 5000));
+    if (!isFree && estFee > maxFeeBudget) return;
+
+    seenIds.add(p.id);
+    const ageScore = (p.age || 25) <= 24 ? 8 : ((p.age || 25) <= 28 ? 4 : -4);
+    const posPriority = matchedPos === targetPositions[0] ? 12 : 6;
+    const fitScore = ovr * 2 + ageScore + posPriority + (isFree ? 6 : 0) - Math.round(estFee / 5000);
+    poolCandidates.push({
+      playerId: p.id,
+      name: p.name,
+      pos: normPos(p.primaryPosition || p.pos),
+      matchedPos,
+      age: p.age || 24,
+      ovr,
+      clubName: clubName || '無所属',
+      estimatedFee: estFee,
+      wage: p.wage || 20,
+      isFreeAgent: isFree,
+      _score: fitScore
+    });
+  };
+
+  const managedClubs = typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []);
+  for (const c of managedClubs) {
+    if (!c || c.id === club.id || c.isPlayer) continue;
+    for (const p of (c.players || [])) {
+      pushIfEligible(p, c.name, false);
+    }
+  }
+  if (typeof gameState !== 'undefined' && Array.isArray(gameState.euroTransferList)) {
+    for (const ep of gameState.euroTransferList) {
+      const eDef = (ep && (ep.euroClubId || ep.clubId) && typeof findEuropeanClubDefinitionById === 'function')
+        ? findEuropeanClubDefinitionById(ep.euroClubId || ep.clubId)
+        : null;
+      pushIfEligible(ep, (eDef && eDef.name) || ep.lastClubName || '欧州クラブ', false);
+    }
+  }
+  if (typeof gameState !== 'undefined' && Array.isArray(gameState.transferMarket)) {
+    for (const fp of gameState.transferMarket) {
+      pushIfEligible(fp, '無所属', true);
+    }
+  }
+
+  poolCandidates.sort((a, b) => b._score - a._score);
+  const picked = [];
+  // ポジションが偏らないよう第1希望・第2希望から優先確保して最大3名
+  for (const tp of targetPositions) {
+    const hit = poolCandidates.find(c => c.matchedPos === tp && !picked.some(x => x.playerId === c.playerId));
+    if (hit) picked.push(hit);
+  }
+  for (const c of poolCandidates) {
+    if (picked.length >= 3) break;
+    if (!picked.some(x => x.playerId === c.playerId)) {
+      picked.push(c);
+    }
+  }
+  const candidates = picked.map(({ _score, ...rest }) => rest);
+
+  return {
+    id: `wish_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    managerId: mgr.id,
+    managerName: mgr.name,
+    formation: formKey,
+    tactic: mgr.preferredTactic || club.tactic || 'possession',
+    positions: targetPositions,
+    reasons: topNeeds.map(n => `${n.pos}: ${n.reason}`),
+    candidates,
+    fulfilled: false,
+    fulfilledPlayerName: null,
+    season: (typeof gameState !== 'undefined' ? gameState.season : 1) || 1,
+    createdDayIndex: (typeof gameState !== 'undefined' ? gameState.currentDayIndex : 0) || 0
+  };
+}
+

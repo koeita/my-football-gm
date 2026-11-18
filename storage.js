@@ -266,7 +266,12 @@ function saveGameToStorage(force = false) {
         sellOnRights: gameState.sellOnRights || [],
         intlBreakState: gameState.intlBreakState || null,
         pendingBoardCrisis: Boolean(gameState.pendingBoardCrisis),
-        pendingDeadlineOffer: Boolean(gameState.pendingDeadlineOffer)
+        pendingDeadlineOffer: Boolean(gameState.pendingDeadlineOffer),
+        secretaryId: gameState.secretaryId || 'sec_claire',
+        inboxMessages: Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages.slice(0, 40) : [],
+        newsFeed: Array.isArray(gameState.newsFeed) ? gameState.newsFeed.slice(0, 40) : [],
+        managerWishes: gameState.managerWishes || null,
+        officeCommTab: gameState.officeCommTab || 'messages'
       }
     };
     if (typeof dehydrateCompetitionsForSave === 'function') {
@@ -358,6 +363,8 @@ function saveGameToStorage(force = false) {
       payload.state.matchHistory = payload.state.matchHistory.slice(-12);
       payload.state.lastWeekResults = [];
       payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 20) : [];
+      payload.state.inboxMessages = Array.isArray(payload.state.inboxMessages) ? payload.state.inboxMessages.slice(0, 20) : [];
+      payload.state.newsFeed = Array.isArray(payload.state.newsFeed) ? payload.state.newsFeed.slice(0, 20) : [];
       if (Array.isArray(payload.state.calendar)) {
         payload.state.calendar = payload.state.calendar.map(d => {
           if (!d || !d.matchResult) return d;
@@ -420,6 +427,8 @@ function saveGameToStorage(force = false) {
           // Stage 3: 最終防衛ライン（履歴・ログ全削除、市場リスト最小化）
           payload.state.matchHistory = [];
           payload.state.dailyLogs = [];
+          payload.state.inboxMessages = [];
+          payload.state.newsFeed = [];
           payload.state.transferMarket = slimPool(payload.state.transferMarket, 35);
           payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 25);
           payload.state.youthCandidates = slimPool(payload.state.youthCandidates, 15);
@@ -912,8 +921,21 @@ function loadGameFromStorage() {
     if (gameState.intlBreakState === undefined) gameState.intlBreakState = null;
     gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
     gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);
+    if (!gameState.secretaryId) gameState.secretaryId = 'sec_claire';
+    if (!Array.isArray(gameState.inboxMessages)) gameState.inboxMessages = [];
+    if (!Array.isArray(gameState.newsFeed)) gameState.newsFeed = [];
+    if (gameState.managerWishes === undefined) gameState.managerWishes = null;
+    if (!gameState.officeCommTab) gameState.officeCommTab = 'messages';
+    if (!gameState.inboxCategoryFilter) gameState.inboxCategoryFilter = 'ALL';
     if (typeof syncAllSubtabsDOM === 'function') {
       syncAllSubtabsDOM();
+    }
+    const pClubLoaded = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    if (pClubLoaded && !gameState.managerWishes && typeof evaluateManagerReinforcementWishes === 'function') {
+      gameState.managerWishes = evaluateManagerReinforcementWishes(pClubLoaded);
+    }
+    if (gameState.inboxMessages.length === 0 && typeof ensureInitialOfficeMessagesAndNews === 'function') {
+      ensureInitialOfficeMessagesAndNews();
     }
     return true;
   } catch (e) {
