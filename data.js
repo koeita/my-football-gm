@@ -30,10 +30,12 @@ function getManagerTacticLabel(key) {
 // ==========================================================================
 
 const MANAGER_RANK_DEFINITIONS = {
-  S: { label: 'S', title: '世界的名将', minReputation: 6200, buffPerMatch: 0.032, highTrustBonus: 0.015, youthGrowthBonus: 0.25, allGrowthBonus: 0.20, badgeColor: '#f59e0b' },
+  S: { label: 'S', title: '世界的名将', minReputation: 6200, buffPerMatch: 0.032, highTrustBonus: 0.015, youthGrowthBonus: 0.25, allGrowthBonus: 0.20, badgeColor: '#7dd3fc' },
   A: { label: 'A', title: '一流指揮官', minReputation: 4500, buffPerMatch: 0.024, highTrustBonus: 0.010, youthGrowthBonus: 0.15, allGrowthBonus: 0.10, badgeColor: '#2ecc71' },
-  B: { label: 'B', title: '実力派', minReputation: 0, buffPerMatch: 0.016, highTrustBonus: 0.008, youthGrowthBonus: 0.10, allGrowthBonus: 0.0, badgeColor: '#38bdf8' },
-  C: { label: 'C', title: '育成・新鋭', minReputation: 0, buffPerMatch: 0.010, highTrustBonus: 0.005, youthGrowthBonus: 0.30, allGrowthBonus: 0.0, badgeColor: '#94a3b8' }
+  B: { label: 'B', title: '実力派', minReputation: 0, buffPerMatch: 0.016, highTrustBonus: 0.008, youthGrowthBonus: 0.10, allGrowthBonus: 0.0, badgeColor: '#a3e635' },
+  C: { label: 'C', title: '育成・新鋭', minReputation: 0, buffPerMatch: 0.010, highTrustBonus: 0.005, youthGrowthBonus: 0.30, allGrowthBonus: 0.0, badgeColor: '#fbbf24' },
+  D: { label: 'D', title: '発展途上', minReputation: 0, buffPerMatch: 0.006, highTrustBonus: 0.003, youthGrowthBonus: 0.15, allGrowthBonus: 0.0, badgeColor: '#fb923c' },
+  E: { label: 'E', title: '無名・新人', minReputation: 0, buffPerMatch: 0.003, highTrustBonus: 0.001, youthGrowthBonus: 0.10, allGrowthBonus: 0.0, badgeColor: '#f87171' }
 };
 
 const MANAGERS_DATABASE = [

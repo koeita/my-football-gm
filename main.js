@@ -10132,9 +10132,7 @@ function getAttributeRankInfo(val) {
   const v = typeof val === 'number' && !Number.isNaN(val) ? val : 50;
   if (v >= 90) return { rank: 'S', color: '#7dd3fc', cls: 'hex-rank-s' };
   if (v >= 80) return { rank: 'A', color: '#2ecc71', cls: 'hex-rank-a' };
-  if (v >= 75) return { rank: 'B+', color: '#a3e635', cls: 'hex-rank-b' };
   if (v >= 70) return { rank: 'B', color: '#a3e635', cls: 'hex-rank-b' };
-  if (v >= 65) return { rank: 'C+', color: '#fbbf24', cls: 'hex-rank-c' };
   if (v >= 60) return { rank: 'C', color: '#fbbf24', cls: 'hex-rank-c' };
   if (v >= 50) return { rank: 'D', color: '#fb923c', cls: 'hex-rank-d' };
   return { rank: 'E', color: '#f87171', cls: 'hex-rank-e' };
@@ -11085,7 +11083,7 @@ function openPlayerProfileModal(playerId) {
 
   const headerFootEl = document.getElementById('profile-header-foot');
   if (headerFootEl) {
-    headerFootEl.innerHTML = formatFootBadge(p);
+    headerFootEl.innerHTML = '';
   }
   const headerOvrEl = document.getElementById('profile-header-ovr');
   if (headerOvrEl) {
@@ -11111,6 +11109,7 @@ function openPlayerProfileModal(playerId) {
     ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
     : 0;
   const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
   const roleStatusText = isMarket
     ? '移籍リスト登録中'
     : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
@@ -11152,23 +11151,8 @@ function openPlayerProfileModal(playerId) {
 
   const topStatusEl = document.getElementById('profile-top-status');
   if (topStatusEl) {
-    if (isInjured) {
-      topStatusEl.textContent = `負傷 残${p.injuryDays || (p.injuryWeeks * 7)}日`;
-      topStatusEl.className = 'profile-top-status-badge mono is-danger';
-    } else if (isYouth) {
-      const potRank = p.potential || p.potentialGrade || 'B';
-      topStatusEl.textContent = `ユース · POT ${potRank}`;
-      topStatusEl.className = 'profile-top-status-badge mono is-gold';
-    } else if (isMarket) {
-      topStatusEl.textContent = isFreeAgentPlayer ? '無所属 FA' : '移籍市場';
-      topStatusEl.className = 'profile-top-status-badge mono is-cyan';
-    } else if (p.isStarter) {
-      topStatusEl.textContent = `スタメン ${p.assignedPos || primaryPos}`;
-      topStatusEl.className = 'profile-top-status-badge mono is-green';
-    } else {
-      topStatusEl.textContent = '控えメンバー';
-      topStatusEl.className = 'profile-top-status-badge mono';
-    }
+    topStatusEl.textContent = '';
+    topStatusEl.className = 'profile-top-status-badge mono hidden';
   }
 
   // スカウティングレポート用 大型ドット絵アバター（64x64 / 2倍スケール描画）
@@ -11197,7 +11181,8 @@ function openPlayerProfileModal(playerId) {
     posPillEl.innerHTML = `
       <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
       <span class="profile-meta-sep">|</span>
-      <span class="profile-meta-text">${footShortText} · ${heightText}</span>
+      <span class="profile-meta-foot">${formatFootBadge(p)}</span>
+      <span class="profile-meta-text">${heightText}</span>
       <span class="profile-meta-sep">|</span>
       <span class="profile-meta-nat">${nationalityDisplay}</span>
     `;
@@ -11205,10 +11190,8 @@ function openPlayerProfileModal(playerId) {
 
   const nameEl = document.getElementById('profile-player-name');
   if (nameEl) {
-    const fullSubHtml = (p.fullName && p.fullName !== p.name)
-      ? `<span class="profile-fullname-sub">${p.fullName}</span>`
-      : '';
-    nameEl.innerHTML = `<span class="profile-name-main">${p.name}</span><span class="profile-age-inline">(${p.age})</span>${fullSubHtml}`;
+    const displayFullName = p.fullName || p.name;
+    nameEl.innerHTML = `<span class="profile-name-main">${displayFullName}</span><span class="profile-age-inline">(${p.age})</span>`;
   }
 
   const bioRowEl = document.getElementById('profile-bio-row');
@@ -11216,15 +11199,15 @@ function openPlayerProfileModal(playerId) {
     let youthMetaHtml = '';
     if (isYouth) {
       const potRank = p.potential || p.potentialGrade || 'B';
-      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
+      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : (potRank === 'C' ? 'stat-rank-C' : (potRank === 'D' ? 'stat-rank-D' : 'stat-rank-E'))));
       youthMetaHtml = `
-        <span class="profile-bio-chip">想定週給 <strong class="accent-green">£${p.wage || 2.5}k</strong></span>
+        <span class="profile-bio-chip">想定週給 <strong class="accent-green">£${(p.wage || 2.5).toLocaleString()}k/週</strong></span>
         <span class="profile-bio-sep">·</span>
         <span class="profile-bio-chip ${potRankClass}" style="font-weight:800;">POT: ${potRank}</span>
       `;
     } else {
       youthMetaHtml = `
-        <span class="profile-bio-chip">${isMarket ? '要求年俸' : '年俸'} <strong class="accent-gold">${formatMoney(p.salary)}</strong></span>
+        <span class="profile-bio-chip">${isMarket ? '要求週給' : '週給'} <strong class="accent-gold">£${weeklyWageVal.toLocaleString()}k/週</strong></span>
         <span class="profile-bio-sep">·</span>
         <button type="button" class="profile-inline-mv-link profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示">市場価値 <strong class="accent-green">${formatMoney(estMarketValue)}</strong></button>
         <span class="profile-bio-sep">·</span>
@@ -11520,7 +11503,6 @@ function openPlayerProfileModal(playerId) {
             <div class="profile-ability-col-pitch">
               <div class="profile-col-heading">
                 <span class="profile-col-title">適性配置</span>
-                <span class="profile-col-fit-note mono">${mains.join('·')}</span>
               </div>
               ${buildPlayerPitchProficiencyHtml(p)}
             </div>
@@ -11675,7 +11657,7 @@ function openPlayerProfileModal(playerId) {
                 <div class="profile-fit-row"><span class="text-muted">選手名</span><span class="mono"><strong>${p.fullName || p.name}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">国籍</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${nationalityDisplay}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">生年・年齢</span><span class="mono"><strong>${birthYear}年 (${p.age}歳)</strong></span></div>
-                <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono"><strong>${heightText} / ${footText}</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${heightText}</strong> / ${formatFootBadge(p)}</span></div>
                 <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubDisplayLabel} (${squadNumText})</strong></span></div>
               </div>
             </div>
@@ -15233,13 +15215,13 @@ function openInitialStaffSetupModal(club) {
     baseMgrWage = 86;
     baseCoachWage = 25;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 62, discipline: 79 } },     // S/B/C/A
-      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 61 } },  // B/S/A/C
+      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 56, discipline: 79 } },     // S/B/D/A
+      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 55 } },  // B/S/A/D
       { focus: 'development', rank: 'A', stats: { tactics: 63, motivation: 78, development: 89, discipline: 72 } }, // C/A/S/B
-      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 62, development: 71, discipline: 89 } }   // A/C/B/S
+      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 54, development: 71, discipline: 89 } }   // A/D/B/S
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 73 } }, // S/C/B
+      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 55, analysis: 73 } }, // S/D/B
       { focus: 'youthDev', rank: 'A', stats: { coaching: 73, youthDev: 89, analysis: 61 } }, // B/S/C
       { focus: 'analysis', rank: 'A', stats: { coaching: 80, youthDev: 71, analysis: 81 } }  // A/B/A
     ];
@@ -15247,29 +15229,29 @@ function openInitialStaffSetupModal(club) {
     baseMgrWage = 62;
     baseCoachWage = 18;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 60, discipline: 71 } },     // A/B/C/B
-      { focus: 'motivation', rank: 'B', stats: { tactics: 61, motivation: 83, development: 71, discipline: 68 } },  // C/A/B/B
-      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 60, development: 84, discipline: 69 } }, // B/C/A/B
-      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 59, discipline: 83 } }   // B/B/C/A
+      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 54, discipline: 71 } },     // A/B/D/B
+      { focus: 'motivation', rank: 'B', stats: { tactics: 56, motivation: 83, development: 71, discipline: 68 } },  // D/A/B/B
+      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 55, development: 84, discipline: 69 } }, // B/D/A/B
+      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 52, discipline: 83 } }   // B/B/D/A
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 59, analysis: 69 } }, // A/C/B
-      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 59 } }, // B/A/C
-      { focus: 'analysis', rank: 'B', stats: { coaching: 60, youthDev: 70, analysis: 82 } }  // C/B/A
+      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 53, analysis: 69 } }, // A/D/B
+      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 54 } }, // B/A/D
+      { focus: 'analysis', rank: 'B', stats: { coaching: 59, youthDev: 70, analysis: 82 } }  // C/B/A
     ];
   } else {
     baseMgrWage = 40;
     baseCoachWage = 12;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 61, development: 56, discipline: 66 } },     // B/C/C/B
-      { focus: 'motivation', rank: 'C', stats: { tactics: 57, motivation: 75, development: 67, discipline: 59 } },  // C/B/B/C
-      { focus: 'development', rank: 'C', stats: { tactics: 66, motivation: 57, development: 75, discipline: 60 } }, // B/C/B/C
-      { focus: 'discipline', rank: 'C', stats: { tactics: 60, motivation: 67, development: 56, discipline: 74 } }   // C/B/C/B
+      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 59, development: 46, discipline: 64 } },     // B/C/E/C
+      { focus: 'motivation', rank: 'C', stats: { tactics: 51, motivation: 75, development: 68, discipline: 45 } },  // D/B/B/E
+      { focus: 'development', rank: 'C', stats: { tactics: 65, motivation: 47, development: 75, discipline: 59 } }, // C/E/B/C
+      { focus: 'discipline', rank: 'C', stats: { tactics: 56, motivation: 68, development: 45, discipline: 74 } }   // D/B/E/B
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 57, analysis: 62 } }, // B/C/C
-      { focus: 'youthDev', rank: 'C', stats: { coaching: 58, youthDev: 75, analysis: 61 } }, // C/B/C
-      { focus: 'analysis', rank: 'C', stats: { coaching: 62, youthDev: 57, analysis: 74 } }  // C/C/B
+      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 46, analysis: 61 } }, // B/E/C
+      { focus: 'youthDev', rank: 'C', stats: { coaching: 53, youthDev: 75, analysis: 47 } }, // D/B/E
+      { focus: 'analysis', rank: 'C', stats: { coaching: 61, youthDev: 52, analysis: 74 } }  // C/D/B
     ];
   }
 

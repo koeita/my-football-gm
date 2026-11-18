@@ -18,31 +18,36 @@ let playerIdCounter = 1;
 function getStaffStatRank(val) {
   const v = typeof val === 'number' ? val : 68;
   if (v >= 88) return 'S';
-  if (v >= 77) return 'A';
-  if (v >= 65) return 'B';
-  if (v >= 54) return 'C';
-  return 'D';
+  if (v >= 78) return 'A';
+  if (v >= 68) return 'B';
+  if (v >= 58) return 'C';
+  if (v >= 48) return 'D';
+  return 'E';
 }
 
 function inferManagerRankFromWage(wage = 70) {
   if (wage >= 110) return 'S';
   if (wage >= 80) return 'A';
   if (wage >= 55) return 'B';
-  return 'C';
+  if (wage >= 36) return 'C';
+  if (wage >= 24) return 'D';
+  return 'E';
 }
 
 function ensureManagerRankAndStats(mgr, focusHint = null) {
   if (!mgr || typeof mgr !== 'object') return mgr;
-  if (!mgr.rank || !['S', 'A', 'B', 'C'].includes(mgr.rank)) {
+  if (!mgr.rank || !['S', 'A', 'B', 'C', 'D', 'E'].includes(mgr.rank)) {
     mgr.rank = inferManagerRankFromWage(mgr.weeklyWage || 70);
   }
-  const baseRange = mgr.rank === 'S' ? [82, 93] : (mgr.rank === 'A' ? [74, 85] : (mgr.rank === 'B' ? [65, 76] : [56, 68]));
+  const baseRange = mgr.rank === 'S'
+    ? [78, 92]
+    : (mgr.rank === 'A' ? [68, 84] : (mgr.rank === 'B' ? [56, 76] : (mgr.rank === 'C' ? [46, 66] : (mgr.rank === 'D' ? [42, 58] : [35, 50]))));
   if (!mgr.stats || typeof mgr.stats !== 'object') {
     const pick = () => randInt(baseRange[0], baseRange[1]);
     const stats = { tactics: pick(), motivation: pick(), development: pick(), discipline: pick() };
     const focus = focusHint || mgr.focus || ['tactics', 'motivation', 'development', 'discipline'][randInt(0, 3)];
     if (stats[focus] !== undefined) {
-      stats[focus] = clamp(stats[focus] + randInt(5, 8), 50, 99);
+      stats[focus] = clamp(stats[focus] + randInt(6, 10), 45, 99);
     }
     mgr.stats = stats;
   } else {
@@ -133,13 +138,15 @@ function getManagerBuyoutFee(manager) {
 function ensureCoachStats(coach, focusHint = null) {
   if (!coach || typeof coach !== 'object') return coach;
   const r = coach.rank || 'B';
-  const baseRange = r === 'A' ? [78, 89] : (r === 'B' ? [66, 77] : [54, 65]);
+  const baseRange = r === 'S'
+    ? [78, 92]
+    : (r === 'A' ? [68, 86] : (r === 'B' ? [56, 76] : (r === 'C' ? [45, 66] : (r === 'D' ? [40, 56] : [35, 48]))));
   if (!coach.stats || typeof coach.stats !== 'object') {
     const pick = () => randInt(baseRange[0], baseRange[1]);
     const stats = { coaching: pick(), youthDev: pick(), analysis: pick() };
     const focus = focusHint || coach.focus || ['coaching', 'youthDev', 'analysis'][randInt(0, 2)];
     if (stats[focus] !== undefined) {
-      stats[focus] = clamp(stats[focus] + randInt(6, 9), 45, 99);
+      stats[focus] = clamp(stats[focus] + randInt(7, 10), 45, 99);
     }
     coach.stats = stats;
   } else {

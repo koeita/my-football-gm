@@ -16477,14 +16477,17 @@ body {
 }
 
 .staff-stat-chip.stat-rank-S strong, .stat-rank-S { color: #7dd3fc !important; font-weight: 900; }
-.staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #34d399 !important; font-weight: 800; }
-.staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #fbbf24 !important; font-weight: 700; }
-.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #f87171 !important; font-weight: 700; }
-.staff-stat-chip.stat-rank-D strong, .stat-rank-D { color: #94a3b8 !important; }
+.staff-stat-chip.stat-rank-A strong, .stat-rank-A { color: #2ecc71 !important; font-weight: 800; }
+.staff-stat-chip.stat-rank-B strong, .stat-rank-B { color: #a3e635 !important; font-weight: 800; }
+.staff-stat-chip.stat-rank-C strong, .stat-rank-C { color: #fbbf24 !important; font-weight: 700; }
+.staff-stat-chip.stat-rank-D strong, .stat-rank-D { color: #fb923c !important; font-weight: 700; }
+.staff-stat-chip.stat-rank-E strong, .stat-rank-E { color: #f87171 !important; font-weight: 700; }
 .staff-stat-chip.stat-rank-S { border-color: rgba(125, 211, 252, 0.55); background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(37, 99, 235, 0.16)); }
-.staff-stat-chip.stat-rank-A { border-color: rgba(52, 211, 153, 0.45); background: rgba(46, 204, 113, 0.14); }
-.staff-stat-chip.stat-rank-B { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.09); }
-.staff-stat-chip.stat-rank-C { border-color: rgba(239, 68, 68, 0.28); background: rgba(239, 68, 68, 0.06); }
+.staff-stat-chip.stat-rank-A { border-color: rgba(46, 204, 113, 0.45); background: rgba(46, 204, 113, 0.14); }
+.staff-stat-chip.stat-rank-B { border-color: rgba(163, 230, 53, 0.40); background: rgba(163, 230, 53, 0.10); }
+.staff-stat-chip.stat-rank-C { border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.09); }
+.staff-stat-chip.stat-rank-D { border-color: rgba(251, 146, 60, 0.32); background: rgba(251, 146, 60, 0.08); }
+.staff-stat-chip.stat-rank-E { border-color: rgba(248, 113, 113, 0.28); background: rgba(248, 113, 113, 0.06); }
 
 
 /* ==========================================================================
@@ -18764,6 +18767,36 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   .profile-cond-val {
     font-size: 10px;
   }
+}
+
+.stat-rank-E,
+.profile-bio-chip.stat-rank-E {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+#player-profile-modal .profile-header-foot-box {
+  display: none !important;
+}
+
+.profile-meta-foot {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.profile-meta-foot .foot-badge,
+.profile-fit-row .foot-badge {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.profile-meta-foot .foot-print-svg,
+.profile-fit-row .foot-print-svg {
+  width: 18px;
+  height: 14px;
+  vertical-align: middle;
 }
 
 
