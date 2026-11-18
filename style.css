@@ -5340,7 +5340,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .day-card.is-today {
   border-color: var(--accent-green);
   background-color: rgba(46, 204, 113, 0.09);
-  box-shadow: inset 0 0 0 1px var(--accent-green);
+  box-shadow: none;
 }
 
 .day-card.is-matchday {
@@ -5349,7 +5349,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .day-card.is-today.is-matchday {
   background-color: rgba(46, 204, 113, 0.16);
-  box-shadow: 0 0 10px rgba(46, 204, 113, 0.25), inset 0 0 0 1px var(--accent-green);
+  box-shadow: none;
 }
 
 .day-card-header {
@@ -5394,9 +5394,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .day-event-match {
-  background-color: rgba(46, 204, 113, 0.25);
+  background-color: transparent;
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.5);
+  border: none;
   font-weight: 700;
 }
 
@@ -13248,13 +13248,13 @@ button.hidden,
 .cal-venue-tag.venue-home {
   background: rgba(46, 204, 113, 0.2);
   color: var(--accent-green);
-  border: 1px solid rgba(46, 204, 113, 0.4);
+  border: none;
 }
 
 .cal-venue-tag.venue-away {
   background: rgba(52, 152, 219, 0.2);
   color: #3498db;
-  border: 1px solid rgba(52, 152, 219, 0.4);
+  border: none;
 }
 
 .cal-next-tag {
@@ -13293,19 +13293,19 @@ button.hidden,
 .cal-score-badge.badge-win {
   background: rgba(46, 204, 113, 0.22);
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.45);
+  border: none;
 }
 
 .cal-score-badge.badge-draw {
   background: rgba(241, 196, 15, 0.2);
   color: #f1c40f;
-  border: 1px solid rgba(241, 196, 15, 0.45);
+  border: none;
 }
 
 .cal-score-badge.badge-lose {
   background: rgba(231, 76, 60, 0.22);
   color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.45);
+  border: none;
 }
 
 /* モバイル対応（幅768px以下）：カレンダー表示時は常に6行分の均等枠を確保し縦スクロールゼロで1画面に収める */
@@ -14343,68 +14343,83 @@ button.hidden,
   color: #FFFFFF;
 }
 
-/* カレンダー日付マスの大会識別バッジ */
+/* カレンダー・週間スケジュール内の大会識別テキスト（外枠との二重枠を防ぐフラット表記） */
 .cal-cup-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 0 2px;
+  border-radius: 2px;
+  border: none;
+  background: transparent;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.3px;
-  margin-bottom: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.2px;
+  margin-bottom: 0;
+  box-shadow: none;
 }
 
 .badge-comp-lgc,
 .badge-comp-l-cup {
-  background: #0284C7;
-  color: #FFFFFF;
-  border: 1px solid #38BDF8;
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-nat,
 .badge-comp-n-cup {
-  background: #DC2626;
-  color: #FFFFFF;
-  border: 1px solid #F87171;
+  background: transparent;
+  color: #fca5a5;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-cl,
 .badge-comp-ect {
-  background: #0A192F;
-  color: #38BDF8;
-  border: 1px solid #00F0FF;
-  box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-el,
 .badge-comp-epc {
-  background: #B45309;
-  color: #FEF08A;
-  border: 1px solid #F59E0B;
+  background: transparent;
+  color: #fcd34d;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-ecl,
 .badge-comp-ecs {
-  background: #065F46;
-  color: #A7F3D0;
-  border: 1px solid #10B981;
+  background: transparent;
+  color: #6ee7b7;
+  border: none;
+  box-shadow: none;
+}
+
+.badge-comp-wct {
+  background: transparent;
+  color: #c4b5fd;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-d1,
 .badge-comp-eng-d1 {
-  background: #1E293B;
-  color: #38BDF8;
-  border: 1px solid #38BDF8;
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-d2,
 .badge-comp-eng-d2 {
-  background: #1E293B;
-  color: #CBD5E1;
-  border: 1px solid #64748B;
+  background: transparent;
+  color: #cbd5e1;
+  border: none;
+  box-shadow: none;
 }
 
 /* 過密日程アラートバッジ */
@@ -15021,9 +15036,10 @@ body {
 .cal-cup-badge,
 .day-event-badge {
   border-radius: 4px !important;
+  border: none !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
 }
 
 /* 7. MATCHDAYカード＆アクションボタンの洗練 */
@@ -15407,7 +15423,11 @@ body {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  display: block !important;
+}
+
+.gm-tasks-mini-summary.hidden,
+.gm-tasks-grid.hidden {
+  display: none !important;
 }
 
 .gm-tasks-footer-bar {

@@ -869,6 +869,7 @@ function advanceCalendarDay(skipRender = false) {
   const prevDay = getCurrentCalendarDay();
   gameState.currentDayIndex++;
   const nextDay = getCurrentCalendarDay();
+  if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
 
   // シーズンカレンダーの終了判定（リーグ戦全節完了 かつ 残りのカップ戦・欧州コンペ完了時のみ終了）
   if (!nextDay || gameState.currentDayIndex >= gameState.calendar.length || (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches())) {
@@ -6619,6 +6620,12 @@ function startNextSeason() {
     }
   }
 
+  const prevCalendarLen = Array.isArray(gameState.calendar) && gameState.calendar.length > 0 ? gameState.calendar.length : 330;
+  if (Array.isArray(gameState.newsFeed)) {
+    gameState.newsFeed.forEach(n => {
+      if (n) n.dayIndex = Number(n.dayIndex || 0) - prevCalendarLen;
+    });
+  }
   const inD2 = isPlayerInSecondDivision();
   const activeClubs = getActivePlayerLeagueClubs();
   gameState.totalWeeks = inD2 ? 46 : 38;
@@ -6628,6 +6635,7 @@ function startNextSeason() {
     initSeasonCompetitions();
   }
   gameState.currentDayIndex = 0;
+  if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   gameState.isAdvancingCalendar = false;
   if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
   gameState.dailyLogs = [
@@ -10407,9 +10415,9 @@ function renderGmDuties() {
 
   const isLocked = gameState.isGameOver || gameState.isSimulating;
 
-  // 折りたたみ時の1行サマリー表示
+  // 折りたたみ時の1行サマリー表示（展開時は完全に空＆非表示にして重複を防ぐ）
   if (miniSummaryEl) {
-    if (isCollapsed) {
+    if (isCollapsed && duties.length > 0) {
       const topDuty = duties[0];
       miniSummaryEl.classList.remove('hidden');
       miniSummaryEl.innerHTML = `
@@ -10426,11 +10434,13 @@ function renderGmDuties() {
       `;
     } else {
       miniSummaryEl.classList.add('hidden');
+      miniSummaryEl.innerHTML = '';
     }
   }
 
   if (isCollapsed) {
     listEl.classList.add('hidden');
+    listEl.innerHTML = '';
   } else {
     listEl.classList.remove('hidden');
     listEl.innerHTML = duties.map(d => {
@@ -17444,12 +17454,40 @@ function markAllInboxMessagesRead() {
 }
 
 /**
- * ニュースフィードに記事を追加する（最大40件保持）
+ * 公開から指定日数（デフォルト7日＝1週間）経過したニュースを自動削除する
  */
-function addNewsItem({ category = 'リーグ', headline = '', lead = '', body = '', highlight = false, clubId = null, playerId = null, actionLabel = '' }) {
+function pruneExpiredNewsItems(maxAgeDays = 7) {
   if (!Array.isArray(gameState.newsFeed)) {
     gameState.newsFeed = [];
+    return;
   }
+  const curDay = gameState.currentDayIndex || 0;
+  const curSeason = gameState.season || 1;
+  const beforeLen = gameState.newsFeed.length;
+  gameState.newsFeed = gameState.newsFeed.filter(item => {
+    if (!item) return false;
+    const itemSeason = item.season || curSeason;
+    const itemDay = Number(item.dayIndex || 0);
+    if (itemSeason < curSeason - 1) return false;
+    if (itemSeason === curSeason || itemDay < 0) {
+      const age = curDay - itemDay;
+      return age >= 0 && age < maxAgeDays;
+    }
+    const approxAge = curDay + 330 - itemDay;
+    return approxAge >= 0 && approxAge < maxAgeDays;
+  });
+  if (gameState.newsFeed.length !== beforeLen && gameState.expandedNewsId) {
+    if (!gameState.newsFeed.some(n => n && n.id === gameState.expandedNewsId)) {
+      gameState.expandedNewsId = null;
+    }
+  }
+}
+
+/**
+ * ニュースフィードに記事を追加する（最大40件・7日間保持）
+ */
+function addNewsItem({ category = 'リーグ', headline = '', lead = '', body = '', highlight = false, clubId = null, playerId = null, actionLabel = '' }) {
+  pruneExpiredNewsItems(7);
   const dayObj = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
   const fullDateLabel = dayObj ? `${dayObj.year}年${dayObj.month}月${dayObj.day}日` : getCurrentCommDateLabel();
   const item = {
@@ -19144,6 +19182,7 @@ function renderOfficeCommPanel() {
   const tabNewsBtn = document.getElementById('office-comm-tab-news');
   if (!inboxListEl || !newsListEl) return;
 
+  if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   const msgs = Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages : [];
   const news = Array.isArray(gameState.newsFeed) ? gameState.newsFeed : [];
   const activeTab = gameState.officeCommTab === 'news' ? 'news' : 'messages';

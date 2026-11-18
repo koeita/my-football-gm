@@ -305,6 +305,28 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         ]:
             self.assertIn(sym, self.main_js)
 
+    def test_11_duties_collapse_no_duplicate_borderless_schedule_and_news_expiry(self):
+        """業務折りたたみ重要複製防止・週間/カレンダー二重枠撤廃・ニュース7日削除が実装されていること"""
+        # 1. 業務折りたたみ時の .hidden 競合解消と片側DOMクリア
+        mini_idx = self.css.index('.gm-tasks-mini-summary {')
+        mini_block = self.css[mini_idx:mini_idx + 180]
+        self.assertNotIn('display: block !important;', mini_block)
+        self.assertIn('.gm-tasks-mini-summary.hidden', self.css)
+        duties_idx = self.main_js.index('function renderGmDuties()')
+        duties_tail = self.main_js[duties_idx + 4500:duties_idx + 12500]
+        self.assertIn("miniSummaryEl.innerHTML = ''", duties_tail)
+        self.assertIn("listEl.innerHTML = ''", duties_tail)
+
+        # 2. 週間スケジュール・カレンダー カップ/欧州コンペの内側二重枠・inset影撤廃
+        cup_badge_idx = self.css.index('.cal-cup-badge {')
+        cup_badge_block = self.css[cup_badge_idx:cup_badge_idx + 1100]
+        self.assertIn('border: none;', cup_badge_block)
+        self.assertNotIn('border: 1px solid', cup_badge_block)
+
+        # 3. ニュースの7日経過自動削除
+        self.assertIn('function pruneExpiredNewsItems(maxAgeDays = 7)', self.main_js)
+        self.assertIn('pruneExpiredNewsItems(7)', self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()
