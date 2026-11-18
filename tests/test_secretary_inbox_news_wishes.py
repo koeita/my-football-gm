@@ -188,6 +188,23 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         for field in ['monthlyLedger:', 'monthlyReports:', 'pendingLineupConsultation:', 'consultationSeq:']:
             self.assertIn(field, self.storage_js)
 
+    def test_8_player_team_news_roster_age_suffix_and_no_offwindow_offer_duty(self):
+        """選手・チームニュース拡張（サムネイル/リード/本文展開）・選手一覧年齢「歳」・オフ期オファータスク抑止"""
+        # 1. 選手・チームニュース拡張
+        self.assertIn('function emitPostMatchTeamAndPlayerNews(', self.main_js)
+        self.assertIn('.news-row-layout', self.css)
+        self.assertIn('.news-thumb-circle', self.css)
+        self.assertIn('data-news-profile', self.main_js)
+        # 2. 選手一覧年齢表記に「歳」
+        self.assertIn('<td class="col-num" style="white-space:nowrap;">${p.age}歳</td>', self.main_js)
+        # 3. シーズン終了・ウィンドウ閉幕時は業務タスクにオファーを出さない
+        mega_start = self.main_js.index('function triggerMegaOfferEvent(')
+        self.assertIn('if (gameState.isSeasonOver) return;', self.main_js[mega_start:mega_start + 350])
+        duties_start = self.main_js.index('function renderGmDuties(')
+        duties_block = self.main_js[duties_start:duties_start + 3800]
+        self.assertIn('const isMarketWindowOpen = !gameState.isSeasonOver', duties_block)
+        self.assertIn('gameState.pendingMegaOffer && isMarketWindowOpen', duties_block)
+
 
 if __name__ == '__main__':
     unittest.main()
