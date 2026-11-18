@@ -279,7 +279,7 @@ function getMaxConcurrentPositionTrainingSlots() {
 
 function getActivePositionTrainingCount(club) {
   if (!club || !Array.isArray(club.players)) return 0;
-  return club.players.filter(pl => pl && pl.positionTraining && pl.positionTraining.active && pl.positionTraining.targetPos).length;
+  return club.players.filter(pl => pl && !(pl.loanStatus && pl.loanStatus.isLoanOut) && pl.positionTraining && pl.positionTraining.active && pl.positionTraining.targetPos).length;
 }
 
 function getEligiblePositionTrainingTargets(player) {
@@ -817,7 +817,7 @@ function hasPlayerCupMatchOnDay(day) {
   if (day.cupCompType === 'preseasonCup') {
     const pre = gameState.competitions.preseasonCup;
     if (!pre || !Array.isArray(pre.matches)) return false;
-    const roundNum = Number(String(day.cupRoundKey || '').replace(/\D+/g, '')) || 1;
+    const roundNum = Number(day.preseasonRound) || Number(String(day.cupRoundKey || '').replace(/\D+/g, '')) || 1;
     const m = pre.matches.find(x => Number(x.round) === roundNum);
     return Boolean(m && !m.played);
   }
@@ -4128,6 +4128,7 @@ function acceptIncomingOffer(offerId) {
     target.assignedPos = null;
     target.slotIndex = null;
     target.isLoanListed = false;
+    target.positionTraining = null;
     offer.status = 'accepted';
     cancelOtherIncomingOffersForPlayer(target.id, offer.id, { clearModalOffers: false });
     ensureValidSquadAndStarters(playerClub);
@@ -4612,69 +4613,7 @@ function promoteYouthPlayer(youthId) {
  * トップチームの21歳以下選手を常設U-21ユースチームへ一時派遣（降格）
  */
 function demotePlayerToYouth(playerId) {
-  const playerClub = getPlayerClub();
-  if (!playerClub) return;
-
-  const player = playerClub.players.find(p => p.id === playerId);
-  if (!player) return;
-
-  if (player.age > 21) {
-    showToast(`U-21チームへ合流できるのは21歳以下の選手のみです（現在${player.age}歳）。`, 'warning');
-    return;
-  }
-
-  if (!playerClub.youthSquad) {
-    playerClub.youthSquad = [];
-  }
-
-  if (playerClub.youthSquad.length >= MAX_YOUTH_SQUAD_SIZE) {
-    showToast(`U-21ユース枠（最大${MAX_YOUTH_SQUAD_SIZE}名）が満杯です。昇格または枠を空けてください。`, 'warning');
-    return;
-  }
-
-  if (playerClub.players.length <= 11) {
-    showToast('トップチームは最低11名必要です。', 'warning');
-    return;
-  }
-
-  if (player.isStarter) {
-    showToast('スタメン選手は降格できません。先にベンチへ移動させてください。', 'warning');
-    return;
-  }
-
-  const idx = playerClub.players.findIndex(p => p.id === playerId);
-  if (idx !== -1) {
-    playerClub.players.splice(idx, 1);
-  }
-
-  player.isYouth = true;
-  player.isStarter = false;
-  player.assignedPos = null;
-  player.slotIndex = null;
-  if (!player.potentialGrade) {
-    const ovr = getPlayerOverallRating(player);
-    if (ovr >= 74) {
-      player.potentialGrade = 'S';
-      player.potentialRating = 85;
-    } else if (ovr >= 68) {
-      player.potentialGrade = 'A';
-      player.potentialRating = 80;
-    } else if (ovr >= 62) {
-      player.potentialGrade = 'B';
-      player.potentialRating = 74;
-    } else {
-      player.potentialGrade = 'C';
-      player.potentialRating = 68;
-    }
-  }
-
-  playerClub.youthSquad.push(player);
-  ensureValidSquadAndStarters(playerClub);
-
-  showToast(`[ユース派遣] #${player.squadNumber} ${player.name}（${player.age}歳）を実戦経験のためU-21チームへ合流させました。`, 'info');
-  addDailyLog(`【U-21合流】#${player.squadNumber} ${player.name} をU-21ユースチームへ派遣`);
-
-  renderAll();
+  return;
 }
 
 /**
@@ -5386,10 +5325,45 @@ function startNextSeason() {
     });
   }
 
-  // 2. レンタル放出（レンタル）選手の成長復帰
+  // 2. レンタル放出（レンタル）選手の成長復帰・実績反映
   playerClub.players.forEach(p => {
     if (p.loanStatus && p.loanStatus.isLoanOut) {
-      addDailyLog(`【レンタルから頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${p.loanStatus.toClubName} での1年間のレンタル期間を終え、実力を高めてチームへ合流しました！`);
+      const destClubName = p.loanStatus.toClubName || 'レンタル先';
+      const seasonAge = Math.max(15, (p.age || 18) - 1);
+      if (!Array.isArray(p.seasonHistory)) {
+        const savedAge = p.age;
+        p.age = seasonAge;
+        ensurePlayerHistoryAndCareer(p, playerClub.name);
+        p.age = savedAge;
+      }
+      if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStrForOut)) {
+        const ovr = getPlayerOverallRating(p);
+        const pos = p.primaryPosition || p.pos || 'CM';
+        const loanApps = randInt(20, 34);
+        const gRate = (pos === 'CF' || pos === 'ST') ? 0.36 : (['LW', 'RW', 'WG'].includes(pos) ? 0.24 : (pos === 'AM' ? 0.20 : (['LM', 'RM', 'SM'].includes(pos) ? 0.12 : (pos === 'CM' ? 0.09 : (pos === 'GK' ? 0 : 0.05)))));
+        const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.16 : 0.08);
+        const loanGoals = pos === 'GK' ? 0 : Math.round(loanApps * gRate);
+        const loanAssists = pos === 'GK' ? 0 : Math.round(loanApps * aRate);
+        const loanRating = clamp(6.45 + (ovr - 65) * 0.035, 6.2, 7.9).toFixed(2);
+        if (!p.careerStats) p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+        p.careerStats.appearances = (p.careerStats.appearances || 0) + loanApps;
+        p.careerStats.goals = (p.careerStats.goals || 0) + loanGoals;
+        p.careerStats.assists = (p.careerStats.assists || 0) + loanAssists;
+        p.seasonHistory.push({
+          seasonYear: finishedYearStrForOut,
+          clubName: `${destClubName} (レンタル)`,
+          age: seasonAge,
+          appearances: loanApps,
+          goals: loanGoals,
+          assists: loanAssists,
+          avgRating: loanRating,
+          ovr
+        });
+      }
+      if ((p.contractYears || 0) <= 0) {
+        p.contractYears = 1;
+      }
+      addDailyLog(`【レンタルから頼もしく復帰】#${p.squadNumber || '-'} ${p.name} が ${destClubName} での1年間のレンタル期間を終え、実力を高めてチームへ合流しました！`);
       p.loanStatus = null;
       p.isLoanListed = false;
     }
@@ -6133,7 +6107,7 @@ function renderHeader() {
 
   const currentDay = getCurrentCalendarDay();
   const payroll = getClubTotalPayroll(playerClub);
-  const squadCount = playerClub.players.length;
+  const squadCount = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut)).length;
 
   const setHeaderText = (id, val) => {
     const el = document.getElementById(id);
@@ -7813,7 +7787,7 @@ function renderRoster() {
   const activeRosterCount = activeRosterPlayers.length;
   const gkCount = activeRosterPlayers.filter(p => p.pos === 'GK').length;
 
-  const sortedPlayers = [...playerClub.players].sort((a, b) => {
+  const sortedPlayers = [...activeRosterPlayers].sort((a, b) => {
     const orderA = POS_DISPLAY_ORDER[a.pos] || 99;
     const orderB = POS_DISPLAY_ORDER[b.pos] || 99;
     if (orderA !== orderB) return orderA - orderB;
@@ -7856,15 +7830,6 @@ function renderRoster() {
       extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
     }
 
-    const canDemoteToYouth = p.age <= 21 && !p.isStarter && (playerClub.youthSquad?.length < MAX_YOUTH_SQUAD_SIZE);
-    let demoteBtnHtml = '';
-    if (p.age <= 21) {
-      const demoteTitle = p.isStarter
-        ? 'スタメン選手は降格不可（先にベンチへ移動させてください）'
-        : (playerClub.youthSquad?.length >= MAX_YOUTH_SQUAD_SIZE ? 'U-21ユース枠満杯（最大10名）' : 'U-21ユースへ合流');
-      demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
-    }
-
     // 22歳以下の若手に対する「レンタル（レンタル放出）」ボタン
     let loanListingBtnHtml = '';
     if (p.age <= 22 && !p.isStarter && (!p.loanStatus || !p.loanStatus.isLoanOut) && !p.loanStatus?.isLoan) {
@@ -7880,11 +7845,9 @@ function renderRoster() {
     let fitBadge = '';
     if (p.isStarter) {
       if (fitInfo.type === 'sub') {
-        if (fitInfo.type === 'sub') {
         fitBadge = '<span class="sub-badge badge-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.4);">◯ 薄適性</span>';
       } else if (fitInfo.type === 'semi') {
         fitBadge = '<span class="sub-badge badge-warn" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.15);">△ 近接</span>';
-      }
       } else if (fitInfo.type === 'out') {
         fitBadge = '<span class="sub-badge badge-penalty">✕ 不適</span>';
       }
@@ -7905,7 +7868,7 @@ function renderRoster() {
     let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
     if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
       ovrDisplay = `<span class="ovr-cell-badge tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
-    } else if (fitInfo.type === 'sub') {
+    } else if (fitInfo.type === 'sub' || fitInfo.type === 'semi') {
       ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     }
 
@@ -7967,7 +7930,6 @@ function renderRoster() {
           <div class="action-btn-group action-btn-grid">
             <div class="action-slot slot-extend">${extendBtnHtml}</div>
             <div class="action-slot slot-loan">${loanListingBtnHtml}</div>
-            <div class="action-slot slot-demote">${demoteBtnHtml}</div>
             <div class="action-slot slot-release">
               <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
                 ${releaseBtnLabel}
@@ -8463,8 +8425,13 @@ function renderIncomingOffers() {
         <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒絶 (REJECT)</button>
       `;
     } else if (offer.status === 'accepted') {
-      deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.8;">売却成立済み</span>`;
-      actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">移籍完了（売却額: ${formatMoney(offer.offerFee)}）</span>`;
+      if (offer.isLoanOffer) {
+        deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.8;">レンタル成立済み</span>`;
+        actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">1年期限付き移籍完了（${offer.buyerClubName}）</span>`;
+      } else {
+        deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="opacity: 0.8;">売却成立済み</span>`;
+        actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">移籍完了（売却額: ${formatMoney(offer.offerFee)}）</span>`;
+      }
     } else if (offer.status === 'rejected') {
       deadlineBadge = `<span class="offer-deadline-badge mono text-danger" style="opacity: 0.8;">拒否済み</span>`;
       actionButtons = `<span class="mono text-muted" style="font-size: 11.5px; padding: 4px;">オファー拒否</span>`;
@@ -8607,7 +8574,7 @@ function renderMarket() {
   const playerClub = getPlayerClub();
   if (!playerClub) return;
 
-  const squadCount = playerClub.players.length;
+  const squadCount = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut)).length;
   const mf = gameState.marketFilter;
   if (!mf.category) mf.category = 'ALL';
   if (!mf.ageRange) mf.ageRange = 'ALL';
@@ -8699,14 +8666,14 @@ function renderMarket() {
   const seenIds = new Set();
   for (const c of d1Clubs) {
     for (const p of (c.players || [])) {
-      if (!p || seenIds.has(p.id)) continue;
+      if (!p || p.isRetired || (p.loanStatus && p.loanStatus.isLoanOut) || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
       allEntries.push({ player: p, club: c, category: 'ENG_D1', isMyClub: Boolean(c.isPlayer) });
     }
   }
   for (const c of d2Clubs) {
     for (const p of (c.players || [])) {
-      if (!p || seenIds.has(p.id)) continue;
+      if (!p || p.isRetired || (p.loanStatus && p.loanStatus.isLoanOut) || seenIds.has(p.id)) continue;
       seenIds.add(p.id);
       allEntries.push({ player: p, club: c, category: 'ENG_D2', isMyClub: Boolean(c.isPlayer) });
     }
@@ -12023,9 +11990,9 @@ function initTacticalDragAndDrop() {
       }
     }
 
-    // 控え選手カードとの当たり判定（モバイルでドロワーが閉じている時は除外）
+    // 控え・ベンチ外選手カードとの当たり判定（モバイルでドロワーが閉じている時は除外）
     if (!isMobile || isDrawerOpen) {
-      const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id]');
+      const benchNodes = document.querySelectorAll('#pitch-bench-list .bench-sub-item[data-player-id], #pitch-reserves-list .bench-sub-item[data-player-id]');
       let bestBench = null;
       let bestBenchDist = Infinity;
 
@@ -12131,7 +12098,7 @@ function initTacticalDragAndDrop() {
 
     if (!dragSource) return;
 
-    benchListEl = (benchItem && benchItem.closest('.pitch-bench-list')) || document.getElementById('pitch-bench-list');
+    benchListEl = (benchItem && benchItem.closest('.pitch-bench-list, .pitch-reserves-list, .tactical-side-column')) || document.getElementById('pitch-bench-list');
     if (dragSource.type === 'bench' && benchListEl) {
       isBenchScrolling = false;
       benchScrollStartX = e.clientX;
@@ -12144,6 +12111,7 @@ function initTacticalDragAndDrop() {
     const isTouch = e.pointerType === 'touch';
     if (isTouch) {
       const targetEl = dragSource.element;
+      const delayMs = dragSource.type === 'bench' ? 260 : 100;
       longPressTimer = setTimeout(() => {
         if (!dragSource) return;
         isTouchReady = true;
@@ -12153,7 +12121,7 @@ function initTacticalDragAndDrop() {
             try { navigator.vibrate(15); } catch(err) {}
           }
         }
-      }, 100);
+      }, delayMs);
     } else {
       isTouchReady = true;
     }
@@ -12184,13 +12152,18 @@ function initTacticalDragAndDrop() {
     if (!isDragging) {
       const isTouch = e.pointerType === 'touch';
 
-      // モバイルで控え選手カードに対するタッチ操作の分岐：
+      // モバイルで控え・ベンチ外選手カードに対するタッチ操作の分岐：
+      // 長押し完了前は縦スクロールを優先し、縦スワイプ検知時は即座にネイティブスクロールへ解放する
       if (isTouch && dragSource.type === 'bench') {
-        const isUpward = deltaY < -8 && Math.abs(deltaY) > Math.abs(deltaX) * 0.6;
-        const isLeftward = deltaX < -8 && Math.abs(deltaX) > Math.abs(deltaY) * 0.5;
-        const isHorizontalSwipe = Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY);
+        const isVerticalScroll = !isTouchReady && Math.abs(deltaY) > 6 && Math.abs(deltaY) >= Math.abs(deltaX) * 0.9;
+        if (isVerticalScroll) {
+          cleanupDrag();
+          return;
+        }
+        const isLeftward = deltaX < -16 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4;
+        const isHorizTray = benchListEl && getComputedStyle(benchListEl).overflowX === 'auto' && Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY);
 
-        if (isTouchReady || isUpward || isLeftward) {
+        if (isTouchReady || isLeftward) {
           isDragging = true;
           isBenchScrolling = false;
           if (longPressTimer) {
@@ -12237,8 +12210,8 @@ function initTacticalDragAndDrop() {
           });
 
           document.body.appendChild(ghostEl);
-        } else if (isHorizontalSwipe) {
-          // B. 水平方向へのスワイプ → 控えリストの横スクロール！
+        } else if (isHorizTray) {
+          // B. 水平スクロールトレイ表示時のみ水平スワイプで横スクロール
           if (longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;

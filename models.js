@@ -1035,13 +1035,21 @@ function calculatePlayerMarketValue(player) {
  * 若手（23歳以下）や高能力（OVR 80以上）の選手は争奪戦が起きるため、値引き幅が小さく抑えられる（0.85倍〜0.95倍）。
  */
 function calculateTransferFee(player) {
-  const marketVal = calculatePlayerMarketValue(player);
+  if (!player || player.isFreeAgent) return 0;
   const contractYears = player.contractYears !== undefined ? player.contractYears : 2;
+  if (contractYears <= 0) return 0;
+
+  const marketVal = calculatePlayerMarketValue(player);
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || 70);
+  const age = player.age || 25;
+
+  if (player.transferListed) {
+    let listedFee = clamp(Math.round((marketVal * 0.82) / 100) * 100, 200, 250000);
+    if (listedFee === marketVal) listedFee = Math.max(200, marketVal - 100);
+    return listedFee;
+  }
 
   if (contractYears <= 1) {
-    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || 70);
-    const age = player.age || 25;
-
     let discountRatio = 0.80; // 基本は20%引き（0.80倍）
 
     if (age <= 23 && ovr >= 80) {
@@ -1056,11 +1064,35 @@ function calculateTransferFee(player) {
       discountRatio = 0.80; // 中堅一般：20%引き（0.80倍）
     }
 
-    const discountedFee = Math.round((marketVal * discountRatio) / 100) * 100;
-    return clamp(discountedFee, 200, 250000);
+    let discountedFee = clamp(Math.round((marketVal * discountRatio) / 100) * 100, 200, 250000);
+    if (discountedFee === marketVal) discountedFee = Math.max(200, marketVal - 100);
+    return discountedFee;
   }
 
-  return marketVal;
+  // 契約残2年以上は契約保護プレミアム・主力評価・将来性による要求移籍金（市場価値と明確に差別化）
+  let askRatio = contractYears >= 4 ? 1.28 : (contractYears === 3 ? 1.18 : 1.08);
+  if (player.isStarter) {
+    askRatio += 0.08;
+  }
+  if ((age <= 23 && ovr >= 78) || ovr >= 83) {
+    askRatio += 0.07;
+  } else if (age >= 30 && !player.isStarter) {
+    askRatio -= 0.04;
+  }
+
+  const keyStr = String(player.id || player.name || '');
+  let idHash = 0;
+  for (let i = 0; i < keyStr.length; i++) {
+    idHash = ((idHash << 5) - idHash) + keyStr.charCodeAt(i);
+    idHash |= 0;
+  }
+  askRatio += ((Math.abs(idHash) % 6) - 2) * 0.01;
+
+  let askFee = clamp(Math.round((marketVal * askRatio) / 100) * 100, 200, 250000);
+  if (askFee === marketVal) {
+    askFee = clamp(marketVal + 100, 200, 250000);
+  }
+  return askFee;
 }
 
 // ==========================================================================
