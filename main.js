@@ -1998,21 +1998,12 @@ function showGmModal(opts, fromQueue = false) {
   if (detailEl) detailEl.innerHTML = detailHtml || '';
 
   const actionsContainer = document.getElementById('modal-actions');
-  const choicePromptEl = document.getElementById('gm-vn-choice-prompt');
   let singleTapNextBtn = null;
   if (actionsContainer) {
     actionsContainer.innerHTML = '';
     const actList = actions || [];
     const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
     actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
-    if (choicePromptEl) {
-      if (actList.length >= 2 && !isSingleNextPrompt) {
-        choicePromptEl.textContent = opts.choicePrompt || 'GM としてご判断ください';
-        choicePromptEl.classList.remove('hidden');
-      } else {
-        choicePromptEl.classList.add('hidden');
-      }
-    }
 
     actList.forEach(act => {
       const btn = document.createElement('button');

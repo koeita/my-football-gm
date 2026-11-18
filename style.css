@@ -18915,13 +18915,6 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   margin-top: auto;
 }
 
-.gm-vn-choice-prompt {
-  font-size: 12px;
-  font-weight: 800;
-  color: #2ecc71;
-  letter-spacing: 0.02em;
-}
-
 .gm-vn-dialogue-card.is-tap-advance {
   cursor: pointer;
 }
