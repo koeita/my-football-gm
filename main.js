@@ -17247,22 +17247,10 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       const meta = slotMeta[sKey] || { shortLabel: sKey };
       const isAct = st.activeSlot === sKey;
       const isEditable = st.editableSet.has(sKey);
-      let subText = '契約中';
-      if (sKey === 'partners') {
-        const curList = (st.club.sponsors.partners || []).filter(Boolean);
-        const selIds = Array.isArray(st.selectedBySlot.partners) ? st.selectedBySlot.partners : [];
-        subText = isEditable ? `${curList.length + selIds.length} / 2社選択` : `${curList.length}社契約中`;
-      } else if (isEditable) {
-        const offers = getAvailableSponsorOffers(st.club, sKey);
-        const picked = offers.find(o => o.id === st.selectedBySlot[sKey]);
-        subText = picked ? picked.name : '未選定';
-      } else if (st.club.sponsors[sKey]) {
-        subText = `${st.club.sponsors[sKey].name} (残${st.club.sponsors[sKey].yearsRemaining}年)`;
-      }
       return `
         <button type="button" class="sponsor-slot-tab ${isAct ? 'is-active' : ''}" data-sponsor-tab="${sKey}">
           <span class="sponsor-slot-tab-label">${meta.shortLabel || meta.label}</span>
-          <span class="sponsor-slot-tab-sub">${escapeCommHtml(subText)}</span>
+          <span class="sponsor-slot-dot ${isEditable ? 'is-open' : ''}" aria-hidden="true"></span>
         </button>
       `;
     }).join('');
