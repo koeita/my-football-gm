@@ -218,7 +218,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('.gm-vn-pill-badge.is-manager-pill', self.css)
 
         consult_start = self.main_js.index('function openLineupConsultationModal(')
-        consult_block = self.main_js[consult_start:consult_start + 3500]
+        consult_block = self.main_js[consult_start:consult_start + 5000]
         self.assertIn("kind: 'manager'", consult_block)
         self.assertIn("roleLabel: '監督'", consult_block)
 
@@ -291,7 +291,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertNotIn('）から「', ply_block)
 
         consult_start = self.main_js.index('function openLineupConsultationModal(')
-        consult_block = self.main_js[consult_start:consult_start + 3500]
+        consult_block = self.main_js[consult_start:consult_start + 5000]
         self.assertIn("kind: 'player'", consult_block)
         self.assertIn("kind: 'conflict'", consult_block)
 
@@ -365,6 +365,31 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         ]:
             self.assertIn(sym, self.main_js)
         self.assertIn('pendingSponsorSlots:', self.storage_js)
+
+    def test_13_consultation_fit_variety_manager_judgment_and_replies(self):
+        for sym in [
+            'recentConsultedPlayerIds',
+            'lastConflictCoachCategory',
+            'function hasUsablePositionFit(',
+            'function findBestFitReplacementCandidate(',
+            'function buildCoachConsultation(',
+            'function showConsultationReplyModal(',
+            'gm-report-next-btn',
+            "scenario: 'M4'",
+            "scenario: 'P3'",
+            "scenario: 'CO1'",
+            "scenario: 'CO2'",
+            "scenario: 'CO3'",
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertNotIn("['相談者'", self.main_js)
+        self.assertIn('class="gm-vn-sticky-footer"', self.html)
+        self.assertIn('.gm-vn-sticky-footer', self.css)
+        stage_pos = self.html.index('class="gm-vn-stage-body"')
+        footer_pos = self.html.index('class="gm-vn-sticky-footer"')
+        actions_pos = self.html.index('id="modal-actions"')
+        self.assertLess(stage_pos, footer_pos)
+        self.assertLess(footer_pos, actions_pos)
 
 
 if __name__ == '__main__':

@@ -249,6 +249,8 @@ const gameState = {
   totalPlayerMatchesPlayed: 0,
   lastConsultationMatchCount: 0,
   consultationSeq: 0,
+  recentConsultedPlayerIds: [],
+  lastConflictCoachCategory: null,
   pendingSponsorSlots: []
 };
 
@@ -1849,6 +1851,10 @@ const gmModalQueue = [];
 let isFastForwardingSeason = false;
 
 function flushNextGmModalOrUnlock() {
+  const overlay = document.getElementById('gm-modal-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) {
+    return;
+  }
   if (gmModalQueue.length > 0) {
     const nextOpts = gmModalQueue.shift();
     showGmModal(nextOpts, true);
@@ -1992,21 +1998,12 @@ function showGmModal(opts, fromQueue = false) {
   if (detailEl) detailEl.innerHTML = detailHtml || '';
 
   const actionsContainer = document.getElementById('modal-actions');
-  const choicePromptEl = document.getElementById('gm-vn-choice-prompt');
   let singleTapNextBtn = null;
   if (actionsContainer) {
     actionsContainer.innerHTML = '';
     const actList = actions || [];
     const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
     actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
-    if (choicePromptEl) {
-      if (actList.length >= 2 && !isSingleNextPrompt) {
-        choicePromptEl.textContent = opts.choicePrompt || 'GM としてご判断ください';
-        choicePromptEl.classList.remove('hidden');
-      } else {
-        choicePromptEl.classList.add('hidden');
-      }
-    }
 
     actList.forEach(act => {
       const btn = document.createElement('button');
@@ -18373,12 +18370,18 @@ function swapStarterWithCandidate(club, outStarter, inCandidate) {
   return true;
 }
 
+function hasUsablePositionFit(player, slotPos) {
+  if (!player) return false;
+  const fit = getPositionFitInfo(player, slotPos);
+  return Boolean(fit && (fit.type === 'main' || fit.type === 'sub'));
+}
+
 function optimizeStarterPositionSlot(club, player) {
   if (!club || !player || !player.isStarter || (player.slotIndex || 0) === 0) return false;
   const curSlotPos = player.assignedPos || player.pos;
   if (curSlotPos === player.pos) return false;
   const starters = (club.players || []).filter(p => p && p.isStarter && (p.slotIndex || 0) > 0 && p.id !== player.id);
-  const partner = starters.find(s => (s.assignedPos || s.pos) === player.pos && getPositionFitInfo(s, curSlotPos).type !== 'out');
+  const partner = starters.find(s => (s.assignedPos || s.pos) === player.pos && hasUsablePositionFit(s, curSlotPos));
   if (partner) {
     const pSlot = partner.slotIndex;
     const pPos = partner.assignedPos || partner.pos;
@@ -18392,30 +18395,69 @@ function optimizeStarterPositionSlot(club, player) {
   return false;
 }
 
+function getRecentConsultedPlayerSet() {
+  if (!Array.isArray(gameState.recentConsultedPlayerIds)) gameState.recentConsultedPlayerIds = [];
+  return new Set(gameState.recentConsultedPlayerIds.slice(-6));
+}
+
+function recordRecentConsultedPlayer(playerId) {
+  if (!playerId) return;
+  if (!Array.isArray(gameState.recentConsultedPlayerIds)) gameState.recentConsultedPlayerIds = [];
+  gameState.recentConsultedPlayerIds = [
+    ...gameState.recentConsultedPlayerIds.filter(id => id !== playerId),
+    playerId
+  ].slice(-6);
+}
+
+function findBestFitReplacementCandidate(pool, slotPos, excludeIds = []) {
+  const excluded = new Set(excludeIds.filter(Boolean));
+  const recentSet = getRecentConsultedPlayerSet();
+  const fitCandidates = (pool || [])
+    .filter(c => c && !excluded.has(c.id))
+    .filter(c => hasUsablePositionFit(c, slotPos))
+    .sort((a, b) => {
+      const fitA = getPositionFitInfo(a, slotPos).type === 'main' ? 14 : 6;
+      const fitB = getPositionFitInfo(b, slotPos).type === 'main' ? 14 : 6;
+      const recentPenaltyA = recentSet.has(a.id) ? 18 : 0;
+      const recentPenaltyB = recentSet.has(b.id) ? 18 : 0;
+      return (getPlayerOverallRating(b) + fitB - (b.fatigue || 0) * 0.25 - recentPenaltyB)
+        - (getPlayerOverallRating(a) + fitA - (a.fatigue || 0) * 0.25 - recentPenaltyA);
+    });
+  if (fitCandidates.length === 0) return null;
+  const fresh = fitCandidates.filter(c => !recentSet.has(c.id));
+  const list = fresh.length > 0 ? fresh : fitCandidates;
+  const idx = (gameState.consultationSeq || 0) % Math.min(3, list.length);
+  return list[idx] || list[0];
+}
+
 function buildManagerConsultation(club) {
   if (!club || !club.manager) return null;
   const mgr = club.manager;
   const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
   const starters = active.filter(p => p.isStarter && (p.slotIndex || 0) > 0);
   const nonStarters = active.filter(p => !p.isStarter && p.pos !== 'GK');
+  const recentSet = getRecentConsultedPlayerSet();
 
   // 1. 疲労または適性外スタメンの入れ替え相談
   const troubledStarter = [...starters]
-    .filter(s => (s.fatigue || 0) >= 45 || getPositionFitInfo(s, s.assignedPos || s.pos).type === 'out')
-    .sort((a, b) => (b.fatigue || 0) - (a.fatigue || 0))[0] || null;
+    .filter(s => (s.fatigue || 0) >= 45 || !hasUsablePositionFit(s, s.assignedPos || s.pos))
+    .sort((a, b) => {
+      const recA = recentSet.has(a.id) ? 1 : 0;
+      const recB = recentSet.has(b.id) ? 1 : 0;
+      if (recA !== recB) return recA - recB;
+      return (b.fatigue || 0) - (a.fatigue || 0);
+    })[0] || null;
   if (troubledStarter && nonStarters.length > 0) {
     const slotPos = troubledStarter.assignedPos || troubledStarter.pos;
-    const candidate = [...nonStarters].sort((a, b) => {
-      const fitA = getPositionFitInfo(a, slotPos).type === 'main' ? 12 : (getPositionFitInfo(a, slotPos).type === 'sub' ? 5 : 0);
-      const fitB = getPositionFitInfo(b, slotPos).type === 'main' ? 12 : (getPositionFitInfo(b, slotPos).type === 'sub' ? 5 : 0);
-      return (getPlayerOverallRating(b) + fitB - (b.fatigue || 0) * 0.25) - (getPlayerOverallRating(a) + fitA - (a.fatigue || 0) * 0.25);
-    })[0];
+    const candidate = findBestFitReplacementCandidate(nonStarters, slotPos, [troubledStarter.id]);
     if (candidate) {
       const cOvr = getPlayerOverallRating(candidate);
       const tOvr = getPlayerOverallRating(troubledStarter);
+      const fitInfo = getPositionFitInfo(candidate, slotPos);
+      const fitLabel = fitInfo.type === 'main' ? '本職適性' : 'サブ適性';
       const reasonTxt = (troubledStarter.fatigue || 0) >= 45
-        ? `疲労が ${Math.round(troubledStarter.fatigue)}% まで蓄積`
-        : `[${slotPos}] の適性外起用で負荷が発生`;
+        ? '連戦による疲労が抜けていない'
+        : `${slotPos} での起用に無理がある`;
       return {
         id: `consult_mgr_${Date.now()}`,
         kind: 'manager',
@@ -18423,22 +18465,53 @@ function buildManagerConsultation(club) {
         senderName: `${mgr.name} 監督`,
         topic: '起用法相談',
         title: `${mgr.name}監督：スタメン起用の見直し提案`,
-        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} に${reasonTxt}しているため、フレッシュな ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢させてくれないか。`,
+        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} は${reasonTxt}ため、${slotPos} に対応できる ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢させてくれないか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢について回答待ち`,
         outPlayerId: troubledStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['相談者', `${mgr.name} 監督（信頼度 ${mgr.trust ?? 75}%）`],
-          ['交代推奨 (OUT)', `${troubledStarter.pos} ${troubledStarter.fullName || troubledStarter.name}（OVR ${tOvr} / 疲労 ${Math.round(troubledStarter.fatigue || 0)}%）`],
-          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr} / 疲労 ${Math.round(candidate.fatigue || 0)}%）`]
+          ['交代推奨 (OUT)', `${troubledStarter.pos} ${troubledStarter.fullName || troubledStarter.name}（OVR ${tOvr}）`],
+          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr} / ${fitLabel}）`]
         ],
         acceptLabel: `監督案を採用（${candidate.name} を先発起用）`
       };
     }
   }
 
-  // 2. 得意布陣・戦術スタイル同期相談
+  // 2. 成績不振スタメンの入れ替え提案 (M4)
+  const underperformers = [...starters]
+    .filter(s => s.pos !== 'GK' && (s.appearances || 0) >= 3 && (s.avgRating || 6.5) < 6.45)
+    .sort((a, b) => (a.avgRating || 6.5) - (b.avgRating || 6.5));
+  for (const slumping of underperformers) {
+    const slotPos = slumping.assignedPos || slumping.pos;
+    const candidate = findBestFitReplacementCandidate(nonStarters, slotPos, [slumping.id]);
+    if (candidate) {
+      const cOvr = getPlayerOverallRating(candidate);
+      const tOvr = getPlayerOverallRating(slumping);
+      const avgStr = (slumping.avgRating || 6.0).toFixed(2);
+      return {
+        id: `consult_mgr_${Date.now()}`,
+        kind: 'manager',
+        scenario: 'M4',
+        senderName: `${mgr.name} 監督`,
+        topic: '起用法相談',
+        title: `${mgr.name}監督：不振選手の先発入れ替え提案`,
+        speech: `GM、直近の試合で ${slumping.fullName || slumping.name}（平均評価 ${avgStr}）のパフォーマンスが上がってきていない。一度先発から外して、${slotPos} をこなせる ${candidate.fullName || candidate.name} にチャンスを与えたいのだがどうだろうか。`,
+        dutyTitle: `${mgr.name}監督の起用法相談`,
+        dutyDesc: `${slumping.name} と ${candidate.name} の入れ替え相談`,
+        outPlayerId: slumping.id,
+        inPlayerId: candidate.id,
+        detailRows: [
+          ['交代推奨 (OUT)', `${slumping.pos} ${slumping.fullName || slumping.name}（OVR ${tOvr} / 評価 ${avgStr}）`],
+          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+        ],
+        acceptLabel: `監督案を採用（${candidate.name} を先発起用）`
+      };
+    }
+  }
+
+  // 3. 得意布陣・戦術スタイル同期相談
   const curForm = club.formation || '4-3-3';
   const curTac = typeof normalizeTacticKey === 'function' ? normalizeTacticKey(club.tactic) : club.tactic;
   const prefTac = typeof normalizeTacticKey === 'function' ? normalizeTacticKey(mgr.preferredTactic) : mgr.preferredTactic;
@@ -18449,7 +18522,7 @@ function buildManagerConsultation(club) {
       kind: 'manager',
       scenario: 'M3',
       senderName: `${mgr.name} 監督`,
-      topic: '監督からの戦術・起用相談',
+      topic: '戦術・起用相談',
       title: `${mgr.name}監督：得意フォーメーションへの移行相談`,
       speech: `GM、選手たちの持ち味を最大限に引き出すため、私の得意布陣「${mgr.preferredFormation} / ${tacLabel}」へ切り替えて戦いたい。フロントとして承認してもらえるだろうか。`,
       dutyTitle: `${mgr.name}監督の戦術・起用相談`,
@@ -18457,7 +18530,6 @@ function buildManagerConsultation(club) {
       preferredFormation: mgr.preferredFormation,
       preferredTactic: prefTac,
       detailRows: [
-        ['相談者', `${mgr.name} 監督（信頼度 ${mgr.trust ?? 75}%）`],
         ['現行体制', `${curForm} / ${typeof getManagerTacticLabel === 'function' ? getManagerTacticLabel(curTac) : curTac}`],
         ['監督提案', `${mgr.preferredFormation} / ${tacLabel}`]
       ],
@@ -18465,19 +18537,22 @@ function buildManagerConsultation(club) {
     };
   }
 
-  // 3. 若手・好調控えの先発テスト起用相談
+  // 4. 若手・好調控えの先発テスト起用相談（適性のあるポジションのスタメンと入れ替え）
   if (starters.length > 0 && nonStarters.length > 0) {
-    const candidate = [...nonStarters].sort((a, b) => {
-      const yA = (a.age || 25) <= 22 ? 6 : 0;
-      const yB = (b.age || 25) <= 22 ? 6 : 0;
-      return (getPlayerOverallRating(b) + yB) - (getPlayerOverallRating(a) + yA);
-    })[0];
-    const replaceStarter = [...starters].sort((a, b) => {
-      const mA = getPositionFitInfo(candidate, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
-      const mB = getPositionFitInfo(candidate, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
-      return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
-    })[0];
-    if (candidate && replaceStarter) {
+    const rankedStarters = [...starters]
+      .filter(s => s.pos !== 'GK')
+      .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b));
+    let chosenPair = null;
+    for (const st of rankedStarters) {
+      const slotPos = st.assignedPos || st.pos;
+      const cand = findBestFitReplacementCandidate(nonStarters, slotPos, [st.id]);
+      if (cand) {
+        chosenPair = { candidate: cand, replaceStarter: st, slotPos };
+        break;
+      }
+    }
+    if (chosenPair) {
+      const { candidate, replaceStarter, slotPos } = chosenPair;
       const cOvr = getPlayerOverallRating(candidate);
       const tOvr = getPlayerOverallRating(replaceStarter);
       return {
@@ -18487,13 +18562,12 @@ function buildManagerConsultation(club) {
         senderName: `${mgr.name} 監督`,
         topic: '起用法相談',
         title: `${mgr.name}監督：${candidate.name}の先発テスト起用提案`,
-        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を次戦の先発で試してみたい。抜擢を認めてもらえるか。`,
+        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を ${slotPos} の先発で試してみたい。抜擢を認めてもらえるか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢提案`,
         outPlayerId: replaceStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['相談者', `${mgr.name} 監督（信頼度 ${mgr.trust ?? 75}%）`],
           ['抜擢候補 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）`],
           ['入替枠 (OUT)', `${replaceStarter.pos} ${replaceStarter.fullName || replaceStarter.name}（OVR ${tOvr}）`]
         ],
@@ -18508,12 +18582,13 @@ function buildPlayerConsultation(club) {
   if (!club) return null;
   const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
   const starters = active.filter(p => p.isStarter && (p.slotIndex || 0) > 0);
+  const recentSet = getRecentConsultedPlayerSet();
 
   // 1. 本職外で起用中の主力からの希望ポジション相談
   const outPosStarter = starters.find(s => {
     const slotPos = s.assignedPos || s.pos;
-    if (slotPos === s.pos) return false;
-    return starters.some(other => other.id !== s.id && (other.assignedPos || other.pos) === s.pos && getPositionFitInfo(other, slotPos).type !== 'out');
+    if (slotPos === s.pos || recentSet.has(s.id)) return false;
+    return starters.some(other => other.id !== s.id && (other.assignedPos || other.pos) === s.pos && hasUsablePositionFit(other, slotPos));
   });
   if (outPosStarter) {
     const curPos = outPosStarter.assignedPos || outPosStarter.pos;
@@ -18528,47 +18603,81 @@ function buildPlayerConsultation(club) {
       dutyTitle: `${outPosStarter.name} の起用法要望`,
       dutyDesc: `本職 ${outPosStarter.pos} 起用の調整要望`,
       playerId: outPosStarter.id,
-      detailRows: [
-        ['要望選手', `#${outPosStarter.squadNumber || '-'} ${outPosStarter.fullName || outPosStarter.name}（OVR ${getPlayerOverallRating(outPosStarter)}）`],
-        ['現在の配置', `${curPos}（本職 ${outPosStarter.pos}）`],
-        ['士気 (Morale)', `${Math.round(outPosStarter.morale ?? 75)}`]
-      ],
-      acceptLabel: `本職 ${outPosStarter.pos} へ配置を調整する`
+      detailRows: [],
+      acceptLabel: '監督に配置見直しを打診する'
     };
   }
 
-  // 2. 控え・ベンチ外実力者からの先発起用直訴
+  // 2. 出場機会が少ない選手からの不満・起用相談 (P3)
+  const benchLowApps = active
+    .filter(p => !p.isStarter && p.pos !== 'GK' && !recentSet.has(p.id) && (p.appearances || 0) <= Math.max(1, Math.floor((gameState.currentMatchIndex || 0) * 0.35)))
+    .sort((a, b) => (getPlayerOverallRating(b) - (b.appearances || 0) * 2) - (getPlayerOverallRating(a) - (a.appearances || 0) * 2));
+  if (benchLowApps.length > 0 && starters.length > 0 && ((gameState.consultationSeq || 0) % 2 === 1)) {
+    for (const requester of benchLowApps) {
+      const outStarter = [...starters]
+        .filter(s => hasUsablePositionFit(requester, s.assignedPos || s.pos))
+        .sort((a, b) => {
+          const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
+          const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
+          return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
+        })[0] || null;
+      if (outStarter) {
+        return {
+          id: `consult_ply_${Date.now()}`,
+          kind: 'player',
+          scenario: 'P3',
+          senderName: `${requester.name} (${requester.pos})`,
+          topic: '出場機会の相談',
+          title: `${requester.fullName || requester.name}：出場機会への不満`,
+          speech: `GM、正直に話させてください。ここまで思うように試合に絡めておらず、自分の力を示す場が足りません。途中出場からでも構わないので、起用を増やしてもらえないでしょうか。`,
+          dutyTitle: `${requester.name} の出場機会相談`,
+          dutyDesc: `出場機会についての面談`,
+          playerId: requester.id,
+          inPlayerId: requester.id,
+          outPlayerId: outStarter.id,
+          detailRows: [],
+          acceptLabel: '監督に起用検討を伝える'
+        };
+      }
+    }
+  }
+
+  // 3. 控え・ベンチ外実力者からの先発起用直訴 (P1)
   const benchHopefuls = active.filter(p => !p.isStarter && p.pos !== 'GK')
-    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+    .sort((a, b) => {
+      const recA = recentSet.has(a.id) ? 15 : 0;
+      const recB = recentSet.has(b.id) ? 15 : 0;
+      return (getPlayerOverallRating(b) - recB) - (getPlayerOverallRating(a) - recA);
+    });
   if (benchHopefuls.length > 0 && starters.length > 0) {
-    const requester = benchHopefuls[0];
-    const rOvr = getPlayerOverallRating(requester);
-    const outStarter = [...starters].sort((a, b) => {
-      const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
-      const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
-      return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
-    })[0];
-    if (outStarter) {
-      return {
-        id: `consult_ply_${Date.now()}`,
-        kind: 'player',
-        scenario: 'P1',
-        senderName: `${requester.name} (${requester.pos})`,
-        topic: '起用法の相談',
-        title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
-        speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
-        dutyTitle: `${requester.name} の先発起用要望`,
-        dutyDesc: `スタメン出場機会についての面談`,
-        playerId: requester.id,
-        inPlayerId: requester.id,
-        outPlayerId: outStarter.id,
-        detailRows: [
-          ['要望選手 (IN)', `#${requester.squadNumber || '-'} ${requester.fullName || requester.name}（${requester.pos} / OVR ${rOvr}）`],
-          ['競合スタメン', `#${outStarter.squadNumber || '-'} ${outStarter.fullName || outStarter.name}（OVR ${getPlayerOverallRating(outStarter)}）`],
-          ['士気 / 状態', `Morale ${Math.round(requester.morale ?? 75)} · 疲労 ${Math.round(requester.fatigue || 0)}%`]
-        ],
-        acceptLabel: `次戦スタメン抜擢（${requester.name}）`
-      };
+    const startIdx = (gameState.consultationSeq || 0) % Math.min(3, benchHopefuls.length);
+    for (let i = 0; i < benchHopefuls.length; i++) {
+      const requester = benchHopefuls[(startIdx + i) % benchHopefuls.length];
+      const outStarter = [...starters]
+        .filter(s => hasUsablePositionFit(requester, s.assignedPos || s.pos))
+        .sort((a, b) => {
+          const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
+          const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
+          return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
+        })[0];
+      if (outStarter) {
+        return {
+          id: `consult_ply_${Date.now()}`,
+          kind: 'player',
+          scenario: 'P1',
+          senderName: `${requester.name} (${requester.pos})`,
+          topic: '起用法の相談',
+          title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
+          speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
+          dutyTitle: `${requester.name} の先発起用要望`,
+          dutyDesc: `スタメン出場機会についての面談`,
+          playerId: requester.id,
+          inPlayerId: requester.id,
+          outPlayerId: outStarter.id,
+          detailRows: [],
+          acceptLabel: '監督に起用検討を伝える'
+        };
+      }
     }
   }
   return null;
@@ -18592,6 +18701,129 @@ function getClubCoachEntries(club) {
   return entries;
 }
 
+function buildCoachConsultation(club) {
+  if (!club) return null;
+  const coaches = getClubCoachEntries(club);
+  if (coaches.length === 0) return null;
+  const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+  const starters = active.filter(p => p.isStarter && (p.slotIndex || 0) > 0);
+  const nonStarters = active.filter(p => !p.isStarter && p.pos !== 'GK');
+  if (starters.length === 0 || nonStarters.length === 0) return null;
+
+  const atkPos = new Set(['ST', 'CF', 'LW', 'RW', 'LM', 'RM', 'CAM', 'AM']);
+  const defPos = new Set(['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'DM']);
+  const order = ['attacking', 'defending', 'fitness'];
+  const offset = (gameState.consultationSeq || 0) % order.length;
+
+  for (let i = 0; i < order.length; i++) {
+    const cat = order[(offset + i) % order.length];
+    const entry = coaches.find(c => c.category === cat);
+    if (!entry) continue;
+
+    if (cat === 'attacking') {
+      const targetStarter = [...starters]
+        .filter(s => atkPos.has(s.assignedPos || s.pos))
+        .sort((a, b) => ((a.avgRating || 6.5) * 10 + getPlayerOverallRating(a) - (a.fatigue || 0) * 0.3)
+          - ((b.avgRating || 6.5) * 10 + getPlayerOverallRating(b) - (b.fatigue || 0) * 0.3))[0];
+      if (!targetStarter) continue;
+      const slotPos = targetStarter.assignedPos || targetStarter.pos;
+      const candidate = findBestFitReplacementCandidate(nonStarters, slotPos, [targetStarter.id]);
+      if (!candidate) continue;
+      const cOvr = getPlayerOverallRating(candidate);
+      return {
+        id: `consult_coach_${Date.now()}`,
+        kind: 'coach',
+        scenario: 'CO1',
+        coachId: entry.coach.id,
+        coachCategory: entry.category,
+        coachName: entry.coach.name,
+        coachRoleLabel: entry.roleLabel,
+        senderName: `${entry.coach.name} ${entry.roleLabel}`,
+        topic: '攻撃陣の起用提案',
+        title: `${entry.coach.name} ${entry.roleLabel}：前線の活性化提案`,
+        speech: `GM、攻撃練習でのキレを見る限り、${slotPos} には ${candidate.fullName || candidate.name}（OVR ${cOvr}）を起用する方が得点の匂いがします。次戦の先発で試してみませんか。`,
+        dutyTitle: `${entry.coach.name}コーチの起用提案`,
+        dutyDesc: `${candidate.name} の先発起用について回答待ち`,
+        outPlayerId: targetStarter.id,
+        inPlayerId: candidate.id,
+        detailRows: [
+          ['交代推奨 (OUT)', `${targetStarter.pos} ${targetStarter.fullName || targetStarter.name}（OVR ${getPlayerOverallRating(targetStarter)}）`],
+          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+        ],
+        acceptLabel: `コーチ案を採用（${candidate.name} を起用）`
+      };
+    }
+
+    if (cat === 'defending') {
+      const targetStarter = [...starters]
+        .filter(s => defPos.has(s.assignedPos || s.pos))
+        .sort((a, b) => ((a.avgRating || 6.5) * 10 + getPlayerOverallRating(a) - (a.fatigue || 0) * 0.3)
+          - ((b.avgRating || 6.5) * 10 + getPlayerOverallRating(b) - (b.fatigue || 0) * 0.3))[0];
+      if (!targetStarter) continue;
+      const slotPos = targetStarter.assignedPos || targetStarter.pos;
+      const candidate = findBestFitReplacementCandidate(nonStarters, slotPos, [targetStarter.id]);
+      if (!candidate) continue;
+      const cOvr = getPlayerOverallRating(candidate);
+      return {
+        id: `consult_coach_${Date.now()}`,
+        kind: 'coach',
+        scenario: 'CO2',
+        coachId: entry.coach.id,
+        coachCategory: entry.category,
+        coachName: entry.coach.name,
+        coachRoleLabel: entry.roleLabel,
+        senderName: `${entry.coach.name} ${entry.roleLabel}`,
+        topic: '守備陣の起用提案',
+        title: `${entry.coach.name} ${entry.roleLabel}：守備ラインのテコ入れ提案`,
+        speech: `GM、最終ラインの安定感を高めるため、${slotPos} に ${candidate.fullName || candidate.name}（OVR ${cOvr}）を入れてみるべきです。対人守備の強度が一段上がります。`,
+        dutyTitle: `${entry.coach.name}コーチの起用提案`,
+        dutyDesc: `${candidate.name} の先発起用について回答待ち`,
+        outPlayerId: targetStarter.id,
+        inPlayerId: candidate.id,
+        detailRows: [
+          ['交代推奨 (OUT)', `${targetStarter.pos} ${targetStarter.fullName || targetStarter.name}（OVR ${getPlayerOverallRating(targetStarter)}）`],
+          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+        ],
+        acceptLabel: `コーチ案を採用（${candidate.name} を起用）`
+      };
+    }
+
+    if (cat === 'fitness') {
+      const tiredStarter = [...starters]
+        .filter(s => s.pos !== 'GK')
+        .sort((a, b) => (b.fatigue || 0) - (a.fatigue || 0))[0];
+      if (!tiredStarter) continue;
+      const slotPos = tiredStarter.assignedPos || tiredStarter.pos;
+      const candidate = findBestFitReplacementCandidate(nonStarters, slotPos, [tiredStarter.id]);
+      if (!candidate) continue;
+      const cOvr = getPlayerOverallRating(candidate);
+      return {
+        id: `consult_coach_${Date.now()}`,
+        kind: 'coach',
+        scenario: 'CO3',
+        coachId: entry.coach.id,
+        coachCategory: entry.category,
+        coachName: entry.coach.name,
+        coachRoleLabel: entry.roleLabel,
+        senderName: `${entry.coach.name} ${entry.roleLabel}`,
+        topic: 'コンディション管理相談',
+        title: `${entry.coach.name} ${entry.roleLabel}：主力の休養とローテ提案`,
+        speech: `GM、${tiredStarter.fullName || tiredStarter.name} に連戦の疲労が蓄積しています。故障を防ぐためにも次戦は休ませ、${slotPos} に対応できる ${candidate.fullName || candidate.name} を先発させましょう。`,
+        dutyTitle: `${entry.coach.name}コーチのローテ提案`,
+        dutyDesc: `${tiredStarter.name} の休養について回答待ち`,
+        outPlayerId: tiredStarter.id,
+        inPlayerId: candidate.id,
+        detailRows: [
+          ['休養推奨 (OUT)', `${tiredStarter.pos} ${tiredStarter.fullName || tiredStarter.name}（OVR ${getPlayerOverallRating(tiredStarter)}）`],
+          ['代役推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+        ],
+        acceptLabel: `コーチ案を採用（${tiredStarter.name} を休養）`
+      };
+    }
+  }
+  return null;
+}
+
 function buildConflictArbitrationEvent(club) {
   if (!club || !club.manager) return null;
   const mgr = club.manager;
@@ -18605,23 +18837,47 @@ function buildConflictArbitrationEvent(club) {
     ? Math.round(starters.reduce((sum, p) => sum + (p.fatigue || 0), 0) / starters.length)
     : 0;
 
-  const youngHopeful = [...nonStarters].filter(p => (p.age || 25) <= 22)
-    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0];
-  const vetStarter = [...starters].filter(p => (p.age || 25) >= 28)
-    .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b))[0];
+  // 若手 vs ベテラン候補（ポジション適性がある組み合わせのみ許可）
+  const vetStarters = [...starters]
+    .filter(p => p.pos !== 'GK' && (p.age || 25) >= 27)
+    .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b));
+  let youngHopeful = null;
+  let vetStarter = null;
+  for (const vs of vetStarters) {
+    const slotPos = vs.assignedPos || vs.pos;
+    const youngPool = nonStarters.filter(p => (p.age || 25) <= 22);
+    const fitYoung = findBestFitReplacementCandidate(youngPool, slotPos, [vs.id]);
+    if (fitYoung) {
+      youngHopeful = fitYoung;
+      vetStarter = vs;
+      break;
+    }
+  }
 
-  const fitnessEntry = coaches.find(e => e.category === 'fitness') || coaches[0];
-  const tacEntries = coaches.filter(e => e.category === 'attacking' || e.category === 'defending');
-  const tacEntry = tacEntries[(gameState.consultationSeq || 0) % Math.max(1, tacEntries.length)] || coaches[0];
+  const atkEntry = coaches.find(e => e.category === 'attacking') || null;
+  const defEntry = coaches.find(e => e.category === 'defending') || null;
+  const fitnessEntry = coaches.find(e => e.category === 'fitness') || null;
 
-  const preferScenario = (avgStarterFatigue >= 28 || ((gameState.consultationSeq || 0) % 3 === 0))
-    ? 'C1'
-    : (youngHopeful && vetStarter && ((gameState.consultationSeq || 0) % 2 === 1))
-      ? 'C3'
-      : 'C2';
+  const candidates = [];
+  if (atkEntry) candidates.push({ key: 'C2_ATK', cat: 'attacking', entry: atkEntry });
+  if (defEntry) candidates.push({ key: 'C2_DEF', cat: 'defending', entry: defEntry });
+  if (youngHopeful && vetStarter && (atkEntry || defEntry)) {
+    const c3Entry = atkEntry || defEntry;
+    candidates.push({ key: 'C3', cat: c3Entry.category, entry: c3Entry });
+  }
+  if (fitnessEntry) candidates.push({ key: 'C1', cat: 'fitness', entry: fitnessEntry });
+  if (candidates.length === 0) {
+    candidates.push({ key: 'C2_ATK', cat: coaches[0].category, entry: coaches[0] });
+  }
 
-  if (preferScenario === 'C3' && youngHopeful && vetStarter) {
-    const cEntry = tacEntry;
+  const lastCat = gameState.lastConflictCoachCategory || null;
+  const nonRepeatPool = candidates.filter(c => c.cat !== lastCat);
+  const pool = nonRepeatPool.length > 0 ? nonRepeatPool : candidates;
+  const picked = pool[(gameState.consultationSeq || 0) % pool.length];
+  gameState.lastConflictCoachCategory = picked.cat;
+
+  if (picked.key === 'C3' && youngHopeful && vetStarter) {
+    const cEntry = picked.entry;
     return {
       id: `consult_conf_${Date.now()}`,
       kind: 'conflict',
@@ -18648,8 +18904,9 @@ function buildConflictArbitrationEvent(club) {
     };
   }
 
-  if (preferScenario === 'C2') {
-    const isAtk = tacEntry.category === 'attacking';
+  if (picked.key === 'C2_ATK' || picked.key === 'C2_DEF') {
+    const tacEntry = picked.entry;
+    const isAtk = picked.key === 'C2_ATK';
     const secLabel = isAtk ? '攻撃ユニット' : '守備ユニット';
     return {
       id: `consult_conf_${Date.now()}`,
@@ -18678,6 +18935,7 @@ function buildConflictArbitrationEvent(club) {
   }
 
   // Scenario C1: トレーニング強度・過密疲労対立
+  const fEntry = picked.entry || coaches[0];
   const mgrC1Body = avgStarterFatigue >= 28
     ? '主力に疲れは見え始めているが、勝負どころにつき強度を落とさず調整したい。'
     : '勝点を落とせない局面につき、実戦形式の強度を保ったまま調整を続けたい。';
@@ -18685,19 +18943,19 @@ function buildConflictArbitrationEvent(club) {
     id: `consult_conf_${Date.now()}`,
     kind: 'conflict',
     scenario: 'C1',
-    senderName: `${mgr.name} 監督 × ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel}`,
+    senderName: `${mgr.name} 監督 × ${fEntry.coach.name} ${fEntry.roleLabel}`,
     topic: '意見対立の仲裁',
     title: '調整方針の対立',
-    speech: `GM、次節に向けた調整メニューで ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel} と意見が割れています。どちらを優先すべきかご判断ください。`,
+    speech: `GM、次節に向けた調整メニューで ${fEntry.coach.name} ${fEntry.roleLabel} と意見が割れています。どちらを優先すべきかご判断ください。`,
     dutyTitle: '監督・コーチの調整方針仲裁',
     dutyDesc: `強度維持か疲労軽減か、次節前に裁定`,
-    coachId: fitnessEntry.coach.id,
-    coachCategory: fitnessEntry.category,
-    coachName: fitnessEntry.coach.name,
-    coachRoleLabel: fitnessEntry.roleLabel,
+    coachId: fEntry.coach.id,
+    coachCategory: fEntry.category,
+    coachName: fEntry.coach.name,
+    coachRoleLabel: fEntry.roleLabel,
     mgrStanceTitle: `${mgr.name} 監督の主張`,
     mgrStanceBody: mgrC1Body,
-    coachStanceTitle: `${fitnessEntry.coach.name}（${fitnessEntry.roleLabel}）の主張`,
+    coachStanceTitle: `${fEntry.coach.name}（${fEntry.roleLabel}）の主張`,
     coachStanceBody: '消耗が蓄積しており、このまま高負荷を続けると故障の恐れがある。強度を落として回復を優先すべきだ。',
     acceptLabel: '監督を支持（強度維持）',
     coachAcceptLabel: 'コーチ案を採用（疲労回復）',
@@ -18707,23 +18965,49 @@ function buildConflictArbitrationEvent(club) {
 
 function buildLineupConsultationCandidate(club, forceType = null) {
   if (!club) return null;
+  let result = null;
   if (forceType === 'player') {
-    return buildPlayerConsultation(club);
+    result = buildPlayerConsultation(club);
+  } else if (forceType === 'manager') {
+    result = buildManagerConsultation(club);
+  } else if (forceType === 'coach') {
+    result = buildCoachConsultation(club);
+  } else if (forceType === 'conflict') {
+    result = buildConflictArbitrationEvent(club);
+  } else {
+    const seqMod = (gameState.consultationSeq || 0) % 4;
+    if (seqMod === 1) {
+      result = buildPlayerConsultation(club) || buildCoachConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
+    } else if (seqMod === 2) {
+      result = buildCoachConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
+    } else if (seqMod === 3) {
+      result = buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club);
+    } else {
+      result = buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club) || buildConflictArbitrationEvent(club);
+    }
   }
-  if (forceType === 'manager') {
-    return buildManagerConsultation(club);
+  if (result) {
+    recordRecentConsultedPlayer(result.inPlayerId || result.playerId);
   }
-  if (forceType === 'conflict') {
-    return buildConflictArbitrationEvent(club);
-  }
-  const seqMod = (gameState.consultationSeq || 0) % 3;
-  if (seqMod === 1) {
-    return buildPlayerConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
-  }
-  if (seqMod === 2) {
-    return buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
-  }
-  return buildManagerConsultation(club) || buildPlayerConsultation(club) || buildConflictArbitrationEvent(club);
+  return result;
+}
+
+function showConsultationReplyModal(reply) {
+  if (!reply || typeof showSecretaryModal !== 'function') return;
+  showSecretaryModal({
+    speaker: reply.speaker || null,
+    topic: reply.topic || '面談の返答',
+    title: reply.title || '返答',
+    speech: reply.speech || '',
+    detailHtml: reply.detailHtml || '',
+    actions: [
+      {
+        label: reply.buttonLabel || '確認',
+        className: 'btn btn-primary',
+        onClick: () => {}
+      }
+    ]
+  });
 }
 
 function resolveLineupConsultationDecision(consultation, decision) {
@@ -18743,8 +19027,13 @@ function resolveLineupConsultationDecision(consultation, decision) {
   gameState.pendingLineupConsultation = null;
   const mgr = club.manager;
   const activePlayers = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  let replyPayload = null;
 
   if (consultation.kind === 'conflict') {
+    const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+    const mgrSpeaker = mgr ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club } : null;
+    const coachSpeaker = coachObj ? { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ', club } : mgrSpeaker;
+
     if (decision === 'accept') {
       if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 5);
       activePlayers.filter(p => p.isStarter).forEach(p => {
@@ -18752,6 +19041,12 @@ function resolveLineupConsultationDecision(consultation, decision) {
         if (consultation.scenario === 'C1') p.fatigue = Math.min(100, (p.fatigue || 0) + 3);
       });
       addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}の方針を支持し、チームの統一感を優先しました（${consultation.coachName || 'コーチ'}には理解を求めました）。`);
+      replyPayload = {
+        speaker: mgrSpeaker,
+        topic: '裁定への返答',
+        title: `${mgr ? mgr.name : '監督'}監督の返答`,
+        speech: `GMのご判断に感謝します。私のやり方を信じて任せていただいた以上、次の試合では結果で応えてみせます。${consultation.coachName || 'コーチ'}にも意図は共有しておきます。`
+      };
     } else if (decision === 'coach' || decision === 'decline') {
       if (mgr) mgr.trust = Math.max(15, (mgr.trust ?? 75) - 3);
       if (consultation.scenario === 'C1') {
@@ -18760,6 +19055,12 @@ function resolveLineupConsultationDecision(consultation, decision) {
           if (p.isStarter) p.morale = Math.min(100, (p.morale || 75) + 2);
         });
         addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'フィジカルコーチ'}の進言を採用し、負荷軽減によって主力のコンディションを回復しました。`);
+        replyPayload = {
+          speaker: coachSpeaker,
+          topic: '裁定への返答',
+          title: `${consultation.coachName || 'コーチ'}（${consultation.coachRoleLabel || 'フィジカルコーチ'}）の返答`,
+          speech: 'ご理解ありがとうございます。これで選手たちの疲労は着実に抜けていくはずです。万全のコンディションで次節に送り出します。'
+        };
       } else if (consultation.scenario === 'C3' && consultation.inPlayerId && consultation.outPlayerId) {
         const outP = club.players.find(p => p.id === consultation.outPlayerId);
         const inP = club.players.find(p => p.id === consultation.inPlayerId);
@@ -18768,6 +19069,12 @@ function resolveLineupConsultationDecision(consultation, decision) {
           inP.morale = Math.min(100, (inP.morale || 75) + 10);
           outP.morale = Math.max(30, (outP.morale || 75) - 2);
           addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の推挙を採用し、若手 #${inP.squadNumber || '-'} ${inP.name} をスタメン抜擢しました。`);
+          replyPayload = {
+            speaker: coachSpeaker,
+            topic: '裁定への返答',
+            title: `${consultation.coachName || 'コーチ'}（${consultation.coachRoleLabel || 'コーチ'}）の返答`,
+            speech: `ありがとうございます！${inP.name} の勢いは必ずチームの起爆剤になります。試合当日までに周囲との連係もしっかり詰めておきます。`
+          };
         }
       } else {
         const isAtk = consultation.coachCategory === 'attacking';
@@ -18778,6 +19085,14 @@ function resolveLineupConsultationDecision(consultation, decision) {
           if (targetPosSet.has(p.pos)) p.morale = Math.min(100, (p.morale || 75) + 7);
         });
         addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の提言を採用し、${isAtk ? '攻撃陣' : '守備陣'}の連携強化を重点実施しました。`);
+        replyPayload = {
+          speaker: coachSpeaker,
+          topic: '裁定への返答',
+          title: `${consultation.coachName || 'コーチ'}（${consultation.coachRoleLabel || 'コーチ'}）の返答`,
+          speech: isAtk
+            ? '承知しました。前線の崩しとフィニッシュの精度を徹底的に磨き上げて、次の試合で違いをお見せします。'
+            : '承知しました。守備ブロックの距離感と球際の強度を引き締め、簡単には崩れない陣形に仕上げます。'
+        };
       }
     } else if (decision === 'mediate') {
       if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 2);
@@ -18786,16 +19101,23 @@ function resolveLineupConsultationDecision(consultation, decision) {
           if (p.isStarter) p.fatigue = Math.max(0, (p.fatigue || 0) - 5);
           else p.morale = Math.min(100, (p.morale || 75) + 4);
         });
-        addDailyLog(`【スタッフ仲裁】GMの折衷案により主力は負荷を分散し、控え組の底上げも両立させました。`);
+        addDailyLog('【スタッフ仲裁】GMの折衷案により主力は負荷を分散し、控え組の底上げも両立させました。');
       } else {
         activePlayers.forEach(p => {
           p.morale = Math.min(100, (p.morale || 75) + 3);
         });
         addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}と${consultation.coachName || 'コーチ'}の双方の意見を取り入れ、円満に妥協点を見出しました。`);
       }
+      replyPayload = {
+        speaker: mgrSpeaker,
+        topic: '仲裁への返答',
+        title: `${mgr ? mgr.name : '監督'}監督の返答`,
+        speech: `なるほど、双方の言い分を踏まえた現実的な折衷案ですね。${consultation.coachName || 'コーチ'}とも摺り合わせはつきました。この形でチームをまとめます。`
+      };
     }
     renderAll();
     if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+    if (replyPayload) showConsultationReplyModal(replyPayload);
     return;
   }
 
@@ -18807,6 +19129,12 @@ function resolveLineupConsultationDecision(consultation, decision) {
         if (typeof autoSelectStarters === 'function') autoSelectStarters(club);
         if (typeof ensureValidSquadAndStarters === 'function') ensureValidSquadAndStarters(club);
         addDailyLog(`【起用相談承認】${mgr ? mgr.name : '監督'}の提案を採用し、布陣を ${club.formation} へ調整しました。`);
+        replyPayload = {
+          speaker: mgr ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club } : null,
+          topic: '相談への返答',
+          title: `${mgr ? mgr.name : '監督'}監督の返答`,
+          speech: `ご承認ありがとうございます。${club.formation} への移行で選手たちの強みがより活きるはずです。すぐ練習に落とし込みます。`
+        };
       } else {
         const outP = club.players.find(p => p.id === consultation.outPlayerId);
         const inP = club.players.find(p => p.id === consultation.inPlayerId);
@@ -18814,24 +19142,99 @@ function resolveLineupConsultationDecision(consultation, decision) {
           swapStarterWithCandidate(club, outP, inP);
           inP.morale = Math.min(100, (inP.morale || 75) + 8);
           addDailyLog(`【起用相談承認】${mgr ? mgr.name : '監督'}の推薦により #${inP.squadNumber || '-'} ${inP.name} をスタメンへ抜擢しました。`);
+          replyPayload = {
+            speaker: mgr ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club } : null,
+            topic: '相談への返答',
+            title: `${mgr ? mgr.name : '監督'}監督の返答`,
+            speech: `ありがとうございます。${inP.name} には今すぐ先発の準備を始めるよう伝えます。必ず期待に応えてくれるはずです。`
+          };
         }
       }
       if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 5);
+    } else if (consultation.kind === 'coach') {
+      const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+      const coachSpeaker = coachObj ? { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ', club } : null;
+      const outP = club.players.find(p => p.id === consultation.outPlayerId);
+      const inP = club.players.find(p => p.id === consultation.inPlayerId);
+      if (outP && inP) {
+        swapStarterWithCandidate(club, outP, inP);
+        inP.morale = Math.min(100, (inP.morale || 75) + 7);
+        addDailyLog(`【コーチ提案承認】${consultation.coachName || 'コーチ'}の進言により #${inP.squadNumber || '-'} ${inP.name} を先発へ起用しました。`);
+        replyPayload = {
+          speaker: coachSpeaker,
+          topic: '提案への返答',
+          title: `${consultation.coachName || 'コーチ'}（${consultation.coachRoleLabel || 'コーチ'}）の返答`,
+          speech: `ご採用ありがとうございます！${inP.name} も非常に張り切っています。次戦に向けて細部まで仕上げていきます。`
+        };
+      }
     } else if (consultation.kind === 'player') {
+      const mgrSpeaker = mgr ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club } : null;
       if (consultation.scenario === 'P2') {
         const p = club.players.find(x => x.id === consultation.playerId);
         if (p) {
-          optimizeStarterPositionSlot(club, p);
-          p.morale = Math.min(100, (p.morale || 75) + 9);
-          addDailyLog(`【選手要望承認】#${p.squadNumber || '-'} ${p.name} を本職 [${p.pos}] へ再配置しました。`);
+          const curPos = p.assignedPos || p.pos;
+          const starters = activePlayers.filter(s => s.isStarter && (s.slotIndex || 0) > 0);
+          const swapPartner = starters.find(other =>
+            other.id !== p.id
+            && (other.assignedPos || other.pos) === p.pos
+            && hasUsablePositionFit(other, curPos)
+          );
+          const approved = Boolean(swapPartner) && (!mgr || (mgr.trust ?? 75) >= 35);
+          if (approved) {
+            optimizeStarterPositionSlot(club, p);
+            p.morale = Math.min(100, (p.morale || 75) + 9);
+            addDailyLog(`【監督判断・配置変更】GMからの伝達を受け、${mgr ? mgr.name : '監督'}監督が #${p.squadNumber || '-'} ${p.name} を本職 [${p.pos}] へ配置変更しました。`);
+            replyPayload = {
+              speaker: mgrSpeaker,
+              topic: '監督からの回答',
+              title: `${mgr ? mgr.name : '監督'}監督の判断：本職配置を承認`,
+              speech: `GMから ${p.name} の要望を聞きました。${swapPartner.name} とのポジション入れ替えならチーム全体のバランスも保てるため、本職の ${p.pos} に戻すことにします。`
+            };
+          } else {
+            p.morale = Math.max(25, (p.morale || 75) - 2);
+            addDailyLog(`【監督判断・配置維持】GMから伝達を受けた${mgr ? mgr.name : '監督'}監督は、チームバランス優先のため #${p.squadNumber || '-'} ${p.name} の現行配置を維持しました。`);
+            replyPayload = {
+              speaker: mgrSpeaker,
+              topic: '監督からの回答',
+              title: `${mgr ? mgr.name : '監督'}監督の判断：現行配置を維持`,
+              speech: `GM、${p.name} の気持ちは理解しましたが、現時点で ${p.pos} へ移すと他のポジションに無理が出ます。今はチーム事情を優先し、現行の配置で戦ってもらいます。`
+            };
+          }
         }
       } else {
         const outP = club.players.find(p => p.id === consultation.outPlayerId);
         const inP = club.players.find(p => p.id === consultation.inPlayerId);
         if (outP && inP) {
-          swapStarterWithCandidate(club, outP, inP);
-          inP.morale = Math.min(100, (inP.morale || 75) + 12);
-          addDailyLog(`【選手要望承認】#${inP.squadNumber || '-'} ${inP.name} の直訴を受け、次戦スタメンへ抜擢しました。`);
+          const slotPos = outP.assignedPos || outP.pos;
+          const fit = getPositionFitInfo(inP, slotPos);
+          const hasFit = hasUsablePositionFit(inP, slotPos);
+          const inScore = getPlayerOverallRating(inP) + (fit.type === 'main' ? 4 : (fit.type === 'sub' ? 0 : -15)) - (inP.fatigue || 0) * 0.15;
+          const outScore = getPlayerOverallRating(outP) - (outP.fatigue || 0) * 0.15;
+          const approved = hasFit && (
+            inScore >= outScore - 3
+            || (outP.fatigue || 0) >= 35
+            || (consultation.scenario === 'P3' && inScore >= outScore - 6)
+          );
+          if (approved) {
+            swapStarterWithCandidate(club, outP, inP);
+            inP.morale = Math.min(100, (inP.morale || 75) + 10);
+            addDailyLog(`【監督判断・先発抜擢】GMからの伝達を受け、${mgr ? mgr.name : '監督'}監督が #${inP.squadNumber || '-'} ${inP.name} の先発起用を決めました。`);
+            replyPayload = {
+              speaker: mgrSpeaker,
+              topic: '監督からの回答',
+              title: `${mgr ? mgr.name : '監督'}監督の判断：先発抜擢を承認`,
+              speech: `GMから話を聞き、改めて練習での状態も確認しました。${slotPos} での適性も問題ないため、次戦は ${inP.name} をスタメンで試してみようと思います。`
+            };
+          } else {
+            inP.morale = Math.min(100, Math.max(25, (inP.morale || 75) + (consultation.scenario === 'P3' ? 2 : -2)));
+            addDailyLog(`【監督判断・先発見送り】GMから伝達を受けた${mgr ? mgr.name : '監督'}監督は、現行スタメン維持を判断し、#${inP.squadNumber || '-'} ${inP.name} には途中出場での準備を指示しました。`);
+            replyPayload = {
+              speaker: mgrSpeaker,
+              topic: '監督からの回答',
+              title: `${mgr ? mgr.name : '監督'}監督の判断：現状の先発を維持`,
+              speech: `GMの伝達は受け止めましたが、${slotPos} は現在の ${outP.name} の安定感が上回っています。${inP.name} にはまず途中出場から流れを変える役割でチャンスを与えるつもりです。`
+            };
+          }
         }
       }
     }
@@ -18839,17 +19242,46 @@ function resolveLineupConsultationDecision(consultation, decision) {
     if (consultation.kind === 'manager' && mgr) {
       mgr.trust = Math.max(0, (mgr.trust ?? 75) - 2);
       addDailyLog(`【起用相談見送り】${mgr.name}監督の起用変更案を見送り、現行布陣を維持しました。`);
+      replyPayload = {
+        speaker: { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club },
+        topic: '相談への返答',
+        title: `${mgr.name}監督の返答`,
+        speech: '承知しました。フロントが現行布陣の継続を望むのであれば、このメンバーで最大限のパフォーマンスを引き出せるよう調整します。'
+      };
+    } else if (consultation.kind === 'coach') {
+      const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+      const coachSpeaker = coachObj ? { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ', club } : null;
+      addDailyLog(`【コーチ提案見送り】${consultation.coachName || 'コーチ'}の起用提案を見送り、現行方針を維持しました。`);
+      replyPayload = {
+        speaker: coachSpeaker,
+        topic: '提案への返答',
+        title: `${consultation.coachName || 'コーチ'}（${consultation.coachRoleLabel || 'コーチ'}）の返答`,
+        speech: '分かりました。現場では引き続き控え組の状態も注視しつつ、今の方針に沿ってサポートを続けます。'
+      };
     } else if (consultation.kind === 'player') {
       const p = club.players.find(x => x.id === (consultation.inPlayerId || consultation.playerId));
       if (p) {
         p.morale = Math.max(20, (p.morale || 75) - 5);
         addDailyLog(`【選手要望回答】${p.name} に対し、チーム方針と激しい競争下での努力を求める旨を伝えました。`);
+        replyPayload = {
+          speaker: {
+            kind: 'player',
+            person: p,
+            name: p.fullName || p.name,
+            roleLabel: `${p.pos} #${p.squadNumber || '-'}`,
+            club
+          },
+          topic: '面談の返答',
+          title: `${p.fullName || p.name} の返答`,
+          speech: '……厳しい言葉ですが、言われたことは受け止めます。練習から見返して、自分の力でポジションを掴み取ってみせます。'
+        };
       }
     }
   }
 
   renderAll();
   if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+  if (replyPayload) showConsultationReplyModal(replyPayload);
 }
 
 function findClubCoachById(club, coachId) {
@@ -18921,6 +19353,17 @@ function openLineupConsultationModal(consultation) {
   let modalSpeaker = null;
   if (consultation.kind === 'manager' && club && club.manager) {
     modalSpeaker = { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club };
+  } else if (consultation.kind === 'coach' && club) {
+    const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+    if (coachObj) {
+      modalSpeaker = {
+        kind: 'coach',
+        person: coachObj,
+        name: coachObj.name,
+        roleLabel: consultation.coachRoleLabel || 'コーチ',
+        club
+      };
+    }
   } else if (consultation.kind === 'player' && club) {
     const targetPlayerId = consultation.playerId || consultation.inPlayerId;
     const playerObj = (club.players || []).find(p => p && p.id === targetPlayerId);
@@ -18941,6 +19384,9 @@ function openLineupConsultationModal(consultation) {
       <span class="gm-modal-flat-val">${escapeCommHtml(v)}</span>
     </div>
   `).join('');
+  const declineLabel = consultation.kind === 'manager'
+    ? '現行布陣を維持する'
+    : (consultation.kind === 'coach' ? '現行方針を維持する' : '競争を勝ち取るよう伝える');
   showSecretaryModal({
     speaker: modalSpeaker,
     topic: consultation.topic,
@@ -18954,7 +19400,7 @@ function openLineupConsultationModal(consultation) {
         onClick: () => resolveLineupConsultationDecision(consultation, 'accept')
       },
       {
-        label: consultation.kind === 'manager' ? '現行布陣を維持する' : '競争を勝ち取るよう伝える',
+        label: declineLabel,
         className: 'btn btn-secondary',
         onClick: () => resolveLineupConsultationDecision(consultation, 'decline')
       },
@@ -19154,8 +19600,8 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     `,
     actions: [
       {
-        label: 'タップで次へ',
-        isNextPrompt: true,
+        label: '次へ',
+        className: 'btn btn-primary gm-report-next-btn',
         onClick: () => { if (typeof renderAll === 'function') renderAll(); }
       }
     ]

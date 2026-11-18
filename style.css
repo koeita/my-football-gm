@@ -18915,13 +18915,6 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   margin-top: auto;
 }
 
-.gm-vn-choice-prompt {
-  font-size: 12px;
-  font-weight: 800;
-  color: #2ecc71;
-  letter-spacing: 0.02em;
-}
-
 .gm-vn-dialogue-card.is-tap-advance {
   cursor: pointer;
 }
@@ -19089,14 +19082,25 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   display: none;
 }
 
+.gm-vn-sticky-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  background: #0f1318;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 3;
+}
+
 .gm-secretary-modal-card .modal-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 4px 0 0;
-  margin-top: 2px;
+  padding: 0;
+  margin-top: 0;
   border-top: none;
   background: transparent;
 }
@@ -19157,6 +19161,11 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   #gm-modal-overlay .modal-description {
     font-size: 13px;
     line-height: 1.6;
+  }
+
+  .gm-vn-sticky-footer {
+    padding: 8px 10px 10px;
+    gap: 6px;
   }
 
   .gm-secretary-modal-card .modal-actions:not(.is-single-prompt) {
