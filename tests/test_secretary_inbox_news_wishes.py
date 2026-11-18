@@ -370,6 +370,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         for sym in [
             'recentConsultedPlayerIds',
             'lastConflictCoachCategory',
+            'function hasUsablePositionFit(',
             'function findBestFitReplacementCandidate(',
             'function buildCoachConsultation(',
             'function showConsultationReplyModal(',

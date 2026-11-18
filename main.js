@@ -18379,12 +18379,18 @@ function swapStarterWithCandidate(club, outStarter, inCandidate) {
   return true;
 }
 
+function hasUsablePositionFit(player, slotPos) {
+  if (!player) return false;
+  const fit = getPositionFitInfo(player, slotPos);
+  return Boolean(fit && (fit.type === 'main' || fit.type === 'sub'));
+}
+
 function optimizeStarterPositionSlot(club, player) {
   if (!club || !player || !player.isStarter || (player.slotIndex || 0) === 0) return false;
   const curSlotPos = player.assignedPos || player.pos;
   if (curSlotPos === player.pos) return false;
   const starters = (club.players || []).filter(p => p && p.isStarter && (p.slotIndex || 0) > 0 && p.id !== player.id);
-  const partner = starters.find(s => (s.assignedPos || s.pos) === player.pos && getPositionFitInfo(s, curSlotPos).type !== 'out');
+  const partner = starters.find(s => (s.assignedPos || s.pos) === player.pos && hasUsablePositionFit(s, curSlotPos));
   if (partner) {
     const pSlot = partner.slotIndex;
     const pPos = partner.assignedPos || partner.pos;
@@ -18417,10 +18423,7 @@ function findBestFitReplacementCandidate(pool, slotPos, excludeIds = []) {
   const recentSet = getRecentConsultedPlayerSet();
   const fitCandidates = (pool || [])
     .filter(c => c && !excluded.has(c.id))
-    .filter(c => {
-      const fit = getPositionFitInfo(c, slotPos);
-      return fit && fit.type !== 'out';
-    })
+    .filter(c => hasUsablePositionFit(c, slotPos))
     .sort((a, b) => {
       const fitA = getPositionFitInfo(a, slotPos).type === 'main' ? 14 : 6;
       const fitB = getPositionFitInfo(b, slotPos).type === 'main' ? 14 : 6;
@@ -18446,7 +18449,7 @@ function buildManagerConsultation(club) {
 
   // 1. 疲労または適性外スタメンの入れ替え相談
   const troubledStarter = [...starters]
-    .filter(s => (s.fatigue || 0) >= 45 || getPositionFitInfo(s, s.assignedPos || s.pos).type === 'out')
+    .filter(s => (s.fatigue || 0) >= 45 || !hasUsablePositionFit(s, s.assignedPos || s.pos))
     .sort((a, b) => {
       const recA = recentSet.has(a.id) ? 1 : 0;
       const recB = recentSet.has(b.id) ? 1 : 0;
@@ -18594,7 +18597,7 @@ function buildPlayerConsultation(club) {
   const outPosStarter = starters.find(s => {
     const slotPos = s.assignedPos || s.pos;
     if (slotPos === s.pos || recentSet.has(s.id)) return false;
-    return starters.some(other => other.id !== s.id && (other.assignedPos || other.pos) === s.pos && getPositionFitInfo(other, slotPos).type !== 'out');
+    return starters.some(other => other.id !== s.id && (other.assignedPos || other.pos) === s.pos && hasUsablePositionFit(other, slotPos));
   });
   if (outPosStarter) {
     const curPos = outPosStarter.assignedPos || outPosStarter.pos;
@@ -18619,27 +18622,32 @@ function buildPlayerConsultation(club) {
     .filter(p => !p.isStarter && p.pos !== 'GK' && !recentSet.has(p.id) && (p.appearances || 0) <= Math.max(1, Math.floor((gameState.currentMatchIndex || 0) * 0.35)))
     .sort((a, b) => (getPlayerOverallRating(b) - (b.appearances || 0) * 2) - (getPlayerOverallRating(a) - (a.appearances || 0) * 2));
   if (benchLowApps.length > 0 && starters.length > 0 && ((gameState.consultationSeq || 0) % 2 === 1)) {
-    const requester = benchLowApps[0];
-    const outStarter = [...starters]
-      .filter(s => getPositionFitInfo(requester, s.assignedPos || s.pos).type !== 'out')
-      .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b))[0] || null;
-    if (outStarter) {
-      return {
-        id: `consult_ply_${Date.now()}`,
-        kind: 'player',
-        scenario: 'P3',
-        senderName: `${requester.name} (${requester.pos})`,
-        topic: '出場機会の相談',
-        title: `${requester.fullName || requester.name}：出場機会への不満`,
-        speech: `GM、正直に話させてください。ここまで思うように試合に絡めておらず、自分の力を示す場が足りません。途中出場からでも構わないので、起用を増やしてもらえないでしょうか。`,
-        dutyTitle: `${requester.name} の出場機会相談`,
-        dutyDesc: `出場機会についての面談`,
-        playerId: requester.id,
-        inPlayerId: requester.id,
-        outPlayerId: outStarter.id,
-        detailRows: [],
-        acceptLabel: '監督に起用検討を伝える'
-      };
+    for (const requester of benchLowApps) {
+      const outStarter = [...starters]
+        .filter(s => hasUsablePositionFit(requester, s.assignedPos || s.pos))
+        .sort((a, b) => {
+          const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
+          const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
+          return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
+        })[0] || null;
+      if (outStarter) {
+        return {
+          id: `consult_ply_${Date.now()}`,
+          kind: 'player',
+          scenario: 'P3',
+          senderName: `${requester.name} (${requester.pos})`,
+          topic: '出場機会の相談',
+          title: `${requester.fullName || requester.name}：出場機会への不満`,
+          speech: `GM、正直に話させてください。ここまで思うように試合に絡めておらず、自分の力を示す場が足りません。途中出場からでも構わないので、起用を増やしてもらえないでしょうか。`,
+          dutyTitle: `${requester.name} の出場機会相談`,
+          dutyDesc: `出場機会についての面談`,
+          playerId: requester.id,
+          inPlayerId: requester.id,
+          outPlayerId: outStarter.id,
+          detailRows: [],
+          acceptLabel: '監督に起用検討を伝える'
+        };
+      }
     }
   }
 
@@ -18651,32 +18659,34 @@ function buildPlayerConsultation(club) {
       return (getPlayerOverallRating(b) - recB) - (getPlayerOverallRating(a) - recA);
     });
   if (benchHopefuls.length > 0 && starters.length > 0) {
-    const idx = (gameState.consultationSeq || 0) % Math.min(3, benchHopefuls.length);
-    const requester = benchHopefuls[idx] || benchHopefuls[0];
-    const outStarter = [...starters]
-      .filter(s => getPositionFitInfo(requester, s.assignedPos || s.pos).type !== 'out')
-      .sort((a, b) => {
-        const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
-        const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
-        return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
-      })[0];
-    if (outStarter) {
-      return {
-        id: `consult_ply_${Date.now()}`,
-        kind: 'player',
-        scenario: 'P1',
-        senderName: `${requester.name} (${requester.pos})`,
-        topic: '起用法の相談',
-        title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
-        speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
-        dutyTitle: `${requester.name} の先発起用要望`,
-        dutyDesc: `スタメン出場機会についての面談`,
-        playerId: requester.id,
-        inPlayerId: requester.id,
-        outPlayerId: outStarter.id,
-        detailRows: [],
-        acceptLabel: '監督に起用検討を伝える'
-      };
+    const startIdx = (gameState.consultationSeq || 0) % Math.min(3, benchHopefuls.length);
+    for (let i = 0; i < benchHopefuls.length; i++) {
+      const requester = benchHopefuls[(startIdx + i) % benchHopefuls.length];
+      const outStarter = [...starters]
+        .filter(s => hasUsablePositionFit(requester, s.assignedPos || s.pos))
+        .sort((a, b) => {
+          const mA = getPositionFitInfo(requester, a.assignedPos || a.pos).type === 'main' ? -8 : 0;
+          const mB = getPositionFitInfo(requester, b.assignedPos || b.pos).type === 'main' ? -8 : 0;
+          return (getPlayerOverallRating(a) + mA) - (getPlayerOverallRating(b) + mB);
+        })[0];
+      if (outStarter) {
+        return {
+          id: `consult_ply_${Date.now()}`,
+          kind: 'player',
+          scenario: 'P1',
+          senderName: `${requester.name} (${requester.pos})`,
+          topic: '起用法の相談',
+          title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
+          speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
+          dutyTitle: `${requester.name} の先発起用要望`,
+          dutyDesc: `スタメン出場機会についての面談`,
+          playerId: requester.id,
+          inPlayerId: requester.id,
+          outPlayerId: outStarter.id,
+          detailRows: [],
+          acceptLabel: '監督に起用検討を伝える'
+        };
+      }
     }
   }
   return null;
@@ -19176,7 +19186,7 @@ function resolveLineupConsultationDecision(consultation, decision) {
           const swapPartner = starters.find(other =>
             other.id !== p.id
             && (other.assignedPos || other.pos) === p.pos
-            && getPositionFitInfo(other, curPos).type !== 'out'
+            && hasUsablePositionFit(other, curPos)
           );
           const approved = Boolean(swapPartner) && (!mgr || (mgr.trust ?? 75) >= 35);
           if (approved) {
@@ -19206,9 +19216,10 @@ function resolveLineupConsultationDecision(consultation, decision) {
         if (outP && inP) {
           const slotPos = outP.assignedPos || outP.pos;
           const fit = getPositionFitInfo(inP, slotPos);
+          const hasFit = hasUsablePositionFit(inP, slotPos);
           const inScore = getPlayerOverallRating(inP) + (fit.type === 'main' ? 4 : (fit.type === 'sub' ? 0 : -15)) - (inP.fatigue || 0) * 0.15;
           const outScore = getPlayerOverallRating(outP) - (outP.fatigue || 0) * 0.15;
-          const approved = fit.type !== 'out' && (
+          const approved = hasFit && (
             inScore >= outScore - 3
             || (outP.fatigue || 0) >= 35
             || (consultation.scenario === 'P3' && inScore >= outScore - 6)
