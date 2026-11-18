@@ -5340,7 +5340,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .day-card.is-today {
   border-color: var(--accent-green);
   background-color: rgba(46, 204, 113, 0.09);
-  box-shadow: inset 0 0 0 1px var(--accent-green);
+  box-shadow: none;
 }
 
 .day-card.is-matchday {
@@ -5349,7 +5349,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .day-card.is-today.is-matchday {
   background-color: rgba(46, 204, 113, 0.16);
-  box-shadow: 0 0 10px rgba(46, 204, 113, 0.25), inset 0 0 0 1px var(--accent-green);
+  box-shadow: none;
 }
 
 .day-card-header {
@@ -5394,9 +5394,9 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .day-event-match {
-  background-color: rgba(46, 204, 113, 0.25);
+  background-color: transparent;
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.5);
+  border: none;
   font-weight: 700;
 }
 
@@ -13248,13 +13248,13 @@ button.hidden,
 .cal-venue-tag.venue-home {
   background: rgba(46, 204, 113, 0.2);
   color: var(--accent-green);
-  border: 1px solid rgba(46, 204, 113, 0.4);
+  border: none;
 }
 
 .cal-venue-tag.venue-away {
   background: rgba(52, 152, 219, 0.2);
   color: #3498db;
-  border: 1px solid rgba(52, 152, 219, 0.4);
+  border: none;
 }
 
 .cal-next-tag {
@@ -13293,19 +13293,19 @@ button.hidden,
 .cal-score-badge.badge-win {
   background: rgba(46, 204, 113, 0.22);
   color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.45);
+  border: none;
 }
 
 .cal-score-badge.badge-draw {
   background: rgba(241, 196, 15, 0.2);
   color: #f1c40f;
-  border: 1px solid rgba(241, 196, 15, 0.45);
+  border: none;
 }
 
 .cal-score-badge.badge-lose {
   background: rgba(231, 76, 60, 0.22);
   color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.45);
+  border: none;
 }
 
 /* モバイル対応（幅768px以下）：カレンダー表示時は常に6行分の均等枠を確保し縦スクロールゼロで1画面に収める */
@@ -14343,68 +14343,83 @@ button.hidden,
   color: #FFFFFF;
 }
 
-/* カレンダー日付マスの大会識別バッジ */
+/* カレンダー・週間スケジュール内の大会識別テキスト（外枠との二重枠を防ぐフラット表記） */
 .cal-cup-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 0 2px;
+  border-radius: 2px;
+  border: none;
+  background: transparent;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.3px;
-  margin-bottom: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.2px;
+  margin-bottom: 0;
+  box-shadow: none;
 }
 
 .badge-comp-lgc,
 .badge-comp-l-cup {
-  background: #0284C7;
-  color: #FFFFFF;
-  border: 1px solid #38BDF8;
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-nat,
 .badge-comp-n-cup {
-  background: #DC2626;
-  color: #FFFFFF;
-  border: 1px solid #F87171;
+  background: transparent;
+  color: #fca5a5;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-cl,
 .badge-comp-ect {
-  background: #0A192F;
-  color: #38BDF8;
-  border: 1px solid #00F0FF;
-  box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-el,
 .badge-comp-epc {
-  background: #B45309;
-  color: #FEF08A;
-  border: 1px solid #F59E0B;
+  background: transparent;
+  color: #fcd34d;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-ecl,
 .badge-comp-ecs {
-  background: #065F46;
-  color: #A7F3D0;
-  border: 1px solid #10B981;
+  background: transparent;
+  color: #6ee7b7;
+  border: none;
+  box-shadow: none;
+}
+
+.badge-comp-wct {
+  background: transparent;
+  color: #c4b5fd;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-d1,
 .badge-comp-eng-d1 {
-  background: #1E293B;
-  color: #38BDF8;
-  border: 1px solid #38BDF8;
+  background: transparent;
+  color: #7dd3fc;
+  border: none;
+  box-shadow: none;
 }
 
 .badge-comp-d2,
 .badge-comp-eng-d2 {
-  background: #1E293B;
-  color: #CBD5E1;
-  border: 1px solid #64748B;
+  background: transparent;
+  color: #cbd5e1;
+  border: none;
+  box-shadow: none;
 }
 
 /* 過密日程アラートバッジ */
@@ -15021,9 +15036,10 @@ body {
 .cal-cup-badge,
 .day-event-badge {
   border-radius: 4px !important;
+  border: none !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
 }
 
 /* 7. MATCHDAYカード＆アクションボタンの洗練 */
@@ -15407,7 +15423,11 @@ body {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  display: block !important;
+}
+
+.gm-tasks-mini-summary.hidden,
+.gm-tasks-grid.hidden {
+  display: none !important;
 }
 
 .gm-tasks-footer-bar {
@@ -16996,6 +17016,282 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 0 !important;
   padding: 10px 4px !important;
+}
+
+.board-sponsor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.board-sponsor-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.board-sponsor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.board-sponsor-row:last-child {
+  border-bottom: none;
+}
+
+.board-sponsor-row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.board-sponsor-slot {
+  font-size: 10.5px;
+  color: #8b949e;
+  font-weight: 700;
+}
+
+.board-sponsor-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-sponsor-name.is-open {
+  color: #fbbf24;
+}
+
+.board-sponsor-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.board-sponsor-fee {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.board-sponsor-meta {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.board-sponsor-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.btn-sponsor-manage {
+  background: rgba(46, 204, 113, 0.14);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  color: #4ade80;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-sponsor-manage:hover {
+  background: rgba(46, 204, 113, 0.24);
+}
+
+/* スポンサー選定モーダル（フラットリスト型） */
+.sponsor-slot-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sponsor-slot-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.sponsor-slot-tab.is-active {
+  background: rgba(46, 204, 113, 0.1);
+  border-bottom-color: #2ecc71;
+  color: #f8fafc;
+}
+
+.sponsor-slot-tab-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sponsor-slot-tab-sub {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.sponsor-slot-tab.is-active .sponsor-slot-tab-sub {
+  color: #4ade80;
+}
+
+.sponsor-slot-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.sponsor-options-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sponsor-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-left-color 0.14s ease;
+}
+
+.sponsor-option-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sponsor-option-row.is-selected {
+  background: rgba(46, 204, 113, 0.09);
+  border-left-color: #2ecc71;
+}
+
+.sponsor-option-row.is-locked {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.sponsor-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sponsor-option-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sponsor-option-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sponsor-option-sector {
+  font-size: 10.5px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sponsor-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.sponsor-option-meta strong {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.sponsor-option-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sponsor-option-annual {
+  font-size: 14px;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.sponsor-option-years {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+.sponsor-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 768px) {
+  .sponsor-modal-footer {
+    justify-content: stretch;
+  }
+  .sponsor-modal-footer button {
+    flex: 1;
+  }
 }
 
 /* 5. スマホ幅 (375px) での金額・給与・期間表記の折り返し完全防止 */

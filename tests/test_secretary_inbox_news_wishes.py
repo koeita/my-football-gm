@@ -295,7 +295,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn("kind: 'player'", consult_block)
         self.assertIn("kind: 'conflict'", consult_block)
 
-        # 3. 監督・コーチ意見対立仲裁イベントと裁定（監督支持/コーチ採用/折衷仲裁/保留）
+        # 3. 監督・コーチ意見対立仲裁イベントと裁定（監督支持/コーチ採用/折衷仲裁/保留・次節終了時自動消滅・メタ表記なし）
         for sym in [
             'function getClubCoachEntries(',
             'function buildConflictArbitrationEvent(',
@@ -304,6 +304,51 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             "decision === 'mediate'",
         ]:
             self.assertIn(sym, self.main_js)
+        conf_start = self.main_js.index('function buildConflictArbitrationEvent(')
+        conf_block = self.main_js[conf_start:conf_start + 3500]
+        self.assertNotIn('}%', conf_block)
+        self.assertNotIn('OVR ', conf_block)
+        comp_start = self.main_js.index('function handlePlayerMatchCompleted(')
+        self.assertIn('gameState.pendingLineupConsultation = null;', self.main_js[comp_start:comp_start + 600])
+
+    def test_11_duties_collapse_no_duplicate_borderless_schedule_and_news_expiry(self):
+        """業務折りたたみ重要複製防止・週間/カレンダー二重枠撤廃・ニュース7日削除が実装されていること"""
+        # 1. 業務折りたたみ時の .hidden 競合解消と片側DOMクリア
+        mini_idx = self.css.index('.gm-tasks-mini-summary {')
+        mini_block = self.css[mini_idx:mini_idx + 180]
+        self.assertNotIn('display: block !important;', mini_block)
+        self.assertIn('.gm-tasks-mini-summary.hidden', self.css)
+        duties_idx = self.main_js.index('function renderGmDuties()')
+        duties_tail = self.main_js[duties_idx + 4500:duties_idx + 12500]
+        self.assertIn("miniSummaryEl.innerHTML = ''", duties_tail)
+        self.assertIn("listEl.innerHTML = ''", duties_tail)
+
+        # 2. 週間スケジュール・カレンダー カップ/欧州コンペの内側二重枠・inset影撤廃
+        cup_badge_idx = self.css.index('.cal-cup-badge {')
+        cup_badge_block = self.css[cup_badge_idx:cup_badge_idx + 1100]
+        self.assertIn('border: none;', cup_badge_block)
+        self.assertNotIn('border: 1px solid', cup_badge_block)
+
+        # 3. ニュースの7日経過自動削除
+        self.assertIn('function pruneExpiredNewsItems(maxAgeDays = 7)', self.main_js)
+        self.assertIn('pruneExpiredNewsItems(7)', self.main_js)
+
+    def test_12_multi_slot_preseason_sponsor_selection(self):
+        """胸・袖・公式パートナーの複数枠スポンサー定義とシーズン開始前選定フローが揃っていること"""
+        for sym in ['SPONSOR_TEMPLATES', 'SLEEVE_SPONSOR_TEMPLATES', 'TRAINING_SPONSOR_TEMPLATES', 'SPONSOR_SLOT_META', 'function getSponsorSlotTemplates(']:
+            self.assertIn(sym, self.data_js)
+        for sym in ['function createSponsorContractFromTemplate(', 'function getClubTotalBaseSponsorIncome(', '_skipAutoSponsorSlots']:
+            self.assertIn(sym, self.models_js)
+        self.assertIn('id="sponsor-selection-modal"', self.html)
+        for sym in [
+            'function getAvailableSponsorOffers(',
+            'function openSponsorSelectionModal(',
+            'pendingSponsorSlots',
+            'btn-open-sponsor-select-panel',
+            "actionKey === 'open-sponsor-selection'",
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('pendingSponsorSlots:', self.storage_js)
 
 
 if __name__ == '__main__':

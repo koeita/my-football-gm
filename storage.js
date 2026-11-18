@@ -257,6 +257,7 @@ function saveGameToStorage(force = false) {
         hasPreContractDepartureThisSeason: Boolean(gameState.hasPreContractDepartureThisSeason),
         incomingTransferOffer: gameState.incomingTransferOffer || null,
         pendingMegaOffer: gameState.pendingMegaOffer || null,
+        pendingSponsorSlots: Array.isArray(gameState.pendingSponsorSlots) ? [...gameState.pendingSponsorSlots] : [],
         facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
         marketSubtab: gameState.marketSubtab || 'market',
         marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' },
@@ -936,6 +937,7 @@ function loadGameFromStorage() {
     if (gameState.monthlyLedger === undefined) gameState.monthlyLedger = null;
     if (!Array.isArray(gameState.monthlyReports)) gameState.monthlyReports = [];
     if (gameState.pendingLineupConsultation === undefined) gameState.pendingLineupConsultation = null;
+    if (!Array.isArray(gameState.pendingSponsorSlots)) gameState.pendingSponsorSlots = [];
     if (typeof gameState.totalPlayerMatchesPlayed !== 'number') gameState.totalPlayerMatchesPlayed = 0;
     if (typeof gameState.lastConsultationMatchCount !== 'number') gameState.lastConsultationMatchCount = 0;
     if (typeof gameState.consultationSeq !== 'number') gameState.consultationSeq = 0;
