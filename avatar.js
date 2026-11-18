@@ -917,6 +917,238 @@ function drawSecretaryBustOnContext(ctx, secretary) {
   drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, kitAccent, true);
 }
 
+/**
+ * 監督立ち絵バストアップ（48x54px透過グリッド）を描画
+ */
+function drawManagerBustOnContext(ctx, manager, club = null) {
+  const genes = ensurePlayerAvatarData(manager);
+  const skin = findSkinPalette(genes.skinColor);
+  const age = manager.age || 50;
+  let hair = findHairPalette(genes.hairColor);
+  if (age >= 48 && hair.key !== 'blond') hair = findHairPalette('grey');
+  const clubColors = club ? [club.primaryColor || '#2ecc71', club.secondaryColor || '#38bdf8'] : ['#2ecc71', '#38bdf8'];
+  const suitMain = '#1e293b';
+  const tieColor = clubColors[0] === '#1e293b' ? '#2ecc71' : clubColors[0];
+
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+
+  ctx.clearRect(0, 0, 48, 54);
+  const ox = 8;
+  const oy = 1;
+
+  // 1. 後ろ髪
+  drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, true);
+
+  // 2. 首
+  set(skin.base);
+  px(ox + 13, oy + 22, 6, 6);
+  set(skin.shadow);
+  px(ox + 13, oy + 22, 6, 2);
+
+  // 3. スーツ胴体（肩幅広めの監督ジャケット）
+  set(suitMain);
+  px(16, 27, 16, 1);
+  px(14, 28, 20, 1);
+  px(12, 29, 24, 3);
+  px(11, 32, 26, 22);
+  set('#0f172a');
+  px(31, 30, 5, 24);
+  px(11, 32, 2, 22);
+  set('#334155');
+  px(14, 28, 4, 1);
+  px(30, 28, 4, 1);
+
+  // 4. 白ワイシャツ＆ネクタイ（クラブカラー）
+  set('#f8fafc');
+  px(20, 27, 8, 2);
+  px(21, 29, 6, 3);
+  px(22, 32, 4, 5);
+  set(tieColor);
+  px(23, 28, 2, 10);
+  set(shadeHex(tieColor, -25));
+  px(23, 37, 2, 2);
+
+  // 5. ラペルライン
+  set('#334155');
+  px(18, 27, 2, 3); px(28, 27, 2, 3);
+  px(19, 30, 2, 3); px(27, 30, 2, 3);
+  px(20, 33, 2, 3); px(26, 33, 2, 3);
+
+  // 6. 左腕と戦術ボードバインダー
+  set(suitMain);
+  px(9, 31, 4, 10);
+  px(10, 40, 8, 4);
+  set('#f8fafc');
+  px(16, 40, 1, 4);
+  set(skin.base);
+  px(16, 39, 3, 3);
+  set('#0f172a');
+  px(11, 33, 8, 9);
+  set('#14532d');
+  px(12, 34, 6, 7);
+  set('#4ade80');
+  px(13, 36, 4, 1);
+  px(14, 38, 1, 2);
+  px(16, 35, 1, 2);
+
+  // 7. 頭部・表情
+  drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, tieColor, true);
+}
+
+/**
+ * 選手立ち絵バストアップ（48x54px透過グリッド：クラブユニフォーム着用）を描画
+ */
+function drawPlayerBustOnContext(ctx, player, club = null) {
+  const genes = ensurePlayerAvatarData(player);
+  const skin = findSkinPalette(genes.skinColor);
+  const age = player.age || 24;
+  const hair = findHairPalette(genes.hairColor);
+  const kit = getAvatarKitColors(player, club);
+  const kitMain = kit[0] || '#2ecc71';
+  const kitSub = kit[1] || '#ffffff';
+  const kitShadow = shadeHex(kitMain, -28);
+  const kitLight = shadeHex(kitMain, 18);
+
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+
+  ctx.clearRect(0, 0, 48, 54);
+  const ox = 8;
+  const oy = 1;
+
+  // 1. 後ろ髪
+  drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, false);
+
+  // 2. 首
+  set(skin.base);
+  px(ox + 13, oy + 22, 6, 6);
+  set(skin.shadow);
+  px(ox + 13, oy + 22, 6, 2);
+
+  // 3. アスリート体型ユニフォーム胴体・両腕
+  set(kitMain);
+  px(15, 27, 18, 1);
+  px(13, 28, 22, 2);
+  px(11, 30, 26, 24);
+  set(kitShadow);
+  px(11, 32, 3, 22);
+  px(34, 30, 3, 24);
+  set(kitLight);
+  px(15, 28, 4, 1);
+  px(29, 28, 4, 1);
+
+  // 4. ユニフォームカラーデザイン（サブカラー縦ライン＋襟＋袖トリム）
+  set(kitSub);
+  px(19, 27, 10, 2);
+  px(20, 29, 8, 1);
+  px(22, 30, 4, 2);
+  px(21, 32, 6, 22); // センターアクセント
+  px(11, 41, 3, 2); // 左袖ライン
+  px(34, 41, 3, 2); // 右袖ライン
+
+  // 首元の肌Vゾーン
+  set(skin.base);
+  px(21, 27, 6, 2);
+  px(22, 29, 4, 1);
+
+  // 左胸エンブレムワンポイント
+  set('#fbbf24');
+  px(28, 33, 3, 3);
+  set(kitShadow);
+  px(29, 34, 1, 1);
+
+  // 腕（ユニフォーム半袖＋腕）
+  set(kitMain);
+  px(10, 32, 2, 10);
+  px(36, 32, 2, 10);
+  set(skin.base);
+  px(9, 42, 3, 5);
+  px(36, 42, 3, 5);
+  set(kitSub);
+  px(10, 35, 3, 2);
+
+  // 5. 頭部・表情
+  drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, kitMain, false);
+}
+
+/**
+ * コーチ立ち絵バストアップ（48x54px透過グリッド：専門トラックスーツ＋ホイッスル）を描画
+ */
+function drawCoachBustOnContext(ctx, coach, club = null) {
+  const genes = ensurePlayerAvatarData(coach);
+  const skin = findSkinPalette(genes.skinColor);
+  const age = coach.age || 46;
+  let hair = findHairPalette(genes.hairColor);
+  if (age >= 50 && hair.key !== 'blond') hair = findHairPalette('grey');
+  const kit = getCoachKitColors(coach.category);
+  const trackMain = kit[0] || '#2c3e50';
+  const trackAccent = kit[1] || '#ffffff';
+  const trackShadow = shadeHex(trackMain, -28);
+  const trackLight = shadeHex(trackMain, 18);
+
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+
+  ctx.clearRect(0, 0, 48, 54);
+  const ox = 8;
+  const oy = 1;
+
+  // 1. 後ろ髪
+  drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, true);
+
+  // 2. 首
+  set(skin.base);
+  px(ox + 13, oy + 22, 6, 6);
+  set(skin.shadow);
+  px(ox + 13, oy + 22, 6, 2);
+
+  // 3. トラックスーツ胴体
+  set(trackMain);
+  px(15, 27, 18, 1);
+  px(13, 28, 22, 2);
+  px(11, 30, 26, 24);
+  set(trackShadow);
+  px(11, 32, 3, 22);
+  px(33, 30, 4, 24);
+
+  // スタンドカラー＋センタージップ＋肩ライン
+  set(trackLight);
+  px(19, 26, 10, 3);
+  px(14, 28, 4, 1);
+  px(30, 28, 4, 1);
+  set('#0f172a');
+  px(21, 27, 6, 2);
+  set(trackAccent);
+  px(23, 29, 2, 25); // センタージップライン
+  px(13, 30, 3, 1);
+  px(32, 30, 3, 1);
+
+  // 首掛けストラップ＆銀ホイッスル
+  set('#0f172a');
+  px(20, 27, 1, 7);
+  px(27, 27, 1, 7);
+  px(21, 34, 6, 2);
+  set('#cbd5e1');
+  px(22, 36, 4, 3);
+  set('#94a3b8');
+  px(25, 37, 2, 1);
+
+  // 左手の戦術ストップウォッチ／メモ
+  set(trackMain);
+  px(9, 32, 4, 9);
+  px(10, 40, 7, 4);
+  set(skin.base);
+  px(15, 39, 3, 3);
+  set('#1e293b');
+  px(11, 34, 5, 6);
+  set('#38bdf8');
+  px(12, 35, 3, 3);
+
+  // 4. 頭部・表情
+  drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, trackAccent, true);
+}
+
 // ---------------------------------------------------------------------------
 // インメモリ 32x32 マスターCanvas & DataURL キャッシュ
 // ---------------------------------------------------------------------------
@@ -1052,7 +1284,15 @@ function renderAvatarCanvases(root = document) {
     const entry = PLAYER_AVATAR_LOOKUP.get(String(pid));
     if (entry && entry.player) {
       if (entry.isBust) {
-        generateSecretaryBust(entry.player, cv);
+        if (entry.bustRole === 'manager') {
+          generateManagerBust(entry.player, cv, entry.club);
+        } else if (entry.bustRole === 'player') {
+          generatePlayerBust(entry.player, cv, entry.club);
+        } else if (entry.bustRole === 'coach') {
+          generateCoachBust(entry.player, cv, entry.club);
+        } else {
+          generateSecretaryBust(entry.player, cv);
+        }
       } else {
         generatePlayerAvatar(entry.player, cv, entry.club);
       }
@@ -1153,6 +1393,63 @@ function generateSecretaryBust(secretary, canvas) {
   ctx.setTransform(sx, 0, 0, sy, 0, 0);
   drawSecretaryBustOnContext(ctx, secretary);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function renderBustOnCanvas(person, canvas, club, drawFn) {
+  if (!person || !canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  const sx = canvas.width / 48;
+  const sy = canvas.height / 54;
+  ctx.setTransform(sx, 0, 0, sy, 0, 0);
+  drawFn(ctx, person, club);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function generateManagerBust(manager, canvas, club = null) {
+  renderBustOnCanvas(manager, canvas, club, drawManagerBustOnContext);
+}
+
+function generatePlayerBust(player, canvas, club = null) {
+  renderBustOnCanvas(player, canvas, club, drawPlayerBustOnContext);
+}
+
+function generateCoachBust(coach, canvas, club = null) {
+  renderBustOnCanvas(coach, canvas, club, drawCoachBustOnContext);
+}
+
+function buildRoleBustHtml(person, bustRole, club, drawFn, fallbackHtmlFn, extraClass = 'secretary-bust-canvas') {
+  if (!person) return '';
+  try {
+    const pid = String(person.id || `${bustRole}_bust_${person.name || 'x'}`);
+    PLAYER_AVATAR_LOOKUP.set(pid, { player: person, club, isBust: true, bustRole });
+    let url = '';
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 96;
+      c.height = 108;
+      renderBustOnCanvas(person, c, club, drawFn);
+      url = c.toDataURL('image/png');
+    }
+    const bgStyle = url ? ` style="background-image:url('${url}');background-size:100% 100%;"` : '';
+    return `<canvas class="player-avatar ${extraClass}" width="96" height="108" data-avatar-pid="${pid}"${bgStyle} aria-hidden="true"></canvas>`;
+  } catch (e) {
+    return typeof fallbackHtmlFn === 'function' ? fallbackHtmlFn() : '';
+  }
+}
+
+function getManagerBustHtml(manager, club = null, extraClass = 'secretary-bust-canvas') {
+  return buildRoleBustHtml(manager, 'manager', club, drawManagerBustOnContext, () => getManagerAvatarHtml(manager, 'avatar-md', 64), extraClass);
+}
+
+function getPlayerBustHtml(player, club = null, extraClass = 'secretary-bust-canvas') {
+  return buildRoleBustHtml(player, 'player', club, drawPlayerBustOnContext, () => getPlayerAvatarHtml(player, club, 'avatar-md', 64), extraClass);
+}
+
+function getCoachBustHtml(coach, club = null, extraClass = 'secretary-bust-canvas') {
+  return buildRoleBustHtml(coach, 'coach', club, drawCoachBustOnContext, () => getCoachAvatarHtml(coach, 'avatar-md', 64), extraClass);
 }
 
 function getSecretaryBustDataUrl(secretary, width = 144, height = 162) {

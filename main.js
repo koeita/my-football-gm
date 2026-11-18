@@ -242,6 +242,7 @@ const gameState = {
   officeCommTab: 'messages',
   inboxCategoryFilter: 'ALL',
   expandedMessageId: null,
+  expandedNewsId: null,
   monthlyLedger: null,
   monthlyReports: [],
   pendingLineupConsultation: null,
@@ -1483,6 +1484,8 @@ function syncPendingMegaOfferToIncomingOffers() {
  * 欧州大陸メガクラブ（EUROPEAN_MEGA_CLUBS）からの強奪オファーを生成し、GMタスク（CRITICAL）へ登録
  */
 function triggerMegaOfferEvent(autoOpenModal = false) {
+  if (gameState.isSeasonOver) return;
+  if (typeof isTransferWindowCurrentlyOpen === 'function' && !isTransferWindowCurrentlyOpen()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || playerClub.players.length <= 12) return;
 
@@ -1686,6 +1689,17 @@ function triggerInjuryEvent() {
           playerClub.funds -= medicalCost;
           victim.injuryWeeks = 1;
           victim.injuryDays = 7;
+          if (typeof addNewsItem === 'function') {
+            addNewsItem({
+              category: '選手',
+              clubId: playerClub.id,
+              playerId: victim.id,
+              headline: `${playerClub.name}・${victim.name}負傷　専門治療で早期復帰へ`,
+              lead: `休む間なく戦った末の離脱（全治1節見込み）`,
+              body: `トレーニング中にトラブルを起こした${victim.pos} ${victim.name}（${victim.age}歳）は欧州専門医の特別治療を受け、全治1節での戦線復帰を目指す。`,
+              highlight: true
+            });
+          }
           renderAll();
         }
       },
@@ -1695,6 +1709,17 @@ function triggerInjuryEvent() {
         onClick: () => {
           victim.injuryWeeks = weeks;
           victim.injuryDays = weeks * 7;
+          if (typeof addNewsItem === 'function') {
+            addNewsItem({
+              category: '選手',
+              clubId: playerClub.id,
+              playerId: victim.id,
+              headline: `${playerClub.name}・${victim.name}負傷　次節へ痛手の戦線離脱`,
+              lead: `休みなく戦った末の離脱である（全治${weeks}節）`,
+              body: `${playerClub.name}の主力 ${victim.pos} ${victim.name}（${victim.age}歳）が筋肉系トラブルにより全治${weeks}試合の診断を受けた。当面は控えメンバーによる総力戦となる。`,
+              highlight: true
+            });
+          }
           const healthyBench = playerClub.players
             .filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0)
             .sort((a, b) => {
@@ -1841,6 +1866,37 @@ function closeGmModal(clearQueue = false) {
   flushNextGmModalOrUnlock();
 }
 
+function resolveModalSpeakerBustHtml(kind, person, club) {
+  if (!person) return '';
+  if (kind === 'manager') {
+    if (typeof getManagerBustHtml === 'function') return getManagerBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getManagerAvatarHtml === 'function') return getManagerAvatarHtml(person, 'avatar-md', 52);
+  } else if (kind === 'player') {
+    if (typeof getPlayerBustHtml === 'function') return getPlayerBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getPlayerAvatarHtml === 'function') return getPlayerAvatarHtml(person, club, 'avatar-md', 52);
+  } else if (kind === 'coach') {
+    if (typeof getCoachBustHtml === 'function') return getCoachBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getCoachAvatarHtml === 'function') return getCoachAvatarHtml(person, 'avatar-md', 52);
+  } else {
+    if (typeof getSecretaryBustHtml === 'function') return getSecretaryBustHtml(person, 'secretary-bust-canvas');
+    if (typeof getSecretaryAvatarHtml === 'function') return getSecretaryAvatarHtml(person, 'avatar-md', 52);
+  }
+  return '';
+}
+
+function getModalSpeakerPillClass(kind) {
+  if (kind === 'manager') return ' is-manager-pill';
+  if (kind === 'player') return ' is-player-pill';
+  if (kind === 'coach') return ' is-coach-pill';
+  return '';
+}
+
+function buildModalSpeakerPillHtml(speakerObj) {
+  if (!speakerObj) return '';
+  const extraCls = getModalSpeakerPillClass(speakerObj.kind);
+  return `<span class="gm-vn-pill-badge${extraCls}"><span class="gm-modal-sec-name">${escapeCommHtml(speakerObj.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(speakerObj.roleLabel)}</span></span>`;
+}
+
 function showGmModal(opts, fromQueue = false) {
   if (!opts || typeof opts !== 'object') return;
   if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;
@@ -1856,7 +1912,15 @@ function showGmModal(opts, fromQueue = false) {
     return;
   }
 
-  const { category, title, description, detailHtml, actions, hideSecretary } = opts;
+  const { category, title, description, detailHtml, actions, hideSecretary, speaker, variant } = opts;
+  const modalCard = overlay.querySelector('.gm-secretary-modal-card');
+  if (modalCard) {
+    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'conflict-arbitration';
+    modalCard.classList.toggle('is-report-modal', isReportLike);
+    modalCard.classList.toggle('is-monthly-ceremony', variant === 'monthly-ceremony');
+    modalCard.classList.toggle('is-conflict-modal', variant === 'conflict-arbitration');
+  }
+
   const secBox = document.getElementById('gm-modal-secretary-box');
   const catEl = document.getElementById('modal-category');
   const titleEl = document.getElementById('modal-title');
@@ -1864,23 +1928,54 @@ function showGmModal(opts, fromQueue = false) {
   const detailEl = document.getElementById('modal-detail-box');
   const dialogueCard = document.getElementById('gm-vn-dialogue-card');
 
+  const isConflictSpeaker = Boolean(speaker && speaker.kind === 'conflict' && speaker.left && speaker.right);
+  const isCustomSpeaker = Boolean(speaker && speaker.kind && speaker.kind !== 'secretary' && speaker.person && (speaker.kind === 'manager' || speaker.kind === 'player' || speaker.kind === 'coach'));
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  const clubCtx = (speaker && speaker.club) || (typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+
+  const activeSpeaker = isConflictSpeaker
+    ? { kind: 'conflict', left: speaker.left, right: speaker.right, club: clubCtx }
+    : isCustomSpeaker
+      ? {
+          kind: speaker.kind,
+          name: speaker.name || speaker.person.fullName || speaker.person.name,
+          roleLabel: speaker.roleLabel || (speaker.kind === 'manager' ? '監督' : (speaker.kind === 'player' ? '選手' : 'コーチ')),
+          person: speaker.person,
+          club: clubCtx
+        }
+      : (sec ? { kind: 'secretary', name: sec.name, roleLabel: sec.roleLabel, person: sec, club: null } : null);
+
   if (secBox) {
-    if (hideSecretary || !sec) {
+    if (hideSecretary || !activeSpeaker) {
       secBox.innerHTML = '';
       secBox.classList.add('hidden');
+    } else if (activeSpeaker.kind === 'conflict') {
+      const leftHtml = resolveModalSpeakerBustHtml(activeSpeaker.left.kind, activeSpeaker.left.person, activeSpeaker.club);
+      const rightHtml = resolveModalSpeakerBustHtml(activeSpeaker.right.kind, activeSpeaker.right.person, activeSpeaker.club);
+      secBox.innerHTML = `
+        <div class="gm-conflict-stage">
+          <div class="gm-modal-sec-avatar-wrap is-duo">${leftHtml}</div>
+          <span class="gm-conflict-vs mono">VS</span>
+          <div class="gm-modal-sec-avatar-wrap is-duo">${rightHtml}</div>
+        </div>
+      `;
+      secBox.classList.remove('hidden');
     } else {
-      const bustHtml = typeof getSecretaryBustHtml === 'function'
-        ? getSecretaryBustHtml(sec, 'secretary-bust-canvas')
-        : (typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '');
+      const bustHtml = resolveModalSpeakerBustHtml(activeSpeaker.kind, activeSpeaker.person, activeSpeaker.club);
       secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
   }
 
   if (catEl) {
-    if (!hideSecretary && sec) {
-      catEl.innerHTML = `<span class="gm-vn-pill-badge"><span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+    if (!hideSecretary && activeSpeaker) {
+      if (activeSpeaker.kind === 'conflict') {
+        const leftPill = buildModalSpeakerPillHtml(activeSpeaker.left);
+        const rightPill = buildModalSpeakerPillHtml(activeSpeaker.right);
+        catEl.innerHTML = `${leftPill}<span class="gm-conflict-pill-sep">×</span>${rightPill}${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      } else {
+        catEl.innerHTML = `${buildModalSpeakerPillHtml(activeSpeaker)}${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      }
     } else {
       catEl.innerHTML = category ? `<span class="gm-vn-pill-badge">${escapeCommHtml(category)}</span>` : '';
     }
@@ -1953,7 +2048,7 @@ function showGmModal(opts, fromQueue = false) {
 /**
  * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
  */
-function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null }) {
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null }) {
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
@@ -1963,7 +2058,9 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
     title,
     description: speech,
     detailHtml,
-    actions: resolvedActions
+    actions: resolvedActions,
+    speaker,
+    variant
   });
 }
 
@@ -2515,8 +2612,8 @@ function processSeasonEnd(isSkipped = false) {
     }
   }
 
-  // シーズン終了時も海外メガクラブからの強奪オファーがGMタスク（CRITICAL）に届く
-  triggerMegaOfferEvent(!isSkipped);
+  // シーズン終了時は移籍市場閉幕中のため未締結オファー・メガオファーを整理し、不要なオファータスクを残さない
+  gameState.pendingMegaOffer = null;
 }
 
 /**
@@ -3724,6 +3821,17 @@ function submitNegotiationOffer() {
       session.statusType = 'success';
       session.statusMessage = `【合意・契約更新完了】#${target.squadNumber || '-'} ${target.name} は提示条件（週給 ${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))} ／ ${session.offeredYears}年契約）に快く合意し、契約更新サインを完了しました！（残契約：${newContractYears}年）`;
       gameState.facilityFeedback = `【契約更新合意】#${target.squadNumber || '-'} ${target.name} と週給 ${formatWage(Math.max(5, Math.round(session.offeredSalary / 52)))}（${session.offeredYears}年契約締結 / 残り${newContractYears}年）で契約を更新しました。`;
+      if (typeof addNewsItem === 'function') {
+        addNewsItem({
+          category: '選手',
+          clubId: playerClub.id,
+          playerId: target.id,
+          headline: `${playerClub.name}、${target.name}と早期更新　契約をつないで次へ`,
+          lead: `シーズン中に${newContractYears}年体制の契約で合意`,
+          body: `${playerClub.name}は${target.pos} ${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）と週給 ${formatWage(target.wage)} で契約更新に合意。中核戦力の流出阻止に成功した。`,
+          highlight: true
+        });
+      }
       renderNegotiationModal();
       renderAll();
       return;
@@ -4348,7 +4456,10 @@ function completeOutgoingTransferSigning(offerId) {
     if (typeof addNewsItem === 'function') {
       addNewsItem({
         category: '移籍',
-        headline: `${playerClub.name}が${target.pos} ${target.name}を期限付き移籍で獲得`,
+        clubId: playerClub.id,
+        playerId: target.id,
+        headline: `${playerClub.name}、${target.name}を期限付き獲得　選手層の拡充へ`,
+        lead: `${offer.sellerClubName || '他クラブ'}から1年レンタルで加入`,
         body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳）の1年間レンタル加入を正式発表した。`,
         highlight: true
       });
@@ -4358,7 +4469,10 @@ function completeOutgoingTransferSigning(offerId) {
     if (typeof addNewsItem === 'function') {
       addNewsItem({
         category: '移籍',
-        headline: `${playerClub.name}がフリーの${target.pos} ${target.name}と契約`,
+        clubId: playerClub.id,
+        playerId: target.id,
+        headline: `${playerClub.name}が${target.name}を完全移籍で獲得　移籍金ゼロの補強`,
+        lead: `フリーエージェント市場から実力者を確保`,
         body: `${playerClub.name}は無所属だった${target.name}（OVR ${getPlayerOverallRating(target)}）を移籍金なしで獲得した。`,
         highlight: true
       });
@@ -4368,7 +4482,10 @@ function completeOutgoingTransferSigning(offerId) {
     if (typeof addNewsItem === 'function') {
       addNewsItem({
         category: '移籍',
-        headline: `${playerClub.name}が${target.pos} ${target.name}を${formatMoney(offer.offeredFee)}で獲得`,
+        clubId: playerClub.id,
+        playerId: target.id,
+        headline: `${playerClub.name}が${target.name}を電撃獲得　${formatMoney(offer.offeredFee)}の投資`,
+        lead: `${offer.sellerClubName || '相手クラブ'}との交渉が正式合意`,
         body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）の完全移籍加入を完了した。`,
         highlight: true
       });
@@ -4770,7 +4887,10 @@ function acceptIncomingOffer(offerId) {
   if (typeof addNewsItem === 'function') {
     addNewsItem({
       category: '移籍',
-      headline: `${playerClub.name}の${target.pos} ${target.name}が${offer.buyerClubName}へ移籍`,
+      clubId: playerClub.id,
+      playerId: target.id,
+      headline: `${playerClub.name}、${target.name}を${offer.buyerClubName}へ放出　資金を確保`,
+      lead: `移籍金 ${formatMoney(saleFee)} で両クラブが合意`,
       body: `${offer.buyerClubName}は${playerClub.name}から${target.name}を移籍金 ${formatMoney(saleFee)} で獲得することで合意した。`,
       highlight: true
     });
@@ -8663,7 +8783,7 @@ function renderRoster() {
           </button>
           ${hgTag}${u21Tag}${fitBadge}${trainingBadge}${injuryBadge}${refusedBadge}${moraleBadge}${loanInBadge}${loanOutBadge}${loanListedBadge}${preDepartBadge}
         </td>
-        <td class="col-num">${p.age}</td>
+        <td class="col-num" style="white-space:nowrap;">${p.age}歳</td>
         <td class="col-num">${ovrDisplay}</td>
         <td class="col-num">${p.appearances}</td>
         <td class="col-num accent-gold"><strong>${p.goals}</strong></td>
@@ -8812,10 +8932,15 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
 function updateMarketBadges() {
   if (typeof syncPendingMegaOfferToIncomingOffers === 'function') syncPendingMegaOfferToIncomingOffers();
   const shortlistCount = (gameState.targetShortlist || []).length;
-  
-  // アクティブなオファー件数（未完了かつ期限内のもののみカウント）
-  const incomingActiveCount = (gameState.incomingOffers || []).filter(o => (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)).length;
-  const outgoingActiveCount = (gameState.outgoingOffers || []).filter(o => o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter').length;
+  const isMarketWindowOpen = !gameState.isSeasonOver && (typeof isTransferWindowCurrentlyOpen === 'function' ? isTransferWindowCurrentlyOpen() : false);
+
+  // アクティブなオファー件数（移籍市場オープン中の未完了・期限内のみカウント）
+  const incomingActiveCount = isMarketWindowOpen
+    ? (gameState.incomingOffers || []).filter(o => (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)).length
+    : 0;
+  const outgoingActiveCount = !gameState.isSeasonOver
+    ? (gameState.outgoingOffers || []).filter(o => o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter').length
+    : 0;
   const totalActiveOffers = incomingActiveCount + outgoingActiveCount;
 
   const bShortlist = document.getElementById('badge-shortlist-count');
@@ -10041,10 +10166,14 @@ function renderGmDuties() {
   }
 
   const duties = [];
+  const isMarketWindowOpen = !gameState.isSeasonOver && (typeof isTransferWindowCurrentlyOpen === 'function' ? isTransferWindowCurrentlyOpen() : false);
+  if (!isMarketWindowOpen && gameState.isSeasonOver && gameState.pendingMegaOffer) {
+    gameState.pendingMegaOffer = null;
+  }
   if (typeof syncPendingMegaOfferToIncomingOffers === 'function') syncPendingMegaOfferToIncomingOffers();
 
-  // 0. 海外メガクラブからの強奪オファーが届いている場合は最優先CRITICALタスクとして表示
-  if (gameState.pendingMegaOffer) {
+  // 0. 海外メガクラブからの強奪オファー（移籍市場オープン中・シーズン中のみ最優先CRITICALタスクとして表示）
+  if (gameState.pendingMegaOffer && isMarketWindowOpen) {
     const offer = gameState.pendingMegaOffer;
     const targetExists = playerClub.players.some(p => p.id === offer.playerId);
     if (targetExists) {
@@ -10125,9 +10254,11 @@ function renderGmDuties() {
   duties.push(criticalDuty);
 
   // 2. 推奨タスク（RECOMMENDED）
-  const activeIncomingOffers = (gameState.incomingOffers || []).filter(o =>
-    (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)
-  );
+  const activeIncomingOffers = isMarketWindowOpen
+    ? (gameState.incomingOffers || []).filter(o =>
+      (o.status === 'pending' || o.status === 'negotiating' || o.status === 'counter_agreed') && ((o.daysLeft ?? 1) > 0)
+    )
+    : [];
   if (activeIncomingOffers.length > 0) {
     duties.push({
       level: 'recommended',
@@ -10141,7 +10272,7 @@ function renderGmDuties() {
     const lc = gameState.pendingLineupConsultation;
     duties.push({
       level: 'recommended',
-      badge: '相談',
+      badge: lc.kind === 'conflict' ? '仲裁' : '相談',
       title: lc.dutyTitle || '起用法の相談・要望',
       desc: lc.dutyDesc || '監督または選手から起用法に関する相談が届いています',
       action: 'open-lineup-consultation'
@@ -17315,18 +17446,25 @@ function markAllInboxMessagesRead() {
 /**
  * ニュースフィードに記事を追加する（最大40件保持）
  */
-function addNewsItem({ category = 'リーグ', headline = '', body = '', highlight = false }) {
+function addNewsItem({ category = 'リーグ', headline = '', lead = '', body = '', highlight = false, clubId = null, playerId = null, actionLabel = '' }) {
   if (!Array.isArray(gameState.newsFeed)) {
     gameState.newsFeed = [];
   }
+  const dayObj = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  const fullDateLabel = dayObj ? `${dayObj.year}年${dayObj.month}月${dayObj.day}日` : getCurrentCommDateLabel();
   const item = {
     id: `news_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     date: getCurrentCommDateLabel(),
+    fullDate: fullDateLabel,
     dayIndex: gameState.currentDayIndex || 0,
     season: gameState.season || 1,
     category,
     headline,
+    lead: lead || '',
     body,
+    clubId: clubId || null,
+    playerId: playerId || null,
+    actionLabel: actionLabel || (body ? '本文を読む' : ''),
     highlight: Boolean(highlight)
   };
   gameState.newsFeed.unshift(item);
@@ -17334,6 +17472,88 @@ function addNewsItem({ category = 'リーグ', headline = '', body = '', highlig
     gameState.newsFeed = gameState.newsFeed.slice(0, 40);
   }
   return item;
+}
+
+/**
+ * 試合終了後のクラブ・注目選手スポーツニュース生成（試合詳報・選手特集）
+ */
+function emitPostMatchTeamAndPlayerNews(playerClub, matchData, oppClub, myScore, oppScore, userWon, userDraw) {
+  if (!playerClub || !matchData || typeof addNewsItem !== 'function') return;
+  const oppName = oppClub ? oppClub.name : '対戦相手';
+  const compLabel = matchData.compTitle || (matchData.week ? `第${matchData.week}節` : '公式戦');
+
+  let matchHeadline = `${playerClub.name}、${oppName}と痛み分け　次戦での巻き返し期す`;
+  let matchLead = `${compLabel} · 試合詳報`;
+  if (userWon) {
+    if (myScore - oppScore === 1) {
+      matchHeadline = `${playerClub.name}、僅差をものに　1点上回って${oppName}撃破`;
+    } else if (oppScore === 0) {
+      matchHeadline = `${playerClub.name}がリード守る完封白星　${oppName}を退ける`;
+    } else {
+      matchHeadline = `${playerClub.name}、攻守かみ合い快勝　${oppName}を下す`;
+    }
+  } else if (!userDraw) {
+    matchHeadline = `${playerClub.name}、${oppName}に${myScore}-${oppScore}で惜敗　課題修正へ`;
+  }
+  addNewsItem({
+    category: 'チーム',
+    clubId: playerClub.id,
+    headline: matchHeadline,
+    lead: matchLead,
+    body: `${compLabel}の${oppName}戦（${matchData.isPlayerHome ? 'ホーム' : 'アウェイ'}）は${myScore}-${oppScore}で決着。${matchData.momPlayer ? `MOMには ${matchData.momPlayer.name} が選出された。` : '選手たちは次の公式戦へ向けコンディション調整に入る。'}`,
+    actionLabel: '試合詳報',
+    highlight: userWon
+  });
+
+  // 2. 注目選手のピックアップ記事（MOM、得点者、または出場を重ねる選手）
+  const activePlayers = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  let spotlight = null;
+  if (matchData.momPlayer && matchData.momClub && matchData.momClub.id === playerClub.id) {
+    spotlight = activePlayers.find(p => p.id === matchData.momPlayer.id) || null;
+  }
+  if (!spotlight && activePlayers.length > 0) {
+    const scorersOrStarters = activePlayers.filter(p => p.isStarter || (p.goals || 0) > 0 || (p.appearances || 0) >= 2);
+    const pool = scorersOrStarters.length > 0 ? scorersOrStarters : activePlayers;
+    spotlight = [...pool].sort((a, b) => (b.goals || 0) * 5 + getPlayerOverallRating(b) - ((a.goals || 0) * 5 + getPlayerOverallRating(a)))[0];
+  }
+
+  if (spotlight && ((gameState.totalPlayerMatchesPlayed || 0) % 2 === 1 || userWon || (matchData.momPlayer && matchData.momPlayer.id === spotlight.id))) {
+    const ovr = getPlayerOverallRating(spotlight);
+    const avgRat = (spotlight.appearances || 0) > 0 && spotlight.totalRating
+      ? (spotlight.totalRating / spotlight.appearances).toFixed(2)
+      : null;
+    if ((spotlight.age || 25) <= 21) {
+      addNewsItem({
+        category: '選手',
+        clubId: playerClub.id,
+        playerId: spotlight.id,
+        headline: `${playerClub.name}・${spotlight.name}、大舞台で意地見せる　単独取材に応じる`,
+        lead: `${playerClub.name} · ${spotlight.age}歳 · ${spotlight.pos}`,
+        body: `期待の若手 ${spotlight.fullName || spotlight.name}（${spotlight.age}歳 / OVR ${ovr}）が${compLabel}でも高い存在感を示した。「1試合ごとに手応えが増している」とさらなる活躍を誓った。`,
+        highlight: true
+      });
+    } else if ((spotlight.appearances || 0) >= 3) {
+      addNewsItem({
+        category: '選手',
+        clubId: playerClub.id,
+        playerId: spotlight.id,
+        headline: `${playerClub.name}・${spotlight.name}が先発を重ねる　直近${spotlight.appearances}試合の足跡`,
+        lead: `先発出場を重ね、今季 ${spotlight.appearances}試合${spotlight.goals || 0}得点${avgRat ? ` (平均評価 ${avgRat})` : ''}`,
+        body: `攻撃とゲームメイクの要を担う ${spotlight.fullName || spotlight.name}（${spotlight.pos} / OVR ${ovr}）が安定したパフォーマンスを継続。${playerClub.name}の上位躍進を支えている。`,
+        highlight: true
+      });
+    } else {
+      addNewsItem({
+        category: '選手',
+        clubId: playerClub.id,
+        playerId: spotlight.id,
+        headline: `${playerClub.name}・${spotlight.name}がピッチで存在感　仕上がりの良さ示す`,
+        lead: `${spotlight.pos} · ${spotlight.age}歳 · OVR ${ovr}`,
+        body: `${compLabel}の${oppName}戦に出場した ${spotlight.fullName || spotlight.name} が攻守にわたり精力的な動きを披露。今後の主力起用に向けて好アピールとなった。`,
+        highlight: false
+      });
+    }
+  }
 }
 
 /**
@@ -17361,9 +17581,23 @@ function ensureInitialOfficeMessagesAndNews() {
 
   if (gameState.newsFeed.length === 0) {
     const divLabel = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) ? 'ENG-D2' : 'ENG-D1';
+    const ace = [...(playerClub.players || [])].sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0];
+    if (ace) {
+      addNewsItem({
+        category: '選手',
+        clubId: playerClub.id,
+        playerId: ace.id,
+        headline: `${playerClub.name}の主軸 ${ace.name}、新体制での飛躍誓う　開幕へ順調`,
+        lead: `${playerClub.name} · ${ace.age}歳 · ${ace.pos} (OVR ${getPlayerOverallRating(ace)})`,
+        body: `新シーズン始動を迎えた${playerClub.name}でエース格の${ace.fullName || ace.name}が充実の動きを見せた。「目標である${playerClub.targetLabel || '上位進出'}へ向けて準備は整っている」と意気込みを語った。`,
+        highlight: true
+      });
+    }
     addNewsItem({
-      category: 'リーグ',
+      category: 'チーム',
+      clubId: playerClub.id,
       headline: `${playerClub.name}が新GMに${gameState.gmName || 'L. Vance'}氏を迎えて始動`,
+      lead: `${divLabel}開幕見通し · 目標 ${playerClub.targetLabel || '上位進出'}`,
       body: `${divLabel}所属の${playerClub.name}は新体制でプレシーズンおよび夏の移籍市場に突入した。目標「${playerClub.targetLabel || '上位進出'}」へ向けた補強と戦術整備に注目が集まる。`,
       highlight: true
     });
@@ -17586,9 +17820,9 @@ function buildManagerConsultation(club) {
         kind: 'manager',
         scenario: 'M1',
         senderName: `${mgr.name} 監督`,
-        topic: '監督からの起用法相談',
+        topic: '起用法相談',
         title: `${mgr.name}監督：スタメン起用の見直し提案`,
-        speech: `GM、次戦に向けて ${troubledStarter.fullName || troubledStarter.name} に${reasonTxt}しています。フレッシュな ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢したいのですが、いかがでしょうか。`,
+        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} に${reasonTxt}しているため、フレッシュな ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢させてくれないか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢について回答待ち`,
         outPlayerId: troubledStarter.id,
@@ -17616,7 +17850,7 @@ function buildManagerConsultation(club) {
       senderName: `${mgr.name} 監督`,
       topic: '監督からの戦術・起用相談',
       title: `${mgr.name}監督：得意フォーメーションへの移行相談`,
-      speech: `GM、選手たちの特徴をより活かすため、私の得意布陣「${mgr.preferredFormation} / ${tacLabel}」へ切り替えて戦いたいと考えております。許可をいただけますでしょうか。`,
+      speech: `GM、選手たちの持ち味を最大限に引き出すため、私の得意布陣「${mgr.preferredFormation} / ${tacLabel}」へ切り替えて戦いたい。フロントとして承認してもらえるだろうか。`,
       dutyTitle: `${mgr.name}監督の戦術・起用相談`,
       dutyDesc: `${mgr.preferredFormation} / ${tacLabel} への調整相談`,
       preferredFormation: mgr.preferredFormation,
@@ -17650,9 +17884,9 @@ function buildManagerConsultation(club) {
         kind: 'manager',
         scenario: 'M2',
         senderName: `${mgr.name} 監督`,
-        topic: '監督からの起用法相談',
+        topic: '起用法相談',
         title: `${mgr.name}監督：${candidate.name}の先発テスト起用提案`,
-        speech: `GM、練習での動きが極めて良い ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を次戦で先発起用して試したいのですが、ご判断をお願いできますか。`,
+        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を次戦の先発で試してみたい。抜擢を認めてもらえるか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢提案`,
         outPlayerId: replaceStarter.id,
@@ -17687,18 +17921,18 @@ function buildPlayerConsultation(club) {
       kind: 'player',
       scenario: 'P2',
       senderName: `${outPosStarter.name} (${outPosStarter.pos})`,
-      topic: '選手からの起用法要望',
+      topic: '起用法の相談',
       title: `${outPosStarter.fullName || outPosStarter.name}：本職ポジションでの起用要望`,
-      speech: `GM、${outPosStarter.fullName || outPosStarter.name} 選手から「現在は ${curPos} を任されていますが、最も持ち味を出せる本職 ${outPosStarter.pos} でプレーさせてもらいたい」と面談希望が届いています。`,
+      speech: `GM、今お時間よろしいでしょうか。現在は ${curPos} を任されていますが、自分の持ち味を最も発揮できるのは本職の ${outPosStarter.pos} です。次戦から本職ポジションでプレーさせてもらえませんか。`,
       dutyTitle: `${outPosStarter.name} の起用法要望`,
-      dutyDesc: `本職 [${outPosStarter.pos}] 起用の調整要望`,
+      dutyDesc: `本職 ${outPosStarter.pos} 起用の調整要望`,
       playerId: outPosStarter.id,
       detailRows: [
         ['要望選手', `#${outPosStarter.squadNumber || '-'} ${outPosStarter.fullName || outPosStarter.name}（OVR ${getPlayerOverallRating(outPosStarter)}）`],
-        ['現在の配置', `${curPos}（本職: ${outPosStarter.pos}）`],
+        ['現在の配置', `${curPos}（本職 ${outPosStarter.pos}）`],
         ['士気 (Morale)', `${Math.round(outPosStarter.morale ?? 75)}`]
       ],
-      acceptLabel: `本職 [${outPosStarter.pos}] へ配置を調整する`
+      acceptLabel: `本職 ${outPosStarter.pos} へ配置を調整する`
     };
   }
 
@@ -17719,11 +17953,12 @@ function buildPlayerConsultation(club) {
         kind: 'player',
         scenario: 'P1',
         senderName: `${requester.name} (${requester.pos})`,
-        topic: '選手からの起用法要望',
+        topic: '起用法の相談',
         title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
-        speech: `GM、控えに甘んじている ${requester.fullName || requester.name}（${requester.pos} / OVR ${rOvr}）から「チームに貢献する準備は万全です。次戦のスタメンにぜひ抜擢してほしい」との強い要望が上がっています。`,
+        speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
         dutyTitle: `${requester.name} の先発起用要望`,
         dutyDesc: `スタメン出場機会についての面談`,
+        playerId: requester.id,
         inPlayerId: requester.id,
         outPlayerId: outStarter.id,
         detailRows: [
@@ -17738,13 +17973,158 @@ function buildPlayerConsultation(club) {
   return null;
 }
 
+function getClubCoachEntries(club) {
+  if (!club || !club.coaches || typeof club.coaches !== 'object') return [];
+  const entries = [];
+  (Array.isArray(club.coaches.attacking) ? club.coaches.attacking : []).forEach(c => {
+    if (c) entries.push({ coach: c, category: 'attacking', roleLabel: '攻撃コーチ' });
+  });
+  (Array.isArray(club.coaches.defending) ? club.coaches.defending : []).forEach(c => {
+    if (c) entries.push({ coach: c, category: 'defending', roleLabel: '守備コーチ' });
+  });
+  if (club.coaches.fitness) {
+    entries.push({ coach: club.coaches.fitness, category: 'fitness', roleLabel: 'フィジカルコーチ' });
+  }
+  if (club.coaches.goalkeeping) {
+    entries.push({ coach: club.coaches.goalkeeping, category: 'goalkeeping', roleLabel: 'GKコーチ' });
+  }
+  return entries;
+}
+
+function buildConflictArbitrationEvent(club) {
+  if (!club || !club.manager) return null;
+  const mgr = club.manager;
+  const coaches = getClubCoachEntries(club);
+  if (coaches.length === 0) return null;
+
+  const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+  const starters = active.filter(p => p.isStarter && (p.slotIndex || 0) > 0);
+  const nonStarters = active.filter(p => !p.isStarter && p.pos !== 'GK');
+  const avgStarterFatigue = starters.length > 0
+    ? Math.round(starters.reduce((sum, p) => sum + (p.fatigue || 0), 0) / starters.length)
+    : 0;
+
+  const youngHopeful = [...nonStarters].filter(p => (p.age || 25) <= 22)
+    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0];
+  const vetStarter = [...starters].filter(p => (p.age || 25) >= 28)
+    .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b))[0];
+
+  const fitnessEntry = coaches.find(e => e.category === 'fitness') || coaches[0];
+  const tacEntries = coaches.filter(e => e.category === 'attacking' || e.category === 'defending');
+  const tacEntry = tacEntries[(gameState.consultationSeq || 0) % Math.max(1, tacEntries.length)] || coaches[0];
+
+  const preferScenario = (avgStarterFatigue >= 28 || ((gameState.consultationSeq || 0) % 3 === 0))
+    ? 'C1'
+    : (youngHopeful && vetStarter && ((gameState.consultationSeq || 0) % 2 === 1))
+      ? 'C3'
+      : 'C2';
+
+  if (preferScenario === 'C3' && youngHopeful && vetStarter) {
+    const cEntry = tacEntry;
+    const yOvr = getPlayerOverallRating(youngHopeful);
+    const vOvr = getPlayerOverallRating(vetStarter);
+    return {
+      id: `consult_conf_${Date.now()}`,
+      kind: 'conflict',
+      scenario: 'C3',
+      senderName: `${mgr.name} 監督 × ${cEntry.coach.name} ${cEntry.roleLabel}`,
+      topic: '意見対立の仲裁',
+      title: '起用路線の対立：ベテラン主軸 vs 若手抜擢',
+      speech: `GM、次戦の選手起用で ${cEntry.coach.fullName || cEntry.coach.name} ${cEntry.roleLabel} と意見が割れています。経験豊富な ${vetStarter.name} で手堅くいくか、勢いのある若手 ${youngHopeful.name} を抜擢すべきか、最終判断をお願いします。`,
+      dutyTitle: '監督・コーチの意見対立仲裁',
+      dutyDesc: `${mgr.name}監督と${cEntry.coach.name}の起用方針を裁定`,
+      coachId: cEntry.coach.id,
+      coachCategory: cEntry.category,
+      coachName: cEntry.coach.name,
+      coachRoleLabel: cEntry.roleLabel,
+      inPlayerId: youngHopeful.id,
+      outPlayerId: vetStarter.id,
+      mgrStanceTitle: `${mgr.name} 監督の主張`,
+      mgrStanceBody: `大一番では経験値と計算できる試合運びが不可欠。${vetStarter.fullName || vetStarter.name}（${vetStarter.age}歳 / OVR ${vOvr}）を軸に据え続けるべき。`,
+      coachStanceTitle: `${cEntry.coach.fullName || cEntry.coach.name}（${cEntry.roleLabel}）の主張`,
+      coachStanceBody: `練習での伸びと推進力は ${youngHopeful.fullName || youngHopeful.name}（${youngHopeful.age}歳 / OVR ${yOvr}）が上。今こそ先発抜擢で活性化すべき。`,
+      impactSummary: '監督支持：信頼度+5・先発士気UP ／ コーチ採用：若手抜擢＆士気+10 ／ 仲裁：双方安定',
+      acceptLabel: `${mgr.name}監督を支持（ベテラン軸を維持）`,
+      coachAcceptLabel: `${cEntry.coach.name}コーチ案を採用（${youngHopeful.name} を抜擢）`,
+      mediateLabel: '段階的起用の折衷案で仲裁する'
+    };
+  }
+
+  if (preferScenario === 'C2') {
+    const isAtk = tacEntry.category === 'attacking';
+    const secLabel = isAtk ? '攻撃ユニット' : '守備ユニット';
+    return {
+      id: `consult_conf_${Date.now()}`,
+      kind: 'conflict',
+      scenario: 'C2',
+      senderName: `${mgr.name} 監督 × ${tacEntry.coach.name} ${tacEntry.roleLabel}`,
+      topic: '意見対立の仲裁',
+      title: `戦術調整の衝突：全体バランス vs ${secLabel}強化`,
+      speech: `GM、今週のトレーニングと戦術重点を巡って私と ${tacEntry.coach.fullName || tacEntry.coach.name} ${tacEntry.roleLabel} の主張が平行線をたどっています。チーム全体としてどちらを優先すべきか裁定してください。`,
+      dutyTitle: '監督・コーチの戦術対立仲裁',
+      dutyDesc: `${mgr.name}監督と${tacEntry.coach.name}の調整方針を裁定`,
+      coachId: tacEntry.coach.id,
+      coachCategory: tacEntry.category,
+      coachName: tacEntry.coach.name,
+      coachRoleLabel: tacEntry.roleLabel,
+      mgrStanceTitle: `${mgr.name} 監督の主張`,
+      mgrStanceBody: '特定の局面に偏らず、既存のチーム規律と攻守全体の連動性を最優先で仕上げたい。',
+      coachStanceTitle: `${tacEntry.coach.fullName || tacEntry.coach.name}（${tacEntry.roleLabel}）の主張`,
+      coachStanceBody: isAtk
+        ? '決定力と前線の連係が勝敗を分ける。攻撃陣に特化した崩しのメニューへ比重を移すべきだ。'
+        : '失点を減らさなければ上位は望めない。守備ブロックと球際の徹底に時間を割くべきだ。',
+      impactSummary: `監督支持：信頼度+5・先発士気UP ／ コーチ採用：${secLabel}士気+7 ／ 仲裁：全体士気UP`,
+      acceptLabel: `${mgr.name}監督を支持（全体規律を優先）`,
+      coachAcceptLabel: `${tacEntry.coach.name}コーチ案を採用（${secLabel}を集中強化）`,
+      mediateLabel: '全体戦術と個別パートを併設して仲裁'
+    };
+  }
+
+  // Scenario C1: トレーニング強度・過密疲労対立
+  return {
+    id: `consult_conf_${Date.now()}`,
+    kind: 'conflict',
+    scenario: 'C1',
+    senderName: `${mgr.name} 監督 × ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel}`,
+    topic: '意見対立の仲裁',
+    title: '調整方針の対立：練習強度維持 vs 疲労回復優先',
+    speech: `GM、次節に向けた調整メニューについて ${fitnessEntry.coach.fullName || fitnessEntry.coach.name} ${fitnessEntry.roleLabel} と対立しています。強度の高い戦術練習を貫くべきか、回復優先へ切り替えるべきか判断を仰ぎたい。`,
+    dutyTitle: '監督・コーチの調整方針仲裁',
+    dutyDesc: `強度維持か疲労軽減か、GMによる仲裁待ち`,
+    coachId: fitnessEntry.coach.id,
+    coachCategory: fitnessEntry.category,
+    coachName: fitnessEntry.coach.name,
+    coachRoleLabel: fitnessEntry.roleLabel,
+    mgrStanceTitle: `${mgr.name} 監督の主張`,
+    mgrStanceBody: `主力平均疲労は ${avgStarterFatigue}% だが勝負どころ。実戦形式の強度を落とさず勝点を取り切る準備を続けたい。`,
+    coachStanceTitle: `${fitnessEntry.coach.fullName || fitnessEntry.coach.name}（${fitnessEntry.roleLabel}）の主張`,
+    coachStanceBody: 'このまま高負荷を続ければ筋肉系トラブルのリスクが急増する。強度を下げて疲労を抜くのが先決だ。',
+    impactSummary: '監督支持：信頼度+5・先発士気+3（疲労増） ／ コーチ採用：全選手疲労-10回復 ／ 仲裁：バランス回復',
+    acceptLabel: `${mgr.name}監督を支持（高強度調整を継続）`,
+    coachAcceptLabel: `${fitnessEntry.coach.name}コーチ案を採用（疲労回復を優先）`,
+    mediateLabel: '主力は軽め・控えは強めの負荷分散で仲裁'
+  };
+}
+
 function buildLineupConsultationCandidate(club, forceType = null) {
   if (!club) return null;
-  const preferPlayer = forceType ? (forceType === 'player') : ((gameState.consultationSeq || 0) % 2 === 1);
-  if (preferPlayer) {
-    return buildPlayerConsultation(club) || (forceType ? null : buildManagerConsultation(club));
+  if (forceType === 'player') {
+    return buildPlayerConsultation(club);
   }
-  return buildManagerConsultation(club) || (forceType ? null : buildPlayerConsultation(club));
+  if (forceType === 'manager') {
+    return buildManagerConsultation(club);
+  }
+  if (forceType === 'conflict') {
+    return buildConflictArbitrationEvent(club);
+  }
+  const seqMod = (gameState.consultationSeq || 0) % 3;
+  if (seqMod === 1) {
+    return buildPlayerConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
+  }
+  if (seqMod === 2) {
+    return buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
+  }
+  return buildManagerConsultation(club) || buildPlayerConsultation(club) || buildConflictArbitrationEvent(club);
 }
 
 function resolveLineupConsultationDecision(consultation, decision) {
@@ -17753,14 +18133,72 @@ function resolveLineupConsultationDecision(consultation, decision) {
 
   if (decision === 'defer') {
     gameState.pendingLineupConsultation = consultation;
-    if (typeof switchTab === 'function') switchTab('roster');
-    if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
+    if (consultation.kind !== 'conflict') {
+      if (typeof switchTab === 'function') switchTab('roster');
+      if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
+    }
     renderAll();
     return;
   }
 
   gameState.pendingLineupConsultation = null;
   const mgr = club.manager;
+  const activePlayers = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+
+  if (consultation.kind === 'conflict') {
+    if (decision === 'accept') {
+      if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 5);
+      activePlayers.filter(p => p.isStarter).forEach(p => {
+        p.morale = Math.min(100, (p.morale || 75) + (consultation.scenario === 'C1' ? 3 : 4));
+        if (consultation.scenario === 'C1') p.fatigue = Math.min(100, (p.fatigue || 0) + 3);
+      });
+      addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}の方針を支持し、チームの統一感を優先しました（${consultation.coachName || 'コーチ'}には理解を求めました）。`);
+    } else if (decision === 'coach' || decision === 'decline') {
+      if (mgr) mgr.trust = Math.max(15, (mgr.trust ?? 75) - 3);
+      if (consultation.scenario === 'C1') {
+        activePlayers.forEach(p => {
+          p.fatigue = Math.max(0, (p.fatigue || 0) - 10);
+          if (p.isStarter) p.morale = Math.min(100, (p.morale || 75) + 2);
+        });
+        addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'フィジカルコーチ'}の進言を採用し、負荷軽減によって主力のコンディションを回復しました。`);
+      } else if (consultation.scenario === 'C3' && consultation.inPlayerId && consultation.outPlayerId) {
+        const outP = club.players.find(p => p.id === consultation.outPlayerId);
+        const inP = club.players.find(p => p.id === consultation.inPlayerId);
+        if (outP && inP) {
+          swapStarterWithCandidate(club, outP, inP);
+          inP.morale = Math.min(100, (inP.morale || 75) + 10);
+          outP.morale = Math.max(30, (outP.morale || 75) - 2);
+          addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の推挙を採用し、若手 #${inP.squadNumber || '-'} ${inP.name} をスタメン抜擢しました。`);
+        }
+      } else {
+        const isAtk = consultation.coachCategory === 'attacking';
+        const targetPosSet = isAtk
+          ? new Set(['ST', 'CF', 'LW', 'RW', 'LM', 'RM', 'CAM', 'AM'])
+          : new Set(['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'DM', 'CM']);
+        activePlayers.forEach(p => {
+          if (targetPosSet.has(p.pos)) p.morale = Math.min(100, (p.morale || 75) + 7);
+        });
+        addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の提言を採用し、${isAtk ? '攻撃陣' : '守備陣'}の連携強化を重点実施しました。`);
+      }
+    } else if (decision === 'mediate') {
+      if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 2);
+      if (consultation.scenario === 'C1') {
+        activePlayers.forEach(p => {
+          if (p.isStarter) p.fatigue = Math.max(0, (p.fatigue || 0) - 5);
+          else p.morale = Math.min(100, (p.morale || 75) + 4);
+        });
+        addDailyLog(`【スタッフ仲裁】GMの折衷案により主力は負荷を分散し、控え組の底上げも両立させました。`);
+      } else {
+        activePlayers.forEach(p => {
+          p.morale = Math.min(100, (p.morale || 75) + 3);
+        });
+        addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}と${consultation.coachName || 'コーチ'}の双方の意見を取り入れ、円満に妥協点を見出しました。`);
+      }
+    }
+    renderAll();
+    if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+    return;
+  }
 
   if (decision === 'accept') {
     if (consultation.kind === 'manager') {
@@ -17815,8 +18253,89 @@ function resolveLineupConsultationDecision(consultation, decision) {
   if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
 }
 
+function findClubCoachById(club, coachId) {
+  if (!club || !coachId) return null;
+  const entry = getClubCoachEntries(club).find(e => e.coach && e.coach.id === coachId);
+  return entry ? entry.coach : null;
+}
+
 function openLineupConsultationModal(consultation) {
   if (!consultation || typeof showSecretaryModal !== 'function') return;
+  const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+
+  if (consultation.kind === 'conflict' && club && club.manager) {
+    const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+    if (coachObj) {
+      const conflictSpeaker = {
+        kind: 'conflict',
+        left: { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督' },
+        right: { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ' },
+        club
+      };
+      const detailHtml = `
+        <div class="gm-conflict-compare">
+          <div class="gm-conflict-stance is-mgr">
+            <div class="gm-conflict-stance-head">${escapeCommHtml(consultation.mgrStanceTitle || `${club.manager.name} 監督の主張`)}</div>
+            <div class="gm-conflict-stance-body">${escapeCommHtml(consultation.mgrStanceBody || '')}</div>
+          </div>
+          <div class="gm-conflict-stance is-coach">
+            <div class="gm-conflict-stance-head">${escapeCommHtml(consultation.coachStanceTitle || `${coachObj.name} コーチの主張`)}</div>
+            <div class="gm-conflict-stance-body">${escapeCommHtml(consultation.coachStanceBody || '')}</div>
+          </div>
+          ${consultation.impactSummary ? `<div class="gm-conflict-impact">${escapeCommHtml(consultation.impactSummary)}</div>` : ''}
+        </div>
+      `;
+      showSecretaryModal({
+        variant: 'conflict-arbitration',
+        speaker: conflictSpeaker,
+        topic: consultation.topic || '意見対立の仲裁',
+        title: consultation.title,
+        speech: consultation.speech,
+        detailHtml,
+        actions: [
+          {
+            label: consultation.acceptLabel || `${club.manager.name}監督を支持`,
+            className: 'btn btn-primary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'accept')
+          },
+          {
+            label: consultation.coachAcceptLabel || `${coachObj.name}コーチ案を採用`,
+            className: 'btn btn-secondary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'coach')
+          },
+          {
+            label: consultation.mediateLabel || '折衷案で仲裁する',
+            className: 'btn btn-accent',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'mediate')
+          },
+          {
+            label: 'あとで判断（業務一覧へ保留）',
+            className: 'btn btn-secondary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'defer')
+          }
+        ]
+      });
+      return;
+    }
+  }
+
+  let modalSpeaker = null;
+  if (consultation.kind === 'manager' && club && club.manager) {
+    modalSpeaker = { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club };
+  } else if (consultation.kind === 'player' && club) {
+    const targetPlayerId = consultation.playerId || consultation.inPlayerId;
+    const playerObj = (club.players || []).find(p => p && p.id === targetPlayerId);
+    if (playerObj) {
+      modalSpeaker = {
+        kind: 'player',
+        person: playerObj,
+        name: playerObj.fullName || playerObj.name,
+        roleLabel: `${playerObj.pos} #${playerObj.squadNumber || '-'}`,
+        club
+      };
+    }
+  }
+
   const rowsHtml = (consultation.detailRows || []).map(([k, v]) => `
     <div class="gm-modal-flat-row">
       <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
@@ -17824,6 +18343,7 @@ function openLineupConsultationModal(consultation) {
     </div>
   `).join('');
   showSecretaryModal({
+    speaker: modalSpeaker,
     topic: consultation.topic,
     title: consultation.title,
     speech: consultation.speech,
@@ -17873,7 +18393,7 @@ function checkAndTriggerLineupConsultation(matchData = null, forceType = null) {
       title: consultation.title,
       body: consultation.speech,
       actionType: 'open-lineup-consultation',
-      actionLabel: '相談を確認・回答する'
+      actionLabel: consultation.kind === 'conflict' ? '対立を仲裁・裁定する' : '相談を確認・回答する'
     });
   }
 
@@ -17895,8 +18415,10 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
   const userWon = hasPk ? Boolean(matchData.userWon) : (myScore > oppScore);
   const userDraw = !hasPk && (myScore === oppScore);
 
+  const prizeIncome = Number(matchData.prizeIncome) || 0;
+  const gateIncome = Number(matchData.gateIncome) || 0;
   const earnedIncome = matchData.isPreseason
-    ? (Number(matchData.matchIncome) || 0)
+    ? ((Number(matchData.matchIncome) || 0) || (prizeIncome + gateIncome))
     : (isHome ? (Number(matchData.matchIncome) || 0) : (Number(matchData.awayBroadcastingFee) || 0));
   const supportersDelta = Number(matchData.playerSupportersDelta || 0);
 
@@ -17920,11 +18442,15 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
 
   gameState.totalPlayerMatchesPlayed = (gameState.totalPlayerMatchesPlayed || 0) + 1;
 
+  const oppClub = isHome ? matchData.awayClub : matchData.homeClub;
+  if (!isFastForwardingSeason && typeof emitPostMatchTeamAndPlayerNews === 'function') {
+    emitPostMatchTeamAndPlayerNews(playerClub, matchData, oppClub, myScore, oppScore, userWon, userDraw);
+  }
+
   if (suppressModal || isFastForwardingSeason || isSeasonClosing || typeof showSecretaryModal !== 'function') {
     return;
   }
 
-  const oppClub = isHome ? matchData.awayClub : matchData.homeClub;
   const oppName = oppClub ? oppClub.name : '対戦相手';
   const venueLabel = isHome ? 'HOME' : 'AWAY';
   const resultLabel = userWon ? '勝利' : (userDraw ? '引分' : '敗戦');
@@ -17955,30 +18481,58 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     speech = `GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）お疲れ様でございました。今回の収支および次回試合の予定をご報告申し上げます。`;
   }
 
-  const momStr = matchData.momPlayer ? ` · MOM ${matchData.momPlayer.name}` : '';
   const fanStr = `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
+  const incomeSubNote = matchData.isPreseason
+    ? (gateIncome > 0 && prizeIncome > 0
+      ? `賞金+${formatMoney(prizeIncome)} · 入場+${formatMoney(gateIncome)}`
+      : (gateIncome > 0 ? '入場・グッズ収入' : 'WCT大会賞金'))
+    : (isHome ? '入場料・グッズ・放映' : 'アウェイ放映権料');
+  const fanDeltaCls = supportersDelta >= 0 ? 'accent-green' : 'text-danger';
 
   showSecretaryModal({
+    variant: 'match-report',
     topic: matchData.isPreseason ? '試合後報告（WCT）' : '試合後報告',
     title: `${compLabel} 試合結果・収支報告`,
     speech,
     detailHtml: `
-      <div class="gm-modal-flat-list">
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">結果 vs ${escapeCommHtml(oppName)} (${venueLabel})</span>
-          <span class="gm-modal-flat-val mono ${resultColorCls}" style="white-space:nowrap;">${myScore}-${oppScore}${escapeCommHtml(pkSuffix)} ${resultLabel}${escapeCommHtml(momStr)}</span>
+      <div class="gm-report-wrap">
+        <div class="gm-report-scoreboard">
+          <div class="gm-report-sb-meta">
+            <span class="gm-report-sb-comp">${escapeCommHtml(compLabel)} · ${venueLabel}</span>
+            <span class="gm-report-sb-outcome ${resultColorCls}">${resultLabel}</span>
+          </div>
+          <div class="gm-report-sb-main">
+            <span class="gm-report-sb-team">${escapeCommHtml(playerClub.name)}</span>
+            <span class="gm-report-sb-score mono ${resultColorCls}">${myScore} - ${oppScore}${pkSuffix ? `<small>${escapeCommHtml(pkSuffix)}</small>` : ''}</span>
+            <span class="gm-report-sb-team is-opp">${escapeCommHtml(oppName)}</span>
+          </div>
+          ${matchData.momPlayer ? `<div class="gm-report-sb-mom"><span>MOM</span><strong>${escapeCommHtml(matchData.momPlayer.name)}</strong></div>` : ''}
         </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">試合収入 / 週間週給目安</span>
-          <span class="gm-modal-flat-val mono" style="white-space:nowrap;"><span class="accent-green">+${formatMoney(earnedIncome)}</span> / <span class="text-danger">-${formatMoney(weeklyPayroll)}</span></span>
+        <div class="gm-report-kpi-grid">
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">試合収入</span>
+            <span class="gm-report-kpi-val mono accent-green">+${formatMoney(earnedIncome)}</span>
+            <span class="gm-report-kpi-sub">${escapeCommHtml(incomeSubNote)}</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">週間給与目安</span>
+            <span class="gm-report-kpi-val mono text-danger">-${formatMoney(weeklyPayroll)}</span>
+            <span class="gm-report-kpi-sub">週次人件費</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">現在資金</span>
+            <span class="gm-report-kpi-val mono accent-gold">${formatMoney(playerClub.funds)}</span>
+            <span class="gm-report-kpi-sub">安全枠 ${formatMoney(safeBudget)}</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">サポーター</span>
+            <span class="gm-report-kpi-val mono ${fanDeltaCls}">${fanStr}</span>
+            <span class="gm-report-kpi-sub">${((playerClub.supporters || 0)).toLocaleString()}人</span>
+          </div>
         </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">現在資金 (安全枠) · 支持</span>
-          <span class="gm-modal-flat-val mono accent-gold" style="white-space:nowrap;">${formatMoney(playerClub.funds)} (${formatMoney(safeBudget)}) · ${fanStr}</span>
-        </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">次回試合予定</span>
-          <span class="gm-modal-flat-val">${escapeCommHtml(nextMatchText)}</span>
+        <div class="gm-report-next-bar">
+          <span class="gm-report-next-label">次回試合予定</span>
+          <span class="gm-report-next-val">${escapeCommHtml(nextMatchText)}</span>
         </div>
       </div>
     `,
@@ -18076,45 +18630,107 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
 
   if (!isFastForwardingSeason && typeof showSecretaryModal === 'function') {
     if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
-    const otherStr = otherNet !== 0
-      ? ` · その他 ${otherNet >= 0 ? '+' : ''}${formatMoney(otherNet)}`
-      : '';
     const netColorCls = netBalance >= 0 ? 'accent-green' : 'text-danger';
     const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
     let meetingSpeech = '';
     if (sec.tone === 'active') {
-      meetingSpeech = `GM、${reportMonth}月度の月次定例会です！今月の戦績と収支実績をまとめました。目標達成と健全経営に向けて次月のプランを確認しましょう。`;
+      meetingSpeech = `GM、${reportMonth}月度の月次定例経営会議を開催します！今月の戦績と収支決算をまとめました。理事会評価も踏まえて次月の指針を固めましょう。`;
     } else if (sec.tone === 'calm') {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の定例報告会を開始します。月間戦績、収支内訳、および理事会評価をご確認ください。`;
+      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の定例経営会議を開始します。今月の戦績実績、収支決算、ならびに理事会評価をご確認ください。`;
     } else {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の月次定例会のお時間でございます。今月の戦績ならびに財務収支の詳細をご報告申し上げます。`;
+      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の月次定例経営会議のお時間でございます。今月の戦績ならびに財務決算の詳細をご報告申し上げます。`;
     }
 
+    let evalScore = Number(boardConf) || 50;
+    if (netBalance > 0) evalScore += 10;
+    else if (netBalance < 0) evalScore -= 6;
+    if (psr && psr.isBreach) evalScore -= 15;
+    if (ledger && ledger.played > 0) {
+      evalScore += ((Number(ledger.won) || 0) - (Number(ledger.lost) || 0)) * 4;
+    }
+    const evalGrade = evalScore >= 90 ? 'S' : evalScore >= 75 ? 'A' : evalScore >= 60 ? 'B' : evalScore >= 45 ? 'C' : evalScore >= 30 ? 'D' : 'E';
+    const evalRankCls = `stat-rank-${evalGrade.toLowerCase()}`;
+    const emblemHtml = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(playerClub, 36, 'gm-ceremony-emblem') : '';
+    const otherRowHtml = otherNet !== 0
+      ? `<div class="gm-ledger-row">
+          <span class="gm-ledger-label">その他運営・雑収支</span>
+          <span class="gm-ledger-val mono ${otherNet >= 0 ? 'accent-green' : 'text-danger'}">${otherNet >= 0 ? '+' : '-'}${formatMoney(Math.abs(otherNet))}</span>
+        </div>`
+      : '';
+    const confBarColor = boardConf >= 70 ? '#2ecc71' : (boardConf >= 45 ? '#f59e0b' : '#ef4444');
+
     showSecretaryModal({
+      variant: 'monthly-ceremony',
       topic: '月次定例会',
       title: `${reportYear}年${reportMonth}月度 月次定例報告会`,
       speech: meetingSpeech,
       detailHtml: `
-        <div class="gm-modal-flat-list">
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">今月戦績</span>
-            <span class="gm-modal-flat-val">${escapeCommHtml(recordSummary)}</span>
+        <div class="gm-ceremony-wrap">
+          <div class="gm-ceremony-banner">
+            <div class="gm-ceremony-banner-left">
+              ${emblemHtml}
+              <div class="gm-ceremony-club-meta">
+                <div class="gm-ceremony-club-name">${escapeCommHtml(playerClub.name)}</div>
+                <div class="gm-ceremony-period">${reportYear}年${reportMonth}月度 決算・戦績報告</div>
+              </div>
+            </div>
+            <div class="gm-ceremony-grade-box">
+              <span class="gm-ceremony-grade-label">月次評価</span>
+              <span class="gm-ceremony-grade mono ${evalRankCls}">${evalGrade}</span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">順位 / 理事会評価</span>
-            <span class="gm-modal-flat-val">${escapeCommHtml(rankText)}（目標 ${escapeCommHtml(targetText)}） · 信頼度 ${boardConf}%</span>
+
+          <div class="gm-report-section-head">戦績・理事会評価</div>
+          <div class="gm-ceremony-rows">
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">今月戦績</span>
+              <span class="gm-ledger-val">${escapeCommHtml(recordSummary)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">順位 / シーズン目標</span>
+              <span class="gm-ledger-val">${escapeCommHtml(rankText)} / ${escapeCommHtml(targetText)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">理事会信頼度</span>
+              <span class="gm-ledger-val gm-conf-val">
+                <span class="gm-conf-meter"><span class="gm-conf-fill" style="width:${Math.max(0, Math.min(100, boardConf))}%;background:${confBarColor};"></span></span>
+                <span class="mono">${boardConf}%</span>
+              </span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">収入 (試合 / 売却)</span>
-            <span class="gm-modal-flat-val mono accent-green" style="white-space:nowrap;">+${formatMoney(matchIncome)} / +${formatMoney(transferIn)}</span>
+
+          <div class="gm-report-section-head">月間収支決算</div>
+          <div class="gm-report-ledger">
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">試合・賞金・グッズ収入</span>
+              <span class="gm-ledger-val mono accent-green">+${formatMoney(matchIncome)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">選手売却収入</span>
+              <span class="gm-ledger-val mono accent-green">+${formatMoney(transferIn)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">給与・スタッフ人件費</span>
+              <span class="gm-ledger-val mono text-danger">-${formatMoney(payrollPaid)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">移籍補強支出</span>
+              <span class="gm-ledger-val mono text-danger">-${formatMoney(transferOut)}</span>
+            </div>
+            ${otherRowHtml}
+            <div class="gm-ledger-row gm-ledger-total">
+              <span class="gm-ledger-label">月間純収支</span>
+              <span class="gm-ledger-val mono ${netColorCls}">${netSign}${formatMoney(netBalance)}</span>
+            </div>
+            <div class="gm-ledger-row gm-ledger-balance">
+              <span class="gm-ledger-label">月末資金残高 (安全枠 ${formatMoney(safeBudget)})</span>
+              <span class="gm-ledger-val mono accent-gold">${formatMoney(curFunds)}</span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">支出 (給与 / 補強)</span>
-            <span class="gm-modal-flat-val mono text-danger" style="white-space:nowrap;">-${formatMoney(payrollPaid)} / -${formatMoney(transferOut)}${escapeCommHtml(otherStr)}</span>
-          </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">月間純収支 / 現在資金</span>
-            <span class="gm-modal-flat-val mono ${netColorCls}" style="white-space:nowrap;">${netSign}${formatMoney(netBalance)} / ${formatMoney(curFunds)}</span>
+
+          <div class="gm-ceremony-verdict">
+            <span class="gm-ceremony-verdict-label">理事会総評</span>
+            <span class="gm-ceremony-verdict-text">${escapeCommHtml(statusComment)}</span>
           </div>
         </div>
       `,
@@ -18161,15 +18777,21 @@ function generateMatchweekNews(weekNum) {
     if (myScore - oppScore >= 3) {
       addNewsItem({
         category: 'リーグ',
+        clubId: playerClub.id,
         headline: `${playerClub.name}が${opp.name}に${myScore}-${oppScore}の快勝`,
+        lead: `${divCode} 第${weekNum}節 · 試合詳報`,
         body: `${divCode}第${weekNum}節で${playerClub.name}が攻撃陣爆発の${myScore}得点で圧勝。${rankSuffix}`,
+        actionLabel: '試合詳報',
         highlight: true
       });
     } else if (oppScore - myScore >= 3) {
       addNewsItem({
         category: 'リーグ',
+        clubId: playerClub.id,
         headline: `${playerClub.name}、${opp.name}に${myScore}-${oppScore}と痛恨の大敗`,
+        lead: `${divCode} 第${weekNum}節 · 試合詳報`,
         body: `${divCode}第${weekNum}節は守備陣が崩れ手痛い敗戦となった。${rankSuffix}`,
+        actionLabel: '試合詳報',
         highlight: true
       });
     }
@@ -18183,7 +18805,9 @@ function generateMatchweekNews(weekNum) {
     if (prevLeaderId && prevLeaderId !== leader.id) {
       addNewsItem({
         category: 'リーグ',
+        clubId: leader.id,
         headline: `${divCode}首位交代：${leader.name}が勝点${leader.pts}でトップ浮上`,
+        lead: `第${weekNum}節終了時 · 順位表変動`,
         body: `第${weekNum}節の結果、${leader.name}が2位${second.name}（勝点${second.pts}）を抑えて首位に立った。`,
         highlight: leader.isPlayer
       });
@@ -18191,7 +18815,9 @@ function generateMatchweekNews(weekNum) {
       const gap = (leader.pts || 0) - (second.pts || 0);
       addNewsItem({
         category: 'リーグ',
+        clubId: leader.id,
         headline: `${divCode}第${weekNum}節終了：${leader.name}が勝点${leader.pts}で首位維持`,
+        lead: `2位との勝点差 ${gap} · 優勝争い`,
         body: `2位${second.name}との勝点差は${gap}。中盤戦から終盤へ向けて激しい上位争いが続いている。`,
         highlight: leader.isPlayer
       });
@@ -18227,13 +18853,17 @@ function generateMatchweekNews(weekNum) {
   if (upsetMatch) {
     addNewsItem({
       category: 'リーグ',
+      clubId: upsetMatch.winner.id,
       headline: `番狂わせ：${upsetMatch.winner.name}が格上${upsetMatch.loser.name}を${upsetMatch.wScore}-${upsetMatch.lScore}で撃破`,
+      lead: `${divCode} 第${weekNum}節 · 試合詳報`,
       body: `${divCode}第${weekNum}節で${upsetMatch.winner.name}が金星を挙げ、リーグ順位表に波乱を呼んだ。`
     });
   } else if (blowoutMatch) {
     addNewsItem({
       category: 'リーグ',
+      clubId: blowoutMatch.winner.id,
       headline: `${blowoutMatch.winner.name}が${blowoutMatch.loser.name}に${blowoutMatch.wScore}-${blowoutMatch.lScore}で大勝`,
+      lead: `${divCode} 第${weekNum}節 · 試合詳報`,
       body: `${divCode}第${weekNum}節、${blowoutMatch.winner.name}が圧巻の攻撃力を披露した。`
     });
   }
@@ -18255,8 +18885,11 @@ function generateMatchweekNews(weekNum) {
     }
     if (topScorer && topClub && (topScorer.goals || 0) >= 3) {
       addNewsItem({
-        category: 'リーグ',
-        headline: `得点王争い：${topClub.name}の${topScorer.name}が今季${topScorer.goals}得点で首位`,
+        category: '選手',
+        clubId: topClub.id,
+        playerId: topScorer.id,
+        headline: `得点王争い：${topClub.name}・${topScorer.name}が今季${topScorer.goals}得点で首位`,
+        lead: `${topClub.name} · ${topScorer.age}歳 · ${topScorer.appearances || weekNum}試合${topScorer.goals}得点`,
         body: `第${weekNum}節終了時点で${topScorer.name}が${divCode}の得点ランキングトップを走っている。`,
         highlight: topClub.isPlayer
       });
@@ -18274,8 +18907,11 @@ function generateCupMatchNews(compName, oppClub, isHome, myScore, oppScore, user
   const resultLabel = userWon ? '勝利' : (myScore === oppScore ? '引き分け' : '敗戦');
   addNewsItem({
     category: 'カップ',
+    clubId: playerClub.id,
     headline: `${compName} ${roundTitle}：${playerClub.name}、${oppClub.name}に${myScore}-${oppScore}で${resultLabel}`,
+    lead: `${compName} ${roundTitle} · 試合詳報`,
     body: `${venue}で迎えた${compName} ${roundTitle}の一戦は${myScore}-${oppScore}で決着した。`,
+    actionLabel: '試合詳報',
     highlight: userWon
   });
 }
@@ -18329,7 +18965,10 @@ function simulateCpuTransferNewsDaily(dayObj) {
         ensureValidSquadAndStarters(buyer);
         addNewsItem({
           category: '移籍',
+          clubId: buyer.id,
+          playerId: ep.id,
           headline: `大型補強：${buyer.name}が${ep.pos || 'MF'} ${ep.name}を${formatMoney(epFee)}で獲得`,
+          lead: `${buyer.name} · ${ep.age}歳 · 移籍成立`,
           body: `${buyer.name}は欧州市場から${ep.name}（${ep.age}歳 / OVR ${epOvr}）の獲得を完了。ライバルクラブの戦力増強に市場が沸いている。`,
           highlight: epOvr >= 80
         });
@@ -18357,7 +18996,10 @@ function simulateCpuTransferNewsDaily(dayObj) {
     }
     addNewsItem({
       category: '移籍',
+      clubId: buyer.id,
+      playerId: target.id,
       headline: `移籍成立：${buyer.name}が${seller.name}から${pos} ${target.name}を獲得`,
+      lead: `${buyer.name} · ${target.age}歳 · 移籍金 ${formatMoney(fee)}`,
       body: `移籍金は${formatMoney(fee)}。${target.name}（${target.age}歳 / OVR ${ovr}）は4年契約で新天地へ合流する。`,
       highlight: ovr >= 79
     });
@@ -18615,24 +19257,72 @@ function renderOfficeCommPanel() {
       '移籍': 'comm-cat-transfer',
       'リーグ': 'comm-cat-league',
       'カップ': 'comm-cat-cup',
-      '監督': 'comm-cat-manager'
+      '監督': 'comm-cat-manager',
+      'チーム': 'comm-cat-cup',
+      '選手': 'comm-cat-league'
+    };
+
+    const resolveNewsVisual = (n) => {
+      let foundPlayer = null;
+      let foundClub = n.clubId && typeof getClubById === 'function' ? getClubById(n.clubId) : null;
+      if (n.playerId) {
+        for (const c of (typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []))) {
+          const p = (c.players || []).find(x => x && x.id === n.playerId);
+          if (p) { foundPlayer = p; foundClub = c; break; }
+        }
+        if (!foundPlayer && Array.isArray(gameState.transferMarket)) {
+          foundPlayer = gameState.transferMarket.find(x => x && x.id === n.playerId) || null;
+        }
+      }
+      if (foundPlayer && typeof getPlayerAvatarHtml === 'function') {
+        return {
+          hasPlayer: true,
+          player: foundPlayer,
+          html: `<div class="news-thumb-circle is-player">${getPlayerAvatarHtml(foundPlayer, foundClub || getPlayerClub(), 'avatar-sm news-thumb-avatar')}</div>`
+        };
+      }
+      const fallbackClub = foundClub || getPlayerClub();
+      return {
+        hasPlayer: false,
+        player: null,
+        html: `<div class="news-thumb-circle is-club">${typeof getClubEmblemSvg === 'function' && fallbackClub ? getClubEmblemSvg(fallbackClub, 26, 'news-thumb-emblem') : ''}</div>`
+      };
     };
 
     newsListEl.innerHTML = news.slice(0, 25).map(n => {
       const catClass = catClassMap[n.category] || 'comm-cat-league';
+      const isExpanded = gameState.expandedNewsId === n.id;
+      const thumb = resolveNewsVisual(n);
+      const leadText = n.lead || (n.body ? String(n.body).slice(0, 44) : '');
+      const readLabel = n.actionLabel || (n.body ? '本文を読む' : '');
+      const displayDate = n.fullDate || n.date || '';
+
       return `
-        <div class="news-row ${n.highlight ? 'is-highlight' : ''}">
-          <div class="news-row-head">
-            <div class="news-row-left">
-              <span class="comm-sender-label ${catClass}">${escapeCommHtml(n.category)}</span>
-              <span class="news-row-headline">${escapeCommHtml(n.headline)}</span>
+        <div class="news-row ${n.highlight ? 'is-highlight' : ''} ${isExpanded ? 'is-expanded' : ''}" data-news-id="${escapeCommHtml(n.id)}">
+          <div class="news-row-layout">
+            ${thumb.html}
+            <div class="news-main-col">
+              <div class="news-row-headline">${escapeCommHtml(n.headline)}</div>
+              ${leadText ? `<div class="news-row-lead">${escapeCommHtml(leadText)}</div>` : ''}
+              <div class="news-row-meta">
+                <div class="news-row-meta-left">
+                  <span class="comm-sender-label ${catClass}">${escapeCommHtml(n.category)}</span>
+                  ${readLabel ? `<span class="news-read-trigger">${isExpanded ? '記事を閉じる' : escapeCommHtml(readLabel)}</span>` : ''}
+                </div>
+                <span class="comm-date-text mono">${escapeCommHtml(displayDate)}</span>
+              </div>
+              ${isExpanded && n.body ? `
+                <div class="news-row-detail">
+                  <p class="news-row-body">${escapeCommHtml(n.body)}</p>
+                  ${thumb.hasPlayer ? `<div class="news-detail-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-news-profile="${escapeCommHtml(thumb.player.id)}" style="white-space:nowrap;">選手詳細を見る</button></div>` : ''}
+                </div>
+              ` : ''}
             </div>
-            <span class="comm-date-text mono">${escapeCommHtml(n.date)}</span>
           </div>
-          ${n.body ? `<p class="news-row-body">${escapeCommHtml(n.body)}</p>` : ''}
         </div>
       `;
     }).join('');
+    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(newsListEl);
   }
 }
 
@@ -18690,6 +19380,24 @@ function initOfficeCommAndSecretaryEvents() {
   }
 
   const inboxListEl = document.getElementById('office-inbox-list');
+  const newsListEl = document.getElementById('office-news-list');
+  if (newsListEl) {
+    newsListEl.addEventListener('click', (e) => {
+      const profBtn = e.target.closest('[data-news-profile]');
+      if (profBtn) {
+        e.stopPropagation();
+        if (typeof openPlayerProfileModal === 'function') {
+          openPlayerProfileModal(profBtn.dataset.newsProfile);
+        }
+        return;
+      }
+      const row = e.target.closest('[data-news-id]');
+      if (row && row.dataset.newsId) {
+        gameState.expandedNewsId = (gameState.expandedNewsId === row.dataset.newsId) ? null : row.dataset.newsId;
+        renderOfficeCommPanel();
+      }
+    });
+  }
   if (inboxListEl) {
     inboxListEl.addEventListener('click', (e) => {
       const profBtn = e.target.closest('[data-msg-profile]');
