@@ -271,7 +271,13 @@ function saveGameToStorage(force = false) {
         inboxMessages: Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages.slice(0, 40) : [],
         newsFeed: Array.isArray(gameState.newsFeed) ? gameState.newsFeed.slice(0, 40) : [],
         managerWishes: gameState.managerWishes || null,
-        officeCommTab: gameState.officeCommTab || 'messages'
+        officeCommTab: gameState.officeCommTab || 'messages',
+        monthlyLedger: gameState.monthlyLedger || null,
+        monthlyReports: Array.isArray(gameState.monthlyReports) ? gameState.monthlyReports.slice(0, 12) : [],
+        pendingLineupConsultation: gameState.pendingLineupConsultation || null,
+        totalPlayerMatchesPlayed: Number(gameState.totalPlayerMatchesPlayed || 0),
+        lastConsultationMatchCount: Number(gameState.lastConsultationMatchCount || 0),
+        consultationSeq: Number(gameState.consultationSeq || 0)
       }
     };
     if (typeof dehydrateCompetitionsForSave === 'function') {
@@ -927,6 +933,12 @@ function loadGameFromStorage() {
     if (gameState.managerWishes === undefined) gameState.managerWishes = null;
     if (!gameState.officeCommTab) gameState.officeCommTab = 'messages';
     if (!gameState.inboxCategoryFilter) gameState.inboxCategoryFilter = 'ALL';
+    if (gameState.monthlyLedger === undefined) gameState.monthlyLedger = null;
+    if (!Array.isArray(gameState.monthlyReports)) gameState.monthlyReports = [];
+    if (gameState.pendingLineupConsultation === undefined) gameState.pendingLineupConsultation = null;
+    if (typeof gameState.totalPlayerMatchesPlayed !== 'number') gameState.totalPlayerMatchesPlayed = 0;
+    if (typeof gameState.lastConsultationMatchCount !== 'number') gameState.lastConsultationMatchCount = 0;
+    if (typeof gameState.consultationSeq !== 'number') gameState.consultationSeq = 0;
     if (typeof syncAllSubtabsDOM === 'function') {
       syncAllSubtabsDOM();
     }
