@@ -295,7 +295,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn("kind: 'player'", consult_block)
         self.assertIn("kind: 'conflict'", consult_block)
 
-        # 3. 監督・コーチ意見対立仲裁イベントと裁定（監督支持/コーチ採用/折衷仲裁/保留）
+        # 3. 監督・コーチ意見対立仲裁イベントと裁定（監督支持/コーチ採用/折衷仲裁/保留・次節終了時自動消滅・メタ表記なし）
         for sym in [
             'function getClubCoachEntries(',
             'function buildConflictArbitrationEvent(',
@@ -304,6 +304,12 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             "decision === 'mediate'",
         ]:
             self.assertIn(sym, self.main_js)
+        conf_start = self.main_js.index('function buildConflictArbitrationEvent(')
+        conf_block = self.main_js[conf_start:conf_start + 3500]
+        self.assertNotIn('}%', conf_block)
+        self.assertNotIn('OVR ', conf_block)
+        comp_start = self.main_js.index('function handlePlayerMatchCompleted(')
+        self.assertIn('gameState.pendingLineupConsultation = null;', self.main_js[comp_start:comp_start + 600])
 
     def test_11_duties_collapse_no_duplicate_borderless_schedule_and_news_expiry(self):
         """業務折りたたみ重要複製防止・週間/カレンダー二重枠撤廃・ニュース7日削除が実装されていること"""

@@ -18059,17 +18059,15 @@ function buildConflictArbitrationEvent(club) {
 
   if (preferScenario === 'C3' && youngHopeful && vetStarter) {
     const cEntry = tacEntry;
-    const yOvr = getPlayerOverallRating(youngHopeful);
-    const vOvr = getPlayerOverallRating(vetStarter);
     return {
       id: `consult_conf_${Date.now()}`,
       kind: 'conflict',
       scenario: 'C3',
       senderName: `${mgr.name} 監督 × ${cEntry.coach.name} ${cEntry.roleLabel}`,
       topic: '意見対立の仲裁',
-      title: '起用路線の対立：ベテラン主軸 vs 若手抜擢',
-      speech: `GM、次戦の選手起用で ${cEntry.coach.fullName || cEntry.coach.name} ${cEntry.roleLabel} と意見が割れています。経験豊富な ${vetStarter.name} で手堅くいくか、勢いのある若手 ${youngHopeful.name} を抜擢すべきか、最終判断をお願いします。`,
-      dutyTitle: '監督・コーチの意見対立仲裁',
+      title: '起用方針の対立',
+      speech: `GM、次節の先発起用で ${cEntry.coach.name} ${cEntry.roleLabel} と意見が割れています。どちらを採るかご判断ください。`,
+      dutyTitle: '監督・コーチの起用対立仲裁',
       dutyDesc: `${mgr.name}監督と${cEntry.coach.name}の起用方針を裁定`,
       coachId: cEntry.coach.id,
       coachCategory: cEntry.category,
@@ -18078,13 +18076,12 @@ function buildConflictArbitrationEvent(club) {
       inPlayerId: youngHopeful.id,
       outPlayerId: vetStarter.id,
       mgrStanceTitle: `${mgr.name} 監督の主張`,
-      mgrStanceBody: `大一番では経験値と計算できる試合運びが不可欠。${vetStarter.fullName || vetStarter.name}（${vetStarter.age}歳 / OVR ${vOvr}）を軸に据え続けるべき。`,
-      coachStanceTitle: `${cEntry.coach.fullName || cEntry.coach.name}（${cEntry.roleLabel}）の主張`,
-      coachStanceBody: `練習での伸びと推進力は ${youngHopeful.fullName || youngHopeful.name}（${youngHopeful.age}歳 / OVR ${yOvr}）が上。今こそ先発抜擢で活性化すべき。`,
-      impactSummary: '監督支持：信頼度+5・先発士気UP ／ コーチ採用：若手抜擢＆士気+10 ／ 仲裁：双方安定',
-      acceptLabel: `${mgr.name}監督を支持（ベテラン軸を維持）`,
-      coachAcceptLabel: `${cEntry.coach.name}コーチ案を採用（${youngHopeful.name} を抜擢）`,
-      mediateLabel: '段階的起用の折衷案で仲裁する'
+      mgrStanceBody: `大一番では経験がものをいう。計算できる ${vetStarter.name} を軸に据えたい。`,
+      coachStanceTitle: `${cEntry.coach.name}（${cEntry.roleLabel}）の主張`,
+      coachStanceBody: `練習での動きと勢いは ${youngHopeful.name} が抜けている。先発に抜擢すべきだ。`,
+      acceptLabel: `監督を支持（${vetStarter.name} 維持）`,
+      coachAcceptLabel: `コーチ案を採用（${youngHopeful.name} 抜擢）`,
+      mediateLabel: '段階的起用で仲裁'
     };
   }
 
@@ -18097,8 +18094,8 @@ function buildConflictArbitrationEvent(club) {
       scenario: 'C2',
       senderName: `${mgr.name} 監督 × ${tacEntry.coach.name} ${tacEntry.roleLabel}`,
       topic: '意見対立の仲裁',
-      title: `戦術調整の衝突：全体バランス vs ${secLabel}強化`,
-      speech: `GM、今週のトレーニングと戦術重点を巡って私と ${tacEntry.coach.fullName || tacEntry.coach.name} ${tacEntry.roleLabel} の主張が平行線をたどっています。チーム全体としてどちらを優先すべきか裁定してください。`,
+      title: '戦術調整の対立',
+      speech: `GM、次節の練習配分を巡って ${tacEntry.coach.name} ${tacEntry.roleLabel} と意見が一致していません。方針をご判断ください。`,
       dutyTitle: '監督・コーチの戦術対立仲裁',
       dutyDesc: `${mgr.name}監督と${tacEntry.coach.name}の調整方針を裁定`,
       coachId: tacEntry.coach.id,
@@ -18106,41 +18103,42 @@ function buildConflictArbitrationEvent(club) {
       coachName: tacEntry.coach.name,
       coachRoleLabel: tacEntry.roleLabel,
       mgrStanceTitle: `${mgr.name} 監督の主張`,
-      mgrStanceBody: '特定の局面に偏らず、既存のチーム規律と攻守全体の連動性を最優先で仕上げたい。',
-      coachStanceTitle: `${tacEntry.coach.fullName || tacEntry.coach.name}（${tacEntry.roleLabel}）の主張`,
+      mgrStanceBody: '特定の局面に偏らず、攻守の連動性とチーム全体の規律を優先して仕上げたい。',
+      coachStanceTitle: `${tacEntry.coach.name}（${tacEntry.roleLabel}）の主張`,
       coachStanceBody: isAtk
-        ? '決定力と前線の連係が勝敗を分ける。攻撃陣に特化した崩しのメニューへ比重を移すべきだ。'
-        : '失点を減らさなければ上位は望めない。守備ブロックと球際の徹底に時間を割くべきだ。',
-      impactSummary: `監督支持：信頼度+5・先発士気UP ／ コーチ採用：${secLabel}士気+7 ／ 仲裁：全体士気UP`,
-      acceptLabel: `${mgr.name}監督を支持（全体規律を優先）`,
-      coachAcceptLabel: `${tacEntry.coach.name}コーチ案を採用（${secLabel}を集中強化）`,
-      mediateLabel: '全体戦術と個別パートを併設して仲裁'
+        ? '決定力と前線の連係を高めるため、攻撃ユニットの崩しに時間を割くべきだ。'
+        : 'まずは失点を防ぐため、守備ブロックと球際の徹底に集中すべきだ。',
+      acceptLabel: '監督を支持（全体重視）',
+      coachAcceptLabel: `コーチ案を採用（${secLabel}強化）`,
+      mediateLabel: '両立メニューで仲裁'
     };
   }
 
   // Scenario C1: トレーニング強度・過密疲労対立
+  const mgrC1Body = avgStarterFatigue >= 28
+    ? '主力に疲れは見え始めているが、勝負どころにつき強度を落とさず調整したい。'
+    : '勝点を落とせない局面につき、実戦形式の強度を保ったまま調整を続けたい。';
   return {
     id: `consult_conf_${Date.now()}`,
     kind: 'conflict',
     scenario: 'C1',
     senderName: `${mgr.name} 監督 × ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel}`,
     topic: '意見対立の仲裁',
-    title: '調整方針の対立：練習強度維持 vs 疲労回復優先',
-    speech: `GM、次節に向けた調整メニューについて ${fitnessEntry.coach.fullName || fitnessEntry.coach.name} ${fitnessEntry.roleLabel} と対立しています。強度の高い戦術練習を貫くべきか、回復優先へ切り替えるべきか判断を仰ぎたい。`,
+    title: '調整方針の対立',
+    speech: `GM、次節に向けた調整メニューで ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel} と意見が割れています。どちらを優先すべきかご判断ください。`,
     dutyTitle: '監督・コーチの調整方針仲裁',
-    dutyDesc: `強度維持か疲労軽減か、GMによる仲裁待ち`,
+    dutyDesc: `強度維持か疲労軽減か、次節前に裁定`,
     coachId: fitnessEntry.coach.id,
     coachCategory: fitnessEntry.category,
     coachName: fitnessEntry.coach.name,
     coachRoleLabel: fitnessEntry.roleLabel,
     mgrStanceTitle: `${mgr.name} 監督の主張`,
-    mgrStanceBody: `主力平均疲労は ${avgStarterFatigue}% だが勝負どころ。実戦形式の強度を落とさず勝点を取り切る準備を続けたい。`,
-    coachStanceTitle: `${fitnessEntry.coach.fullName || fitnessEntry.coach.name}（${fitnessEntry.roleLabel}）の主張`,
-    coachStanceBody: 'このまま高負荷を続ければ筋肉系トラブルのリスクが急増する。強度を下げて疲労を抜くのが先決だ。',
-    impactSummary: '監督支持：信頼度+5・先発士気+3（疲労増） ／ コーチ採用：全選手疲労-10回復 ／ 仲裁：バランス回復',
-    acceptLabel: `${mgr.name}監督を支持（高強度調整を継続）`,
-    coachAcceptLabel: `${fitnessEntry.coach.name}コーチ案を採用（疲労回復を優先）`,
-    mediateLabel: '主力は軽め・控えは強めの負荷分散で仲裁'
+    mgrStanceBody: mgrC1Body,
+    coachStanceTitle: `${fitnessEntry.coach.name}（${fitnessEntry.roleLabel}）の主張`,
+    coachStanceBody: '消耗が蓄積しており、このまま高負荷を続けると故障の恐れがある。強度を落として回復を優先すべきだ。',
+    acceptLabel: '監督を支持（強度維持）',
+    coachAcceptLabel: 'コーチ案を採用（疲労回復）',
+    mediateLabel: '負荷分散で仲裁'
   };
 }
 
@@ -18347,7 +18345,7 @@ function openLineupConsultationModal(consultation) {
             onClick: () => resolveLineupConsultationDecision(consultation, 'mediate')
           },
           {
-            label: 'あとで判断（業務一覧へ保留）',
+            label: 'あとで判断',
             className: 'btn btn-secondary',
             onClick: () => resolveLineupConsultationDecision(consultation, 'defer')
           }
@@ -18445,6 +18443,23 @@ function checkAndTriggerLineupConsultation(matchData = null, forceType = null) {
 function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeasonClosing = false } = {}) {
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   if (!playerClub || !matchData) return;
+
+  // 次節に向けた保留中の相談・対立仲裁は、次節（試合）消化をもって期限切れ終了とする
+  if (gameState.pendingLineupConsultation) {
+    const expiredConsult = gameState.pendingLineupConsultation;
+    gameState.pendingLineupConsultation = null;
+    if (Array.isArray(gameState.inboxMessages)) {
+      gameState.inboxMessages.forEach(m => {
+        if (m && m.actionType === 'open-lineup-consultation') {
+          m.actionType = null;
+          m.actionLabel = '';
+        }
+      });
+    }
+    if (expiredConsult.kind === 'conflict') {
+      addDailyLog(`【仲裁終了】未裁定だった「${expiredConsult.title}」は次戦の消化により終了しました。`);
+    }
+  }
 
   const isHome = Boolean(matchData.isPlayerHome);
   const myScore = isHome ? (matchData.homeScore || 0) : (matchData.awayScore || 0);
