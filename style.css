@@ -2653,7 +2653,7 @@ body {
   box-sizing: border-box !important;
   cursor: grab !important;
   margin: 0 !important;
-  touch-action: none !important;
+  touch-action: pan-y !important;
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
@@ -11913,8 +11913,11 @@ button.hidden,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
-  max-height: 240px;
+  max-height: 260px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: 4px 2px;
 }
 
@@ -11951,7 +11954,7 @@ button.hidden,
   box-sizing: border-box !important;
   cursor: grab !important;
   margin: 0 !important;
-  touch-action: none !important;
+  touch-action: pan-y !important;
   transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease !important;
 }
 
@@ -12180,6 +12183,9 @@ button.hidden,
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
@@ -12331,14 +12337,15 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-box {
     margin: 0 !important;
-    padding: 2px 4px !important;
+    padding: 4px 6px !important;
     border-radius: 4px !important;
     background: var(--bg-panel, #161b22) !important;
     position: static !important;
+    flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     min-height: 44px !important;
     box-sizing: border-box !important;
-    touch-action: pan-x !important;
+    touch-action: pan-y !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-sub-header {
@@ -12358,16 +12365,17 @@ button.hidden,
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box {
-    margin: 0 !important;
-    padding: 3px 5px !important;
+    margin: 6px 0 0 0 !important;
+    padding: 5px 6px !important;
     border-radius: 4px !important;
     background: rgba(18, 22, 26, 0.95) !important;
     border: 1px dashed rgba(255, 255, 255, 0.22) !important;
     position: static !important;
+    flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     min-height: 44px !important;
     box-sizing: border-box !important;
-    touch-action: pan-x !important;
+    touch-action: pan-y !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-box .pitch-sub-title {
@@ -12389,27 +12397,24 @@ button.hidden,
 
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-bench-list,
   body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-reserves-list {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    gap: 5px !important;
-    padding: 1px 2px 3px 2px !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    padding: 4px 2px 12px 2px !important;
     min-height: 38px !important;
     max-height: none !important;
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-x: contain !important;
-    touch-action: pan-x !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    touch-action: pan-y !important;
   }
 
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card),
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card) {
-    flex-shrink: 0 !important;
-    width: 114px !important;
-    min-width: 114px !important;
-    max-width: 114px !important;
-    height: 38px !important;
-    min-height: 38px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 48px !important;
+    min-height: 48px !important;
     position: relative !important;
     left: auto !important;
     top: auto !important;
@@ -12417,8 +12422,9 @@ button.hidden,
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    padding: 2px 5px !important;
+    padding: 3px 6px !important;
     box-sizing: border-box !important;
+    touch-action: pan-y !important;
   }
 
   /* モバイル作戦ボード：スタメン選手カードもベンチ選手と同じ見た目・質感・固定幅に統一 */
