@@ -127,6 +127,31 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertGreaterEqual(self.main_js.count('showSecretaryModal('), 6)
         self.assertGreaterEqual(self.models_js.count('showSecretaryModal('), 2)
 
+    def test_6_toast_offer_expiry_mega_fee_and_skip_season_fixes(self):
+        """トースト重複抑止・合意オファー失効・メガオファー£0防止＆移籍タブ同期・シーズン終了スキップモーダル抑止"""
+        # 1. トースト抑止（info/success禁止・モーダル開時の非表示）
+        toast_start = self.main_js.index('function showToast(')
+        toast_block = self.main_js[toast_start:toast_start + 500]
+        self.assertIn("type !== 'error' && type !== 'warn' && type !== 'warning'", toast_block)
+        self.assertIn("gm-modal-overlay", toast_block)
+        # 2. 合意済み送信オファーの期限管理
+        self.assertIn('agreedDaysLeft', self.main_js)
+        self.assertIn("offer.status === 'agreed'", self.main_js)
+        self.assertIn("offer.status = 'expired'", self.main_js)
+        self.assertNotIn('(SIGN)', self.main_js)
+        self.assertNotIn('(CANCEL)', self.main_js)
+        # 3. メガオファー£0防止と移籍タブ同期
+        self.assertIn('function syncPendingMegaOfferToIncomingOffers(', self.main_js)
+        self.assertIn('isMegaOfferEvent: true', self.main_js)
+        mega_start = self.main_js.index('function triggerMegaOfferEvent(')
+        mega_block = self.main_js[mega_start:mega_start + 1800]
+        self.assertIn('calculatePlayerMarketValue(target)', mega_block)
+        self.assertIn('Math.max(1000,', mega_block)
+        # 4. シーズン終了スキップ時の夏・冬市場秘書報告モーダル抑止
+        self.assertIn('let isFastForwardingSeason = false;', self.main_js)
+        self.assertIn('if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;', self.main_js)
+        self.assertIn('allowDuringSkip: true', self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()

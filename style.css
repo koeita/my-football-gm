@@ -12519,6 +12519,8 @@ button.hidden,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
 }
@@ -12530,9 +12532,14 @@ button.hidden,
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .offer-deadline-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 12px;

@@ -3825,9 +3825,6 @@ function advanceYouthScoutingDaily() {
           });
         }
       }
-      if (typeof showToast === 'function') {
-        showToast(`ユーススカウト報告（${reg.name}）：${foundNames[0]}`, 'success');
-      }
     }
 
     if (task.daysRemaining > 0) {
