@@ -17016,6 +17016,9 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 0 !important;
   padding: 10px 4px !important;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .board-sponsor-head {
@@ -17029,6 +17032,7 @@ body {
 .board-sponsor-rows {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .board-sponsor-row {
@@ -17038,6 +17042,7 @@ body {
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
 }
 
 .board-sponsor-row:last-child {
@@ -17049,6 +17054,7 @@ body {
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .board-sponsor-slot {
@@ -17121,7 +17127,7 @@ body {
 /* スポンサー選定モーダル（フラットリスト型） */
 .sponsor-slot-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(98px, 1fr));
   gap: 6px;
   margin-bottom: 10px;
 }

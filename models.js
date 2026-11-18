@@ -3173,24 +3173,43 @@ function ensureClubRealismFields(club) {
     club.sponsors = {
       chest: club.sponsor || null,
       sleeve: null,
-      training: null
+      training: null,
+      stadium: null,
+      partners: []
     };
   }
   if (!club.sponsors.chest && club.sponsor) {
     club.sponsors.chest = club.sponsor;
   }
+  if (!Array.isArray(club.sponsors.partners)) {
+    club.sponsors.partners = [];
+  }
   const skipSet = new Set(Array.isArray(club._skipAutoSponsorSlots) ? club._skipAutoSponsorSlots : []);
   const rep = club.reputation || 4000;
-  for (const slotKey of ['chest', 'sleeve', 'training']) {
+  for (const slotKey of ['chest', 'sleeve', 'training', 'stadium']) {
     if (!club.sponsors[slotKey] && !skipSet.has(slotKey)) {
       const templates = typeof getSponsorSlotTemplates === 'function'
         ? getSponsorSlotTemplates(slotKey)
         : (typeof SPONSOR_TEMPLATES !== 'undefined' ? SPONSOR_TEMPLATES : []);
-      const matched = templates.find(s => rep >= s.minReputation) || templates[templates.length - 1];
+      const matched = templates.find(s => rep >= (s.minReputation || 1000)) || templates[templates.length - 1];
       if (matched) {
         club.sponsors[slotKey] = createSponsorContractFromTemplate(matched, slotKey);
       }
     }
+  }
+  if (club.sponsors.partners.length === 0 && !skipSet.has('partners')) {
+    const pTemplates = typeof getSponsorSlotTemplates === 'function' ? getSponsorSlotTemplates('partners') : [];
+    const scale = 0.16 * (rep >= 6600 ? 16000 : rep >= 5200 ? 11500 : rep >= 3800 ? 7500 : 4000);
+    pTemplates.slice(0, 2).forEach(pt => {
+      club.sponsors.partners.push(createSponsorContractFromTemplate({
+        ...pt,
+        baseAnnual: Math.round(scale / 10) * 10,
+        clBonus: Math.round((scale * 0.3) / 10) * 10,
+        titleBonus: Math.round((scale * 0.4) / 10) * 10,
+        relegationPenaltyPct: 20,
+        contractYears: 2
+      }, 'partners'));
+    });
   }
   club.sponsor = club.sponsors.chest || null;
   if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
@@ -3218,20 +3237,30 @@ function createSponsorContractFromTemplate(tpl, slotKey = 'chest') {
     slot: slotKey,
     name: tpl.name,
     sector: tpl.sector || 'パートナー',
+    style: tpl.style || 'balanced',
     baseAnnual: tpl.baseAnnual || 0,
+    signingBonus: tpl.signingBonus || 0,
     clBonus: tpl.clBonus || 0,
     titleBonus: tpl.titleBonus || 0,
+    matchIncomeBonusPct: tpl.matchIncomeBonusPct || 0,
     relegationPenaltyPct: tpl.relegationPenaltyPct || 0,
     yearsRemaining: tpl.contractYears || randInt(1, 2),
     perkLabel: tpl.perkLabel || ''
   };
 }
 
+function getAllClubSponsorContracts(club) {
+  if (!club) return [];
+  if (club.sponsors && typeof club.sponsors === 'object') {
+    const singleList = ['chest', 'sleeve', 'training', 'stadium'].map(k => club.sponsors[k]).filter(Boolean);
+    const partnerList = Array.isArray(club.sponsors.partners) ? club.sponsors.partners.filter(Boolean) : [];
+    return [...singleList, ...partnerList];
+  }
+  return club.sponsor ? [club.sponsor] : [];
+}
+
 function getClubTotalBaseSponsorIncome(club, isD2Club = false) {
-  if (!club) return 0;
-  const slots = club.sponsors && typeof club.sponsors === 'object'
-    ? ['chest', 'sleeve', 'training'].map(k => club.sponsors[k]).filter(Boolean)
-    : (club.sponsor ? [club.sponsor] : []);
+  const slots = getAllClubSponsorContracts(club);
   if (slots.length === 0) return 0;
   let total = 0;
   for (const sp of slots) {
@@ -3242,6 +3271,13 @@ function getClubTotalBaseSponsorIncome(club, isD2Club = false) {
     total += val;
   }
   return total;
+}
+
+function getClubSponsorMatchIncomeMultiplier(club) {
+  const slots = getAllClubSponsorContracts(club);
+  if (slots.length === 0) return 1.0;
+  const sumPct = slots.reduce((acc, sp) => acc + (Number(sp.matchIncomeBonusPct) || 0), 0);
+  return 1 + Math.min(0.25, Math.max(0, sumPct / 100));
 }
 
 function isPlayerSuspendedForComp(player, compCategory = 'league') {

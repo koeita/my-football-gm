@@ -334,14 +334,30 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('pruneExpiredNewsItems(7)', self.main_js)
 
     def test_12_multi_slot_preseason_sponsor_selection(self):
-        """胸・袖・公式パートナーの複数枠スポンサー定義とシーズン開始前選定フローが揃っていること"""
-        for sym in ['SPONSOR_TEMPLATES', 'SLEEVE_SPONSOR_TEMPLATES', 'TRAINING_SPONSOR_TEMPLATES', 'SPONSOR_SLOT_META', 'function getSponsorSlotTemplates(']:
+        """胸・袖・練習場・スタジアム・複数公式パートナー枠とトレードオフ選定フローが揃っていること"""
+        for sym in [
+            'SPONSOR_TEMPLATES',
+            'SLEEVE_SPONSOR_TEMPLATES',
+            'TRAINING_SPONSOR_TEMPLATES',
+            'STADIUM_SPONSOR_TEMPLATES',
+            'OFFICIAL_PARTNER_TEMPLATES',
+            'SPONSOR_SLOT_META',
+            'function getSponsorSlotTemplates(',
+        ]:
             self.assertIn(sym, self.data_js)
-        for sym in ['function createSponsorContractFromTemplate(', 'function getClubTotalBaseSponsorIncome(', '_skipAutoSponsorSlots']:
+        for sym in [
+            'function createSponsorContractFromTemplate(',
+            'function getAllClubSponsorContracts(',
+            'function getClubTotalBaseSponsorIncome(',
+            'function getClubSponsorMatchIncomeMultiplier(',
+            '_skipAutoSponsorSlots',
+        ]:
             self.assertIn(sym, self.models_js)
         self.assertIn('id="sponsor-selection-modal"', self.html)
         for sym in [
             'function getAvailableSponsorOffers(',
+            'strategyProfiles',
+            'signingBonus',
             'function openSponsorSelectionModal(',
             'pendingSponsorSlots',
             'btn-open-sponsor-select-panel',

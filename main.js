@@ -6666,7 +6666,9 @@ function startNextSeason() {
     });
   }
   if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(playerClub);
-  const openSponsorSlots = ['chest', 'sleeve', 'training'].filter(k => !playerClub.sponsors || !playerClub.sponsors[k]);
+  const openSponsorSlots = ['chest', 'sleeve', 'training', 'stadium'].filter(k => !playerClub.sponsors || !playerClub.sponsors[k]);
+  const curPartners = (playerClub.sponsors && Array.isArray(playerClub.sponsors.partners)) ? playerClub.sponsors.partners.filter(Boolean) : [];
+  if (curPartners.length < 2) openSponsorSlots.push('partners');
   gameState.pendingSponsorSlots = openSponsorSlots;
   if (openSponsorSlots.length > 0) {
     addDailyLog(`【スポンサー更改】新シーズン開幕に伴い、${openSponsorSlots.length}枠のスポンサー契約選定が可能になりました。`);
@@ -10300,7 +10302,7 @@ function renderGmDuties() {
       level: 'recommended',
       badge: '契約',
       title: 'スポンサー契約の締結',
-      desc: `胸・袖・公式パートナーの未契約枠（${gameState.pendingSponsorSlots.length}枠）を選定します`,
+      desc: `胸・袖・施設・公式パートナーの未契約枠（${gameState.pendingSponsorSlots.length}枠）を選定します`,
       action: 'open-sponsor-selection'
     });
   }
@@ -16115,10 +16117,10 @@ function openInitialStaffSetupModal(club) {
         playerClub.formation = selectedMgr.preferredFormation;
         playerClub.tactic = selectedMgr.preferredTactic;
         playerClub.coaches = selCoaches;
-        playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training'];
-        playerClub.sponsors = { chest: null, sleeve: null, training: null };
+        playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+        playerClub.sponsors = { chest: null, sleeve: null, training: null, stadium: null, partners: [] };
         playerClub.sponsor = null;
-        gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training'];
+        gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
         if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
           applyManagerPreMatchDelegation(playerClub, true);
         } else {
@@ -17083,12 +17085,96 @@ function getAvailableSponsorOffers(club, slotKey) {
     ? getSponsorSlotTemplates(slotKey)
     : (typeof SPONSOR_TEMPLATES !== 'undefined' ? SPONSOR_TEMPLATES : []);
   const rep = (club && club.reputation) || 4000;
-  const isD2 = club && (club.division === 'd2' || (typeof isPlayerInSecondDivision === 'function' && club.isPlayer && isPlayerInSecondDivision()));
-  const effectiveRep = isD2 ? Math.round(rep * 0.85) : rep;
-  return templates.map((tpl, idx) => {
-    const isLast = idx === templates.length - 1;
-    const isEligible = isLast || effectiveRep >= (tpl.minReputation - 350);
-    return { ...tpl, isEligible };
+  const isD2 = Boolean(club && (club.division === 'd2' || (typeof isPlayerInSecondDivision === 'function' && club.isPlayer && isPlayerInSecondDivision())));
+  const chestBase = rep >= 6600 ? 15000 : rep >= 5400 ? 11000 : rep >= 4000 ? 7500 : rep >= 2800 ? 5200 : 3400;
+  const effectiveChestBase = isD2 ? Math.round(chestBase * 0.78) : chestBase;
+  const slotMeta = typeof SPONSOR_SLOT_META !== 'undefined' && SPONSOR_SLOT_META[slotKey]
+    ? SPONSOR_SLOT_META[slotKey]
+    : { scale: 1.0 };
+  const slotBase = Math.max(800, Math.round((effectiveChestBase * (slotMeta.scale || 1.0)) / 10) * 10);
+  const round10 = (v) => Math.max(100, Math.round(v / 10) * 10);
+
+  // クラブ格に適した4〜5社を選び、それぞれ異なる契約戦略（安定長期 / 成果ボーナス特化 / 即金短期 / ホーム収入ブースト）を付与
+  const eligiblePool = templates.filter(t => t.minReputation == null || rep >= (t.minReputation - 900));
+  const pickedTemplates = (eligiblePool.length >= 4 ? eligiblePool : templates).slice(0, slotKey === 'partners' ? 5 : 4);
+  const matchBoostPct = slotKey === 'chest' ? 8 : (slotKey === 'stadium' ? 6 : 4);
+
+  const strategyProfiles = [
+    {
+      style: 'stable',
+      baseMult: 1.06,
+      signMult: 0,
+      clMult: 0.16,
+      titleMult: 0.22,
+      matchPct: 0,
+      years: slotKey === 'partners' ? 2 : 3,
+      penalty: 15,
+      perkLabel: '固定年額高め・長期安定（降格耐性）'
+    },
+    {
+      style: 'bonus',
+      baseMult: 0.80,
+      signMult: 0,
+      clMult: 0.46,
+      titleMult: 0.66,
+      matchPct: 0,
+      years: 2,
+      penalty: 35,
+      perkLabel: 'ECT出場・優勝成果ボーナス特化'
+    },
+    {
+      style: 'signing',
+      baseMult: 0.86,
+      signMult: 0.30,
+      clMult: 0.22,
+      titleMult: 0.30,
+      matchPct: 0,
+      years: 1,
+      penalty: 20,
+      perkLabel: '契約時即金前払・1年短期更新'
+    },
+    {
+      style: 'match',
+      baseMult: 0.90,
+      signMult: 0.08,
+      clMult: 0.26,
+      titleMult: 0.35,
+      matchPct: matchBoostPct,
+      years: 2,
+      penalty: 25,
+      perkLabel: `ホーム入場・グッズ収入+${matchBoostPct}%`
+    },
+    {
+      style: 'balanced',
+      baseMult: 0.94,
+      signMult: 0.16,
+      clMult: 0.25,
+      titleMult: 0.32,
+      matchPct: 0,
+      years: 1,
+      penalty: 20,
+      perkLabel: '即金＋年額バランス・1年契約'
+    }
+  ];
+
+  return pickedTemplates.map((tpl, idx) => {
+    const prof = strategyProfiles[idx % strategyProfiles.length];
+    const signingBonus = prof.signMult > 0 ? round10(slotBase * prof.signMult) : 0;
+    return {
+      id: tpl.id,
+      name: tpl.name,
+      sector: tpl.sector || 'パートナー',
+      style: prof.style,
+      baseAnnual: round10(slotBase * prof.baseMult),
+      signingBonus,
+      clBonus: round10(slotBase * prof.clMult),
+      titleBonus: round10(slotBase * prof.titleMult),
+      matchIncomeBonusPct: prof.matchPct,
+      relegationPenaltyPct: prof.penalty,
+      contractYears: prof.years,
+      perkLabel: prof.perkLabel,
+      isEligible: true
+    };
   });
 }
 
@@ -17105,23 +17191,33 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
   if (!playerClub || !modal || !bodyEl) return;
 
   if (!playerClub.sponsors || typeof playerClub.sponsors !== 'object') {
-    playerClub.sponsors = { chest: playerClub.sponsor || null, sleeve: null, training: null };
+    playerClub.sponsors = { chest: playerClub.sponsor || null, sleeve: null, training: null, stadium: null, partners: [] };
   }
+  if (!Array.isArray(playerClub.sponsors.partners)) playerClub.sponsors.partners = [];
 
-  const allSlots = ['chest', 'sleeve', 'training'];
+  const allSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+  const currentOpenSlots = allSlots.filter(k => k === 'partners'
+    ? playerClub.sponsors.partners.filter(Boolean).length < 2
+    : !playerClub.sponsors[k]);
   const openSlots = Array.isArray(targetSlots) && targetSlots.length > 0
     ? targetSlots
     : (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0
       ? gameState.pendingSponsorSlots
-      : allSlots.filter(k => !playerClub.sponsors[k]));
-  const editableSet = new Set(openSlots.length > 0 ? openSlots : allSlots.filter(k => !playerClub.sponsors[k]));
+      : currentOpenSlots);
+  const editableSet = new Set(openSlots.length > 0 ? openSlots : currentOpenSlots);
 
   const selectedBySlot = {};
   for (const sKey of allSlots) {
-    if (editableSet.has(sKey)) {
-      const offers = getAvailableSponsorOffers(playerClub, sKey);
-      const firstOk = offers.find(o => o.isEligible) || offers[offers.length - 1];
-      selectedBySlot[sKey] = firstOk ? firstOk.id : null;
+    if (!editableSet.has(sKey)) continue;
+    const offers = getAvailableSponsorOffers(playerClub, sKey);
+    if (sKey === 'partners') {
+      const existingCount = playerClub.sponsors.partners.filter(Boolean).length;
+      const needCount = Math.max(0, 2 - existingCount);
+      const existingNames = new Set(playerClub.sponsors.partners.filter(Boolean).map(p => p.name));
+      const avail = offers.filter(o => !existingNames.has(o.name));
+      selectedBySlot.partners = avail.slice(0, needCount).map(o => o.id);
+    } else {
+      selectedBySlot[sKey] = offers[0] ? offers[0].id : null;
     }
   }
 
@@ -17140,17 +17236,23 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
     const slotMeta = typeof SPONSOR_SLOT_META !== 'undefined'
       ? SPONSOR_SLOT_META
       : {
-          chest: { label: '胸スポンサー', shortLabel: '胸', desc: 'ユニフォーム前面のメインパートナー' },
-          sleeve: { label: '袖スポンサー', shortLabel: '袖', desc: 'ユニフォーム袖・キットパートナー' },
-          training: { label: '公式パートナー', shortLabel: '練習場', desc: '練習場・クラブ公式パートナー' }
+          chest: { label: '胸', shortLabel: '胸', desc: 'ユニフォーム前面メイン枠', maxPick: 1 },
+          sleeve: { label: '袖', shortLabel: '袖', desc: 'ユニフォーム袖枠', maxPick: 1 },
+          training: { label: '練習場', shortLabel: '練習場', desc: 'トレーニング施設枠', maxPick: 1 },
+          stadium: { label: 'スタジアム', shortLabel: 'スタジアム', desc: 'スタジアム枠', maxPick: 1 },
+          partners: { label: '公式パートナー', shortLabel: 'パートナー', desc: '複数契約枠（最大2社）', maxPick: 2 }
         };
 
     const tabsHtml = st.allSlots.map(sKey => {
-      const meta = slotMeta[sKey] || { label: sKey };
+      const meta = slotMeta[sKey] || { shortLabel: sKey };
       const isAct = st.activeSlot === sKey;
       const isEditable = st.editableSet.has(sKey);
       let subText = '契約中';
-      if (isEditable) {
+      if (sKey === 'partners') {
+        const curList = (st.club.sponsors.partners || []).filter(Boolean);
+        const selIds = Array.isArray(st.selectedBySlot.partners) ? st.selectedBySlot.partners : [];
+        subText = isEditable ? `${curList.length + selIds.length} / 2社選択` : `${curList.length}社契約中`;
+      } else if (isEditable) {
         const offers = getAvailableSponsorOffers(st.club, sKey);
         const picked = offers.find(o => o.id === st.selectedBySlot[sKey]);
         subText = picked ? picked.name : '未選定';
@@ -17159,7 +17261,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       }
       return `
         <button type="button" class="sponsor-slot-tab ${isAct ? 'is-active' : ''}" data-sponsor-tab="${sKey}">
-          <span class="sponsor-slot-tab-label">${meta.label}</span>
+          <span class="sponsor-slot-tab-label">${meta.shortLabel || meta.label}</span>
           <span class="sponsor-slot-tab-sub">${escapeCommHtml(subText)}</span>
         </button>
       `;
@@ -17168,7 +17270,69 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
     const curMeta = slotMeta[st.activeSlot] || {};
     const curIsEditable = st.editableSet.has(st.activeSlot);
     let listHtml = '';
-    if (!curIsEditable && st.club.sponsors[st.activeSlot]) {
+
+    if (st.activeSlot === 'partners') {
+      const existingPartners = (st.club.sponsors.partners || []).filter(Boolean);
+      const existingNames = new Set(existingPartners.map(p => p.name));
+      const needCount = Math.max(0, 2 - existingPartners.length);
+      const pickedIds = Array.isArray(st.selectedBySlot.partners) ? st.selectedBySlot.partners : [];
+      const offers = getAvailableSponsorOffers(st.club, 'partners').filter(o => !existingNames.has(o.name));
+
+      const existingHtml = existingPartners.map(sp => `
+        <div class="sponsor-option-row is-selected">
+          <div class="sponsor-option-main">
+            <div class="sponsor-option-top">
+              <span class="sponsor-option-name">${escapeCommHtml(sp.name)}</span>
+              <span class="sponsor-option-sector">${escapeCommHtml(sp.sector || 'パートナー')} · 契約中</span>
+            </div>
+            <div class="sponsor-option-meta mono">
+              <span>ECT: <strong>+${formatMoney(sp.clBonus || 0)}</strong></span>
+              <span>優勝: <strong>+${formatMoney(sp.titleBonus || 0)}</strong></span>
+              ${sp.perkLabel ? `<span>${escapeCommHtml(sp.perkLabel)}</span>` : ''}
+            </div>
+          </div>
+          <div class="sponsor-option-right mono">
+            <span class="sponsor-option-annual">${formatMoney(sp.baseAnnual || 0)}/年</span>
+            <span class="sponsor-option-years">残 ${sp.yearsRemaining}年</span>
+          </div>
+        </div>
+      `).join('');
+
+      const newHtml = needCount > 0 ? offers.map(o => {
+        const isSel = pickedIds.includes(o.id);
+        return `
+          <div class="sponsor-option-row ${isSel ? 'is-selected' : ''}"
+               data-sponsor-pick="${o.id}"
+               role="button"
+               tabindex="0">
+            <div class="sponsor-option-main">
+              <div class="sponsor-option-top">
+                <span class="sponsor-option-name">${escapeCommHtml(o.name)}</span>
+                <span class="sponsor-option-sector">${escapeCommHtml(o.sector || '')}</span>
+              </div>
+              <div class="sponsor-option-meta mono">
+                ${o.signingBonus > 0 ? `<span>即金: <strong class="accent-gold">+${formatMoney(o.signingBonus)}</strong></span>` : ''}
+                <span>ECT: <strong>+${formatMoney(o.clBonus)}</strong></span>
+                <span>優勝: <strong>+${formatMoney(o.titleBonus)}</strong></span>
+                <span>${escapeCommHtml(o.perkLabel)}</span>
+              </div>
+            </div>
+            <div class="sponsor-option-right mono">
+              <span class="sponsor-option-annual">${formatMoney(o.baseAnnual)}/年</span>
+              <span class="sponsor-option-years">${o.contractYears}年契約</span>
+            </div>
+          </div>
+        `;
+      }).join('') : '';
+
+      listHtml = `
+        <div class="sponsor-slot-summary">
+          <span>${curMeta.desc || ''}</span>
+          <span class="mono">${needCount > 0 ? `あと ${needCount}社選択可能` : '2社契約済み'}</span>
+        </div>
+        <div class="sponsor-options-list">${existingHtml}${newHtml}</div>
+      `;
+    } else if (!curIsEditable && st.club.sponsors[st.activeSlot]) {
       const sp = st.club.sponsors[st.activeSlot];
       listHtml = `
         <div class="sponsor-slot-summary">
@@ -17185,6 +17349,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
               <div class="sponsor-option-meta mono">
                 <span>ECT: <strong>+${formatMoney(sp.clBonus || 0)}</strong></span>
                 <span>優勝: <strong>+${formatMoney(sp.titleBonus || 0)}</strong></span>
+                ${sp.perkLabel ? `<span>${escapeCommHtml(sp.perkLabel)}</span>` : ''}
               </div>
             </div>
             <div class="sponsor-option-right mono">
@@ -17206,20 +17371,20 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
           ${offers.map(o => {
             const isSel = o.id === pickedId;
             return `
-              <div class="sponsor-option-row ${isSel ? 'is-selected' : ''} ${!o.isEligible ? 'is-locked' : ''}"
+              <div class="sponsor-option-row ${isSel ? 'is-selected' : ''}"
                    data-sponsor-pick="${o.id}"
                    role="button"
-                   tabindex="${o.isEligible ? '0' : '-1'}"
-                   aria-disabled="${!o.isEligible ? 'true' : 'false'}">
+                   tabindex="0">
                 <div class="sponsor-option-main">
                   <div class="sponsor-option-top">
                     <span class="sponsor-option-name">${escapeCommHtml(o.name)}</span>
                     <span class="sponsor-option-sector">${escapeCommHtml(o.sector || '')}</span>
                   </div>
                   <div class="sponsor-option-meta mono">
+                    ${o.signingBonus > 0 ? `<span>即金: <strong class="accent-gold">+${formatMoney(o.signingBonus)}</strong></span>` : ''}
                     <span>ECT: <strong>+${formatMoney(o.clBonus)}</strong></span>
                     <span>優勝: <strong>+${formatMoney(o.titleBonus)}</strong></span>
-                    <span>${o.isEligible ? escapeCommHtml(o.perkLabel || '') : `必要格 ${o.minReputation}`}</span>
+                    <span>${escapeCommHtml(o.perkLabel || '')}</span>
                   </div>
                 </div>
                 <div class="sponsor-option-right mono">
@@ -17243,8 +17408,23 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
     });
     bodyEl.querySelectorAll('[data-sponsor-pick]').forEach(row => {
       row.addEventListener('click', () => {
-        if (row.classList.contains('is-locked')) return;
-        st.selectedBySlot[st.activeSlot] = row.dataset.sponsorPick;
+        const pickId = row.dataset.sponsorPick;
+        if (st.activeSlot === 'partners') {
+          const existingCount = (st.club.sponsors.partners || []).filter(Boolean).length;
+          const maxPick = Math.max(0, 2 - existingCount);
+          if (maxPick <= 0) return;
+          const curArr = Array.isArray(st.selectedBySlot.partners) ? [...st.selectedBySlot.partners] : [];
+          const idx = curArr.indexOf(pickId);
+          if (idx >= 0) {
+            if (curArr.length > 1) curArr.splice(idx, 1);
+          } else {
+            if (curArr.length >= maxPick) curArr.shift();
+            curArr.push(pickId);
+          }
+          st.selectedBySlot.partners = curArr;
+        } else {
+          st.selectedBySlot[st.activeSlot] = pickId;
+        }
         renderSponsorModal();
       });
     });
@@ -17273,32 +17453,53 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       }
       const signedNames = [];
       let totalAddedAnnual = 0;
+      let totalSigningBonus = 0;
+
       for (const sKey of st.editableSet) {
         const offers = getAvailableSponsorOffers(st.club, sKey);
-        const tpl = offers.find(o => o.id === st.selectedBySlot[sKey] && o.isEligible)
-          || offers.find(o => o.isEligible)
-          || offers[offers.length - 1];
-        if (tpl && typeof createSponsorContractFromTemplate === 'function') {
-          st.club.sponsors[sKey] = createSponsorContractFromTemplate(tpl, sKey);
-          signedNames.push(`${(typeof SPONSOR_SLOT_META !== 'undefined' && SPONSOR_SLOT_META[sKey] ? SPONSOR_SLOT_META[sKey].shortLabel : sKey)}:${tpl.name}`);
-          totalAddedAnnual += tpl.baseAnnual || 0;
+        if (sKey === 'partners') {
+          const selIds = Array.isArray(st.selectedBySlot.partners) ? st.selectedBySlot.partners : [];
+          for (const pid of selIds) {
+            if ((st.club.sponsors.partners || []).length >= 2) break;
+            const tpl = offers.find(o => o.id === pid);
+            if (tpl && typeof createSponsorContractFromTemplate === 'function') {
+              st.club.sponsors.partners.push(createSponsorContractFromTemplate(tpl, 'partners'));
+              signedNames.push(`パートナー:${tpl.name}`);
+              totalAddedAnnual += tpl.baseAnnual || 0;
+              totalSigningBonus += tpl.signingBonus || 0;
+            }
+          }
+        } else {
+          const tpl = offers.find(o => o.id === st.selectedBySlot[sKey]) || offers[0];
+          if (tpl && typeof createSponsorContractFromTemplate === 'function') {
+            st.club.sponsors[sKey] = createSponsorContractFromTemplate(tpl, sKey);
+            const shortLbl = (typeof SPONSOR_SLOT_META !== 'undefined' && SPONSOR_SLOT_META[sKey]) ? SPONSOR_SLOT_META[sKey].shortLabel : sKey;
+            signedNames.push(`${shortLbl}:${tpl.name}`);
+            totalAddedAnnual += tpl.baseAnnual || 0;
+            totalSigningBonus += tpl.signingBonus || 0;
+          }
         }
       }
+
       st.club.sponsor = st.club.sponsors.chest || null;
+      if (totalSigningBonus > 0) {
+        st.club.funds = (st.club.funds || 0) + totalSigningBonus;
+      }
       if (Array.isArray(st.club._skipAutoSponsorSlots)) {
         st.club._skipAutoSponsorSlots = st.club._skipAutoSponsorSlots.filter(k => !st.editableSet.has(k));
       }
       gameState.pendingSponsorSlots = (gameState.pendingSponsorSlots || []).filter(k => !st.editableSet.has(k));
 
       if (signedNames.length > 0) {
-        addDailyLog(`【スポンサー契約締結】${signedNames.join(' / ')}（基本年額計 ${formatMoney(totalAddedAnnual)}）と合意しました。`);
+        const signNote = totalSigningBonus > 0 ? ` / 契約一時金 +${formatMoney(totalSigningBonus)}` : '';
+        addDailyLog(`【スポンサー契約締結】${signedNames.join(' / ')}（基本年額計 ${formatMoney(totalAddedAnnual)}${signNote}）と合意しました。`);
         if (typeof addNewsItem === 'function') {
           addNewsItem({
             category: 'チーム',
             clubId: st.club.id,
             headline: `${st.club.name}、新スポンサー契約を正式発表`,
             lead: `Season ${gameState.season} パートナー発表`,
-            body: `${st.club.name}は新シーズンに向け ${signedNames.join('・')} とのスポンサー契約締結を発表した。基本年額の合計は ${formatMoney(totalAddedAnnual)} に上る。`,
+            body: `${st.club.name}は新シーズンに向け ${signedNames.join('・')} との契約締結を発表した。基本年額合計は ${formatMoney(totalAddedAnnual)}${signNote}。`,
             highlight: true
           });
         }
@@ -17322,16 +17523,20 @@ function renderBoardPsrSponsorPanel(club) {
 
   const slotsObj = club.sponsors && typeof club.sponsors === 'object'
     ? club.sponsors
-    : { chest: club.sponsor || null, sleeve: null, training: null };
+    : { chest: club.sponsor || null, sleeve: null, training: null, stadium: null, partners: [] };
+  const partnerList = Array.isArray(slotsObj.partners) ? slotsObj.partners.filter(Boolean) : [];
   const slotDefs = [
     { key: 'chest', label: '胸スポンサー' },
     { key: 'sleeve', label: '袖スポンサー' },
-    { key: 'training', label: '公式パートナー' }
+    { key: 'training', label: '練習場' },
+    { key: 'stadium', label: 'スタジアム' }
   ];
-  const hasOpenSlot = slotDefs.some(d => !slotsObj[d.key]) || (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0);
-  const totalBaseAnnual = slotDefs.reduce((sum, d) => sum + ((slotsObj[d.key] && slotsObj[d.key].baseAnnual) || 0), 0);
+  const hasOpenSlot = slotDefs.some(d => !slotsObj[d.key]) || partnerList.length < 2 || (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0);
+  const totalBaseAnnual = typeof getClubTotalBaseSponsorIncome === 'function'
+    ? getClubTotalBaseSponsorIncome(club, isPlayerInSecondDivision())
+    : slotDefs.reduce((sum, d) => sum + ((slotsObj[d.key] && slotsObj[d.key].baseAnnual) || 0), 0);
 
-  const rowsHtml = slotDefs.map(d => {
+  const singleRowsHtml = slotDefs.map(d => {
     const sp = slotsObj[d.key];
     if (!sp) {
       return `
@@ -17360,6 +17565,25 @@ function renderBoardPsrSponsorPanel(club) {
     `;
   }).join('');
 
+  const partnerSum = partnerList.reduce((acc, p) => acc + (p.baseAnnual || 0), 0);
+  const partnerNamesText = partnerList.length > 0
+    ? partnerList.map(p => `${p.name} (残${p.yearsRemaining || 1}年)`).join(' / ')
+    : '未契約（最大2社選定可能）';
+  const partnerRowHtml = `
+    <div class="board-sponsor-row">
+      <div class="board-sponsor-row-left">
+        <span class="board-sponsor-slot">公式パートナー (${partnerList.length}/2社)</span>
+        <span class="board-sponsor-name ${partnerList.length < 2 ? 'is-open' : ''}">${escapeCommHtml(partnerNamesText)}</span>
+      </div>
+      <div class="board-sponsor-row-right mono">
+        <span class="board-sponsor-fee ${partnerList.length > 0 ? 'accent-gold' : 'text-muted'}">${formatMoney(partnerSum)}/年</span>
+      </div>
+    </div>
+  `;
+
+  const matchMult = typeof getClubSponsorMatchIncomeMultiplier === 'function' ? getClubSponsorMatchIncomeMultiplier(club) : 1.0;
+  const matchBoostText = matchMult > 1.0 ? `（ホーム収入+${Math.round((matchMult - 1) * 100)}%）` : '';
+
   const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { total3YrNet: 0, isBreach: false, pointsDeduction: 0 };
   const conf = club.boardConfidence ?? 75;
   const targetRank = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
@@ -17374,9 +17598,9 @@ function renderBoardPsrSponsorPanel(club) {
           <div class="board-psr-title mono" style="margin-bottom:0;">SPONSORSHIP / スポンサー契約</div>
           <button type="button" class="btn-sponsor-manage mono" id="btn-open-sponsor-select-panel">${hasOpenSlot ? '契約を選定' : '契約確認'}</button>
         </div>
-        <div class="board-sponsor-rows">${rowsHtml}</div>
+        <div class="board-sponsor-rows">${singleRowsHtml}${partnerRowHtml}</div>
         <div class="board-sponsor-total-row mono">
-          <span>基本年額合計</span>
+          <span>基本年額合計${escapeCommHtml(matchBoostText)}</span>
           <strong class="accent-green">${formatMoney(totalBaseAnnual)}/年</strong>
         </div>
       </div>
@@ -17449,25 +17673,41 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     const d1Idx = d1RankMap.has(club.id) ? d1RankMap.get(club.id) : -1;
     const slotsObj = club.sponsors && typeof club.sponsors === 'object'
       ? club.sponsors
-      : { chest: club.sponsor || null, sleeve: null, training: null };
+      : { chest: club.sponsor || null, sleeve: null, training: null, stadium: null, partners: [] };
+    if (!Array.isArray(slotsObj.partners)) slotsObj.partners = [];
     let spRev = 0;
     const expiredSlots = [];
-    for (const sKey of ['chest', 'sleeve', 'training']) {
-      const sp = slotsObj[sKey];
-      if (!sp) continue;
+    const calcSlotRev = (sp) => {
       let slotRev = sp.baseAnnual || 0;
       if (d1Idx === 0) slotRev += (sp.titleBonus || 0);
       if (ectQualifiedIds.has(club.id)) slotRev += (sp.clBonus || 0);
       if (isD2Club && sp.relegationPenaltyPct) {
         slotRev = Math.round(slotRev * (1 - sp.relegationPenaltyPct / 100));
       }
-      spRev += slotRev;
+      return slotRev;
+    };
+
+    for (const sKey of ['chest', 'sleeve', 'training', 'stadium']) {
+      const sp = slotsObj[sKey];
+      if (!sp) continue;
+      spRev += calcSlotRev(sp);
       sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
       if (sp.yearsRemaining === 0) {
         slotsObj[sKey] = null;
         expiredSlots.push(sKey);
       }
     }
+    const keptPartners = [];
+    for (const sp of slotsObj.partners) {
+      if (!sp) continue;
+      spRev += calcSlotRev(sp);
+      sp.yearsRemaining = Math.max(0, (sp.yearsRemaining || 1) - 1);
+      if (sp.yearsRemaining > 0) keptPartners.push(sp);
+    }
+    if (keptPartners.length < 2) {
+      expiredSlots.push('partners');
+    }
+    slotsObj.partners = keptPartners;
     club.sponsors = slotsObj;
     club.sponsor = slotsObj.chest || null;
     if (spRev > 0) {

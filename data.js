@@ -2148,15 +2148,37 @@ const TRAINING_SPONSOR_TEMPLATES = [
   { id: 'trn_midland', name: 'Midland Print', sector: '地域メディア', tier: 'lower', baseAnnual: 850, clBonus: 250, titleBonus: 400, relegationPenaltyPct: 10, minReputation: 1000, contractYears: 1, perkLabel: '地域パートナー・1年' }
 ];
 
+// スタジアムパートナー企業テンプレート（単位：£1K）
+const STADIUM_SPONSOR_TEMPLATES = [
+  { id: 'std_arena_grp', name: 'Crown Arena Group', sector: '不動産', tier: 'top', baseAnnual: 5200, clBonus: 1400, titleBonus: 2000, relegationPenaltyPct: 30, minReputation: 6400, contractYears: 3, perkLabel: '3年長期・命名権契約' },
+  { id: 'std_skyline', name: 'Skyline Construction', sector: '建設', tier: 'upper', baseAnnual: 4000, clBonus: 1200, titleBonus: 1600, relegationPenaltyPct: 25, minReputation: 5000, contractYears: 2, perkLabel: '施設連携バランス型' },
+  { id: 'std_transit', name: 'Albion Rail & Transit', sector: '交通', tier: 'mid', baseAnnual: 2900, clBonus: 800, titleBonus: 1200, relegationPenaltyPct: 20, minReputation: 3600, contractYears: 2, perkLabel: 'ホーム集客ブースト' },
+  { id: 'std_royal_sec', name: 'Royal Guard Security', sector: '警備', tier: 'mid', baseAnnual: 2100, clBonus: 600, titleBonus: 900, relegationPenaltyPct: 15, minReputation: 2400, contractYears: 1, perkLabel: '1年短期・安定運営' },
+  { id: 'std_thames_est', name: 'Thames Estates', sector: '商業開発', tier: 'lower', baseAnnual: 1400, clBonus: 400, titleBonus: 600, relegationPenaltyPct: 10, minReputation: 1000, contractYears: 1, perkLabel: '地域商業連携' }
+];
+
+// 公式パートナー企業テンプレート（複数選択枠用：最大2社契約可）
+const OFFICIAL_PARTNER_TEMPLATES = [
+  { id: 'prt_zenith_cap', name: 'Zenith Capital', sector: '投資', style: 'signing', perkLabel: '契約時即金・1年短期' },
+  { id: 'prt_velox_bev', name: 'Velox Energy Drink', sector: '飲料', style: 'match', perkLabel: 'ホーム入場・グッズ収入+4%' },
+  { id: 'prt_aurora_tech', name: 'Aurora Analytics', sector: 'AI解析', style: 'bonus', perkLabel: '欧州・優勝成果ボーナス特化' },
+  { id: 'prt_harbor_bank', name: 'Harbor Trust Bank', sector: '銀行', style: 'stable', perkLabel: '固定年額高め・2年長期安定' },
+  { id: 'prt_meridian_air', name: 'Meridian Mobility', sector: 'モビリティ', style: 'balanced', perkLabel: '即金＋安定年額バランス' }
+];
+
 const SPONSOR_SLOT_META = {
-  chest: { key: 'chest', label: '胸スポンサー', shortLabel: '胸', desc: 'ユニフォーム前面のメインパートナー' },
-  sleeve: { key: 'sleeve', label: '袖スポンサー', shortLabel: '袖', desc: 'ユニフォーム袖・キットパートナー' },
-  training: { key: 'training', label: '公式パートナー', shortLabel: '練習場', desc: '練習場・クラブ公式パートナー' }
+  chest: { key: 'chest', label: '胸スポンサー', shortLabel: '胸', desc: 'ユニフォーム前面メイン枠（1社選択）', maxPick: 1, scale: 1.0 },
+  sleeve: { key: 'sleeve', label: '袖スポンサー', shortLabel: '袖', desc: 'ユニフォーム袖枠（1社選択）', maxPick: 1, scale: 0.32 },
+  training: { key: 'training', label: '練習場', shortLabel: '練習場', desc: 'トレーニング施設枠（1社選択）', maxPick: 1, scale: 0.25 },
+  stadium: { key: 'stadium', label: 'スタジアム', shortLabel: 'スタジアム', desc: 'マッチデー・スタジアム枠（1社選択）', maxPick: 1, scale: 0.28 },
+  partners: { key: 'partners', label: '公式パートナー', shortLabel: 'パートナー', desc: '複数契約枠（最大2社まで組み合わせ可能）', maxPick: 2, scale: 0.16 }
 };
 
 function getSponsorSlotTemplates(slotKey) {
   if (slotKey === 'sleeve') return SLEEVE_SPONSOR_TEMPLATES;
   if (slotKey === 'training') return TRAINING_SPONSOR_TEMPLATES;
+  if (slotKey === 'stadium') return STADIUM_SPONSOR_TEMPLATES;
+  if (slotKey === 'partners') return OFFICIAL_PARTNER_TEMPLATES;
   return SPONSOR_TEMPLATES;
 }
 
