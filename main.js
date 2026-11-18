@@ -10126,6 +10126,21 @@ function findPlayerWithContextById(playerId) {
 }
 
 /**
+ * 能力値(0-99)からアルファベットランク(S〜E)と表示色を返す
+ */
+function getAttributeRankInfo(val) {
+  const v = typeof val === 'number' && !Number.isNaN(val) ? val : 50;
+  if (v >= 90) return { rank: 'S', color: '#7dd3fc', cls: 'hex-rank-s' };
+  if (v >= 80) return { rank: 'A', color: '#2ecc71', cls: 'hex-rank-a' };
+  if (v >= 75) return { rank: 'B+', color: '#a3e635', cls: 'hex-rank-b' };
+  if (v >= 70) return { rank: 'B', color: '#a3e635', cls: 'hex-rank-b' };
+  if (v >= 65) return { rank: 'C+', color: '#fbbf24', cls: 'hex-rank-c' };
+  if (v >= 60) return { rank: 'C', color: '#fbbf24', cls: 'hex-rank-c' };
+  if (v >= 50) return { rank: 'D', color: '#fb923c', cls: 'hex-rank-d' };
+  return { rank: 'E', color: '#f87171', cls: 'hex-rank-e' };
+}
+
+/**
  * 選手カード用の六角形レーダーチャートSVGを生成する
  * 頂点順（時計回り・上から）：決定力、ドリブル、パス、守備、スピード、スタミナ
  */
@@ -10146,9 +10161,9 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
     return { ...a, isRange: false, displayVal: `${a.val}` };
   });
 
-  const cx = 160;
-  const cy = 116;
-  const maxR = 64;
+  const cx = 125;
+  const cy = 112;
+  const maxR = 52;
   const levels = [0.25, 0.5, 0.75, 1.0];
 
   const getPoint = (angleDeg, r) => {
@@ -10195,67 +10210,60 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
 
   const dataPolyPts = valPoints.map(v => `${v.pt.x},${v.pt.y}`).join(' ');
   const dataDots = valPoints.map(v => {
-    const tierCls = getOvrTierClass(v.val);
-    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.5" class="hex-data-dot ${tierCls}" />`;
+    const rankInfo = getAttributeRankInfo(v.val);
+    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.2" class="hex-data-dot" style="fill:${rankInfo.color};" />`;
   }).join('');
 
-  // ラベルと数値の配置
+  // ラベル・ランク（S〜E）・数値の3段配置
   const labelsSvg = axes.map(a => {
-    const tierCls = getOvrTierClass(a.val);
+    const rankInfo = getAttributeRankInfo(a.val);
     let lx = cx;
-    let lyLabel = cy;
+    let lyName = cy;
+    let lyRank = cy;
     let lyVal = cy;
-    let anchor = 'middle';
+    const anchor = 'middle';
 
     if (a.angleDeg === -90) {
-      // 上：決定力
       lx = cx;
-      lyLabel = cy - maxR - 23;
-      lyVal = cy - maxR - 8;
-      anchor = 'middle';
+      lyName = 16;
+      lyRank = 35;
+      lyVal = 49;
     } else if (a.angleDeg === 90) {
-      // 下：守備
       lx = cx;
-      lyLabel = cy + maxR + 15;
-      lyVal = cy + maxR + 31;
-      anchor = 'middle';
+      lyName = 180;
+      lyRank = 199;
+      lyVal = 213;
     } else if (a.angleDeg === -30) {
-      // 右上：ドリブル
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x + 10;
-      lyLabel = outer.y - 5;
-      lyVal = outer.y + 11;
-      anchor = 'start';
+      lx = 210;
+      lyName = 68;
+      lyRank = 87;
+      lyVal = 101;
     } else if (a.angleDeg === 30) {
-      // 右下：パス
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x + 10;
-      lyLabel = outer.y - 3;
-      lyVal = outer.y + 13;
-      anchor = 'start';
+      lx = 210;
+      lyName = 132;
+      lyRank = 151;
+      lyVal = 165;
     } else if (a.angleDeg === 150) {
-      // 左下：スピード
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x - 10;
-      lyLabel = outer.y - 3;
-      lyVal = outer.y + 13;
-      anchor = 'end';
+      lx = 40;
+      lyName = 132;
+      lyRank = 151;
+      lyVal = 165;
     } else if (a.angleDeg === -150) {
-      // 左上：スタミナ
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x - 10;
-      lyLabel = outer.y - 5;
-      lyVal = outer.y + 11;
-      anchor = 'end';
+      lx = 40;
+      lyName = 68;
+      lyRank = 87;
+      lyVal = 101;
     }
 
+    const rankText = a.isRange ? `${rankInfo.rank}?` : rankInfo.rank;
     const valSvgHtml = a.isRange
-      ? `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val"><tspan class="${getOvrTierClass(a.min)}">${a.min}</tspan><tspan fill="#ffffff">~</tspan><tspan class="${getOvrTierClass(a.max)}">${a.max}</tspan></text>`
-      : `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.displayVal}</text>`;
+      ? `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val-sub"><tspan class="${getOvrTierClass(a.min)}">${a.min}</tspan><tspan fill="#8b949e">~</tspan><tspan class="${getOvrTierClass(a.max)}">${a.max}</tspan></text>`
+      : `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val-sub">${a.displayVal}</text>`;
 
     return `
       <g class="hex-label-group">
-        <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
+        <text x="${lx}" y="${lyName}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
+        <text x="${lx}" y="${lyRank}" text-anchor="${anchor}" class="hex-label-rank" fill="${rankInfo.color}">${rankText}</text>
         ${valSvgHtml}
       </g>
     `;
@@ -10263,7 +10271,7 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
 
   return `
     <div class="profile-hexagon-wrap">
-      <svg viewBox="0 0 320 232" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
+      <svg viewBox="0 0 250 224" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
         ${gridPolygons}
         ${axisLines}
         ${rangeMaxPolyHtml}
@@ -11091,12 +11099,25 @@ function openPlayerProfileModal(playerId) {
         valEl.className = 'profile-header-ovr-val';
       }
       valEl.style.background = 'none';
-      valEl.style.fontSize = scoutView.isScouted ? '' : '20px';
+      valEl.style.fontSize = scoutView.isScouted ? '' : '16px';
     }
   }
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : 'N/A';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
+  const isInjured = Boolean((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0));
+  const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
+  const appRate = (p.appearances || 0) > 0
+    ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
+    : 0;
+  const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  const roleStatusText = isMarket
+    ? '移籍リスト登録中'
+    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
+  const conditionText = isInjured
+    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
+    : '良好 (出場可能)';
+  const conditionClass = isInjured ? 'text-danger' : 'accent-green';
 
   const footLabelMap = {
     Right: 'Right',
@@ -11113,7 +11134,7 @@ function openPlayerProfileModal(playerId) {
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
   const rawNat = p.nationality || 'England';
   const flagHtml = getNationalityFlagHtml(rawNat);
-  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:6px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:5px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
   const squadNumText = `#${p.squadNumber || 10}`;
   const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
   const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
@@ -11121,8 +11142,34 @@ function openPlayerProfileModal(playerId) {
 
   const attrs = getPlayerFiveAttributes(p);
 
+  const topBarEl = document.getElementById('profile-top-club-bar');
+  if (topBarEl) {
+    const clubColor = (ctx.club && ctx.club.primaryColor) || (isFreeAgentPlayer ? '#475569' : '#2ecc71');
+    topBarEl.style.setProperty('--profile-club-accent', clubColor);
+  }
   const squadNumEl = document.getElementById('profile-squad-num');
   if (squadNumEl) squadNumEl.textContent = squadNumText;
+
+  const topStatusEl = document.getElementById('profile-top-status');
+  if (topStatusEl) {
+    if (isInjured) {
+      topStatusEl.textContent = `負傷 残${p.injuryDays || (p.injuryWeeks * 7)}日`;
+      topStatusEl.className = 'profile-top-status-badge mono is-danger';
+    } else if (isYouth) {
+      const potRank = p.potential || p.potentialGrade || 'B';
+      topStatusEl.textContent = `ユース · POT ${potRank}`;
+      topStatusEl.className = 'profile-top-status-badge mono is-gold';
+    } else if (isMarket) {
+      topStatusEl.textContent = isFreeAgentPlayer ? '無所属 FA' : '移籍市場';
+      topStatusEl.className = 'profile-top-status-badge mono is-cyan';
+    } else if (p.isStarter) {
+      topStatusEl.textContent = `スタメン ${p.assignedPos || primaryPos}`;
+      topStatusEl.className = 'profile-top-status-badge mono is-green';
+    } else {
+      topStatusEl.textContent = '控えメンバー';
+      topStatusEl.className = 'profile-top-status-badge mono';
+    }
+  }
 
   // スカウティングレポート用 大型ドット絵アバター（64x64 / 2倍スケール描画）
   const avatarCanvasEl = document.getElementById('profile-avatar-canvas');
@@ -11133,75 +11180,59 @@ function openPlayerProfileModal(playerId) {
   }
 
   const clubLabelEl = document.getElementById('profile-club-label');
-  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 18, 'profile-club-emblem')}<span>${clubDisplayLabel}</span>`;
+  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 17, 'profile-club-emblem')}<span>${clubDisplayLabel}</span>`;
+
+  ensurePlayerProficiencies(p);
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? p.mainPositions
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+  const subsRaw = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+  const subsFiltered = subsRaw.filter(sp => !mains.includes(sp));
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
-    ensurePlayerProficiencies(p);
-    const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
-      ? p.mainPositions
-      : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
-    const subs = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
-
-    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main" title="本適性ポジション">${mp}</span>`).join(' ');
-    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub" title="薄適性ポジション">${sp}</span>`).join(' ');
-
+    const subPosTextHtml = subsFiltered.length > 0
+      ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+      : '';
     posPillEl.innerHTML = `
-      <div class="profile-pos-badges-wrap">
-        ${mainBadgesHtml}
-        ${subBadgesHtml}
-      </div>
+      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-text">${footShortText} · ${heightText}</span>
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-nat">${nationalityDisplay}</span>
     `;
   }
 
   const nameEl = document.getElementById('profile-player-name');
   if (nameEl) {
-    if (p.fullName && p.fullName !== p.name) {
-      nameEl.innerHTML = `<span class="profile-name-main">${p.name}</span><span class="profile-fullname-sub">(${p.fullName})</span>`;
-    } else {
-      nameEl.textContent = p.name;
-    }
+    const fullSubHtml = (p.fullName && p.fullName !== p.name)
+      ? `<span class="profile-fullname-sub">${p.fullName}</span>`
+      : '';
+    nameEl.innerHTML = `<span class="profile-name-main">${p.name}</span><span class="profile-age-inline">(${p.age})</span>${fullSubHtml}`;
   }
 
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
-    const footBadgeStr = formatFootBadge(p);
-    let youthBadgeHtml = '';
+    let youthMetaHtml = '';
     if (isYouth) {
       const potRank = p.potential || p.potentialGrade || 'B';
       const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
-      youthBadgeHtml = `
-        <span class="profile-bio-chip mono ${potRankClass}" style="border-color:currentColor;font-weight:700;">POT: ${potRank}</span>
+      youthMetaHtml = `
+        <span class="profile-bio-chip">想定週給 <strong class="accent-green">£${p.wage || 2.5}k</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip ${potRankClass}" style="font-weight:800;">POT ${potRank}</span>
+      `;
+    } else {
+      youthMetaHtml = `
+        <span class="profile-bio-chip">${isMarket ? '要求年俸' : '年俸'} <strong class="accent-gold">${formatMoney(p.salary)}</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <button type="button" class="profile-inline-mv-link profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示">市場価値 <strong class="accent-green">${formatMoney(estMarketValue)}</strong></button>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip">契約 ${p.contractYears}年</span>
       `;
     }
 
-    bioRowEl.innerHTML = `
-      <span class="profile-bio-chip">${nationalityDisplay}</span>
-      <span class="profile-bio-chip">${p.age}歳</span>
-      <span class="profile-bio-chip">${heightText}</span>
-      <span class="profile-bio-chip mono" id="profile-squad-num" style="color:var(--accent-green);font-weight:700;">${squadNumText}</span>
-      <span class="profile-bio-chip profile-bio-foot-mob">${formatFootBadge(p)}</span>
-      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
-      ${youthBadgeHtml}
-    `;
-  }
-
-  let currentSlotBanner = '';
-  if (p.isStarter && p.assignedPos) {
-    const fitInfo = getPositionFitInfo(p, p.assignedPos);
-    let fitColorClass = 'accent-green';
-    let fitSymbol = '◎ ';
-    let fitSlotNote = '本職として機能';
-    if (fitInfo.type === 'sub') { fitColorClass = 'text-cyan'; fitSymbol = '◯ '; fitSlotNote = 'サブ適性で対応'; }
-    else if (fitInfo.type === 'semi') { fitColorClass = 'text-warning'; fitSymbol = '△ '; fitSlotNote = '不慣れな配置'; }
-    else if (fitInfo.type === 'out') { fitColorClass = 'text-danger'; fitSymbol = '✕ '; fitSlotNote = '適性外の配置'; }
-
-    currentSlotBanner = `
-      <div class="profile-fit-row" style="margin-top: 4px; border-color: rgba(46, 204, 113, 0.4);">
-        <span class="text-muted">現在の配置スロット: <strong class="mono">${p.assignedPos}</strong></span>
-        <span class="mono ${fitColorClass}"><strong>${fitSymbol}${fitSlotNote}</strong></span>
-      </div>
-    `;
+    bioRowEl.innerHTML = youthMetaHtml;
   }
 
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
@@ -11303,22 +11334,12 @@ function openPlayerProfileModal(playerId) {
   }
 
 
-  // 今季成績の補助指標
-  const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
-  const appRate = (p.appearances || 0) > 0
-    ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
-    : 0;
+  // 今季成績・コンディション補助指標
   const goalsPerMatch = (p.appearances || 0) > 0
     ? ((p.goals || 0) / p.appearances).toFixed(2)
     : '0.00';
-  const roleStatusText = isMarket
-    ? '移籍リスト登録中'
-    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
-  const conditionText = (p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)
-    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
-    : '良好 (出場可能)';
-  const conditionClass = ((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)) ? 'text-danger' : 'accent-green';
-  const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  const condPct = isInjured ? 20 : clamp(100 - pFtgVal, 0, 100);
+  const condColor = isInjured ? '#f87171' : (condPct >= 70 ? '#2ecc71' : (condPct >= 40 ? '#38bdf8' : '#fbbf24'));
 
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
   const lastHistoryRow = seasonHistory.length > 0 ? seasonHistory[seasonHistory.length - 1] : null;
@@ -11448,120 +11469,100 @@ function openPlayerProfileModal(playerId) {
     </div>
   `).join('');
 
+  const abilityActionsHtml = isYouth ? `
+    <div class="profile-ability-actions">
+      <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
+        トップチームへ昇格 (契約金 £40k · 週給 £${p.wage || 2.5}k · 3年)
+      </button>
+      <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 9px 14px;">
+        放出
+      </button>
+    </div>
+  ` : (!isMyClubPlayer && !isCandidate ? (() => {
+    const activeScout = (gameState.activeScoutAssignments || []).find(a => a.playerId === p.id);
+    const scoutActionBtn = !scoutView.isScouted
+      ? (activeScout
+        ? `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="padding: 8px 12px; opacity: 0.75;">調査中(${activeScout.daysRemaining}日)</button>`
+        : `<button type="button" class="btn btn-secondary btn-sm mono" data-profile-scout-dispatch="${p.id}" style="padding: 8px 12px; font-weight: 700;">調査派遣</button>`)
+      : '';
+    return `
+    <div class="profile-ability-actions">
+      ${scoutActionBtn}
+      <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 8px 12px;">
+        ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 8px 14px; font-weight: 700;">
+        ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
+      </button>
+    </div>`;
+  })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
+    <div class="profile-ability-actions">
+      <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
+        ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
+      </button>
+    </div>
+  ` : ''));
+
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
-      <!-- タブ1：能力（階層UI：左見出し・右詳細 ＋ スリムゲージ ＋ 数値プレート） -->
+      <!-- タブ1：能力（左レーダーチャート＋右適性ピッチ2カラム ＋ 特徴インライン ＋ コンディションゲージ） -->
       <div class="profile-tab-panel" data-profile-panel="ability">
-        <div class="profile-section-grid">
-          <div class="profile-box profile-box-hexagon">
-            <div class="profile-box-header">
-              <span class="ui-kv-label" style="margin-top: 0;">能力チャート</span>
-              <span class="profile-ovr-badge ${scoutView.isScouted ? getOvrTierClass(baseOvr) : ''}" style="background:none;">OVR ${ovrDisplayHtml}</span>
-            </div>
-            ${hexagonChartHtml}
-            <div class="ui-kv-list" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
-              <div class="ui-kv-row">
-                <div class="ui-kv-label">選手特徴</div>
-                <div class="ui-kv-content">
-                  <div class="profile-traits-wrap">
-                    ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">${t}</button>`).join('')}
-                  </div>
-                  <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
-                </div>
+        <div class="profile-ability-board">
+          <div class="profile-ability-board-grid">
+            <div class="profile-ability-col-chart">
+              <div class="profile-col-heading">
+                <span class="profile-col-title is-accent">能力</span>
+                <span class="profile-col-sub mono">OVR <strong class="${scoutView.isScouted ? getOvrTierClass(baseOvr) : ''}">${ovrDisplayHtml}</strong></span>
               </div>
+              ${hexagonChartHtml}
+            </div>
+            <div class="profile-ability-col-pitch">
+              <div class="profile-col-heading">
+                <span class="profile-col-title">適性配置</span>
+                <span class="profile-col-fit-note mono">${mains.join('·')}</span>
+              </div>
+              ${buildPlayerPitchProficiencyHtml(p)}
             </div>
           </div>
 
-          <div class="profile-box">
-            <div class="ui-kv-list">
-              <div class="ui-kv-row">
-                <div class="ui-kv-label accent-cyan-bar">適性配置</div>
-                <div class="ui-kv-content">
-                  ${buildPlayerPitchProficiencyHtml(p)}
-                </div>
+          <div class="profile-traits-inline-row">
+            <span class="profile-inline-label">特徴</span>
+            <div class="profile-traits-content">
+              <div class="profile-traits-wrap">
+                ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">・ ${t}</button>`).join('')}
               </div>
-              ${trainingSectionHtml}
+              <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
             </div>
           </div>
         </div>
 
-        <!-- 契約・価値 数値プレート階層 -->
-        <div class="ui-kv-list" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">
-          ${isYouth ? `
-            <div class="ui-kv-row">
-              <div class="ui-kv-label accent-gold-bar">プロ契約</div>
-              <div class="ui-kv-content">
-                <div class="ui-plate-grid">
-                  <div class="ui-stat-plate is-gold">
-                    <span class="ui-plate-label">初回契約金</span>
-                    <span class="ui-plate-val accent-gold">£40k</span>
-                  </div>
-                  <div class="ui-stat-plate is-highlight">
-                    <span class="ui-plate-label">想定週給</span>
-                    <span class="ui-plate-val accent-green">£${p.wage || 2.5}k/週</span>
-                  </div>
-                  <div class="ui-stat-plate">
-                    <span class="ui-plate-label">契約 / POT</span>
-                    <span class="ui-plate-val">3年 · ${p.potential || p.potentialGrade || 'B'}</span>
-                  </div>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 8px;">
-                  <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
-                    トップチームへ昇格
-                  </button>
-                  <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 9px 14px;">
-                    放出
-                  </button>
-                </div>
-              </div>
+        <div class="profile-condition-gauges-bar">
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">コンディション</span>
+              <span class="profile-cond-val mono" style="color:${condColor};">${condPct}%</span>
             </div>
-          ` : `
-            <div class="ui-kv-row">
-              <div class="ui-kv-label accent-gold-bar">契約・価値</div>
-              <div class="ui-kv-content">
-                <div class="ui-plate-grid">
-                  <div class="ui-stat-plate is-gold">
-                    <span class="ui-plate-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
-                    <span class="ui-plate-val accent-gold">${formatMoney(p.salary)}</span>
-                  </div>
-                  <div class="ui-stat-plate">
-                    <span class="ui-plate-label">契約残年数</span>
-                    <span class="ui-plate-val">${p.contractYears}年</span>
-                  </div>
-                  <div class="ui-stat-plate is-highlight profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示" style="cursor: pointer;">
-                    <span class="ui-plate-label">市場価値 ▶</span>
-                    <span class="ui-plate-val accent-green">${formatMoney(estMarketValue)}</span>
-                  </div>
-                </div>
-                ${!isMyClubPlayer && !isCandidate ? (() => {
-                  const activeScout = (gameState.activeScoutAssignments || []).find(a => a.playerId === p.id);
-                  const scoutActionBtn = !scoutView.isScouted
-                    ? (activeScout
-                      ? `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="padding: 9px 12px; opacity: 0.75;">調査中(${activeScout.daysRemaining}日)</button>`
-                      : `<button type="button" class="btn btn-secondary btn-sm mono" data-profile-scout-dispatch="${p.id}" style="padding: 9px 12px; font-weight: 700;">調査派遣</button>`)
-                    : '';
-                  return `
-                  <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    ${scoutActionBtn}
-                    <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
-                      ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
-                      ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
-                    </button>
-                  </div>`;
-                })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
-                  <div style="margin-top: 10px;">
-                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
-                      ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
-                    </button>
-                  </div>
-                ` : '')}
-              </div>
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill" style="width:${condPct}%; background:${condColor};"></div></div>
+          </div>
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">疲労</span>
+              <span class="profile-cond-val mono" style="color:${pFtgStatus.color};">${pFtgVal} (${pFtgStatus.label})</span>
             </div>
-          `}
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill" style="width:${Math.max(4, pFtgVal)}%; background:${pFtgStatus.color};"></div></div>
+          </div>
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">出場率</span>
+              <span class="profile-cond-val mono accent-green">${appRate}%</span>
+            </div>
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill ovr-tier-high" style="width:${appRate}%"></div></div>
+          </div>
         </div>
+
+        ${trainingSectionHtml ? `<div class="profile-training-compact-wrap ui-kv-list">${trainingSectionHtml}</div>` : ''}
+        ${abilityActionsHtml}
       </div>
 
       <!-- タブ2：今季成績（数値プレート＋左見出し2カラム＋ゲージ） -->

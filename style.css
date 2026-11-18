@@ -18207,4 +18207,550 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   }
 }
 
+/* ==========================================================================
+   選手詳細プロフィールモーダル（#player-profile-modal）：1画面集約＆ランク可視化UI
+   ========================================================================== */
+#player-profile-modal .profile-modal-card {
+  border-top: none;
+  background-color: #1c2024;
+}
+
+.profile-top-club-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.16) 0%, #14171c 65%);
+  border-top: 3px solid var(--profile-club-accent, #2ecc71);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.profile-top-club-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+#player-profile-modal .profile-top-club-left .modal-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+  color: #f1f5f9;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.profile-top-squad-num {
+  font-size: 12px;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-top-club-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.profile-top-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.profile-top-status-badge.is-green { color: #2ecc71; }
+.profile-top-status-badge.is-cyan  { color: #38bdf8; }
+.profile-top-status-badge.is-gold  { color: #fbbf24; }
+.profile-top-status-badge.is-danger { color: #f87171; }
+
+.profile-top-club-bar .btn-modal-close {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 999px;
+  font-size: 13px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+}
+
+#player-profile-modal .profile-modal-header {
+  padding: 10px 16px;
+  background-color: #16191d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#player-profile-modal .profile-header-left {
+  gap: 14px;
+  align-items: center;
+}
+
+#player-profile-modal .profile-avatar-canvas {
+  width: 60px;
+  height: 60px;
+}
+
+#player-profile-modal .profile-avatar-col .profile-header-ovr-box {
+  margin-top: -10px;
+  padding: 1px 10px;
+  background: #111519;
+  border: 1.5px solid #eab308;
+  border-radius: 999px;
+}
+
+#player-profile-modal .profile-avatar-col .profile-header-ovr-val {
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+#player-profile-modal .profile-identity {
+  gap: 3px;
+}
+
+#player-profile-modal .profile-player-name {
+  font-size: 19px;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.profile-age-inline {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.profile-submeta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+#player-profile-modal .profile-pos-pill {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: #cbd5e1;
+}
+
+.profile-meta-mainpos {
+  color: #2ecc71;
+  font-weight: 800;
+}
+
+.profile-meta-subpos {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.profile-meta-sep {
+  color: #4b5563;
+  font-size: 10px;
+}
+
+.profile-meta-text,
+.profile-meta-nat {
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+#player-profile-modal .profile-bio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px !important;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.profile-bio-sep {
+  color: #4b5563;
+}
+
+.profile-inline-mv-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: #cbd5e1;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(46, 204, 113, 0.45);
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.profile-inline-mv-link:hover {
+  color: #2ecc71;
+}
+
+/* フラット下線タブバー */
+#player-profile-modal .profile-subnav-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0 !important;
+  padding: 0 12px !important;
+  background-color: #14171c !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#player-profile-modal .profile-tab-btn {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 9px 4px !important;
+  color: #8b949e !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  box-shadow: none !important;
+}
+
+#player-profile-modal .profile-tab-btn:hover {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+
+#player-profile-modal .profile-tab-btn.active {
+  background: transparent !important;
+  color: #ffffff !important;
+  border-bottom-color: #2ecc71 !important;
+  box-shadow: none !important;
+}
+
+/* モーダル本文＆能力2カラムボード */
+#player-profile-modal .profile-modal-body {
+  padding: 12px 16px 16px;
+  gap: 10px;
+  background-color: #1c2024;
+}
+
+#player-profile-modal .profile-tab-panel {
+  gap: 10px;
+}
+
+.profile-ability-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-ability-board-grid {
+  display: grid;
+  grid-template-columns: 1.24fr 0.76fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.profile-ability-col-chart,
+.profile-ability-col-pitch {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-col-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.profile-col-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #8b949e;
+  letter-spacing: 0.03em;
+}
+
+.profile-col-title.is-accent {
+  color: #2ecc71;
+}
+
+.profile-col-sub,
+.profile-col-fit-note {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+#player-profile-modal .profile-hexagon-wrap {
+  padding: 0;
+}
+
+#player-profile-modal .profile-hexagon-svg {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  overflow: visible;
+}
+
+#player-profile-modal .hex-label-name {
+  fill: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hex-label-rank {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.hex-label-val-sub {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  fill: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 右カラム内適性ピッチコンパクト化 */
+.profile-ability-col-pitch .ef-pitch-container {
+  margin-top: 2px;
+  padding: 5px 4px 4px;
+  background: rgba(22, 36, 27, 0.75);
+  border-color: rgba(46, 204, 113, 0.2);
+}
+
+.profile-ability-col-pitch .ef-pitch-field {
+  grid-template-rows: repeat(6, 20px);
+  gap: 3px;
+  padding: 4px;
+  max-width: 100%;
+}
+
+.profile-ability-col-pitch .ef-pos-slot {
+  font-size: 9.5px;
+}
+
+.profile-ability-col-pitch .ef-pos-lb,
+.profile-ability-col-pitch .ef-pos-rb {
+  font-size: 7.5px !important;
+  letter-spacing: -0.04em;
+}
+
+.profile-ability-col-pitch .ef-pitch-legend {
+  margin-top: 4px;
+  padding-top: 3px;
+  font-size: 9px;
+  gap: 3px;
+  justify-content: space-between;
+}
+
+.profile-ability-col-pitch .ef-legend-item {
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.profile-ability-col-pitch .ef-legend-color {
+  width: 8px;
+  height: 6px;
+}
+
+/* 特徴インライン行（枠線なし・中黒区切り） */
+.profile-traits-inline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-inline-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f87171;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.profile-traits-content {
+  flex: 1;
+  min-width: 0;
+}
+
+#player-profile-modal .profile-traits-wrap {
+  gap: 4px 10px;
+}
+
+#player-profile-modal .profile-trait-tag,
+#player-profile-modal .profile-trait-tag.is-active-trait {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 0 !important;
+  padding: 1px 2px !important;
+  color: #f1f5f9 !important;
+  font-size: 11.5px;
+  font-weight: 700 !important;
+}
+
+#player-profile-modal .profile-trait-tag.is-selected {
+  background: transparent !important;
+  color: #2ecc71 !important;
+  border-bottom-color: #2ecc71 !important;
+}
+
+/* 下段：コンディション3連ゲージ */
+.profile-condition-gauges-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 4px 2px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-cond-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profile-cond-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 10.5px;
+}
+
+.profile-cond-label {
+  color: #8b949e;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-cond-val {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.profile-training-compact-wrap .ui-kv-row {
+  padding: 6px 2px;
+}
+
+.profile-ability-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .profile-top-club-bar {
+    padding: 5px 10px;
+    min-height: 34px;
+  }
+
+  #player-profile-modal .profile-modal-header {
+    padding: 8px 12px;
+  }
+
+  #player-profile-modal .profile-header-left {
+    gap: 10px;
+  }
+
+  #player-profile-modal .profile-avatar-canvas {
+    width: 50px;
+    height: 50px;
+  }
+
+  #player-profile-modal .profile-player-name {
+    font-size: 16.5px !important;
+    padding-right: 0 !important;
+  }
+
+  #player-profile-modal .profile-submeta-row .profile-header-foot-box {
+    display: none !important;
+  }
+
+  #player-profile-modal .profile-pos-pill {
+    font-size: 10.5px;
+  }
+
+  #player-profile-modal .profile-bio-row {
+    font-size: 10.5px !important;
+  }
+
+  #player-profile-modal .profile-subnav-bar {
+    padding: 0 6px !important;
+  }
+
+  #player-profile-modal .profile-tab-btn {
+    padding: 8px 2px !important;
+    font-size: 11px !important;
+  }
+
+  #player-profile-modal .profile-modal-body {
+    padding: 8px 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  .profile-ability-board-grid {
+    grid-template-columns: 1.22fr 0.78fr;
+    gap: 6px;
+  }
+
+  .profile-ability-col-pitch .ef-pitch-field {
+    grid-template-rows: repeat(6, 18px);
+    gap: 2.5px;
+    padding: 3px;
+  }
+
+  .profile-ability-col-pitch .ef-pos-slot {
+    font-size: 8.5px;
+  }
+
+  .profile-ability-col-pitch .ef-pos-lb,
+  .profile-ability-col-pitch .ef-pos-rb {
+    font-size: 7px !important;
+  }
+
+  .profile-ability-col-pitch .ef-pitch-legend {
+    font-size: 8px;
+  }
+
+  .profile-condition-gauges-bar {
+    gap: 8px;
+  }
+
+  .profile-cond-label {
+    font-size: 9.5px;
+  }
+
+  .profile-cond-val {
+    font-size: 10px;
+  }
+}
+
 
