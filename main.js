@@ -1451,27 +1451,27 @@ function openMegaOfferModal() {
   const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : 'N/A';
 
   showGmModal({
-    category: 'EUROPEAN MEGA TRANSFER OFFER / CRITICAL',
-    title: `${offer.megaClubName}から #${target.squadNumber || offer.squadNumber} ${target.name} に対し 移籍金${formatMoney(offer.offerAmount)} の正式オファー`,
-    description: `${gameState.gmName} GM、緊急案件です。当クラブの主力 ${target.pos} #${target.squadNumber || offer.squadNumber} ${target.name}（${target.age}歳）に対し、${offer.megaClubCountry}の名門「${offer.megaClubName}」から破格の移籍金 ${formatMoney(offer.offerAmount)} の買取オファーが届きました。受諾して莫大なクラブ資金を得るか、拒否して戦力を維持するか決断してください。`,
-    detailHtml: `対象選手：<strong>#${target.squadNumber || offer.squadNumber} [${target.pos}] ${target.name}</strong>（OVR ${ovr} / 今季 ${target.appearances}試合 ${target.goals}得点 / 平均評価 ${avgRating}）<br>買収提示額：<strong class="accent-gold">${formatMoney(offer.offerAmount)}</strong>（即時入金）<br>拒否時の影響：サポーター支持 +250人 ／ 本人のプライド上昇により次回契約更新時の要求年俸が +12% 上昇（契約残年数2年以下へ短縮）`,
+    category: '大型買取オファー',
+    title: `${offer.megaClubName}から #${target.squadNumber || offer.squadNumber} ${target.fullName || target.name} への正式オファー`,
+    description: `${gameState.gmName} GM、当クラブの主力 ${target.pos} #${target.squadNumber || offer.squadNumber} ${target.name}（${target.age}歳）に対し、${offer.megaClubCountry}の強豪「${offer.megaClubName}」から移籍金 ${formatMoney(offer.offerAmount)} の買取オファーが届いています。`,
+    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">対象選手</span><span class="gm-modal-flat-val">${target.pos} #${target.squadNumber || offer.squadNumber} ${target.fullName || target.name} (OVR ${ovr})</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">買収提示額 (即時入金)</span><span class="gm-modal-flat-val accent-gold mono">${formatMoney(offer.offerAmount)}</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">拒否時の影響</span><span class="gm-modal-flat-val">支持 +250人 · 次回契約要求週給 +12%</span></div></div>`,
     actions: [
       {
-        label: `【オファー受諾】売却して移籍金を受領（+${formatMoney(offer.offerAmount)}）`,
+        label: `承諾して売却 (+${formatMoney(offer.offerAmount)})`,
         className: 'btn btn-accent',
         onClick: () => {
           acceptPendingMegaOffer();
         }
       },
       {
-        label: '【オファー拒否】戦力維持・引き止め（要求年俸上昇 / ファン+250人）',
+        label: '拒否して残留させる',
         className: 'btn btn-primary',
         onClick: () => {
           rejectPendingMegaOffer();
         }
       },
       {
-        label: '保留して閉じる（GMタスクからいつでも対応可能）',
+        label: '保留して閉じる',
         className: 'btn btn-secondary',
         onClick: () => {
           renderAll();
@@ -1520,7 +1520,8 @@ function rejectPendingMegaOffer() {
     target.contractYears = Math.min(target.contractYears || 2, 2);
     const baseDemand = calculatePlayerDemandSalary(target);
     target.demandedSalary = Math.round((baseDemand * 1.12) / 50) * 50;
-    gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求年俸が ${formatMoney(target.demandedSalary)} に上昇・契約延長交渉が可能）。`;
+    const reqWage = Math.max(5, Math.round(target.demandedSalary / 52));
+    gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求週給が £${reqWage}k/週 に上昇・契約延長交渉が可能）。`;
   }
 
   gameState.pendingMegaOffer = null;
@@ -1627,10 +1628,10 @@ function triggerYouthPromotionEvent() {
   const isFull = playerClub.players.length >= maxSquad;
 
   showGmModal({
-    category: 'ACADEMY SCOUT REPORT',
-    title: '若手ユース選手の台頭（トップチーム無料昇格オファー）',
-    description: `クラブの下部組織（アカデミー）にて、10代の有望株 ${prospect.pos} ${prospect.name}（${prospect.age}歳）が眩い才能を発揮しています。移籍金£0・最低年俸${formatMoney(prospect.salary)}でトップチームへ昇格させることができます。`,
-    detailHtml: `候補選手：[${prospect.pos}] ${prospect.name}（${prospect.age}歳）<br>能力値：総合 ${ovr}（攻撃 ${prospect.atk} / 守備 ${prospect.def} / スタミナ ${prospect.sta}） / 4年契約・年俸 ${formatMoney(prospect.salary)}`,
+    category: 'アカデミー昇格推薦',
+    title: '若手ユース選手のトップチーム昇格案内',
+    description: `下部組織の ${prospect.pos} ${prospect.fullName || prospect.name}（${prospect.age}歳）が著しく成長しています。移籍金 £0・週給 £${prospect.wage}k/週 でトップチームへ昇格可能です。`,
+    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">候補選手</span><span class="gm-modal-flat-val">${prospect.pos} ${prospect.fullName || prospect.name} (${prospect.age}歳)</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">総合力 (OVR)</span><span class="gm-modal-flat-val accent-green">OVR ${ovr}</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">昇格条件</span><span class="gm-modal-flat-val accent-gold mono">4年契約 · £${prospect.wage}k/週</span></div></div>`,
     actions: [
       {
         label: isFull ? `所属枠上限（${maxSquad}名）のため昇格不可` : 'トップチームへ無料昇格させる（移籍金 £0）',
@@ -2766,6 +2767,54 @@ function refreshNegCashflowWarning(bodyEl = null) {
 }
 
 /**
+ * プロフィール・交渉・オファー各モーダル共通の選手ヘッダー表示データを生成する
+ */
+function buildUnifiedPlayerModalHeaderData(p, clubObj, clubLabelText, opts = {}) {
+  if (!p) return null;
+  const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
+  if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(p);
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? p.mainPositions
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+  const subsRaw = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+  const subsFiltered = subsRaw.filter(sp => !mains.includes(sp));
+
+  const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
+  const rawNat = p.nationality || 'England';
+  const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
+  const footHtml = typeof formatFootBadge === 'function' ? formatFootBadge(p) : '';
+  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:5px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+  const subPosTextHtml = subsFiltered.length > 0
+    ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+    : '';
+  const emblemHtml = (clubObj && typeof getClubEmblemSvg === 'function')
+    ? getClubEmblemSvg(clubObj, 17, 'profile-club-emblem')
+    : '';
+  const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
+  const estMarketValue = typeof calculatePlayerMarketValue === 'function'
+    ? calculatePlayerMarketValue(p)
+    : (typeof calculateTransferFee === 'function' ? calculateTransferFee(p) : 0);
+
+  return {
+    clubHtml: `${emblemHtml}<span>${clubLabelText}</span>`,
+    clubAccent: (clubObj && clubObj.primaryColor) || (opts.isFreeAgent ? '#475569' : '#2ecc71'),
+    squadNumText: (!opts.isFreeAgent && p.squadNumber) ? `#${p.squadNumber}` : '',
+    nameHtml: `<span class="profile-name-main">${p.fullName || p.name}</span><span class="profile-age-inline">(${p.age})</span>`,
+    posMetaHtml: `
+      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-foot">${footHtml}</span>
+      <span class="profile-meta-text">${heightText}</span>
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-nat">${nationalityDisplay}</span>
+    `,
+    weeklyWageVal,
+    estMarketValue,
+    contractText: opts.isFreeAgent ? '無所属' : `契約 ${p.contractYears || 0}年`
+  };
+}
+
+/**
  * 交渉モーダル（契約更新 / 移籍獲得）の内容を描画・同期する
  */
 function renderNegotiationModal() {
@@ -2797,8 +2846,6 @@ function renderNegotiationModal() {
     ? `${ovr}`
     : buildOvrRangeHtml(negScoutView.ovrMin, negScoutView.ovrMax);
   const negOvrSeed = negScoutView.isScouted ? ovr : Math.round((negScoutView.ovrMin + negScoutView.ovrMax) / 2);
-  const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
-  const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
 
   const avatarCanvasEl = document.getElementById('neg-avatar-canvas');
   if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
@@ -2818,51 +2865,54 @@ function renderNegotiationModal() {
         valEl.className = 'profile-header-ovr-val';
       }
       valEl.style.background = 'none';
-      valEl.style.fontSize = negScoutView.isScouted ? '' : '18px';
+      valEl.style.fontSize = negScoutView.isScouted ? '' : '16px';
     }
+  }
+
+  const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
+  const clubLabelText = isRenewal
+    ? (playerClub ? playerClub.name : '自クラブ')
+    : (session.isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ'));
+  const hdrData = buildUnifiedPlayerModalHeaderData(target, clubDisplayObj, clubLabelText, {
+    isFreeAgent: Boolean(!isRenewal && session.isFreeAgent)
+  });
+
+  const negTopBarEl = document.getElementById('neg-top-club-bar');
+  if (negTopBarEl && hdrData) {
+    negTopBarEl.style.setProperty('--profile-club-accent', hdrData.clubAccent);
   }
 
   const catEl = document.getElementById('neg-modal-category');
-  if (catEl) {
-    const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
-    const clubLabelText = isRenewal ? (playerClub ? playerClub.name : '自クラブ') : (session.isFreeAgent ? '無所属 (フリー)' : (sellerClub ? sellerClub.name : '相手クラブ'));
-    if (clubDisplayObj && typeof getClubEmblemSvg === 'function') {
-      catEl.innerHTML = `${getClubEmblemSvg(clubDisplayObj, 18, 'profile-club-emblem')}<span>${clubLabelText}</span>`;
-    } else {
-      catEl.textContent = clubLabelText;
-    }
+  if (catEl && hdrData) {
+    catEl.innerHTML = hdrData.clubHtml;
+  }
+
+  const squadNumEl = document.getElementById('neg-squad-num');
+  if (squadNumEl && hdrData) {
+    squadNumEl.textContent = hdrData.squadNumText;
+    squadNumEl.classList.toggle('hidden', !hdrData.squadNumText);
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
-  if (posPillEl) {
-    if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(target);
-    const mains = Array.isArray(target.mainPositions) && target.mainPositions.length > 0
-      ? target.mainPositions
-      : [primaryPos];
-    const subs = Array.isArray(target.subPositions) ? target.subPositions : subPosList;
-    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main">${mp}</span>`).join(' ');
-    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub">${sp}</span>`).join(' ');
-    posPillEl.innerHTML = `<div class="profile-pos-badges-wrap">${mainBadgesHtml}${subBadgesHtml}</div>`;
+  if (posPillEl && hdrData) {
+    posPillEl.innerHTML = hdrData.posMetaHtml;
   }
 
   const titleEl = document.getElementById('neg-modal-title');
-  if (titleEl) {
-    if (target.fullName && target.fullName !== target.name) {
-      titleEl.innerHTML = `<span class="profile-name-main">${target.name}</span><span class="profile-fullname-sub">(${target.fullName})</span>`;
-    } else {
-      titleEl.textContent = target.name;
-    }
+  if (titleEl && hdrData) {
+    titleEl.innerHTML = hdrData.nameHtml;
   }
 
   const metaEl = document.getElementById('neg-player-meta');
-  if (metaEl) {
-    const rawNat = target.nationality || 'England';
-    const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
-    const natChip = `<span class="profile-bio-chip"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
-    const ageChip = `<span class="profile-bio-chip">${target.age}歳</span>`;
-    const numChip = isRenewal ? `<span class="profile-bio-chip mono" style="color:var(--accent-green);font-weight:700;">#${target.squadNumber || '-'}</span>` : '';
-    const wageChip = `<span class="profile-bio-chip mono" style="color:var(--accent-gold);">${formatWage(target.wage)}</span>`;
-    metaEl.innerHTML = `${natChip}${ageChip}${numChip}${wageChip}`;
+  if (metaEl && hdrData) {
+    const wageLabel = isRenewal ? '現在週給' : '現週給';
+    metaEl.innerHTML = `
+      <span class="profile-bio-chip">${wageLabel} <strong class="accent-gold">£${hdrData.weeklyWageVal.toLocaleString()}k/週</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">市場価値 <strong class="accent-green">${formatMoney(hdrData.estMarketValue)}</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">${hdrData.contractText}</span>
+    `;
   }
 
   const maxFails = 2;
@@ -2896,7 +2946,7 @@ function renderNegotiationModal() {
             完全移籍
           </button>
           <button type="button" class="btn-dealtype ${session.dealType === 'loan' ? 'active' : ''}" data-deal-type="loan" ${session.completed ? 'disabled' : ''}>
-            レンタル (LOAN)
+            レンタル
           </button>
           ${isPreContractOk ? `
             <button type="button" class="btn-dealtype ${session.dealType === 'pre_contract' ? 'active' : ''}" data-deal-type="pre_contract" ${session.completed ? 'disabled' : ''} title="残り契約半年・来季7/1加入内定">
@@ -2967,7 +3017,7 @@ function renderNegotiationModal() {
           const reason = isStar ? '主力スター（OVR 78以上）' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
           return `
             <div class="neg-feedback-box status-warn" style="margin-bottom: 12px; font-size: 11px;">
-              <strong>【レンタル獲得困難】</strong> 主力選手のためレンタル不可です。交渉が成立しない可能性が高いため、完全移籍を推奨します。
+              <strong>レンタル獲得困難：</strong>主力選手のためレンタル不可となる可能性が高く、完全移籍での交渉を推奨します。
             </div>
           `;
         }
@@ -4564,21 +4614,44 @@ function openCounterOfferModal(offerId) {
 
   const playerClub = getPlayerClub();
   const player = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+  const topBarEl = document.getElementById('counter-top-club-bar');
+  if (topBarEl) {
+    topBarEl.style.setProperty('--profile-club-accent', (playerClub && playerClub.primaryColor) || '#2ecc71');
+  }
+
   const infoEl = document.getElementById('counter-offer-modal-player-info');
   if (infoEl) {
+    const dispName = (player && (player.fullName || player.name)) || offer.playerName;
+    const footHtml = player && typeof formatFootBadge === 'function' ? formatFootBadge(player) : '';
+    const weeklyWage = (player && player.wage) || offer.wage || 20;
+    const ovrCls = typeof getOvrTierClass === 'function' ? getOvrTierClass(offer.ovr) : '';
     infoEl.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 12px;">
-        <div>
-          <span class="accent-green mono font-bold">[${offer.playerPos}]</span>
-          <span style="font-weight: 700; font-size: 14px; margin-left: 4px;">#${offer.squadNumber} ${offer.playerName}</span>
-          <span class="text-muted mono" style="font-size: 11.5px; margin-left: 6px;">(${offer.playerAge}歳 / <span class="inline-ovr-display" style="font-weight:800; color:#e6edf3;">OVR ${offer.ovr}</span>)</span>
+      <div class="counter-player-unified-card">
+        <div class="profile-avatar-col">
+          <canvas class="profile-avatar-canvas" id="counter-player-avatar" width="48" height="48" aria-label="選手アバター"></canvas>
+          <div class="profile-header-ovr-box mono">
+            <strong class="profile-header-ovr-val ${ovrCls}">${offer.ovr}</strong>
+          </div>
         </div>
-        <div style="text-align: right;">
-          <div style="font-size: 11px; color: #8b949e;">オファー元クラブ</div>
-          <div style="font-weight: 700; font-size: 12.5px; color: #e6edf3;">${offer.buyerClubName}</div>
+        <div class="counter-player-unified-meta">
+          <div class="counter-player-title-row">
+            <span class="profile-meta-mainpos mono">${offer.playerPos}</span>
+            <span class="counter-player-fullname">${dispName} <span class="profile-age-inline">(${offer.playerAge})</span></span>
+            <span class="profile-top-squad-num mono">#${offer.squadNumber}</span>
+          </div>
+          <div class="counter-player-sub-row mono">
+            ${footHtml ? `<span class="profile-meta-foot">${footHtml}</span>` : ''}
+            <span>週給 <strong class="accent-gold">£${weeklyWage.toLocaleString()}k/週</strong></span>
+            <span class="profile-meta-sep">·</span>
+            <span>相手: <strong style="color:#f1f5f9;">${offer.buyerClubName}</strong></span>
+          </div>
         </div>
       </div>
     `;
+    const cv = document.getElementById('counter-player-avatar');
+    if (cv && player && typeof generatePlayerAvatar === 'function') {
+      generatePlayerAvatar(player, cv, playerClub);
+    }
   }
 
   const currentFeeEl = document.getElementById('counter-current-fee');
@@ -4684,22 +4757,60 @@ function openIncomingOfferModal() {
     return;
   }
 
-  // ヘッダー情報
+  const topBarEl = document.getElementById('incoming-top-club-bar');
+  if (topBarEl) {
+    topBarEl.style.setProperty('--profile-club-accent', (playerClub && playerClub.primaryColor) || '#eab308');
+  }
+
+  const avatarEl = document.getElementById('incoming-offer-avatar');
+  if (avatarEl && target && typeof generatePlayerAvatar === 'function') {
+    generatePlayerAvatar(target, avatarEl, playerClub);
+  }
+
+  const ovrBoxEl = document.getElementById('incoming-offer-ovr');
+  if (ovrBoxEl) {
+    const valEl = ovrBoxEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = offer.ovr;
+      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(offer.ovr) : ''}`;
+      valEl.style.background = 'none';
+    }
+  }
+
+  // ヘッダー情報（プロフィールモーダル統一フォーマット）
   const squadNumEl = document.getElementById('incoming-offer-squad-num');
   const catEl = document.getElementById('incoming-offer-category');
   const posPill = document.getElementById('incoming-offer-pos-pill');
   const titleEl = document.getElementById('incoming-offer-title');
   const metaEl = document.getElementById('incoming-offer-meta');
 
+  const hdrPlayer = target || {
+    name: offer.playerName,
+    fullName: offer.playerName,
+    pos: offer.playerPos,
+    age: offer.playerAge,
+    squadNumber: offer.squadNumber,
+    wage: offer.wage || 20,
+    contractYears: 2,
+    preferredFoot: 'Right',
+    height: 180,
+    nationality: 'England'
+  };
+  const hdrData = typeof buildUnifiedPlayerModalHeaderData === 'function'
+    ? buildUnifiedPlayerModalHeaderData(hdrPlayer, playerClub, (playerClub && playerClub.name) || '自クラブ')
+    : null;
+
   if (squadNumEl) squadNumEl.textContent = `#${offer.squadNumber}`;
-  if (catEl) catEl.textContent = offer.isMegaClub ? 'EUROPEAN MEGA BID / CRITICAL' : 'DOMESTIC TRANSFER BID';
-  if (posPill) posPill.textContent = offer.playerPos;
-  if (titleEl) titleEl.textContent = `${offer.buyerClubName} からの買取オファー`;
-  if (metaEl) {
+  if (catEl && hdrData) catEl.innerHTML = hdrData.clubHtml;
+  if (posPill && hdrData) posPill.innerHTML = hdrData.posMetaHtml;
+  if (titleEl && hdrData) titleEl.innerHTML = hdrData.nameHtml;
+  if (metaEl && hdrData) {
     metaEl.innerHTML = `
-      <span>買い手: <strong>${offer.buyerClubName}</strong>${offer.buyerClubCountry ? ` (${offer.buyerClubCountry})` : ''}</span>
-      <span>対象: <strong>${offer.playerName}</strong> (${offer.playerAge}歳 / OVR ${offer.ovr})</span>
-      <span>現週給: <strong>${formatWage(offer.wage)}</strong></span>
+      <span class="profile-bio-chip">週給 <strong class="accent-gold">£${hdrData.weeklyWageVal.toLocaleString()}k/週</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">市場価値 <strong class="accent-green">${formatMoney(hdrData.estMarketValue)}</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">${hdrData.contractText}</span>
     `;
   }
 
@@ -4721,10 +4832,10 @@ function renderIncomingOfferBody(offer, resultData = null) {
     bodyEl.innerHTML = `
       <div class="incoming-offer-result ${isSuccess ? 'result-success' : 'result-failed'}">
         <div class="result-header mono">
-          <span class="result-status-tag ${isSuccess ? 'tag-success' : 'tag-fail'}">${isSuccess ? 'AGREEMENT REACHED' : 'TALKS COLLAPSED'}</span>
-          <h3 class="result-title">${isSuccess ? '増額オファー合意！ 移籍成立' : '交渉決裂・相手クラブ撤退'}</h3>
+          <span class="result-status-tag ${isSuccess ? 'tag-success' : 'tag-fail'}">${isSuccess ? '交渉成立' : '交渉決裂'}</span>
+          <h3 class="result-title">${isSuccess ? '増額オファー合意 · 移籍成立' : '相手クラブが交渉から撤退'}</h3>
         </div>
-        <div class="result-body-text" style="padding: 14px; background: rgba(0,0,0,0.25); border-radius: 6px; line-height: 1.6; font-size: 13px; margin: 12px 0;">
+        <div class="result-body-text" style="padding: 12px 2px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); line-height: 1.6; font-size: 13px; margin: 10px 0;">
           ${resultData.message}
         </div>
         <div class="incoming-offer-actions mt-3">
@@ -4740,29 +4851,44 @@ function renderIncomingOfferBody(offer, resultData = null) {
   }
 
   const diffSign = offer.ratioPercent >= 0 ? `+${offer.ratioPercent}%` : `${offer.ratioPercent}%`;
+  const buyerFlag = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(offer.buyerClubName, 16, 'profile-club-emblem') : '';
 
   bodyEl.innerHTML = `
-    <div class="incoming-offer-hero">
-      <div class="incoming-offer-fee-box">
-        <div class="incoming-fee-label mono">PROPOSED TRANSFER FEE (提示移籍金)</div>
-        <div class="incoming-offer-amt mono accent-gold">${formatMoney(offer.offerFee)}</div>
-        <div class="incoming-fee-diff mono text-accent">市場推定価格 ${formatMoney(offer.baseFee)} (${diffSign})</div>
+    <div class="ui-plate-grid cols-2">
+      <div class="ui-stat-plate is-gold">
+        <span class="ui-plate-label">提示移籍金 (${offer.buyerClubName})</span>
+        <span class="ui-plate-val accent-gold">${formatMoney(offer.offerFee)}</span>
       </div>
-      <div class="incoming-offer-desc">
-        ${offer.buyerClubCountry}の名門クラブ「<strong>${offer.buyerClubName}</strong>」が、当クラブ所属の主力 <strong>${offer.playerPos} #${offer.squadNumber} ${offer.playerName}</strong>（${offer.playerAge}歳 / OVR ${offer.ovr}）の完全移籍を強く希望し、<strong>${formatMoney(offer.offerFee)}</strong> の即時買取オファーを打診してきました。<br>
-        GMとして、オファーを承諾して巨額のクラブ資金を得るか、拒否してチームの戦力を死守するか、あるいは強気な増額カウンターを要求するか決断してください。
+      <div class="ui-stat-plate is-highlight">
+        <span class="ui-plate-label">市場推定価格との差</span>
+        <span class="ui-plate-val accent-green">${formatMoney(offer.baseFee)} (${diffSign})</span>
+      </div>
+    </div>
+
+    <div class="ui-kv-list">
+      <div class="ui-kv-row">
+        <div class="ui-kv-label accent-gold-bar">オファー元</div>
+        <div class="ui-kv-content mono" style="display:flex;align-items:center;gap:6px;font-size:12.5px;">
+          ${buyerFlag}<strong>${offer.buyerClubName}</strong><span class="text-muted">(${offer.buyerClubCountry || '海外'})</span>
+        </div>
+      </div>
+      <div class="ui-kv-row">
+        <div class="ui-kv-label">打診内容</div>
+        <div class="ui-kv-content" style="font-size:12.5px;line-height:1.5;color:#d1d5db;">
+          完全移籍での即時獲得を希望しています。提示額を受諾して売却するか、増額要求・売却拒否を選択してください。
+        </div>
       </div>
     </div>
 
     <div class="incoming-offer-actions">
-      <button type="button" class="btn btn-accent btn-lg" id="btn-incoming-accept" title="提示額で売却し、資金を獲得します">
-        <span class="mono">① ACCEPT</span> 【オファー承諾】売却して資金受領 (+${formatMoney(offer.offerFee)})
+      <button type="button" class="btn btn-accent" id="btn-incoming-accept" title="提示額で売却し、資金を獲得します">
+        承諾して売却 (+${formatMoney(offer.offerFee)})
       </button>
-      <button type="button" class="btn btn-primary btn-lg" id="btn-incoming-counter" title="提示額の1.35倍を要求。50%で合意、50%で破談">
-        <span class="mono">② COUNTER</span> 【増額要求】移籍金 ${formatMoney(offer.counterFee)} を逆提案 (勝率50%)
+      <button type="button" class="btn btn-primary" id="btn-incoming-counter" title="提示額の1.35倍を要求。50%で合意、50%で破談">
+        増額を逆提案 (${formatMoney(offer.counterFee)} / 勝率50%)
       </button>
-      <button type="button" class="btn btn-secondary btn-lg" id="btn-incoming-reject" title="売却を拒否して選手を残留させます">
-        <span class="mono">③ REJECT</span> 【売却拒否・残留】オファーを断る (戦力維持)
+      <button type="button" class="btn btn-secondary" id="btn-incoming-reject" title="売却を拒否して選手を残留させます">
+        売却を拒否して残留
       </button>
     </div>
   `;
@@ -8218,7 +8344,7 @@ function renderRoster() {
     } else if (p.contractRefused) {
       extendBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled title="交渉決裂のためオフシーズンにフリー流出確定">交渉決裂</button>`;
     } else if (canExtend) {
-      extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
+      extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・週給交渉モーダルを開く">契約交渉</button>`;
     }
 
     // 22歳以下の若手に対する「レンタル（レンタル放出）」ボタン
@@ -8740,13 +8866,14 @@ function renderIncomingOffers() {
             </button>
             <div class="offer-player-meta">
               <div class="offer-player-name">
-                <span class="accent-green mono">[${offer.playerPos}]</span>
+                <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
                 <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
-                  #${offer.squadNumber} ${offer.playerName}
+                  #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
                 </button>
               </div>
               <div class="offer-player-tags">
                 <span>${offer.playerAge}歳</span>
+                ${target ? `<span class="profile-meta-foot">${formatFootBadge(target)}</span>` : ''}
                 ${(() => {
                   const isMyNow = Boolean(playerClub && playerClub.players && playerClub.players.some(x => x.id === offer.playerId));
                   const sv = (target && typeof getPlayerScoutedView === 'function')
@@ -8769,7 +8896,7 @@ function renderIncomingOffers() {
             </div>
             <div class="offer-finance-block">
               <span class="offer-finance-label">提示週給 / 契約</span>
-              <span class="offer-finance-val mono">${formatWage(offer.offeredWage)} (${offer.offeredYears}年)</span>
+              <span class="offer-finance-val mono">£${(offer.offeredWage || 0).toLocaleString()}k/週 (${offer.offeredYears}年)</span>
             </div>
           </div>
 
@@ -8810,10 +8937,10 @@ function renderIncomingOffers() {
         </div>
       `;
     } else if (offer.status === 'counter_agreed') {
-      deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">上乗せ合意！ 残り期限: ${offer.daysLeft}日</span>`;
+      deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">上乗せ合意 · 残り${offer.daysLeft}日</span>`;
       actionButtons = `
-        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (ACCEPT: <span class="mono">${formatMoney(offer.offerFee)}</span>)</button>
-        <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒絶 (REJECT)</button>
+        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (<span class="mono">${formatMoney(offer.offerFee)}</span>)</button>
+        <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否する</button>
       `;
     } else if (offer.status === 'accepted') {
       if (offer.isLoanOffer) {
@@ -8840,15 +8967,15 @@ function renderIncomingOffers() {
       if (offer.isLoanOffer) {
         deadlineBadge = `<div class="offer-deadline-badge mono accent-green">レンタル打診（残り${offer.daysLeft}日）</div>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">レンタルへ送り出す (承諾)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる (拒絶)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">レンタルへ送り出す</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる</button>
         `;
       } else {
         deadlineBadge = `<div class="offer-deadline-badge mono">回答期限: 残り${offer.daysLeft}日</div>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
-          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ (COUNTER)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾して売却</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否する</button>
+          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ要求</button>
         `;
       }
     }
@@ -8870,15 +8997,15 @@ function renderIncomingOffers() {
           </button>
           <div class="offer-player-meta">
             <div class="offer-player-name">
-              <span class="accent-green mono">[${offer.playerPos}]</span>
+              <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
               <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
-                #${offer.squadNumber} ${offer.playerName}
+                #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
               </button>
             </div>
             <div class="offer-player-tags">
               <span>${offer.playerAge}歳</span>
               <span class="ovr-cell-badge ${getOvrTierClass(offer.ovr)}">OVR ${offer.ovr}</span>
-              <span>${footBadge}</span>
+              <span class="profile-meta-foot">${footBadge}</span>
             </div>
           </div>
         </div>
@@ -8890,7 +9017,7 @@ function renderIncomingOffers() {
           </div>
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '給与負担' : '選手週給'}</span>
-            <span class="offer-finance-val mono ${offer.isLoanOffer ? 'accent-green' : ''}">${offer.isLoanOffer ? '相手100%全額負担' : formatWage(offer.wage)}</span>
+            <span class="offer-finance-val mono ${offer.isLoanOffer ? 'accent-green' : ''}">${offer.isLoanOffer ? '相手100%全額負担' : `£${(offer.wage || 0).toLocaleString()}k/週`}</span>
           </div>
         </div>
 
@@ -9373,7 +9500,7 @@ function renderYouthSquad() {
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
     const pot = y.potential || y.potentialGrade || 'B';
-    const potClass = pot === 'S' ? 'stat-rank-S' : (pot === 'A' ? 'stat-rank-A' : (pot === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
+    const potClass = `stat-rank-${['S', 'A', 'B', 'C', 'D', 'E'].includes(pot) ? pot : 'C'}`;
     const canPromoteBtn = canPromote ? `
       <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
         昇格
@@ -9453,23 +9580,29 @@ function renderYouthScoutingPanel() {
         const ovr = getPlayerOverallRating(y);
         const nat = y.nationality || 'England';
         const flag = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(nat) : '';
+        const footHtml = typeof formatFootBadge === 'function' ? formatFootBadge(y) : '';
         const traits = Array.isArray(y.traits) ? y.traits.slice(0, 2) : [];
+        const yPot = y.potential || 'B';
+        const yPotCls = `stat-rank-${['S', 'A', 'B', 'C', 'D', 'E'].includes(yPot) ? yPot : 'B'}`;
+        const rAtk = getAttributeRankInfo(y.atk);
+        const rDef = getAttributeRankInfo(y.def);
+        const rSta = getAttributeRankInfo(y.sta);
         return `
           <div class="youth-report-card">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
               <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                 <span class="pos-tag pos-${y.pos}">${y.pos}</span>
-                <strong style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${y.name}</strong>
+                <strong style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${y.fullName || y.name}</strong>
               </div>
-              <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${y.potential === 'S' ? 'stat-rank-S' : (y.potential === 'A' ? 'stat-rank-A' : 'stat-rank-B')}" style="font-size:14px; font-weight:900;">POT ${y.potential || 'B'}</span></span>
+              <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${yPotCls}" style="font-size:14px; font-weight:900;">POT ${yPot}</span></span>
             </div>
-            <div class="mono text-muted" style="font-size:10.5px;">
-              ${flag} ${nat} | ${y.age}歳 | ${y.scoutRegionName || '発掘'}
+            <div class="mono text-muted" style="font-size:10.5px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+              <span>${flag} ${nat}</span> · <span>${y.age}歳</span>${footHtml ? ` · <span class="profile-meta-foot">${footHtml}</span>` : ''} · <span>${y.scoutRegionName || '発掘'}</span>
             </div>
             <div class="staff-stats-chips" style="margin-top:0;">
-              <span class="staff-stat-chip">ATK <strong>${y.atk}</strong></span>
-              <span class="staff-stat-chip">DEF <strong>${y.def}</strong></span>
-              <span class="staff-stat-chip">STA <strong>${y.sta}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rAtk.rank}">ATK <strong>${rAtk.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.atk}</span></span>
+              <span class="staff-stat-chip stat-rank-${rDef.rank}">DEF <strong>${rDef.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.def}</span></span>
+              <span class="staff-stat-chip stat-rank-${rSta.rank}">STA <strong>${rSta.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.sta}</span></span>
               ${traits.map(tr => `<span class="staff-specialty-tag">${tr}</span>`).join('')}
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
@@ -10126,6 +10259,19 @@ function findPlayerWithContextById(playerId) {
 }
 
 /**
+ * 能力値(0-99)からアルファベットランク(S〜E)と表示色を返す
+ */
+function getAttributeRankInfo(val) {
+  const v = typeof val === 'number' && !Number.isNaN(val) ? val : 50;
+  if (v >= 90) return { rank: 'S', color: '#7dd3fc', cls: 'hex-rank-s' };
+  if (v >= 80) return { rank: 'A', color: '#2ecc71', cls: 'hex-rank-a' };
+  if (v >= 70) return { rank: 'B', color: '#a3e635', cls: 'hex-rank-b' };
+  if (v >= 60) return { rank: 'C', color: '#fbbf24', cls: 'hex-rank-c' };
+  if (v >= 50) return { rank: 'D', color: '#fb923c', cls: 'hex-rank-d' };
+  return { rank: 'E', color: '#f87171', cls: 'hex-rank-e' };
+}
+
+/**
  * 選手カード用の六角形レーダーチャートSVGを生成する
  * 頂点順（時計回り・上から）：決定力、ドリブル、パス、守備、スピード、スタミナ
  */
@@ -10146,9 +10292,9 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
     return { ...a, isRange: false, displayVal: `${a.val}` };
   });
 
-  const cx = 160;
-  const cy = 116;
-  const maxR = 64;
+  const cx = 125;
+  const cy = 112;
+  const maxR = 52;
   const levels = [0.25, 0.5, 0.75, 1.0];
 
   const getPoint = (angleDeg, r) => {
@@ -10195,67 +10341,60 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
 
   const dataPolyPts = valPoints.map(v => `${v.pt.x},${v.pt.y}`).join(' ');
   const dataDots = valPoints.map(v => {
-    const tierCls = getOvrTierClass(v.val);
-    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.5" class="hex-data-dot ${tierCls}" />`;
+    const rankInfo = getAttributeRankInfo(v.val);
+    return `<circle cx="${v.pt.x}" cy="${v.pt.y}" r="3.2" class="hex-data-dot" style="fill:${rankInfo.color};" />`;
   }).join('');
 
-  // ラベルと数値の配置
+  // ラベル・ランク（S〜E）・数値の3段配置
   const labelsSvg = axes.map(a => {
-    const tierCls = getOvrTierClass(a.val);
+    const rankInfo = getAttributeRankInfo(a.val);
     let lx = cx;
-    let lyLabel = cy;
+    let lyName = cy;
+    let lyRank = cy;
     let lyVal = cy;
-    let anchor = 'middle';
+    const anchor = 'middle';
 
     if (a.angleDeg === -90) {
-      // 上：決定力
       lx = cx;
-      lyLabel = cy - maxR - 23;
-      lyVal = cy - maxR - 8;
-      anchor = 'middle';
+      lyName = 16;
+      lyRank = 35;
+      lyVal = 49;
     } else if (a.angleDeg === 90) {
-      // 下：守備
       lx = cx;
-      lyLabel = cy + maxR + 15;
-      lyVal = cy + maxR + 31;
-      anchor = 'middle';
+      lyName = 180;
+      lyRank = 199;
+      lyVal = 213;
     } else if (a.angleDeg === -30) {
-      // 右上：ドリブル
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x + 10;
-      lyLabel = outer.y - 5;
-      lyVal = outer.y + 11;
-      anchor = 'start';
+      lx = 210;
+      lyName = 68;
+      lyRank = 87;
+      lyVal = 101;
     } else if (a.angleDeg === 30) {
-      // 右下：パス
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x + 10;
-      lyLabel = outer.y - 3;
-      lyVal = outer.y + 13;
-      anchor = 'start';
+      lx = 210;
+      lyName = 132;
+      lyRank = 151;
+      lyVal = 165;
     } else if (a.angleDeg === 150) {
-      // 左下：スピード
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x - 10;
-      lyLabel = outer.y - 3;
-      lyVal = outer.y + 13;
-      anchor = 'end';
+      lx = 40;
+      lyName = 132;
+      lyRank = 151;
+      lyVal = 165;
     } else if (a.angleDeg === -150) {
-      // 左上：スタミナ
-      const outer = getPoint(a.angleDeg, maxR);
-      lx = outer.x - 10;
-      lyLabel = outer.y - 5;
-      lyVal = outer.y + 11;
-      anchor = 'end';
+      lx = 40;
+      lyName = 68;
+      lyRank = 87;
+      lyVal = 101;
     }
 
+    const rankText = a.isRange ? `${rankInfo.rank}?` : rankInfo.rank;
     const valSvgHtml = a.isRange
-      ? `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val"><tspan class="${getOvrTierClass(a.min)}">${a.min}</tspan><tspan fill="#ffffff">~</tspan><tspan class="${getOvrTierClass(a.max)}">${a.max}</tspan></text>`
-      : `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val ${tierCls}">${a.displayVal}</text>`;
+      ? `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val-sub"><tspan class="${getOvrTierClass(a.min)}">${a.min}</tspan><tspan fill="#8b949e">~</tspan><tspan class="${getOvrTierClass(a.max)}">${a.max}</tspan></text>`
+      : `<text x="${lx}" y="${lyVal}" text-anchor="${anchor}" class="hex-label-val-sub">${a.displayVal}</text>`;
 
     return `
       <g class="hex-label-group">
-        <text x="${lx}" y="${lyLabel}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
+        <text x="${lx}" y="${lyName}" text-anchor="${anchor}" class="hex-label-name">${a.label}</text>
+        <text x="${lx}" y="${lyRank}" text-anchor="${anchor}" class="hex-label-rank" fill="${rankInfo.color}">${rankText}</text>
         ${valSvgHtml}
       </g>
     `;
@@ -10263,7 +10402,7 @@ function buildPlayerHexagonChartSvg(attrs, scoutRanges = null) {
 
   return `
     <div class="profile-hexagon-wrap">
-      <svg viewBox="0 0 320 232" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
+      <svg viewBox="0 0 250 224" class="profile-hexagon-svg" role="img" aria-label="選手能力六角形チャート">
         ${gridPolygons}
         ${axisLines}
         ${rangeMaxPolyHtml}
@@ -11077,7 +11216,7 @@ function openPlayerProfileModal(playerId) {
 
   const headerFootEl = document.getElementById('profile-header-foot');
   if (headerFootEl) {
-    headerFootEl.innerHTML = formatFootBadge(p);
+    headerFootEl.innerHTML = '';
   }
   const headerOvrEl = document.getElementById('profile-header-ovr');
   if (headerOvrEl) {
@@ -11091,12 +11230,26 @@ function openPlayerProfileModal(playerId) {
         valEl.className = 'profile-header-ovr-val';
       }
       valEl.style.background = 'none';
-      valEl.style.fontSize = scoutView.isScouted ? '' : '20px';
+      valEl.style.fontSize = scoutView.isScouted ? '' : '16px';
     }
   }
   const avgRating = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : 'N/A';
   const pFtgVal = getPlayerFatigue(p);
   const pFtgStatus = getPlayerFatigueStatus(pFtgVal);
+  const isInjured = Boolean((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0));
+  const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
+  const appRate = (p.appearances || 0) > 0
+    ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
+    : 0;
+  const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
+  const roleStatusText = isMarket
+    ? '移籍リスト登録中'
+    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
+  const conditionText = isInjured
+    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
+    : '良好 (出場可能)';
+  const conditionClass = isInjured ? 'text-danger' : 'accent-green';
 
   const footLabelMap = {
     Right: 'Right',
@@ -11113,7 +11266,7 @@ function openPlayerProfileModal(playerId) {
   const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
   const rawNat = p.nationality || 'England';
   const flagHtml = getNationalityFlagHtml(rawNat);
-  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:6px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:5px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
   const squadNumText = `#${p.squadNumber || 10}`;
   const traits = Array.isArray(p.traits) && p.traits.length > 0 ? p.traits : ['ハードワーカー'];
   const careerApps = p.careerStats ? p.careerStats.appearances : p.appearances;
@@ -11121,8 +11274,19 @@ function openPlayerProfileModal(playerId) {
 
   const attrs = getPlayerFiveAttributes(p);
 
+  const topBarEl = document.getElementById('profile-top-club-bar');
+  if (topBarEl) {
+    const clubColor = (ctx.club && ctx.club.primaryColor) || (isFreeAgentPlayer ? '#475569' : '#2ecc71');
+    topBarEl.style.setProperty('--profile-club-accent', clubColor);
+  }
   const squadNumEl = document.getElementById('profile-squad-num');
   if (squadNumEl) squadNumEl.textContent = squadNumText;
+
+  const topStatusEl = document.getElementById('profile-top-status');
+  if (topStatusEl) {
+    topStatusEl.textContent = '';
+    topStatusEl.className = 'profile-top-status-badge mono hidden';
+  }
 
   // スカウティングレポート用 大型ドット絵アバター（64x64 / 2倍スケール描画）
   const avatarCanvasEl = document.getElementById('profile-avatar-canvas');
@@ -11133,75 +11297,58 @@ function openPlayerProfileModal(playerId) {
   }
 
   const clubLabelEl = document.getElementById('profile-club-label');
-  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 18, 'profile-club-emblem')}<span>${clubDisplayLabel}</span>`;
+  if (clubLabelEl) clubLabelEl.innerHTML = `${getClubEmblemSvg(ctx.club || clubName, 17, 'profile-club-emblem')}<span>${clubDisplayLabel}</span>`;
+
+  ensurePlayerProficiencies(p);
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? p.mainPositions
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+  const subsRaw = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+  const subsFiltered = subsRaw.filter(sp => !mains.includes(sp));
 
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
-    ensurePlayerProficiencies(p);
-    const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
-      ? p.mainPositions
-      : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
-    const subs = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
-
-    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main" title="本適性ポジション">${mp}</span>`).join(' ');
-    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub" title="薄適性ポジション">${sp}</span>`).join(' ');
-
+    const subPosTextHtml = subsFiltered.length > 0
+      ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+      : '';
     posPillEl.innerHTML = `
-      <div class="profile-pos-badges-wrap">
-        ${mainBadgesHtml}
-        ${subBadgesHtml}
-      </div>
+      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-foot">${formatFootBadge(p)}</span>
+      <span class="profile-meta-text">${heightText}</span>
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-nat">${nationalityDisplay}</span>
     `;
   }
 
   const nameEl = document.getElementById('profile-player-name');
   if (nameEl) {
-    if (p.fullName && p.fullName !== p.name) {
-      nameEl.innerHTML = `<span class="profile-name-main">${p.name}</span><span class="profile-fullname-sub">(${p.fullName})</span>`;
-    } else {
-      nameEl.textContent = p.name;
-    }
+    const displayFullName = p.fullName || p.name;
+    nameEl.innerHTML = `<span class="profile-name-main">${displayFullName}</span><span class="profile-age-inline">(${p.age})</span>`;
   }
 
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
-    const footBadgeStr = formatFootBadge(p);
-    let youthBadgeHtml = '';
+    let youthMetaHtml = '';
     if (isYouth) {
       const potRank = p.potential || p.potentialGrade || 'B';
-      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
-      youthBadgeHtml = `
-        <span class="profile-bio-chip mono ${potRankClass}" style="border-color:currentColor;font-weight:700;">POT: ${potRank}</span>
+      const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : (potRank === 'C' ? 'stat-rank-C' : (potRank === 'D' ? 'stat-rank-D' : 'stat-rank-E'))));
+      youthMetaHtml = `
+        <span class="profile-bio-chip">想定週給 <strong class="accent-green">£${(p.wage || 2.5).toLocaleString()}k/週</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip ${potRankClass}" style="font-weight:800;">POT: ${potRank}</span>
+      `;
+    } else {
+      youthMetaHtml = `
+        <span class="profile-bio-chip">${isMarket ? '要求週給' : '週給'} <strong class="accent-gold">£${weeklyWageVal.toLocaleString()}k/週</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <button type="button" class="profile-inline-mv-link profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示">市場価値 <strong class="accent-green">${formatMoney(estMarketValue)}</strong></button>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip">契約 ${p.contractYears}年</span>
       `;
     }
 
-    bioRowEl.innerHTML = `
-      <span class="profile-bio-chip">${nationalityDisplay}</span>
-      <span class="profile-bio-chip">${p.age}歳</span>
-      <span class="profile-bio-chip">${heightText}</span>
-      <span class="profile-bio-chip mono" id="profile-squad-num" style="color:var(--accent-green);font-weight:700;">${squadNumText}</span>
-      <span class="profile-bio-chip profile-bio-foot-mob">${formatFootBadge(p)}</span>
-      <span class="profile-bio-chip mono" style="color:${pFtgStatus.color};">疲労: ${pFtgVal} (${pFtgStatus.label})</span>
-      ${youthBadgeHtml}
-    `;
-  }
-
-  let currentSlotBanner = '';
-  if (p.isStarter && p.assignedPos) {
-    const fitInfo = getPositionFitInfo(p, p.assignedPos);
-    let fitColorClass = 'accent-green';
-    let fitSymbol = '◎ ';
-    let fitSlotNote = '本職として機能';
-    if (fitInfo.type === 'sub') { fitColorClass = 'text-cyan'; fitSymbol = '◯ '; fitSlotNote = 'サブ適性で対応'; }
-    else if (fitInfo.type === 'semi') { fitColorClass = 'text-warning'; fitSymbol = '△ '; fitSlotNote = '不慣れな配置'; }
-    else if (fitInfo.type === 'out') { fitColorClass = 'text-danger'; fitSymbol = '✕ '; fitSlotNote = '適性外の配置'; }
-
-    currentSlotBanner = `
-      <div class="profile-fit-row" style="margin-top: 4px; border-color: rgba(46, 204, 113, 0.4);">
-        <span class="text-muted">現在の配置スロット: <strong class="mono">${p.assignedPos}</strong></span>
-        <span class="mono ${fitColorClass}"><strong>${fitSymbol}${fitSlotNote}</strong></span>
-      </div>
-    `;
+    bioRowEl.innerHTML = youthMetaHtml;
   }
 
   // 6大能力パラメータの六角形レーダーチャート（決定力・ドリブル・パス・守備・スピード・スタミナ）
@@ -11303,22 +11450,12 @@ function openPlayerProfileModal(playerId) {
   }
 
 
-  // 今季成績の補助指標
-  const clubPlayedMatches = Math.max(1, (playerClub && playerClub.played) || gameState.currentWeek || 0);
-  const appRate = (p.appearances || 0) > 0
-    ? Math.min(100, Math.round(((p.appearances || 0) / clubPlayedMatches) * 100))
-    : 0;
+  // 今季成績・コンディション補助指標
   const goalsPerMatch = (p.appearances || 0) > 0
     ? ((p.goals || 0) / p.appearances).toFixed(2)
     : '0.00';
-  const roleStatusText = isMarket
-    ? '移籍リスト登録中'
-    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
-  const conditionText = (p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)
-    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
-    : '良好 (出場可能)';
-  const conditionClass = ((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0)) ? 'text-danger' : 'accent-green';
-  const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
+  const condPct = isInjured ? 20 : clamp(100 - pFtgVal, 0, 100);
+  const condColor = isInjured ? '#f87171' : (condPct >= 70 ? '#2ecc71' : (condPct >= 40 ? '#38bdf8' : '#fbbf24'));
 
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
   const lastHistoryRow = seasonHistory.length > 0 ? seasonHistory[seasonHistory.length - 1] : null;
@@ -11448,120 +11585,99 @@ function openPlayerProfileModal(playerId) {
     </div>
   `).join('');
 
+  const abilityActionsHtml = isYouth ? `
+    <div class="profile-ability-actions">
+      <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
+        トップチームへ昇格 (契約金 £40k · 週給 £${p.wage || 2.5}k · 3年)
+      </button>
+      <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 9px 14px;">
+        放出
+      </button>
+    </div>
+  ` : (!isMyClubPlayer && !isCandidate ? (() => {
+    const activeScout = (gameState.activeScoutAssignments || []).find(a => a.playerId === p.id);
+    const scoutActionBtn = !scoutView.isScouted
+      ? (activeScout
+        ? `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="padding: 8px 12px; opacity: 0.75;">調査中(${activeScout.daysRemaining}日)</button>`
+        : `<button type="button" class="btn btn-secondary btn-sm mono" data-profile-scout-dispatch="${p.id}" style="padding: 8px 12px; font-weight: 700;">調査派遣</button>`)
+      : '';
+    return `
+    <div class="profile-ability-actions">
+      ${scoutActionBtn}
+      <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 8px 12px;">
+        ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 8px 14px; font-weight: 700;">
+        ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
+      </button>
+    </div>`;
+  })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
+    <div class="profile-ability-actions">
+      <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
+        ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
+      </button>
+    </div>
+  ` : ''));
+
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
-      <!-- タブ1：能力（階層UI：左見出し・右詳細 ＋ スリムゲージ ＋ 数値プレート） -->
+      <!-- タブ1：能力（左レーダーチャート＋右適性ピッチ2カラム ＋ 特徴インライン ＋ コンディションゲージ） -->
       <div class="profile-tab-panel" data-profile-panel="ability">
-        <div class="profile-section-grid">
-          <div class="profile-box profile-box-hexagon">
-            <div class="profile-box-header">
-              <span class="ui-kv-label" style="margin-top: 0;">能力チャート</span>
-              <span class="profile-ovr-badge ${scoutView.isScouted ? getOvrTierClass(baseOvr) : ''}" style="background:none;">OVR ${ovrDisplayHtml}</span>
-            </div>
-            ${hexagonChartHtml}
-            <div class="ui-kv-list" style="margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);">
-              <div class="ui-kv-row">
-                <div class="ui-kv-label">選手特徴</div>
-                <div class="ui-kv-content">
-                  <div class="profile-traits-wrap">
-                    ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">${t}</button>`).join('')}
-                  </div>
-                  <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
-                </div>
+        <div class="profile-ability-board">
+          <div class="profile-ability-board-grid">
+            <div class="profile-ability-col-chart">
+              <div class="profile-col-heading">
+                <span class="profile-col-title is-accent">能力</span>
+                <span class="profile-col-sub mono">OVR <strong class="${scoutView.isScouted ? getOvrTierClass(baseOvr) : ''}">${ovrDisplayHtml}</strong></span>
               </div>
+              ${hexagonChartHtml}
+            </div>
+            <div class="profile-ability-col-pitch">
+              <div class="profile-col-heading">
+                <span class="profile-col-title">適性配置</span>
+              </div>
+              ${buildPlayerPitchProficiencyHtml(p)}
             </div>
           </div>
 
-          <div class="profile-box">
-            <div class="ui-kv-list">
-              <div class="ui-kv-row">
-                <div class="ui-kv-label accent-cyan-bar">適性配置</div>
-                <div class="ui-kv-content">
-                  ${buildPlayerPitchProficiencyHtml(p)}
-                </div>
+          <div class="profile-traits-inline-row">
+            <span class="profile-inline-label">特徴</span>
+            <div class="profile-traits-content">
+              <div class="profile-traits-wrap">
+                ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">・ ${t}</button>`).join('')}
               </div>
-              ${trainingSectionHtml}
+              <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
             </div>
           </div>
         </div>
 
-        <!-- 契約・価値 数値プレート階層 -->
-        <div class="ui-kv-list" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">
-          ${isYouth ? `
-            <div class="ui-kv-row">
-              <div class="ui-kv-label accent-gold-bar">プロ契約</div>
-              <div class="ui-kv-content">
-                <div class="ui-plate-grid">
-                  <div class="ui-stat-plate is-gold">
-                    <span class="ui-plate-label">初回契約金</span>
-                    <span class="ui-plate-val accent-gold">£40k</span>
-                  </div>
-                  <div class="ui-stat-plate is-highlight">
-                    <span class="ui-plate-label">想定週給</span>
-                    <span class="ui-plate-val accent-green">£${p.wage || 2.5}k/週</span>
-                  </div>
-                  <div class="ui-stat-plate">
-                    <span class="ui-plate-label">契約 / POT</span>
-                    <span class="ui-plate-val">3年 · ${p.potential || p.potentialGrade || 'B'}</span>
-                  </div>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 8px;">
-                  <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
-                    トップチームへ昇格
-                  </button>
-                  <button type="button" class="btn btn-danger-outline mono btn-modal-release-youth" data-youth-id="${p.id}" style="font-weight: 700; padding: 9px 14px;">
-                    放出
-                  </button>
-                </div>
-              </div>
+        <div class="profile-condition-gauges-bar">
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">コンディション</span>
+              <span class="profile-cond-val mono" style="color:${condColor};">${condPct}%</span>
             </div>
-          ` : `
-            <div class="ui-kv-row">
-              <div class="ui-kv-label accent-gold-bar">契約・価値</div>
-              <div class="ui-kv-content">
-                <div class="ui-plate-grid">
-                  <div class="ui-stat-plate is-gold">
-                    <span class="ui-plate-label">${isMarket ? '要求年俸' : '現在年俸'}</span>
-                    <span class="ui-plate-val accent-gold">${formatMoney(p.salary)}</span>
-                  </div>
-                  <div class="ui-stat-plate">
-                    <span class="ui-plate-label">契約残年数</span>
-                    <span class="ui-plate-val">${p.contractYears}年</span>
-                  </div>
-                  <div class="ui-stat-plate is-highlight profile-metric-clickable" data-switch-profile-tab="market-value" title="市場価値推移グラフを表示" style="cursor: pointer;">
-                    <span class="ui-plate-label">市場価値 ▶</span>
-                    <span class="ui-plate-val accent-green">${formatMoney(estMarketValue)}</span>
-                  </div>
-                </div>
-                ${!isMyClubPlayer && !isCandidate ? (() => {
-                  const activeScout = (gameState.activeScoutAssignments || []).find(a => a.playerId === p.id);
-                  const scoutActionBtn = !scoutView.isScouted
-                    ? (activeScout
-                      ? `<button type="button" class="btn btn-sm btn-disabled mono" disabled style="padding: 9px 12px; opacity: 0.75;">調査中(${activeScout.daysRemaining}日)</button>`
-                      : `<button type="button" class="btn btn-secondary btn-sm mono" data-profile-scout-dispatch="${p.id}" style="padding: 9px 12px; font-weight: 700;">調査派遣</button>`)
-                    : '';
-                  return `
-                  <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    ${scoutActionBtn}
-                    <button type="button" class="btn btn-primary btn-sm mono" data-profile-direct-offer="${p.id}" ${p.negotiationFailed ? 'disabled' : ''} style="flex: 1; font-weight: 700; padding: 9px 12px;">
-                      ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 9px 14px; font-weight: 700;">
-                      ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
-                    </button>
-                  </div>`;
-                })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
-                  <div style="margin-top: 10px;">
-                    <button type="button" class="btn btn-secondary btn-sm mono" data-profile-direct-renewal="${p.id}" ${p.contractRefused ? 'disabled' : ''} style="width: 100%; font-weight: 700; padding: 8px 12px;">
-                      ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
-                    </button>
-                  </div>
-                ` : '')}
-              </div>
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill" style="width:${condPct}%; background:${condColor};"></div></div>
+          </div>
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">疲労</span>
+              <span class="profile-cond-val mono" style="color:${pFtgStatus.color};">${pFtgVal} (${pFtgStatus.label})</span>
             </div>
-          `}
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill" style="width:${Math.max(4, pFtgVal)}%; background:${pFtgStatus.color};"></div></div>
+          </div>
+          <div class="profile-cond-item">
+            <div class="profile-cond-top">
+              <span class="profile-cond-label">出場率</span>
+              <span class="profile-cond-val mono accent-green">${appRate}%</span>
+            </div>
+            <div class="ui-slim-gauge"><div class="ui-slim-gauge-fill ovr-tier-high" style="width:${appRate}%"></div></div>
+          </div>
         </div>
+
+        ${trainingSectionHtml ? `<div class="profile-training-compact-wrap ui-kv-list">${trainingSectionHtml}</div>` : ''}
+        ${abilityActionsHtml}
       </div>
 
       <!-- タブ2：今季成績（数値プレート＋左見出し2カラム＋ゲージ） -->
@@ -11674,7 +11790,7 @@ function openPlayerProfileModal(playerId) {
                 <div class="profile-fit-row"><span class="text-muted">選手名</span><span class="mono"><strong>${p.fullName || p.name}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">国籍</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${nationalityDisplay}</strong></span></div>
                 <div class="profile-fit-row"><span class="text-muted">生年・年齢</span><span class="mono"><strong>${birthYear}年 (${p.age}歳)</strong></span></div>
-                <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono"><strong>${heightText} / ${footText}</strong></span></div>
+                <div class="profile-fit-row"><span class="text-muted">身長・利き足</span><span class="mono" style="display:inline-flex;align-items:center;gap:6px;"><strong>${heightText}</strong> / ${formatFootBadge(p)}</span></div>
                 <div class="profile-fit-row"><span class="text-muted">所属・背番号</span><span class="mono"><strong>${clubDisplayLabel} (${squadNumText})</strong></span></div>
               </div>
             </div>
@@ -11727,8 +11843,9 @@ function openPlayerProfileModal(playerId) {
       });
     }
 
-    // タブ内からの別タブジャンプ（推定市場価値カード等）
-    bodyEl.querySelectorAll('[data-switch-profile-tab]').forEach(btn => {
+    // カード全体（ヘッダーの市場価値リンク・タブ内カード等）からの別タブジャンプ
+    const profileCardScopeEl = document.getElementById('player-profile-modal-card') || bodyEl;
+    profileCardScopeEl.querySelectorAll('[data-switch-profile-tab]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (btn.dataset.switchProfileTab) {
@@ -14419,8 +14536,8 @@ function renderManagerManagementPanel() {
                   <span class="ui-plate-val accent-green">${mgr.trust}%</span>
                 </div>
                 <div class="ui-stat-plate is-gold">
-                  <span class="ui-plate-label">週給 (年俸)</span>
-                  <span class="ui-plate-val accent-gold">£${mgr.weeklyWage}k</span>
+                  <span class="ui-plate-label">週給</span>
+                  <span class="ui-plate-val accent-gold">£${mgr.weeklyWage}k/週</span>
                 </div>
                 <div class="ui-stat-plate">
                   <span class="ui-plate-label">契約残年数</span>
@@ -15231,13 +15348,13 @@ function openInitialStaffSetupModal(club) {
     baseMgrWage = 86;
     baseCoachWage = 25;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 62, discipline: 79 } },     // S/B/C/A
-      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 61 } },  // B/S/A/C
+      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 56, discipline: 79 } },     // S/B/D/A
+      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 55 } },  // B/S/A/D
       { focus: 'development', rank: 'A', stats: { tactics: 63, motivation: 78, development: 89, discipline: 72 } }, // C/A/S/B
-      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 62, development: 71, discipline: 89 } }   // A/C/B/S
+      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 54, development: 71, discipline: 89 } }   // A/D/B/S
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 73 } }, // S/C/B
+      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 55, analysis: 73 } }, // S/D/B
       { focus: 'youthDev', rank: 'A', stats: { coaching: 73, youthDev: 89, analysis: 61 } }, // B/S/C
       { focus: 'analysis', rank: 'A', stats: { coaching: 80, youthDev: 71, analysis: 81 } }  // A/B/A
     ];
@@ -15245,29 +15362,29 @@ function openInitialStaffSetupModal(club) {
     baseMgrWage = 62;
     baseCoachWage = 18;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 60, discipline: 71 } },     // A/B/C/B
-      { focus: 'motivation', rank: 'B', stats: { tactics: 61, motivation: 83, development: 71, discipline: 68 } },  // C/A/B/B
-      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 60, development: 84, discipline: 69 } }, // B/C/A/B
-      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 59, discipline: 83 } }   // B/B/C/A
+      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 54, discipline: 71 } },     // A/B/D/B
+      { focus: 'motivation', rank: 'B', stats: { tactics: 56, motivation: 83, development: 71, discipline: 68 } },  // D/A/B/B
+      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 55, development: 84, discipline: 69 } }, // B/D/A/B
+      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 52, discipline: 83 } }   // B/B/D/A
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 59, analysis: 69 } }, // A/C/B
-      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 59 } }, // B/A/C
-      { focus: 'analysis', rank: 'B', stats: { coaching: 60, youthDev: 70, analysis: 82 } }  // C/B/A
+      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 53, analysis: 69 } }, // A/D/B
+      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 54 } }, // B/A/D
+      { focus: 'analysis', rank: 'B', stats: { coaching: 59, youthDev: 70, analysis: 82 } }  // C/B/A
     ];
   } else {
     baseMgrWage = 40;
     baseCoachWage = 12;
     mgrProfiles = [
-      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 61, development: 56, discipline: 66 } },     // B/C/C/B
-      { focus: 'motivation', rank: 'C', stats: { tactics: 57, motivation: 75, development: 67, discipline: 59 } },  // C/B/B/C
-      { focus: 'development', rank: 'C', stats: { tactics: 66, motivation: 57, development: 75, discipline: 60 } }, // B/C/B/C
-      { focus: 'discipline', rank: 'C', stats: { tactics: 60, motivation: 67, development: 56, discipline: 74 } }   // C/B/C/B
+      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 59, development: 46, discipline: 64 } },     // B/C/E/C
+      { focus: 'motivation', rank: 'C', stats: { tactics: 51, motivation: 75, development: 68, discipline: 45 } },  // D/B/B/E
+      { focus: 'development', rank: 'C', stats: { tactics: 65, motivation: 47, development: 75, discipline: 59 } }, // C/E/B/C
+      { focus: 'discipline', rank: 'C', stats: { tactics: 56, motivation: 68, development: 45, discipline: 74 } }   // D/B/E/B
     ];
     coachProfiles = [
-      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 57, analysis: 62 } }, // B/C/C
-      { focus: 'youthDev', rank: 'C', stats: { coaching: 58, youthDev: 75, analysis: 61 } }, // C/B/C
-      { focus: 'analysis', rank: 'C', stats: { coaching: 62, youthDev: 57, analysis: 74 } }  // C/C/B
+      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 46, analysis: 61 } }, // B/E/C
+      { focus: 'youthDev', rank: 'C', stats: { coaching: 53, youthDev: 75, analysis: 47 } }, // D/B/E
+      { focus: 'analysis', rank: 'C', stats: { coaching: 61, youthDev: 52, analysis: 74 } }  // C/D/B
     ];
   }
 
