@@ -543,7 +543,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const userWon = myScore > oppScore;
     const userDraw = myScore === oppScore;
 
-    // 親善大会賞金とボーナス
+    // 親善大会賞金とホーム入場料・グッズ売上
     let prize = 300; // 参加賞 £300K
     let fanGain = 400;
     let moraleGain = 4;
@@ -562,14 +562,22 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       moraleGain += 3;
     }
 
-    playerClub.funds = (playerClub.funds || 0) + prize;
+    const stadiumLvPre = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+    const stadiumMultPre = 1 + (stadiumLvPre - 1) * 0.15;
+    const gateIncome = isHome
+      ? Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10
+      : 0;
+    const totalPreseasonIncome = prize + gateIncome;
+
+    playerClub.funds = (playerClub.funds || 0) + totalPreseasonIncome;
     playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + fanGain);
     playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
     const finalBonusText = (roundNum === 3 && userWon) ? ' WCTトロフィー獲得！' : '';
+    const gateNoteText = gateIncome > 0 ? ` / 入場・グッズ+${formatMoney(gateIncome)}` : '';
     const emitPreseasonPostMatchLogAndToast = () => {
-      addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
+      addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)}${gateNoteText} / サポーター+${fanGain}人）`);
     };
 
     currentDay.played = true;
@@ -606,13 +614,16 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       awayXg: Number((awayScore * 0.75 + 0.35).toFixed(2)),
       isPlayerHome: isHome,
       isPlayerMatch: true,
-      matchIncome: prize,
+      matchIncome: totalPreseasonIncome,
+      prizeIncome: prize,
+      gateIncome,
+      awayBroadcastingFee: isHome ? 0 : totalPreseasonIncome,
       playerSupportersDelta: fanGain,
       homeSubEvents: cupRatings.homeSubEvents || [],
       awaySubEvents: cupRatings.awaySubEvents || [],
       homeScorers,
       awayScorers,
-      prizeText: `+${formatMoney(prize)}`,
+      prizeText: `+${formatMoney(totalPreseasonIncome)}`,
       fanGainText: `+${fanGain}人`
     };
 
@@ -3586,8 +3597,12 @@ function buildMatchSummaryHtml(md) {
   }
 
   // GM収支＆サポーター増減
-  const revenueAmount = isPlayerHome ? (md.matchIncome || 1800) : (md.awayBroadcastingFee || 1600);
-  const revenueTypeLabel = isPlayerHome ? '入場料・グッズ' : '放映権分配金';
+  const revenueAmount = md.isPreseason
+    ? (md.matchIncome || 0)
+    : (isPlayerHome ? (md.matchIncome || 1800) : (md.awayBroadcastingFee || 1600));
+  const revenueTypeLabel = md.isPreseason
+    ? (md.gateIncome > 0 ? '賞金・入場・グッズ' : 'WCT大会賞金')
+    : (isPlayerHome ? '入場料・グッズ' : '放映権分配金');
   const supDelta = typeof md.playerSupportersDelta === 'number' ? md.playerSupportersDelta : (resType === 'win' ? 150 : (resType === 'draw' ? 30 : -40));
   const supSign = supDelta >= 0 ? '+' : '';
   const supColor = supDelta >= 0 ? 'var(--accent-green)' : '#e74c3c';

@@ -18655,6 +18655,19 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   white-space: nowrap;
 }
 
+.gm-vn-pill-badge.is-manager-pill {
+  background: #38bdf8;
+  color: #071b2e;
+}
+
+.gm-vn-pill-badge.is-manager-pill .gm-modal-sec-name {
+  color: #071b2e;
+}
+
+.gm-vn-pill-badge.is-manager-pill .gm-modal-sec-role {
+  color: #0c3554;
+}
+
 .gm-modal-sec-topic {
   background: #161b22;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -18846,6 +18859,388 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     font-size: 11.5px;
     gap: 8px;
   }
+
+  .gm-secretary-modal-card.is-report-modal {
+    min-height: auto !important;
+  }
+
+  .gm-secretary-modal-card.is-report-modal .gm-modal-sec-avatar-wrap {
+    width: 108px;
+    height: 118px;
+  }
+
+  .gm-secretary-modal-card.is-monthly-ceremony .gm-modal-sec-avatar-wrap {
+    width: 92px;
+    height: 100px;
+  }
+
+  .gm-secretary-modal-card.is-monthly-ceremony .gm-ledger-row {
+    padding: 4px 2px;
+    font-size: 11.5px;
+  }
+
+  .gm-report-sb-score {
+    font-size: 18px;
+  }
+
+  .gm-report-kpi-val {
+    font-size: 13px;
+  }
+
+  .gm-ledger-row {
+    font-size: 11.5px;
+  }
+}
+
+.gm-secretary-modal-card.is-report-modal {
+  min-height: auto;
+  max-height: 92vh;
+}
+
+.gm-secretary-modal-card.is-report-modal .gm-modal-sec-avatar-wrap {
+  width: 116px;
+  height: 126px;
+}
+
+.gm-secretary-modal-card.is-report-modal .gm-vn-dialogue-card {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.gm-secretary-modal-card.is-report-modal .gm-vn-dialogue-bottom {
+  margin-top: 2px;
+  gap: 8px;
+}
+
+.gm-secretary-modal-card.is-monthly-ceremony {
+  border-top: 3px solid #f59e0b;
+}
+
+.gm-secretary-modal-card.is-monthly-ceremony .gm-vn-stage-body {
+  background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.14), transparent 62%);
+}
+
+.gm-secretary-modal-card.is-monthly-ceremony .gm-vn-dialogue-card {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: #151920;
+}
+
+.gm-report-wrap,
+.gm-ceremony-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gm-report-scoreboard {
+  background: #1e242b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.gm-report-sb-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10.5px;
+}
+
+.gm-report-sb-comp {
+  color: #8b949e;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-report-sb-outcome {
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gm-report-sb-main {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.gm-report-sb-team {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-report-sb-team.is-opp {
+  text-align: right;
+}
+
+.gm-report-sb-score {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gm-report-sb-score small {
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 3px;
+}
+
+.gm-report-sb-mom {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.gm-report-sb-mom strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.gm-report-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gm-report-kpi-cell {
+  background: #1a1f26;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gm-report-kpi-label {
+  font-size: 10.5px;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.gm-report-kpi-val {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.gm-report-kpi-sub {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-report-next-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  background: rgba(46, 204, 113, 0.08);
+  border-left: 3px solid #2ecc71;
+  border-radius: 4px;
+}
+
+.gm-report-next-label {
+  font-size: 11px;
+  color: #8b949e;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gm-report-next-val {
+  font-size: 11.5px;
+  color: #e2e8f0;
+  font-weight: 700;
+  text-align: right;
+  min-width: 0;
+}
+
+.gm-ceremony-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.14) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 6px;
+}
+
+.gm-ceremony-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gm-ceremony-emblem {
+  flex-shrink: 0;
+}
+
+.gm-ceremony-club-meta {
+  min-width: 0;
+}
+
+.gm-ceremony-club-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gm-ceremony-period {
+  font-size: 11px;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.gm-ceremony-grade-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.gm-ceremony-grade-label {
+  font-size: 10px;
+  color: #8b949e;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gm-ceremony-grade {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.gm-report-section-head {
+  font-size: 11px;
+  font-weight: 800;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+  padding: 4px 0 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.gm-ceremony-rows,
+.gm-report-ledger {
+  display: flex;
+  flex-direction: column;
+}
+
+.gm-ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+}
+
+.gm-ledger-label {
+  color: #cbd5e1;
+  min-width: 0;
+}
+
+.gm-ledger-val {
+  color: #f8fafc;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.gm-ledger-row.gm-ledger-total {
+  margin-top: 2px;
+  padding: 7px 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: none;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+}
+
+.gm-ledger-row.gm-ledger-total .gm-ledger-label {
+  color: #f8fafc;
+  font-weight: 800;
+}
+
+.gm-ledger-row.gm-ledger-balance {
+  border-bottom: none;
+  padding: 5px 6px;
+  font-size: 12px;
+}
+
+.gm-conf-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gm-conf-meter {
+  width: 56px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gm-conf-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.gm-ceremony-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+}
+
+.gm-ceremony-verdict-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.gm-ceremony-verdict-text {
+  font-size: 11.5px;
+  color: #e2e8f0;
+  line-height: 1.45;
 }
 
 /* ==========================================================================

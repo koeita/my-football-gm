@@ -1881,7 +1881,13 @@ function showGmModal(opts, fromQueue = false) {
     return;
   }
 
-  const { category, title, description, detailHtml, actions, hideSecretary } = opts;
+  const { category, title, description, detailHtml, actions, hideSecretary, speaker, variant } = opts;
+  const modalCard = overlay.querySelector('.gm-secretary-modal-card');
+  if (modalCard) {
+    modalCard.classList.toggle('is-report-modal', variant === 'match-report' || variant === 'monthly-ceremony');
+    modalCard.classList.toggle('is-monthly-ceremony', variant === 'monthly-ceremony');
+  }
+
   const secBox = document.getElementById('gm-modal-secretary-box');
   const catEl = document.getElementById('modal-category');
   const titleEl = document.getElementById('modal-title');
@@ -1889,23 +1895,34 @@ function showGmModal(opts, fromQueue = false) {
   const detailEl = document.getElementById('modal-detail-box');
   const dialogueCard = document.getElementById('gm-vn-dialogue-card');
 
+  const isManagerSpeaker = Boolean(speaker && speaker.kind === 'manager' && speaker.person);
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  const activeSpeaker = isManagerSpeaker
+    ? { name: speaker.name || speaker.person.name, roleLabel: speaker.roleLabel || '監督', person: speaker.person, club: speaker.club || getPlayerClub(), kind: 'manager' }
+    : (sec ? { name: sec.name, roleLabel: sec.roleLabel, person: sec, club: null, kind: 'secretary' } : null);
+
   if (secBox) {
-    if (hideSecretary || !sec) {
+    if (hideSecretary || !activeSpeaker) {
       secBox.innerHTML = '';
       secBox.classList.add('hidden');
     } else {
-      const bustHtml = typeof getSecretaryBustHtml === 'function'
-        ? getSecretaryBustHtml(sec, 'secretary-bust-canvas')
-        : (typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '');
+      let bustHtml = '';
+      if (activeSpeaker.kind === 'manager' && typeof getManagerBustHtml === 'function') {
+        bustHtml = getManagerBustHtml(activeSpeaker.person, activeSpeaker.club, 'secretary-bust-canvas');
+      } else if (typeof getSecretaryBustHtml === 'function') {
+        bustHtml = getSecretaryBustHtml(activeSpeaker.person, 'secretary-bust-canvas');
+      } else if (typeof getSecretaryAvatarHtml === 'function') {
+        bustHtml = getSecretaryAvatarHtml(activeSpeaker.person, 'avatar-md', 52);
+      }
       secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
   }
 
   if (catEl) {
-    if (!hideSecretary && sec) {
-      catEl.innerHTML = `<span class="gm-vn-pill-badge"><span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+    if (!hideSecretary && activeSpeaker) {
+      const pillExtraCls = activeSpeaker.kind === 'manager' ? ' is-manager-pill' : '';
+      catEl.innerHTML = `<span class="gm-vn-pill-badge${pillExtraCls}"><span class="gm-modal-sec-name">${escapeCommHtml(activeSpeaker.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(activeSpeaker.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
     } else {
       catEl.innerHTML = category ? `<span class="gm-vn-pill-badge">${escapeCommHtml(category)}</span>` : '';
     }
@@ -1978,7 +1995,7 @@ function showGmModal(opts, fromQueue = false) {
 /**
  * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
  */
-function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null }) {
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null }) {
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
@@ -1988,7 +2005,9 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
     title,
     description: speech,
     detailHtml,
-    actions: resolvedActions
+    actions: resolvedActions,
+    speaker,
+    variant
   });
 }
 
@@ -17748,9 +17767,9 @@ function buildManagerConsultation(club) {
         kind: 'manager',
         scenario: 'M1',
         senderName: `${mgr.name} 監督`,
-        topic: '監督からの起用法相談',
+        topic: '起用法相談',
         title: `${mgr.name}監督：スタメン起用の見直し提案`,
-        speech: `GM、次戦に向けて ${troubledStarter.fullName || troubledStarter.name} に${reasonTxt}しています。フレッシュな ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢したいのですが、いかがでしょうか。`,
+        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} に${reasonTxt}しているため、フレッシュな ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢させてくれないか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢について回答待ち`,
         outPlayerId: troubledStarter.id,
@@ -17778,7 +17797,7 @@ function buildManagerConsultation(club) {
       senderName: `${mgr.name} 監督`,
       topic: '監督からの戦術・起用相談',
       title: `${mgr.name}監督：得意フォーメーションへの移行相談`,
-      speech: `GM、選手たちの特徴をより活かすため、私の得意布陣「${mgr.preferredFormation} / ${tacLabel}」へ切り替えて戦いたいと考えております。許可をいただけますでしょうか。`,
+      speech: `GM、選手たちの持ち味を最大限に引き出すため、私の得意布陣「${mgr.preferredFormation} / ${tacLabel}」へ切り替えて戦いたい。フロントとして承認してもらえるだろうか。`,
       dutyTitle: `${mgr.name}監督の戦術・起用相談`,
       dutyDesc: `${mgr.preferredFormation} / ${tacLabel} への調整相談`,
       preferredFormation: mgr.preferredFormation,
@@ -17812,9 +17831,9 @@ function buildManagerConsultation(club) {
         kind: 'manager',
         scenario: 'M2',
         senderName: `${mgr.name} 監督`,
-        topic: '監督からの起用法相談',
+        topic: '起用法相談',
         title: `${mgr.name}監督：${candidate.name}の先発テスト起用提案`,
-        speech: `GM、練習での動きが極めて良い ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を次戦で先発起用して試したいのですが、ご判断をお願いできますか。`,
+        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を次戦の先発で試してみたい。抜擢を認めてもらえるか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢提案`,
         outPlayerId: replaceStarter.id,
@@ -17979,6 +17998,10 @@ function resolveLineupConsultationDecision(consultation, decision) {
 
 function openLineupConsultationModal(consultation) {
   if (!consultation || typeof showSecretaryModal !== 'function') return;
+  const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const mgrSpeaker = (consultation.kind === 'manager' && club && club.manager)
+    ? { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club }
+    : null;
   const rowsHtml = (consultation.detailRows || []).map(([k, v]) => `
     <div class="gm-modal-flat-row">
       <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
@@ -17986,6 +18009,7 @@ function openLineupConsultationModal(consultation) {
     </div>
   `).join('');
   showSecretaryModal({
+    speaker: mgrSpeaker,
     topic: consultation.topic,
     title: consultation.title,
     speech: consultation.speech,
@@ -18057,8 +18081,10 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
   const userWon = hasPk ? Boolean(matchData.userWon) : (myScore > oppScore);
   const userDraw = !hasPk && (myScore === oppScore);
 
+  const prizeIncome = Number(matchData.prizeIncome) || 0;
+  const gateIncome = Number(matchData.gateIncome) || 0;
   const earnedIncome = matchData.isPreseason
-    ? (Number(matchData.matchIncome) || 0)
+    ? ((Number(matchData.matchIncome) || 0) || (prizeIncome + gateIncome))
     : (isHome ? (Number(matchData.matchIncome) || 0) : (Number(matchData.awayBroadcastingFee) || 0));
   const supportersDelta = Number(matchData.playerSupportersDelta || 0);
 
@@ -18121,30 +18147,58 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     speech = `GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）お疲れ様でございました。今回の収支および次回試合の予定をご報告申し上げます。`;
   }
 
-  const momStr = matchData.momPlayer ? ` · MOM ${matchData.momPlayer.name}` : '';
   const fanStr = `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
+  const incomeSubNote = matchData.isPreseason
+    ? (gateIncome > 0 && prizeIncome > 0
+      ? `賞金+${formatMoney(prizeIncome)} · 入場+${formatMoney(gateIncome)}`
+      : (gateIncome > 0 ? '入場・グッズ収入' : 'WCT大会賞金'))
+    : (isHome ? '入場料・グッズ・放映' : 'アウェイ放映権料');
+  const fanDeltaCls = supportersDelta >= 0 ? 'accent-green' : 'text-danger';
 
   showSecretaryModal({
+    variant: 'match-report',
     topic: matchData.isPreseason ? '試合後報告（WCT）' : '試合後報告',
     title: `${compLabel} 試合結果・収支報告`,
     speech,
     detailHtml: `
-      <div class="gm-modal-flat-list">
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">結果 vs ${escapeCommHtml(oppName)} (${venueLabel})</span>
-          <span class="gm-modal-flat-val mono ${resultColorCls}" style="white-space:nowrap;">${myScore}-${oppScore}${escapeCommHtml(pkSuffix)} ${resultLabel}${escapeCommHtml(momStr)}</span>
+      <div class="gm-report-wrap">
+        <div class="gm-report-scoreboard">
+          <div class="gm-report-sb-meta">
+            <span class="gm-report-sb-comp">${escapeCommHtml(compLabel)} · ${venueLabel}</span>
+            <span class="gm-report-sb-outcome ${resultColorCls}">${resultLabel}</span>
+          </div>
+          <div class="gm-report-sb-main">
+            <span class="gm-report-sb-team">${escapeCommHtml(playerClub.name)}</span>
+            <span class="gm-report-sb-score mono ${resultColorCls}">${myScore} - ${oppScore}${pkSuffix ? `<small>${escapeCommHtml(pkSuffix)}</small>` : ''}</span>
+            <span class="gm-report-sb-team is-opp">${escapeCommHtml(oppName)}</span>
+          </div>
+          ${matchData.momPlayer ? `<div class="gm-report-sb-mom"><span>MOM</span><strong>${escapeCommHtml(matchData.momPlayer.name)}</strong></div>` : ''}
         </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">試合収入 / 週間週給目安</span>
-          <span class="gm-modal-flat-val mono" style="white-space:nowrap;"><span class="accent-green">+${formatMoney(earnedIncome)}</span> / <span class="text-danger">-${formatMoney(weeklyPayroll)}</span></span>
+        <div class="gm-report-kpi-grid">
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">試合収入</span>
+            <span class="gm-report-kpi-val mono accent-green">+${formatMoney(earnedIncome)}</span>
+            <span class="gm-report-kpi-sub">${escapeCommHtml(incomeSubNote)}</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">週間給与目安</span>
+            <span class="gm-report-kpi-val mono text-danger">-${formatMoney(weeklyPayroll)}</span>
+            <span class="gm-report-kpi-sub">週次人件費</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">現在資金</span>
+            <span class="gm-report-kpi-val mono accent-gold">${formatMoney(playerClub.funds)}</span>
+            <span class="gm-report-kpi-sub">安全枠 ${formatMoney(safeBudget)}</span>
+          </div>
+          <div class="gm-report-kpi-cell">
+            <span class="gm-report-kpi-label">サポーター</span>
+            <span class="gm-report-kpi-val mono ${fanDeltaCls}">${fanStr}</span>
+            <span class="gm-report-kpi-sub">${((playerClub.supporters || 0)).toLocaleString()}人</span>
+          </div>
         </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">現在資金 (安全枠) · 支持</span>
-          <span class="gm-modal-flat-val mono accent-gold" style="white-space:nowrap;">${formatMoney(playerClub.funds)} (${formatMoney(safeBudget)}) · ${fanStr}</span>
-        </div>
-        <div class="gm-modal-flat-row">
-          <span class="gm-modal-flat-label">次回試合予定</span>
-          <span class="gm-modal-flat-val">${escapeCommHtml(nextMatchText)}</span>
+        <div class="gm-report-next-bar">
+          <span class="gm-report-next-label">次回試合予定</span>
+          <span class="gm-report-next-val">${escapeCommHtml(nextMatchText)}</span>
         </div>
       </div>
     `,
@@ -18242,45 +18296,107 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
 
   if (!isFastForwardingSeason && typeof showSecretaryModal === 'function') {
     if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
-    const otherStr = otherNet !== 0
-      ? ` · その他 ${otherNet >= 0 ? '+' : ''}${formatMoney(otherNet)}`
-      : '';
     const netColorCls = netBalance >= 0 ? 'accent-green' : 'text-danger';
     const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
     let meetingSpeech = '';
     if (sec.tone === 'active') {
-      meetingSpeech = `GM、${reportMonth}月度の月次定例会です！今月の戦績と収支実績をまとめました。目標達成と健全経営に向けて次月のプランを確認しましょう。`;
+      meetingSpeech = `GM、${reportMonth}月度の月次定例経営会議を開催します！今月の戦績と収支決算をまとめました。理事会評価も踏まえて次月の指針を固めましょう。`;
     } else if (sec.tone === 'calm') {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の定例報告会を開始します。月間戦績、収支内訳、および理事会評価をご確認ください。`;
+      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の定例経営会議を開始します。今月の戦績実績、収支決算、ならびに理事会評価をご確認ください。`;
     } else {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の月次定例会のお時間でございます。今月の戦績ならびに財務収支の詳細をご報告申し上げます。`;
+      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の月次定例経営会議のお時間でございます。今月の戦績ならびに財務決算の詳細をご報告申し上げます。`;
     }
 
+    let evalScore = Number(boardConf) || 50;
+    if (netBalance > 0) evalScore += 10;
+    else if (netBalance < 0) evalScore -= 6;
+    if (psr && psr.isBreach) evalScore -= 15;
+    if (ledger && ledger.played > 0) {
+      evalScore += ((Number(ledger.won) || 0) - (Number(ledger.lost) || 0)) * 4;
+    }
+    const evalGrade = evalScore >= 90 ? 'S' : evalScore >= 75 ? 'A' : evalScore >= 60 ? 'B' : evalScore >= 45 ? 'C' : evalScore >= 30 ? 'D' : 'E';
+    const evalRankCls = `stat-rank-${evalGrade.toLowerCase()}`;
+    const emblemHtml = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(playerClub, 36, 'gm-ceremony-emblem') : '';
+    const otherRowHtml = otherNet !== 0
+      ? `<div class="gm-ledger-row">
+          <span class="gm-ledger-label">その他運営・雑収支</span>
+          <span class="gm-ledger-val mono ${otherNet >= 0 ? 'accent-green' : 'text-danger'}">${otherNet >= 0 ? '+' : '-'}${formatMoney(Math.abs(otherNet))}</span>
+        </div>`
+      : '';
+    const confBarColor = boardConf >= 70 ? '#2ecc71' : (boardConf >= 45 ? '#f59e0b' : '#ef4444');
+
     showSecretaryModal({
+      variant: 'monthly-ceremony',
       topic: '月次定例会',
       title: `${reportYear}年${reportMonth}月度 月次定例報告会`,
       speech: meetingSpeech,
       detailHtml: `
-        <div class="gm-modal-flat-list">
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">今月戦績</span>
-            <span class="gm-modal-flat-val">${escapeCommHtml(recordSummary)}</span>
+        <div class="gm-ceremony-wrap">
+          <div class="gm-ceremony-banner">
+            <div class="gm-ceremony-banner-left">
+              ${emblemHtml}
+              <div class="gm-ceremony-club-meta">
+                <div class="gm-ceremony-club-name">${escapeCommHtml(playerClub.name)}</div>
+                <div class="gm-ceremony-period">${reportYear}年${reportMonth}月度 決算・戦績報告</div>
+              </div>
+            </div>
+            <div class="gm-ceremony-grade-box">
+              <span class="gm-ceremony-grade-label">月次評価</span>
+              <span class="gm-ceremony-grade mono ${evalRankCls}">${evalGrade}</span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">順位 / 理事会評価</span>
-            <span class="gm-modal-flat-val">${escapeCommHtml(rankText)}（目標 ${escapeCommHtml(targetText)}） · 信頼度 ${boardConf}%</span>
+
+          <div class="gm-report-section-head">戦績・理事会評価</div>
+          <div class="gm-ceremony-rows">
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">今月戦績</span>
+              <span class="gm-ledger-val">${escapeCommHtml(recordSummary)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">順位 / シーズン目標</span>
+              <span class="gm-ledger-val">${escapeCommHtml(rankText)} / ${escapeCommHtml(targetText)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">理事会信頼度</span>
+              <span class="gm-ledger-val gm-conf-val">
+                <span class="gm-conf-meter"><span class="gm-conf-fill" style="width:${Math.max(0, Math.min(100, boardConf))}%;background:${confBarColor};"></span></span>
+                <span class="mono">${boardConf}%</span>
+              </span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">収入 (試合 / 売却)</span>
-            <span class="gm-modal-flat-val mono accent-green" style="white-space:nowrap;">+${formatMoney(matchIncome)} / +${formatMoney(transferIn)}</span>
+
+          <div class="gm-report-section-head">月間収支決算</div>
+          <div class="gm-report-ledger">
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">試合・賞金・グッズ収入</span>
+              <span class="gm-ledger-val mono accent-green">+${formatMoney(matchIncome)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">選手売却収入</span>
+              <span class="gm-ledger-val mono accent-green">+${formatMoney(transferIn)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">給与・スタッフ人件費</span>
+              <span class="gm-ledger-val mono text-danger">-${formatMoney(payrollPaid)}</span>
+            </div>
+            <div class="gm-ledger-row">
+              <span class="gm-ledger-label">移籍補強支出</span>
+              <span class="gm-ledger-val mono text-danger">-${formatMoney(transferOut)}</span>
+            </div>
+            ${otherRowHtml}
+            <div class="gm-ledger-row gm-ledger-total">
+              <span class="gm-ledger-label">月間純収支</span>
+              <span class="gm-ledger-val mono ${netColorCls}">${netSign}${formatMoney(netBalance)}</span>
+            </div>
+            <div class="gm-ledger-row gm-ledger-balance">
+              <span class="gm-ledger-label">月末資金残高 (安全枠 ${formatMoney(safeBudget)})</span>
+              <span class="gm-ledger-val mono accent-gold">${formatMoney(curFunds)}</span>
+            </div>
           </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">支出 (給与 / 補強)</span>
-            <span class="gm-modal-flat-val mono text-danger" style="white-space:nowrap;">-${formatMoney(payrollPaid)} / -${formatMoney(transferOut)}${escapeCommHtml(otherStr)}</span>
-          </div>
-          <div class="gm-modal-flat-row">
-            <span class="gm-modal-flat-label">月間純収支 / 現在資金</span>
-            <span class="gm-modal-flat-val mono ${netColorCls}" style="white-space:nowrap;">${netSign}${formatMoney(netBalance)} / ${formatMoney(curFunds)}</span>
+
+          <div class="gm-ceremony-verdict">
+            <span class="gm-ceremony-verdict-label">理事会総評</span>
+            <span class="gm-ceremony-verdict-text">${escapeCommHtml(statusComment)}</span>
           </div>
         </div>
       `,

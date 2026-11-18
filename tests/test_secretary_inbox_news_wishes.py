@@ -205,6 +205,60 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('const isMarketWindowOpen = !gameState.isSeasonOver', duties_block)
         self.assertIn('gameState.pendingMegaOffer && isMarketWindowOpen', duties_block)
 
+    def test_9_manager_speaker_preseason_gate_and_executive_reports(self):
+        """監督直接相談・プレシーズン入場料収入反映・試合後報告＆月次定例会UI刷新が揃っていること"""
+        # 1. 監督専用バストアップと監督スピーカー制御
+        for sym in [
+            'function drawManagerBustOnContext(',
+            'function generateManagerBust(',
+            'function getManagerBustHtml(',
+            "entry.bustRole === 'manager'",
+        ]:
+            self.assertIn(sym, self.avatar_js)
+        self.assertIn('.gm-vn-pill-badge.is-manager-pill', self.css)
+
+        consult_start = self.main_js.index('function openLineupConsultationModal(')
+        consult_block = self.main_js[consult_start:consult_start + 1200]
+        self.assertIn("kind: 'manager'", consult_block)
+        self.assertIn("roleLabel: '監督'", consult_block)
+
+        gm_modal_start = self.main_js.index('function showGmModal(')
+        gm_modal_block = self.main_js[gm_modal_start:gm_modal_start + 3800]
+        self.assertIn("activeSpeaker.kind === 'manager'", gm_modal_block)
+        self.assertIn('isManagerSpeaker', gm_modal_block)
+        self.assertIn("variant === 'match-report' || variant === 'monthly-ceremony'", gm_modal_block)
+        self.assertIn("variant === 'monthly-ceremony'", gm_modal_block)
+
+        # 2. プレシーズンマッチ(WCT)の入場・グッズ収入の賞金合算・サマリー/秘書報告一致
+        pre_start = self.match_js.index("currentDay.cupCompType === 'preseasonCup'")
+        pre_end = self.match_js.index("// 1. 欧州リーグフェーズ", pre_start)
+        pre_block = self.match_js[pre_start:pre_end]
+        self.assertIn('gateIncome', pre_block)
+        self.assertIn('totalPreseasonIncome = prize + gateIncome', pre_block)
+        self.assertIn('matchIncome: totalPreseasonIncome', pre_block)
+        self.assertIn('awayBroadcastingFee: isHome ? 0 : totalPreseasonIncome', pre_block)
+
+        summary_start = self.match_js.index('function buildMatchSummaryHtml(')
+        summary_block = self.match_js[summary_start:summary_start + 6500]
+        self.assertIn('md.isPreseason', summary_block)
+
+        # 3. 試合後報告ダッシュボード & 月次定例経営会議セレモニーUI
+        self.assertIn("variant: 'match-report'", self.main_js)
+        self.assertIn("variant: 'monthly-ceremony'", self.main_js)
+        for cls_name in [
+            'gm-report-scoreboard',
+            'gm-report-kpi-grid',
+            'gm-report-next-bar',
+            'gm-ceremony-banner',
+            'gm-ceremony-grade',
+            'gm-report-ledger',
+            'gm-ledger-total',
+        ]:
+            self.assertIn(cls_name, self.main_js)
+            self.assertIn(f'.{cls_name}', self.css)
+        self.assertIn('.gm-secretary-modal-card.is-report-modal', self.css)
+        self.assertIn('.gm-secretary-modal-card.is-monthly-ceremony', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()

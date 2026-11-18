@@ -917,6 +917,85 @@ function drawSecretaryBustOnContext(ctx, secretary) {
   drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, kitAccent, true);
 }
 
+/**
+ * 監督立ち絵バストアップ（48x54px透過グリッド）を描画
+ */
+function drawManagerBustOnContext(ctx, manager, club = null) {
+  const genes = ensurePlayerAvatarData(manager);
+  const skin = findSkinPalette(genes.skinColor);
+  const age = manager.age || 50;
+  let hair = findHairPalette(genes.hairColor);
+  if (age >= 48 && hair.key !== 'blond') hair = findHairPalette('grey');
+  const clubColors = club ? [club.primaryColor || '#2ecc71', club.secondaryColor || '#38bdf8'] : ['#2ecc71', '#38bdf8'];
+  const suitMain = '#1e293b';
+  const tieColor = clubColors[0] === '#1e293b' ? '#2ecc71' : clubColors[0];
+
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+
+  ctx.clearRect(0, 0, 48, 54);
+  const ox = 8;
+  const oy = 1;
+
+  // 1. 後ろ髪
+  drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, true);
+
+  // 2. 首
+  set(skin.base);
+  px(ox + 13, oy + 22, 6, 6);
+  set(skin.shadow);
+  px(ox + 13, oy + 22, 6, 2);
+
+  // 3. スーツ胴体（肩幅広めの監督ジャケット）
+  set(suitMain);
+  px(16, 27, 16, 1);
+  px(14, 28, 20, 1);
+  px(12, 29, 24, 3);
+  px(11, 32, 26, 22);
+  set('#0f172a');
+  px(31, 30, 5, 24);
+  px(11, 32, 2, 22);
+  set('#334155');
+  px(14, 28, 4, 1);
+  px(30, 28, 4, 1);
+
+  // 4. 白ワイシャツ＆ネクタイ（クラブカラー）
+  set('#f8fafc');
+  px(20, 27, 8, 2);
+  px(21, 29, 6, 3);
+  px(22, 32, 4, 5);
+  set(tieColor);
+  px(23, 28, 2, 10);
+  set(shadeHex(tieColor, -25));
+  px(23, 37, 2, 2);
+
+  // 5. ラペルライン
+  set('#334155');
+  px(18, 27, 2, 3); px(28, 27, 2, 3);
+  px(19, 30, 2, 3); px(27, 30, 2, 3);
+  px(20, 33, 2, 3); px(26, 33, 2, 3);
+
+  // 6. 左腕と戦術ボードバインダー
+  set(suitMain);
+  px(9, 31, 4, 10);
+  px(10, 40, 8, 4);
+  set('#f8fafc');
+  px(16, 40, 1, 4);
+  set(skin.base);
+  px(16, 39, 3, 3);
+  set('#0f172a');
+  px(11, 33, 8, 9);
+  set('#14532d');
+  px(12, 34, 6, 7);
+  set('#4ade80');
+  px(13, 36, 4, 1);
+  px(14, 38, 1, 2);
+  px(16, 35, 1, 2);
+
+  // 7. 頭部・表情
+  drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, tieColor, true);
+}
+
 // ---------------------------------------------------------------------------
 // インメモリ 32x32 マスターCanvas & DataURL キャッシュ
 // ---------------------------------------------------------------------------
@@ -1052,7 +1131,11 @@ function renderAvatarCanvases(root = document) {
     const entry = PLAYER_AVATAR_LOOKUP.get(String(pid));
     if (entry && entry.player) {
       if (entry.isBust) {
-        generateSecretaryBust(entry.player, cv);
+        if (entry.bustRole === 'manager') {
+          generateManagerBust(entry.player, cv, entry.club);
+        } else {
+          generateSecretaryBust(entry.player, cv);
+        }
       } else {
         generatePlayerAvatar(entry.player, cv, entry.club);
       }
@@ -1153,6 +1236,39 @@ function generateSecretaryBust(secretary, canvas) {
   ctx.setTransform(sx, 0, 0, sy, 0, 0);
   drawSecretaryBustOnContext(ctx, secretary);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function generateManagerBust(manager, canvas, club = null) {
+  if (!manager || !canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  const sx = canvas.width / 48;
+  const sy = canvas.height / 54;
+  ctx.setTransform(sx, 0, 0, sy, 0, 0);
+  drawManagerBustOnContext(ctx, manager, club);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function getManagerBustHtml(manager, club = null, extraClass = 'secretary-bust-canvas') {
+  if (!manager) return '';
+  try {
+    const pid = String(manager.id || `mgr_bust_${manager.name || 'x'}`);
+    PLAYER_AVATAR_LOOKUP.set(pid, { player: manager, club, isBust: true, bustRole: 'manager' });
+    let url = '';
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 96;
+      c.height = 108;
+      generateManagerBust(manager, c, club);
+      url = c.toDataURL('image/png');
+    }
+    const bgStyle = url ? ` style="background-image:url('${url}');background-size:100% 100%;"` : '';
+    return `<canvas class="player-avatar ${extraClass}" width="96" height="108" data-avatar-pid="${pid}"${bgStyle} aria-hidden="true"></canvas>`;
+  } catch (e) {
+    return getManagerAvatarHtml(manager, 'avatar-md', 64);
+  }
 }
 
 function getSecretaryBustDataUrl(secretary, width = 144, height = 162) {
