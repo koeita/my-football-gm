@@ -1282,13 +1282,18 @@
           <!-- JSで秘書のドット絵立ち絵を描画 -->
         </div>
         <div class="gm-vn-dialogue-card" id="gm-vn-dialogue-card">
-          <div class="gm-vn-nameplate-row">
-            <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+          <div class="gm-vn-dialogue-top">
+            <div class="gm-vn-nameplate-row">
+              <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+            </div>
+            <p class="modal-description" id="modal-description"></p>
           </div>
-          <p class="modal-description" id="modal-description"></p>
-          <div class="modal-detail-box" id="modal-detail-box"></div>
-          <div class="modal-actions" id="modal-actions">
-            <!-- JSで次へプロンプト・選択肢ボタンを生成 -->
+          <div class="gm-vn-dialogue-bottom">
+            <div class="modal-detail-box" id="modal-detail-box"></div>
+            <div class="gm-vn-choice-prompt hidden" id="gm-vn-choice-prompt">GM としてご判断ください</div>
+            <div class="modal-actions" id="modal-actions">
+              <!-- JSで次へプロンプト・選択肢ボタンを生成 -->
+            </div>
           </div>
         </div>
       </div>
