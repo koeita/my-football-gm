@@ -563,7 +563,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     }
 
     const stadiumLvPre = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
-    const stadiumMultPre = 1 + (stadiumLvPre - 1) * 0.15;
+    const sponsorMatchMultPre = typeof getClubSponsorMatchIncomeMultiplier === 'function' ? getClubSponsorMatchIncomeMultiplier(playerClub) : 1.0;
+    const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.15) * sponsorMatchMultPre;
     const gateIncome = isHome
       ? Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10
       : 0;
@@ -1051,7 +1052,9 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
     return { matchIncome: 0, awayBroadcastingFee: 0, playerSupportersDelta: 0 };
   }
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
-  const stadiumMultiplier = 1 + (stadiumLv - 1) * 0.15;
+  const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
 
   let matchIncome = 0;
   let awayBroadcastingFee = 0;
@@ -2248,7 +2251,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   let playerAwayScorers = [];
 
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
-  const stadiumMultiplier = 1 + (stadiumLv - 1) * 0.15;
+  const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
 
   for (const match of weekMatches) {
     const homeClub = getClubById(match.homeId);
