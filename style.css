@@ -18211,8 +18211,11 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
    選手詳細プロフィールモーダル（#player-profile-modal）：1画面集約＆ランク可視化UI
    ========================================================================== */
 #player-profile-modal .profile-modal-card {
-  border-top: none;
+  border-top: none !important;
   background-color: #1c2024;
+  overflow: hidden;
+  height: auto;
+  max-height: 88vh;
 }
 
 .profile-top-club-bar {
@@ -18221,8 +18224,10 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   justify-content: space-between;
   gap: 8px;
   padding: 6px 12px;
-  background: linear-gradient(90deg, rgba(46, 204, 113, 0.16) 0%, #14171c 65%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, #14171c 65%);
   border-top: 3px solid var(--profile-club-accent, #2ecc71);
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   min-height: 36px;
@@ -18462,7 +18467,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   display: grid;
   grid-template-columns: 1.24fr 0.76fr;
   gap: 10px;
-  align-items: center;
+  align-items: start;
 }
 
 .profile-ability-col-chart,
@@ -18506,7 +18511,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 #player-profile-modal .profile-hexagon-svg {
   width: 100%;
-  max-width: 280px;
+  max-width: 240px;
   height: auto;
   overflow: visible;
 }
@@ -18657,7 +18662,15 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .profile-training-compact-wrap .ui-kv-row {
-  padding: 6px 2px;
+  padding: 6px 2px 8px;
+}
+
+.profile-training-compact-wrap .profile-training-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 0;
 }
 
 .profile-ability-actions {

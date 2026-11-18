@@ -11220,7 +11220,7 @@ function openPlayerProfileModal(playerId) {
       youthMetaHtml = `
         <span class="profile-bio-chip">想定週給 <strong class="accent-green">£${p.wage || 2.5}k</strong></span>
         <span class="profile-bio-sep">·</span>
-        <span class="profile-bio-chip ${potRankClass}" style="font-weight:800;">POT ${potRank}</span>
+        <span class="profile-bio-chip ${potRankClass}" style="font-weight:800;">POT: ${potRank}</span>
       `;
     } else {
       youthMetaHtml = `
@@ -11728,8 +11728,9 @@ function openPlayerProfileModal(playerId) {
       });
     }
 
-    // タブ内からの別タブジャンプ（推定市場価値カード等）
-    bodyEl.querySelectorAll('[data-switch-profile-tab]').forEach(btn => {
+    // カード全体（ヘッダーの市場価値リンク・タブ内カード等）からの別タブジャンプ
+    const profileCardScopeEl = document.getElementById('player-profile-modal-card') || bodyEl;
+    profileCardScopeEl.querySelectorAll('[data-switch-profile-tab]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (btn.dataset.switchProfileTab) {
