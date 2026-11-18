@@ -3362,6 +3362,28 @@ function advanceScoutingProgressDaily() {
             actionPayload: task.playerId
           });
         }
+        if (typeof showSecretaryModal === 'function') {
+          showSecretaryModal({
+            topic: 'スカウト報告',
+            title: `詳細調査完了：${pPos ? pPos + ' ' : ''}${pName}`,
+            speech: `チーフスカウトより ${pName} の詳細調査レポートが届きました。能力値と契約条件のすべてが判明しております。`,
+            detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">調査対象選手</span><span class="gm-modal-flat-val">${pPos ? pPos + ' ' : ''}${pName}${pOvr ? ` (OVR ${pOvr})` : ''}</span></div></div>`,
+            actions: [
+              {
+                label: '選手詳細を確認する',
+                className: 'btn btn-primary',
+                onClick: () => {
+                  if (typeof openPlayerProfileModal === 'function') openPlayerProfileModal(task.playerId);
+                }
+              },
+              {
+                label: '後で確認する',
+                className: 'btn btn-secondary',
+                onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+              }
+            ]
+          });
+        }
       }
     } else {
       gameState.scoutingIntel[task.playerId] = intel;
@@ -3770,6 +3792,31 @@ function advanceYouthScoutingDaily() {
           actionLabel: 'ユース画面を確認',
           actionPayload: null
         });
+        if (typeof showSecretaryModal === 'function') {
+          showSecretaryModal({
+            topic: 'ユース発掘報告',
+            title: `ユーススカウト発掘レポート到着（${reg.name}）`,
+            speech: `${reg.name}へ派遣していたユーススカウトから定期レポートが届きました。新たな原石が見つかっております。`,
+            detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">発掘候補</span><span class="gm-modal-flat-val">${foundNames.join(' / ')}</span></div></div>`,
+            actions: [
+              {
+                label: 'ユース画面を確認する',
+                className: 'btn btn-primary',
+                onClick: () => {
+                  if (typeof switchTab === 'function' && typeof switchFacilitiesSubtab === 'function') {
+                    switchTab('facilities');
+                    switchFacilitiesSubtab('youth');
+                  }
+                }
+              },
+              {
+                label: '後で確認する',
+                className: 'btn btn-secondary',
+                onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+              }
+            ]
+          });
+        }
       }
       if (typeof showToast === 'function') {
         showToast(`ユーススカウト報告（${reg.name}）：${foundNames[0]}`, 'success');

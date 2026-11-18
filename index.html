@@ -1274,16 +1274,22 @@
     </div>
   </div>
 
-  <!-- GMイベント / メガオファー モーダルダイアログ -->
+  <!-- GMイベント / 秘書ブリーフィング モーダルダイアログ -->
   <div id="gm-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <span class="modal-category mono" id="modal-category">GM EVENT</span>
-        <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
+    <div class="modal-card gm-secretary-modal-card">
+      <div class="modal-header gm-modal-header-row">
+        <div class="gm-modal-secretary-row" id="gm-modal-secretary-box">
+          <!-- JSで秘書のドット絵アバター・名前・役職を描画 -->
+        </div>
+        <div class="gm-modal-title-col">
+          <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+          <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-gm-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body">
         <p class="modal-description" id="modal-description"></p>
-        <div class="modal-detail-box mono" id="modal-detail-box"></div>
+        <div class="modal-detail-box" id="modal-detail-box"></div>
       </div>
       <div class="modal-actions" id="modal-actions">
         <!-- JSで選択肢ボタンを生成 -->

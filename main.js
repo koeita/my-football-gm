@@ -964,6 +964,7 @@ function advanceCalendarDay(skipRender = false) {
   if (typeof advanceYouthScoutingDaily === 'function') {
     advanceYouthScoutingDaily();
   }
+  let winterMarketEvent = false;
   if (nextDay.day === 1) {
     for (const club of getAllManagedLeagueClubs()) {
       for (const p of (club.players || [])) {
@@ -988,14 +989,40 @@ function advanceCalendarDay(skipRender = false) {
       sendMonthlyBoardReport(nextDay);
     }
     if (nextDay.month === 1 && typeof generateAndSendManagerWishReport === 'function') {
-      generateAndSendManagerWishReport('冬の移籍市場開幕');
+      const winterWish = generateAndSendManagerWishReport('冬の移籍市場開幕');
+      const pClubWinter = getPlayerClub();
+      stopAdvancingCalendar();
+      if (typeof showSecretaryModal === 'function' && pClubWinter) {
+        const posLabel = winterWish && Array.isArray(winterWish.positions) ? winterWish.positions.join('・') : '補強ポイント';
+        showSecretaryModal({
+          topic: '冬期移籍市場開幕',
+          title: '冬の移籍市場オープンと後半戦補強要望',
+          speech: `1月1日より冬の移籍ウィンドウが開幕いたしました。監督から後半戦へ向けた ${posLabel} の補強要望書と推薦選手リストが届いております。`,
+          detailHtml: typeof buildWishModalDetailHtml === 'function' ? buildWishModalDetailHtml(pClubWinter, winterWish) : '',
+          actions: [
+            {
+              label: '移籍市場で確認する',
+              className: 'btn btn-primary',
+              onClick: () => {
+                switchTab('market');
+              }
+            },
+            {
+              label: '執務室で閉じる',
+              className: 'btn btn-secondary',
+              onClick: () => { renderAll(); }
+            }
+          ]
+        });
+      }
+      winterMarketEvent = true;
     }
   }
 
   // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新
   const incomingResponded = updateIncomingOffersExpiry();
   const outgoingResponded = updateOutgoingOffersExpiry();
-  let eventTriggered = false;
+  let eventTriggered = winterMarketEvent;
   if (incomingResponded || outgoingResponded) {
     eventTriggered = true;
   }
@@ -1077,6 +1104,30 @@ function advanceCalendarDay(skipRender = false) {
         actionType: 'goto-market-offers',
         actionLabel: 'オファーを確認',
         actionPayload: null
+      });
+    }
+    stopAdvancingCalendar();
+    if (typeof showSecretaryModal === 'function') {
+      showSecretaryModal({
+        topic: 'デッドラインデイ',
+        title: '移籍市場最終日のご案内',
+        speech: '本日をもって今ウィンドウの移籍市場が閉幕いたします。合意済みの獲得契約や未回答の売却オファーが残っていないか、最終確認をお願いいたします。',
+        detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">本日付</span><span class="gm-modal-flat-val mono">${nextDay.displayDate}</span></div></div>`,
+        actions: [
+          {
+            label: 'オファー・移籍市場を確認',
+            className: 'btn btn-primary',
+            onClick: () => {
+              switchTab('market');
+              switchMarketSubtab('offers');
+            }
+          },
+          {
+            label: 'このまま進める',
+            className: 'btn btn-secondary',
+            onClick: () => { renderAll(); }
+          }
+        ]
       });
     }
     eventTriggered = true;
@@ -1640,19 +1691,71 @@ function triggerSupporterPetitionEvent() {
 }
 
 /**
- * イベント用モーダルダイアログの表示制御
+ * イベント・秘書ブリーフィング用モーダルダイアログの表示制御（キュー対応）
  */
-function showGmModal({ category, title, description, detailHtml, actions }) {
+const gmModalQueue = [];
+
+function flushNextGmModalOrUnlock() {
+  if (gmModalQueue.length > 0) {
+    const nextOpts = gmModalQueue.shift();
+    showGmModal(nextOpts, true);
+    return;
+  }
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
+}
+
+function closeGmModal(clearQueue = false) {
+  if (clearQueue) {
+    gmModalQueue.length = 0;
+  }
+  const overlay = document.getElementById('gm-modal-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+  flushNextGmModalOrUnlock();
+}
+
+function showGmModal(opts, fromQueue = false) {
+  if (!opts || typeof opts !== 'object') return;
   const overlay = document.getElementById('gm-modal-overlay');
   if (!overlay) return;
+
+  if (!fromQueue && !overlay.classList.contains('hidden')) {
+    if (gmModalQueue.length < 8) {
+      gmModalQueue.push(opts);
+    }
+    return;
+  }
+
+  const { category, title, description, detailHtml, actions, hideSecretary } = opts;
+  const secBox = document.getElementById('gm-modal-secretary-box');
   const catEl = document.getElementById('modal-category');
   const titleEl = document.getElementById('modal-title');
   const descEl = document.getElementById('modal-description');
   const detailEl = document.getElementById('modal-detail-box');
-  if (catEl) catEl.textContent = category;
-  if (titleEl) titleEl.textContent = title;
-  if (descEl) descEl.textContent = description;
-  if (detailEl) detailEl.innerHTML = detailHtml;
+
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  if (secBox) {
+    if (hideSecretary || !sec) {
+      secBox.innerHTML = '';
+      secBox.classList.add('hidden');
+    } else {
+      const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '';
+      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${avatarHtml}</div>`;
+      secBox.classList.remove('hidden');
+    }
+  }
+
+  if (catEl) {
+    if (!hideSecretary && sec) {
+      catEl.innerHTML = `<span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+    } else {
+      catEl.textContent = category || '';
+    }
+  }
+  if (titleEl) titleEl.textContent = title || '';
+  if (descEl) descEl.textContent = description || '';
+  if (detailEl) detailEl.innerHTML = detailHtml || '';
 
   const actionsContainer = document.getElementById('modal-actions');
   if (actionsContainer) {
@@ -1667,14 +1770,106 @@ function showGmModal({ category, title, description, detailHtml, actions }) {
       btn.addEventListener('click', () => {
         overlay.classList.add('hidden');
         if (act.onClick) act.onClick();
-        if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
+        flushNextGmModalOrUnlock();
       });
       actionsContainer.appendChild(btn);
     });
   }
 
   overlay.classList.remove('hidden');
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(overlay);
+  }
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+}
+
+/**
+ * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
+ */
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null }) {
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
+  const resolvedActions = Array.isArray(actions) && actions.length > 0
+    ? actions
+    : [{ label: '確認して閉じる', className: 'btn btn-primary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
+  showGmModal({
+    category: topic,
+    title,
+    description: speech,
+    detailHtml,
+    actions: resolvedActions
+  });
+}
+
+function buildWishModalDetailHtml(playerClub, wish) {
+  const rows = [];
+  if (playerClub) {
+    const safeBudget = typeof getSafeTransferBudget === 'function' ? getSafeTransferBudget(playerClub) : (playerClub.funds || 0);
+    rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">目標順位</span><span class="gm-modal-flat-val accent-green">${escapeCommHtml(playerClub.targetLabel || '上位進出')}</span></div>`);
+    rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">保有資金 / 安全移籍予算</span><span class="gm-modal-flat-val accent-gold mono">${formatMoney(playerClub.funds)} / ${formatMoney(safeBudget)}</span></div>`);
+  }
+  if (wish && Array.isArray(wish.positions) && wish.positions.length > 0) {
+    rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督補強希望 (${escapeCommHtml(wish.managerName || '監督')})</span><span class="gm-modal-flat-val" style="color:#38bdf8;">${escapeCommHtml(wish.positions.join('・'))}（布陣 ${escapeCommHtml(wish.formation || '4-3-3')}）</span></div>`);
+    (wish.candidates || []).slice(0, 3).forEach(c => {
+      const feeTxt = c.isFreeAgent ? '£0' : formatMoney(c.estimatedFee);
+      rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label"><strong style="color:#38bdf8;">${escapeCommHtml(c.pos)}</strong> ${escapeCommHtml(c.name)} (${escapeCommHtml(c.clubName)})</span><span class="gm-modal-flat-val mono">OVR ${c.ovr} · 推定 ${feeTxt}</span></div>`);
+    });
+  }
+  return rows.length > 0 ? `<div class="gm-modal-flat-list">${rows.join('')}</div>` : '';
+}
+
+/**
+ * クラブ着任時および新シーズン開幕時の秘書ブリーフィングモーダル
+ */
+function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false, wish = null) {
+  if (!playerClub) return;
+  const activeWish = wish || (Array.isArray(gameState.managerWishes) ? gameState.managerWishes[0] : (gameState.managerWishes || null));
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
+  const mgrName = (mgr && mgr.name) || (playerClub.manager && playerClub.manager.name) || '新監督';
+  const wishPosText = (activeWish && Array.isArray(activeWish.positions) && activeWish.positions.length > 0)
+    ? activeWish.positions.join('・')
+    : '戦力全体のバランス';
+  const topic = isFirstCareer ? '就任初日ブリーフィング' : `Season ${gameState.season} 開幕報告`;
+  const title = isFirstCareer
+    ? `${playerClub.name} プレシーズン開始`
+    : `Season ${gameState.season} 新体制始動`;
+
+  let speech = '';
+  if (sec.tone === 'energetic') {
+    speech = isFirstCareer
+      ? `GM、${playerClub.name}へのご着任おめでとうございます！7月1日より移籍市場が解禁されました。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
+      : `GM、Season ${gameState.season}の開幕です！移籍市場もオープンしています。${mgrName}監督の補強希望「${wishPosText}」を確認して動き出しましょう。`;
+  } else if (sec.tone === 'analytical') {
+    speech = isFirstCareer
+      ? `GM、着任初日の確認です。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
+      : `GM、Season ${gameState.season}の基準日が開始しました。安全移籍予算と目標順位を確認の上、${mgrName}監督が求める「${wishPosText}」の精査を推奨します。`;
+  } else {
+    speech = isFirstCareer
+      ? `GM、${playerClub.name}へのご着任にあたりご挨拶申し上げます。本日よりプレシーズンおよび移籍市場が開幕いたしました。${mgrName}監督からは「${wishPosText}」の補強要望が届いております。`
+      : `GM、Season ${gameState.season}が開幕いたしました。移籍市場も同時に開いておりますので、目標達成に向け${mgrName}監督の補強希望「${wishPosText}」をご確認のうえご指示ください。`;
+  }
+
+  showSecretaryModal({
+    topic,
+    title,
+    speech,
+    detailHtml: buildWishModalDetailHtml(playerClub, activeWish),
+    actions: [
+      {
+        label: '移籍市場を見る',
+        className: 'btn btn-secondary',
+        onClick: () => {
+          if (typeof switchTab === 'function') switchTab('market');
+        }
+      },
+      {
+        label: '業務を開始する',
+        className: 'btn btn-primary',
+        onClick: () => {
+          if (typeof renderAll === 'function') renderAll();
+        }
+      }
+    ]
+  });
 }
 
 /**
@@ -3486,6 +3681,7 @@ function updateOutgoingOffersExpiry() {
   if (!Array.isArray(gameState.outgoingOffers) || gameState.outgoingOffers.length === 0) return false;
 
   let hadResponseToday = false;
+  const respondedItems = [];
 
   for (const offer of gameState.outgoingOffers) {
     if (offer.status !== 'pending') continue;
@@ -3496,6 +3692,7 @@ function updateOutgoingOffersExpiry() {
       if (offer.willAgree) {
         offer.status = 'agreed';
         hadResponseToday = true;
+        respondedItems.push({ offer, outcome: '合意', color: '#2ecc71', fee: offer.offeredFee });
         addDailyLog(`【オファー合意！】${offer.sellerClubName} および ${offer.playerName} が移籍条件（移籍金 ${formatMoney(offer.offeredFee)}）に合意しました！「オファー」タブより契約を確定できます。`);
         if (typeof addInboxMessage === 'function') {
           addInboxMessage({
@@ -3521,6 +3718,7 @@ function updateOutgoingOffersExpiry() {
           offer.counterFee = Math.round(Math.max(offer.demandedFee, offer.offeredFee * 1.2) / 100) * 100;
           offer.pendingDays = 3; // 逆オファーへの回答期限
           hadResponseToday = true;
+          respondedItems.push({ offer, outcome: '増額要求', color: '#f59e0b', fee: offer.counterFee });
           addDailyLog(`【相手からの増額要求】${offer.sellerClubName} から ${offer.playerName} の移籍金引き上げ要求（${formatMoney(offer.counterFee)}）が届きました。「オファー」タブより承認または拒否を選択してください。`);
           if (typeof addInboxMessage === 'function') {
             addInboxMessage({
@@ -3539,6 +3737,7 @@ function updateOutgoingOffersExpiry() {
         } else {
           offer.status = 'rejected';
           hadResponseToday = true;
+          respondedItems.push({ offer, outcome: '決裂', color: '#ef4444', fee: offer.offeredFee });
           const reasonMsg = offer.rejectionReason ? `（理由: ${offer.rejectionReason}）` : '';
           addDailyLog(`【オファー決裂】${offer.sellerClubName} は ${offer.playerName} への${offer.dealType === 'loan' ? 'レンタルオファー' : 'オファー'}を拒絶しました。${reasonMsg}`);
           if (typeof addInboxMessage === 'function') {
@@ -3558,6 +3757,38 @@ function updateOutgoingOffersExpiry() {
         }
       }
     }
+  }
+
+  if (hadResponseToday && respondedItems.length > 0 && typeof showSecretaryModal === 'function') {
+    const rowsHtml = respondedItems.map(({ offer, outcome, color, fee }) => `
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">${escapeCommHtml(offer.playerName)} (${escapeCommHtml(offer.sellerClubName)})</span>
+        <span class="gm-modal-flat-val mono" style="color:${color};">${outcome} · ${formatMoney(fee)}</span>
+      </div>
+    `).join('');
+    showSecretaryModal({
+      topic: '移籍交渉回答',
+      title: `獲得オファーの回答が届きました（${respondedItems.length}件）`,
+      speech: '送信していた獲得オファーに対する相手クラブからの回答が届いております。オファー一覧より契約確定または再判断を行ってください。',
+      detailHtml: `<div class="gm-modal-flat-list">${rowsHtml}</div>`,
+      actions: [
+        {
+          label: 'オファー一覧を開く',
+          className: 'btn btn-primary',
+          onClick: () => {
+            switchTab('market');
+            switchMarketSubtab('offers');
+            gameState.offersSubtab = 'outgoing';
+            renderIncomingOffers();
+          }
+        },
+        {
+          label: '後で確認する',
+          className: 'btn btn-secondary',
+          onClick: () => { renderAll(); }
+        }
+      ]
+    });
   }
 
   updateMarketBadges();
@@ -4023,6 +4254,36 @@ function triggerIncomingTransferOffer(force = false) {
       actionType: 'goto-market-offers',
       actionLabel: 'オファーを確認',
       actionPayload: 'incoming'
+    });
+  }
+  if (typeof showSecretaryModal === 'function') {
+    showSecretaryModal({
+      topic: '買取オファー着信',
+      title: `${buyerClubName}から ${target.name} への獲得オファー`,
+      speech: `${buyerClubName}より当クラブ所属の ${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対して正式な買取打診が届いております。回答期限は5日間です。`,
+      detailHtml: `
+        <div class="gm-modal-flat-list">
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">対象選手</span><span class="gm-modal-flat-val">${escapeCommHtml(target.pos)} #${target.squadNumber || '-'} ${escapeCommHtml(target.name)} (OVR ${newOffer.ovr})</span></div>
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">提示移籍金</span><span class="gm-modal-flat-val accent-gold mono">${formatMoney(offerFee)}</span></div>
+        </div>
+      `,
+      actions: [
+        {
+          label: 'オファー画面で確認する',
+          className: 'btn btn-primary',
+          onClick: () => {
+            switchTab('market');
+            switchMarketSubtab('offers');
+            gameState.offersSubtab = 'incoming';
+            renderIncomingOffers();
+          }
+        },
+        {
+          label: '後で検討する',
+          className: 'btn btn-secondary',
+          onClick: () => { renderAll(); }
+        }
+      ]
     });
   }
   updateMarketBadges();
@@ -5893,12 +6154,13 @@ function startNextSeason() {
   }
   gameState.currentDayIndex = 0;
   gameState.isAdvancingCalendar = false;
+  if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: `Season ${gameState.season} (${inD2 ? 'ENG-D2' : 'ENG-D1'}) が開幕しました！目標順位達成に向けてチームを指揮しましょう。` }
   ];
-  if (typeof generateAndSendManagerWishReport === 'function') {
-    generateAndSendManagerWishReport(`Season ${gameState.season} 開幕`);
-  }
+  const seasonWish = typeof generateAndSendManagerWishReport === 'function'
+    ? generateAndSendManagerWishReport(`Season ${gameState.season} 開幕`)
+    : null;
   if (typeof addNewsItem === 'function') {
     addNewsItem({
       category: 'リーグ',
@@ -5909,6 +6171,7 @@ function startNextSeason() {
   }
   switchTab('office');
   renderAll();
+  showSecretaryClubOpeningBriefing(playerClub, playerClub.manager, false, seasonWish);
 }
 
 /**
@@ -11904,6 +12167,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.intlBreakState = null;
   gameState.pendingBoardCrisis = false;
   gameState.pendingDeadlineOffer = false;
+  if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
   const assignedManagers = [];
@@ -13763,7 +14027,11 @@ function initGame() {
       } else {
         const gmOverlay = document.getElementById('gm-modal-overlay');
         if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
-          gmOverlay.classList.add('hidden');
+          if (typeof closeGmModal === 'function') {
+            closeGmModal(false);
+          } else {
+            gmOverlay.classList.add('hidden');
+          }
         }
       }
     }
@@ -14598,9 +14866,9 @@ function hireNewManager(managerId) {
 
   const tacticLabel = getManagerTacticLabel(newMgr.preferredTactic);
   addDailyLog(`${newMgr.name}監督が新監督として就任しました ${buyoutMsg}（得意: ${newMgr.preferredFormation} / ${tacticLabel}）`);
-  if (typeof generateAndSendManagerWishReport === 'function') {
-    generateAndSendManagerWishReport(`${newMgr.name}監督 就任時`);
-  }
+  const newMgrWish = typeof generateAndSendManagerWishReport === 'function'
+    ? generateAndSendManagerWishReport(`${newMgr.name}監督 就任時`)
+    : null;
   if (typeof addNewsItem === 'function') {
     addNewsItem({
       category: '監督',
@@ -14610,6 +14878,29 @@ function hireNewManager(managerId) {
     });
   }
   renderAll();
+  if (typeof showSecretaryModal === 'function') {
+    const wishPos = newMgrWish && Array.isArray(newMgrWish.positions) && newMgrWish.positions.length > 0
+      ? newMgrWish.positions.join('・')
+      : 'スカッド全体の調整';
+    showSecretaryModal({
+      topic: '新監督就任報告',
+      title: `${newMgr.name} 監督が就任`,
+      speech: `GM、${newMgr.name}監督（得意: ${newMgr.preferredFormation} / ${tacticLabel}）との契約が完了しました。新体制の初動として「${wishPos}」の補強要望を受け取っています。`,
+      detailHtml: buildWishModalDetailHtml(club, newMgrWish),
+      actions: [
+        {
+          label: '移籍市場を見る',
+          className: 'btn btn-secondary',
+          onClick: () => { if (typeof switchTab === 'function') switchTab('market'); }
+        },
+        {
+          label: '承知した',
+          className: 'btn btn-primary',
+          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+        }
+      ]
+    });
+  }
   return true;
 }
 
@@ -15220,6 +15511,7 @@ function openInitialStaffSetupModal(club) {
       if (state.selectedSecretaryId) {
         gameState.secretaryId = state.selectedSecretaryId;
       }
+      let initWish = null;
       if (playerClub && selectedMgr) {
         playerClub.manager = selectedMgr;
         playerClub.formation = selectedMgr.preferredFormation;
@@ -15239,7 +15531,7 @@ function openInitialStaffSetupModal(club) {
           ensureInitialOfficeMessagesAndNews();
         }
         if (typeof generateAndSendManagerWishReport === 'function') {
-          generateAndSendManagerWishReport('プレシーズン指導体制発足');
+          initWish = generateAndSendManagerWishReport('プレシーズン指導体制発足');
         }
       }
       modal.classList.add('hidden');
@@ -15247,6 +15539,9 @@ function openInitialStaffSetupModal(club) {
       renderAll();
       if (typeof saveGameToStorage === 'function') {
         saveGameToStorage(true);
+      }
+      if (playerClub && selectedMgr && typeof showSecretaryClubOpeningBriefing === 'function') {
+        showSecretaryClubOpeningBriefing(playerClub, selectedMgr, true, initWish);
       }
     };
   }
@@ -16723,6 +17018,34 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
   if (typeof showToast === 'function') {
     showToast(`${mgr.name}監督の補強希望を達成！（監督信頼度 +${trustBonus}）`, 'success');
   }
+  if (typeof showSecretaryModal === 'function') {
+    const wishDetailRows = [
+      `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">加入選手</span><span class="gm-modal-flat-val accent-green">${escapeCommHtml(signedPlayer.name)} (${escapeCommHtml(signedPlayer.pos)} / OVR ${ovr})</span></div>`,
+      `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">達成項目</span><span class="gm-modal-flat-val">${escapeCommHtml(bonusLabel)}</span></div>`,
+      `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督信頼度 (${escapeCommHtml(mgr.name)})</span><span class="gm-modal-flat-val accent-green">+${trustBonus} ➔ ${mgr.trust}%</span></div>`
+    ];
+    showSecretaryModal({
+      topic: '監督補強要望の達成',
+      title: `${signedPlayer.name} の加入を監督が歓迎`,
+      speech: `GM、${signedPlayer.name}選手の獲得お疲れさまです。${mgr.name}監督から「${isRecommended ? '推薦した狙い通りの戦力だ' : `${matchedPos}の厚みが大きく改善した`}」と感謝のメッセージが届いています。`,
+      detailHtml: `<div class="gm-modal-flat-list">${wishDetailRows.join('')}</div>`,
+      actions: [
+        {
+          label: '作戦ボードで起用する',
+          className: 'btn btn-secondary',
+          onClick: () => {
+            if (typeof switchTab === 'function') switchTab('roster');
+            if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
+          }
+        },
+        {
+          label: '確認して閉じる',
+          className: 'btn btn-primary',
+          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+        }
+      ]
+    });
+  }
   return true;
 }
 
@@ -17352,6 +17675,10 @@ function initOfficeCommAndSecretaryEvents() {
     secModal.addEventListener('click', (e) => {
       if (e.target === secModal) closeSecretarySelectModal();
     });
+  }
+  const closeGmBtn = document.getElementById('btn-close-gm-modal');
+  if (closeGmBtn) {
+    closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
 }
 

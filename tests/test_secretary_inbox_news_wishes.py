@@ -98,6 +98,27 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         for txt in [self.html, self.data_js, self.models_js, self.main_js]:
             self.assertIsNone(re.search(r'[⚽💰✨🎮📋📰💬🏆]', txt))
 
+    def test_5_secretary_modal_on_start_and_events(self):
+        """秘書モーダル（開始時・各イベント連動・キュー制御・閉じるボタン）が実装されていること"""
+        for dom_id in ['gm-modal-secretary-box', 'btn-close-gm-modal']:
+            self.assertIn(f'id="{dom_id}"', self.html)
+        self.assertIn('class="modal-card gm-secretary-modal-card"', self.html)
+        for css_sel in ['.gm-secretary-modal-card', '.gm-modal-sec-avatar-wrap', '.gm-modal-flat-list', '.gm-modal-flat-row']:
+            self.assertIn(css_sel, self.css)
+        for js_sym in [
+            'const gmModalQueue = [];',
+            'function flushNextGmModalOrUnlock(',
+            'function closeGmModal(',
+            'function showSecretaryModal(',
+            'function buildWishModalDetailHtml(',
+            'function showSecretaryClubOpeningBriefing(',
+        ]:
+            self.assertIn(js_sym, self.main_js)
+        self.assertIn('showSecretaryClubOpeningBriefing(playerClub, selectedMgr, true, initWish)', self.main_js)
+        self.assertIn('showSecretaryClubOpeningBriefing(playerClub, playerClub.manager, false, seasonWish)', self.main_js)
+        self.assertGreaterEqual(self.main_js.count('showSecretaryModal('), 6)
+        self.assertGreaterEqual(self.models_js.count('showSecretaryModal('), 2)
+
 
 if __name__ == '__main__':
     unittest.main()

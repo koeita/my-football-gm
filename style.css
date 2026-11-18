@@ -18041,3 +18041,170 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   }
 }
 
+/* 秘書登場モーダル（#gm-modal-overlay 統合） */
+.gm-secretary-modal-card {
+  max-width: 560px;
+}
+
+.gm-modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.gm-modal-secretary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.gm-modal-sec-avatar-wrap {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gm-modal-sec-avatar-wrap canvas.player-avatar {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.gm-modal-title-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.gm-secretary-modal-card .modal-category {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.gm-secretary-modal-card .modal-title {
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.gm-modal-sec-speaker {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.gm-modal-sec-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.gm-modal-sec-role {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.gm-modal-sec-topic {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.gm-secretary-modal-card .modal-detail-box {
+  background-color: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  padding: 6px 0 0;
+  margin-top: 4px;
+}
+
+.gm-modal-flat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.gm-modal-flat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: #d1d5db;
+}
+
+.gm-modal-flat-row:last-child {
+  border-bottom: none;
+}
+
+.gm-modal-flat-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #8b949e;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.gm-modal-flat-val {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#gm-modal-overlay .modal-detail-box:empty {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .gm-secretary-modal-card .modal-header {
+    padding: 12px 14px;
+  }
+
+  .gm-secretary-modal-card .modal-body {
+    padding: 12px 14px;
+  }
+
+  .gm-secretary-modal-card .modal-actions {
+    padding: 10px 14px 14px;
+  }
+
+  .gm-modal-header-row {
+    gap: 10px;
+  }
+
+  .gm-modal-sec-avatar-wrap,
+  .gm-modal-sec-avatar-wrap canvas.player-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .gm-secretary-modal-card .modal-title {
+    font-size: 15px;
+  }
+
+  .gm-modal-flat-row {
+    font-size: 11.5px;
+    gap: 8px;
+  }
+}
+
+
