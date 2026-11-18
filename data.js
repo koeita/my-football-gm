@@ -2120,13 +2120,45 @@ const SQUAD_STATUS_LABELS = {
 
 // 胸スポンサー企業テンプレート（単位：£1K）
 const SPONSOR_TEMPLATES = [
-  { id: 'sp_global_fin', name: 'Apex Global Bank', tier: 'top', baseAnnual: 18000, clBonus: 5000, titleBonus: 7000, relegationPenaltyPct: 45, minReputation: 6800 },
-  { id: 'sp_airways', name: 'Britannia Airways', tier: 'top', baseAnnual: 15000, clBonus: 4500, titleBonus: 6000, relegationPenaltyPct: 40, minReputation: 6000 },
-  { id: 'sp_tech_core', name: 'Nexa Cloud Systems', tier: 'upper', baseAnnual: 10500, clBonus: 3500, titleBonus: 4500, relegationPenaltyPct: 35, minReputation: 4800 },
-  { id: 'sp_motors', name: 'Veloce Motors UK', tier: 'mid', baseAnnual: 7500, clBonus: 2500, titleBonus: 3500, relegationPenaltyPct: 30, minReputation: 3800 },
-  { id: 'sp_energy', name: 'NorthSea Energy', tier: 'mid', baseAnnual: 5500, clBonus: 2000, titleBonus: 2500, relegationPenaltyPct: 25, minReputation: 2800 },
-  { id: 'sp_local_bet', name: 'Albion Heritage Co.', tier: 'lower', baseAnnual: 3200, clBonus: 1200, titleBonus: 1800, relegationPenaltyPct: 15, minReputation: 1000 }
+  { id: 'sp_global_fin', name: 'Apex Global Bank', sector: '国際金融', tier: 'top', baseAnnual: 18000, clBonus: 5000, titleBonus: 7000, relegationPenaltyPct: 45, minReputation: 6800, contractYears: 2, perkLabel: '高額年俸・大型ボーナス型' },
+  { id: 'sp_airways', name: 'Britannia Airways', sector: '航空', tier: 'top', baseAnnual: 15000, clBonus: 4500, titleBonus: 6000, relegationPenaltyPct: 40, minReputation: 6000, contractYears: 3, perkLabel: '3年長期安定契約' },
+  { id: 'sp_tech_core', name: 'Nexa Cloud Systems', sector: 'クラウドIT', tier: 'upper', baseAnnual: 10500, clBonus: 3500, titleBonus: 4500, relegationPenaltyPct: 35, minReputation: 4800, contractYears: 1, perkLabel: '1年短期・更新柔軟型' },
+  { id: 'sp_motors', name: 'Veloce Motors UK', sector: '自動車', tier: 'mid', baseAnnual: 7500, clBonus: 2500, titleBonus: 3500, relegationPenaltyPct: 30, minReputation: 3800, contractYears: 2, perkLabel: '中堅安定バランス型' },
+  { id: 'sp_energy', name: 'NorthSea Energy', sector: 'エネルギー', tier: 'mid', baseAnnual: 5500, clBonus: 2000, titleBonus: 2500, relegationPenaltyPct: 25, minReputation: 2800, contractYears: 2, perkLabel: '降格減額緩やか' },
+  { id: 'sp_local_bet', name: 'Albion Heritage Co.', sector: '地域産業', tier: 'lower', baseAnnual: 3200, clBonus: 1200, titleBonus: 1800, relegationPenaltyPct: 15, minReputation: 1000, contractYears: 1, perkLabel: '1年短期・地域密着型' }
 ];
+
+// 袖スポンサー企業テンプレート（単位：£1K）
+const SLEEVE_SPONSOR_TEMPLATES = [
+  { id: 'slv_nova_tel', name: 'Nova Telecom', sector: '通信', tier: 'top', baseAnnual: 5800, clBonus: 1800, titleBonus: 2400, relegationPenaltyPct: 40, minReputation: 6600, contractYears: 2, perkLabel: '2年主力袖契約' },
+  { id: 'slv_metro_pay', name: 'Metro Pay', sector: 'フィンテック', tier: 'upper', baseAnnual: 4600, clBonus: 1600, titleBonus: 2200, relegationPenaltyPct: 35, minReputation: 5200, contractYears: 1, perkLabel: '1年短期・高ボーナス型' },
+  { id: 'slv_vanguard', name: 'Vanguard Sport', sector: 'スポーツ用品', tier: 'mid', baseAnnual: 3400, clBonus: 1100, titleBonus: 1600, relegationPenaltyPct: 30, minReputation: 4000, contractYears: 2, perkLabel: '安定2年契約' },
+  { id: 'slv_sterling_log', name: 'Sterling Logistics', sector: '物流', tier: 'mid', baseAnnual: 2500, clBonus: 800, titleBonus: 1200, relegationPenaltyPct: 25, minReputation: 3000, contractYears: 2, perkLabel: '堅実バランス型' },
+  { id: 'slv_harbor_brew', name: 'Harbor Brew Co.', sector: '飲料', tier: 'lower', baseAnnual: 1800, clBonus: 600, titleBonus: 900, relegationPenaltyPct: 20, minReputation: 1800, contractYears: 1, perkLabel: '1年短期契約' },
+  { id: 'slv_crown_wear', name: 'Crown Wear', sector: 'アパレル', tier: 'lower', baseAnnual: 1100, clBonus: 400, titleBonus: 600, relegationPenaltyPct: 10, minReputation: 1000, contractYears: 1, perkLabel: '降格影響軽微・1年契約' }
+];
+
+// 練習場・公式パートナー企業テンプレート（単位：£1K）
+const TRAINING_SPONSOR_TEMPLATES = [
+  { id: 'trn_apex_bio', name: 'Apex BioLab', sector: 'スポーツ科学', tier: 'top', baseAnnual: 4200, clBonus: 1200, titleBonus: 1800, relegationPenaltyPct: 35, minReputation: 6400, contractYears: 2, perkLabel: '練習場ネーミング権' },
+  { id: 'trn_kinetix', name: 'Kinetix Tech', sector: 'データ解析', tier: 'upper', baseAnnual: 3300, clBonus: 1000, titleBonus: 1500, relegationPenaltyPct: 30, minReputation: 5000, contractYears: 1, perkLabel: '1年短期・更新柔軟型' },
+  { id: 'trn_titan_nut', name: 'Titan Nutrition', sector: '栄養補助', tier: 'mid', baseAnnual: 2400, clBonus: 800, titleBonus: 1100, relegationPenaltyPct: 25, minReputation: 3800, contractYears: 2, perkLabel: '2年安定供給契約' },
+  { id: 'trn_aegis_ins', name: 'Aegis Insurance', sector: '保険', tier: 'mid', baseAnnual: 1800, clBonus: 600, titleBonus: 800, relegationPenaltyPct: 20, minReputation: 2600, contractYears: 2, perkLabel: '堅実固定年額' },
+  { id: 'trn_pulse_hyd', name: 'Pulse Hydration', sector: '飲料', tier: 'lower', baseAnnual: 1300, clBonus: 400, titleBonus: 600, relegationPenaltyPct: 15, minReputation: 1600, contractYears: 1, perkLabel: '1年短期契約' },
+  { id: 'trn_midland', name: 'Midland Print', sector: '地域メディア', tier: 'lower', baseAnnual: 850, clBonus: 250, titleBonus: 400, relegationPenaltyPct: 10, minReputation: 1000, contractYears: 1, perkLabel: '地域パートナー・1年' }
+];
+
+const SPONSOR_SLOT_META = {
+  chest: { key: 'chest', label: '胸スポンサー', shortLabel: '胸', desc: 'ユニフォーム前面のメインパートナー' },
+  sleeve: { key: 'sleeve', label: '袖スポンサー', shortLabel: '袖', desc: 'ユニフォーム袖・キットパートナー' },
+  training: { key: 'training', label: '公式パートナー', shortLabel: '練習場', desc: '練習場・クラブ公式パートナー' }
+};
+
+function getSponsorSlotTemplates(slotKey) {
+  if (slotKey === 'sleeve') return SLEEVE_SPONSOR_TEMPLATES;
+  if (slotKey === 'training') return TRAINING_SPONSOR_TEMPLATES;
+  return SPONSOR_TEMPLATES;
+}
 
 // 代表チーム戦力・招集基準マスタ（代表ウィーク用）
 const NATIONAL_TEAM_STRENGTHS = {

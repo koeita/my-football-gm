@@ -17018,6 +17018,282 @@ body {
   padding: 10px 4px !important;
 }
 
+.board-sponsor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.board-sponsor-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.board-sponsor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.board-sponsor-row:last-child {
+  border-bottom: none;
+}
+
+.board-sponsor-row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.board-sponsor-slot {
+  font-size: 10.5px;
+  color: #8b949e;
+  font-weight: 700;
+}
+
+.board-sponsor-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-sponsor-name.is-open {
+  color: #fbbf24;
+}
+
+.board-sponsor-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.board-sponsor-fee {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.board-sponsor-meta {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.board-sponsor-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.btn-sponsor-manage {
+  background: rgba(46, 204, 113, 0.14);
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  color: #4ade80;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-sponsor-manage:hover {
+  background: rgba(46, 204, 113, 0.24);
+}
+
+/* スポンサー選定モーダル（フラットリスト型） */
+.sponsor-slot-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sponsor-slot-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.sponsor-slot-tab.is-active {
+  background: rgba(46, 204, 113, 0.1);
+  border-bottom-color: #2ecc71;
+  color: #f8fafc;
+}
+
+.sponsor-slot-tab-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sponsor-slot-tab-sub {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.sponsor-slot-tab.is-active .sponsor-slot-tab-sub {
+  color: #4ade80;
+}
+
+.sponsor-slot-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.sponsor-options-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sponsor-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-left-color 0.14s ease;
+}
+
+.sponsor-option-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sponsor-option-row.is-selected {
+  background: rgba(46, 204, 113, 0.09);
+  border-left-color: #2ecc71;
+}
+
+.sponsor-option-row.is-locked {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.sponsor-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sponsor-option-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sponsor-option-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sponsor-option-sector {
+  font-size: 10.5px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sponsor-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.sponsor-option-meta strong {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.sponsor-option-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sponsor-option-annual {
+  font-size: 14px;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.sponsor-option-years {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+.sponsor-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 768px) {
+  .sponsor-modal-footer {
+    justify-content: stretch;
+  }
+  .sponsor-modal-footer button {
+    flex: 1;
+  }
+}
+
 /* 5. スマホ幅 (375px) での金額・給与・期間表記の折り返し完全防止 */
 .flat-row-header {
   display: flex;

@@ -1614,6 +1614,25 @@
     </div>
   </div>
 
+  <!-- スポンサー契約選定モーダル（シーズン開幕前・経営画面） -->
+  <div id="sponsor-selection-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sponsor-modal-title">
+    <div class="modal-card sponsor-select-card" style="max-width: 680px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <h2 class="info-popup-title" id="sponsor-modal-title">スポンサー契約</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-sponsor-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="sponsor-modal-body" id="sponsor-modal-body" style="overflow-y: auto; padding: 12px 16px; flex: 1;">
+        <!-- JSで胸・袖・公式パートナー枠タブおよび候補リストを描画 -->
+      </div>
+      <div class="sponsor-modal-footer" id="sponsor-modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-defer-sponsor-modal">あとで選ぶ</button>
+        <button type="button" class="btn btn-primary mono" id="btn-confirm-sponsor-modal">契約を確定する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 担当秘書変更モーダル -->
   <div id="secretary-select-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="secretary-modal-title">
     <div class="modal-card" style="max-width: 560px;">

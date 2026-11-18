@@ -2883,10 +2883,9 @@ function getSafeTransferBudget(club) {
   const gateUnit = isD2Club ? 0.055 : 0.085;
   const estHomeGate = Math.round(((club.supporters || 14000) * gateUnit) * stadiumMult);
   const estAwayTv = isD2Club ? 450 : 1600;
-  let estSponsorBase = (club.sponsor && typeof club.sponsor.baseAnnual === 'number') ? club.sponsor.baseAnnual : 3200;
-  if (isD2Club && club.sponsor && club.sponsor.relegationPenaltyPct) {
-    estSponsorBase = Math.round(estSponsorBase * (1 - club.sponsor.relegationPenaltyPct / 100));
-  }
+  let estSponsorBase = typeof getClubTotalBaseSponsorIncome === 'function'
+    ? getClubTotalBaseSponsorIncome(club, isD2Club)
+    : ((club.sponsor && typeof club.sponsor.baseAnnual === 'number') ? club.sponsor.baseAnnual : 3200);
   const estMinLeaguePrize = isD2Club ? 1500 : 5000;
   const estGuaranteedEndRev = estSponsorBase + estMinLeaguePrize;
 
@@ -3170,21 +3169,30 @@ function ensureClubRealismFields(club) {
   if (!club.roles || typeof club.roles !== 'object') {
     club.roles = { captainId: null, pkKickerId: null, setPieceKickerId: null };
   }
-  if (!club.sponsor) {
-    const rep = club.reputation || 4000;
-    const templates = typeof SPONSOR_TEMPLATES !== 'undefined' ? SPONSOR_TEMPLATES : [];
-    const matched = templates.find(s => rep >= s.minReputation) || templates[templates.length - 1];
-    if (matched) {
-      club.sponsor = {
-        name: matched.name,
-        baseAnnual: matched.baseAnnual,
-        clBonus: matched.clBonus,
-        titleBonus: matched.titleBonus,
-        relegationPenaltyPct: matched.relegationPenaltyPct,
-        yearsRemaining: randInt(2, 3)
-      };
+  if (!club.sponsors || typeof club.sponsors !== 'object') {
+    club.sponsors = {
+      chest: club.sponsor || null,
+      sleeve: null,
+      training: null
+    };
+  }
+  if (!club.sponsors.chest && club.sponsor) {
+    club.sponsors.chest = club.sponsor;
+  }
+  const skipSet = new Set(Array.isArray(club._skipAutoSponsorSlots) ? club._skipAutoSponsorSlots : []);
+  const rep = club.reputation || 4000;
+  for (const slotKey of ['chest', 'sleeve', 'training']) {
+    if (!club.sponsors[slotKey] && !skipSet.has(slotKey)) {
+      const templates = typeof getSponsorSlotTemplates === 'function'
+        ? getSponsorSlotTemplates(slotKey)
+        : (typeof SPONSOR_TEMPLATES !== 'undefined' ? SPONSOR_TEMPLATES : []);
+      const matched = templates.find(s => rep >= s.minReputation) || templates[templates.length - 1];
+      if (matched) {
+        club.sponsors[slotKey] = createSponsorContractFromTemplate(matched, slotKey);
+      }
     }
   }
+  club.sponsor = club.sponsors.chest || null;
   if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
   if (!club.psrSanction || typeof club.psrSanction !== 'object') {
     club.psrSanction = { transferBanWindows: 0, pointsDeductedThisSeason: 0 };
@@ -3201,6 +3209,39 @@ function ensureClubRealismFields(club) {
     club.players.forEach((p, idx) => ensurePlayerRealismFields(p, idx < 11));
   }
   autoAssignClubRoles(club);
+}
+
+function createSponsorContractFromTemplate(tpl, slotKey = 'chest') {
+  if (!tpl) return null;
+  return {
+    id: tpl.id || `sp_${slotKey}_${Date.now()}`,
+    slot: slotKey,
+    name: tpl.name,
+    sector: tpl.sector || 'パートナー',
+    baseAnnual: tpl.baseAnnual || 0,
+    clBonus: tpl.clBonus || 0,
+    titleBonus: tpl.titleBonus || 0,
+    relegationPenaltyPct: tpl.relegationPenaltyPct || 0,
+    yearsRemaining: tpl.contractYears || randInt(1, 2),
+    perkLabel: tpl.perkLabel || ''
+  };
+}
+
+function getClubTotalBaseSponsorIncome(club, isD2Club = false) {
+  if (!club) return 0;
+  const slots = club.sponsors && typeof club.sponsors === 'object'
+    ? ['chest', 'sleeve', 'training'].map(k => club.sponsors[k]).filter(Boolean)
+    : (club.sponsor ? [club.sponsor] : []);
+  if (slots.length === 0) return 0;
+  let total = 0;
+  for (const sp of slots) {
+    let val = typeof sp.baseAnnual === 'number' ? sp.baseAnnual : 0;
+    if (isD2Club && sp.relegationPenaltyPct) {
+      val = Math.round(val * (1 - sp.relegationPenaltyPct / 100));
+    }
+    total += val;
+  }
+  return total;
 }
 
 function isPlayerSuspendedForComp(player, compCategory = 'league') {
