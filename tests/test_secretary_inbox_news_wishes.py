@@ -37,9 +37,15 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('function getSecretaryBriefingText(', self.models_js)
         self.assertIn('id="secretary-briefing-bar"', self.html)
         self.assertIn('id="secretary-select-modal"', self.html)
+        self.assertIn('id="btn-header-kickoff"', self.html)
         self.assertIn('function renderSecretaryBriefing(', self.main_js)
         self.assertIn('function selectSecretary(', self.main_js)
+        self.assertIn('function getGmDutyIconSvg(', self.main_js)
         self.assertIn('data-init-sec-id', self.main_js)
+        self.assertIn("担当秘書の選任 (1 / 3)", self.main_js)
+        self.assertIn('業務一覧', self.main_js)
+        for css_sym in ['.btn-office-primary-cta', '.duty-icon-stack', '.duty-icon-pill', '.gm-task-chevron']:
+            self.assertIn(css_sym, self.css)
 
     def test_2_manager_reinforcement_wishes_and_trust_reward(self):
         """監督からの補強希望算出、推薦選手提示、獲得時の信頼度(+10/+6)連動が実装されていること"""
