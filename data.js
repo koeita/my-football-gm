@@ -2318,4 +2318,74 @@ const YOUTH_SCOUT_REGIONS = {
   }
 };
 
+// ==========================================================================
+// 秘書役データベース（3名から選択・変更可能）
+// ==========================================================================
+const SECRETARIES_DATABASE = [
+  {
+    id: 'sec_claire',
+    name: 'C. Bennett',
+    fullName: 'Claire Bennett',
+    nationality: 'England',
+    age: 27,
+    roleLabel: 'チーフセクレタリー',
+    specialty: '財務・日程管理',
+    tone: 'polite',
+    kitColors: ['#1e293b', '#38bdf8'],
+    bio: 'クラブの財務管理とスケジュール調整を統括するチーフ秘書。的確な状況整理でGMの意思決定を支える。',
+    avatarData: {
+      skinColor: 'fair',
+      hairStyle: 'long',
+      hairColor: 'blond',
+      facialHair: 'none',
+      accessories: 'glasses',
+      eyeVariant: 2,
+      isFemale: true
+    }
+  },
+  {
+    id: 'sec_elena',
+    name: 'E. Silva',
+    fullName: 'Elena Silva',
+    nationality: 'Spain',
+    age: 25,
+    roleLabel: 'オペレーション秘書',
+    specialty: '現場・移籍連携',
+    tone: 'active',
+    kitColors: ['#27272a', '#2ecc71'],
+    bio: '現場スタッフやスカウト部門とのパイプ役に長けた実務派秘書。移籍市場や編成の動きを迅速に届ける。',
+    avatarData: {
+      skinColor: 'tan',
+      hairStyle: 'centerpart',
+      hairColor: 'brown',
+      facialHair: 'none',
+      accessories: 'none',
+      eyeVariant: 0,
+      isFemale: true
+    }
+  },
+  {
+    id: 'sec_arthur',
+    name: 'A. Miles',
+    fullName: 'Arthur Miles',
+    nationality: 'England',
+    age: 38,
+    roleLabel: 'エグゼクティブ補佐官',
+    specialty: '理事会・戦力分析',
+    tone: 'calm',
+    kitColors: ['#1f242d', '#f59e0b'],
+    bio: '欧州クラブでフロント実務を歴任したベテラン補佐官。理事会対応と中長期の編成戦略に精通する。',
+    avatarData: {
+      skinColor: 'fair',
+      hairStyle: 'short',
+      hairColor: 'grey',
+      facialHair: 'none',
+      accessories: 'glasses',
+      eyeVariant: 1,
+      isFemale: false
+    }
+  }
+];
+
+
 

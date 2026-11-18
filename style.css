@@ -17606,3 +17606,605 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 .cal-day-cell.is-current-day.has-match {
   border-color: var(--accent-green) !important;
 }
+
+/* ==========================================
+   秘書ブリーフィング ＆ クラブ通信パネル（メッセージ・ニュース）
+   ========================================== */
+.secretary-briefing-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+
+.secretary-avatar-box {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secretary-avatar-box canvas.player-avatar {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.secretary-briefing-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.secretary-briefing-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.secretary-name-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.secretary-role-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.secretary-spec-text {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.secretary-briefing-speech {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #d1d5db;
+}
+
+.btn-change-secretary {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-change-secretary:hover {
+  color: #ffffff;
+  border-color: #2ecc71;
+}
+
+/* クラブ通信パネル（メッセージ受信箱 / ニュース） */
+.office-comm-panel {
+  background: #14171c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.office-comm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.office-comm-tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.office-comm-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 4px 2px 6px;
+  color: #8b949e;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-comm-tab.active {
+  color: #ffffff;
+  border-bottom-color: #2ecc71;
+}
+
+.comm-tab-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+}
+
+.comm-tab-count.has-unread {
+  color: #2ecc71;
+}
+
+.office-comm-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inbox-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-inbox-filter {
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #8b949e;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-inbox-filter.active {
+  color: #2ecc71;
+}
+
+.btn-mark-all-read {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 2px 4px;
+}
+
+.btn-mark-all-read:hover {
+  color: #2ecc71;
+}
+
+.office-inbox-list,
+.office-news-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.inbox-row,
+.news-row {
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.12s ease;
+}
+
+.inbox-row:last-child,
+.news-row:last-child {
+  border-bottom: none;
+}
+
+.inbox-row {
+  cursor: pointer;
+}
+
+.inbox-row:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.inbox-row-head,
+.news-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inbox-row-left,
+.news-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.inbox-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #2ecc71;
+  flex-shrink: 0;
+}
+
+.inbox-read-spacer {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+}
+
+.comm-sender-label {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.comm-sender-manager { color: #38bdf8; }
+.comm-sender-scout { color: #2ecc71; }
+.comm-sender-board { color: #f59e0b; }
+.comm-sender-secretary { color: #a78bfa; }
+.comm-cat-transfer { color: #f59e0b; }
+.comm-cat-league { color: #38bdf8; }
+.comm-cat-cup { color: #2ecc71; }
+.comm-cat-manager { color: #a78bfa; }
+
+.inbox-row-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-row.is-unread .inbox-row-title {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.comm-date-text {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inbox-row-detail {
+  padding: 8px 0 2px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inbox-row-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d1d5db;
+}
+
+.wish-candidates-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wish-candidate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wish-candidate-row:last-child {
+  border-bottom: none;
+}
+
+.wish-candidate-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.wish-candidate-pos {
+  font-size: 11px;
+  font-weight: 800;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+.wish-candidate-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.wish-candidate-meta {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.wish-candidate-fee {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f59e0b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wish-candidate-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.inbox-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.news-row-headline {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.news-row.is-highlight .news-row-headline {
+  color: #ffffff;
+}
+
+.news-row-body {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.secretary-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.secretary-select-row:last-child {
+  border-bottom: none;
+}
+
+.secretary-select-row:hover {
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.secretary-select-row.selected {
+  background-color: rgba(46, 204, 113, 0.08);
+}
+
+.comm-empty-msg {
+  padding: 18px 4px;
+  text-align: center;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+@media (max-width: 768px) {
+  .secretary-briefing-bar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .btn-change-secretary {
+    margin-left: auto;
+  }
+  .wish-candidate-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .wish-candidate-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* 秘書登場モーダル（#gm-modal-overlay 統合） */
+.gm-secretary-modal-card {
+  max-width: 560px;
+}
+
+.gm-modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.gm-modal-secretary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.gm-modal-sec-avatar-wrap {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gm-modal-sec-avatar-wrap canvas.player-avatar {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.gm-modal-title-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.gm-secretary-modal-card .modal-category {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.gm-secretary-modal-card .modal-title {
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.gm-modal-sec-speaker {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.gm-modal-sec-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.gm-modal-sec-role {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.gm-modal-sec-topic {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.gm-secretary-modal-card .modal-detail-box {
+  background-color: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  padding: 6px 0 0;
+  margin-top: 4px;
+}
+
+.gm-modal-flat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.gm-modal-flat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  color: #d1d5db;
+}
+
+.gm-modal-flat-row:last-child {
+  border-bottom: none;
+}
+
+.gm-modal-flat-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #8b949e;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.gm-modal-flat-val {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#gm-modal-overlay .modal-detail-box:empty {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .gm-secretary-modal-card .modal-header {
+    padding: 12px 14px;
+  }
+
+  .gm-secretary-modal-card .modal-body {
+    padding: 12px 14px;
+  }
+
+  .gm-secretary-modal-card .modal-actions {
+    padding: 10px 14px 14px;
+  }
+
+  .gm-modal-header-row {
+    gap: 10px;
+  }
+
+  .gm-modal-sec-avatar-wrap,
+  .gm-modal-sec-avatar-wrap canvas.player-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .gm-secretary-modal-card .modal-title {
+    font-size: 15px;
+  }
+
+  .gm-modal-flat-row {
+    font-size: 11.5px;
+    gap: 8px;
+  }
+}
+
+

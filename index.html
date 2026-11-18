@@ -229,11 +229,14 @@
 
     <!-- タブ3：本部（GM執務室）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
-      <!-- 業務タスク一覧 -->
-      <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="業務タスク一覧">
+      <!-- 秘書ブリーフィング ＆ 優先業務進言パネル -->
+      <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="秘書ブリーフィングと業務タスク一覧">
+      <div class="secretary-briefing-bar" id="secretary-briefing-bar">
+        <!-- JSで秘書ドット絵アバター・進行ブリーフィング・担当変更ボタンを描画 -->
+      </div>
       <div class="gm-tasks-header">
         <div class="gm-tasks-title-group">
-          <h2 class="gm-tasks-title">業務タスク</h2>
+          <h2 class="gm-tasks-title">秘書からの優先事項</h2>
           <span class="gm-tasks-count-badge mono" id="gm-tasks-count-badge">3件</span>
         </div>
         <div class="gm-tasks-header-right">
@@ -305,6 +308,38 @@
         <!-- JSで直近7日分のカレンダーカードを描画 -->
       </div>
     </section>
+
+      <!-- クラブ通信パネル（メッセージ受信箱 / ニュース） -->
+      <section class="office-comm-panel" id="office-comm-panel" aria-label="メッセージとニュース">
+        <div class="office-comm-header">
+          <div class="office-comm-tabs" role="tablist">
+            <button type="button" class="office-comm-tab active" data-comm-tab="messages" id="office-comm-tab-messages" role="tab" aria-selected="true">
+              メッセージ <span class="comm-tab-count mono" id="office-unread-badge">0</span>
+            </button>
+            <button type="button" class="office-comm-tab" data-comm-tab="news" id="office-comm-tab-news" role="tab" aria-selected="false">
+              ニュース <span class="comm-tab-count mono" id="office-news-badge">0</span>
+            </button>
+          </div>
+          <div class="office-comm-controls" id="office-inbox-controls">
+            <div class="inbox-filter-group" id="inbox-filter-bar">
+              <button type="button" class="btn-inbox-filter active" data-inbox-filter="ALL">すべて</button>
+              <button type="button" class="btn-inbox-filter" data-inbox-filter="manager">監督</button>
+              <button type="button" class="btn-inbox-filter" data-inbox-filter="scout">スカウト</button>
+              <button type="button" class="btn-inbox-filter" data-inbox-filter="board">理事会・移籍</button>
+              <button type="button" class="btn-inbox-filter" data-inbox-filter="secretary">秘書</button>
+            </div>
+            <button type="button" class="btn-mark-all-read mono" id="btn-mark-all-read">すべて既読</button>
+          </div>
+        </div>
+        <div class="office-comm-body">
+          <div class="office-inbox-list" id="office-inbox-list">
+            <!-- JSで受信メッセージフラットリストを描画 -->
+          </div>
+          <div class="office-news-list hidden" id="office-news-list">
+            <!-- JSでリーグ・移籍ニュースフラットリストを描画 -->
+          </div>
+        </div>
+      </section>
   </main>
 
     <!-- タブ1：チーム（順位表・日程/結果・個人スタッツ） -->
@@ -1239,16 +1274,22 @@
     </div>
   </div>
 
-  <!-- GMイベント / メガオファー モーダルダイアログ -->
+  <!-- GMイベント / 秘書ブリーフィング モーダルダイアログ -->
   <div id="gm-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <span class="modal-category mono" id="modal-category">GM EVENT</span>
-        <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
+    <div class="modal-card gm-secretary-modal-card">
+      <div class="modal-header gm-modal-header-row">
+        <div class="gm-modal-secretary-row" id="gm-modal-secretary-box">
+          <!-- JSで秘書のドット絵アバター・名前・役職を描画 -->
+        </div>
+        <div class="gm-modal-title-col">
+          <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+          <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-gm-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body">
         <p class="modal-description" id="modal-description"></p>
-        <div class="modal-detail-box mono" id="modal-detail-box"></div>
+        <div class="modal-detail-box" id="modal-detail-box"></div>
       </div>
       <div class="modal-actions" id="modal-actions">
         <!-- JSで選択肢ボタンを生成 -->
@@ -1533,6 +1574,21 @@
         <button type="button" class="btn btn-primary mono" id="btn-confirm-initial-staff" style="padding: 8px 20px; font-weight: 700;">
           指導体制を確定してプレシーズン開幕へ
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 担当秘書変更モーダル -->
+  <div id="secretary-select-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="secretary-modal-title">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <h2 class="info-popup-title" id="secretary-modal-title">担当秘書の選任</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-secretary-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body" id="secretary-modal-body" style="padding: 12px 16px;">
+        <!-- JSで秘書候補3名をフラットリスト描画 -->
       </div>
     </div>
   </div>
