@@ -1734,6 +1734,7 @@ function showGmModal(opts, fromQueue = false) {
   const titleEl = document.getElementById('modal-title');
   const descEl = document.getElementById('modal-description');
   const detailEl = document.getElementById('modal-detail-box');
+  const dialogueCard = document.getElementById('gm-vn-dialogue-card');
 
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
   if (secBox) {
@@ -1741,40 +1742,68 @@ function showGmModal(opts, fromQueue = false) {
       secBox.innerHTML = '';
       secBox.classList.add('hidden');
     } else {
-      const avatarHtml = typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '';
-      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${avatarHtml}</div>`;
+      const bustHtml = typeof getSecretaryBustHtml === 'function'
+        ? getSecretaryBustHtml(sec, 'secretary-bust-canvas')
+        : (typeof getSecretaryAvatarHtml === 'function' ? getSecretaryAvatarHtml(sec, 'avatar-md', 52) : '');
+      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
   }
 
   if (catEl) {
     if (!hideSecretary && sec) {
-      catEl.innerHTML = `<span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      catEl.innerHTML = `<span class="gm-vn-pill-badge"><span class="gm-modal-sec-name">${escapeCommHtml(sec.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(sec.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
     } else {
-      catEl.textContent = category || '';
+      catEl.innerHTML = category ? `<span class="gm-vn-pill-badge">${escapeCommHtml(category)}</span>` : '';
     }
   }
   if (titleEl) titleEl.textContent = title || '';
-  if (descEl) descEl.textContent = description || '';
+  if (descEl) {
+    descEl.textContent = description || '';
+    descEl.classList.remove('gm-vn-speech-anim');
+    void descEl.offsetWidth;
+    descEl.classList.add('gm-vn-speech-anim');
+  }
   if (detailEl) detailEl.innerHTML = detailHtml || '';
 
   const actionsContainer = document.getElementById('modal-actions');
+  let singleTapNextBtn = null;
   if (actionsContainer) {
     actionsContainer.innerHTML = '';
+    const actList = actions || [];
+    const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
+    actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
 
-    (actions || []).forEach(act => {
+    actList.forEach(act => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = act.className || 'btn btn-primary';
-      btn.textContent = act.label;
+      if (isSingleNextPrompt) {
+        btn.className = 'gm-vn-next-prompt-btn';
+        btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+        singleTapNextBtn = btn;
+      } else {
+        btn.className = act.className || 'btn btn-primary';
+        btn.textContent = act.label;
+      }
       if (act.disabled) btn.disabled = true;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         overlay.classList.add('hidden');
         if (act.onClick) act.onClick();
         flushNextGmModalOrUnlock();
       });
       actionsContainer.appendChild(btn);
     });
+  }
+
+  if (dialogueCard) {
+    dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
+    dialogueCard.onclick = singleTapNextBtn
+      ? (e) => {
+          if (e.target.closest('button, a, #modal-detail-box')) return;
+          singleTapNextBtn.click();
+        }
+      : null;
   }
 
   overlay.classList.remove('hidden');
@@ -1791,7 +1820,7 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
-    : [{ label: '確認して閉じる', className: 'btn btn-primary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
+    : [{ label: 'タップで次へ', isNextPrompt: true, onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
   showGmModal({
     category: topic,
     title,
@@ -1835,11 +1864,11 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
     : `Season ${gameState.season} 新体制始動`;
 
   let speech = '';
-  if (sec.tone === 'energetic') {
+  if (sec.tone === 'active') {
     speech = isFirstCareer
       ? `GM、${playerClub.name}へのご着任おめでとうございます！7月1日より移籍市場が解禁されました。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
       : `GM、Season ${gameState.season}の開幕です！移籍市場もオープンしています。${mgrName}監督の補強希望「${wishPosText}」を確認して動き出しましょう。`;
-  } else if (sec.tone === 'analytical') {
+  } else if (sec.tone === 'calm') {
     speech = isFirstCareer
       ? `GM、着任初日の確認です。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
       : `GM、Season ${gameState.season}の基準日が開始しました。安全移籍予算と目標順位を確認の上、${mgrName}監督が求める「${wishPosText}」の精査を推奨します。`;

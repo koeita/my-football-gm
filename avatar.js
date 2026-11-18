@@ -344,6 +344,49 @@ function getAvatarKitColors(player, club) {
 // 16-bit レトロモダン・ピクセルポートレート描画コア（32x32 グリッド）
 // ---------------------------------------------------------------------------
 /**
+ * 共通ヘルパー：後ろ髪レイヤー描画（円形32x32 ＆ バスト立ち絵48x54共用）
+ */
+function drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, extraLongBottom = false) {
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(ox + x, oy + y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+  const style = genes.hairStyle || 'short';
+
+  set(hair.base);
+  if (style === 'afro') {
+    px(8, 2, 16, 2);
+    px(6, 4, 20, 2);
+    px(4, 6, 24, 8);
+    px(5, 14, 22, 3);
+    px(6, 17, 4, 2); px(22, 17, 4, 2);
+    set(hair.shadow);
+    for (let y = 3; y < 18; y += 2) {
+      for (let x = 5 + (y % 4 === 1 ? 1 : 0); x < 27; x += 3) {
+        if ((x - 16) * (x - 16) + (y - 10) * (y - 10) <= 120) px(x, y);
+      }
+    }
+    set(hair.highlight);
+    for (let y = 3; y < 10; y += 2) {
+      for (let x = 9 + (y % 3); x < 23; x += 4) px(x, y);
+    }
+  } else if (style === 'long') {
+    const extH = extraLongBottom ? 21 : 17;
+    px(7, 7, 18, extH);
+    if (!extraLongBottom) px(8, 24, 16, 2);
+    set(hair.shadow);
+    px(7, 14, 2, extH - 6); px(23, 14, 2, extH - 6);
+    set(hair.highlight);
+    px(9, 10, 1, 13); px(22, 10, 1, 13);
+  } else if (style === 'dreads') {
+    const len = extraLongBottom ? 20 : 16;
+    for (const x of [6, 8, 23, 25]) {
+      set(hair.base); px(x, 8, 2, len);
+      set(hair.shadow); for (let y = 9; y < 8 + len; y += 3) px(x, y, 2, 1);
+      set(hair.highlight); for (let y = 10; y < 8 + len; y += 3) px(x, y, 1, 1);
+    }
+  }
+}
+
+/**
  * 32x32 グリッドへ円形バストアップのドット絵を描画
  * @param {CanvasRenderingContext2D} ctx 既に scale 済みのコンテキスト
  */
@@ -356,13 +399,11 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   if (age >= 34) hair = findHairPalette('grey');
   const isVeteranSaltPepper = age >= 31 && age < 34 && hair.key !== 'grey' && hair.key !== 'blond';
 
-  const style = genes.hairStyle || 'short';
   const [kitMain, kitAccent] = kit || AVATAR_DEFAULT_KIT;
 
   ctx.clearRect(0, 0, 32, 32);
 
   // 1. 【背景円（Base Circle）】
-  // 32x32 Canvas中央に、半径約14.8pxのダークグレー（#1c2026）の塗りつぶし円を描画
   ctx.save();
   ctx.beginPath();
   ctx.arc(16, 16, 14.8, 0, Math.PI * 2);
@@ -379,41 +420,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   px(0, 0, 32, 11);
 
   // 2. 【後ろ髪レイヤー（頭部・首の背面）】
-  set(hair.base);
-  if (style === 'afro') {
-    // 豊かなアフロの球状シルエット
-    px(8, 2, 16, 2);
-    px(6, 4, 20, 2);
-    px(4, 6, 24, 8);
-    px(5, 14, 22, 3);
-    px(6, 17, 4, 2); px(22, 17, 4, 2);
-    // アフロの陰影・ハイライトテクスチャ
-    set(hair.shadow);
-    for (let y = 3; y < 18; y += 2) {
-      for (let x = 5 + (y % 4 === 1 ? 1 : 0); x < 27; x += 3) {
-        if ((x - 16) * (x - 16) + (y - 10) * (y - 10) <= 120) px(x, y);
-      }
-    }
-    set(hair.highlight);
-    for (let y = 3; y < 10; y += 2) {
-      for (let x = 9 + (y % 3); x < 23; x += 4) px(x, y);
-    }
-  } else if (style === 'long') {
-    // 肩まで広がるウェーブ長髪（背面）
-    px(7, 7, 18, 17);
-    px(8, 24, 16, 2);
-    set(hair.shadow);
-    px(7, 14, 2, 11); px(23, 14, 2, 11);
-    set(hair.highlight);
-    px(9, 10, 1, 12); px(22, 10, 1, 12);
-  } else if (style === 'dreads') {
-    // 肩まで垂れ下がるドレッドの束（背面）
-    for (const x of [6, 8, 23, 25]) {
-      set(hair.base); px(x, 8, 2, 16);
-      set(hair.shadow); for (let y = 9; y < 24; y += 3) px(x, y, 2, 1);
-      set(hair.highlight); for (let y = 10; y < 24; y += 3) px(x, y, 1, 1);
-    }
-  }
+  drawPixelAvatarBackHair(ctx, 0, 0, genes, hair, false);
 
   // 3. 【首と顎下の深い影】
   // 首のベース幅 6px (X=13〜18, Y=22〜26)
@@ -496,40 +503,63 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
     px(25, 28, 2, 4);
   }
 
+  // 5〜13: 顔（耳・輪郭・眉・目・鼻・口・髭・前髪・アクセサリー）共通レイヤーを描画
+  drawPixelAvatarFaceAndHairLayers(ctx, 0, 0, genes, hair, age, kitAccent, false);
+
+  ctx.restore();
+
+  // 14. 【外周リング】
+  ctx.beginPath();
+  ctx.arc(16, 16, 15.2, 0, Math.PI * 2);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#252a32';
+  ctx.stroke();
+}
+
+/**
+ * 共通ヘルパー：顔の輪郭〜表情〜前髪〜アクセサリーを描画（32x32円形・バスト立ち絵共用）
+ */
+function drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, kitAccent, isBust = false) {
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(ox + x, oy + y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+  const skin = findSkinPalette(genes.skinColor);
+  const isVeteranSaltPepper = age >= 31 && age < 34 && hair.key !== 'grey' && hair.key !== 'blond';
+  const style = genes.hairStyle || 'short';
+
   // 5. 【耳】
-  // 左耳 (X=8〜9, Y=13〜16) / 右耳 (X=22〜23, Y=13〜16)
   set(skin.base);
   px(8, 13, 2, 4); px(22, 13, 2, 4);
-  // 耳の内側の濃い影
   set(skin.shadow);
   px(9, 14, 1, 2); px(22, 14, 1, 2);
 
-  // 6. 【顔の輪郭（角ばった顎ライン・立体シェーディング）】
-  // 顔ベース（X=10〜21, Y=8〜21）
+  // 6. 【顔の輪郭】
   set(skin.base);
-  px(11, 8, 10, 2);   // 額
-  px(10, 10, 12, 10); // 頬・顔中央
-  px(11, 20, 10, 1);  // 顎上部
-  px(12, 21, 8, 1);   // 角ばった顎ライン
-  px(13, 22, 6, 1);   // 顎先端
+  px(11, 8, 10, 2);
+  px(10, 10, 12, 10);
+  px(11, 20, 10, 1);
+  px(12, 21, 8, 1);
+  px(13, 22, 6, 1);
 
-  // 立体感シェーディング：右側・顎エッジ・顎下の影
   set(skin.shadow);
-  px(21, 10, 1, 10);  // 右頬の縦シャドウ
+  px(21, 10, 1, 10);
   if (!genes.isFemale) {
-    px(20, 20, 1, 1);   // 顎右角シャドウ
-    px(11, 20, 1, 1);   // 顎左角シャドウ
+    px(20, 20, 1, 1);
+    px(11, 20, 1, 1);
   }
-  px(12, 21, 1, 1); px(19, 21, 1, 1); // 顎下角
-  px(13, 22, 6, 1);   // 顎底辺の境界シャドウ
+  px(12, 21, 1, 1); px(19, 21, 1, 1);
+  px(13, 22, 6, 1);
 
-  // ハイライト（左上からの光源）：額と左頬
   set(skin.highlight);
-  px(12, 9, 6, 1);    // 額ハイライト
-  px(11, 11, 1, 4);   // 左頬ハイライト
+  px(12, 9, 6, 1);
+  px(11, 11, 1, 4);
+
+  if (isBust && genes.isFemale) {
+    ctx.fillStyle = 'rgba(244, 114, 182, 0.24)';
+    px(11, 17, 2, 1);
+    px(19, 17, 2, 1);
+  }
 
   // 7. 【眉】
-  // キリッとした横2〜3pxの引き締まったライン
   const browColor = hair.key === 'blond' ? '#8a6425' : hair.key === 'grey' ? '#4a4a4a' : hair.shadow;
   set(browColor);
   px(11, 12, 3, 1);
@@ -537,18 +567,15 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   px(13, 13, 1, 1);
   px(18, 13, 1, 1);
 
-  // 8. 【目（横3px：自信のある瞳）】
+  // 8. 【目】
   const ev = genes.eyeVariant || 0;
-  // まぶたの影
   set(skin.shadow);
   px(11, 13, 2, 1); px(19, 13, 2, 1);
 
   if (ev === 1) {
-    // パターン1：鋭い眼光（横3px：白1px + 黒2px）
     set('#f8fafc'); px(11, 14, 1, 1); px(20, 14, 1, 1);
     set('#111827'); px(12, 14, 2, 1); px(18, 14, 2, 1);
   } else if (ev === 2) {
-    // パターン2：青/琥珀系の澄んだ瞳（横3px：白 + 虹彩 + 白）
     set('#f8fafc');
     px(11, 14, 1, 1); px(13, 14, 1, 1);
     px(18, 14, 1, 1); px(20, 14, 1, 1);
@@ -556,7 +583,6 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
     set(irisColor);
     px(12, 14, 1, 1); px(19, 14, 1, 1);
   } else {
-    // パターン0：正面を見据える自信のある瞳（横3px：白 + 黒 + 白）
     set('#f8fafc');
     px(11, 14, 1, 1); px(13, 14, 1, 1);
     px(18, 14, 1, 1); px(20, 14, 1, 1);
@@ -565,30 +591,31 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   }
 
   // 9. 【鼻】
-  // 鼻筋ハイライトと小鼻・鼻下の影
   set(skin.highlight);
-  px(15, 14, 1, 3); // 鼻筋
+  px(15, 14, 1, 3);
   set(skin.shadow);
-  px(15, 17, 2, 1); // 鼻下シャドウ
-  px(14, 17, 1, 1); // 左小鼻
-  px(17, 17, 1, 1); // 右小鼻
+  px(15, 17, 2, 1);
+  px(14, 17, 1, 1);
+  px(17, 17, 1, 1);
 
   // 10. 【口】
-  // 顎から2px上（Y=19）に、引き締まった横2〜3pxの直線ライン
   if (genes.isFemale) {
     set('#1e293b');
-    px(10, 13, 1, 1); px(21, 13, 1, 1); // 目尻のまつ毛アクセント
+    px(10, 13, 1, 1); px(21, 13, 1, 1);
     set('#b84a5a');
     px(14, 19, 4, 1);
+    if (isBust) {
+      px(13, 18, 1, 1);
+      px(18, 18, 1, 1);
+    }
   } else {
     set('#7a3328');
-    px(14, 19, 4, 1); // 直線リップ
+    px(14, 19, 4, 1);
   }
-  // 下唇の立体シャドウ
   set(skin.shadow);
   px(15, 20, 2, 1);
 
-  // 11. 【髭（Facial Hair）】
+  // 11. 【髭】
   const facial = genes.isFemale ? 'none' : (genes.facialHair || 'none');
   const beardColor = hair.base;
   const beardShadow = hair.shadow;
@@ -600,24 +627,22 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
     px(13, 19, 1, 1); px(18, 19, 1, 1);
   } else if (facial === 'goatee') {
     set(beardColor);
-    px(13, 18, 6, 1); // 口髭
+    px(13, 18, 6, 1);
     px(15, 20, 2, 1);
-    px(14, 21, 4, 1); // 顎髭
+    px(14, 21, 4, 1);
     set(beardShadow);
     px(14, 22, 4, 1);
   } else if (facial === 'beard') {
-    // フルビアード・精悍な無精髭
     set(beardColor);
-    px(10, 15, 1, 5); px(21, 15, 1, 5); // もみあげ
-    px(11, 18, 2, 3); px(19, 18, 2, 3); // 頬髭
-    px(13, 18, 6, 1); // 口髭
-    px(12, 20, 8, 2); // 顎髭全体
+    px(10, 15, 1, 5); px(21, 15, 1, 5);
+    px(11, 18, 2, 3); px(19, 18, 2, 3);
+    px(13, 18, 6, 1);
+    px(12, 20, 8, 2);
     set(beardShadow);
     px(13, 22, 6, 1);
     set('#7a3328');
-    px(14, 19, 4, 1); // 髭の間から覗く口
+    px(14, 19, 4, 1);
   } else if (age >= 28 && !genes.isFemale) {
-    // 大人の選手：薄い無精髭のシャドウ
     ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
     px(11, 18, 10, 3);
   }
@@ -625,7 +650,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
   // 12. 【前髪・トップヘアレイヤー】
   set(hair.base);
   switch (style) {
-    case 'short': // サイド刈り上げフェード・短髪ツーブロック
+    case 'short':
       px(11, 5, 10, 1);
       px(10, 6, 12, 3);
       px(10, 9, 2, 3); px(20, 9, 2, 3);
@@ -634,8 +659,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
       set(skin.shadow);
       px(9, 10, 1, 3); px(22, 10, 1, 3);
       break;
-
-    case 'spiky': // スポーティなツンツンヘア
+    case 'spiky':
       px(10, 7, 12, 2);
       px(10, 9, 1, 2); px(21, 9, 1, 2);
       px(11, 4, 2, 3);
@@ -647,8 +671,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
       set(hair.shadow);
       px(10, 8, 12, 1);
       break;
-
-    case 'perm': // パーマ・カーリー
+    case 'perm':
       px(10, 5, 12, 1);
       px(9, 6, 14, 4);
       px(8, 10, 3, 4); px(21, 10, 3, 4);
@@ -661,14 +684,12 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
         for (let x = 11 + (y % 4 === 0 ? 0 : 2); x < 21; x += 3) px(x, y);
       }
       break;
-
-    case 'afro': // アフロ（前髪側）
+    case 'afro':
       px(10, 7, 12, 2);
       set(hair.shadow);
       px(10, 8, 12, 1);
       break;
-
-    case 'dreads': // ドレッドヘア（前髪側）
+    case 'dreads':
       px(10, 6, 12, 2);
       for (const x of [9, 12, 17, 20]) {
         set(hair.base); px(x, 7, 2, 8);
@@ -676,8 +697,7 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
         set(hair.highlight); px(x, 8, 1, 2);
       }
       break;
-
-    case 'buzz': // スキンヘッド・坊主
+    case 'buzz':
       ctx.fillStyle = hair.base;
       ctx.globalAlpha = 0.5;
       px(11, 6, 10, 1);
@@ -685,30 +705,33 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
       px(10, 9, 1, 3); px(21, 9, 1, 3);
       ctx.globalAlpha = 1.0;
       break;
-
-    case 'centerpart': // センター分け・カーテンヘア
+    case 'centerpart':
       px(11, 5, 10, 1);
       px(10, 6, 12, 3);
-      px(9, 9, 3, 4); px(20, 9, 3, 4);
+      px(9, 9, 3, isBust ? 9 : 4); px(20, 9, 3, isBust ? 9 : 4);
+      if (isBust) {
+        px(8, 14, 3, 7); px(21, 14, 3, 7);
+      }
       set(skin.base);
       px(15, 7, 2, 3);
       set(hair.shadow);
       px(14, 9, 1, 2); px(17, 9, 1, 2);
       set(hair.highlight);
       px(12, 6, 3, 1); px(17, 6, 3, 1);
+      if (isBust) {
+        px(9, 11, 1, 6); px(22, 11, 1, 6);
+      }
       break;
-
-    case 'long': // ウェーブ長髪（前髪・サイド）
+    case 'long':
       px(11, 5, 10, 1);
       px(10, 6, 12, 3);
-      px(8, 9, 3, 12); px(21, 9, 3, 12);
+      px(8, 9, 3, isBust ? 16 : 12); px(21, 9, 3, isBust ? 16 : 12);
       set(hair.highlight);
       px(12, 6, 7, 1);
-      px(9, 11, 1, 8); px(22, 11, 1, 8);
+      px(9, 11, 1, isBust ? 11 : 8); px(22, 11, 1, isBust ? 11 : 8);
       set(hair.shadow);
       px(11, 8, 10, 1);
       break;
-
     default:
       px(11, 5, 10, 1);
       px(10, 6, 12, 3);
@@ -716,45 +739,182 @@ function drawPixelAvatarOnContext(ctx, genes, age, kit, roleType = 'player') {
       px(12, 6, 8, 1);
   }
 
-  // ベテラン選手（31〜33歳）のごま塩・白髪ハイライト
   if (isVeteranSaltPepper && style !== 'buzz') {
     set('rgba(220, 225, 230, 0.65)');
     px(11, 6); px(14, 7); px(18, 6); px(20, 8); px(10, 10); px(21, 11);
   }
 
-  // 13. 【アクセサリー（メガネ・ヘアバンド）】
+  // 13. 【アクセサリー】
   if (genes.accessories === 'glasses') {
-    // 細いフレームのインテリ風眼鏡
     set('#232830');
-    // 左フレーム
     px(10, 13, 4, 1); px(10, 16, 4, 1);
     px(10, 14, 1, 2); px(13, 14, 1, 2);
-    // 右フレーム
     px(17, 13, 4, 1); px(17, 16, 4, 1);
     px(17, 14, 1, 2); px(20, 14, 1, 2);
-    // 中央ブリッジ & つる
     px(14, 14, 3, 1);
     px(9, 14, 1, 1); px(21, 14, 1, 1);
-    // レンズ反射ハイライト
     ctx.fillStyle = 'rgba(210, 235, 255, 0.28)';
     px(11, 14, 2, 2); px(18, 14, 2, 2);
   } else if (genes.accessories === 'band') {
-    // ヘアバンド
     const bandColor = kitAccent === '#ffffff' || kitAccent === '#f2f2f2' ? '#f8fafc' : kitAccent;
     set(bandColor);
     px(10, 9, 12, 1);
     set(shadeHex(bandColor, -35));
     px(10, 10, 12, 1);
   }
+}
 
-  ctx.restore();
+/**
+ * 秘書立ち絵バストアップ（48x54px透過グリッド）を描画
+ */
+function drawSecretaryBustOnContext(ctx, secretary) {
+  const genes = ensurePlayerAvatarData(secretary);
+  const skin = findSkinPalette(genes.skinColor);
+  const age = secretary.age || 27;
+  let hair = findHairPalette(genes.hairColor);
+  if (age >= 34) hair = findHairPalette('grey');
+  const kit = Array.isArray(secretary.kitColors) && secretary.kitColors.length >= 2
+    ? secretary.kitColors
+    : ['#1e293b', '#38bdf8'];
+  const [kitMain, kitAccent] = kit;
 
-  // 14. 【外周リング】
-  ctx.beginPath();
-  ctx.arc(16, 16, 15.2, 0, Math.PI * 2);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = '#252a32';
-  ctx.stroke();
+  const px = (x, y, w = 1, h = 1) => ctx.fillRect(x, y, w, h);
+  const set = (c) => { ctx.fillStyle = c; };
+
+  ctx.clearRect(0, 0, 48, 54);
+
+  const ox = 8;
+  const oy = 1;
+
+  // 1. 後ろ髪（肩にかかるボブ・ロング表現）
+  drawPixelAvatarBackHair(ctx, ox, oy, genes, hair, true);
+  if (genes.hairStyle === 'centerpart') {
+    set(hair.base);
+    px(ox + 8, oy + 9, 16, 17);
+    set(hair.shadow);
+    px(ox + 8, oy + 18, 2, 8);
+    px(ox + 22, oy + 18, 2, 8);
+  }
+
+  // 2. 首と鎖骨周辺の陰影
+  set(skin.base);
+  px(ox + 13, oy + 22, 6, 6);
+  set(skin.shadow);
+  px(ox + 13, oy + 22, 6, 2);
+  px(ox + 13, oy + 24, 1, 3);
+  px(ox + 18, oy + 24, 1, 3);
+
+  // 3. ジャケット胴体・テーラードシルエット
+  set(kitMain);
+  px(17, 27, 14, 1);
+  px(15, 28, 18, 1);
+  px(13, 29, 22, 2);
+  px(12, 31, 24, 4);
+  px(13, 35, 22, 19);
+
+  // 左右輪郭の陰影とハイライト
+  set(shadeHex(kitMain, -28));
+  px(30, 30, 5, 24);
+  px(12, 31, 2, 23);
+  set(shadeHex(kitMain, 18));
+  px(15, 28, 3, 1);
+  px(30, 28, 3, 1);
+
+  // 4. 白ブラウス／シャツＶゾーンと襟ラペル
+  set('#f8fafc');
+  px(20, 27, 8, 2);
+  px(21, 29, 6, 3);
+  px(22, 32, 4, 3);
+  px(23, 35, 2, 3);
+  set('#cbd5e1');
+  px(21, 29, 1, 2);
+  px(26, 29, 1, 2);
+
+  // ラペルライン
+  set(shadeHex(kitMain, 24));
+  px(18, 27, 2, 3); px(28, 27, 2, 3);
+  px(19, 30, 2, 3); px(27, 30, 2, 3);
+  px(20, 33, 2, 3); px(26, 33, 2, 3);
+  px(21, 36, 2, 2); px(25, 36, 2, 2);
+
+  // 金パイピング＆ボタン装飾
+  set('#fbbf24');
+  px(23, 41, 2, 2);
+  px(23, 47, 2, 2);
+
+  // 5. リボンタイ（女性秘書）またはネクタイ（男性秘書）
+  if (genes.isFemale) {
+    const bowMain = '#fbbf24';
+    const bowShadow = '#d97706';
+    set(bowMain);
+    px(20, 28, 3, 2);
+    px(25, 28, 3, 2);
+    px(21, 30, 2, 2);
+    px(25, 30, 2, 2);
+    set(bowShadow);
+    px(23, 28, 2, 2);
+    px(21, 31, 1, 1);
+    px(26, 31, 1, 1);
+  } else {
+    set(shadeHex(kitAccent, -20));
+    px(23, 27, 2, 2);
+    set(kitAccent);
+    px(23, 29, 2, 8);
+  }
+
+  // 6. 左腕と小物アイテム（コーヒーカップ / 戦術タブレット / 書類ファイル）
+  set(kitMain);
+  px(10, 31, 4, 10);
+  px(11, 40, 8, 4);
+  set(shadeHex(kitMain, 14));
+  px(11, 31, 1, 8);
+  set('#f8fafc');
+  px(16, 40, 1, 4); // シャツ袖口
+
+  // 左手
+  set(skin.base);
+  px(16, 39, 3, 3);
+  set(skin.shadow);
+  px(17, 41, 2, 1);
+
+  if (secretary.id === 'sec_elena') {
+    // ピッチグリーン発光ライン入り戦術タブレット
+    set('#334155');
+    px(11, 33, 7, 8);
+    set('#0f172a');
+    px(12, 34, 5, 6);
+    set('#2ecc71');
+    px(13, 35, 3, 1);
+    px(13, 37, 2, 1);
+    px(13, 39, 3, 1);
+  } else if (secretary.id === 'sec_arthur') {
+    // 理事会用レザーバインダー
+    set('#78350f');
+    px(11, 34, 7, 8);
+    set('#f59e0b');
+    px(14, 34, 2, 1);
+    set('#f8fafc');
+    px(12, 35, 5, 1);
+  } else {
+    // ブリーフィングの湯気立つカップ
+    set('#f8fafc');
+    px(12, 33, 5, 7);
+    set('#cbd5e1');
+    px(11, 31, 7, 1);
+    px(12, 32, 5, 1);
+    set('#92400e');
+    px(12, 35, 5, 3);
+    set('#38bdf8');
+    px(14, 36, 1, 1);
+    // 湯気
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
+    px(13, 29, 1, 1);
+    px(15, 27, 1, 2);
+    px(14, 25, 1, 1);
+  }
+
+  // 7. 頭部・表情・前髪・眼鏡
+  drawPixelAvatarFaceAndHairLayers(ctx, ox, oy, genes, hair, age, kitAccent, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -891,7 +1051,11 @@ function renderAvatarCanvases(root = document) {
     const pid = cv.getAttribute('data-avatar-pid');
     const entry = PLAYER_AVATAR_LOOKUP.get(String(pid));
     if (entry && entry.player) {
-      generatePlayerAvatar(entry.player, cv, entry.club);
+      if (entry.isBust) {
+        generateSecretaryBust(entry.player, cv);
+      } else {
+        generatePlayerAvatar(entry.player, cv, entry.club);
+      }
     }
   });
 }
@@ -976,5 +1140,48 @@ function getSecretaryAvatarHtml(secretary, extraClass = 'avatar-md', canvasSize 
     extraClass,
     canvasSize
   );
+}
+
+function generateSecretaryBust(secretary, canvas) {
+  if (!secretary || !canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  const sx = canvas.width / 48;
+  const sy = canvas.height / 54;
+  ctx.setTransform(sx, 0, 0, sy, 0, 0);
+  drawSecretaryBustOnContext(ctx, secretary);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function getSecretaryBustDataUrl(secretary, width = 144, height = 162) {
+  if (!secretary) return '';
+  const key = `bust|${secretary.id || secretary.name}|${width}x${height}`;
+  const cached = PLAYER_AVATAR_CACHE.get(key);
+  if (cached) return cached;
+  if (typeof document === 'undefined') return '';
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  generateSecretaryBust(secretary, c);
+  const url = c.toDataURL('image/png');
+  PLAYER_AVATAR_CACHE.set(key, url);
+  return url;
+}
+
+function getSecretaryBustHtml(secretary, extraClass = 'secretary-bust-canvas') {
+  if (!secretary) return '';
+  try {
+    const bustKey = `sec_bust_${secretary.id || secretary.name || 'x'}`;
+    PLAYER_AVATAR_LOOKUP.set(bustKey, { player: secretary, club: null, isBust: true });
+    const w = 144;
+    const h = 162;
+    const url = getSecretaryBustDataUrl(secretary, w, h);
+    const bgStyle = url ? ` style="background-image:url('${url}');background-size:100% 100%;"` : '';
+    return `<canvas class="player-avatar ${extraClass}" width="${w}" height="${h}" data-avatar-pid="${bustKey}"${bgStyle} aria-hidden="true"></canvas>`;
+  } catch (e) {
+    return '';
+  }
 }
 

@@ -109,8 +109,10 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         for dom_id in ['gm-modal-secretary-box', 'btn-close-gm-modal']:
             self.assertIn(f'id="{dom_id}"', self.html)
         self.assertIn('class="modal-card gm-secretary-modal-card"', self.html)
-        for css_sel in ['.gm-secretary-modal-card', '.gm-modal-sec-avatar-wrap', '.gm-modal-flat-list', '.gm-modal-flat-row']:
+        for css_sel in ['.gm-secretary-modal-card', '.gm-modal-sec-avatar-wrap', '.gm-vn-dialogue-card', '.gm-modal-flat-list', '.gm-modal-flat-row']:
             self.assertIn(css_sel, self.css)
+        self.assertIn('function drawSecretaryBustOnContext(', self.avatar_js)
+        self.assertIn('function getSecretaryBustHtml(', self.avatar_js)
         for js_sym in [
             'const gmModalQueue = [];',
             'function flushNextGmModalOrUnlock(',

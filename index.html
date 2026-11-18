@@ -1274,21 +1274,23 @@
   <div id="gm-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-card gm-secretary-modal-card">
       <div class="modal-header gm-modal-header-row">
-        <div class="gm-modal-secretary-row" id="gm-modal-secretary-box">
-          <!-- JSで秘書のドット絵アバター・名前・役職を描画 -->
-        </div>
-        <div class="gm-modal-title-col">
-          <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
-          <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
-        </div>
+        <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
         <button type="button" class="btn-modal-close mono" id="btn-close-gm-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
-      <div class="modal-body">
-        <p class="modal-description" id="modal-description"></p>
-        <div class="modal-detail-box" id="modal-detail-box"></div>
-      </div>
-      <div class="modal-actions" id="modal-actions">
-        <!-- JSで選択肢ボタンを生成 -->
+      <div class="gm-vn-stage-body">
+        <div class="gm-modal-secretary-row" id="gm-modal-secretary-box">
+          <!-- JSで秘書のドット絵立ち絵を描画 -->
+        </div>
+        <div class="gm-vn-dialogue-card" id="gm-vn-dialogue-card">
+          <div class="gm-vn-nameplate-row">
+            <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+          </div>
+          <p class="modal-description" id="modal-description"></p>
+          <div class="modal-detail-box" id="modal-detail-box"></div>
+          <div class="modal-actions" id="modal-actions">
+            <!-- JSで次へプロンプト・選択肢ボタンを生成 -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
