@@ -382,6 +382,13 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         ]:
             self.assertIn(sym, self.main_js)
         self.assertNotIn("['相談者'", self.main_js)
+        self.assertIn('class="gm-vn-sticky-footer"', self.html)
+        self.assertIn('.gm-vn-sticky-footer', self.css)
+        stage_pos = self.html.index('class="gm-vn-stage-body"')
+        footer_pos = self.html.index('class="gm-vn-sticky-footer"')
+        actions_pos = self.html.index('id="modal-actions"')
+        self.assertLess(stage_pos, footer_pos)
+        self.assertLess(footer_pos, actions_pos)
 
 
 if __name__ == '__main__':
