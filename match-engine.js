@@ -570,9 +570,6 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const finalBonusText = (roundNum === 3 && userWon) ? ' WCTトロフィー獲得！' : '';
     const emitPreseasonPostMatchLogAndToast = () => {
       addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)} / サポーター+${fanGain}人）`);
-      if (typeof showToast === 'function') {
-        showToast(`WCT ${myMatch.roundName}：${resText}！ 賞金+${formatMoney(prize)}獲得！`, userWon ? 'success' : 'info');
-      }
     };
 
     currentDay.played = true;
@@ -621,13 +618,19 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
     if (skipAnimation) {
       emitPreseasonPostMatchLogAndToast();
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: true });
+      }
       renderAll();
       return;
     }
 
-    // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示（トースト通知は試合終了後に表示）
+    // 2Dピッチ試合経過アニメーション＆マッチサマリーを表示（ログ・秘書報告は試合終了後に表示）
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
       emitPreseasonPostMatchLogAndToast();
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: false });
+      }
       renderAll();
     }, { quickSummary });
     return;
@@ -746,11 +749,17 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     }
 
     if (skipAnimation) {
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: true });
+      }
       renderAll();
       return;
     }
 
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: false });
+      }
       renderAll();
     }, { quickSummary });
     return;
@@ -857,11 +866,17 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     }
 
     if (skipAnimation) {
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: true });
+      }
       renderAll();
       return;
     }
 
     openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(matchData, { suppressModal: false });
+      }
       renderAll();
     }, { quickSummary });
     return;
@@ -999,6 +1014,9 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   }
 
   if (skipAnimation) {
+    if (typeof handlePlayerMatchCompleted === 'function') {
+      handlePlayerMatchCompleted(matchData, { suppressModal: true, isSeasonClosing: canEndSeasonAfterCup });
+    }
     if (canEndSeasonAfterCup) {
       processSeasonEnd(true);
     }
@@ -1007,6 +1025,9 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   }
 
   openMatchEventModal(matchData, homeScorers, awayScorers, () => {
+    if (typeof handlePlayerMatchCompleted === 'function') {
+      handlePlayerMatchCompleted(matchData, { suppressModal: canEndSeasonAfterCup, isSeasonClosing: canEndSeasonAfterCup });
+    }
     if (canEndSeasonAfterCup) {
       processSeasonEnd(false);
     }
@@ -2380,6 +2401,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   const canEndSeasonNow = isFinalWeek && (typeof hasRemainingCupMatches !== 'function' || !hasRemainingCupMatches());
 
   if (skipAnimation) {
+    if (playerMatchData && typeof handlePlayerMatchCompleted === 'function') {
+      handlePlayerMatchCompleted(playerMatchData, { suppressModal: true, isSeasonClosing: canEndSeasonNow });
+    }
     if (canEndSeasonNow) {
       processSeasonEnd(true);
     }
@@ -2389,6 +2413,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
 
   if (playerMatchData) {
     openMatchEventModal(playerMatchData, playerHomeScorers, playerAwayScorers, () => {
+      if (typeof handlePlayerMatchCompleted === 'function') {
+        handlePlayerMatchCompleted(playerMatchData, { suppressModal: canEndSeasonNow, isSeasonClosing: canEndSeasonNow });
+      }
       if (canEndSeasonNow) {
         processSeasonEnd(false);
       } else {
@@ -3855,6 +3882,8 @@ function closeMatchEventModal() {
   clearMatchLiveTimers();
   matchLiveState.status = 'IDLE';
   gameState.isSimulating = false;
+  const toastContainer = document.getElementById('toast-container');
+  if (toastContainer) toastContainer.innerHTML = '';
 
   const modal = document.getElementById('match-event-modal');
   if (modal) modal.classList.add('hidden');

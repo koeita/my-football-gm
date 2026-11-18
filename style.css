@@ -18197,6 +18197,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .comm-sender-manager { color: #38bdf8; }
+.comm-sender-player { color: #2dd4bf; }
 .comm-sender-scout { color: #2ecc71; }
 .comm-sender-board { color: #f59e0b; }
 .comm-sender-secretary { color: #a78bfa; }
@@ -18602,9 +18603,9 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .gm-modal-flat-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   padding: 5.5px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 12px;
@@ -18616,19 +18617,22 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .gm-modal-flat-label {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 1 auto;
+  min-width: 104px;
   color: #8b949e;
   white-space: normal;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .gm-modal-flat-val {
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 700;
   color: #ffffff;
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 #gm-modal-overlay .modal-detail-box:empty {
@@ -18720,8 +18724,12 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     min-height: 44px;
     border-radius: 10px;
     padding: 10px 14px;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+    box-sizing: border-box;
     justify-content: center;
   }
 

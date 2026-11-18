@@ -152,6 +152,42 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;', self.main_js)
         self.assertIn('allowDuringSkip: true', self.main_js)
 
+    def test_7_post_match_secretary_report_consultations_and_monthly_meeting(self):
+        """試合後秘書報告・監督/選手の起用相談要望・月末月次定例会・プレシーズントースト削除が実装されていること"""
+        # 1. プレシーズンマッチ終了時のトースト抑止とクローズ時コンテナクリア
+        self.assertIn("const toastContainer = document.getElementById('toast-container');", self.match_js)
+        pre_start = self.match_js.index("currentDay.cupCompType === 'preseasonCup'")
+        pre_end = self.match_js.index("// 1. 欧州リーグフェーズ", pre_start)
+        self.assertNotIn('showToast(', self.match_js[pre_start:pre_end])
+
+        # 2. 試合ごとの秘書収支・次戦報告
+        for sym in [
+            'function handlePlayerMatchCompleted(',
+            'function findNextScheduledPlayerMatch(',
+            'function ensureMonthlyLedger(',
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        # 3. 監督・選手からの起用法の相談・要望と受信箱フィルタ・業務一覧連動
+        self.assertIn('data-inbox-filter="player"', self.html)
+        self.assertIn('.comm-sender-player', self.css)
+        for sym in [
+            'function checkAndTriggerLineupConsultation(',
+            'function buildManagerConsultation(',
+            'function buildPlayerConsultation(',
+            'function openLineupConsultationModal(',
+            'function resolveLineupConsultationDecision(',
+            'pendingLineupConsultation',
+            "actionKey === 'open-lineup-consultation'",
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        # 4. 月次定例会（月次報告会）およびセーブ保存互換
+        self.assertIn('function sendMonthlyBoardReport(', self.main_js)
+        self.assertIn('月次定例報告会', self.main_js)
+        for field in ['monthlyLedger:', 'monthlyReports:', 'pendingLineupConsultation:', 'consultationSeq:']:
+            self.assertIn(field, self.storage_js)
+
 
 if __name__ == '__main__':
     unittest.main()

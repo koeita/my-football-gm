@@ -3854,7 +3854,6 @@ function signYouthScoutReportToAcademy(playerId) {
   if (typeof addDailyLog === 'function') {
     addDailyLog(`【ユース入団】発掘選手 ${prospect.pos} ${prospect.name}（${prospect.age}歳 / POT:${prospect.potential}）がユースチームに入団しました。`);
   }
-  if (typeof showToast === 'function') showToast(`${prospect.name} がユースチームに入団しました`, 'success');
   return true;
 }
 
@@ -3885,7 +3884,6 @@ function promoteYouthScoutReportDirectly(playerId) {
   if (typeof addDailyLog === 'function') {
     addDailyLog(`【発掘即昇格】${prospect.pos} #${prospect.squadNumber} ${prospect.name}（${prospect.age}歳）とプロ契約を締結しトップチームへ昇格させました！`);
   }
-  if (typeof showToast === 'function') showToast(`${prospect.name} をトップチームへ直接昇格させました`, 'success');
   return true;
 }
 
