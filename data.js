@@ -2031,12 +2031,12 @@ function formatMoney(kPounds) {
 }
 
 /**
- * 欧州基準の週給フォーマット（例: 25 -> 「£25K/w」、120 -> 「£120K/w」）
+ * 欧州基準の週給フォーマット（例: 25 -> 「£25k/週」、120 -> 「£120k/週」）
  */
 function formatWage(kWage) {
   const rounded = Math.round(kWage || 0);
-  if (rounded === 0) return '£0/w';
-  return `£${rounded.toLocaleString()}K/w`;
+  if (rounded === 0) return '£0/週';
+  return `£${rounded.toLocaleString()}k/週`;
 }
 
 /**

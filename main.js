@@ -1451,27 +1451,27 @@ function openMegaOfferModal() {
   const avgRating = target.appearances > 0 ? (target.totalRating / target.appearances).toFixed(1) : 'N/A';
 
   showGmModal({
-    category: 'EUROPEAN MEGA TRANSFER OFFER / CRITICAL',
-    title: `${offer.megaClubName}から #${target.squadNumber || offer.squadNumber} ${target.name} に対し 移籍金${formatMoney(offer.offerAmount)} の正式オファー`,
-    description: `${gameState.gmName} GM、緊急案件です。当クラブの主力 ${target.pos} #${target.squadNumber || offer.squadNumber} ${target.name}（${target.age}歳）に対し、${offer.megaClubCountry}の名門「${offer.megaClubName}」から破格の移籍金 ${formatMoney(offer.offerAmount)} の買取オファーが届きました。受諾して莫大なクラブ資金を得るか、拒否して戦力を維持するか決断してください。`,
-    detailHtml: `対象選手：<strong>#${target.squadNumber || offer.squadNumber} [${target.pos}] ${target.name}</strong>（OVR ${ovr} / 今季 ${target.appearances}試合 ${target.goals}得点 / 平均評価 ${avgRating}）<br>買収提示額：<strong class="accent-gold">${formatMoney(offer.offerAmount)}</strong>（即時入金）<br>拒否時の影響：サポーター支持 +250人 ／ 本人のプライド上昇により次回契約更新時の要求年俸が +12% 上昇（契約残年数2年以下へ短縮）`,
+    category: '大型買取オファー',
+    title: `${offer.megaClubName}から #${target.squadNumber || offer.squadNumber} ${target.fullName || target.name} への正式オファー`,
+    description: `${gameState.gmName} GM、当クラブの主力 ${target.pos} #${target.squadNumber || offer.squadNumber} ${target.name}（${target.age}歳）に対し、${offer.megaClubCountry}の強豪「${offer.megaClubName}」から移籍金 ${formatMoney(offer.offerAmount)} の買取オファーが届いています。`,
+    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">対象選手</span><span class="gm-modal-flat-val">${target.pos} #${target.squadNumber || offer.squadNumber} ${target.fullName || target.name} (OVR ${ovr})</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">買収提示額 (即時入金)</span><span class="gm-modal-flat-val accent-gold mono">${formatMoney(offer.offerAmount)}</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">拒否時の影響</span><span class="gm-modal-flat-val">支持 +250人 · 次回契約要求週給 +12%</span></div></div>`,
     actions: [
       {
-        label: `【オファー受諾】売却して移籍金を受領（+${formatMoney(offer.offerAmount)}）`,
+        label: `承諾して売却 (+${formatMoney(offer.offerAmount)})`,
         className: 'btn btn-accent',
         onClick: () => {
           acceptPendingMegaOffer();
         }
       },
       {
-        label: '【オファー拒否】戦力維持・引き止め（要求年俸上昇 / ファン+250人）',
+        label: '拒否して残留させる',
         className: 'btn btn-primary',
         onClick: () => {
           rejectPendingMegaOffer();
         }
       },
       {
-        label: '保留して閉じる（GMタスクからいつでも対応可能）',
+        label: '保留して閉じる',
         className: 'btn btn-secondary',
         onClick: () => {
           renderAll();
@@ -1520,7 +1520,8 @@ function rejectPendingMegaOffer() {
     target.contractYears = Math.min(target.contractYears || 2, 2);
     const baseDemand = calculatePlayerDemandSalary(target);
     target.demandedSalary = Math.round((baseDemand * 1.12) / 50) * 50;
-    gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求年俸が ${formatMoney(target.demandedSalary)} に上昇・契約延長交渉が可能）。`;
+    const reqWage = Math.max(5, Math.round(target.demandedSalary / 52));
+    gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求週給が £${reqWage}k/週 に上昇・契約延長交渉が可能）。`;
   }
 
   gameState.pendingMegaOffer = null;
@@ -1627,10 +1628,10 @@ function triggerYouthPromotionEvent() {
   const isFull = playerClub.players.length >= maxSquad;
 
   showGmModal({
-    category: 'ACADEMY SCOUT REPORT',
-    title: '若手ユース選手の台頭（トップチーム無料昇格オファー）',
-    description: `クラブの下部組織（アカデミー）にて、10代の有望株 ${prospect.pos} ${prospect.name}（${prospect.age}歳）が眩い才能を発揮しています。移籍金£0・最低年俸${formatMoney(prospect.salary)}でトップチームへ昇格させることができます。`,
-    detailHtml: `候補選手：[${prospect.pos}] ${prospect.name}（${prospect.age}歳）<br>能力値：総合 ${ovr}（攻撃 ${prospect.atk} / 守備 ${prospect.def} / スタミナ ${prospect.sta}） / 4年契約・年俸 ${formatMoney(prospect.salary)}`,
+    category: 'アカデミー昇格推薦',
+    title: '若手ユース選手のトップチーム昇格案内',
+    description: `下部組織の ${prospect.pos} ${prospect.fullName || prospect.name}（${prospect.age}歳）が著しく成長しています。移籍金 £0・週給 £${prospect.wage}k/週 でトップチームへ昇格可能です。`,
+    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">候補選手</span><span class="gm-modal-flat-val">${prospect.pos} ${prospect.fullName || prospect.name} (${prospect.age}歳)</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">総合力 (OVR)</span><span class="gm-modal-flat-val accent-green">OVR ${ovr}</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">昇格条件</span><span class="gm-modal-flat-val accent-gold mono">4年契約 · £${prospect.wage}k/週</span></div></div>`,
     actions: [
       {
         label: isFull ? `所属枠上限（${maxSquad}名）のため昇格不可` : 'トップチームへ無料昇格させる（移籍金 £0）',
@@ -2766,6 +2767,54 @@ function refreshNegCashflowWarning(bodyEl = null) {
 }
 
 /**
+ * プロフィール・交渉・オファー各モーダル共通の選手ヘッダー表示データを生成する
+ */
+function buildUnifiedPlayerModalHeaderData(p, clubObj, clubLabelText, opts = {}) {
+  if (!p) return null;
+  const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
+  if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(p);
+  const mains = Array.isArray(p.mainPositions) && p.mainPositions.length > 0
+    ? p.mainPositions
+    : (Array.isArray(p.majorPositions) && p.majorPositions.length > 0 ? p.majorPositions : [primaryPos]);
+  const subsRaw = Array.isArray(p.subPositions) ? p.subPositions : (Array.isArray(p.secondaryPositions) ? p.secondaryPositions : []);
+  const subsFiltered = subsRaw.filter(sp => !mains.includes(sp));
+
+  const heightText = typeof p.height === 'number' ? `${p.height}cm` : (p.height || '180cm');
+  const rawNat = p.nationality || 'England';
+  const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
+  const footHtml = typeof formatFootBadge === 'function' ? formatFootBadge(p) : '';
+  const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:5px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
+  const subPosTextHtml = subsFiltered.length > 0
+    ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+    : '';
+  const emblemHtml = (clubObj && typeof getClubEmblemSvg === 'function')
+    ? getClubEmblemSvg(clubObj, 17, 'profile-club-emblem')
+    : '';
+  const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
+  const estMarketValue = typeof calculatePlayerMarketValue === 'function'
+    ? calculatePlayerMarketValue(p)
+    : (typeof calculateTransferFee === 'function' ? calculateTransferFee(p) : 0);
+
+  return {
+    clubHtml: `${emblemHtml}<span>${clubLabelText}</span>`,
+    clubAccent: (clubObj && clubObj.primaryColor) || (opts.isFreeAgent ? '#475569' : '#2ecc71'),
+    squadNumText: (!opts.isFreeAgent && p.squadNumber) ? `#${p.squadNumber}` : '',
+    nameHtml: `<span class="profile-name-main">${p.fullName || p.name}</span><span class="profile-age-inline">(${p.age})</span>`,
+    posMetaHtml: `
+      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-foot">${footHtml}</span>
+      <span class="profile-meta-text">${heightText}</span>
+      <span class="profile-meta-sep">|</span>
+      <span class="profile-meta-nat">${nationalityDisplay}</span>
+    `,
+    weeklyWageVal,
+    estMarketValue,
+    contractText: opts.isFreeAgent ? '無所属' : `契約 ${p.contractYears || 0}年`
+  };
+}
+
+/**
  * 交渉モーダル（契約更新 / 移籍獲得）の内容を描画・同期する
  */
 function renderNegotiationModal() {
@@ -2797,8 +2846,6 @@ function renderNegotiationModal() {
     ? `${ovr}`
     : buildOvrRangeHtml(negScoutView.ovrMin, negScoutView.ovrMax);
   const negOvrSeed = negScoutView.isScouted ? ovr : Math.round((negScoutView.ovrMin + negScoutView.ovrMax) / 2);
-  const primaryPos = target.primaryPosition || target.preferredPosition || target.pos;
-  const subPosList = Array.isArray(target.secondaryPositions) ? target.secondaryPositions : [];
 
   const avatarCanvasEl = document.getElementById('neg-avatar-canvas');
   if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
@@ -2818,51 +2865,54 @@ function renderNegotiationModal() {
         valEl.className = 'profile-header-ovr-val';
       }
       valEl.style.background = 'none';
-      valEl.style.fontSize = negScoutView.isScouted ? '' : '18px';
+      valEl.style.fontSize = negScoutView.isScouted ? '' : '16px';
     }
+  }
+
+  const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
+  const clubLabelText = isRenewal
+    ? (playerClub ? playerClub.name : '自クラブ')
+    : (session.isFreeAgent ? '無所属 (Free Agent)' : (sellerClub ? sellerClub.name : '相手クラブ'));
+  const hdrData = buildUnifiedPlayerModalHeaderData(target, clubDisplayObj, clubLabelText, {
+    isFreeAgent: Boolean(!isRenewal && session.isFreeAgent)
+  });
+
+  const negTopBarEl = document.getElementById('neg-top-club-bar');
+  if (negTopBarEl && hdrData) {
+    negTopBarEl.style.setProperty('--profile-club-accent', hdrData.clubAccent);
   }
 
   const catEl = document.getElementById('neg-modal-category');
-  if (catEl) {
-    const clubDisplayObj = isRenewal ? playerClub : (session.isFreeAgent ? null : sellerClub);
-    const clubLabelText = isRenewal ? (playerClub ? playerClub.name : '自クラブ') : (session.isFreeAgent ? '無所属 (フリー)' : (sellerClub ? sellerClub.name : '相手クラブ'));
-    if (clubDisplayObj && typeof getClubEmblemSvg === 'function') {
-      catEl.innerHTML = `${getClubEmblemSvg(clubDisplayObj, 18, 'profile-club-emblem')}<span>${clubLabelText}</span>`;
-    } else {
-      catEl.textContent = clubLabelText;
-    }
+  if (catEl && hdrData) {
+    catEl.innerHTML = hdrData.clubHtml;
+  }
+
+  const squadNumEl = document.getElementById('neg-squad-num');
+  if (squadNumEl && hdrData) {
+    squadNumEl.textContent = hdrData.squadNumText;
+    squadNumEl.classList.toggle('hidden', !hdrData.squadNumText);
   }
 
   const posPillEl = document.getElementById('neg-pos-pill');
-  if (posPillEl) {
-    if (typeof ensurePlayerProficiencies === 'function') ensurePlayerProficiencies(target);
-    const mains = Array.isArray(target.mainPositions) && target.mainPositions.length > 0
-      ? target.mainPositions
-      : [primaryPos];
-    const subs = Array.isArray(target.subPositions) ? target.subPositions : subPosList;
-    const mainBadgesHtml = mains.map(mp => `<span class="profile-pos-badge-main">${mp}</span>`).join(' ');
-    const subBadgesHtml = subs.filter(sp => !mains.includes(sp)).map(sp => `<span class="profile-pos-badge-sub">${sp}</span>`).join(' ');
-    posPillEl.innerHTML = `<div class="profile-pos-badges-wrap">${mainBadgesHtml}${subBadgesHtml}</div>`;
+  if (posPillEl && hdrData) {
+    posPillEl.innerHTML = hdrData.posMetaHtml;
   }
 
   const titleEl = document.getElementById('neg-modal-title');
-  if (titleEl) {
-    if (target.fullName && target.fullName !== target.name) {
-      titleEl.innerHTML = `<span class="profile-name-main">${target.name}</span><span class="profile-fullname-sub">(${target.fullName})</span>`;
-    } else {
-      titleEl.textContent = target.name;
-    }
+  if (titleEl && hdrData) {
+    titleEl.innerHTML = hdrData.nameHtml;
   }
 
   const metaEl = document.getElementById('neg-player-meta');
-  if (metaEl) {
-    const rawNat = target.nationality || 'England';
-    const flagHtml = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(rawNat) : '';
-    const natChip = `<span class="profile-bio-chip"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
-    const ageChip = `<span class="profile-bio-chip">${target.age}歳</span>`;
-    const numChip = isRenewal ? `<span class="profile-bio-chip mono" style="color:var(--accent-green);font-weight:700;">#${target.squadNumber || '-'}</span>` : '';
-    const wageChip = `<span class="profile-bio-chip mono" style="color:var(--accent-gold);">${formatWage(target.wage)}</span>`;
-    metaEl.innerHTML = `${natChip}${ageChip}${numChip}${wageChip}`;
+  if (metaEl && hdrData) {
+    const wageLabel = isRenewal ? '現在週給' : '現週給';
+    metaEl.innerHTML = `
+      <span class="profile-bio-chip">${wageLabel} <strong class="accent-gold">£${hdrData.weeklyWageVal.toLocaleString()}k/週</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">市場価値 <strong class="accent-green">${formatMoney(hdrData.estMarketValue)}</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">${hdrData.contractText}</span>
+    `;
   }
 
   const maxFails = 2;
@@ -2896,7 +2946,7 @@ function renderNegotiationModal() {
             完全移籍
           </button>
           <button type="button" class="btn-dealtype ${session.dealType === 'loan' ? 'active' : ''}" data-deal-type="loan" ${session.completed ? 'disabled' : ''}>
-            レンタル (LOAN)
+            レンタル
           </button>
           ${isPreContractOk ? `
             <button type="button" class="btn-dealtype ${session.dealType === 'pre_contract' ? 'active' : ''}" data-deal-type="pre_contract" ${session.completed ? 'disabled' : ''} title="残り契約半年・来季7/1加入内定">
@@ -2967,7 +3017,7 @@ function renderNegotiationModal() {
           const reason = isStar ? '主力スター（OVR 78以上）' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
           return `
             <div class="neg-feedback-box status-warn" style="margin-bottom: 12px; font-size: 11px;">
-              <strong>【レンタル獲得困難】</strong> 主力選手のためレンタル不可です。交渉が成立しない可能性が高いため、完全移籍を推奨します。
+              <strong>レンタル獲得困難：</strong>主力選手のためレンタル不可となる可能性が高く、完全移籍での交渉を推奨します。
             </div>
           `;
         }
@@ -4564,21 +4614,44 @@ function openCounterOfferModal(offerId) {
 
   const playerClub = getPlayerClub();
   const player = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
+  const topBarEl = document.getElementById('counter-top-club-bar');
+  if (topBarEl) {
+    topBarEl.style.setProperty('--profile-club-accent', (playerClub && playerClub.primaryColor) || '#2ecc71');
+  }
+
   const infoEl = document.getElementById('counter-offer-modal-player-info');
   if (infoEl) {
+    const dispName = (player && (player.fullName || player.name)) || offer.playerName;
+    const footHtml = player && typeof formatFootBadge === 'function' ? formatFootBadge(player) : '';
+    const weeklyWage = (player && player.wage) || offer.wage || 20;
+    const ovrCls = typeof getOvrTierClass === 'function' ? getOvrTierClass(offer.ovr) : '';
     infoEl.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 12px;">
-        <div>
-          <span class="accent-green mono font-bold">[${offer.playerPos}]</span>
-          <span style="font-weight: 700; font-size: 14px; margin-left: 4px;">#${offer.squadNumber} ${offer.playerName}</span>
-          <span class="text-muted mono" style="font-size: 11.5px; margin-left: 6px;">(${offer.playerAge}歳 / <span class="inline-ovr-display" style="font-weight:800; color:#e6edf3;">OVR ${offer.ovr}</span>)</span>
+      <div class="counter-player-unified-card">
+        <div class="profile-avatar-col">
+          <canvas class="profile-avatar-canvas" id="counter-player-avatar" width="48" height="48" aria-label="選手アバター"></canvas>
+          <div class="profile-header-ovr-box mono">
+            <strong class="profile-header-ovr-val ${ovrCls}">${offer.ovr}</strong>
+          </div>
         </div>
-        <div style="text-align: right;">
-          <div style="font-size: 11px; color: #8b949e;">オファー元クラブ</div>
-          <div style="font-weight: 700; font-size: 12.5px; color: #e6edf3;">${offer.buyerClubName}</div>
+        <div class="counter-player-unified-meta">
+          <div class="counter-player-title-row">
+            <span class="profile-meta-mainpos mono">${offer.playerPos}</span>
+            <span class="counter-player-fullname">${dispName} <span class="profile-age-inline">(${offer.playerAge})</span></span>
+            <span class="profile-top-squad-num mono">#${offer.squadNumber}</span>
+          </div>
+          <div class="counter-player-sub-row mono">
+            ${footHtml ? `<span class="profile-meta-foot">${footHtml}</span>` : ''}
+            <span>週給 <strong class="accent-gold">£${weeklyWage.toLocaleString()}k/週</strong></span>
+            <span class="profile-meta-sep">·</span>
+            <span>相手: <strong style="color:#f1f5f9;">${offer.buyerClubName}</strong></span>
+          </div>
         </div>
       </div>
     `;
+    const cv = document.getElementById('counter-player-avatar');
+    if (cv && player && typeof generatePlayerAvatar === 'function') {
+      generatePlayerAvatar(player, cv, playerClub);
+    }
   }
 
   const currentFeeEl = document.getElementById('counter-current-fee');
@@ -4684,22 +4757,60 @@ function openIncomingOfferModal() {
     return;
   }
 
-  // ヘッダー情報
+  const topBarEl = document.getElementById('incoming-top-club-bar');
+  if (topBarEl) {
+    topBarEl.style.setProperty('--profile-club-accent', (playerClub && playerClub.primaryColor) || '#eab308');
+  }
+
+  const avatarEl = document.getElementById('incoming-offer-avatar');
+  if (avatarEl && target && typeof generatePlayerAvatar === 'function') {
+    generatePlayerAvatar(target, avatarEl, playerClub);
+  }
+
+  const ovrBoxEl = document.getElementById('incoming-offer-ovr');
+  if (ovrBoxEl) {
+    const valEl = ovrBoxEl.querySelector('.profile-header-ovr-val');
+    if (valEl) {
+      valEl.textContent = offer.ovr;
+      valEl.className = `profile-header-ovr-val ${typeof getOvrTierClass === 'function' ? getOvrTierClass(offer.ovr) : ''}`;
+      valEl.style.background = 'none';
+    }
+  }
+
+  // ヘッダー情報（プロフィールモーダル統一フォーマット）
   const squadNumEl = document.getElementById('incoming-offer-squad-num');
   const catEl = document.getElementById('incoming-offer-category');
   const posPill = document.getElementById('incoming-offer-pos-pill');
   const titleEl = document.getElementById('incoming-offer-title');
   const metaEl = document.getElementById('incoming-offer-meta');
 
+  const hdrPlayer = target || {
+    name: offer.playerName,
+    fullName: offer.playerName,
+    pos: offer.playerPos,
+    age: offer.playerAge,
+    squadNumber: offer.squadNumber,
+    wage: offer.wage || 20,
+    contractYears: 2,
+    preferredFoot: 'Right',
+    height: 180,
+    nationality: 'England'
+  };
+  const hdrData = typeof buildUnifiedPlayerModalHeaderData === 'function'
+    ? buildUnifiedPlayerModalHeaderData(hdrPlayer, playerClub, (playerClub && playerClub.name) || '自クラブ')
+    : null;
+
   if (squadNumEl) squadNumEl.textContent = `#${offer.squadNumber}`;
-  if (catEl) catEl.textContent = offer.isMegaClub ? 'EUROPEAN MEGA BID / CRITICAL' : 'DOMESTIC TRANSFER BID';
-  if (posPill) posPill.textContent = offer.playerPos;
-  if (titleEl) titleEl.textContent = `${offer.buyerClubName} からの買取オファー`;
-  if (metaEl) {
+  if (catEl && hdrData) catEl.innerHTML = hdrData.clubHtml;
+  if (posPill && hdrData) posPill.innerHTML = hdrData.posMetaHtml;
+  if (titleEl && hdrData) titleEl.innerHTML = hdrData.nameHtml;
+  if (metaEl && hdrData) {
     metaEl.innerHTML = `
-      <span>買い手: <strong>${offer.buyerClubName}</strong>${offer.buyerClubCountry ? ` (${offer.buyerClubCountry})` : ''}</span>
-      <span>対象: <strong>${offer.playerName}</strong> (${offer.playerAge}歳 / OVR ${offer.ovr})</span>
-      <span>現週給: <strong>${formatWage(offer.wage)}</strong></span>
+      <span class="profile-bio-chip">週給 <strong class="accent-gold">£${hdrData.weeklyWageVal.toLocaleString()}k/週</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">市場価値 <strong class="accent-green">${formatMoney(hdrData.estMarketValue)}</strong></span>
+      <span class="profile-bio-sep">·</span>
+      <span class="profile-bio-chip">${hdrData.contractText}</span>
     `;
   }
 
@@ -4721,10 +4832,10 @@ function renderIncomingOfferBody(offer, resultData = null) {
     bodyEl.innerHTML = `
       <div class="incoming-offer-result ${isSuccess ? 'result-success' : 'result-failed'}">
         <div class="result-header mono">
-          <span class="result-status-tag ${isSuccess ? 'tag-success' : 'tag-fail'}">${isSuccess ? 'AGREEMENT REACHED' : 'TALKS COLLAPSED'}</span>
-          <h3 class="result-title">${isSuccess ? '増額オファー合意！ 移籍成立' : '交渉決裂・相手クラブ撤退'}</h3>
+          <span class="result-status-tag ${isSuccess ? 'tag-success' : 'tag-fail'}">${isSuccess ? '交渉成立' : '交渉決裂'}</span>
+          <h3 class="result-title">${isSuccess ? '増額オファー合意 · 移籍成立' : '相手クラブが交渉から撤退'}</h3>
         </div>
-        <div class="result-body-text" style="padding: 14px; background: rgba(0,0,0,0.25); border-radius: 6px; line-height: 1.6; font-size: 13px; margin: 12px 0;">
+        <div class="result-body-text" style="padding: 12px 2px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); line-height: 1.6; font-size: 13px; margin: 10px 0;">
           ${resultData.message}
         </div>
         <div class="incoming-offer-actions mt-3">
@@ -4740,29 +4851,44 @@ function renderIncomingOfferBody(offer, resultData = null) {
   }
 
   const diffSign = offer.ratioPercent >= 0 ? `+${offer.ratioPercent}%` : `${offer.ratioPercent}%`;
+  const buyerFlag = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(offer.buyerClubName, 16, 'profile-club-emblem') : '';
 
   bodyEl.innerHTML = `
-    <div class="incoming-offer-hero">
-      <div class="incoming-offer-fee-box">
-        <div class="incoming-fee-label mono">PROPOSED TRANSFER FEE (提示移籍金)</div>
-        <div class="incoming-offer-amt mono accent-gold">${formatMoney(offer.offerFee)}</div>
-        <div class="incoming-fee-diff mono text-accent">市場推定価格 ${formatMoney(offer.baseFee)} (${diffSign})</div>
+    <div class="ui-plate-grid cols-2">
+      <div class="ui-stat-plate is-gold">
+        <span class="ui-plate-label">提示移籍金 (${offer.buyerClubName})</span>
+        <span class="ui-plate-val accent-gold">${formatMoney(offer.offerFee)}</span>
       </div>
-      <div class="incoming-offer-desc">
-        ${offer.buyerClubCountry}の名門クラブ「<strong>${offer.buyerClubName}</strong>」が、当クラブ所属の主力 <strong>${offer.playerPos} #${offer.squadNumber} ${offer.playerName}</strong>（${offer.playerAge}歳 / OVR ${offer.ovr}）の完全移籍を強く希望し、<strong>${formatMoney(offer.offerFee)}</strong> の即時買取オファーを打診してきました。<br>
-        GMとして、オファーを承諾して巨額のクラブ資金を得るか、拒否してチームの戦力を死守するか、あるいは強気な増額カウンターを要求するか決断してください。
+      <div class="ui-stat-plate is-highlight">
+        <span class="ui-plate-label">市場推定価格との差</span>
+        <span class="ui-plate-val accent-green">${formatMoney(offer.baseFee)} (${diffSign})</span>
+      </div>
+    </div>
+
+    <div class="ui-kv-list">
+      <div class="ui-kv-row">
+        <div class="ui-kv-label accent-gold-bar">オファー元</div>
+        <div class="ui-kv-content mono" style="display:flex;align-items:center;gap:6px;font-size:12.5px;">
+          ${buyerFlag}<strong>${offer.buyerClubName}</strong><span class="text-muted">(${offer.buyerClubCountry || '海外'})</span>
+        </div>
+      </div>
+      <div class="ui-kv-row">
+        <div class="ui-kv-label">打診内容</div>
+        <div class="ui-kv-content" style="font-size:12.5px;line-height:1.5;color:#d1d5db;">
+          完全移籍での即時獲得を希望しています。提示額を受諾して売却するか、増額要求・売却拒否を選択してください。
+        </div>
       </div>
     </div>
 
     <div class="incoming-offer-actions">
-      <button type="button" class="btn btn-accent btn-lg" id="btn-incoming-accept" title="提示額で売却し、資金を獲得します">
-        <span class="mono">① ACCEPT</span> 【オファー承諾】売却して資金受領 (+${formatMoney(offer.offerFee)})
+      <button type="button" class="btn btn-accent" id="btn-incoming-accept" title="提示額で売却し、資金を獲得します">
+        承諾して売却 (+${formatMoney(offer.offerFee)})
       </button>
-      <button type="button" class="btn btn-primary btn-lg" id="btn-incoming-counter" title="提示額の1.35倍を要求。50%で合意、50%で破談">
-        <span class="mono">② COUNTER</span> 【増額要求】移籍金 ${formatMoney(offer.counterFee)} を逆提案 (勝率50%)
+      <button type="button" class="btn btn-primary" id="btn-incoming-counter" title="提示額の1.35倍を要求。50%で合意、50%で破談">
+        増額を逆提案 (${formatMoney(offer.counterFee)} / 勝率50%)
       </button>
-      <button type="button" class="btn btn-secondary btn-lg" id="btn-incoming-reject" title="売却を拒否して選手を残留させます">
-        <span class="mono">③ REJECT</span> 【売却拒否・残留】オファーを断る (戦力維持)
+      <button type="button" class="btn btn-secondary" id="btn-incoming-reject" title="売却を拒否して選手を残留させます">
+        売却を拒否して残留
       </button>
     </div>
   `;
@@ -8218,7 +8344,7 @@ function renderRoster() {
     } else if (p.contractRefused) {
       extendBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled title="交渉決裂のためオフシーズンにフリー流出確定">交渉決裂</button>`;
     } else if (canExtend) {
-      extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
+      extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・週給交渉モーダルを開く">契約交渉</button>`;
     }
 
     // 22歳以下の若手に対する「レンタル（レンタル放出）」ボタン
@@ -8740,13 +8866,14 @@ function renderIncomingOffers() {
             </button>
             <div class="offer-player-meta">
               <div class="offer-player-name">
-                <span class="accent-green mono">[${offer.playerPos}]</span>
+                <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
                 <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
-                  #${offer.squadNumber} ${offer.playerName}
+                  #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
                 </button>
               </div>
               <div class="offer-player-tags">
                 <span>${offer.playerAge}歳</span>
+                ${target ? `<span class="profile-meta-foot">${formatFootBadge(target)}</span>` : ''}
                 ${(() => {
                   const isMyNow = Boolean(playerClub && playerClub.players && playerClub.players.some(x => x.id === offer.playerId));
                   const sv = (target && typeof getPlayerScoutedView === 'function')
@@ -8769,7 +8896,7 @@ function renderIncomingOffers() {
             </div>
             <div class="offer-finance-block">
               <span class="offer-finance-label">提示週給 / 契約</span>
-              <span class="offer-finance-val mono">${formatWage(offer.offeredWage)} (${offer.offeredYears}年)</span>
+              <span class="offer-finance-val mono">£${(offer.offeredWage || 0).toLocaleString()}k/週 (${offer.offeredYears}年)</span>
             </div>
           </div>
 
@@ -8810,10 +8937,10 @@ function renderIncomingOffers() {
         </div>
       `;
     } else if (offer.status === 'counter_agreed') {
-      deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">上乗せ合意！ 残り期限: ${offer.daysLeft}日</span>`;
+      deadlineBadge = `<span class="offer-deadline-badge mono accent-green" style="border: 1px solid rgba(46, 204, 113, 0.4); background: rgba(46, 204, 113, 0.15); font-weight: 700;">上乗せ合意 · 残り${offer.daysLeft}日</span>`;
       actionButtons = `
-        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (ACCEPT: <span class="mono">${formatMoney(offer.offerFee)}</span>)</button>
-        <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒絶 (REJECT)</button>
+        <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">新金額で承諾 (<span class="mono">${formatMoney(offer.offerFee)}</span>)</button>
+        <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否する</button>
       `;
     } else if (offer.status === 'accepted') {
       if (offer.isLoanOffer) {
@@ -8840,15 +8967,15 @@ function renderIncomingOffers() {
       if (offer.isLoanOffer) {
         deadlineBadge = `<div class="offer-deadline-badge mono accent-green">レンタル打診（残り${offer.daysLeft}日）</div>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">レンタルへ送り出す (承諾)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる (拒絶)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}" style="font-weight: 700;">レンタルへ送り出す</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">残留させる</button>
         `;
       } else {
         deadlineBadge = `<div class="offer-deadline-badge mono">回答期限: 残り${offer.daysLeft}日</div>`;
         actionButtons = `
-          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾 (ACCEPT)</button>
-          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否 (REJECT)</button>
-          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ (COUNTER)</button>
+          <button type="button" class="btn btn-sm btn-offer-accept" data-offer-accept="${offer.id}">承諾して売却</button>
+          <button type="button" class="btn btn-sm btn-offer-reject" data-offer-reject="${offer.id}">拒否する</button>
+          <button type="button" class="btn btn-sm btn-offer-counter" data-offer-counter="${offer.id}" title="希望の移籍金を相手に提示して交渉します">上乗せ要求</button>
         `;
       }
     }
@@ -8870,15 +8997,15 @@ function renderIncomingOffers() {
           </button>
           <div class="offer-player-meta">
             <div class="offer-player-name">
-              <span class="accent-green mono">[${offer.playerPos}]</span>
+              <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
               <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
-                #${offer.squadNumber} ${offer.playerName}
+                #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
               </button>
             </div>
             <div class="offer-player-tags">
               <span>${offer.playerAge}歳</span>
               <span class="ovr-cell-badge ${getOvrTierClass(offer.ovr)}">OVR ${offer.ovr}</span>
-              <span>${footBadge}</span>
+              <span class="profile-meta-foot">${footBadge}</span>
             </div>
           </div>
         </div>
@@ -8890,7 +9017,7 @@ function renderIncomingOffers() {
           </div>
           <div class="offer-finance-block">
             <span class="offer-finance-label">${offer.isLoanOffer ? '給与負担' : '選手週給'}</span>
-            <span class="offer-finance-val mono ${offer.isLoanOffer ? 'accent-green' : ''}">${offer.isLoanOffer ? '相手100%全額負担' : formatWage(offer.wage)}</span>
+            <span class="offer-finance-val mono ${offer.isLoanOffer ? 'accent-green' : ''}">${offer.isLoanOffer ? '相手100%全額負担' : `£${(offer.wage || 0).toLocaleString()}k/週`}</span>
           </div>
         </div>
 
@@ -9373,7 +9500,7 @@ function renderYouthSquad() {
   tbody.innerHTML = youthList.map(y => {
     const ovr = getPlayerOverallRating(y);
     const pot = y.potential || y.potentialGrade || 'B';
-    const potClass = pot === 'S' ? 'stat-rank-S' : (pot === 'A' ? 'stat-rank-A' : (pot === 'B' ? 'stat-rank-B' : 'stat-rank-C'));
+    const potClass = `stat-rank-${['S', 'A', 'B', 'C', 'D', 'E'].includes(pot) ? pot : 'C'}`;
     const canPromoteBtn = canPromote ? `
       <button type="button" class="btn btn-primary btn-sm btn-promote-youth" data-promote-id="${y.id}" title="トップチームへプロ契約昇格">
         昇格
@@ -9453,23 +9580,29 @@ function renderYouthScoutingPanel() {
         const ovr = getPlayerOverallRating(y);
         const nat = y.nationality || 'England';
         const flag = typeof getNationalityFlagHtml === 'function' ? getNationalityFlagHtml(nat) : '';
+        const footHtml = typeof formatFootBadge === 'function' ? formatFootBadge(y) : '';
         const traits = Array.isArray(y.traits) ? y.traits.slice(0, 2) : [];
+        const yPot = y.potential || 'B';
+        const yPotCls = `stat-rank-${['S', 'A', 'B', 'C', 'D', 'E'].includes(yPot) ? yPot : 'B'}`;
+        const rAtk = getAttributeRankInfo(y.atk);
+        const rDef = getAttributeRankInfo(y.def);
+        const rSta = getAttributeRankInfo(y.sta);
         return `
           <div class="youth-report-card">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
               <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                 <span class="pos-tag pos-${y.pos}">${y.pos}</span>
-                <strong style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${y.name}</strong>
+                <strong style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${y.fullName || y.name}</strong>
               </div>
-              <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${y.potential === 'S' ? 'stat-rank-S' : (y.potential === 'A' ? 'stat-rank-A' : 'stat-rank-B')}" style="font-size:14px; font-weight:900;">POT ${y.potential || 'B'}</span></span>
+              <span class="mono font-bold wage-nowrap" style="display:inline-flex; align-items:center; gap:6px;"><span class="ovr-cell-badge ${getOvrTierClass(ovr)}" style="font-size:12.5px;">OVR ${ovr}</span><span class="${yPotCls}" style="font-size:14px; font-weight:900;">POT ${yPot}</span></span>
             </div>
-            <div class="mono text-muted" style="font-size:10.5px;">
-              ${flag} ${nat} | ${y.age}歳 | ${y.scoutRegionName || '発掘'}
+            <div class="mono text-muted" style="font-size:10.5px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+              <span>${flag} ${nat}</span> · <span>${y.age}歳</span>${footHtml ? ` · <span class="profile-meta-foot">${footHtml}</span>` : ''} · <span>${y.scoutRegionName || '発掘'}</span>
             </div>
             <div class="staff-stats-chips" style="margin-top:0;">
-              <span class="staff-stat-chip">ATK <strong>${y.atk}</strong></span>
-              <span class="staff-stat-chip">DEF <strong>${y.def}</strong></span>
-              <span class="staff-stat-chip">STA <strong>${y.sta}</strong></span>
+              <span class="staff-stat-chip stat-rank-${rAtk.rank}">ATK <strong>${rAtk.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.atk}</span></span>
+              <span class="staff-stat-chip stat-rank-${rDef.rank}">DEF <strong>${rDef.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.def}</span></span>
+              <span class="staff-stat-chip stat-rank-${rSta.rank}">STA <strong>${rSta.rank}</strong> <span style="font-size:10px;opacity:0.75;">${y.sta}</span></span>
               ${traits.map(tr => `<span class="staff-specialty-tag">${tr}</span>`).join('')}
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
@@ -14403,8 +14536,8 @@ function renderManagerManagementPanel() {
                   <span class="ui-plate-val accent-green">${mgr.trust}%</span>
                 </div>
                 <div class="ui-stat-plate is-gold">
-                  <span class="ui-plate-label">週給 (年俸)</span>
-                  <span class="ui-plate-val accent-gold">£${mgr.weeklyWage}k</span>
+                  <span class="ui-plate-label">週給</span>
+                  <span class="ui-plate-val accent-gold">£${mgr.weeklyWage}k/週</span>
                 </div>
                 <div class="ui-stat-plate">
                   <span class="ui-plate-label">契約残年数</span>
