@@ -218,14 +218,14 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('.gm-vn-pill-badge.is-manager-pill', self.css)
 
         consult_start = self.main_js.index('function openLineupConsultationModal(')
-        consult_block = self.main_js[consult_start:consult_start + 1200]
+        consult_block = self.main_js[consult_start:consult_start + 3500]
         self.assertIn("kind: 'manager'", consult_block)
         self.assertIn("roleLabel: '監督'", consult_block)
 
         gm_modal_start = self.main_js.index('function showGmModal(')
-        gm_modal_block = self.main_js[gm_modal_start:gm_modal_start + 3800]
-        self.assertIn("activeSpeaker.kind === 'manager'", gm_modal_block)
-        self.assertIn('isManagerSpeaker', gm_modal_block)
+        gm_modal_block = self.main_js[gm_modal_start:gm_modal_start + 4500]
+        self.assertIn('isCustomSpeaker', gm_modal_block)
+        self.assertIn('resolveModalSpeakerBustHtml', self.main_js)
         self.assertIn("variant === 'match-report' || variant === 'monthly-ceremony'", gm_modal_block)
         self.assertIn("variant === 'monthly-ceremony'", gm_modal_block)
 
@@ -258,6 +258,52 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             self.assertIn(f'.{cls_name}', self.css)
         self.assertIn('.gm-secretary-modal-card.is-report-modal', self.css)
         self.assertIn('.gm-secretary-modal-card.is-monthly-ceremony', self.css)
+
+    def test_10_player_direct_speaker_and_conflict_arbitration(self):
+        """選手直接相談演出（選手バスト）と監督・コーチ意見対立の仲裁イベントが実装されていること"""
+        # 1. 選手・コーチ専用バストアップ描画とピルCSS
+        for sym in [
+            'function drawPlayerBustOnContext(',
+            'function drawCoachBustOnContext(',
+            'function generatePlayerBust(',
+            'function generateCoachBust(',
+            'function getPlayerBustHtml(',
+            'function getCoachBustHtml(',
+            "entry.bustRole === 'player'",
+            "entry.bustRole === 'coach'",
+        ]:
+            self.assertIn(sym, self.avatar_js)
+        for css_cls in [
+            '.gm-vn-pill-badge.is-player-pill',
+            '.gm-vn-pill-badge.is-coach-pill',
+            '.gm-conflict-stage',
+            '.gm-conflict-compare',
+            '.gm-conflict-stance.is-mgr',
+            '.gm-conflict-stance.is-coach',
+            '.gm-secretary-modal-card.is-conflict-modal',
+        ]:
+            self.assertIn(css_cls, self.css)
+
+        # 2. 選手相談が選手本人話者かつ一人称口調であること
+        ply_start = self.main_js.index('function buildPlayerConsultation(')
+        ply_block = self.main_js[ply_start:ply_start + 2600]
+        self.assertNotIn('選手から「', ply_block)
+        self.assertNotIn('）から「', ply_block)
+
+        consult_start = self.main_js.index('function openLineupConsultationModal(')
+        consult_block = self.main_js[consult_start:consult_start + 3500]
+        self.assertIn("kind: 'player'", consult_block)
+        self.assertIn("kind: 'conflict'", consult_block)
+
+        # 3. 監督・コーチ意見対立仲裁イベントと裁定（監督支持/コーチ採用/折衷仲裁/保留）
+        for sym in [
+            'function getClubCoachEntries(',
+            'function buildConflictArbitrationEvent(',
+            "variant: 'conflict-arbitration'",
+            "consultation.kind === 'conflict'",
+            "decision === 'mediate'",
+        ]:
+            self.assertIn(sym, self.main_js)
 
 
 if __name__ == '__main__':

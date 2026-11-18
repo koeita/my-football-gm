@@ -1866,6 +1866,37 @@ function closeGmModal(clearQueue = false) {
   flushNextGmModalOrUnlock();
 }
 
+function resolveModalSpeakerBustHtml(kind, person, club) {
+  if (!person) return '';
+  if (kind === 'manager') {
+    if (typeof getManagerBustHtml === 'function') return getManagerBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getManagerAvatarHtml === 'function') return getManagerAvatarHtml(person, 'avatar-md', 52);
+  } else if (kind === 'player') {
+    if (typeof getPlayerBustHtml === 'function') return getPlayerBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getPlayerAvatarHtml === 'function') return getPlayerAvatarHtml(person, club, 'avatar-md', 52);
+  } else if (kind === 'coach') {
+    if (typeof getCoachBustHtml === 'function') return getCoachBustHtml(person, club, 'secretary-bust-canvas');
+    if (typeof getCoachAvatarHtml === 'function') return getCoachAvatarHtml(person, 'avatar-md', 52);
+  } else {
+    if (typeof getSecretaryBustHtml === 'function') return getSecretaryBustHtml(person, 'secretary-bust-canvas');
+    if (typeof getSecretaryAvatarHtml === 'function') return getSecretaryAvatarHtml(person, 'avatar-md', 52);
+  }
+  return '';
+}
+
+function getModalSpeakerPillClass(kind) {
+  if (kind === 'manager') return ' is-manager-pill';
+  if (kind === 'player') return ' is-player-pill';
+  if (kind === 'coach') return ' is-coach-pill';
+  return '';
+}
+
+function buildModalSpeakerPillHtml(speakerObj) {
+  if (!speakerObj) return '';
+  const extraCls = getModalSpeakerPillClass(speakerObj.kind);
+  return `<span class="gm-vn-pill-badge${extraCls}"><span class="gm-modal-sec-name">${escapeCommHtml(speakerObj.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(speakerObj.roleLabel)}</span></span>`;
+}
+
 function showGmModal(opts, fromQueue = false) {
   if (!opts || typeof opts !== 'object') return;
   if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;
@@ -1884,8 +1915,10 @@ function showGmModal(opts, fromQueue = false) {
   const { category, title, description, detailHtml, actions, hideSecretary, speaker, variant } = opts;
   const modalCard = overlay.querySelector('.gm-secretary-modal-card');
   if (modalCard) {
-    modalCard.classList.toggle('is-report-modal', variant === 'match-report' || variant === 'monthly-ceremony');
+    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'conflict-arbitration';
+    modalCard.classList.toggle('is-report-modal', isReportLike);
     modalCard.classList.toggle('is-monthly-ceremony', variant === 'monthly-ceremony');
+    modalCard.classList.toggle('is-conflict-modal', variant === 'conflict-arbitration');
   }
 
   const secBox = document.getElementById('gm-modal-secretary-box');
@@ -1895,25 +1928,40 @@ function showGmModal(opts, fromQueue = false) {
   const detailEl = document.getElementById('modal-detail-box');
   const dialogueCard = document.getElementById('gm-vn-dialogue-card');
 
-  const isManagerSpeaker = Boolean(speaker && speaker.kind === 'manager' && speaker.person);
+  const isConflictSpeaker = Boolean(speaker && speaker.kind === 'conflict' && speaker.left && speaker.right);
+  const isCustomSpeaker = Boolean(speaker && speaker.kind && speaker.kind !== 'secretary' && speaker.person && (speaker.kind === 'manager' || speaker.kind === 'player' || speaker.kind === 'coach'));
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
-  const activeSpeaker = isManagerSpeaker
-    ? { name: speaker.name || speaker.person.name, roleLabel: speaker.roleLabel || '監督', person: speaker.person, club: speaker.club || getPlayerClub(), kind: 'manager' }
-    : (sec ? { name: sec.name, roleLabel: sec.roleLabel, person: sec, club: null, kind: 'secretary' } : null);
+  const clubCtx = (speaker && speaker.club) || (typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+
+  const activeSpeaker = isConflictSpeaker
+    ? { kind: 'conflict', left: speaker.left, right: speaker.right, club: clubCtx }
+    : isCustomSpeaker
+      ? {
+          kind: speaker.kind,
+          name: speaker.name || speaker.person.fullName || speaker.person.name,
+          roleLabel: speaker.roleLabel || (speaker.kind === 'manager' ? '監督' : (speaker.kind === 'player' ? '選手' : 'コーチ')),
+          person: speaker.person,
+          club: clubCtx
+        }
+      : (sec ? { kind: 'secretary', name: sec.name, roleLabel: sec.roleLabel, person: sec, club: null } : null);
 
   if (secBox) {
     if (hideSecretary || !activeSpeaker) {
       secBox.innerHTML = '';
       secBox.classList.add('hidden');
+    } else if (activeSpeaker.kind === 'conflict') {
+      const leftHtml = resolveModalSpeakerBustHtml(activeSpeaker.left.kind, activeSpeaker.left.person, activeSpeaker.club);
+      const rightHtml = resolveModalSpeakerBustHtml(activeSpeaker.right.kind, activeSpeaker.right.person, activeSpeaker.club);
+      secBox.innerHTML = `
+        <div class="gm-conflict-stage">
+          <div class="gm-modal-sec-avatar-wrap is-duo">${leftHtml}</div>
+          <span class="gm-conflict-vs mono">VS</span>
+          <div class="gm-modal-sec-avatar-wrap is-duo">${rightHtml}</div>
+        </div>
+      `;
+      secBox.classList.remove('hidden');
     } else {
-      let bustHtml = '';
-      if (activeSpeaker.kind === 'manager' && typeof getManagerBustHtml === 'function') {
-        bustHtml = getManagerBustHtml(activeSpeaker.person, activeSpeaker.club, 'secretary-bust-canvas');
-      } else if (typeof getSecretaryBustHtml === 'function') {
-        bustHtml = getSecretaryBustHtml(activeSpeaker.person, 'secretary-bust-canvas');
-      } else if (typeof getSecretaryAvatarHtml === 'function') {
-        bustHtml = getSecretaryAvatarHtml(activeSpeaker.person, 'avatar-md', 52);
-      }
+      const bustHtml = resolveModalSpeakerBustHtml(activeSpeaker.kind, activeSpeaker.person, activeSpeaker.club);
       secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
@@ -1921,8 +1969,13 @@ function showGmModal(opts, fromQueue = false) {
 
   if (catEl) {
     if (!hideSecretary && activeSpeaker) {
-      const pillExtraCls = activeSpeaker.kind === 'manager' ? ' is-manager-pill' : '';
-      catEl.innerHTML = `<span class="gm-vn-pill-badge${pillExtraCls}"><span class="gm-modal-sec-name">${escapeCommHtml(activeSpeaker.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(activeSpeaker.roleLabel)}</span></span>${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      if (activeSpeaker.kind === 'conflict') {
+        const leftPill = buildModalSpeakerPillHtml(activeSpeaker.left);
+        const rightPill = buildModalSpeakerPillHtml(activeSpeaker.right);
+        catEl.innerHTML = `${leftPill}<span class="gm-conflict-pill-sep">×</span>${rightPill}${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      } else {
+        catEl.innerHTML = `${buildModalSpeakerPillHtml(activeSpeaker)}${category ? `<span class="gm-modal-sec-topic">${escapeCommHtml(category)}</span>` : ''}`;
+      }
     } else {
       catEl.innerHTML = category ? `<span class="gm-vn-pill-badge">${escapeCommHtml(category)}</span>` : '';
     }
@@ -10219,7 +10272,7 @@ function renderGmDuties() {
     const lc = gameState.pendingLineupConsultation;
     duties.push({
       level: 'recommended',
-      badge: '相談',
+      badge: lc.kind === 'conflict' ? '仲裁' : '相談',
       title: lc.dutyTitle || '起用法の相談・要望',
       desc: lc.dutyDesc || '監督または選手から起用法に関する相談が届いています',
       action: 'open-lineup-consultation'
@@ -17868,18 +17921,18 @@ function buildPlayerConsultation(club) {
       kind: 'player',
       scenario: 'P2',
       senderName: `${outPosStarter.name} (${outPosStarter.pos})`,
-      topic: '選手からの起用法要望',
+      topic: '起用法の相談',
       title: `${outPosStarter.fullName || outPosStarter.name}：本職ポジションでの起用要望`,
-      speech: `GM、${outPosStarter.fullName || outPosStarter.name} 選手から「現在は ${curPos} を任されていますが、最も持ち味を出せる本職 ${outPosStarter.pos} でプレーさせてもらいたい」と面談希望が届いています。`,
+      speech: `GM、今お時間よろしいでしょうか。現在は ${curPos} を任されていますが、自分の持ち味を最も発揮できるのは本職の ${outPosStarter.pos} です。次戦から本職ポジションでプレーさせてもらえませんか。`,
       dutyTitle: `${outPosStarter.name} の起用法要望`,
-      dutyDesc: `本職 [${outPosStarter.pos}] 起用の調整要望`,
+      dutyDesc: `本職 ${outPosStarter.pos} 起用の調整要望`,
       playerId: outPosStarter.id,
       detailRows: [
         ['要望選手', `#${outPosStarter.squadNumber || '-'} ${outPosStarter.fullName || outPosStarter.name}（OVR ${getPlayerOverallRating(outPosStarter)}）`],
-        ['現在の配置', `${curPos}（本職: ${outPosStarter.pos}）`],
+        ['現在の配置', `${curPos}（本職 ${outPosStarter.pos}）`],
         ['士気 (Morale)', `${Math.round(outPosStarter.morale ?? 75)}`]
       ],
-      acceptLabel: `本職 [${outPosStarter.pos}] へ配置を調整する`
+      acceptLabel: `本職 ${outPosStarter.pos} へ配置を調整する`
     };
   }
 
@@ -17900,11 +17953,12 @@ function buildPlayerConsultation(club) {
         kind: 'player',
         scenario: 'P1',
         senderName: `${requester.name} (${requester.pos})`,
-        topic: '選手からの起用法要望',
+        topic: '起用法の相談',
         title: `${requester.fullName || requester.name}：先発メンバー入り直訴`,
-        speech: `GM、控えに甘んじている ${requester.fullName || requester.name}（${requester.pos} / OVR ${rOvr}）から「チームに貢献する準備は万全です。次戦のスタメンにぜひ抜擢してほしい」との強い要望が上がっています。`,
+        speech: `GM、直接お話ししたいことがあります。今は控えに回っていますが、身体のキレも集中力も万全です。チームを勝利へ導く準備はできているので、次の試合でスタメンを任せてください。`,
         dutyTitle: `${requester.name} の先発起用要望`,
         dutyDesc: `スタメン出場機会についての面談`,
+        playerId: requester.id,
         inPlayerId: requester.id,
         outPlayerId: outStarter.id,
         detailRows: [
@@ -17919,13 +17973,158 @@ function buildPlayerConsultation(club) {
   return null;
 }
 
+function getClubCoachEntries(club) {
+  if (!club || !club.coaches || typeof club.coaches !== 'object') return [];
+  const entries = [];
+  (Array.isArray(club.coaches.attacking) ? club.coaches.attacking : []).forEach(c => {
+    if (c) entries.push({ coach: c, category: 'attacking', roleLabel: '攻撃コーチ' });
+  });
+  (Array.isArray(club.coaches.defending) ? club.coaches.defending : []).forEach(c => {
+    if (c) entries.push({ coach: c, category: 'defending', roleLabel: '守備コーチ' });
+  });
+  if (club.coaches.fitness) {
+    entries.push({ coach: club.coaches.fitness, category: 'fitness', roleLabel: 'フィジカルコーチ' });
+  }
+  if (club.coaches.goalkeeping) {
+    entries.push({ coach: club.coaches.goalkeeping, category: 'goalkeeping', roleLabel: 'GKコーチ' });
+  }
+  return entries;
+}
+
+function buildConflictArbitrationEvent(club) {
+  if (!club || !club.manager) return null;
+  const mgr = club.manager;
+  const coaches = getClubCoachEntries(club);
+  if (coaches.length === 0) return null;
+
+  const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+  const starters = active.filter(p => p.isStarter && (p.slotIndex || 0) > 0);
+  const nonStarters = active.filter(p => !p.isStarter && p.pos !== 'GK');
+  const avgStarterFatigue = starters.length > 0
+    ? Math.round(starters.reduce((sum, p) => sum + (p.fatigue || 0), 0) / starters.length)
+    : 0;
+
+  const youngHopeful = [...nonStarters].filter(p => (p.age || 25) <= 22)
+    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0];
+  const vetStarter = [...starters].filter(p => (p.age || 25) >= 28)
+    .sort((a, b) => getPlayerOverallRating(a) - getPlayerOverallRating(b))[0];
+
+  const fitnessEntry = coaches.find(e => e.category === 'fitness') || coaches[0];
+  const tacEntries = coaches.filter(e => e.category === 'attacking' || e.category === 'defending');
+  const tacEntry = tacEntries[(gameState.consultationSeq || 0) % Math.max(1, tacEntries.length)] || coaches[0];
+
+  const preferScenario = (avgStarterFatigue >= 28 || ((gameState.consultationSeq || 0) % 3 === 0))
+    ? 'C1'
+    : (youngHopeful && vetStarter && ((gameState.consultationSeq || 0) % 2 === 1))
+      ? 'C3'
+      : 'C2';
+
+  if (preferScenario === 'C3' && youngHopeful && vetStarter) {
+    const cEntry = tacEntry;
+    const yOvr = getPlayerOverallRating(youngHopeful);
+    const vOvr = getPlayerOverallRating(vetStarter);
+    return {
+      id: `consult_conf_${Date.now()}`,
+      kind: 'conflict',
+      scenario: 'C3',
+      senderName: `${mgr.name} 監督 × ${cEntry.coach.name} ${cEntry.roleLabel}`,
+      topic: '意見対立の仲裁',
+      title: '起用路線の対立：ベテラン主軸 vs 若手抜擢',
+      speech: `GM、次戦の選手起用で ${cEntry.coach.fullName || cEntry.coach.name} ${cEntry.roleLabel} と意見が割れています。経験豊富な ${vetStarter.name} で手堅くいくか、勢いのある若手 ${youngHopeful.name} を抜擢すべきか、最終判断をお願いします。`,
+      dutyTitle: '監督・コーチの意見対立仲裁',
+      dutyDesc: `${mgr.name}監督と${cEntry.coach.name}の起用方針を裁定`,
+      coachId: cEntry.coach.id,
+      coachCategory: cEntry.category,
+      coachName: cEntry.coach.name,
+      coachRoleLabel: cEntry.roleLabel,
+      inPlayerId: youngHopeful.id,
+      outPlayerId: vetStarter.id,
+      mgrStanceTitle: `${mgr.name} 監督の主張`,
+      mgrStanceBody: `大一番では経験値と計算できる試合運びが不可欠。${vetStarter.fullName || vetStarter.name}（${vetStarter.age}歳 / OVR ${vOvr}）を軸に据え続けるべき。`,
+      coachStanceTitle: `${cEntry.coach.fullName || cEntry.coach.name}（${cEntry.roleLabel}）の主張`,
+      coachStanceBody: `練習での伸びと推進力は ${youngHopeful.fullName || youngHopeful.name}（${youngHopeful.age}歳 / OVR ${yOvr}）が上。今こそ先発抜擢で活性化すべき。`,
+      impactSummary: '監督支持：信頼度+5・先発士気UP ／ コーチ採用：若手抜擢＆士気+10 ／ 仲裁：双方安定',
+      acceptLabel: `${mgr.name}監督を支持（ベテラン軸を維持）`,
+      coachAcceptLabel: `${cEntry.coach.name}コーチ案を採用（${youngHopeful.name} を抜擢）`,
+      mediateLabel: '段階的起用の折衷案で仲裁する'
+    };
+  }
+
+  if (preferScenario === 'C2') {
+    const isAtk = tacEntry.category === 'attacking';
+    const secLabel = isAtk ? '攻撃ユニット' : '守備ユニット';
+    return {
+      id: `consult_conf_${Date.now()}`,
+      kind: 'conflict',
+      scenario: 'C2',
+      senderName: `${mgr.name} 監督 × ${tacEntry.coach.name} ${tacEntry.roleLabel}`,
+      topic: '意見対立の仲裁',
+      title: `戦術調整の衝突：全体バランス vs ${secLabel}強化`,
+      speech: `GM、今週のトレーニングと戦術重点を巡って私と ${tacEntry.coach.fullName || tacEntry.coach.name} ${tacEntry.roleLabel} の主張が平行線をたどっています。チーム全体としてどちらを優先すべきか裁定してください。`,
+      dutyTitle: '監督・コーチの戦術対立仲裁',
+      dutyDesc: `${mgr.name}監督と${tacEntry.coach.name}の調整方針を裁定`,
+      coachId: tacEntry.coach.id,
+      coachCategory: tacEntry.category,
+      coachName: tacEntry.coach.name,
+      coachRoleLabel: tacEntry.roleLabel,
+      mgrStanceTitle: `${mgr.name} 監督の主張`,
+      mgrStanceBody: '特定の局面に偏らず、既存のチーム規律と攻守全体の連動性を最優先で仕上げたい。',
+      coachStanceTitle: `${tacEntry.coach.fullName || tacEntry.coach.name}（${tacEntry.roleLabel}）の主張`,
+      coachStanceBody: isAtk
+        ? '決定力と前線の連係が勝敗を分ける。攻撃陣に特化した崩しのメニューへ比重を移すべきだ。'
+        : '失点を減らさなければ上位は望めない。守備ブロックと球際の徹底に時間を割くべきだ。',
+      impactSummary: `監督支持：信頼度+5・先発士気UP ／ コーチ採用：${secLabel}士気+7 ／ 仲裁：全体士気UP`,
+      acceptLabel: `${mgr.name}監督を支持（全体規律を優先）`,
+      coachAcceptLabel: `${tacEntry.coach.name}コーチ案を採用（${secLabel}を集中強化）`,
+      mediateLabel: '全体戦術と個別パートを併設して仲裁'
+    };
+  }
+
+  // Scenario C1: トレーニング強度・過密疲労対立
+  return {
+    id: `consult_conf_${Date.now()}`,
+    kind: 'conflict',
+    scenario: 'C1',
+    senderName: `${mgr.name} 監督 × ${fitnessEntry.coach.name} ${fitnessEntry.roleLabel}`,
+    topic: '意見対立の仲裁',
+    title: '調整方針の対立：練習強度維持 vs 疲労回復優先',
+    speech: `GM、次節に向けた調整メニューについて ${fitnessEntry.coach.fullName || fitnessEntry.coach.name} ${fitnessEntry.roleLabel} と対立しています。強度の高い戦術練習を貫くべきか、回復優先へ切り替えるべきか判断を仰ぎたい。`,
+    dutyTitle: '監督・コーチの調整方針仲裁',
+    dutyDesc: `強度維持か疲労軽減か、GMによる仲裁待ち`,
+    coachId: fitnessEntry.coach.id,
+    coachCategory: fitnessEntry.category,
+    coachName: fitnessEntry.coach.name,
+    coachRoleLabel: fitnessEntry.roleLabel,
+    mgrStanceTitle: `${mgr.name} 監督の主張`,
+    mgrStanceBody: `主力平均疲労は ${avgStarterFatigue}% だが勝負どころ。実戦形式の強度を落とさず勝点を取り切る準備を続けたい。`,
+    coachStanceTitle: `${fitnessEntry.coach.fullName || fitnessEntry.coach.name}（${fitnessEntry.roleLabel}）の主張`,
+    coachStanceBody: 'このまま高負荷を続ければ筋肉系トラブルのリスクが急増する。強度を下げて疲労を抜くのが先決だ。',
+    impactSummary: '監督支持：信頼度+5・先発士気+3（疲労増） ／ コーチ採用：全選手疲労-10回復 ／ 仲裁：バランス回復',
+    acceptLabel: `${mgr.name}監督を支持（高強度調整を継続）`,
+    coachAcceptLabel: `${fitnessEntry.coach.name}コーチ案を採用（疲労回復を優先）`,
+    mediateLabel: '主力は軽め・控えは強めの負荷分散で仲裁'
+  };
+}
+
 function buildLineupConsultationCandidate(club, forceType = null) {
   if (!club) return null;
-  const preferPlayer = forceType ? (forceType === 'player') : ((gameState.consultationSeq || 0) % 2 === 1);
-  if (preferPlayer) {
-    return buildPlayerConsultation(club) || (forceType ? null : buildManagerConsultation(club));
+  if (forceType === 'player') {
+    return buildPlayerConsultation(club);
   }
-  return buildManagerConsultation(club) || (forceType ? null : buildPlayerConsultation(club));
+  if (forceType === 'manager') {
+    return buildManagerConsultation(club);
+  }
+  if (forceType === 'conflict') {
+    return buildConflictArbitrationEvent(club);
+  }
+  const seqMod = (gameState.consultationSeq || 0) % 3;
+  if (seqMod === 1) {
+    return buildPlayerConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
+  }
+  if (seqMod === 2) {
+    return buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
+  }
+  return buildManagerConsultation(club) || buildPlayerConsultation(club) || buildConflictArbitrationEvent(club);
 }
 
 function resolveLineupConsultationDecision(consultation, decision) {
@@ -17934,14 +18133,72 @@ function resolveLineupConsultationDecision(consultation, decision) {
 
   if (decision === 'defer') {
     gameState.pendingLineupConsultation = consultation;
-    if (typeof switchTab === 'function') switchTab('roster');
-    if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
+    if (consultation.kind !== 'conflict') {
+      if (typeof switchTab === 'function') switchTab('roster');
+      if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
+    }
     renderAll();
     return;
   }
 
   gameState.pendingLineupConsultation = null;
   const mgr = club.manager;
+  const activePlayers = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+
+  if (consultation.kind === 'conflict') {
+    if (decision === 'accept') {
+      if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 5);
+      activePlayers.filter(p => p.isStarter).forEach(p => {
+        p.morale = Math.min(100, (p.morale || 75) + (consultation.scenario === 'C1' ? 3 : 4));
+        if (consultation.scenario === 'C1') p.fatigue = Math.min(100, (p.fatigue || 0) + 3);
+      });
+      addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}の方針を支持し、チームの統一感を優先しました（${consultation.coachName || 'コーチ'}には理解を求めました）。`);
+    } else if (decision === 'coach' || decision === 'decline') {
+      if (mgr) mgr.trust = Math.max(15, (mgr.trust ?? 75) - 3);
+      if (consultation.scenario === 'C1') {
+        activePlayers.forEach(p => {
+          p.fatigue = Math.max(0, (p.fatigue || 0) - 10);
+          if (p.isStarter) p.morale = Math.min(100, (p.morale || 75) + 2);
+        });
+        addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'フィジカルコーチ'}の進言を採用し、負荷軽減によって主力のコンディションを回復しました。`);
+      } else if (consultation.scenario === 'C3' && consultation.inPlayerId && consultation.outPlayerId) {
+        const outP = club.players.find(p => p.id === consultation.outPlayerId);
+        const inP = club.players.find(p => p.id === consultation.inPlayerId);
+        if (outP && inP) {
+          swapStarterWithCandidate(club, outP, inP);
+          inP.morale = Math.min(100, (inP.morale || 75) + 10);
+          outP.morale = Math.max(30, (outP.morale || 75) - 2);
+          addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の推挙を採用し、若手 #${inP.squadNumber || '-'} ${inP.name} をスタメン抜擢しました。`);
+        }
+      } else {
+        const isAtk = consultation.coachCategory === 'attacking';
+        const targetPosSet = isAtk
+          ? new Set(['ST', 'CF', 'LW', 'RW', 'LM', 'RM', 'CAM', 'AM'])
+          : new Set(['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'DM', 'CM']);
+        activePlayers.forEach(p => {
+          if (targetPosSet.has(p.pos)) p.morale = Math.min(100, (p.morale || 75) + 7);
+        });
+        addDailyLog(`【スタッフ仲裁】${consultation.coachName || 'コーチ'}の提言を採用し、${isAtk ? '攻撃陣' : '守備陣'}の連携強化を重点実施しました。`);
+      }
+    } else if (decision === 'mediate') {
+      if (mgr) mgr.trust = Math.min(100, (mgr.trust ?? 75) + 2);
+      if (consultation.scenario === 'C1') {
+        activePlayers.forEach(p => {
+          if (p.isStarter) p.fatigue = Math.max(0, (p.fatigue || 0) - 5);
+          else p.morale = Math.min(100, (p.morale || 75) + 4);
+        });
+        addDailyLog(`【スタッフ仲裁】GMの折衷案により主力は負荷を分散し、控え組の底上げも両立させました。`);
+      } else {
+        activePlayers.forEach(p => {
+          p.morale = Math.min(100, (p.morale || 75) + 3);
+        });
+        addDailyLog(`【スタッフ仲裁】${mgr ? mgr.name : '監督'}と${consultation.coachName || 'コーチ'}の双方の意見を取り入れ、円満に妥協点を見出しました。`);
+      }
+    }
+    renderAll();
+    if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+    return;
+  }
 
   if (decision === 'accept') {
     if (consultation.kind === 'manager') {
@@ -17996,12 +18253,89 @@ function resolveLineupConsultationDecision(consultation, decision) {
   if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
 }
 
+function findClubCoachById(club, coachId) {
+  if (!club || !coachId) return null;
+  const entry = getClubCoachEntries(club).find(e => e.coach && e.coach.id === coachId);
+  return entry ? entry.coach : null;
+}
+
 function openLineupConsultationModal(consultation) {
   if (!consultation || typeof showSecretaryModal !== 'function') return;
   const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
-  const mgrSpeaker = (consultation.kind === 'manager' && club && club.manager)
-    ? { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club }
-    : null;
+
+  if (consultation.kind === 'conflict' && club && club.manager) {
+    const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
+    if (coachObj) {
+      const conflictSpeaker = {
+        kind: 'conflict',
+        left: { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督' },
+        right: { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ' },
+        club
+      };
+      const detailHtml = `
+        <div class="gm-conflict-compare">
+          <div class="gm-conflict-stance is-mgr">
+            <div class="gm-conflict-stance-head">${escapeCommHtml(consultation.mgrStanceTitle || `${club.manager.name} 監督の主張`)}</div>
+            <div class="gm-conflict-stance-body">${escapeCommHtml(consultation.mgrStanceBody || '')}</div>
+          </div>
+          <div class="gm-conflict-stance is-coach">
+            <div class="gm-conflict-stance-head">${escapeCommHtml(consultation.coachStanceTitle || `${coachObj.name} コーチの主張`)}</div>
+            <div class="gm-conflict-stance-body">${escapeCommHtml(consultation.coachStanceBody || '')}</div>
+          </div>
+          ${consultation.impactSummary ? `<div class="gm-conflict-impact">${escapeCommHtml(consultation.impactSummary)}</div>` : ''}
+        </div>
+      `;
+      showSecretaryModal({
+        variant: 'conflict-arbitration',
+        speaker: conflictSpeaker,
+        topic: consultation.topic || '意見対立の仲裁',
+        title: consultation.title,
+        speech: consultation.speech,
+        detailHtml,
+        actions: [
+          {
+            label: consultation.acceptLabel || `${club.manager.name}監督を支持`,
+            className: 'btn btn-primary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'accept')
+          },
+          {
+            label: consultation.coachAcceptLabel || `${coachObj.name}コーチ案を採用`,
+            className: 'btn btn-secondary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'coach')
+          },
+          {
+            label: consultation.mediateLabel || '折衷案で仲裁する',
+            className: 'btn btn-accent',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'mediate')
+          },
+          {
+            label: 'あとで判断（業務一覧へ保留）',
+            className: 'btn btn-secondary',
+            onClick: () => resolveLineupConsultationDecision(consultation, 'defer')
+          }
+        ]
+      });
+      return;
+    }
+  }
+
+  let modalSpeaker = null;
+  if (consultation.kind === 'manager' && club && club.manager) {
+    modalSpeaker = { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club };
+  } else if (consultation.kind === 'player' && club) {
+    const targetPlayerId = consultation.playerId || consultation.inPlayerId;
+    const playerObj = (club.players || []).find(p => p && p.id === targetPlayerId);
+    if (playerObj) {
+      modalSpeaker = {
+        kind: 'player',
+        person: playerObj,
+        name: playerObj.fullName || playerObj.name,
+        roleLabel: `${playerObj.pos} #${playerObj.squadNumber || '-'}`,
+        club
+      };
+    }
+  }
+
   const rowsHtml = (consultation.detailRows || []).map(([k, v]) => `
     <div class="gm-modal-flat-row">
       <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
@@ -18009,7 +18343,7 @@ function openLineupConsultationModal(consultation) {
     </div>
   `).join('');
   showSecretaryModal({
-    speaker: mgrSpeaker,
+    speaker: modalSpeaker,
     topic: consultation.topic,
     title: consultation.title,
     speech: consultation.speech,
@@ -18059,7 +18393,7 @@ function checkAndTriggerLineupConsultation(matchData = null, forceType = null) {
       title: consultation.title,
       body: consultation.speech,
       actionType: 'open-lineup-consultation',
-      actionLabel: '相談を確認・回答する'
+      actionLabel: consultation.kind === 'conflict' ? '対立を仲裁・裁定する' : '相談を確認・回答する'
     });
   }
 

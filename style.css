@@ -18668,6 +18668,39 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   color: #0c3554;
 }
 
+.gm-vn-pill-badge.is-player-pill {
+  background: #2dd4bf;
+  color: #042f2e;
+}
+
+.gm-vn-pill-badge.is-player-pill .gm-modal-sec-name {
+  color: #042f2e;
+}
+
+.gm-vn-pill-badge.is-player-pill .gm-modal-sec-role {
+  color: #115e59;
+}
+
+.gm-vn-pill-badge.is-coach-pill {
+  background: #f59e0b;
+  color: #1c1002;
+}
+
+.gm-vn-pill-badge.is-coach-pill .gm-modal-sec-name {
+  color: #1c1002;
+}
+
+.gm-vn-pill-badge.is-coach-pill .gm-modal-sec-role {
+  color: #451a03;
+}
+
+.gm-conflict-pill-sep {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  margin: 0 2px;
+}
+
 .gm-modal-sec-topic {
   background: #161b22;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -19241,6 +19274,123 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   font-size: 11.5px;
   color: #e2e8f0;
   line-height: 1.45;
+}
+
+/* ==========================================================================
+   監督・コーチ意見対立仲裁ステージ＆対比UI
+   ========================================================================== */
+.gm-secretary-modal-card.is-conflict-modal {
+  border-top: 3px solid #38bdf8;
+}
+
+.gm-secretary-modal-card.is-conflict-modal .gm-vn-stage-body {
+  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.14), transparent 64%);
+}
+
+.gm-secretary-modal-card.is-conflict-modal .gm-vn-dialogue-card {
+  border-color: rgba(56, 189, 248, 0.34);
+}
+
+.gm-conflict-stage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.gm-modal-sec-avatar-wrap.is-duo {
+  width: 96px;
+  height: 108px;
+}
+
+.gm-conflict-vs {
+  align-self: center;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+  padding: 0 2px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gm-conflict-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gm-conflict-stance {
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+}
+
+.gm-conflict-stance.is-mgr {
+  border-left: 3px solid #38bdf8;
+}
+
+.gm-conflict-stance.is-coach {
+  border-left: 3px solid #f59e0b;
+}
+
+.gm-conflict-stance-head {
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.gm-conflict-stance.is-mgr .gm-conflict-stance-head {
+  color: #38bdf8;
+}
+
+.gm-conflict-stance.is-coach .gm-conflict-stance-head {
+  color: #fbbf24;
+}
+
+.gm-conflict-stance-body {
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.gm-conflict-impact {
+  font-size: 11px;
+  color: #94a3b8;
+  padding-top: 2px;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .gm-modal-sec-avatar-wrap.is-duo {
+    width: 80px;
+    height: 90px;
+  }
+
+  .gm-conflict-vs {
+    font-size: 12px;
+  }
+
+  .gm-secretary-modal-card.is-conflict-modal .gm-vn-dialogue-card {
+    padding: 14px 12px 10px;
+    gap: 8px;
+  }
+
+  .gm-secretary-modal-card.is-conflict-modal .gm-conflict-stance {
+    padding: 6px 9px;
+  }
+
+  .gm-secretary-modal-card.is-conflict-modal .modal-actions:not(.is-single-prompt) {
+    gap: 6px;
+  }
+
+  .gm-secretary-modal-card.is-conflict-modal .modal-actions:not(.is-single-prompt) button {
+    min-height: 38px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+  }
 }
 
 /* ==========================================================================
