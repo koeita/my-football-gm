@@ -1311,21 +1311,18 @@ function initReloadPrevention() {
     }
 
     // モバイル作戦ボード（画面幅768px以下）表示時：
-    // 控え・ベンチ外ドロワー内の縦スクロールと横トレイの操作は許可し、ピッチ外でのプルリロードを遮断する
+    // ベンチ外エリア内部の縦スクロールと横トレイ操作のみ許可し、ドロワー外や控え固定部のスクロール・プルリロードを遮断する
     const isMobileRosterBoard = (window.innerWidth <= 768) && gameState.activeTab === 'roster' && (!gameState.rosterSubtab || gameState.rosterSubtab === 'board');
     if (isMobileRosterBoard) {
       const isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
-      const isSubOrReserveList = e.target && e.target.closest && e.target.closest('.pitch-bench-list, .pitch-reserves-list');
-      const sideDrawer = e.target && e.target.closest && e.target.closest('.tactical-side-column');
-      if (isHorizontal && isSubOrReserveList) {
+      const isBenchOrReserveList = e.target && e.target.closest && e.target.closest('.pitch-bench-list, .pitch-reserves-list');
+      const reservesList = e.target && e.target.closest && e.target.closest('.pitch-reserves-list');
+      if (isHorizontal && isBenchOrReserveList) {
         return;
       }
-      if (!isHorizontal && sideDrawer) {
-        const scrollTarget = (isSubOrReserveList && isSubOrReserveList.scrollHeight > isSubOrReserveList.clientHeight)
-          ? isSubOrReserveList
-          : sideDrawer;
-        const canScrollUp = deltaY > 0 && scrollTarget.scrollTop > 0;
-        const canScrollDown = deltaY < 0 && (scrollTarget.scrollTop + scrollTarget.clientHeight < scrollTarget.scrollHeight - 1);
+      if (!isHorizontal && reservesList) {
+        const canScrollUp = deltaY > 0 && reservesList.scrollTop > 0;
+        const canScrollDown = deltaY < 0 && (reservesList.scrollTop + reservesList.clientHeight < reservesList.scrollHeight - 1);
         if (canScrollUp || canScrollDown) {
           return;
         }
