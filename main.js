@@ -4613,74 +4613,7 @@ function promoteYouthPlayer(youthId) {
  * トップチームの21歳以下選手を常設U-21ユースチームへ一時派遣（降格）
  */
 function demotePlayerToYouth(playerId) {
-  const playerClub = getPlayerClub();
-  if (!playerClub) return;
-
-  const player = playerClub.players.find(p => p.id === playerId);
-  if (!player) return;
-
-  if (player.loanStatus && (player.loanStatus.isLoanOut || player.loanStatus.isLoan)) {
-    showToast('レンタル契約中の選手はU-21チームへ移動できません。', 'warning');
-    return;
-  }
-
-  if (player.age > 21) {
-    showToast(`U-21チームへ合流できるのは21歳以下の選手のみです（現在${player.age}歳）。`, 'warning');
-    return;
-  }
-
-  if (!playerClub.youthSquad) {
-    playerClub.youthSquad = [];
-  }
-
-  if (playerClub.youthSquad.length >= MAX_YOUTH_SQUAD_SIZE) {
-    showToast(`U-21ユース枠（最大${MAX_YOUTH_SQUAD_SIZE}名）が満杯です。昇格または枠を空けてください。`, 'warning');
-    return;
-  }
-
-  if (playerClub.players.length <= 11) {
-    showToast('トップチームは最低11名必要です。', 'warning');
-    return;
-  }
-
-  if (player.isStarter) {
-    showToast('スタメン選手は降格できません。先にベンチへ移動させてください。', 'warning');
-    return;
-  }
-
-  const idx = playerClub.players.findIndex(p => p.id === playerId);
-  if (idx !== -1) {
-    playerClub.players.splice(idx, 1);
-  }
-
-  player.isYouth = true;
-  player.isStarter = false;
-  player.assignedPos = null;
-  player.slotIndex = null;
-  if (!player.potentialGrade) {
-    const ovr = getPlayerOverallRating(player);
-    if (ovr >= 74) {
-      player.potentialGrade = 'S';
-      player.potentialRating = 85;
-    } else if (ovr >= 68) {
-      player.potentialGrade = 'A';
-      player.potentialRating = 80;
-    } else if (ovr >= 62) {
-      player.potentialGrade = 'B';
-      player.potentialRating = 74;
-    } else {
-      player.potentialGrade = 'C';
-      player.potentialRating = 68;
-    }
-  }
-
-  playerClub.youthSquad.push(player);
-  ensureValidSquadAndStarters(playerClub);
-
-  showToast(`[ユース派遣] #${player.squadNumber} ${player.name}（${player.age}歳）を実戦経験のためU-21チームへ合流させました。`, 'info');
-  addDailyLog(`【U-21合流】#${player.squadNumber} ${player.name} をU-21ユースチームへ派遣`);
-
-  renderAll();
+  return;
 }
 
 /**
@@ -7897,15 +7830,6 @@ function renderRoster() {
       extendBtnHtml = `<button type="button" class="btn btn-accent btn-sm btn-extend-contract" data-extend-id="${p.id}" title="契約延長・年俸交渉モーダルを開く">契約交渉</button>`;
     }
 
-    const canDemoteToYouth = p.age <= 21 && !p.isStarter && (playerClub.youthSquad?.length < MAX_YOUTH_SQUAD_SIZE);
-    let demoteBtnHtml = '';
-    if (p.age <= 21) {
-      const demoteTitle = p.isStarter
-        ? 'スタメン選手は降格不可（先にベンチへ移動させてください）'
-        : (playerClub.youthSquad?.length >= MAX_YOUTH_SQUAD_SIZE ? 'U-21ユース枠満杯（最大10名）' : 'U-21ユースへ合流');
-      demoteBtnHtml = `<button type="button" class="btn btn-secondary btn-sm btn-demote-youth" data-demote-id="${p.id}" ${canDemoteToYouth ? '' : 'disabled'} title="${demoteTitle}">U-21降格</button>`;
-    }
-
     // 22歳以下の若手に対する「レンタル（レンタル放出）」ボタン
     let loanListingBtnHtml = '';
     if (p.age <= 22 && !p.isStarter && (!p.loanStatus || !p.loanStatus.isLoanOut) && !p.loanStatus?.isLoan) {
@@ -8006,7 +7930,6 @@ function renderRoster() {
           <div class="action-btn-group action-btn-grid">
             <div class="action-slot slot-extend">${extendBtnHtml}</div>
             <div class="action-slot slot-loan">${loanListingBtnHtml}</div>
-            <div class="action-slot slot-demote">${demoteBtnHtml}</div>
             <div class="action-slot slot-release">
               <button type="button" class="btn btn-danger btn-sm btn-release-player" data-release-id="${p.id}" ${canRelease ? '' : 'disabled'}>
                 ${releaseBtnLabel}
