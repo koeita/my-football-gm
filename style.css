@@ -16142,10 +16142,10 @@ body {
   font-weight: 500;
 }
 
-/* オフィス画面 MATCHDAY パネル：観戦キックオフ ＆ クイック結果 2並列ボタン */
+/* オフィス画面 MATCHDAY パネル：クイック結果 ＆ 観戦キックオフ 2並列ボタン */
 .matchday-action-row.matchday-action-dual {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
+  grid-template-columns: 1fr 1.25fr;
   gap: 8px;
   align-items: stretch;
   width: 100%;
@@ -20132,6 +20132,38 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   background: transparent !important;
   color: #2ecc71 !important;
   border-bottom-color: #2ecc71 !important;
+}
+
+.profile-meta-inline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 6px 2px 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-meta-inline-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 11.5px;
+}
+
+.profile-meta-inline-key {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.profile-meta-inline-val {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+  white-space: nowrap;
 }
 
 /* 下段：コンディション3連ゲージ */

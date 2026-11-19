@@ -1650,6 +1650,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     contractYears,
     growthCurve,
     growthType: growthCurve,
+    injuryProneness: generatePlayerInjuryProneness(growthCurve, pos, traits),
     injuryWeeks: 0,
     injuryDays: 0,
     isRetired: false,
@@ -1746,6 +1747,7 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     growthCurve,
     growthType: growthCurve,
     potential,
+    injuryProneness: generatePlayerInjuryProneness(growthCurve, pos, traits),
     injuryWeeks: 0,
     injuryDays: 0,
     isRetired: false,
@@ -2511,9 +2513,12 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
   let currentBench = nonStarters.filter(p => p.isBench === true);
   let currentReserves = nonStarters.filter(p => p.isBench !== true);
 
-  // 初回や控えが9名未満の場合はリザーブ上位から補充
+  // 初回や控えが9名未満の場合はリザーブ上位から補充（負傷者は後回し）
   if (currentBench.length < 9 && currentReserves.length > 0) {
     currentReserves.sort((a, b) => {
+      const injA = ((a.injuryDays || 0) > 0 || (a.injuryWeeks || 0) > 0) ? 1 : 0;
+      const injB = ((b.injuryDays || 0) > 0 || (b.injuryWeeks || 0) > 0) ? 1 : 0;
+      if (injA !== injB) return injA - injB;
       const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
       const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
       if (orderA !== orderB) return orderA - orderB;
@@ -2523,8 +2528,11 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
       currentBench.push(currentReserves.shift());
     }
   } else if (currentBench.length > 9) {
-    // 9名を超えている場合は上位9名のみベンチとし、溢れた選手はリザーブへ
+    // 9名を超えている場合は健康な上位9名のみベンチとし、溢れた選手・負傷者はリザーブへ
     currentBench.sort((a, b) => {
+      const injA = ((a.injuryDays || 0) > 0 || (a.injuryWeeks || 0) > 0) ? 1 : 0;
+      const injB = ((b.injuryDays || 0) > 0 || (b.injuryWeeks || 0) > 0) ? 1 : 0;
+      if (injA !== injB) return injA - injB;
       const orderA = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[a.pos] : 99) || 99;
       const orderB = (typeof POS_DISPLAY_ORDER !== 'undefined' ? POS_DISPLAY_ORDER[b.pos] : 99) || 99;
       if (orderA !== orderB) return orderA - orderB;
@@ -3113,10 +3121,170 @@ function shouldPlayerRetire(player) {
 // ==========================================================================
 
 /**
+ * 成長型・ポジション・特徴から選手の怪我しやすさ（10〜96）を生成
+ */
+function generatePlayerInjuryProneness(growthCurve, pos = 'CM', traits = []) {
+  const normCurve = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(growthCurve) : (growthCurve || 'standard');
+  let val;
+  if (normCurve === 'fragile_genius') {
+    val = randInt(78, 96);
+  } else if (normCurve === 'steady_iron') {
+    val = randInt(10, 24);
+  } else if (normCurve === 'early_fade') {
+    val = randInt(42, 68);
+  } else if (normCurve === 'early_long') {
+    val = randInt(24, 52);
+  } else if (normCurve === 'late_bloom') {
+    val = randInt(22, 50);
+  } else {
+    val = randInt(20, 74);
+  }
+
+  if (pos === 'GK') {
+    val -= 6;
+  }
+  if (Array.isArray(traits) && traits.includes('無尽蔵のスタミナ') && normCurve !== 'fragile_genius') {
+    val -= 6;
+  }
+
+  if (normCurve === 'fragile_genius') {
+    return clamp(Math.round(val), 76, 96);
+  }
+  if (normCurve === 'steady_iron') {
+    return clamp(Math.round(val), 10, 26);
+  }
+  return clamp(Math.round(val), 10, 96);
+}
+
+/**
+ * 既存・旧セーブ選手の怪我しやすさ（injuryProneness）を後方互換補完＆成長型と整合
+ */
+function ensurePlayerInjuryProneness(player) {
+  if (!player) return 50;
+  const normCurve = typeof normalizeGrowthCurveId === 'function'
+    ? normalizeGrowthCurveId(player.growthCurve || player.growthType)
+    : (player.growthCurve || 'standard');
+
+  if (typeof player.injuryProneness === 'number' && !Number.isNaN(player.injuryProneness)) {
+    if (normCurve === 'fragile_genius') {
+      player.injuryProneness = clamp(Math.round(player.injuryProneness), 76, 96);
+    } else if (normCurve === 'steady_iron') {
+      player.injuryProneness = clamp(Math.round(player.injuryProneness), 10, 26);
+    } else {
+      player.injuryProneness = clamp(Math.round(player.injuryProneness), 10, 96);
+    }
+    return player.injuryProneness;
+  }
+
+  const keyStr = `${player.id || ''}_${player.name || ''}`;
+  let hash = 0;
+  for (let i = 0; i < keyStr.length; i++) {
+    hash = ((hash * 31) + keyStr.charCodeAt(i)) | 0;
+  }
+  const unit = (Math.abs(hash) % 1000) / 999;
+
+  let minR = 20;
+  let maxR = 74;
+  if (normCurve === 'fragile_genius') {
+    minR = 78; maxR = 96;
+  } else if (normCurve === 'steady_iron') {
+    minR = 10; maxR = 24;
+  } else if (normCurve === 'early_fade') {
+    minR = 42; maxR = 68;
+  } else if (normCurve === 'early_long') {
+    minR = 24; maxR = 52;
+  } else if (normCurve === 'late_bloom') {
+    minR = 22; maxR = 50;
+  }
+
+  let val = Math.round(minR + unit * (maxR - minR));
+  const pos = player.primaryPosition || player.pos || 'CM';
+  if (pos === 'GK') val -= 6;
+  if (Array.isArray(player.traits) && player.traits.includes('無尽蔵のスタミナ') && normCurve !== 'fragile_genius') {
+    val -= 6;
+  }
+
+  if (normCurve === 'fragile_genius') {
+    player.injuryProneness = clamp(val, 76, 96);
+  } else if (normCurve === 'steady_iron') {
+    player.injuryProneness = clamp(val, 10, 26);
+  } else {
+    player.injuryProneness = clamp(val, 10, 96);
+  }
+  return player.injuryProneness;
+}
+
+/**
+ * 選手の怪我しやすさランク・表示色・発生確率倍率を取得
+ */
+function getInjuryPronenessInfo(player) {
+  const score = ensurePlayerInjuryProneness(player);
+  if (score >= 75) {
+    return {
+      score,
+      level: 'very_high',
+      label: '非常に高い',
+      color: '#ef4444',
+      riskMultiplier: Number((2.4 + (score - 75) * 0.04).toFixed(2))
+    };
+  }
+  if (score >= 60) {
+    return {
+      score,
+      level: 'high',
+      label: 'やや高い',
+      color: '#f97316',
+      riskMultiplier: Number((1.55 + (score - 60) * 0.04).toFixed(2))
+    };
+  }
+  if (score >= 38) {
+    return {
+      score,
+      level: 'normal',
+      label: '標準',
+      color: '#94a3b8',
+      riskMultiplier: Number((0.85 + (score - 38) * 0.025).toFixed(2))
+    };
+  }
+  if (score >= 25) {
+    return {
+      score,
+      level: 'low',
+      label: '低い',
+      color: '#38bdf8',
+      riskMultiplier: Number((0.55 + (score - 25) * 0.02).toFixed(2))
+    };
+  }
+  return {
+    score,
+    level: 'iron',
+    label: '極めて低い',
+    color: '#2ecc71',
+    riskMultiplier: Number((0.35 + (score - 10) * 0.013).toFixed(2))
+  };
+}
+
+/**
+ * 負傷離脱期間をメタ表現（節・試合）を使わず自然な表現へ整形
+ */
+function formatPlayerInjuryDurationText(player) {
+  if (!player) return '';
+  const days = (typeof player.injuryDays === 'number' && player.injuryDays > 0)
+    ? player.injuryDays
+    : ((player.injuryWeeks || 0) * 7);
+  if (days <= 0) return '';
+  if (days >= 14) {
+    return `あと約${Math.max(2, Math.round(days / 7))}週間`;
+  }
+  return `あと約${days}日`;
+}
+
+/**
  * 選手オブジェクトのリアリティ拡張フィールドを後方互換補完
  */
 function ensurePlayerRealismFields(player, isStarterHint = false) {
   if (!player) return;
+  ensurePlayerInjuryProneness(player);
   if (!player.squadStatus) {
     const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : 70;
     if (player.isYouth || player.age <= 20) player.squadStatus = 'prospect';

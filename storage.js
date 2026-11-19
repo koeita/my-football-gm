@@ -631,6 +631,7 @@ function migrateLegacyClubsData() {
   if (Array.isArray(gameState.freeAgents)) {
     gameState.freeAgents.forEach(p => {
       if (p && Array.isArray(p.pastClubs)) p.pastClubs = p.pastClubs.map(normalizeNameStr);
+      if (p && typeof ensurePlayerInjuryProneness === 'function') ensurePlayerInjuryProneness(p);
     });
   }
   if (Array.isArray(gameState.euroTransferList)) {
@@ -639,6 +640,7 @@ function migrateLegacyClubsData() {
       if (p.clubName) p.clubName = normalizeNameStr(p.clubName);
       if (p.club && typeof p.club === 'object') syncClubObj(p.club);
       if (Array.isArray(p.pastClubs)) p.pastClubs = p.pastClubs.map(normalizeNameStr);
+      if (typeof ensurePlayerInjuryProneness === 'function') ensurePlayerInjuryProneness(p);
     });
   }
   if (gameState.competitions && typeof gameState.competitions === 'object') {
@@ -910,11 +912,13 @@ function loadGameFromStorage() {
         c.players.forEach(p => {
           if (typeof p.fatigue !== 'number') p.fatigue = 0;
           if (p.lastMatchRating == null) p.lastMatchRating = 6.7;
+          if (typeof ensurePlayerInjuryProneness === 'function') ensurePlayerInjuryProneness(p);
         });
       }
       if (Array.isArray(c.youthSquad)) {
         c.youthSquad.forEach(yp => {
           if (typeof yp.fatigue !== 'number') yp.fatigue = 0;
+          if (typeof ensurePlayerInjuryProneness === 'function') ensurePlayerInjuryProneness(yp);
         });
       }
     });

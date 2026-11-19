@@ -2203,12 +2203,14 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
 }
 
 /**
- * 毎節終了時に既存の怪我人の残り全治節数を -1 する
+ * 毎節終了時に負傷日数の未設定プレイヤーのみ残り週数を更新（injuryDaysがある場合は日次カウントと同期）
  */
 function advanceInjuryRecovery() {
   for (const club of getAllManagedLeagueClubs()) {
     for (const p of (club.players || [])) {
-      if (p.injuryWeeks && p.injuryWeeks > 0) {
+      if (p.injuryDays && p.injuryDays > 0) {
+        p.injuryWeeks = Math.ceil(p.injuryDays / 7);
+      } else if (p.injuryWeeks && p.injuryWeeks > 0) {
         p.injuryWeeks = Math.max(0, p.injuryWeeks - 1);
       }
     }
