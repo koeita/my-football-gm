@@ -426,6 +426,21 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         dual_block = self.main_js[dual_start:dual_start + 450]
         self.assertLess(dual_block.index('id="btn-panel-quick-result"'), dual_block.index('id="btn-panel-kickoff"'))
 
+    def test_15_youth_awakening_replaces_promotion_event(self):
+        self.assertNotIn('function triggerYouthPromotionEvent(', self.main_js)
+        self.assertNotIn('triggerYouthPromotionEvent(', self.main_js)
+        for sym in [
+            'function pickYouthAwakeningTrait(',
+            'function triggerYouthAwakeningEvent(',
+            'hasAwakened',
+            'youth-awakened-tag',
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('.youth-awakened-tag', self.css)
+        post_start = self.main_js.index('function checkPostMatchEvents(')
+        post_block = self.main_js[post_start:post_start + 2200]
+        self.assertIn('triggerYouthAwakeningEvent()', post_block)
+
 
 if __name__ == '__main__':
     unittest.main()
