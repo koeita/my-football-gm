@@ -1403,7 +1403,9 @@ function checkPostMatchEvents() {
     if (roll < injuryThreshold) {
       triggerInjuryEvent();
     } else if (roll < 0.68) {
-      triggerYouthPromotionEvent();
+      if (!triggerYouthAwakeningEvent()) {
+        triggerSupporterPetitionEvent();
+      }
     } else {
       triggerSupporterPetitionEvent();
     }
@@ -1794,58 +1796,226 @@ function triggerInjuryEvent() {
 }
 
 /**
- * ランダムイベント2「若手ユース選手の台頭（無料昇格オファー）」
+ * 覚醒時に習得する未所持ポジション別特徴を1つ選出
  */
-function triggerYouthPromotionEvent() {
-  const playerClub = getPlayerClub();
-  const usedNames = new Set();
-  getAllManagedLeagueClubs().forEach(c => (c.players || []).forEach(p => usedNames.add(p.name)));
+function pickYouthAwakeningTrait(youth) {
+  if (!youth) return null;
+  const existing = Array.isArray(youth.traits) ? youth.traits : [];
+  if (existing.length >= 3) return null;
+  const poolMap = {
+    GK: ['守護神の反射神経', '冷静沈着', '空中戦の覇者'],
+    CB: ['鉄壁の対人守備', '空中戦の覇者', 'ビルドアップの起点'],
+    LB: ['スピードスター', '無尽蔵のスタミナ', 'ハードワーカー'],
+    RB: ['スピードスター', '無尽蔵のスタミナ', 'ハードワーカー'],
+    SB: ['スピードスター', '無尽蔵のスタミナ', 'ハードワーカー'],
+    DM: ['鉄壁の対人守備', 'ビルドアップの起点', '戦術理解度◎'],
+    CM: ['ビルドアップの起点', 'チャンスメイカー', '無尽蔵のスタミナ', '戦術理解度◎'],
+    LM: ['スピードスター', '高精度キッカー', 'ハードワーカー'],
+    RM: ['スピードスター', '高精度キッカー', 'ハードワーカー'],
+    SM: ['スピードスター', '高精度キッカー', 'ハードワーカー'],
+    AM: ['チャンスメイカー', '高精度キッカー', '冷静沈着'],
+    LW: ['スピードスター', 'ラインブレイカー', 'チャンスメイカー'],
+    RW: ['スピードスター', 'ラインブレイカー', 'チャンスメイカー'],
+    WG: ['スピードスター', 'ラインブレイカー', 'チャンスメイカー'],
+    CF: ['決定力の鬼', 'ラインブレイカー', '空中戦の覇者']
+  };
+  const basePool = poolMap[youth.pos] || ['戦術理解度◎', 'ハードワーカー', '冷静沈着'];
+  const validPool = typeof PLAYER_TRAIT_DEFINITIONS === 'object' && PLAYER_TRAIT_DEFINITIONS
+    ? basePool.filter(t => Object.prototype.hasOwnProperty.call(PLAYER_TRAIT_DEFINITIONS, t))
+    : basePool;
+  const candidates = validPool.filter(t => !existing.includes(t));
+  if (candidates.length === 0) return null;
+  return candidates[randInt(0, candidates.length - 1)];
+}
 
-  const pos = ALL_POSITIONS[randInt(0, ALL_POSITIONS.length - 1)];
-  const curve = Math.random() < 0.45 ? 'early' : (Math.random() < 0.35 ? 'fragile' : 'standard');
-  const prospect = createPlayer(pos, randInt(60, 68), false, usedNames, [17, 18], curve);
-  prospect.salary = 800; // £800K
-  prospect.wage = Math.max(10, Math.round(prospect.salary / 52));
-  prospect.contractYears = 4;
-  prospect.isYouth = false;
-  prospect.isYouthGraduate = true;
-  prospect.isHomegrown = true;
-  prospect.isStarter = false;
-  prospect.isBench = false;
-  prospect.assignedPos = null;
-  prospect.slotIndex = null;
-  prospect.squadNumber = null;
-  const ovr = getPlayerOverallRating(prospect);
-  const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
-  const isFull = playerClub.players.length >= maxSquad;
+/**
+ * ランダムイベント2「ユース選手の覚醒（U-21在籍選手の能力・ポテンシャル開花）」
+ */
+function triggerYouthAwakeningEvent() {
+  const playerClub = getPlayerClub();
+  const youthList = playerClub && Array.isArray(playerClub.youthSquad)
+    ? playerClub.youthSquad.filter(Boolean)
+    : [];
+  if (youthList.length === 0) return false;
+
+  const unawakened = youthList.filter(y => !y.hasAwakened);
+  const pool = unawakened.length > 0 ? unawakened : youthList;
+
+  const potWeightMap = { S: 4, A: 3, B: 2, C: 1 };
+  const weights = pool.map(y => {
+    const pw = potWeightMap[y.potential || y.potentialGrade] || 2;
+    const youthBias = (y.age || 18) <= 18 ? 1.25 : 1.0;
+    return pw * youthBias;
+  });
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * totalW;
+  let youth = pool[pool.length - 1];
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) {
+      youth = pool[i];
+      break;
+    }
+  }
+
+  const beforeOvr = getPlayerOverallRating(youth);
+  const potOrder = ['C', 'B', 'A', 'S'];
+  const rawPot = youth.potential || youth.potentialGrade || 'B';
+  const beforePot = potOrder.includes(rawPot) ? rawPot : 'B';
+  const beforePotIdx = potOrder.indexOf(beforePot);
+  const nextPot = potOrder[Math.min(potOrder.length - 1, beforePotIdx + 1)];
+  const candidateTrait = pickYouthAwakeningTrait(youth);
+  const specialCost = 150; // £150K
+  const role = (typeof POS_ROLE_GROUP !== 'undefined' && POS_ROLE_GROUP[youth.pos]) || 'MF';
+  const youthDisplayName = youth.fullName || youth.name;
+
+  const applyYouthAwakening = (intensive) => {
+    let dAtk = 0;
+    let dDef = 0;
+    let dSta = 0;
+    if (intensive) {
+      if (role === 'FW') { dAtk = randInt(6, 9); dDef = randInt(2, 4); dSta = randInt(4, 7); }
+      else if (role === 'DF') { dAtk = randInt(2, 4); dDef = randInt(6, 9); dSta = randInt(4, 7); }
+      else if (role === 'GK') { dAtk = randInt(1, 2); dDef = randInt(7, 10); dSta = randInt(4, 7); }
+      else { dAtk = randInt(5, 8); dDef = randInt(5, 8); dSta = randInt(5, 8); }
+    } else {
+      if (role === 'FW') { dAtk = randInt(4, 6); dDef = randInt(1, 3); dSta = randInt(2, 5); }
+      else if (role === 'DF') { dAtk = randInt(1, 3); dDef = randInt(4, 6); dSta = randInt(2, 5); }
+      else if (role === 'GK') { dAtk = randInt(0, 1); dDef = randInt(5, 7); dSta = randInt(2, 5); }
+      else { dAtk = randInt(3, 5); dDef = randInt(3, 5); dSta = randInt(3, 5); }
+    }
+
+    const potUps = intensive ? (nextPot !== beforePot) : (nextPot !== beforePot && Math.random() < 0.5);
+    const afterPot = potUps ? nextPot : beforePot;
+    if (beforePot === 'S') {
+      const capBonus = intensive ? 2 : 1;
+      if (role === 'FW') dAtk += capBonus;
+      else if (role === 'DF' || role === 'GK') dDef += capBonus;
+      else { dAtk += capBonus; dDef += capBonus; }
+    }
+
+    youth.atk = clamp((youth.atk || 55) + dAtk, 1, 99);
+    youth.def = clamp((youth.def || 55) + dDef, 1, 99);
+    youth.sta = clamp((youth.sta || 55) + dSta, 1, 99);
+    youth.attributes = null;
+    if (typeof getPlayerFiveAttributes === 'function') {
+      youth.attributes = getPlayerFiveAttributes(youth);
+    }
+    youth.potential = afterPot;
+    youth.potentialGrade = afterPot;
+    const potFloorMap = { C: 70, B: 76, A: 83, S: 90 };
+    if (typeof youth.potentialRating === 'number' || afterPot !== beforePot) {
+      youth.potentialRating = Math.max(youth.potentialRating || 0, potFloorMap[afterPot] || 76);
+    }
+
+    let gainedTrait = null;
+    if (candidateTrait) {
+      if (!Array.isArray(youth.traits)) youth.traits = [];
+      if (!youth.traits.includes(candidateTrait)) {
+        youth.traits.push(candidateTrait);
+        gainedTrait = candidateTrait;
+      }
+    }
+    youth.hasAwakened = true;
+    youth.morale = Math.min(100, (youth.morale || 80) + 12);
+    const afterOvr = getPlayerOverallRating(youth);
+    return { beforeOvr, afterOvr, beforePot, afterPot, gainedTrait };
+  };
+
+  const handleAwakeningResult = (intensive) => {
+    if (intensive) {
+      playerClub.funds -= specialCost;
+    }
+    const res = applyYouthAwakening(intensive);
+    const potText = res.afterPot !== res.beforePot ? ` / POT ${res.beforePot}→${res.afterPot}` : '';
+    const traitText = res.gainedTrait ? ` / 特徴「${res.gainedTrait}」習得` : '';
+    if (typeof addDailyLog === 'function') {
+      addDailyLog(`【ユース覚醒】U-21 ${youth.pos} ${youthDisplayName}（${youth.age}歳）が覚醒し、OVR ${res.beforeOvr}→${res.afterOvr}${potText}${traitText}へと成長しました。`);
+    }
+    if (typeof addNewsItem === 'function') {
+      addNewsItem({
+        category: '選手',
+        clubId: playerClub.id,
+        playerId: youth.id,
+        headline: `${playerClub.name}期待の${youth.name}が才能開花　練習で圧倒的な存在感`,
+        lead: `OVR ${res.beforeOvr}→${res.afterOvr}${res.gainedTrait ? `・新特徴「${res.gainedTrait}」を習得` : ''}`,
+        body: `${playerClub.name}のU-21アカデミーに所属する${youth.pos} ${youthDisplayName}（${youth.age}歳）が練習で飛躍的な成長を遂げた。${intensive ? 'トップチーム帯同の特別指導も奏功し、' : ''}今後のトップチーム定着へ大きな期待が寄せられている。`,
+        highlight: true
+      });
+    }
+    renderAll();
+    if (typeof showConsultationReplyModal === 'function') {
+      const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
+      const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
+      showConsultationReplyModal({
+        speaker: {
+          kind: 'player',
+          person: youth,
+          name: youthDisplayName,
+          roleLabel: `U-21 ${youth.pos}`,
+          club: playerClub
+        },
+        topic: 'ユース覚醒報告',
+        title: `${youthDisplayName} の返答`,
+        speech: intensive
+          ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
+          : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
+      });
+    }
+  };
+
+  const potOutlook = nextPot !== beforePot
+    ? `能力大幅上昇 · POT ${beforePot}→${nextPot}`
+    : '能力大幅上昇 · POT S維持';
+  const traitRowHtml = candidateTrait
+    ? `
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">新特徴候補</span>
+        <span class="gm-modal-flat-val accent-gold">${escapeCommHtml(candidateTrait)}</span>
+      </div>`
+    : '';
+  const detailHtml = `
+    <div class="gm-modal-flat-list">
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">対象選手</span>
+        <span class="gm-modal-flat-val">U-21 ${escapeCommHtml(youth.pos)} ${escapeCommHtml(youthDisplayName)}（${youth.age}歳）</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">現在評価</span>
+        <span class="gm-modal-flat-val accent-green font-bold">OVR ${beforeOvr} · POT ${beforePot}</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">開花見込み</span>
+        <span class="gm-modal-flat-val">${escapeCommHtml(potOutlook)}</span>
+      </div>${traitRowHtml}
+    </div>
+  `;
+
+  const speaker = playerClub.manager
+    ? { kind: 'manager', person: playerClub.manager, name: playerClub.manager.name, roleLabel: '監督', club: playerClub }
+    : null;
 
   showGmModal({
-    category: 'アカデミー昇格推薦',
-    title: '若手ユース選手のトップチーム昇格案内',
-    description: `下部組織の ${prospect.pos} ${prospect.fullName || prospect.name}（${prospect.age}歳）が著しく成長しています。移籍金 £0・週給 £${prospect.wage}k/週 でトップチームへ昇格可能です。`,
-    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">候補選手</span><span class="gm-modal-flat-val">${prospect.pos} ${prospect.fullName || prospect.name} (${prospect.age}歳)</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">総合力 (OVR)</span><span class="gm-modal-flat-val accent-green">OVR ${ovr}</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">昇格条件</span><span class="gm-modal-flat-val accent-gold mono">4年契約 · £${prospect.wage}k/週</span></div></div>`,
+    speaker,
+    category: 'アカデミー覚醒報告',
+    title: `ユース覚醒：${youthDisplayName}`,
+    description: `U-21所属の ${youth.pos} ${youthDisplayName}（${youth.age}歳）が紅白戦で別人のようなキレを見せ、才能が一気に開花しつつあります。`,
+    detailHtml,
     actions: [
       {
-        label: isFull ? `所属枠上限（${maxSquad}名）のため昇格不可` : 'トップチームへ無料昇格させる（移籍金 £0）',
+        label: `トップ帯同の特別指導で伸ばす（-${formatMoney(specialCost)}）`,
         className: 'btn btn-primary',
-        disabled: isFull,
-        onClick: () => {
-          playerClub.players.push(prospect);
-          ensureClubSquadNumbers(playerClub);
-          ensureValidSquadAndStarters(playerClub);
-          renderAll();
-        }
+        disabled: playerClub.funds < specialCost,
+        onClick: () => handleAwakeningResult(true)
       },
       {
-        label: `昇格を見送り提携クラブへ貸出（育成補償金 +${formatMoney(400)}）`,
+        label: 'U-21で伸び伸びと育成を続ける（費用£0）',
         className: 'btn btn-secondary',
-        onClick: () => {
-          playerClub.funds += 400;
-          renderAll();
-        }
+        onClick: () => handleAwakeningResult(false)
       }
     ]
   });
+  return true;
 }
 
 /**
@@ -9948,12 +10118,14 @@ function renderYouthSquad() {
       </button>
     ` : `<button type="button" class="btn btn-secondary btn-sm" disabled>枠上限</button>`;
 
+    const awakenedHtml = y.hasAwakened ? '<span class="youth-awakened-tag">覚醒</span>' : '';
+
     return `
       <tr class="clickable-youth-row" data-profile-id="${y.id}" style="cursor: pointer;">
         <td class="col-pos"><span class="pos-tag pos-${y.pos}">${y.pos}</span></td>
         <td class="col-name">
           <button type="button" class="player-name-link clickable-player-name" data-profile-id="${y.id}" title="詳細プロフィールを表示">
-            ${getPlayerAvatarHtml(y, playerClub, 'avatar-sm table-avatar')}${y.name}
+            ${getPlayerAvatarHtml(y, playerClub, 'avatar-sm table-avatar')}${y.name}${awakenedHtml}
           </button>
         </td>
         <td class="col-num col-youth-age">${y.age}歳</td>

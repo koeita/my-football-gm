@@ -15971,6 +15971,15 @@ body {
   line-height: 1;
 }
 
+.youth-awakened-tag {
+  color: #2ecc71;
+  font-size: 10.5px;
+  font-weight: 800;
+  margin-left: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* 選手プロフィールモーダル：市場価値推移タブ & SVG折れ線グラフ */
 .profile-status-pill {
   font-size: 10.5px;
