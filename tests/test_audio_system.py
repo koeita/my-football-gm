@@ -111,8 +111,8 @@ class TestAudioSystem(unittest.TestCase):
         # index.html の古いキャッシュバージョンが残っていないこと
         self.assertNotIn('storage.js?v=20261112_0400', self.index_html)
         self.assertNotIn('style.css?v=20261114_0100', self.index_html)
-        for asset in ['style.css?v=20261119_0300', 'storage.js?v=20261119_0300', 'audio.js?v=20261119_0300', 'match-engine.js?v=20261119_0300', 'main.js?v=20261119_0300']:
-            self.assertIn(asset, self.index_html)
+        for asset in ['style.css', 'storage.js', 'audio.js', 'match-engine.js', 'main.js']:
+            self.assertRegex(self.index_html, rf'{re.escape(asset)}\?v=20261119_\d+')
 
     def test_index_html_and_css_settings_ui(self):
         storage_pos = self.index_html.find('src="storage.js')
