@@ -1384,7 +1384,7 @@ function checkPostMatchEvents() {
     return;
   }
 
-  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lvで負傷率軽減、ゲーゲンプレス時は負傷率微増）
+  // 全38節の長丁場に合わせ、通常節は18%の確率でランダムGMイベントが発生（トレーニング＆メディカル施設Lv・選手ごとの怪我しやすさ・ゲーゲンプレス・過密日程で変動）
   const playerClub = getPlayerClub();
   const isGegenpress = playerClub && normalizeTacticKey(playerClub.tactic) === 'gegenpress';
   const eventTriggerProb = isGegenpress ? 0.21 : 0.18;
@@ -1392,8 +1392,13 @@ function checkPostMatchEvents() {
     const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
     const baseInjuryThreshold = Math.max(0.10, 0.36 * (1 - (trainingLv - 1) * 0.18));
     const congestion = typeof checkScheduleCongestion === 'function' ? checkScheduleCongestion() : { injuryChanceMultiplier: 1.0 };
+    const starters = playerClub ? (playerClub.players || []).filter(p => p && p.isStarter && !p.isRetired && (p.injuryWeeks || 0) === 0 && (p.injuryDays || 0) === 0) : [];
+    const avgRisk = (starters.length > 0 && typeof getInjuryPronenessInfo === 'function')
+      ? starters.reduce((sum, p) => sum + getInjuryPronenessInfo(p).riskMultiplier, 0) / starters.length
+      : 1.0;
+    const squadProneMult = clamp(avgRisk, 0.75, 1.45);
     let injuryThreshold = isGegenpress ? Math.min(0.52, baseInjuryThreshold * 1.22) : baseInjuryThreshold;
-    injuryThreshold = Math.min(0.60, injuryThreshold * (congestion.injuryChanceMultiplier || 1.0));
+    injuryThreshold = Math.min(0.62, injuryThreshold * (congestion.injuryChanceMultiplier || 1.0) * squadProneMult);
     const roll = Math.random();
     if (roll < injuryThreshold) {
       triggerInjuryEvent();
@@ -1660,94 +1665,128 @@ function rejectPendingMegaOffer() {
 }
 
 /**
- * ランダムイベント1「選手の怪我（全治〇試合）」
+ * ランダムイベント1「選手の負傷報告（監督による自動入れ替え連動）」
  */
 function triggerInjuryEvent() {
   const playerClub = getPlayerClub();
-  const starters = playerClub.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+  if (!playerClub) return;
+  const starters = playerClub.players.filter(p => p && p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0 && (p.injuryDays || 0) === 0);
   if (starters.length === 0) return;
 
-  const weighted = [];
-  for (const p of starters) {
-    const normCurve = typeof normalizeGrowthCurveId === 'function' ? normalizeGrowthCurveId(p.growthCurve) : p.growthCurve;
-    const weight = normCurve === 'fragile_genius' ? 6 : (normCurve === 'steady_iron' ? 1 : 2);
-    for (let i = 0; i < weight; i++) {
-      weighted.push(p);
+  const weights = starters.map(p => {
+    const risk = typeof getInjuryPronenessInfo === 'function' ? getInjuryPronenessInfo(p).riskMultiplier : 1.0;
+    const fatigueFactor = 1 + Math.max(0, (p.fatigue || 0) - 30) / 80;
+    return Math.max(0.1, risk * fatigueFactor);
+  });
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let pickRoll = Math.random() * totalWeight;
+  let victim = starters[starters.length - 1];
+  for (let i = 0; i < starters.length; i++) {
+    pickRoll -= weights[i];
+    if (pickRoll <= 0) {
+      victim = starters[i];
+      break;
     }
   }
-  const victim = weighted[randInt(0, weighted.length - 1)];
-  const weeks = randInt(2, 4);
+
+  const proneInfo = typeof getInjuryPronenessInfo === 'function' ? getInjuryPronenessInfo(victim) : { score: 50 };
+  const weeks = proneInfo.score >= 75
+    ? randInt(3, 5)
+    : (proneInfo.score < 28 ? randInt(1, 2) : randInt(2, 4));
+  const fastDays = weeks <= 1 ? 3 : 7;
+  const fastLabel = weeks <= 1 ? '約3日で復帰' : '約1週間で復帰';
   const medicalCost = 600; // £600K
+  const victimDisplayName = victim.fullName || victim.name;
+
+  const detailHtml = `
+    <div class="gm-modal-flat-list">
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">負傷選手</span>
+        <span class="gm-modal-flat-val">${escapeCommHtml(victim.pos)} ${escapeCommHtml(victimDisplayName)}（OVR ${getPlayerOverallRating(victim)}）</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">診断見込み</span>
+        <span class="gm-modal-flat-val text-danger font-bold">全治約${weeks}週間</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">特別治療</span>
+        <span class="gm-modal-flat-val accent-green">${formatMoney(medicalCost)}（${fastLabel}見込み）</span>
+      </div>
+    </div>
+  `;
+
+  const notifyManagerReplacement = (swapInfo, fastTrack) => {
+    if (!swapInfo || !swapInfo.replacement || typeof showConsultationReplyModal !== 'function') return;
+    const mgr = playerClub.manager;
+    const repName = swapInfo.replacement.fullName || swapInfo.replacement.name;
+    const mgrSpeaker = mgr
+      ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club: playerClub }
+      : null;
+    const mgrTitleName = mgr ? `${mgr.name}監督` : '監督代行';
+    showConsultationReplyModal({
+      speaker: mgrSpeaker,
+      topic: '離脱に伴う起用調整',
+      title: `${mgrTitleName}：代役の先発起用`,
+      speech: fastTrack
+        ? `${victim.name} の早期復帰を優先する方針ですね。離脱中は ${swapInfo.slotPos} に ${repName} を先発へ繰り上げて対応します。`
+        : `承知しました。${victim.name} はリハビリに専念させ、復帰するまで ${swapInfo.slotPos} の先発には ${repName} を起用します。`
+    });
+  };
 
   showGmModal({
-    category: 'MEDICAL REPORT / INJURY',
-    title: `選手の負傷アクシデント（全治${weeks}試合）`,
-    description: `トレーニング中に ${victim.pos} ${victim.name}（${victim.age}歳）が筋肉系のトラブルを訴え、全治${weeks}試合の診断を受けました。治療方針を選択してください。`,
-    detailHtml: `負傷選手：[${victim.pos}] ${victim.name}（総合力 ${getPlayerOverallRating(victim)}）<br>特別治療費：${formatMoney(medicalCost)}（全治期間を1試合に短縮し能力低下を防止）`,
+    category: 'メディカル報告',
+    title: `負傷報告：${victimDisplayName}`,
+    description: `トレーニング中に ${victim.pos} ${victimDisplayName}（${victim.age}歳）が筋肉系のトラブルを訴え、全治約${weeks}週間との診断を受けました。`,
+    detailHtml,
     actions: [
       {
-        label: `欧州専門医の特別治療（-${formatMoney(medicalCost)} / 全治1節に短縮）`,
+        label: `欧州専門医の特別治療（-${formatMoney(medicalCost)} / ${fastLabel}）`,
         className: 'btn btn-primary',
         disabled: playerClub.funds < medicalCost,
         onClick: () => {
           playerClub.funds -= medicalCost;
-          victim.injuryWeeks = 1;
-          victim.injuryDays = 7;
+          victim.injuryDays = fastDays;
+          victim.injuryWeeks = Math.ceil(fastDays / 7);
+          const swapInfo = typeof autoReplaceInjuredStarterByManager === 'function'
+            ? autoReplaceInjuredStarterByManager(playerClub, victim)
+            : null;
           if (typeof addNewsItem === 'function') {
             addNewsItem({
               category: '選手',
               clubId: playerClub.id,
               playerId: victim.id,
               headline: `${playerClub.name}・${victim.name}負傷　専門治療で早期復帰へ`,
-              lead: `休む間なく戦った末の離脱（全治1節見込み）`,
-              body: `トレーニング中にトラブルを起こした${victim.pos} ${victim.name}（${victim.age}歳）は欧州専門医の特別治療を受け、全治1節での戦線復帰を目指す。`,
+              lead: `トレーニング中に負傷、${fastLabel}見込み`,
+              body: `トレーニング中にトラブルを起こした${victim.pos} ${victimDisplayName}（${victim.age}歳）は欧州専門医の特別治療を受け、${fastLabel}を目指して調整を続ける。`,
               highlight: true
             });
           }
           renderAll();
+          if (swapInfo) notifyManagerReplacement(swapInfo, true);
         }
       },
       {
-        label: `通常リハビリ＆ベンチ休養（費用£0 / 全治${weeks}節）`,
+        label: `通常リハビリで回復（費用£0 / 約${weeks}週間）`,
         className: 'btn btn-secondary',
         onClick: () => {
           victim.injuryWeeks = weeks;
           victim.injuryDays = weeks * 7;
+          const swapInfo = typeof autoReplaceInjuredStarterByManager === 'function'
+            ? autoReplaceInjuredStarterByManager(playerClub, victim)
+            : null;
           if (typeof addNewsItem === 'function') {
             addNewsItem({
               category: '選手',
               clubId: playerClub.id,
               playerId: victim.id,
-              headline: `${playerClub.name}・${victim.name}負傷　次節へ痛手の戦線離脱`,
-              lead: `休みなく戦った末の離脱である（全治${weeks}節）`,
-              body: `${playerClub.name}の主力 ${victim.pos} ${victim.name}（${victim.age}歳）が筋肉系トラブルにより全治${weeks}試合の診断を受けた。当面は控えメンバーによる総力戦となる。`,
+              headline: `${playerClub.name}・${victim.name}負傷　戦線離脱へ`,
+              lead: `約${weeks}週間の離脱見込み`,
+              body: `${playerClub.name}の主力 ${victim.pos} ${victimDisplayName}（${victim.age}歳）が筋肉系トラブルにより約${weeks}週間の離脱見込みとなった。当面は代替メンバーを含めた総力戦となる。`,
               highlight: true
             });
           }
-          const healthyBench = playerClub.players
-            .filter(p => p && !p.isStarter && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0)
-            .sort((a, b) => {
-              const aBench = a.isBench !== false ? 1 : 0;
-              const bBench = b.isBench !== false ? 1 : 0;
-              if (aBench !== bBench) return bBench - aBench;
-              const aMatch = a.pos === victim.assignedPos ? 1 : 0;
-              const bMatch = b.pos === victim.assignedPos ? 1 : 0;
-              if (aMatch !== bMatch) return bMatch - aMatch;
-              return getPlayerOverallRating(b) - getPlayerOverallRating(a);
-            });
-          if (healthyBench.length > 0) {
-            const sub = healthyBench[0];
-            sub.isStarter = true;
-            sub.isBench = false;
-            sub.slotIndex = victim.slotIndex;
-            sub.assignedPos = victim.assignedPos || victim.pos;
-            victim.isStarter = false;
-            victim.isBench = true;
-            victim.slotIndex = null;
-            victim.assignedPos = null;
-            ensureValidSquadAndStarters(playerClub);
-          }
           renderAll();
+          if (swapInfo) notifyManagerReplacement(swapInfo, false);
         }
       }
     ]
@@ -7948,11 +7987,11 @@ function renderMatchLog() {
           </div>
         </div>
         <div class="matchday-action-row matchday-action-dual">
-          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff" title="${playerMatchInfo.title}の作戦確認・観戦を開始">
-            観戦キックオフ ▶
-          </button>
           <button type="button" class="btn btn-secondary mono" id="btn-panel-quick-result" title="作戦確認・2D試合経過を省略して即座に結果サマリーを表示">
             クイック結果 ▶|
+          </button>
+          <button type="button" class="btn btn-primary btn-kickoff-pulse" id="btn-panel-kickoff" title="${playerMatchInfo.title}の作戦確認・観戦を開始">
+            観戦キックオフ ▶
           </button>
         </div>
       </div>
@@ -8192,8 +8231,9 @@ function renderTacticalBoard() {
         const isSusp = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(starter, 'league');
         const suspBadgeHtml = isSusp ? '<span class="pitch-node-susp" title="累積警告/退場により出場停止">停</span>' : '';
 
-        const injuryBadgeHtml = starter.injuryWeeks > 0
-          ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+        const injuryDurText = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(starter) : '';
+        const injuryBadgeHtml = ((starter.injuryDays || 0) > 0 || (starter.injuryWeeks || 0) > 0)
+          ? `<span class="pitch-node-injury" title="負傷離脱中（${injuryDurText}）">傷</span>`
           : '';
 
         nodeEl.className = nodeClasses;
@@ -8251,8 +8291,9 @@ function renderTacticalBoard() {
         const isSusp = typeof isPlayerSuspendedForComp === 'function' && isPlayerSuspendedForComp(starter, 'league');
         const suspBadgeHtml = isSusp ? '<span class="pitch-node-susp" title="累積警告/退場により出場停止">停</span>' : '';
 
-        const injuryBadgeHtml = starter.injuryWeeks > 0
-          ? `<span class="pitch-node-injury" title="負傷中（残り${starter.injuryWeeks}節）">傷</span>`
+        const injuryDurText = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(starter) : '';
+        const injuryBadgeHtml = ((starter.injuryDays || 0) > 0 || (starter.injuryWeeks || 0) > 0)
+          ? `<span class="pitch-node-injury" title="負傷離脱中（${injuryDurText}）">傷</span>`
           : '';
 
         return `
@@ -8334,8 +8375,9 @@ function renderTacticalBoard() {
         const itemClass = fitClass;
         const fitBadgeHtml = '';
 
-        const injuryBadgeHtml = bp.injuryWeeks > 0
-          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+        const injuryDurText = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(bp) : '';
+        const injuryBadgeHtml = ((bp.injuryDays || 0) > 0 || (bp.injuryWeeks || 0) > 0)
+          ? `<span class="pitch-node-injury" title="負傷離脱中（${injuryDurText}）">傷</span>`
           : '';
 
         return `
@@ -8387,8 +8429,9 @@ function renderTacticalBoard() {
 
         const fitBadgeHtml = '';
 
-        const injuryBadgeHtml = bp.injuryWeeks > 0
-          ? `<span class="pitch-node-injury" title="負傷中（残り${bp.injuryWeeks}節）">傷</span>`
+        const injuryDurText = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(bp) : '';
+        const injuryBadgeHtml = ((bp.injuryDays || 0) > 0 || (bp.injuryWeeks || 0) > 0)
+          ? `<span class="pitch-node-injury" title="負傷離脱中（${injuryDurText}）">傷</span>`
           : '';
 
         return `
@@ -8460,8 +8503,9 @@ function renderTacticalBoard() {
           : 'fit-out'
         ) : '';
 
-        const injuryBadgeHtml = rp.injuryWeeks > 0
-          ? `<span class="pitch-node-injury" title="負傷中（残り${rp.injuryWeeks}節）">傷</span>`
+        const injuryDurText = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(rp) : '';
+        const injuryBadgeHtml = ((rp.injuryDays || 0) > 0 || (rp.injuryWeeks || 0) > 0)
+          ? `<span class="pitch-node-injury" title="負傷離脱中（${injuryDurText}）">傷</span>`
           : '';
 
         return `
@@ -8753,7 +8797,10 @@ function renderRoster() {
       ? `<span class="sub-badge badge-training" title="新ポジション特訓進行中">特訓:${p.positionTraining.targetPos} (${Math.round(p.positionTraining.progress)}%)</span>`
       : '';
 
-    const injuryBadge = p.injuryWeeks > 0 ? `<span class="sub-badge badge-injury">負傷:残${p.injuryWeeks}節</span>` : '';
+    const isRowInjured = Boolean((p.injuryDays && p.injuryDays > 0) || (p.injuryWeeks && p.injuryWeeks > 0));
+    const injuryBadge = isRowInjured
+      ? `<span class="sub-badge badge-injury">負傷 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : ''})</span>`
+      : '';
     const refusedBadge = p.contractRefused ? `<span class="sub-badge badge-refused">流出確定</span>` : '';
     const moraleBadge = (!p.contractRefused && p.megaOfferRejected) ? `<span class="sub-badge badge-morale-down">昇給要求</span>` : '';
     const loanInBadge = p.loanStatus?.isLoan ? '<span class="sub-badge badge-loan">LOAN</span>' : '';
@@ -8763,7 +8810,7 @@ function renderRoster() {
 
     const ovrTierCls = getOvrTierClass(effOvr);
     let ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span>`;
-    if (p.injuryWeeks > 0 || fitInfo.type === 'out') {
+    if (isRowInjured || fitInfo.type === 'out') {
       ovrDisplay = `<span class="ovr-cell-badge tier-text-low">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
     } else if (fitInfo.type === 'sub' || fitInfo.type === 'semi') {
       ovrDisplay = `<span class="ovr-cell-badge ${ovrTierCls}">${effOvr}</span> <span class="text-muted" style="font-size:10px;">(${baseOvr})</span>`;
@@ -11705,7 +11752,7 @@ function openPlayerProfileModal(playerId) {
     ? '移籍リスト登録中'
     : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
   const conditionText = isInjured
-    ? `負傷離脱中 (残り${p.injuryDays || (p.injuryWeeks * 7)}日)`
+    ? `負傷離脱中 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `あと約${p.injuryDays || (p.injuryWeeks * 7)}日`})`
     : '良好 (出場可能)';
   const conditionClass = isInjured ? 'text-danger' : 'accent-green';
 
@@ -12077,6 +12124,16 @@ function openPlayerProfileModal(playerId) {
     </div>
   ` : ''));
 
+  const canRevealProfileMeta = Boolean(scoutView.isScouted || isMyClubPlayer || isYouth);
+  const growthCurveDisplay = canRevealProfileMeta
+    ? (typeof getGrowthCurveLabel === 'function' ? getGrowthCurveLabel(p.growthCurve || p.growthType) : '標準型')
+    : '未調査';
+  const injuryProneInfo = typeof getInjuryPronenessInfo === 'function'
+    ? getInjuryPronenessInfo(p)
+    : { label: '標準', color: '#94a3b8' };
+  const injuryProneDisplay = canRevealProfileMeta ? injuryProneInfo.label : '未調査';
+  const injuryProneColor = canRevealProfileMeta ? injuryProneInfo.color : '#8b949e';
+
   const bodyEl = document.getElementById('profile-modal-body');
   if (bodyEl) {
     bodyEl.innerHTML = `
@@ -12107,6 +12164,10 @@ function openPlayerProfileModal(playerId) {
               </div>
               <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
             </div>
+          </div>
+          <div class="profile-meta-inline-row">
+            <span class="profile-meta-inline-item"><span class="profile-meta-inline-key">成長型</span><strong class="profile-meta-inline-val">${growthCurveDisplay}</strong></span>
+            <span class="profile-meta-inline-item"><span class="profile-meta-inline-key">怪我しやすさ</span><strong class="profile-meta-inline-val" style="color:${injuryProneColor};">${injuryProneDisplay}</strong></span>
           </div>
         </div>
 
@@ -17779,10 +17840,18 @@ function processInternationalBreakEvent(day) {
         if (p && p.onIntlDuty) {
           p.onIntlDuty = false;
           p.fatigue = clamp((p.fatigue || 0) + randInt(12, 22), 0, 100);
-          if (Math.random() < 0.04) {
-            p.injuryDays = randInt(5, 14);
+          const riskMult = typeof getInjuryPronenessInfo === 'function' ? getInjuryPronenessInfo(p).riskMultiplier : 1.0;
+          if (Math.random() < 0.035 * riskMult) {
+            const pScore = typeof ensurePlayerInjuryProneness === 'function' ? ensurePlayerInjuryProneness(p) : 50;
+            p.injuryDays = pScore >= 75 ? randInt(7, 21) : randInt(5, 14);
             p.injuryWeeks = Math.ceil(p.injuryDays / 7);
-            if (club.isPlayer) injuredNames.push(`${p.name}(全治${p.injuryDays}日)`);
+            if (p.isStarter && typeof autoReplaceInjuredStarterByManager === 'function') {
+              autoReplaceInjuredStarterByManager(club, p);
+            }
+            if (club.isPlayer) {
+              const durTxt = typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `約${p.injuryDays}日`;
+              injuredNames.push(`${p.name}(${durTxt})`);
+            }
           }
           if (club.isPlayer) returned.push(p.name);
         }
@@ -18349,6 +18418,75 @@ function findNextScheduledPlayerMatch() {
     }
   }
   return null;
+}
+
+function autoReplaceInjuredStarterByManager(club, injuredPlayer) {
+  if (!club || !injuredPlayer || !injuredPlayer.isStarter) return null;
+  const slotPos = injuredPlayer.assignedPos || injuredPlayer.pos;
+  const slotIndex = injuredPlayer.slotIndex;
+  const isGkSlot = slotPos === 'GK' || slotIndex === 0;
+
+  const healthyPool = (club.players || []).filter(p => (
+    p
+    && p.id !== injuredPlayer.id
+    && !p.isStarter
+    && !p.isRetired
+    && !(p.loanStatus && p.loanStatus.isLoanOut)
+    && !((p.injuryDays || 0) > 0 || (p.injuryWeeks || 0) > 0)
+    && !p.onIntlDuty
+    && (typeof isPlayerSuspendedForComp !== 'function' || !isPlayerSuspendedForComp(p, 'league'))
+  ));
+  if (healthyPool.length === 0) return null;
+
+  let candidates;
+  if (isGkSlot) {
+    const gks = healthyPool.filter(p => p.pos === 'GK');
+    candidates = gks.length > 0 ? gks : healthyPool;
+    candidates.sort((a, b) => {
+      const benchBias = ((b.isBench !== false ? 1.5 : 0) - (a.isBench !== false ? 1.5 : 0));
+      return (getPlayerOverallRating(b) - (b.fatigue || 0) * 0.25 + benchBias)
+        - (getPlayerOverallRating(a) - (a.fatigue || 0) * 0.25);
+    });
+  } else {
+    const fieldPool = healthyPool.filter(p => p.pos !== 'GK');
+    candidates = fieldPool.length > 0 ? fieldPool : healthyPool;
+    const fitRank = (p) => {
+      const t = typeof getPositionFitInfo === 'function' ? getPositionFitInfo(p, slotPos).type : 'out';
+      return t === 'main' ? 3 : (t === 'sub' ? 2 : (t === 'semi' ? 1 : 0));
+    };
+    candidates.sort((a, b) => {
+      const rankDiff = fitRank(b) - fitRank(a);
+      if (rankDiff !== 0) return rankDiff;
+      const effA = typeof getEffectivePlayerRatingForSlot === 'function' ? getEffectivePlayerRatingForSlot(a, slotPos) : getPlayerOverallRating(a);
+      const effB = typeof getEffectivePlayerRatingForSlot === 'function' ? getEffectivePlayerRatingForSlot(b, slotPos) : getPlayerOverallRating(b);
+      const scoreA = effA - (a.fatigue || 0) * 0.25 + (a.isBench !== false ? 1.5 : 0);
+      const scoreB = effB - (b.fatigue || 0) * 0.25 + (b.isBench !== false ? 1.5 : 0);
+      return scoreB - scoreA;
+    });
+  }
+
+  const replacement = candidates[0];
+  if (!replacement) return null;
+
+  injuredPlayer.isStarter = false;
+  injuredPlayer.isBench = false;
+  injuredPlayer.slotIndex = null;
+  injuredPlayer.assignedPos = null;
+
+  replacement.isStarter = true;
+  replacement.isBench = false;
+  replacement.slotIndex = slotIndex;
+  replacement.assignedPos = slotPos;
+
+  if (typeof ensureValidSquadAndStarters === 'function') {
+    ensureValidSquadAndStarters(club);
+  }
+
+  const mgrName = (club.manager && club.manager.name) ? `${club.manager.name}監督` : '監督';
+  if (club.isPlayer && typeof addDailyLog === 'function') {
+    addDailyLog(`【負傷自動交代】${mgrName}が負傷した #${injuredPlayer.squadNumber || '-'} ${injuredPlayer.name} に代わり、#${replacement.squadNumber || '-'} ${replacement.name}（${slotPos}）を先発へ入れ替えました。`);
+  }
+  return { replacement, slotPos, managerName: mgrName };
 }
 
 function swapStarterWithCandidate(club, outStarter, inCandidate) {

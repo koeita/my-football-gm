@@ -391,6 +391,41 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertLess(stage_pos, footer_pos)
         self.assertLess(footer_pos, actions_pos)
 
+    def test_14_injury_proneness_auto_swap_clean_text_and_hq_button_order(self):
+        for sym in [
+            'function generatePlayerInjuryProneness(',
+            'function ensurePlayerInjuryProneness(',
+            'function getInjuryPronenessInfo(',
+            'function formatPlayerInjuryDurationText(',
+            'injuryProneness: generatePlayerInjuryProneness(growthCurve, pos, traits)',
+        ]:
+            self.assertIn(sym, self.models_js)
+        self.assertIn('ensurePlayerInjuryProneness(', self.storage_js)
+
+        for sym in [
+            'function autoReplaceInjuredStarterByManager(',
+            'getInjuryPronenessInfo(',
+            'formatPlayerInjuryDurationText(',
+            '.profile-meta-inline-row',
+        ]:
+            self.assertIn(sym, self.main_js if not sym.startswith('.') else self.css)
+
+        inj_start = self.main_js.index('function triggerInjuryEvent()')
+        inj_block = self.main_js[inj_start:inj_start + 4500]
+        self.assertIn('autoReplaceInjuredStarterByManager(', inj_block)
+        for forbidden in ['全治1節', '全治${weeks}節', '全治${weeks}試合', 'MEDICAL REPORT']:
+            self.assertNotIn(forbidden, inj_block)
+        self.assertNotIn('負傷:残${p.injuryWeeks}節', self.main_js)
+        self.assertNotIn('残り${starter.injuryWeeks}節', self.main_js)
+
+        intl_start = self.main_js.index('function processInternationalBreakEvent(')
+        intl_block = self.main_js[intl_start:intl_start + 2200]
+        self.assertIn('autoReplaceInjuredStarterByManager(', intl_block)
+
+        dual_start = self.main_js.index('matchday-action-row matchday-action-dual')
+        dual_block = self.main_js[dual_start:dual_start + 450]
+        self.assertLess(dual_block.index('id="btn-panel-quick-result"'), dual_block.index('id="btn-panel-kickoff"'))
+
 
 if __name__ == '__main__':
     unittest.main()
