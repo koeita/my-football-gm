@@ -2231,7 +2231,7 @@ function playQuickMatchResult() {
       ensureValidSquadAndStarters(playerClub);
     }
   }
-  closeMatchPrecheckModal();
+  closeMatchPrecheckModal(true);
   playCurrentMatchday(false, true);
 }
 
@@ -3158,6 +3158,14 @@ function startMatchLiveTimer() {
     const ev = matchLiveState.timelineByMinute[min] || null;
     animatePitchStep(min, ev);
 
+    const isHighSpeed = (matchLiveState.speed || 1) >= 4;
+    const playMatchSfx = (key, opts) => {
+      if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.playSfx === 'function') {
+        SoundEngine.playSfx(key, opts);
+      }
+    };
+    const mdNow = matchLiveState.matchData;
+
     if (ev) {
       if (ev.type === 'goal') {
         if (ev.side === 'home') {
@@ -3172,18 +3180,37 @@ function startMatchLiveTimer() {
         if (shEl) shEl.textContent = matchLiveState.liveHomeScore;
         if (saEl) saEl.textContent = matchLiveState.liveAwayScore;
         appendLiveCommentary(`${min}'`, ev.text, 'ev-goal');
+        const isPlayerGoal = Boolean(
+          (ev.side === 'home' && mdNow?.homeClub?.isPlayer)
+          || (ev.side === 'away' && mdNow?.awayClub?.isPlayer)
+        );
+        playMatchSfx('sfx_kick');
+        playMatchSfx(isPlayerGoal ? 'sfx_goal_cheer' : 'sfx_crowd_groan', { delayMs: 70 });
       } else if (ev.type === 'save') {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
         appendLiveCommentary(`${min}'`, ev.text, 'ev-save');
+        if (!isHighSpeed) {
+          playMatchSfx('sfx_kick');
+          playMatchSfx('sfx_applause', { delayMs: 80, volumeScale: 0.72 });
+        }
       } else if (ev.type === 'shot') {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
         appendLiveCommentary(`${min}'`, ev.text, '');
+        if (!isHighSpeed) {
+          playMatchSfx('sfx_kick');
+          playMatchSfx('sfx_crowd_groan', { delayMs: 90, volumeScale: 0.55 });
+        }
       } else if (ev.type === 'sub') {
         appendLiveCommentary(`${min}'`, ev.text, 'ev-sub');
+        if (!isHighSpeed) {
+          playMatchSfx('sfx_applause', { volumeScale: 0.45 });
+        }
       } else if (ev.type === 'red') {
         appendLiveCommentary(`${min}'`, ev.text, 'ev-red');
+        playMatchSfx('sfx_whistle_short');
+        playMatchSfx('sfx_crowd_boo', { delayMs: 110 });
       }
     } else if (min % 9 === 0 && min < 44 || (min > 46 && min < 88 && min % 9 === 0)) {
       const md = matchLiveState.matchData;
@@ -3205,6 +3232,7 @@ function startMatchLiveTimer() {
       clearInterval(matchLiveState.timerId);
       matchLiveState.timerId = null;
       matchLiveState.status = 'HALFTIME';
+      playMatchSfx('sfx_whistle_short');
 
       if (appSettings.autoHalftimeResume) {
         appendLiveCommentary(`45'`, '前半終了！ハーフタイム自動進行によりそのまま後半へ入ります。', 'ev-period');
@@ -3234,6 +3262,7 @@ function startMatchLiveTimer() {
       clearInterval(matchLiveState.timerId);
       matchLiveState.timerId = null;
       matchLiveState.status = 'FULLTIME';
+      playMatchSfx('sfx_whistle_long');
 
       const periodEl = document.getElementById('match-live-period');
       if (periodEl) periodEl.textContent = 'FULL TIME';
@@ -3262,6 +3291,9 @@ function startMatchLiveTimer() {
  */
 function resumeSecondHalfMatch() {
   if (matchLiveState.status !== 'HALFTIME') return;
+  if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.playSfx === 'function') {
+    SoundEngine.playSfx('sfx_whistle_short');
+  }
   const htOverlay = document.getElementById('match-halftime-overlay');
   if (htOverlay) htOverlay.classList.add('hidden');
 
@@ -3841,9 +3873,33 @@ function buildMatchSummaryHtml(md) {
   `;
 }
 
-function transitionToMatchSummary() {
+function transitionToMatchSummary(isQuickResult = false) {
   clearMatchLiveTimers();
   matchLiveState.status = 'SUMMARY';
+
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.setScene('office');
+    const mdSound = matchLiveState.matchData;
+    const isPlayerHome = Boolean(mdSound && mdSound.homeClub && mdSound.homeClub.isPlayer);
+    const isPlayerAway = Boolean(mdSound && mdSound.awayClub && mdSound.awayClub.isPlayer);
+    if (mdSound && (isPlayerHome || isPlayerAway)) {
+      const pGoals = isPlayerHome ? mdSound.homeScore : mdSound.awayScore;
+      const oGoals = isPlayerHome ? mdSound.awayScore : mdSound.homeScore;
+      if (isQuickResult) {
+        SoundEngine.playSfx('sfx_whistle_long');
+      }
+      const dMs = isQuickResult ? 150 : 40;
+      if (pGoals > oGoals) {
+        SoundEngine.playSfx('jingle_victory', { delayMs: dMs });
+      } else if (pGoals === oGoals) {
+        SoundEngine.playSfx('sfx_applause', { delayMs: dMs, volumeScale: 0.6 });
+      } else if (isQuickResult) {
+        SoundEngine.playSfx('sfx_alert', { delayMs: dMs, volumeScale: 0.72 });
+      }
+    } else if (isQuickResult) {
+      SoundEngine.playSfx('sfx_whistle_long');
+    }
+  }
 
   const phasePitch = document.getElementById('match-phase-pitch');
   const phaseSummary = document.getElementById('match-phase-summary');
@@ -3904,6 +3960,9 @@ function closeMatchEventModal() {
   clearMatchLiveTimers();
   matchLiveState.status = 'IDLE';
   gameState.isSimulating = false;
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.setScene('office');
+  }
   const toastContainer = document.getElementById('toast-container');
   if (toastContainer) toastContainer.innerHTML = '';
 
@@ -3925,11 +3984,14 @@ function closeMatchEventModal() {
 /**
  * 試合前 作戦最終確認モーダルの開閉
  */
-function closeMatchPrecheckModal() {
+function closeMatchPrecheckModal(preserveScene = false) {
   const modal = document.getElementById('match-precheck-modal');
   if (modal) modal.classList.add('hidden');
   document.documentElement.classList.remove('modal-locked');
   document.body.classList.remove('modal-locked');
+  if (!preserveScene && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.setScene('office');
+  }
 }
 
 function openMatchPrecheckModal() {
@@ -4110,7 +4172,7 @@ function openMatchPrecheckModal() {
   // イベントバインド
   const btnClose = document.getElementById('btn-close-precheck-modal');
   if (btnClose) {
-    btnClose.onclick = closeMatchPrecheckModal;
+    btnClose.onclick = () => closeMatchPrecheckModal(false);
   }
   const btnPrecheckDelegation = document.getElementById('btn-precheck-toggle-delegation');
   if (btnPrecheckDelegation) {
@@ -4122,7 +4184,7 @@ function openMatchPrecheckModal() {
   const btnGotoRoster = document.getElementById('btn-precheck-goto-roster');
   if (btnGotoRoster) {
     btnGotoRoster.onclick = () => {
-      closeMatchPrecheckModal();
+      closeMatchPrecheckModal(false);
       switchTab('roster');
     };
   }
@@ -4135,7 +4197,7 @@ function openMatchPrecheckModal() {
   const btnStartMatch = document.getElementById('btn-precheck-start-match');
   if (btnStartMatch) {
     btnStartMatch.onclick = () => {
-      closeMatchPrecheckModal();
+      closeMatchPrecheckModal(true);
       playCurrentMatchday(false, false);
     };
   }
@@ -4143,6 +4205,10 @@ function openMatchPrecheckModal() {
   document.documentElement.classList.add('modal-locked');
   document.body.classList.add('modal-locked');
   modal.classList.remove('hidden');
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.setScene('prematch');
+    SoundEngine.playSfx('sfx_notify');
+  }
 }
 
 /**
@@ -4306,8 +4372,12 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, op
 
   modal.classList.remove('hidden');
   if (options && options.quickSummary) {
-    transitionToMatchSummary();
+    transitionToMatchSummary(true);
   } else {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+      SoundEngine.setScene('match');
+      SoundEngine.playSfx('sfx_whistle_short', { delayMs: 20 });
+    }
     startMatchLiveTimer();
   }
 }

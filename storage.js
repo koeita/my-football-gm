@@ -110,7 +110,10 @@ function hydrateSaveFromIndexedDBAsync() {
 }
 
 const appSettings = {
+  soundEnabled: true,
   soundVolume: 70,
+  bgmVolume: 60,
+  seVolume: 80,
   autoSaveEnabled: true,
   matchSpeed: 2,
   autoHalftimeResume: false
@@ -121,18 +124,27 @@ function loadSettingsFromStorage() {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (typeof parsed.soundEnabled === 'boolean') appSettings.soundEnabled = parsed.soundEnabled;
       if (typeof parsed.soundVolume === 'number') appSettings.soundVolume = parsed.soundVolume;
+      if (typeof parsed.bgmVolume === 'number') appSettings.bgmVolume = parsed.bgmVolume;
+      if (typeof parsed.seVolume === 'number') appSettings.seVolume = parsed.seVolume;
       if (typeof parsed.autoSaveEnabled === 'boolean') appSettings.autoSaveEnabled = parsed.autoSaveEnabled;
       if (typeof parsed.matchSpeed === 'number') appSettings.matchSpeed = parsed.matchSpeed;
       if (typeof parsed.autoHalftimeResume === 'boolean') appSettings.autoHalftimeResume = parsed.autoHalftimeResume;
     }
   } catch (e) {}
+  if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.syncFromSettings === 'function') {
+    SoundEngine.syncFromSettings();
+  }
 }
 
 function saveSettingsToStorage() {
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
   } catch (e) {}
+  if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.syncFromSettings === 'function') {
+    SoundEngine.syncFromSettings();
+  }
 }
 
 let autoSaveDebounceTimer = null;
@@ -992,6 +1004,9 @@ function showMainMenuScreen() {
   updateContinueButtonUI();
   hydrateSaveFromIndexedDBAsync();
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.setScene === 'function') {
+    SoundEngine.setScene('title');
+  }
 }
 
 function hideMainMenuScreen() {
@@ -1000,6 +1015,9 @@ function hideMainMenuScreen() {
   if (menuEl) menuEl.classList.add('hidden');
   if (appEl) appEl.classList.remove('app-hidden');
   document.body.classList.remove('main-menu-active');
+  if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.setScene === 'function') {
+    SoundEngine.setScene('office');
+  }
 }
 
 function updateCareerRecordsFromCurrentState() {
@@ -1157,15 +1175,30 @@ function closeRecordsModal() {
 function openSettingsModal() {
   loadSettingsFromStorage();
   const overlay = document.getElementById('settings-modal-overlay');
+  const soundCheck = document.getElementById('setting-sound-enabled');
+  const soundLabel = document.getElementById('setting-sound-enabled-label');
   const volInput = document.getElementById('setting-sound-volume');
   const volVal = document.getElementById('setting-sound-volume-val');
+  const bgmInput = document.getElementById('setting-bgm-volume');
+  const bgmVal = document.getElementById('setting-bgm-volume-val');
+  const seInput = document.getElementById('setting-se-volume');
+  const seVal = document.getElementById('setting-se-volume-val');
   const autoSaveCheck = document.getElementById('setting-autosave-enabled');
   const autoSaveLabel = document.getElementById('setting-autosave-label');
   const speedSelect = document.getElementById('setting-match-speed');
   const autoHtCheck = document.getElementById('setting-auto-halftime');
   const autoHtLabel = document.getElementById('setting-auto-halftime-label');
+  const soundEnabled = appSettings.soundEnabled !== false;
+  if (soundCheck) soundCheck.checked = soundEnabled;
+  if (soundLabel) soundLabel.textContent = soundEnabled ? 'ON' : 'OFF';
   if (volInput) volInput.value = appSettings.soundVolume;
   if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
+  const bgmVolVal = typeof appSettings.bgmVolume === 'number' ? appSettings.bgmVolume : 60;
+  const seVolVal = typeof appSettings.seVolume === 'number' ? appSettings.seVolume : 80;
+  if (bgmInput) bgmInput.value = bgmVolVal;
+  if (bgmVal) bgmVal.textContent = `${bgmVolVal}%`;
+  if (seInput) seInput.value = seVolVal;
+  if (seVal) seVal.textContent = `${seVolVal}%`;
   if (autoSaveCheck) autoSaveCheck.checked = appSettings.autoSaveEnabled;
   if (autoSaveLabel) autoSaveLabel.textContent = appSettings.autoSaveEnabled ? 'ENABLED' : 'OFF';
   if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
@@ -1260,13 +1293,48 @@ function initMainMenuAndModals() {
   if (btnCloseRecFooter) btnCloseRecFooter.addEventListener('click', closeRecordsModal);
 
   // Settings modal controls
-  const volInput = document.getElementById('setting-sound-volume');
-  const volVal = document.getElementById('setting-sound-volume-val');
-  if (volInput) {
-    volInput.addEventListener('input', (e) => {
-      appSettings.soundVolume = parseInt(e.target.value, 10) || 0;
-      if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
+  const soundCheck = document.getElementById('setting-sound-enabled');
+  const soundLabel = document.getElementById('setting-sound-enabled-label');
+  if (soundCheck) {
+    soundCheck.addEventListener('change', (e) => {
+      appSettings.soundEnabled = !!e.target.checked;
+      if (soundLabel) soundLabel.textContent = appSettings.soundEnabled ? 'ON' : 'OFF';
+      if (appSettings.soundEnabled && typeof SoundEngine !== 'undefined' && SoundEngine) {
+        SoundEngine.unlock();
+      }
       saveSettingsToStorage();
+    });
+  }
+
+  const volumeBindings = [
+    { inputId: 'setting-sound-volume', settingKey: 'soundVolume', labelId: 'setting-sound-volume-val' },
+    { inputId: 'setting-bgm-volume', settingKey: 'bgmVolume', labelId: 'setting-bgm-volume-val' },
+    { inputId: 'setting-se-volume', settingKey: 'seVolume', labelId: 'setting-se-volume-val' }
+  ];
+  volumeBindings.forEach(({ inputId, settingKey, labelId }) => {
+    const inputEl = document.getElementById(inputId);
+    const labelEl = document.getElementById(labelId);
+    if (!inputEl) return;
+    const handleVolumeUpdate = (e) => {
+      const val = parseInt(e.target.value, 10);
+      appSettings[settingKey] = Number.isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
+      if (labelEl) labelEl.textContent = `${appSettings[settingKey]}%`;
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+        SoundEngine.unlock();
+      }
+      saveSettingsToStorage();
+    };
+    inputEl.addEventListener('input', handleVolumeUpdate);
+    inputEl.addEventListener('change', handleVolumeUpdate);
+  });
+
+  const btnTestSound = document.getElementById('btn-test-sound-se');
+  if (btnTestSound) {
+    btnTestSound.addEventListener('click', () => {
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+        SoundEngine.unlock();
+        SoundEngine.playSfx('sfx_notify', { allowDuringSkip: true, cooldownMs: 0 });
+      }
     });
   }
 

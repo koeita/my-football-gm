@@ -1314,13 +1314,17 @@ function generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, pr
 }
 
 /**
- * 年齢とポジションに応じた初期キャリア通算成績を生成
+ * 年齢とポジション・怪我しやすさに応じた初期キャリア通算成績を生成
  */
-function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 70) {
+function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 70, injuryProneness = 50) {
+  const availFactor = typeof getInjuryAvailabilityFactor === 'function'
+    ? getInjuryAvailabilityFactor(injuryProneness)
+    : 1.0;
   const isProdigy = isStarter && approxPower >= 78 && age <= 19;
   const activeYears = isProdigy ? Math.max(1, age - 16) : Math.max(0, age - 18);
   if (activeYears === 0) {
-    const apps = isStarter ? randInt(8, 22) : randInt(2, 10);
+    const rawApps = isStarter ? randInt(8, 22) : randInt(2, 10);
+    const apps = Math.max(1, Math.round(rawApps * clamp(availFactor, 0.62, 1.08)));
     const goals = (pos === 'CF' || pos === 'LW' || pos === 'RW' || pos === 'WG') ? randInt(0, apps > 8 ? 4 : 1) : 0;
     return { appearances: apps, goals };
   }
@@ -1334,7 +1338,8 @@ function generateInitialCareerStats(pos, age, isStarter = false, approxPower = 7
     appsPerYear = randInt(25, 36);
     cupBonus = randInt(2, 6);
   }
-  const totalApps = activeYears * appsPerYear + cupBonus;
+  const rawTotalApps = activeYears * appsPerYear + cupBonus;
+  const totalApps = Math.max(activeYears * 6, Math.min(activeYears * 48, Math.round(rawTotalApps * availFactor)));
 
   // 攻撃的ポジションほど能力（approxPower）に応じた得点力差を明確化（公式戦キャリア平均ペースとして算出）
   const atkScale = clamp(0.76 + (approxPower - 70) * 0.026, 0.65, 1.38);
@@ -1611,7 +1616,8 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
   const preferredFoot = generatePreferredFoot(pos);
   const height = generatePlayerHeight(pos);
   const traits = generatePlayerTraits(pos, atk, def, sta, secondaryPositions, height, preferredFoot);
-  const careerStats = generateInitialCareerStats(pos, age, isStarter, center);
+  const injuryProneness = generatePlayerInjuryProneness(growthCurve, pos, traits);
+  const careerStats = generateInitialCareerStats(pos, age, isStarter, center, injuryProneness);
   const defaultSquadNum = (PREFERRED_SQUAD_NUMBERS[pos] || [14])[0];
 
   return {
@@ -1650,7 +1656,7 @@ function createPlayer(pos, basePower, isStarter, usedNames, customAgeRange = nul
     contractYears,
     growthCurve,
     growthType: growthCurve,
-    injuryProneness: generatePlayerInjuryProneness(growthCurve, pos, traits),
+    injuryProneness,
     injuryWeeks: 0,
     injuryDays: 0,
     isRetired: false,
@@ -2120,9 +2126,11 @@ function applyInitialEuropeanDomesticStats(p, curW) {
   if ((p.appearances || 0) > 0) return;
   const pos = p.primaryPosition || p.pos || 'CM';
   const pOvr = getPlayerOverallRating(p);
-  const playProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
+  const availFactor = typeof getInjuryAvailabilityFactor === 'function' ? getInjuryAvailabilityFactor(p) : 1.0;
+  const basePlayProb = pOvr >= 80 ? 0.88 : (pOvr >= 75 ? 0.78 : (pOvr >= 70 ? 0.65 : 0.48));
+  const playProb = clamp(basePlayProb * availFactor, 0.22, 0.96);
   const effectiveW = Math.min(curW, 38);
-  const estApps = Math.max(1, Math.min(42, effectiveW + 2, Math.round(effectiveW * playProb + (pOvr >= 78 ? randInt(0, 2) : 0))));
+  const estApps = Math.max(1, Math.min(42, effectiveW + 2, Math.round(effectiveW * playProb + (pOvr >= 78 && availFactor >= 0.85 ? randInt(0, 2) : 0))));
   const gRate = (pos === 'CF' || pos === 'ST') ? 0.42 : (['LW', 'RW', 'WG'].includes(pos) ? 0.28 : (pos === 'AM' ? 0.22 : (['LM', 'RM', 'SM'].includes(pos) ? 0.13 : (pos === 'CM' ? 0.10 : (pos === 'DM' ? 0.06 : (pos === 'GK' ? 0 : 0.055))))));
   const aRate = pos === 'GK' ? 0 : (pos === 'AM' ? 0.22 : (['LW', 'RW', 'WG', 'LM', 'RM', 'SM'].includes(pos) ? 0.18 : (pos === 'CM' ? 0.13 : 0.06)));
   const estGoals = pos === 'GK' ? 0 : Math.max(0, Math.round(estApps * gRate * (0.75 + Math.random() * 0.5)));
@@ -2152,7 +2160,9 @@ function advanceEuropeanTransferListMatchweek() {
     processedIds.add(p.id);
     if ((p.appearances || 0) >= maxSeasonApps) return;
     const ovr = getPlayerOverallRating(p);
-    const playProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
+    const availFactor = typeof getInjuryAvailabilityFactor === 'function' ? getInjuryAvailabilityFactor(p) : 1.0;
+    const basePlayProb = ovr >= 80 ? 0.88 : (ovr >= 75 ? 0.78 : (ovr >= 70 ? 0.65 : 0.45));
+    const playProb = clamp(basePlayProb * availFactor, 0.20, 0.96);
     if (Math.random() > playProb) return;
 
     const pos = p.primaryPosition || p.pos || 'CM';
@@ -3262,6 +3272,33 @@ function getInjuryPronenessInfo(player) {
     color: '#2ecc71',
     riskMultiplier: Number((0.35 + (score - 10) * 0.013).toFixed(2))
   };
+}
+
+/**
+ * 怪我しやすさ（injuryProneness）から年間平均稼働率係数を算出
+ * 高い選手（ガラスの天才等）は年間出場ペースが明確に下がり、鉄人系は安定して高稼働になる
+ */
+function getInjuryAvailabilityFactor(scoreOrPlayer) {
+  let score = 50;
+  if (typeof scoreOrPlayer === 'number' && !Number.isNaN(scoreOrPlayer)) {
+    score = clamp(Math.round(scoreOrPlayer), 10, 96);
+  } else if (scoreOrPlayer && typeof scoreOrPlayer === 'object') {
+    score = ensurePlayerInjuryProneness(scoreOrPlayer);
+  }
+  if (score >= 75) {
+    // 非常に高い（75..96）: 0.72 .. 0.58（離脱シーズンが多く年平均20〜30試合ペース）
+    return Number((0.72 - ((score - 75) / 21) * 0.14).toFixed(3));
+  }
+  if (score >= 60) {
+    // やや高い（60..74）: 0.86 .. 0.76
+    return Number((0.86 - ((score - 60) / 15) * 0.10).toFixed(3));
+  }
+  if (score >= 38) {
+    // 標準（38..59）: 1.00 .. 0.94
+    return Number((1.00 - ((score - 38) / 22) * 0.06).toFixed(3));
+  }
+  // 低い・極めて低い（10..37）: 1.02 .. 1.08（鉄人系の安定稼働）
+  return Number((1.02 + ((38 - score) / 28) * 0.06).toFixed(3));
 }
 
 /**

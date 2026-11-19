@@ -872,6 +872,9 @@ function advanceCalendarDay(skipRender = false) {
   const prevDay = getCurrentCalendarDay();
   gameState.currentDayIndex++;
   const nextDay = getCurrentCalendarDay();
+  if (!skipRender && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx('ui_page');
+  }
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
 
   // シーズンカレンダーの終了判定（リーグ戦全節完了 かつ 残りのカップ戦・欧州コンペ完了時のみ終了）
@@ -1740,6 +1743,7 @@ function triggerInjuryEvent() {
     title: `負傷報告：${victimDisplayName}`,
     description: `トレーニング中に ${victim.pos} ${victimDisplayName}（${victim.age}歳）が筋肉系のトラブルを訴え、全治約${weeks}週間との診断を受けました。`,
     detailHtml,
+    soundKey: 'sfx_alert',
     actions: [
       {
         label: `欧州専門医の特別治療（-${formatMoney(medicalCost)} / ${fastLabel}）`,
@@ -1943,6 +1947,9 @@ function triggerYouthAwakeningEvent() {
         highlight: true
       });
     }
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+      SoundEngine.playSfx('jingle_awaken');
+    }
     renderAll();
     if (typeof showConsultationReplyModal === 'function') {
       const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
@@ -1957,6 +1964,7 @@ function triggerYouthAwakeningEvent() {
         },
         topic: 'ユース覚醒報告',
         title: `${youthDisplayName} の返答`,
+        soundKey: 'none',
         speech: intensive
           ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
           : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
@@ -2251,12 +2259,15 @@ function showGmModal(opts, fromQueue = false) {
     renderAvatarCanvases(overlay);
   }
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+  if (opts.soundKey !== 'none' && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx(opts.soundKey || 'sfx_notify', { allowDuringSkip: Boolean(opts.allowDuringSkip) });
+  }
 }
 
 /**
  * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
  */
-function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null }) {
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null, soundKey = null }) {
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
@@ -2268,7 +2279,8 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
     detailHtml,
     actions: resolvedActions,
     speaker,
-    variant
+    variant,
+    soundKey
   });
 }
 
@@ -2746,6 +2758,9 @@ function processSeasonEnd(isSkipped = false) {
   };
 
   switchTab('market');
+  if (!isSkipped && playerRank === 1 && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx('jingle_victory');
+  }
 
   // 昇降格判定の実行（実際の1部・2部クラブ入れ替えは新シーズン開幕時に実施し、オフシーズン中は今季の最終順位表を保持する）
   const mustPromoteThisSeason = Boolean(wasInD2 && playerClub && playerClub.mustPromoteImmediate);
@@ -2755,6 +2770,7 @@ function processSeasonEnd(isSkipped = false) {
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
     showGmModal({
       allowDuringSkip: true,
+      soundKey: 'sfx_alert',
       category: 'BOARD OF DIRECTORS / CRITICAL WARNING',
       title: '【緊急通告】セカンドディビジョン（ENG-D2）への降格処分と最後通告',
       description: `今シーズンの成績不振により、当クラブはイングランド・セカンドディビジョン（ENG-D2）への降格が決定いたしました。理事会は極めて遺憾の意を表明するとともに、来季1年での「ファーストディビジョン（ENG-D1）復帰（3位以内自動昇格）」を絶対厳命といたします。達成できなかった場合は即時解任となります。`,
@@ -2772,6 +2788,7 @@ function processSeasonEnd(isSkipped = false) {
   } else if (promoRelResult && promoRelResult.isPlayerPromoted) {
     showGmModal({
       allowDuringSkip: true,
+      soundKey: 'jingle_victory',
       category: 'BOARD OF DIRECTORS / PROMOTION ACHIEVED',
       title: '【祝・1部昇格達成】ファーストディビジョン（ENG-D1）への復帰決定！',
       description: `見事セカンドディビジョン（ENG-D2）を ${playerRank}位 で勝ち抜き、来季からのイングランド・ファーストディビジョン（ENG-D1）昇格が決定しました！理事会およびサポーターはあなたの手腕を高く称賛しています。`,
@@ -4045,6 +4062,7 @@ function submitNegotiationOffer() {
           highlight: true
         });
       }
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
       renderNegotiationModal();
       renderAll();
       return;
@@ -4482,6 +4500,7 @@ function completeOutgoingTransferSigning(offerId) {
 
     offer.status = 'signed';
     addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -4709,6 +4728,7 @@ function completeOutgoingTransferSigning(offerId) {
     checkAndRewardManagerWishOnSigning(target, dealType);
   }
 
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -5080,6 +5100,7 @@ function acceptIncomingOffer(offerId) {
     ensureValidSquadAndStarters(playerClub);
 
     addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -5109,6 +5130,7 @@ function acceptIncomingOffer(offerId) {
     });
   }
 
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -6051,6 +6073,7 @@ function swapStarterSlots(slotIndexA, slotIndexB) {
     starterA.assignedPos = slotDefB.pos;
     starterB.slotIndex = slotIndexA;
     starterB.assignedPos = slotDefA.pos;
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   }
   gameState.selectedSlotIndex = null;
   gameState.selectedPlayerId = null;
@@ -6092,6 +6115,7 @@ function handlePitchNodeClick(slotIndex) {
     prevStarter.assignedPos = slotDef.pos;
     clickedStarter.slotIndex = prevSlotIndex;
     clickedStarter.assignedPos = prevSlotDef.pos;
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   }
 
   gameState.selectedSlotIndex = null;
@@ -6119,6 +6143,7 @@ function swapBenchOrReservePlayers(playerAId, playerBId) {
   pB.isBench = tempBench;
 
   ensureValidSquadAndStarters(playerClub);
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   renderRoster();
 }
 
@@ -6156,6 +6181,7 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
     gameState.selectedSlotIndex = null;
     gameState.selectedPlayerId = null;
     ensureValidSquadAndStarters(playerClub);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
     renderRoster();
     return;
   }
@@ -6389,7 +6415,8 @@ function startNextSeason() {
       if (!p.seasonHistory.some(r => r && r.seasonYear === finishedYearStrForOut)) {
         const ovr = getPlayerOverallRating(p);
         const pos = p.primaryPosition || p.pos || 'CM';
-        const loanApps = randInt(20, 34);
+        const availFactor = typeof getInjuryAvailabilityFactor === 'function' ? getInjuryAvailabilityFactor(p) : 1.0;
+        const loanApps = clamp(Math.round(randInt(20, 34) * availFactor), 6, 38);
         const gRate = (pos === 'CF' || pos === 'ST') ? 0.36 : (['LW', 'RW', 'WG'].includes(pos) ? 0.24 : (pos === 'AM' ? 0.20 : (['LM', 'RM', 'SM'].includes(pos) ? 0.12 : (pos === 'CM' ? 0.09 : (pos === 'GK' ? 0 : 0.05)))));
         const aRate = pos === 'GK' ? 0 : (['AM', 'LW', 'RW', 'LM', 'RM'].includes(pos) ? 0.16 : 0.08);
         const loanGoals = pos === 'GK' ? 0 : Math.round(loanApps * gRate);
@@ -11177,15 +11204,36 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
     if (!p.careerStats) p.careerStats = { appearances: careerApps, goals: rawCareerGoals, assists: 0 };
 
+    const proneScore = typeof ensurePlayerInjuryProneness === 'function' ? ensurePlayerInjuryProneness(p) : 50;
+    const availFactor = typeof getInjuryAvailabilityFactor === 'function' ? getInjuryAvailabilityFactor(proneScore) : 1.0;
+
     let totalPastApps = Math.max(0, careerApps - (p.appearances || 0));
-    const minAppsPerYear = baseOvr >= 82 ? 35 : (baseOvr >= 75 ? 29 : (baseOvr >= 68 ? 22 : 15));
-    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * Math.max(12, minAppsPerYear - 5)) {
-      const minExpectedPastApps = pastSeasonsCount * (minAppsPerYear + (absHash % 9));
+    const rawMinAppsPerYear = baseOvr >= 82 ? 35 : (baseOvr >= 75 ? 29 : (baseOvr >= 68 ? 22 : 15));
+    const minAppsPerYear = Math.max(9, Math.round(rawMinAppsPerYear * availFactor));
+    if (pastSeasonsCount > 0 && totalPastApps < pastSeasonsCount * Math.max(7, minAppsPerYear - 5)) {
+      const minExpectedPastApps = pastSeasonsCount * (minAppsPerYear + (absHash % 7));
       totalPastApps = minExpectedPastApps;
       p.careerStats.appearances = totalPastApps + (p.appearances || 0);
     }
 
     let totalPastGoals = Math.max(0, rawCareerGoals - (p.goals || 0));
+    // 旧セーブ等で怪我しやすさ未反映の過大な過去出場数が入っている場合は稼働率で整合させる
+    if (pastSeasonsCount > 0 && proneScore >= 60) {
+      const maxReasonablePastApps = pastSeasonsCount * (Math.round(42 * availFactor) + 2);
+      if (totalPastApps > maxReasonablePastApps) {
+        const scaleRatio = maxReasonablePastApps / Math.max(1, totalPastApps);
+        totalPastApps = Math.max(pastSeasonsCount * 6, Math.round(totalPastApps * scaleRatio));
+        p.careerStats.appearances = totalPastApps + (p.appearances || 0);
+        if (totalPastGoals > 0) {
+          totalPastGoals = Math.max(0, Math.round(totalPastGoals * scaleRatio));
+          p.careerStats.goals = totalPastGoals + (p.goals || 0);
+        }
+        if (typeof p.careerStats.assists === 'number' && p.careerStats.assists > (p.assists || 0)) {
+          const pastAst = p.careerStats.assists - (p.assists || 0);
+          p.careerStats.assists = Math.max(0, Math.round(pastAst * scaleRatio)) + (p.assists || 0);
+        }
+      }
+    }
     if (pastSeasonsCount > 0 && primaryPos !== 'GK' && (!hadCareerStats || (totalPastGoals === 0 && (pastSeasonsCount >= 2 || totalPastApps >= 18)))) {
       const atkScale = clamp(0.76 + (baseOvr - 70) * 0.026, 0.65, 1.38);
       const midScale = clamp(0.82 + (baseOvr - 70) * 0.018, 0.74, 1.24);
@@ -11297,19 +11345,71 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         peakSeasonIdx = pastSeasonsCount - 1;
       }
 
-      // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分
+      // 各年度の重みを計算して出場数・ゴール数・アシスト数を整数配分（怪我しやすさに応じた離脱年の波を反映）
       const appWeights = [];
       const goalWeights = [];
       const assistWeights = [];
+      const injuryHitFactors = [];
       let sumAppW = 0;
       let sumGoalW = 0;
       let sumAssistW = 0;
 
       for (let i = 0; i < pastSeasonsCount; i++) {
+        const seasonSeed = (absHash ^ Math.imul(i + 1, 2654435761)) >>> 0;
+        const injRoll = (seasonSeed >>> 8) % 100;
+        let injFactor = 1.0;
+        if (proneScore >= 75) {
+          if (injRoll < 22) {
+            injFactor = 0.34 + ((seasonSeed % 11) / 100); // 0.34 .. 0.44（長期離脱年）
+          } else if (injRoll < 48) {
+            injFactor = 0.52 + ((seasonSeed % 15) / 100); // 0.52 .. 0.66（中長期離脱年）
+          }
+        } else if (proneScore >= 60) {
+          if (injRoll < 12) {
+            injFactor = 0.44 + ((seasonSeed % 13) / 100); // 0.44 .. 0.56
+          } else if (injRoll < 30) {
+            injFactor = 0.62 + ((seasonSeed % 15) / 100); // 0.62 .. 0.76
+          }
+        } else if (proneScore >= 38) {
+          if (injRoll < 10) {
+            injFactor = 0.65 + ((seasonSeed % 16) / 100); // 0.65 .. 0.80
+          }
+        }
+        injuryHitFactors.push(injFactor);
+      }
+
+      // 怪我頻度が高いのに過去年で一度も離脱が発生しなかった場合は、ピーク年以外から最低1年を離脱年へ決定論的に割り当て
+      const minRequiredInjurySeasons = proneScore >= 75
+        ? (pastSeasonsCount >= 5 ? 2 : (pastSeasonsCount >= 2 ? 1 : 0))
+        : (proneScore >= 60 && pastSeasonsCount >= 4 ? 1 : 0);
+      let currentInjurySeasons = injuryHitFactors.filter(f => f < 0.85).length;
+      if (currentInjurySeasons < minRequiredInjurySeasons) {
+        const candidateIdxs = [];
+        for (let i = 0; i < pastSeasonsCount; i++) {
+          if (injuryHitFactors[i] >= 0.85 && i !== peakSeasonIdx) candidateIdxs.push(i);
+        }
+        if (candidateIdxs.length === 0) {
+          for (let i = 0; i < pastSeasonsCount; i++) {
+            if (injuryHitFactors[i] >= 0.85) candidateIdxs.push(i);
+          }
+        }
+        let pickCursor = absHash % Math.max(1, candidateIdxs.length);
+        while (currentInjurySeasons < minRequiredInjurySeasons && candidateIdxs.length > 0) {
+          const targetIdx = candidateIdxs.splice(pickCursor % candidateIdxs.length, 1)[0];
+          injuryHitFactors[targetIdx] = proneScore >= 75 ? 0.40 : 0.56;
+          currentInjurySeasons += 1;
+          pickCursor += 1;
+        }
+      }
+
+      for (let i = 0; i < pastSeasonsCount; i++) {
         const ageAtSeason = debutBaseAge + i;
         const maturity = ageAtSeason <= 19 ? 0.50 : (ageAtSeason <= 21 ? 0.78 : 1.0);
-        const jitter = 0.85 + (((absHash >> (i % 8)) & 7) / 25);
+        const jitter = proneScore < 38
+          ? (0.93 + (((absHash >> (i % 8)) & 7) / 48)) // 鉄人系はブレ幅を抑えて毎年安定稼働（0.93 .. 1.08）
+          : (0.85 + (((absHash >> (i % 8)) & 7) / 25));
         const seasonSeed = (absHash ^ Math.imul(i + 1, 2654435761)) >>> 0;
+        const injFactor = injuryHitFactors[i];
 
         let awMul = 1.0;
         let gwMul = 0.64 + ((seasonSeed % 9) / 25); // 通常年は 0.64 .. 0.96
@@ -11326,9 +11426,10 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
           astwMul *= 1.08;
         }
 
-        const aw = maturity * jitter * awMul;
-        const gw = maturity * gwMul;
-        const astw = maturity * astwMul;
+        const contribInjScale = injFactor < 1.0 ? (0.35 + 0.65 * injFactor) : 1.0;
+        const aw = maturity * jitter * awMul * injFactor;
+        const gw = maturity * gwMul * contribInjScale;
+        const astw = maturity * astwMul * contribInjScale;
         appWeights.push(aw);
         goalWeights.push(gw);
         assistWeights.push(astw);
@@ -11337,7 +11438,42 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         sumAssistW += astw;
       }
 
-      let remApps = totalPastApps;
+      // 全シーズンの出場数を重み按分で先に算出し、端数は非離脱年の高重みシーズンへ調整
+      const allocatedApps = [];
+      let sumAllocatedApps = 0;
+      for (let i = 0; i < pastSeasonsCount; i++) {
+        const est = clamp(Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW)), 1, 50);
+        allocatedApps.push(est);
+        sumAllocatedApps += est;
+      }
+      let diffApps = totalPastApps - sumAllocatedApps;
+      if (diffApps !== 0 && pastSeasonsCount > 0) {
+        const orderIdxs = Array.from({ length: pastSeasonsCount }, (_, idx) => idx).sort((a, b) => {
+          const aHealthy = injuryHitFactors[a] >= 0.85 ? 1 : 0;
+          const bHealthy = injuryHitFactors[b] >= 0.85 ? 1 : 0;
+          if (diffApps > 0 && aHealthy !== bHealthy) return bHealthy - aHealthy;
+          return appWeights[b] - appWeights[a];
+        });
+        let safety = 0;
+        while (diffApps !== 0 && safety < 200) {
+          let changed = false;
+          for (const idx of orderIdxs) {
+            if (diffApps === 0) break;
+            if (diffApps > 0 && allocatedApps[idx] < 50) {
+              allocatedApps[idx] += 1;
+              diffApps -= 1;
+              changed = true;
+            } else if (diffApps < 0 && allocatedApps[idx] > 1) {
+              allocatedApps[idx] -= 1;
+              diffApps += 1;
+              changed = true;
+            }
+          }
+          if (!changed) break;
+          safety += 1;
+        }
+      }
+
       let remGoals = totalPastGoals;
       let remAssists = totalPastAssists;
 
@@ -11347,9 +11483,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         const ageAtSeason = debutBaseAge + i;
         const isLast = (i === pastSeasonsCount - 1);
 
-        let apps = isLast ? remApps : Math.round((totalPastApps * appWeights[i]) / Math.max(0.01, sumAppW));
-        apps = clamp(apps, 1, Math.min(50, Math.max(1, remApps - (pastSeasonsCount - 1 - i))));
-        remApps = Math.max(0, remApps - apps);
+        const apps = allocatedApps[i];
 
         let goals = isLast ? remGoals : Math.round((totalPastGoals * goalWeights[i]) / Math.max(0.01, sumGoalW));
         goals = clamp(goals, 0, remGoals);
@@ -11385,16 +11519,15 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         });
       }
 
-      // 端数が残った場合は最終過去シーズンに加算してキャリア通算と完全一致させる
-      if (remApps > 0 && history.length > 0) {
-        history[history.length - 1].appearances += remApps;
-      }
+      // 端数が残った場合は最終過去シーズン（ゴール・アシストのみ）に加算してキャリア通算と完全一致させる
       if (remGoals > 0 && history.length > 0) {
         history[history.length - 1].goals += remGoals;
       }
       if (remAssists > 0 && history.length > 0) {
         history[history.length - 1].assists += remAssists;
       }
+      const finalPastAppsSum = history.reduce((sum, r) => sum + (r.appearances || 0), 0);
+      p.careerStats.appearances = finalPastAppsSum + (p.appearances || 0);
     }
 
     p.seasonHistory = history;
@@ -17709,6 +17842,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       gameState.pendingSponsorSlots = (gameState.pendingSponsorSlots || []).filter(k => !st.editableSet.has(k));
 
       if (signedNames.length > 0) {
+        if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
         const signNote = totalSigningBonus > 0 ? ` / 契約一時金 +${formatMoney(totalSigningBonus)}` : '';
         addDailyLog(`【スポンサー契約締結】${signedNames.join(' / ')}（基本年額計 ${formatMoney(totalAddedAnnual)}${signNote}）と合意しました。`);
         if (typeof addNewsItem === 'function') {
@@ -19310,6 +19444,7 @@ function showConsultationReplyModal(reply) {
     title: reply.title || '返答',
     speech: reply.speech || '',
     detailHtml: reply.detailHtml || '',
+    soundKey: reply.soundKey || null,
     actions: [
       {
         label: reply.buttonLabel || '確認',
