@@ -872,6 +872,9 @@ function advanceCalendarDay(skipRender = false) {
   const prevDay = getCurrentCalendarDay();
   gameState.currentDayIndex++;
   const nextDay = getCurrentCalendarDay();
+  if (!skipRender && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx('ui_page');
+  }
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
 
   // シーズンカレンダーの終了判定（リーグ戦全節完了 かつ 残りのカップ戦・欧州コンペ完了時のみ終了）
@@ -1740,6 +1743,7 @@ function triggerInjuryEvent() {
     title: `負傷報告：${victimDisplayName}`,
     description: `トレーニング中に ${victim.pos} ${victimDisplayName}（${victim.age}歳）が筋肉系のトラブルを訴え、全治約${weeks}週間との診断を受けました。`,
     detailHtml,
+    soundKey: 'sfx_alert',
     actions: [
       {
         label: `欧州専門医の特別治療（-${formatMoney(medicalCost)} / ${fastLabel}）`,
@@ -1944,6 +1948,9 @@ function triggerYouthAwakeningEvent() {
       });
     }
     renderAll();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+      SoundEngine.playSfx('jingle_awaken');
+    }
     if (typeof showConsultationReplyModal === 'function') {
       const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
       const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
@@ -1957,6 +1964,7 @@ function triggerYouthAwakeningEvent() {
         },
         topic: 'ユース覚醒報告',
         title: `${youthDisplayName} の返答`,
+        soundKey: 'none',
         speech: intensive
           ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
           : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
@@ -2251,12 +2259,15 @@ function showGmModal(opts, fromQueue = false) {
     renderAvatarCanvases(overlay);
   }
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+  if (opts.soundKey !== 'none' && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx(opts.soundKey || 'sfx_notify', { allowDuringSkip: Boolean(opts.allowDuringSkip) });
+  }
 }
 
 /**
  * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
  */
-function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null }) {
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null, soundKey = null }) {
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
@@ -2268,7 +2279,8 @@ function showSecretaryModal({ topic = '進行ブリーフィング', title = '',
     detailHtml,
     actions: resolvedActions,
     speaker,
-    variant
+    variant,
+    soundKey
   });
 }
 
@@ -2746,6 +2758,9 @@ function processSeasonEnd(isSkipped = false) {
   };
 
   switchTab('market');
+  if (!isSkipped && playerRank === 1 && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx('jingle_victory');
+  }
 
   // 昇降格判定の実行（実際の1部・2部クラブ入れ替えは新シーズン開幕時に実施し、オフシーズン中は今季の最終順位表を保持する）
   const mustPromoteThisSeason = Boolean(wasInD2 && playerClub && playerClub.mustPromoteImmediate);
@@ -2755,6 +2770,7 @@ function processSeasonEnd(isSkipped = false) {
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
     showGmModal({
       allowDuringSkip: true,
+      soundKey: 'sfx_alert',
       category: 'BOARD OF DIRECTORS / CRITICAL WARNING',
       title: '【緊急通告】セカンドディビジョン（ENG-D2）への降格処分と最後通告',
       description: `今シーズンの成績不振により、当クラブはイングランド・セカンドディビジョン（ENG-D2）への降格が決定いたしました。理事会は極めて遺憾の意を表明するとともに、来季1年での「ファーストディビジョン（ENG-D1）復帰（3位以内自動昇格）」を絶対厳命といたします。達成できなかった場合は即時解任となります。`,
@@ -2772,6 +2788,7 @@ function processSeasonEnd(isSkipped = false) {
   } else if (promoRelResult && promoRelResult.isPlayerPromoted) {
     showGmModal({
       allowDuringSkip: true,
+      soundKey: 'jingle_victory',
       category: 'BOARD OF DIRECTORS / PROMOTION ACHIEVED',
       title: '【祝・1部昇格達成】ファーストディビジョン（ENG-D1）への復帰決定！',
       description: `見事セカンドディビジョン（ENG-D2）を ${playerRank}位 で勝ち抜き、来季からのイングランド・ファーストディビジョン（ENG-D1）昇格が決定しました！理事会およびサポーターはあなたの手腕を高く称賛しています。`,
@@ -4047,6 +4064,7 @@ function submitNegotiationOffer() {
       }
       renderNegotiationModal();
       renderAll();
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
       return;
     }
 
@@ -4482,6 +4500,7 @@ function completeOutgoingTransferSigning(offerId) {
 
     offer.status = 'signed';
     addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -4709,6 +4728,7 @@ function completeOutgoingTransferSigning(offerId) {
     checkAndRewardManagerWishOnSigning(target, dealType);
   }
 
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -5080,6 +5100,7 @@ function acceptIncomingOffer(offerId) {
     ensureValidSquadAndStarters(playerClub);
 
     addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -5109,6 +5130,7 @@ function acceptIncomingOffer(offerId) {
     });
   }
 
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -6051,6 +6073,7 @@ function swapStarterSlots(slotIndexA, slotIndexB) {
     starterA.assignedPos = slotDefB.pos;
     starterB.slotIndex = slotIndexA;
     starterB.assignedPos = slotDefA.pos;
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   }
   gameState.selectedSlotIndex = null;
   gameState.selectedPlayerId = null;
@@ -6092,6 +6115,7 @@ function handlePitchNodeClick(slotIndex) {
     prevStarter.assignedPos = slotDef.pos;
     clickedStarter.slotIndex = prevSlotIndex;
     clickedStarter.assignedPos = prevSlotDef.pos;
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   }
 
   gameState.selectedSlotIndex = null;
@@ -6119,6 +6143,7 @@ function swapBenchOrReservePlayers(playerAId, playerBId) {
   pB.isBench = tempBench;
 
   ensureValidSquadAndStarters(playerClub);
+  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
   renderRoster();
 }
 
@@ -6156,6 +6181,7 @@ function substituteBenchPlayerToSlot(benchPlayerId, targetSlotIndex = null) {
     gameState.selectedSlotIndex = null;
     gameState.selectedPlayerId = null;
     ensureValidSquadAndStarters(playerClub);
+    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_confirm');
     renderRoster();
     return;
   }
@@ -17709,6 +17735,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       gameState.pendingSponsorSlots = (gameState.pendingSponsorSlots || []).filter(k => !st.editableSet.has(k));
 
       if (signedNames.length > 0) {
+        if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
         const signNote = totalSigningBonus > 0 ? ` / 契約一時金 +${formatMoney(totalSigningBonus)}` : '';
         addDailyLog(`【スポンサー契約締結】${signedNames.join(' / ')}（基本年額計 ${formatMoney(totalAddedAnnual)}${signNote}）と合意しました。`);
         if (typeof addNewsItem === 'function') {
@@ -19310,6 +19337,7 @@ function showConsultationReplyModal(reply) {
     title: reply.title || '返答',
     speech: reply.speech || '',
     detailHtml: reply.detailHtml || '',
+    soundKey: reply.soundKey || null,
     actions: [
       {
         label: reply.buttonLabel || '確認',

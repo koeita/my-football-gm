@@ -1528,12 +1528,45 @@
       <div class="modal-body settings-modal-body">
         <div class="settings-row">
           <div class="settings-label-col">
-            <span class="settings-label">マスター音量（SE / 演出音）</span>
-            <span class="settings-desc">試合・ボタン操作時の効果音ボリューム</span>
+            <span class="settings-label">サウンド再生</span>
+            <span class="settings-desc">BGM・効果音・スタジアム環境音のON/OFF</span>
+          </div>
+          <div class="settings-control-col">
+            <label class="settings-toggle-label mono">
+              <input type="checkbox" id="setting-sound-enabled" checked>
+              <span id="setting-sound-enabled-label">ON</span>
+            </label>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">マスター音量</span>
+            <span class="settings-desc">すべてのBGM・効果音・環境音の基準音量</span>
           </div>
           <div class="settings-control-col mono">
             <input type="range" id="setting-sound-volume" min="0" max="100" value="70" class="settings-range">
-            <span id="setting-sound-volume-val" class="mono">70%</span>
+            <span id="setting-sound-volume-val" class="mono settings-volume-val">70%</span>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">BGM音量</span>
+            <span class="settings-desc">タイトル・試合前・本部画面のBGMボリューム</span>
+          </div>
+          <div class="settings-control-col mono">
+            <input type="range" id="setting-bgm-volume" min="0" max="100" value="60" class="settings-range">
+            <span id="setting-bgm-volume-val" class="mono settings-volume-val">60%</span>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">SE・環境音音量</span>
+            <span class="settings-desc">スタジアム歓声・笛・操作音・ジングル音量</span>
+          </div>
+          <div class="settings-control-col mono">
+            <input type="range" id="setting-se-volume" min="0" max="100" value="80" class="settings-range">
+            <span id="setting-se-volume-val" class="mono settings-volume-val">80%</span>
+            <button type="button" class="btn btn-secondary btn-sm btn-settings-sound-test" id="btn-test-sound-se">試聴</button>
           </div>
         </div>
         <div class="settings-row">
@@ -1928,6 +1961,7 @@
   <script src="competitions.js?v=20261112_0400"></script>
   <script src="match-engine.js?v=20261112_0400"></script>
   <script src="storage.js?v=20261112_0400"></script>
+  <script src="audio.js?v=20261119_0100"></script>
   <script src="main.js?v=20261112_0400"></script>
 </body>
 </html>
