@@ -1299,42 +1299,34 @@ function initMainMenuAndModals() {
     soundCheck.addEventListener('change', (e) => {
       appSettings.soundEnabled = !!e.target.checked;
       if (soundLabel) soundLabel.textContent = appSettings.soundEnabled ? 'ON' : 'OFF';
+      if (appSettings.soundEnabled && typeof SoundEngine !== 'undefined' && SoundEngine) {
+        SoundEngine.unlock();
+      }
       saveSettingsToStorage();
     });
   }
 
-  const volInput = document.getElementById('setting-sound-volume');
-  const volVal = document.getElementById('setting-sound-volume-val');
-  if (volInput) {
-    volInput.addEventListener('input', (e) => {
+  const volumeBindings = [
+    { inputId: 'setting-sound-volume', settingKey: 'soundVolume', labelId: 'setting-sound-volume-val' },
+    { inputId: 'setting-bgm-volume', settingKey: 'bgmVolume', labelId: 'setting-bgm-volume-val' },
+    { inputId: 'setting-se-volume', settingKey: 'seVolume', labelId: 'setting-se-volume-val' }
+  ];
+  volumeBindings.forEach(({ inputId, settingKey, labelId }) => {
+    const inputEl = document.getElementById(inputId);
+    const labelEl = document.getElementById(labelId);
+    if (!inputEl) return;
+    const handleVolumeUpdate = (e) => {
       const val = parseInt(e.target.value, 10);
-      appSettings.soundVolume = Number.isNaN(val) ? 0 : val;
-      if (volVal) volVal.textContent = `${appSettings.soundVolume}%`;
+      appSettings[settingKey] = Number.isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
+      if (labelEl) labelEl.textContent = `${appSettings[settingKey]}%`;
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) {
+        SoundEngine.unlock();
+      }
       saveSettingsToStorage();
-    });
-  }
-
-  const bgmInput = document.getElementById('setting-bgm-volume');
-  const bgmVal = document.getElementById('setting-bgm-volume-val');
-  if (bgmInput) {
-    bgmInput.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      appSettings.bgmVolume = Number.isNaN(val) ? 0 : val;
-      if (bgmVal) bgmVal.textContent = `${appSettings.bgmVolume}%`;
-      saveSettingsToStorage();
-    });
-  }
-
-  const seInput = document.getElementById('setting-se-volume');
-  const seVal = document.getElementById('setting-se-volume-val');
-  if (seInput) {
-    seInput.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      appSettings.seVolume = Number.isNaN(val) ? 0 : val;
-      if (seVal) seVal.textContent = `${appSettings.seVolume}%`;
-      saveSettingsToStorage();
-    });
-  }
+    };
+    inputEl.addEventListener('input', handleVolumeUpdate);
+    inputEl.addEventListener('change', handleVolumeUpdate);
+  });
 
   const btnTestSound = document.getElementById('btn-test-sound-se');
   if (btnTestSound) {

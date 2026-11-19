@@ -1947,10 +1947,10 @@ function triggerYouthAwakeningEvent() {
         highlight: true
       });
     }
-    renderAll();
     if (typeof SoundEngine !== 'undefined' && SoundEngine) {
       SoundEngine.playSfx('jingle_awaken');
     }
+    renderAll();
     if (typeof showConsultationReplyModal === 'function') {
       const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
       const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
@@ -4062,9 +4062,9 @@ function submitNegotiationOffer() {
           highlight: true
         });
       }
+      if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
       renderNegotiationModal();
       renderAll();
-      if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
       return;
     }
 

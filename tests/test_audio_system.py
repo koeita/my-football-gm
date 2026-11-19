@@ -75,6 +75,45 @@ class TestAudioSystem(unittest.TestCase):
         self.assertIn('pagehide', self.audio_js)
         self.assertIn('isFastForwardingSeason', self.audio_js)
 
+    def test_audio_low_latency_features(self):
+        self.assertIn('decodeAudioData', self.audio_js)
+        self.assertIn('createBufferSource', self.audio_js)
+        self.assertIn("latencyHint: 'interactive'", self.audio_js)
+        self.assertIn('trimStartSec', self.audio_js)
+        self.assertIn("audio.preload = 'auto'", self.audio_js)
+        self.assertNotIn("preload = def.loop ? 'auto' : 'metadata'", self.audio_js)
+        self.assertRegex(
+            self.audio_js,
+            r"document\.addEventListener\('click',\s*\(e\)\s*=>\s*\{[\s\S]*?\},\s*true\);"
+        )
+        # 緊迫感・無遅延化に合わせたタイトなdelayMsと描画前再生の確認
+        self.assertIn("SoundEngine.playSfx('sfx_whistle_short', { delayMs: 20 })", self.match_js)
+        awaken_idx = self.main_js.find("SoundEngine.playSfx('jingle_awaken')")
+        awaken_render_idx = self.main_js.find("renderAll();", awaken_idx - 120, awaken_idx + 120)
+        self.assertGreater(awaken_render_idx, awaken_idx)
+
+    def test_audio_mixer_and_cache_versioning(self):
+        # Web Audio 共通ミキサー (Master / BGM / SE GainNode) と聴感カーブの確認
+        for token in [
+            'volumePercentToGain',
+            'masterGainNode',
+            'bgmChannelGainNode',
+            'seChannelGainNode',
+            'startWebAudioLoopNode',
+        ]:
+            self.assertIn(token, self.audio_js, f'audio.js に {token} が含まれていません')
+
+        # storage.js が input/change 両イベントと SoundEngine.unlock() に連動すること
+        self.assertIn("addEventListener('input', handleVolumeUpdate)", self.storage_js)
+        self.assertIn("addEventListener('change', handleVolumeUpdate)", self.storage_js)
+        self.assertIn('SoundEngine.unlock()', self.storage_js)
+
+        # index.html の古いキャッシュバージョンが残っていないこと
+        self.assertNotIn('storage.js?v=20261112_0400', self.index_html)
+        self.assertNotIn('style.css?v=20261114_0100', self.index_html)
+        for asset in ['style.css?v=20261119_0300', 'storage.js?v=20261119_0300', 'audio.js?v=20261119_0300', 'match-engine.js?v=20261119_0300', 'main.js?v=20261119_0300']:
+            self.assertIn(asset, self.index_html)
+
     def test_index_html_and_css_settings_ui(self):
         storage_pos = self.index_html.find('src="storage.js')
         audio_pos = self.index_html.find('src="audio.js')

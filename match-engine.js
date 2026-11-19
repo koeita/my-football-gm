@@ -3185,14 +3185,14 @@ function startMatchLiveTimer() {
           || (ev.side === 'away' && mdNow?.awayClub?.isPlayer)
         );
         playMatchSfx('sfx_kick');
-        playMatchSfx(isPlayerGoal ? 'sfx_goal_cheer' : 'sfx_crowd_groan', { delayMs: 120 });
+        playMatchSfx(isPlayerGoal ? 'sfx_goal_cheer' : 'sfx_crowd_groan', { delayMs: 70 });
       } else if (ev.type === 'save') {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
         appendLiveCommentary(`${min}'`, ev.text, 'ev-save');
         if (!isHighSpeed) {
           playMatchSfx('sfx_kick');
-          playMatchSfx('sfx_applause', { delayMs: 140, volumeScale: 0.72 });
+          playMatchSfx('sfx_applause', { delayMs: 80, volumeScale: 0.72 });
         }
       } else if (ev.type === 'shot') {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
@@ -3200,7 +3200,7 @@ function startMatchLiveTimer() {
         appendLiveCommentary(`${min}'`, ev.text, '');
         if (!isHighSpeed) {
           playMatchSfx('sfx_kick');
-          playMatchSfx('sfx_crowd_groan', { delayMs: 160, volumeScale: 0.55 });
+          playMatchSfx('sfx_crowd_groan', { delayMs: 90, volumeScale: 0.55 });
         }
       } else if (ev.type === 'sub') {
         appendLiveCommentary(`${min}'`, ev.text, 'ev-sub');
@@ -3210,7 +3210,7 @@ function startMatchLiveTimer() {
       } else if (ev.type === 'red') {
         appendLiveCommentary(`${min}'`, ev.text, 'ev-red');
         playMatchSfx('sfx_whistle_short');
-        playMatchSfx('sfx_crowd_boo', { delayMs: 180 });
+        playMatchSfx('sfx_crowd_boo', { delayMs: 110 });
       }
     } else if (min % 9 === 0 && min < 44 || (min > 46 && min < 88 && min % 9 === 0)) {
       const md = matchLiveState.matchData;
@@ -3888,7 +3888,7 @@ function transitionToMatchSummary(isQuickResult = false) {
       if (isQuickResult) {
         SoundEngine.playSfx('sfx_whistle_long');
       }
-      const dMs = isQuickResult ? 220 : 80;
+      const dMs = isQuickResult ? 150 : 40;
       if (pGoals > oGoals) {
         SoundEngine.playSfx('jingle_victory', { delayMs: dMs });
       } else if (pGoals === oGoals) {
@@ -4376,7 +4376,7 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, op
   } else {
     if (typeof SoundEngine !== 'undefined' && SoundEngine) {
       SoundEngine.setScene('match');
-      SoundEngine.playSfx('sfx_whistle_short', { delayMs: 140 });
+      SoundEngine.playSfx('sfx_whistle_short', { delayMs: 20 });
     }
     startMatchLiveTimer();
   }
