@@ -2386,6 +2386,10 @@ function showInfoPopup({ title, tag, bodyHtml }) {
 function closeInfoPopup() {
   const overlay = document.getElementById('info-popup-modal');
   if (overlay) overlay.classList.add('hidden');
+  document.querySelectorAll('#player-profile-modal .profile-trait-tag.is-selected').forEach(btn => {
+    btn.classList.remove('is-selected');
+    btn.setAttribute('aria-expanded', 'false');
+  });
 }
 
 /**
@@ -12467,7 +12471,6 @@ function openPlayerProfileModal(playerId) {
               <div class="profile-traits-wrap">
                 ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">・ ${t}</button>`).join('')}
               </div>
-              <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
             </div>
           </div>
           <div class="profile-meta-inline-row">
@@ -14728,29 +14731,28 @@ function initGame() {
       const traitBtn = e.target.closest('.profile-trait-tag[data-trait-name]');
       if (!traitBtn) return;
       const traitName = traitBtn.dataset.traitName;
-      const bodyEl = profileModalOverlay.querySelector('.profile-traits-wrap')?.parentElement;
-      const detailEl = bodyEl ? bodyEl.querySelector('#profile-trait-detail') : document.getElementById('profile-trait-detail');
-      if (!detailEl) return;
+      if (!traitName) return;
 
-      const isAlreadySelected = traitBtn.classList.contains('is-selected') && !detailEl.classList.contains('hidden');
       profileModalOverlay.querySelectorAll('.profile-trait-tag[data-trait-name]').forEach(btn => {
         btn.classList.remove('is-selected');
         btn.setAttribute('aria-expanded', 'false');
       });
-
-      if (isAlreadySelected) {
-        detailEl.classList.add('hidden');
-        detailEl.innerHTML = '';
-        return;
-      }
 
       traitBtn.classList.add('is-selected');
       traitBtn.setAttribute('aria-expanded', 'true');
       const desc = typeof getPlayerTraitDescription === 'function'
         ? getPlayerTraitDescription(traitName)
         : '試合でのパフォーマンスに影響します。';
-      detailEl.innerHTML = `<strong class="profile-trait-detail-title">${traitName}</strong><span class="profile-trait-detail-desc">${desc}</span>`;
-      detailEl.classList.remove('hidden');
+      const safeDesc = typeof escapeCommHtml === 'function' ? escapeCommHtml(desc) : desc;
+      showInfoPopup({
+        tag: '特徴',
+        title: traitName,
+        bodyHtml: `
+          <div class="info-popup-desc-box">
+            <p class="info-popup-desc-text">${safeDesc}</p>
+          </div>
+        `
+      });
     });
   }
 
