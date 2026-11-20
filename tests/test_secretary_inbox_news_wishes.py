@@ -466,6 +466,31 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn("sheetPanel.addEventListener('touchmove'", self.main_js)
         self.assertIn("sheetPanel.addEventListener('touchend'", self.main_js)
 
+    def test_17_news_category_filter_and_deadline_day_hourly_advance(self):
+        """ニュースカテゴリ絞り込みと移籍最終日（デッドラインデー）の1時間ごと進行を検証"""
+        self.assertIn('id="office-news-controls"', self.html)
+        self.assertIn('id="news-filter-bar"', self.html)
+        for cat in ['ALL', '移籍', 'リーグ', 'カップ', 'チーム・選手', '監督']:
+            self.assertIn(f'data-news-filter="{cat}"', self.html)
+        self.assertIn("newsCategoryFilter: 'ALL'", self.main_js)
+        self.assertIn("if (newsCatFilter === 'チーム・選手') return n.category === 'チーム' || n.category === '選手';", self.main_js)
+
+        for sym in [
+            'function isDeadlineDayHourlyActive(',
+            'function renderDeadlineDayBanner(',
+            'function triggerDeadlineTickFeedback(',
+            'function advanceDeadlineHour(',
+            'deadlineDayState:',
+            '+1時間進める',
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('id="office-deadline-section"', self.html)
+        self.assertIn('id="btn-deadline-advance-hour"', self.html)
+        self.assertIn('.btn-office-footer-util.is-deadline-hourly {', self.css)
+        self.assertIn('.deadline-progress-fill {', self.css)
+        self.assertIn('deadlineDayState: gameState.deadlineDayState || null,', self.storage_js)
+        self.assertIn("if (gameState.deadlineDayState === undefined) gameState.deadlineDayState = null;", self.storage_js)
+
 
 if __name__ == '__main__':
     unittest.main()

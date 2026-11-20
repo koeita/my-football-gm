@@ -4087,6 +4087,14 @@ function openMatchPrecheckModal() {
     `;
   });
 
+  const preHomeClub = isHome ? playerClub : (opponentClub || { name: oppName });
+  const preAwayClub = isHome ? (opponentClub || { name: oppName }) : playerClub;
+  const preThemes = typeof resolveSummaryKitThemes === 'function'
+    ? resolveSummaryKitThemes(preHomeClub, preAwayClub)
+    : { homeTheme: { inlineVars: '' }, awayTheme: { inlineVars: '' } };
+  const myPreTheme = isHome ? preThemes.homeTheme : preThemes.awayTheme;
+  const oppPreTheme = isHome ? preThemes.awayTheme : preThemes.homeTheme;
+
   body.innerHTML = `
     <div class="precheck-body-grid">
       <!-- 左列：対戦カード＆作戦概要（余白なくリッチに展開） -->
@@ -4095,7 +4103,7 @@ function openMatchPrecheckModal() {
         <div class="precheck-hero-card">
           
           <div class="precheck-vs-row">
-            <div class="precheck-club-box is-player">
+            <div class="precheck-club-box is-player" style="${myPreTheme.inlineVars || ''}">
               <div class="precheck-club-title-wrap">
                 ${getClubEmblemSvg(playerClub, 28, 'precheck-emblem')}
                 <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(playerClub)}</span>
@@ -4106,7 +4114,7 @@ function openMatchPrecheckModal() {
               </div>
             </div>
             <div class="precheck-vs-badge">VS</div>
-            <div class="precheck-club-box">
+            <div class="precheck-club-box" style="${oppPreTheme.inlineVars || ''}">
               <div class="precheck-club-title-wrap">
                 <span class="precheck-club-name mono" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">${getClubShortCode(opponentClub || oppName)}</span>
                 ${getClubEmblemSvg(opponentClub || oppName, 28, 'precheck-emblem')}

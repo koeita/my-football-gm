@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_0500">
+  <link rel="stylesheet" href="style.css?v=20261119_0700">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -235,6 +235,28 @@
           <div class="secretary-briefing-bar" id="secretary-briefing-bar">
             <!-- JSで秘書ドット絵アバター・業務一覧タイトル・残タスクバーを描画 -->
           </div>
+          <button type="button" class="btn-toggle-tasks" id="btn-toggle-gm-tasks" aria-expanded="true" title="表示切り替え">
+            <span id="gm-tasks-toggle-text">折りたたむ</span>
+            <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
+          </button>
+        </div>
+        <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
+        <div class="gm-tasks-mini-summary hidden" id="gm-tasks-mini-summary">
+          <!-- JSで最優先タスクを1行描画 -->
+        </div>
+        <div class="gm-tasks-grid" id="gm-tasks-list">
+          <!-- JSでクリック可能な業務タスク行を自動描画 -->
+        </div>
+        <div class="gm-tasks-footer-bar office-action-controls" id="office-action-controls">
+          <div class="gm-tasks-footer-left">
+            <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
+              <span>+1日進める</span>
+            </button>
+            <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
+            <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
+            <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
+          </div>
           <div class="office-action-primary" id="office-action-primary">
             <button type="button" class="btn-office-primary-cta" id="btn-advance-to-match">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
@@ -257,27 +279,35 @@
             </button>
           </div>
         </div>
-        <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
-        <div class="gm-tasks-mini-summary hidden" id="gm-tasks-mini-summary">
-          <!-- JSで最優先タスクを1行描画 -->
-        </div>
-        <div class="gm-tasks-grid" id="gm-tasks-list">
-          <!-- JSでクリック可能な業務タスク行を自動描画 -->
-        </div>
-        <div class="gm-tasks-footer-bar office-action-controls" id="office-action-controls">
-          <div class="gm-tasks-footer-left">
-            <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
-              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
-              <span>+1日進める</span>
-            </button>
-            <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
-            <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
-            <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
+      </section>
+
+      <!-- 移籍市場最終日（DEADLINE DAY）カウントダウンパネル -->
+      <section class="office-deadline-section hidden" id="office-deadline-section" aria-label="移籍市場最終日カウントダウン">
+        <div class="deadline-banner-top">
+          <div class="deadline-banner-info">
+            <span class="deadline-banner-tag mono">DEADLINE DAY</span>
+            <div class="deadline-clock-row">
+              <strong class="deadline-banner-clock mono" id="deadline-banner-clock">10:00</strong>
+              <span class="deadline-banner-rem mono" id="deadline-banner-rem">閉幕まで残り 14時間</span>
+            </div>
+            <span class="deadline-banner-status" id="deadline-banner-status">10:00 — 移籍最終日がスタートしました</span>
           </div>
-          <button type="button" class="btn-toggle-tasks" id="btn-toggle-gm-tasks" aria-expanded="true" title="表示切り替え">
-            <span id="gm-tasks-toggle-text">折りたたむ</span>
-            <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
+          <button type="button" class="btn-deadline-advance" id="btn-deadline-advance-hour" title="デッドラインデーを1時間進める">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <span>+1時間進める</span>
           </button>
+        </div>
+        <div class="deadline-progress-wrap">
+          <div class="deadline-progress-track">
+            <div class="deadline-progress-fill" id="deadline-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="deadline-progress-scale mono">
+            <span>10:00</span>
+            <span>14:00</span>
+            <span>18:00</span>
+            <span>22:00</span>
+            <span>24:00 閉幕</span>
+          </div>
         </div>
       </section>
 
@@ -326,6 +356,16 @@
               <button type="button" class="btn-inbox-filter" data-inbox-filter="secretary">秘書</button>
             </div>
             <button type="button" class="btn-mark-all-read mono" id="btn-mark-all-read">すべて既読</button>
+          </div>
+          <div class="office-comm-controls hidden" id="office-news-controls">
+            <div class="inbox-filter-group" id="news-filter-bar">
+              <button type="button" class="btn-inbox-filter active" data-news-filter="ALL">すべて</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="移籍">移籍</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="リーグ">リーグ</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="カップ">カップ</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="チーム・選手">チーム・選手</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="監督">監督</button>
+            </div>
           </div>
         </div>
         <div class="office-comm-body">
@@ -1977,9 +2017,9 @@
   <script src="avatar.js?v=20261112_0400"></script>
   <script src="models.js?v=20261119_0400"></script>
   <script src="competitions.js?v=20261112_0400"></script>
-  <script src="match-engine.js?v=20261119_0300"></script>
-  <script src="storage.js?v=20261119_0300"></script>
+  <script src="match-engine.js?v=20261119_0600"></script>
+  <script src="storage.js?v=20261119_0600"></script>
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_0500"></script>
+  <script src="main.js?v=20261119_0700"></script>
 </body>
 </html>

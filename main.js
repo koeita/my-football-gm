@@ -235,12 +235,14 @@ const gameState = {
   intlBreakState: null,
   pendingBoardCrisis: false,
   pendingDeadlineOffer: false,
+  deadlineDayState: null,
   secretaryId: 'sec_claire',
   inboxMessages: [],
   newsFeed: [],
   managerWishes: null,
   officeCommTab: 'messages',
   inboxCategoryFilter: 'ALL',
+  newsCategoryFilter: 'ALL',
   expandedMessageId: null,
   expandedNewsId: null,
   monthlyLedger: null,
@@ -856,6 +858,141 @@ function hasPlayerCupMatchOnDay(day) {
  * @param {boolean} skipRender 高速連続進行時の個別render省略フラグ
  * @returns {boolean} 停止トリガーが発生したか（試合日・重要イベント・シーズン終了など）
  */
+function isDeadlineDayHourlyActive() {
+  const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+  return Boolean(
+    curDay &&
+    curDay.isTransferDeadline &&
+    gameState.deadlineDayState &&
+    gameState.deadlineDayState.active &&
+    !gameState.isGameOver &&
+    !gameState.isSeasonOver
+  );
+}
+
+function triggerDeadlineTickFeedback() {
+  ['deadline-banner-clock', 'header-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('deadline-tick-flash');
+    void el.offsetWidth;
+    el.classList.add('deadline-tick-flash');
+  });
+}
+
+function renderDeadlineDayBanner() {
+  const sectionEl = document.getElementById('office-deadline-section');
+  if (!sectionEl) return;
+
+  const active = isDeadlineDayHourlyActive();
+  sectionEl.classList.toggle('hidden', !active);
+  if (!active) return;
+
+  const ds = gameState.deadlineDayState;
+  const hour = Number(ds.hour) || 10;
+  const closeHour = Number(ds.closeHour) || 23;
+  const remHours = Math.max(1, (closeHour + 1) - hour);
+  const progressPct = Math.max(0, Math.min(100, Math.round(((hour - 10) / ((closeHour + 1) - 10)) * 100)));
+  const hrLabel = `${String(hour).padStart(2, '0')}:00`;
+
+  sectionEl.classList.toggle('is-urgent', remHours <= 3);
+
+  const clockEl = document.getElementById('deadline-banner-clock');
+  const remEl = document.getElementById('deadline-banner-rem');
+  const statusEl = document.getElementById('deadline-banner-status');
+  const fillEl = document.getElementById('deadline-progress-fill');
+  const btnEl = document.getElementById('btn-deadline-advance-hour');
+
+  if (clockEl) clockEl.textContent = hrLabel;
+  if (remEl) remEl.textContent = `閉幕まで残り ${remHours}時間`;
+  if (statusEl) statusEl.textContent = ds.lastStatus || `${hrLabel} — 移籍最終日が進行中です`;
+  if (fillEl) fillEl.style.width = `${progressPct}%`;
+  if (btnEl) {
+    btnEl.disabled = Boolean(gameState.isSimulating || isTodayMatchDayPending() || gameState.isAdvancingCalendar);
+    const spanEl = btnEl.querySelector('span');
+    if (spanEl) {
+      spanEl.textContent = hour >= closeHour ? '+1時間進める (閉幕)' : '+1時間進める';
+    }
+  }
+}
+
+/**
+ * 移籍市場最終日（デッドラインデー）の1時間進行処理
+ * @returns {boolean} 当日内で1時間進めた場合は true、24:00締切で翌日へ進む場合は false
+ */
+function advanceDeadlineHour(skipRender = false) {
+  const ds = gameState.deadlineDayState;
+  const curDay = getCurrentCalendarDay();
+  if (!ds || !ds.active || !curDay || !curDay.isTransferDeadline) {
+    gameState.deadlineDayState = null;
+    return false;
+  }
+
+  ds.hour = (Number(ds.hour) || 10) + 1;
+  const closeHour = Number(ds.closeHour) || 23;
+  if (ds.hour > closeHour) {
+    gameState.deadlineDayState = null;
+    addDailyLog('【移籍市場閉幕】24:00を迎え、今ウィンドウの移籍市場が終了しました。');
+    return false;
+  }
+
+  if (!skipRender && typeof SoundEngine !== 'undefined' && SoundEngine) {
+    SoundEngine.playSfx('ui_page');
+  }
+
+  const hrLabel = `${String(ds.hour).padStart(2, '0')}:00`;
+  const statusNotes = [];
+
+  if (ds.hour % 3 === 0 && typeof advanceScoutingProgressDaily === 'function') {
+    advanceScoutingProgressDaily();
+    statusNotes.push('スカウト調査が進捗');
+  }
+
+  // デッドラインデー中は送信オファーの回答速度が大幅に上がる
+  const responseBoostProb = ds.hour >= 20 ? 0.75 : 0.45;
+  if (Array.isArray(gameState.outgoingOffers)) {
+    gameState.outgoingOffers.forEach(o => {
+      if (o && o.status === 'pending' && Math.random() < responseBoostProb) {
+        o.pendingDays = 1;
+      }
+    });
+  }
+  const outgoingResponded = typeof updateOutgoingOffersExpiry === 'function' ? updateOutgoingOffersExpiry() : false;
+  if (outgoingResponded) statusNotes.push('送信オファーの回答到着');
+
+  let eventTriggered = Boolean(outgoingResponded);
+  const incomingProb = ds.hour >= 20 ? 0.25 : 0.14;
+  if (!gameState.pendingMegaOffer && !isFastForwardingSeason && Math.random() < incomingProb) {
+    const offerFired = typeof triggerIncomingTransferOffer === 'function' ? triggerIncomingTransferOffer(false) : false;
+    const loanFired = !offerFired && typeof triggerLoanListingOffers === 'function' ? triggerLoanListingOffers() : false;
+    if (offerFired || loanFired) {
+      eventTriggered = true;
+      statusNotes.push('駆け込みオファー到着');
+    }
+  }
+
+  if (ds.hour % 2 === 0 && typeof simulateCpuTransferNewsDaily === 'function') {
+    simulateCpuTransferNewsDaily(curDay);
+    statusNotes.push('他クラブの移籍速報あり');
+  }
+
+  ds.lastStatus = statusNotes.length > 0
+    ? `${hrLabel} — ${statusNotes.join(' / ')}`
+    : `${hrLabel} — 各クラブと最終調整中（新規動きなし）`;
+
+  if (eventTriggered) {
+    stopAdvancingCalendar();
+  }
+
+  if (gameState.hasStartedOnce) autoSaveDirty = true;
+  if (!skipRender) {
+    renderAll();
+    triggerDeadlineTickFeedback();
+    if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
+  }
+  return true;
+}
+
 function advanceCalendarDay(skipRender = false) {
   if (gameState.isGameOver || gameState.isSeasonOver) {
     stopAdvancingCalendar();
@@ -866,6 +1003,13 @@ function advanceCalendarDay(skipRender = false) {
   if (isTodayMatchDayPending()) {
     stopAdvancingCalendar();
     return true;
+  }
+
+  // 移籍市場最終日（デッドラインデー）は1時間ごとに進行
+  if (!skipRender && !isFastForwardingSeason && isDeadlineDayHourlyActive()) {
+    if (advanceDeadlineHour(skipRender)) {
+      return true;
+    }
   }
 
   // 日付インデックスを進める
@@ -1106,7 +1250,10 @@ function advanceCalendarDay(skipRender = false) {
   }
   if (nextDay.isTransferDeadline && !gameState.pendingDeadlineOffer) {
     gameState.pendingDeadlineOffer = true;
-    addDailyLog('【デッドラインデイ】本日は移籍市場最終日！駆け込みオファーや交渉が活発化しています。');
+    if (!isFastForwardingSeason) {
+      gameState.deadlineDayState = { active: true, hour: 10, closeHour: 23 };
+    }
+    addDailyLog('【デッドラインデイ】本日は移籍市場最終日！10:00〜24:00まで1時間刻みで進行し、駆け込み交渉が活発化します。');
     if (typeof addInboxMessage === 'function') {
       const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: '秘書' };
       addInboxMessage({
@@ -1146,6 +1293,7 @@ function advanceCalendarDay(skipRender = false) {
     eventTriggered = true;
   } else if (!nextDay.isTransferDeadline) {
     gameState.pendingDeadlineOffer = false;
+    gameState.deadlineDayState = null;
   }
   if (gameState.pendingBoardCrisis && !gameState.isGameOver && !isFastForwardingSeason) {
     stopAdvancingCalendar();
@@ -1241,7 +1389,11 @@ function renderWeeklySchedule() {
 
   // 移籍市場バッジの更新
   if (marketBadgeEl && currentDay) {
-    if (currentDay.windowOpen) {
+    if (isDeadlineDayHourlyActive()) {
+      const remHours = Math.max(1, 24 - (Number(gameState.deadlineDayState.hour) || 10));
+      marketBadgeEl.textContent = `市場最終日 残り${remHours}時間`;
+      marketBadgeEl.className = 'market-status-pill badge-market-open';
+    } else if (currentDay.windowOpen) {
       const windowName = (currentDay.month === 7 || currentDay.month === 8) ? '夏期' : '冬期';
       marketBadgeEl.textContent = `${windowName} 移籍市場 OPEN`;
       marketBadgeEl.className = 'market-status-pill badge-market-open';
@@ -7328,7 +7480,12 @@ function renderHeader() {
   // 日付・曜日表示
   const dateEl = document.getElementById('header-date');
   if (dateEl && currentDay) {
-    dateEl.textContent = currentDay.displayDate;
+    if (isDeadlineDayHourlyActive()) {
+      const hr = String(Number(gameState.deadlineDayState.hour) || 10).padStart(2, '0');
+      dateEl.textContent = `${currentDay.displayDate} ${hr}:00`;
+    } else {
+      dateEl.textContent = currentDay.displayDate;
+    }
   }
 
   if (gameState.isGameOver) {
@@ -7435,8 +7592,18 @@ function renderHeader() {
   const isMatchPending = isTodayMatchDayPending();
   const isAdvancing = gameState.isAdvancingCalendar;
   const isBusy = gameState.isSimulating;
+  const isDeadlineHourly = isDeadlineDayHourlyActive();
 
-  if (btnAdvanceDay) btnAdvanceDay.disabled = isBusy || isMatchPending || isAdvancing;
+  if (btnAdvanceDay) {
+    btnAdvanceDay.disabled = isBusy || isMatchPending || isAdvancing;
+    btnAdvanceDay.classList.toggle('is-deadline-hourly', isDeadlineHourly);
+    const advLabel = btnAdvanceDay.querySelector('span');
+    if (advLabel) {
+      advLabel.textContent = isDeadlineHourly ? '+1時間進める' : '+1日進める';
+    }
+    btnAdvanceDay.title = isDeadlineHourly ? 'デッドラインデーを1時間進める' : 'カレンダーを1日進める';
+  }
+  renderDeadlineDayBanner();
   if (btnAdvanceToMatch) btnAdvanceToMatch.disabled = isBusy || isMatchPending || isAdvancing;
   if (btnHeaderKickoff) btnHeaderKickoff.disabled = isBusy || isAdvancing;
   if (btnPlayMatch) btnPlayMatch.disabled = isBusy || isAdvancing;
@@ -13879,6 +14046,10 @@ function initGame() {
   if (btnAdvanceDay) {
     btnAdvanceDay.addEventListener('click', () => advanceCalendarDay(false));
   }
+  const btnDeadlineAdvanceHour = document.getElementById('btn-deadline-advance-hour');
+  if (btnDeadlineAdvanceHour) {
+    btnDeadlineAdvanceHour.addEventListener('click', () => advanceCalendarDay(false));
+  }
   const btnAdvanceToMatch = document.getElementById('btn-advance-to-match');
   if (btnAdvanceToMatch) {
     btnAdvanceToMatch.addEventListener('click', startAdvancingToNextMatch);
@@ -17431,11 +17602,14 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
   const awayTeamIsPlayer = !homeTeamIsPlayer;
   const homeClubObj = homeTeamIsPlayer ? playerClub : oppClub;
   const awayClubObj = awayTeamIsPlayer ? playerClub : oppClub;
+  const scoutThemes = typeof resolveSummaryKitThemes === 'function'
+    ? resolveSummaryKitThemes(homeClubObj, awayClubObj)
+    : { homeTheme: { inlineVars: '' }, awayTheme: { inlineVars: '' } };
 
   body.innerHTML = `
     <!-- クラブ対決カード -->
     <div class="scout-matchup-card">
-      <div class="scout-team-col home">
+      <div class="scout-team-col home" style="${scoutThemes.homeTheme.inlineVars || ''}">
         <div class="scout-team-title-wrap">
           ${getClubEmblemSvg(homeClubObj, 28, 'scout-emblem')}
           <span class="scout-team-name mono ${homeTeamIsPlayer ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
@@ -17453,7 +17627,7 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
         </span>
         <span class="mono" style="font-size:10.5px; color:#8a94a0;">${dateStr}</span>
       </div>
-      <div class="scout-team-col away">
+      <div class="scout-team-col away" style="${scoutThemes.awayTheme.inlineVars || ''}">
         <div class="scout-team-title-wrap">
           <span class="scout-team-name mono ${awayTeamIsPlayer ? 'accent-green' : ''}" style="font-weight:800; font-size:16px; letter-spacing:0.05em;">
             ${getClubShortCode(awayClubObj)}
@@ -20741,6 +20915,7 @@ function renderOfficeCommPanel() {
   const inboxListEl = document.getElementById('office-inbox-list');
   const newsListEl = document.getElementById('office-news-list');
   const controlsEl = document.getElementById('office-inbox-controls');
+  const newsControlsEl = document.getElementById('office-news-controls');
   const unreadBadgeEl = document.getElementById('office-unread-badge');
   const newsBadgeEl = document.getElementById('office-news-badge');
   const tabMessagesBtn = document.getElementById('office-comm-tab-messages');
@@ -20771,9 +20946,15 @@ function renderOfficeCommPanel() {
   if (controlsEl) {
     controlsEl.classList.toggle('hidden', activeTab !== 'messages');
   }
+  if (newsControlsEl) {
+    newsControlsEl.classList.toggle('hidden', activeTab !== 'news');
+  }
 
   document.querySelectorAll('#inbox-filter-bar .btn-inbox-filter').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.inboxFilter === (gameState.inboxCategoryFilter || 'ALL'));
+  });
+  document.querySelectorAll('#news-filter-bar .btn-inbox-filter').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.newsFilter === (gameState.newsCategoryFilter || 'ALL'));
   });
 
   if (activeTab === 'messages') {
@@ -20818,8 +20999,16 @@ function renderOfficeCommPanel() {
     inboxListEl.classList.add('hidden');
     newsListEl.classList.remove('hidden');
 
-    if (news.length === 0) {
-      newsListEl.innerHTML = '<div class="comm-empty-msg">現在表示できるニュースはありません。</div>';
+    const newsCatFilter = gameState.newsCategoryFilter || 'ALL';
+    const filteredNews = news.filter(n => {
+      if (!n) return false;
+      if (newsCatFilter === 'ALL') return true;
+      if (newsCatFilter === 'チーム・選手') return n.category === 'チーム' || n.category === '選手';
+      return n.category === newsCatFilter;
+    });
+
+    if (filteredNews.length === 0) {
+      newsListEl.innerHTML = '<div class="comm-empty-msg">該当するニュースはありません。</div>';
       return;
     }
 
@@ -20832,7 +21021,7 @@ function renderOfficeCommPanel() {
       '選手': 'comm-cat-league'
     };
 
-    newsListEl.innerHTML = news.slice(0, 25).map(n => {
+    newsListEl.innerHTML = filteredNews.slice(0, 25).map(n => {
       const catClass = catClassMap[n.category] || 'comm-cat-league';
       const thumb = resolveNewsVisualInfo(n);
       const displayDate = n.fullDate || n.date || '';
@@ -21125,6 +21314,16 @@ function initOfficeCommAndSecretaryEvents() {
       const btn = e.target.closest('[data-inbox-filter]');
       if (!btn || !btn.dataset.inboxFilter) return;
       gameState.inboxCategoryFilter = btn.dataset.inboxFilter;
+      renderOfficeCommPanel();
+    });
+  }
+
+  const newsFilterBar = document.getElementById('news-filter-bar');
+  if (newsFilterBar) {
+    newsFilterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-news-filter]');
+      if (!btn || !btn.dataset.newsFilter) return;
+      gameState.newsCategoryFilter = btn.dataset.newsFilter;
       renderOfficeCommPanel();
     });
   }

@@ -256,6 +256,34 @@ class TestClubKits(unittest.TestCase):
         ).group(0)
         self.assertIn('color: #ffffff;', precheck_css)
 
+    def test_precheck_and_scouting_modal_sync_with_kit_colors(self):
+        """作戦最終確認モーダルと対戦スカウティングレポートのチーム枠がユニホーム色と同期していること"""
+        precheck_fn = re.search(
+            r'function openMatchPrecheckModal\(\) \{([\s\S]*?)\n\}',
+            self.match_js
+        ).group(1)
+        self.assertIn('resolveSummaryKitThemes(preHomeClub, preAwayClub)', precheck_fn)
+        self.assertIn('class="precheck-club-box is-player" style="${myPreTheme.inlineVars || \'\'}"', precheck_fn)
+        self.assertIn('class="precheck-club-box" style="${oppPreTheme.inlineVars || \'\'}"', precheck_fn)
+
+        precheck_box_css = re.search(r'\.precheck-club-box \{[\s\S]*?\}', self.style_css).group(0)
+        self.assertIn('var(--team-tint-bg', precheck_box_css)
+        self.assertIn('var(--team-tint-border', precheck_box_css)
+
+        with open(os.path.join(self.root, 'main.js'), 'r', encoding='utf-8') as f:
+            main_js = f.read()
+        scout_fn = re.search(
+            r'function renderFixtureScoutingModal\([\s\S]*?\n\}',
+            main_js
+        ).group(0)
+        self.assertIn('resolveSummaryKitThemes(homeClubObj, awayClubObj)', scout_fn)
+        self.assertIn('class="scout-team-col home" style="${scoutThemes.homeTheme.inlineVars || \'\'}"', scout_fn)
+        self.assertIn('class="scout-team-col away" style="${scoutThemes.awayTheme.inlineVars || \'\'}"', scout_fn)
+
+        scout_box_css = re.search(r'\.scout-team-col \{[\s\S]*?\}', self.style_css).group(0)
+        self.assertIn('var(--team-tint-bg', scout_box_css)
+        self.assertIn('var(--team-tint-border', scout_box_css)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -280,11 +280,14 @@ function saveGameToStorage(force = false) {
         intlBreakState: gameState.intlBreakState || null,
         pendingBoardCrisis: Boolean(gameState.pendingBoardCrisis),
         pendingDeadlineOffer: Boolean(gameState.pendingDeadlineOffer),
+        deadlineDayState: gameState.deadlineDayState || null,
         secretaryId: gameState.secretaryId || 'sec_claire',
         inboxMessages: Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages.slice(0, 40) : [],
         newsFeed: Array.isArray(gameState.newsFeed) ? gameState.newsFeed.slice(0, 40) : [],
         managerWishes: gameState.managerWishes || null,
         officeCommTab: gameState.officeCommTab || 'messages',
+        inboxCategoryFilter: gameState.inboxCategoryFilter || 'ALL',
+        newsCategoryFilter: gameState.newsCategoryFilter || 'ALL',
         monthlyLedger: gameState.monthlyLedger || null,
         monthlyReports: Array.isArray(gameState.monthlyReports) ? gameState.monthlyReports.slice(0, 12) : [],
         pendingLineupConsultation: gameState.pendingLineupConsultation || null,
@@ -944,12 +947,14 @@ function loadGameFromStorage() {
     if (gameState.intlBreakState === undefined) gameState.intlBreakState = null;
     gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
     gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);
+    if (gameState.deadlineDayState === undefined) gameState.deadlineDayState = null;
     if (!gameState.secretaryId) gameState.secretaryId = 'sec_claire';
     if (!Array.isArray(gameState.inboxMessages)) gameState.inboxMessages = [];
     if (!Array.isArray(gameState.newsFeed)) gameState.newsFeed = [];
     if (gameState.managerWishes === undefined) gameState.managerWishes = null;
     if (!gameState.officeCommTab) gameState.officeCommTab = 'messages';
     if (!gameState.inboxCategoryFilter) gameState.inboxCategoryFilter = 'ALL';
+    if (!gameState.newsCategoryFilter) gameState.newsCategoryFilter = 'ALL';
     if (gameState.monthlyLedger === undefined) gameState.monthlyLedger = null;
     if (!Array.isArray(gameState.monthlyReports)) gameState.monthlyReports = [];
     if (gameState.pendingLineupConsultation === undefined) gameState.pendingLineupConsultation = null;
