@@ -961,11 +961,13 @@ function advanceDeadlineHour(skipRender = false) {
   if (outgoingResponded) statusNotes.push('送信オファーの回答到着');
 
   let eventTriggered = Boolean(outgoingResponded);
-  const incomingProb = ds.hour >= 20 ? 0.25 : 0.14;
+  const noOfferYetLate = ds.hour >= 18 && !(ds.offersReceivedCount > 0);
+  const incomingProb = noOfferYetLate ? 0.55 : (ds.hour >= 20 ? 0.35 : 0.22);
   if (!gameState.pendingMegaOffer && !isFastForwardingSeason && Math.random() < incomingProb) {
-    const offerFired = typeof triggerIncomingTransferOffer === 'function' ? triggerIncomingTransferOffer(false) : false;
-    const loanFired = !offerFired && typeof triggerLoanListingOffers === 'function' ? triggerLoanListingOffers() : false;
+    const offerFired = typeof triggerIncomingTransferOffer === 'function' ? triggerIncomingTransferOffer(true) : false;
+    const loanFired = !offerFired && typeof triggerLoanListingOffers === 'function' ? triggerLoanListingOffers(true) : false;
     if (offerFired || loanFired) {
+      ds.offersReceivedCount = (ds.offersReceivedCount || 0) + 1;
       eventTriggered = true;
       statusNotes.push('駆け込みオファー到着');
     }
@@ -3207,7 +3209,7 @@ function toggleLoanListing(playerId) {
 /**
  * 移籍ウィンドウ期間中のレンタル打診オファー発生処理
  */
-function triggerLoanListingOffers() {
+function triggerLoanListingOffers(force = false) {
   const playerClub = getPlayerClub();
   if (!playerClub || !Array.isArray(gameState.incomingOffers)) return false;
 
@@ -3218,8 +3220,8 @@ function triggerLoanListingOffers() {
   const listedPlayers = playerClub.players.filter(p => p.isLoanListed && !p.isStarter && !p.isRetired && (!p.loanStatus || !p.loanStatus.isLoanOut));
   if (listedPlayers.length === 0) return false;
 
-  // 約15%の確率で打診オファー発生
-  if (Math.random() > 0.18) return false;
+  // 約18%の確率で打診オファー発生（force時はバイパス）
+  if (!force && Math.random() > 0.18) return false;
 
   const target = listedPlayers[randInt(0, listedPlayers.length - 1)];
   if (gameState.incomingOffers.some(o => o.playerId === target.id)) return false;
@@ -19078,6 +19080,14 @@ function swapStarterWithCandidate(club, outStarter, inCandidate) {
   inCandidate.isBench = false;
   inCandidate.slotIndex = targetSlot;
   inCandidate.assignedPos = targetAssignedPos;
+  if (!Array.isArray(club.promisedNextMatchSwaps)) club.promisedNextMatchSwaps = [];
+  club.promisedNextMatchSwaps = club.promisedNextMatchSwaps.filter(s => s && s.inId !== inCandidate.id && s.slotIndex !== targetSlot);
+  club.promisedNextMatchSwaps.push({
+    outId: outStarter.id,
+    inId: inCandidate.id,
+    slotIndex: targetSlot,
+    assignedPos: targetAssignedPos
+  });
   if (typeof ensureValidSquadAndStarters === 'function') {
     ensureValidSquadAndStarters(club);
   }
@@ -20183,6 +20193,9 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     if (expiredConsult.kind === 'conflict') {
       addDailyLog(`【仲裁終了】未裁定だった「${expiredConsult.title}」は次戦の消化により終了しました。`);
     }
+  }
+  if (Array.isArray(playerClub.promisedNextMatchSwaps) && playerClub.promisedNextMatchSwaps.length > 0) {
+    playerClub.promisedNextMatchSwaps = [];
   }
 
   const isHome = Boolean(matchData.isPlayerHome);

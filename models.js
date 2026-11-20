@@ -326,6 +326,37 @@ function updateManagerTrustAfterMatch(club, won, drawn) {
 /**
  * 監督一任モードがONの際、監督の得意陣形・戦術へ同期し、疲労・負傷を考慮したローテーション11人を選出する
  */
+function applyPromisedNextMatchSwaps(club) {
+  if (!club || !Array.isArray(club.promisedNextMatchSwaps) || club.promisedNextMatchSwaps.length === 0) return;
+  const players = Array.isArray(club.players) ? club.players : [];
+  for (const swap of club.promisedNextMatchSwaps) {
+    if (!swap || !swap.inId) continue;
+    const inP = players.find(p => p && p.id === swap.inId && !p.isRetired && !(p.injuryDays > 0) && !(p.loanStatus && p.loanStatus.isLoanOut));
+    if (!inP || inP.isStarter) continue;
+
+    let outP = swap.outId ? players.find(p => p && p.id === swap.outId && p.isStarter) : null;
+    if (!outP && typeof swap.slotIndex === 'number') {
+      outP = players.find(p => p && p.isStarter && p.slotIndex === swap.slotIndex && p.id !== inP.id);
+    }
+    if (!outP && swap.assignedPos) {
+      outP = players.find(p => p && p.isStarter && (p.assignedPos || p.pos) === swap.assignedPos && p.id !== inP.id);
+    }
+    if (!outP) continue;
+
+    const targetSlot = outP.slotIndex;
+    const targetPos = outP.assignedPos || outP.pos;
+    outP.isStarter = false;
+    outP.isBench = true;
+    outP.slotIndex = null;
+    outP.assignedPos = null;
+
+    inP.isStarter = true;
+    inP.isBench = false;
+    inP.slotIndex = targetSlot;
+    inP.assignedPos = targetPos;
+  }
+}
+
 function applyManagerPreMatchDelegation(club, syncPhilosophy = true) {
   if (!club || !club.manager) return;
   const mgr = club.manager;
@@ -338,6 +369,7 @@ function applyManagerPreMatchDelegation(club, syncPhilosophy = true) {
     }
   }
   optimizeClubStarters(club);
+  applyPromisedNextMatchSwaps(club);
 }
 
 // ==========================================================================
