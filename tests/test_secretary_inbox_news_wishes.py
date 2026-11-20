@@ -490,6 +490,14 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('.deadline-progress-fill {', self.css)
         self.assertIn('deadlineDayState: gameState.deadlineDayState || null,', self.storage_js)
         self.assertIn("if (gameState.deadlineDayState === undefined) gameState.deadlineDayState = null;", self.storage_js)
+        # デッドラインデーの二重確率掛け算バグ修正（force=true呼び出し）
+        self.assertIn('triggerIncomingTransferOffer(true)', self.main_js)
+        self.assertIn('triggerLoanListingOffers(true)', self.main_js)
+        # 監督相談承諾のスタメン入れ替えが監督一任モードでも次戦に反映されること
+        self.assertIn('function applyPromisedNextMatchSwaps(', self.models_js)
+        self.assertIn('applyPromisedNextMatchSwaps(club);', self.models_js)
+        self.assertIn('club.promisedNextMatchSwaps', self.main_js)
+        self.assertIn('playerClub.promisedNextMatchSwaps = [];', self.main_js)
 
 
 if __name__ == '__main__':
