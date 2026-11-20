@@ -21202,16 +21202,15 @@ function initOfficeCommAndSecretaryEvents() {
       const dx = t.clientX - swipeStartX;
 
       if (!isSwipingSheet) {
-        if (dy >= 0 || Math.abs(dy) < 6 || Math.abs(dy) <= Math.abs(dx)) return;
-        if (startedInScrollableBody && sheetBody) {
-          const canScrollDown = sheetBody.scrollTop + sheetBody.clientHeight < sheetBody.scrollHeight - 2;
-          if (canScrollDown) return;
+        if (dy <= 0 || Math.abs(dy) < 6 || Math.abs(dy) <= Math.abs(dx)) return;
+        if (startedInScrollableBody && sheetBody && sheetBody.scrollTop > 2) {
+          return;
         }
         isSwipingSheet = true;
       }
 
       if (isSwipingSheet) {
-        swipeDeltaY = Math.min(0, dy);
+        swipeDeltaY = Math.max(0, dy);
         if (e.cancelable) e.preventDefault();
         sheetPanel.style.transition = 'none';
         sheetPanel.style.transform = `translateY(${swipeDeltaY}px)`;
@@ -21223,7 +21222,7 @@ function initOfficeCommAndSecretaryEvents() {
       isSwipingSheet = false;
       const elapsed = Math.max(1, Date.now() - swipeStartTime);
       const velocity = swipeDeltaY / elapsed;
-      if (swipeDeltaY <= -45 || (swipeDeltaY <= -18 && velocity < -0.35)) {
+      if (swipeDeltaY >= 45 || (swipeDeltaY >= 18 && velocity > 0.35)) {
         closeCommDetailSheet();
       } else {
         sheetPanel.style.transition = '';

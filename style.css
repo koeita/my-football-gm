@@ -20659,7 +20659,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
    ========================================================================== */
 .profile-trait-popover {
   position: fixed;
-  z-index: 2600;
+  z-index: 35000;
   width: min(296px, calc(100vw - 16px));
   background: #24282c;
   border: 1px solid rgba(46, 204, 113, 0.5);
@@ -20809,12 +20809,12 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 .comm-sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2450;
+  z-index: 29000;
   background: rgba(0, 0, 0, 0.58);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   opacity: 0;
   transition: opacity 0.22s ease;
   touch-action: none;
@@ -20833,16 +20833,16 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   max-width: 680px;
   max-height: 82dvh;
   background: #1a1d20;
-  border-bottom: 1px solid rgba(46, 204, 113, 0.45);
+  border-top: 1px solid rgba(46, 204, 113, 0.45);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0 0 12px 12px;
-  padding: 12px 16px 8px;
+  border-radius: 12px 12px 0 0;
+  padding: 6px 16px calc(14px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.7);
-  transform: translateY(-100%);
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.7);
+  transform: translateY(100%);
   transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
   overflow: hidden;
@@ -20851,6 +20851,16 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .comm-sheet-overlay.is-open .comm-sheet-panel {
   transform: translateY(0);
+}
+
+.comm-sheet-swipe-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 6px;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
 }
 
 .comm-sheet-header {
@@ -20906,16 +20916,6 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   white-space: pre-line;
 }
 
-.comm-sheet-swipe-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 0 4px;
-  flex-shrink: 0;
-  cursor: grab;
-  touch-action: none;
-}
-
 .comm-sheet-handle {
   width: 44px;
   height: 4px;
@@ -20929,7 +20929,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     max-width: 100%;
     border-left: none;
     border-right: none;
-    padding: 10px 14px 6px;
+    padding: 6px 14px calc(14px + env(safe-area-inset-bottom, 0px));
   }
   .comm-sheet-title {
     font-size: 14px;
