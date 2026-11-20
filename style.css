@@ -10478,6 +10478,11 @@ body.main-menu-active {
   gap: 3px;
   flex: 1;
   min-width: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--team-tint-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--team-tint-border, rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 0 10px var(--team-tint-glow, transparent);
 }
 
 .precheck-club-name {
@@ -13499,6 +13504,12 @@ button.hidden,
   flex-direction: column;
   gap: 3px;
   flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--team-tint-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--team-tint-border, rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 0 10px var(--team-tint-glow, transparent);
 }
 
 .scout-team-col.home {

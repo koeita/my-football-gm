@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_0500">
+  <link rel="stylesheet" href="style.css?v=20261119_0600">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -326,6 +326,16 @@
               <button type="button" class="btn-inbox-filter" data-inbox-filter="secretary">秘書</button>
             </div>
             <button type="button" class="btn-mark-all-read mono" id="btn-mark-all-read">すべて既読</button>
+          </div>
+          <div class="office-comm-controls hidden" id="office-news-controls">
+            <div class="inbox-filter-group" id="news-filter-bar">
+              <button type="button" class="btn-inbox-filter active" data-news-filter="ALL">すべて</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="移籍">移籍</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="リーグ">リーグ</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="カップ">カップ</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="チーム・選手">チーム・選手</button>
+              <button type="button" class="btn-inbox-filter" data-news-filter="監督">監督</button>
+            </div>
           </div>
         </div>
         <div class="office-comm-body">
@@ -1977,9 +1987,9 @@
   <script src="avatar.js?v=20261112_0400"></script>
   <script src="models.js?v=20261119_0400"></script>
   <script src="competitions.js?v=20261112_0400"></script>
-  <script src="match-engine.js?v=20261119_0300"></script>
-  <script src="storage.js?v=20261119_0300"></script>
+  <script src="match-engine.js?v=20261119_0600"></script>
+  <script src="storage.js?v=20261119_0600"></script>
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_0500"></script>
+  <script src="main.js?v=20261119_0600"></script>
 </body>
 </html>
