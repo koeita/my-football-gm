@@ -870,6 +870,52 @@ function isDeadlineDayHourlyActive() {
   );
 }
 
+function triggerDeadlineTickFeedback() {
+  ['deadline-banner-clock', 'header-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('deadline-tick-flash');
+    void el.offsetWidth;
+    el.classList.add('deadline-tick-flash');
+  });
+}
+
+function renderDeadlineDayBanner() {
+  const sectionEl = document.getElementById('office-deadline-section');
+  if (!sectionEl) return;
+
+  const active = isDeadlineDayHourlyActive();
+  sectionEl.classList.toggle('hidden', !active);
+  if (!active) return;
+
+  const ds = gameState.deadlineDayState;
+  const hour = Number(ds.hour) || 10;
+  const closeHour = Number(ds.closeHour) || 23;
+  const remHours = Math.max(1, (closeHour + 1) - hour);
+  const progressPct = Math.max(0, Math.min(100, Math.round(((hour - 10) / ((closeHour + 1) - 10)) * 100)));
+  const hrLabel = `${String(hour).padStart(2, '0')}:00`;
+
+  sectionEl.classList.toggle('is-urgent', remHours <= 3);
+
+  const clockEl = document.getElementById('deadline-banner-clock');
+  const remEl = document.getElementById('deadline-banner-rem');
+  const statusEl = document.getElementById('deadline-banner-status');
+  const fillEl = document.getElementById('deadline-progress-fill');
+  const btnEl = document.getElementById('btn-deadline-advance-hour');
+
+  if (clockEl) clockEl.textContent = hrLabel;
+  if (remEl) remEl.textContent = `閉幕まで残り ${remHours}時間`;
+  if (statusEl) statusEl.textContent = ds.lastStatus || `${hrLabel} — 移籍最終日が進行中です`;
+  if (fillEl) fillEl.style.width = `${progressPct}%`;
+  if (btnEl) {
+    btnEl.disabled = Boolean(gameState.isSimulating || isTodayMatchDayPending() || gameState.isAdvancingCalendar);
+    const spanEl = btnEl.querySelector('span');
+    if (spanEl) {
+      spanEl.textContent = hour >= closeHour ? '+1時間進める (閉幕)' : '+1時間進める';
+    }
+  }
+}
+
 /**
  * 移籍市場最終日（デッドラインデー）の1時間進行処理
  * @returns {boolean} 当日内で1時間進めた場合は true、24:00締切で翌日へ進む場合は false
@@ -894,8 +940,12 @@ function advanceDeadlineHour(skipRender = false) {
     SoundEngine.playSfx('ui_page');
   }
 
+  const hrLabel = `${String(ds.hour).padStart(2, '0')}:00`;
+  const statusNotes = [];
+
   if (ds.hour % 3 === 0 && typeof advanceScoutingProgressDaily === 'function') {
     advanceScoutingProgressDaily();
+    statusNotes.push('スカウト調査が進捗');
   }
 
   // デッドラインデー中は送信オファーの回答速度が大幅に上がる
@@ -908,6 +958,7 @@ function advanceDeadlineHour(skipRender = false) {
     });
   }
   const outgoingResponded = typeof updateOutgoingOffersExpiry === 'function' ? updateOutgoingOffersExpiry() : false;
+  if (outgoingResponded) statusNotes.push('送信オファーの回答到着');
 
   let eventTriggered = Boolean(outgoingResponded);
   const incomingProb = ds.hour >= 20 ? 0.25 : 0.14;
@@ -916,12 +967,18 @@ function advanceDeadlineHour(skipRender = false) {
     const loanFired = !offerFired && typeof triggerLoanListingOffers === 'function' ? triggerLoanListingOffers() : false;
     if (offerFired || loanFired) {
       eventTriggered = true;
+      statusNotes.push('駆け込みオファー到着');
     }
   }
 
   if (ds.hour % 2 === 0 && typeof simulateCpuTransferNewsDaily === 'function') {
     simulateCpuTransferNewsDaily(curDay);
+    statusNotes.push('他クラブの移籍速報あり');
   }
+
+  ds.lastStatus = statusNotes.length > 0
+    ? `${hrLabel} — ${statusNotes.join(' / ')}`
+    : `${hrLabel} — 各クラブと最終調整中（新規動きなし）`;
 
   if (eventTriggered) {
     stopAdvancingCalendar();
@@ -930,6 +987,7 @@ function advanceDeadlineHour(skipRender = false) {
   if (gameState.hasStartedOnce) autoSaveDirty = true;
   if (!skipRender) {
     renderAll();
+    triggerDeadlineTickFeedback();
     if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
   }
   return true;
@@ -7538,12 +7596,14 @@ function renderHeader() {
 
   if (btnAdvanceDay) {
     btnAdvanceDay.disabled = isBusy || isMatchPending || isAdvancing;
+    btnAdvanceDay.classList.toggle('is-deadline-hourly', isDeadlineHourly);
     const advLabel = btnAdvanceDay.querySelector('span');
     if (advLabel) {
       advLabel.textContent = isDeadlineHourly ? '+1時間進める' : '+1日進める';
     }
     btnAdvanceDay.title = isDeadlineHourly ? 'デッドラインデーを1時間進める' : 'カレンダーを1日進める';
   }
+  renderDeadlineDayBanner();
   if (btnAdvanceToMatch) btnAdvanceToMatch.disabled = isBusy || isMatchPending || isAdvancing;
   if (btnHeaderKickoff) btnHeaderKickoff.disabled = isBusy || isAdvancing;
   if (btnPlayMatch) btnPlayMatch.disabled = isBusy || isAdvancing;
@@ -13985,6 +14045,10 @@ function initGame() {
   const btnAdvanceDay = document.getElementById('btn-advance-day');
   if (btnAdvanceDay) {
     btnAdvanceDay.addEventListener('click', () => advanceCalendarDay(false));
+  }
+  const btnDeadlineAdvanceHour = document.getElementById('btn-deadline-advance-hour');
+  if (btnDeadlineAdvanceHour) {
+    btnDeadlineAdvanceHour.addEventListener('click', () => advanceCalendarDay(false));
   }
   const btnAdvanceToMatch = document.getElementById('btn-advance-to-match');
   if (btnAdvanceToMatch) {

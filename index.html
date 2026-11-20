@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_0600">
+  <link rel="stylesheet" href="style.css?v=20261119_0700">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -278,6 +278,36 @@
             <span id="gm-tasks-toggle-text">折りたたむ</span>
             <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
           </button>
+        </div>
+      </section>
+
+      <!-- 移籍市場最終日（DEADLINE DAY）カウントダウンパネル -->
+      <section class="office-deadline-section hidden" id="office-deadline-section" aria-label="移籍市場最終日カウントダウン">
+        <div class="deadline-banner-top">
+          <div class="deadline-banner-info">
+            <span class="deadline-banner-tag mono">DEADLINE DAY</span>
+            <div class="deadline-clock-row">
+              <strong class="deadline-banner-clock mono" id="deadline-banner-clock">10:00</strong>
+              <span class="deadline-banner-rem mono" id="deadline-banner-rem">閉幕まで残り 14時間</span>
+            </div>
+            <span class="deadline-banner-status" id="deadline-banner-status">10:00 — 移籍最終日がスタートしました</span>
+          </div>
+          <button type="button" class="btn-deadline-advance" id="btn-deadline-advance-hour" title="デッドラインデーを1時間進める">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <span>+1時間進める</span>
+          </button>
+        </div>
+        <div class="deadline-progress-wrap">
+          <div class="deadline-progress-track">
+            <div class="deadline-progress-fill" id="deadline-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="deadline-progress-scale mono">
+            <span>10:00</span>
+            <span>14:00</span>
+            <span>18:00</span>
+            <span>22:00</span>
+            <span>24:00 閉幕</span>
+          </div>
         </div>
       </section>
 
@@ -1990,6 +2020,6 @@
   <script src="match-engine.js?v=20261119_0600"></script>
   <script src="storage.js?v=20261119_0600"></script>
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_0600"></script>
+  <script src="main.js?v=20261119_0700"></script>
 </body>
 </html>

@@ -477,11 +477,17 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
 
         for sym in [
             'function isDeadlineDayHourlyActive(',
+            'function renderDeadlineDayBanner(',
+            'function triggerDeadlineTickFeedback(',
             'function advanceDeadlineHour(',
             'deadlineDayState:',
             '+1時間進める',
         ]:
             self.assertIn(sym, self.main_js)
+        self.assertIn('id="office-deadline-section"', self.html)
+        self.assertIn('id="btn-deadline-advance-hour"', self.html)
+        self.assertIn('.btn-office-footer-util.is-deadline-hourly {', self.css)
+        self.assertIn('.deadline-progress-fill {', self.css)
         self.assertIn('deadlineDayState: gameState.deadlineDayState || null,', self.storage_js)
         self.assertIn("if (gameState.deadlineDayState === undefined) gameState.deadlineDayState = null;", self.storage_js)
 
