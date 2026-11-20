@@ -441,6 +441,31 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         post_block = self.main_js[post_start:post_start + 2200]
         self.assertIn('triggerYouthAwakeningEvent()', post_block)
 
+    def test_16_trait_popover_and_comm_top_swipe_sheet(self):
+        """特徴の非暗転吹き出しポップオーバーと、メッセージ/ニュースの上部スライドダウン＋上スワイプ収納シートを検証"""
+        for sym in [
+            'function closeProfileTraitPopover(',
+            'function openProfileTraitPopover(',
+            'function openCommDetailSheet(',
+            'function closeCommDetailSheet(',
+            'function openInboxMessageSheet(',
+            'function openNewsDetailSheet('
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        self.assertIn('id="comm-detail-sheet-overlay"', self.html)
+        self.assertIn('id="comm-detail-sheet-panel"', self.html)
+        self.assertIn('.profile-trait-popover {', self.css)
+        self.assertIn('z-index: 35000;', self.css)
+        self.assertIn('.trait-popover-arrow {', self.css)
+        self.assertIn('.comm-sheet-overlay {', self.css)
+        self.assertIn('justify-content: flex-end;', self.css)
+        self.assertIn('.comm-sheet-panel {', self.css)
+        self.assertIn('transform: translateY(100%);', self.css)
+        self.assertIn("sheetPanel.addEventListener('touchstart'", self.main_js)
+        self.assertIn("sheetPanel.addEventListener('touchmove'", self.main_js)
+        self.assertIn("sheetPanel.addEventListener('touchend'", self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()

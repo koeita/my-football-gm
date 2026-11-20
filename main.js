@@ -2389,6 +2389,82 @@ function closeInfoPopup() {
 }
 
 /**
+ * 選手特徴の吹き出しポップオーバーを閉じる
+ */
+function closeProfileTraitPopover() {
+  const pop = document.getElementById('profile-trait-popover');
+  if (pop) pop.classList.add('hidden');
+  document.querySelectorAll('#player-profile-modal .profile-trait-tag.is-selected').forEach(btn => {
+    btn.classList.remove('is-selected');
+    btn.setAttribute('aria-expanded', 'false');
+  });
+}
+
+/**
+ * 選手特徴の詳細を暗転なしの吹き出しポップオーバーでタグ直下（または直上）に表示
+ */
+function openProfileTraitPopover(traitBtn, traitName) {
+  if (!traitBtn || !traitName) return;
+  let pop = document.getElementById('profile-trait-popover');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'profile-trait-popover';
+    pop.className = 'profile-trait-popover hidden';
+    pop.setAttribute('role', 'tooltip');
+    document.body.appendChild(pop);
+  }
+
+  const desc = typeof getPlayerTraitDescription === 'function'
+    ? getPlayerTraitDescription(traitName)
+    : '試合でのパフォーマンスに影響します。';
+  const safeTitle = typeof escapeCommHtml === 'function' ? escapeCommHtml(traitName) : traitName;
+  const safeDesc = typeof escapeCommHtml === 'function' ? escapeCommHtml(desc) : desc;
+
+  pop.innerHTML = `
+    <span class="trait-popover-arrow" aria-hidden="true"></span>
+    <div class="trait-popover-header">
+      <strong class="trait-popover-title">${safeTitle}</strong>
+      <button type="button" class="trait-popover-close mono" aria-label="閉じる">✕</button>
+    </div>
+    <p class="trait-popover-desc">${safeDesc}</p>
+  `;
+
+  const closeBtn = pop.querySelector('.trait-popover-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closeProfileTraitPopover();
+    });
+  }
+
+  pop.classList.remove('hidden', 'is-above');
+  pop.style.visibility = 'hidden';
+  pop.style.left = '0px';
+  pop.style.top = '0px';
+
+  const rect = traitBtn.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const margin = 8;
+  const gap = 8;
+
+  const left = Math.max(margin, Math.min(window.innerWidth - popRect.width - margin, rect.left + rect.width / 2 - popRect.width / 2));
+  const fitsBelow = (rect.bottom + gap + popRect.height) <= (window.innerHeight - margin);
+  let top;
+  if (fitsBelow) {
+    top = rect.bottom + gap;
+  } else {
+    top = Math.max(margin, rect.top - popRect.height - gap);
+    pop.classList.add('is-above');
+  }
+  const arrowLeft = Math.max(14, Math.min(popRect.width - 14, (rect.left + rect.width / 2) - left));
+
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(top)}px`;
+  pop.style.setProperty('--arrow-left', `${Math.round(arrowLeft)}px`);
+  pop.style.visibility = '';
+}
+
+/**
  * 施設投資の詳細ポップアップ表示
  */
 function showFacilityInfoPopup(facilityKey) {
@@ -12467,7 +12543,6 @@ function openPlayerProfileModal(playerId) {
               <div class="profile-traits-wrap">
                 ${traits.map(t => `<button type="button" class="profile-trait-tag is-active-trait" data-trait-name="${t}" aria-expanded="false">・ ${t}</button>`).join('')}
               </div>
-              <div class="profile-trait-detail hidden" id="profile-trait-detail"></div>
             </div>
           </div>
           <div class="profile-meta-inline-row">
@@ -12749,6 +12824,7 @@ function openPlayerProfileModal(playerId) {
  * 選手詳細プロフィールモーダルを閉じる
  */
 function closePlayerProfileModal() {
+  if (typeof closeProfileTraitPopover === 'function') closeProfileTraitPopover();
   const modalEl = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
   const cardEl = document.getElementById('player-profile-modal-card');
   const bodyScrollEl = document.getElementById('profile-modal-body');
@@ -14726,33 +14802,43 @@ function initGame() {
   if (profileModalOverlay) {
     profileModalOverlay.addEventListener('click', (e) => {
       const traitBtn = e.target.closest('.profile-trait-tag[data-trait-name]');
-      if (!traitBtn) return;
+      if (!traitBtn) {
+        if (!e.target.closest('#profile-trait-popover')) {
+          closeProfileTraitPopover();
+        }
+        return;
+      }
       const traitName = traitBtn.dataset.traitName;
-      const bodyEl = profileModalOverlay.querySelector('.profile-traits-wrap')?.parentElement;
-      const detailEl = bodyEl ? bodyEl.querySelector('#profile-trait-detail') : document.getElementById('profile-trait-detail');
-      if (!detailEl) return;
+      if (!traitName) return;
 
-      const isAlreadySelected = traitBtn.classList.contains('is-selected') && !detailEl.classList.contains('hidden');
+      const pop = document.getElementById('profile-trait-popover');
+      const isSameOpen = traitBtn.classList.contains('is-selected') && pop && !pop.classList.contains('hidden');
+      if (isSameOpen) {
+        closeProfileTraitPopover();
+        return;
+      }
+
       profileModalOverlay.querySelectorAll('.profile-trait-tag[data-trait-name]').forEach(btn => {
         btn.classList.remove('is-selected');
         btn.setAttribute('aria-expanded', 'false');
       });
 
-      if (isAlreadySelected) {
-        detailEl.classList.add('hidden');
-        detailEl.innerHTML = '';
-        return;
-      }
-
       traitBtn.classList.add('is-selected');
       traitBtn.setAttribute('aria-expanded', 'true');
-      const desc = typeof getPlayerTraitDescription === 'function'
-        ? getPlayerTraitDescription(traitName)
-        : '試合でのパフォーマンスに影響します。';
-      detailEl.innerHTML = `<strong class="profile-trait-detail-title">${traitName}</strong><span class="profile-trait-detail-desc">${desc}</span>`;
-      detailEl.classList.remove('hidden');
+      openProfileTraitPopover(traitBtn, traitName);
     });
+
+    const profileBodyScrollEl = document.getElementById('profile-modal-body');
+    if (profileBodyScrollEl) {
+      profileBodyScrollEl.addEventListener('scroll', closeProfileTraitPopover, { passive: true });
+    }
   }
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('profile-trait-popover');
+    if (!pop || pop.classList.contains('hidden')) return;
+    if (e.target.closest('#profile-trait-popover') || e.target.closest('.profile-trait-tag[data-trait-name]')) return;
+    closeProfileTraitPopover();
+  });
 
   // 契約更新・移籍獲得交渉モーダルのイベント
   const negModalOverlay = document.getElementById('negotiation-modal');
@@ -14960,6 +15046,16 @@ function initGame() {
       const secModal = document.getElementById('secretary-select-modal');
       if (secModal && !secModal.classList.contains('hidden')) {
         closeSecretarySelectModal();
+        return;
+      }
+      const traitPopover = document.getElementById('profile-trait-popover');
+      if (traitPopover && !traitPopover.classList.contains('hidden')) {
+        closeProfileTraitPopover();
+        return;
+      }
+      const commSheet = document.getElementById('comm-detail-sheet-overlay');
+      if (commSheet && !commSheet.classList.contains('hidden')) {
+        closeCommDetailSheet();
         return;
       }
       const infoPopup = document.getElementById('info-popup-modal');
@@ -20701,54 +20797,20 @@ function renderOfficeCommPanel() {
     };
 
     inboxListEl.innerHTML = filtered.slice(0, 25).map(m => {
-      const isExpanded = gameState.expandedMessageId === m.id;
       const senderClass = senderClassMap[m.senderType] || 'comm-sender-secretary';
 
-      let candHtml = '';
-      if (isExpanded && Array.isArray(m.candidatePlayers) && m.candidatePlayers.length > 0) {
-        const rows = m.candidatePlayers.map(c => {
-          const inList = typeof isInShortlist === 'function' && isInShortlist(c.playerId);
-          const feeLabel = c.isFreeAgent ? '移籍金 £0' : `推定 ${formatMoney(c.estimatedFee)}`;
-          return `
-            <div class="wish-candidate-row">
-              <div class="wish-candidate-info">
-                <span class="wish-candidate-pos mono">${escapeCommHtml(c.pos)}</span>
-                <span class="wish-candidate-name">${escapeCommHtml(c.name)}</span>
-                <span class="wish-candidate-meta mono">OVR ${c.ovr} · ${c.age}歳 · ${escapeCommHtml(c.clubName)}</span>
-                <span class="wish-candidate-fee mono">${feeLabel}</span>
-              </div>
-              <div class="wish-candidate-actions">
-                <button type="button" class="btn btn-secondary btn-sm mono" data-msg-profile="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">詳細</button>
-                <button type="button" class="btn btn-primary btn-sm mono" data-msg-negotiate="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">交渉</button>
-                <button type="button" class="btn btn-secondary btn-sm mono" data-msg-shortlist="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">${inList ? '候補解除' : '候補追加'}</button>
-              </div>
-            </div>
-          `;
-        }).join('');
-        candHtml = `<div class="wish-candidates-list">${rows}</div>`;
-      }
-
-      const actionBtnHtml = (isExpanded && m.actionType && m.actionLabel)
-        ? `<div class="inbox-row-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-msg-action="${escapeCommHtml(m.actionType)}" data-msg-payload="${escapeCommHtml(m.actionPayload || '')}" style="white-space:nowrap;flex-shrink:0;">${escapeCommHtml(m.actionLabel)}</button></div>`
-        : '';
-
       return `
-        <div class="inbox-row ${m.read ? 'is-read' : 'is-unread'} ${isExpanded ? 'is-expanded' : ''}" data-inbox-msg-id="${escapeCommHtml(m.id)}">
-          <div class="inbox-row-head">
-            <div class="inbox-row-left">
-              <span class="${m.read ? 'inbox-read-spacer' : 'inbox-unread-dot'}" aria-hidden="true"></span>
-              <span class="comm-sender-label ${senderClass}">${escapeCommHtml(m.senderName)}</span>
-              <span class="inbox-row-title">${escapeCommHtml(m.title)}</span>
+        <div class="inbox-row ${m.read ? 'is-read' : 'is-unread'}" data-inbox-msg-id="${escapeCommHtml(m.id)}">
+          <div class="inbox-row-stack">
+            <div class="inbox-row-top">
+              <div class="inbox-row-sender-wrap">
+                <span class="${m.read ? 'inbox-read-spacer' : 'inbox-unread-dot'}" aria-hidden="true"></span>
+                <span class="comm-sender-label ${senderClass}">${escapeCommHtml(m.senderName)}</span>
+              </div>
+              <span class="comm-date-text mono">${escapeCommHtml(m.date)}</span>
             </div>
-            <span class="comm-date-text mono">${escapeCommHtml(m.date)}</span>
+            <div class="inbox-row-title">${escapeCommHtml(m.title)}</div>
           </div>
-          ${isExpanded ? `
-            <div class="inbox-row-detail">
-              <p class="inbox-row-body">${escapeCommHtml(m.body)}</p>
-              ${candHtml}
-              ${actionBtnHtml}
-            </div>
-          ` : ''}
         </div>
       `;
     }).join('');
@@ -20770,61 +20832,23 @@ function renderOfficeCommPanel() {
       '選手': 'comm-cat-league'
     };
 
-    const resolveNewsVisual = (n) => {
-      let foundPlayer = null;
-      let foundClub = n.clubId && typeof getClubById === 'function' ? getClubById(n.clubId) : null;
-      if (n.playerId) {
-        for (const c of (typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []))) {
-          const p = (c.players || []).find(x => x && x.id === n.playerId);
-          if (p) { foundPlayer = p; foundClub = c; break; }
-        }
-        if (!foundPlayer && Array.isArray(gameState.transferMarket)) {
-          foundPlayer = gameState.transferMarket.find(x => x && x.id === n.playerId) || null;
-        }
-      }
-      if (foundPlayer && typeof getPlayerAvatarHtml === 'function') {
-        return {
-          hasPlayer: true,
-          player: foundPlayer,
-          html: `<div class="news-thumb-circle is-player">${getPlayerAvatarHtml(foundPlayer, foundClub || getPlayerClub(), 'avatar-sm news-thumb-avatar')}</div>`
-        };
-      }
-      const fallbackClub = foundClub || getPlayerClub();
-      return {
-        hasPlayer: false,
-        player: null,
-        html: `<div class="news-thumb-circle is-club">${typeof getClubEmblemSvg === 'function' && fallbackClub ? getClubEmblemSvg(fallbackClub, 26, 'news-thumb-emblem') : ''}</div>`
-      };
-    };
-
     newsListEl.innerHTML = news.slice(0, 25).map(n => {
       const catClass = catClassMap[n.category] || 'comm-cat-league';
-      const isExpanded = gameState.expandedNewsId === n.id;
-      const thumb = resolveNewsVisual(n);
-      const leadText = n.lead || (n.body ? String(n.body).slice(0, 44) : '');
-      const readLabel = n.actionLabel || (n.body ? '本文を読む' : '');
+      const thumb = resolveNewsVisualInfo(n);
       const displayDate = n.fullDate || n.date || '';
 
       return `
-        <div class="news-row ${n.highlight ? 'is-highlight' : ''} ${isExpanded ? 'is-expanded' : ''}" data-news-id="${escapeCommHtml(n.id)}">
+        <div class="news-row ${n.highlight ? 'is-highlight' : ''}" data-news-id="${escapeCommHtml(n.id)}">
           <div class="news-row-layout">
             ${thumb.html}
             <div class="news-main-col">
               <div class="news-row-headline">${escapeCommHtml(n.headline)}</div>
-              ${leadText ? `<div class="news-row-lead">${escapeCommHtml(leadText)}</div>` : ''}
               <div class="news-row-meta">
                 <div class="news-row-meta-left">
                   <span class="comm-sender-label ${catClass}">${escapeCommHtml(n.category)}</span>
-                  ${readLabel ? `<span class="news-read-trigger">${isExpanded ? '記事を閉じる' : escapeCommHtml(readLabel)}</span>` : ''}
                 </div>
                 <span class="comm-date-text mono">${escapeCommHtml(displayDate)}</span>
               </div>
-              ${isExpanded && n.body ? `
-                <div class="news-row-detail">
-                  <p class="news-row-body">${escapeCommHtml(n.body)}</p>
-                  ${thumb.hasPlayer ? `<div class="news-detail-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-news-profile="${escapeCommHtml(thumb.player.id)}" style="white-space:nowrap;">選手詳細を見る</button></div>` : ''}
-                </div>
-              ` : ''}
             </div>
           </div>
         </div>
@@ -20832,6 +20856,229 @@ function renderOfficeCommPanel() {
     }).join('');
     if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(newsListEl);
   }
+}
+
+function resolveNewsVisualInfo(n) {
+  let foundPlayer = null;
+  let foundClub = n && n.clubId && typeof getClubById === 'function' ? getClubById(n.clubId) : null;
+  if (n && n.playerId) {
+    for (const c of (typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []))) {
+      const p = (c.players || []).find(x => x && x.id === n.playerId);
+      if (p) { foundPlayer = p; foundClub = c; break; }
+    }
+    if (!foundPlayer && Array.isArray(gameState.transferMarket)) {
+      foundPlayer = gameState.transferMarket.find(x => x && x.id === n.playerId) || null;
+    }
+  }
+  if (foundPlayer && typeof getPlayerAvatarHtml === 'function') {
+    return {
+      hasPlayer: true,
+      player: foundPlayer,
+      html: `<div class="news-thumb-circle is-player">${getPlayerAvatarHtml(foundPlayer, foundClub || getPlayerClub(), 'avatar-sm news-thumb-avatar')}</div>`
+    };
+  }
+  const fallbackClub = foundClub || getPlayerClub();
+  return {
+    hasPlayer: false,
+    player: null,
+    html: `<div class="news-thumb-circle is-club">${typeof getClubEmblemSvg === 'function' && fallbackClub ? getClubEmblemSvg(fallbackClub, 26, 'news-thumb-emblem') : ''}</div>`
+  };
+}
+
+function buildInboxCandidatesHtml(m) {
+  if (!m || !Array.isArray(m.candidatePlayers) || m.candidatePlayers.length === 0) return '';
+  const rows = m.candidatePlayers.map(c => {
+    const inList = typeof isInShortlist === 'function' && isInShortlist(c.playerId);
+    const feeLabel = c.isFreeAgent ? '移籍金 £0' : `推定 ${formatMoney(c.estimatedFee)}`;
+    return `
+      <div class="wish-candidate-row">
+        <div class="wish-candidate-info">
+          <span class="wish-candidate-pos mono">${escapeCommHtml(c.pos)}</span>
+          <span class="wish-candidate-name">${escapeCommHtml(c.name)}</span>
+          <span class="wish-candidate-meta mono">OVR ${c.ovr} · ${c.age}歳 · ${escapeCommHtml(c.clubName)}</span>
+          <span class="wish-candidate-fee mono">${feeLabel}</span>
+        </div>
+        <div class="wish-candidate-actions">
+          <button type="button" class="btn btn-secondary btn-sm mono" data-msg-profile="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">詳細</button>
+          <button type="button" class="btn btn-primary btn-sm mono" data-msg-negotiate="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">交渉</button>
+          <button type="button" class="btn btn-secondary btn-sm mono" data-msg-shortlist="${escapeCommHtml(c.playerId)}" style="white-space:nowrap;flex-shrink:0;">${inList ? '候補解除' : '候補追加'}</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  return `<div class="wish-candidates-list">${rows}</div>`;
+}
+
+let commSheetActiveContext = null;
+let commSheetCloseTimerId = null;
+
+function openCommDetailSheet({ labelText, labelClass, dateText, titleText, bodyHtml, type, itemId }) {
+  const overlay = document.getElementById('comm-detail-sheet-overlay');
+  const panel = document.getElementById('comm-detail-sheet-panel');
+  const senderEl = document.getElementById('comm-sheet-sender');
+  const dateEl = document.getElementById('comm-sheet-date');
+  const titleEl = document.getElementById('comm-sheet-title');
+  const bodyEl = document.getElementById('comm-sheet-body');
+  if (!overlay || !panel) return;
+
+  if (commSheetCloseTimerId) {
+    clearTimeout(commSheetCloseTimerId);
+    commSheetCloseTimerId = null;
+  }
+
+  commSheetActiveContext = { type, itemId };
+  if (senderEl) {
+    senderEl.className = `comm-sender-label ${labelClass || ''}`;
+    senderEl.textContent = labelText || '';
+  }
+  if (dateEl) dateEl.textContent = dateText || '';
+  if (titleEl) titleEl.textContent = titleText || '';
+  if (bodyEl) {
+    bodyEl.innerHTML = bodyHtml || '';
+    bodyEl.scrollTop = 0;
+  }
+
+  panel.style.transition = '';
+  panel.style.transform = '';
+  overlay.classList.remove('hidden', 'is-open');
+  void panel.offsetWidth;
+  overlay.classList.add('is-open');
+  if (typeof renderAvatarCanvases === 'function' && bodyEl) {
+    renderAvatarCanvases(bodyEl);
+  }
+}
+
+function closeCommDetailSheet() {
+  const overlay = document.getElementById('comm-detail-sheet-overlay');
+  const panel = document.getElementById('comm-detail-sheet-panel');
+  if (!overlay || overlay.classList.contains('hidden')) return;
+
+  commSheetActiveContext = null;
+  if (panel) {
+    panel.style.transition = '';
+    panel.style.transform = '';
+  }
+  overlay.classList.remove('is-open');
+
+  if (commSheetCloseTimerId) clearTimeout(commSheetCloseTimerId);
+  commSheetCloseTimerId = setTimeout(() => {
+    overlay.classList.add('hidden');
+    commSheetCloseTimerId = null;
+  }, 240);
+}
+
+function openInboxMessageSheet(msgId) {
+  const msgs = Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages : [];
+  const m = msgs.find(x => x && x.id === msgId);
+  if (!m) return;
+
+  const senderClassMap = {
+    manager: 'comm-sender-manager',
+    player: 'comm-sender-player',
+    scout: 'comm-sender-scout',
+    board: 'comm-sender-board',
+    secretary: 'comm-sender-secretary'
+  };
+  const candHtml = buildInboxCandidatesHtml(m);
+  const actionBtnHtml = (m.actionType && m.actionLabel)
+    ? `<div class="inbox-row-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-msg-action="${escapeCommHtml(m.actionType)}" data-msg-payload="${escapeCommHtml(m.actionPayload || '')}" style="white-space:nowrap;flex-shrink:0;">${escapeCommHtml(m.actionLabel)}</button></div>`
+    : '';
+  const bodyHtml = `
+    <p class="comm-sheet-body-text">${escapeCommHtml(m.body || '')}</p>
+    ${candHtml}
+    ${actionBtnHtml}
+  `;
+
+  openCommDetailSheet({
+    labelText: m.senderName,
+    labelClass: senderClassMap[m.senderType] || 'comm-sender-secretary',
+    dateText: m.date,
+    titleText: m.title,
+    bodyHtml,
+    type: 'message',
+    itemId: m.id
+  });
+}
+
+function openNewsDetailSheet(newsId) {
+  const news = Array.isArray(gameState.newsFeed) ? gameState.newsFeed : [];
+  const n = news.find(x => x && x.id === newsId);
+  if (!n) return;
+
+  const catClassMap = {
+    '移籍': 'comm-cat-transfer',
+    'リーグ': 'comm-cat-league',
+    'カップ': 'comm-cat-cup',
+    '監督': 'comm-cat-manager',
+    'チーム': 'comm-cat-cup',
+    '選手': 'comm-cat-league'
+  };
+  const thumb = resolveNewsVisualInfo(n);
+  const bodyText = n.body || n.lead || '';
+  const bodyHtml = `
+    <div class="comm-sheet-news-hero">
+      ${thumb.html}
+      <p class="comm-sheet-body-text">${escapeCommHtml(bodyText)}</p>
+    </div>
+    ${thumb.hasPlayer ? `<div class="news-detail-actions"><button type="button" class="btn btn-secondary btn-sm mono" data-news-profile="${escapeCommHtml(thumb.player.id)}" style="white-space:nowrap;">選手詳細を見る</button></div>` : ''}
+  `;
+
+  openCommDetailSheet({
+    labelText: n.category,
+    labelClass: catClassMap[n.category] || 'comm-cat-league',
+    dateText: n.fullDate || n.date || '',
+    titleText: n.headline,
+    bodyHtml,
+    type: 'news',
+    itemId: n.id
+  });
+}
+
+function handleCommDetailActionClick(e) {
+  const newsProfBtn = e.target.closest('[data-news-profile]');
+  if (newsProfBtn) {
+    e.stopPropagation();
+    if (typeof openPlayerProfileModal === 'function') {
+      openPlayerProfileModal(newsProfBtn.dataset.newsProfile);
+    }
+    return true;
+  }
+  const profBtn = e.target.closest('[data-msg-profile]');
+  if (profBtn) {
+    e.stopPropagation();
+    if (typeof openPlayerProfileModal === 'function') {
+      openPlayerProfileModal(profBtn.dataset.msgProfile);
+    }
+    return true;
+  }
+  const negBtn = e.target.closest('[data-msg-negotiate]');
+  if (negBtn) {
+    e.stopPropagation();
+    if (typeof openTransferNegotiationModal === 'function') {
+      openTransferNegotiationModal(negBtn.dataset.msgNegotiate);
+    }
+    return true;
+  }
+  const slBtn = e.target.closest('[data-msg-shortlist]');
+  if (slBtn) {
+    e.stopPropagation();
+    if (typeof toggleShortlist === 'function') {
+      toggleShortlist(slBtn.dataset.msgShortlist);
+      renderOfficeCommPanel();
+      if (commSheetActiveContext && commSheetActiveContext.type === 'message') {
+        openInboxMessageSheet(commSheetActiveContext.itemId);
+      }
+    }
+    return true;
+  }
+  const actBtn = e.target.closest('[data-msg-action]');
+  if (actBtn) {
+    e.stopPropagation();
+    closeCommDetailSheet();
+    handleInboxMessageAction(actBtn.dataset.msgAction, actBtn.dataset.msgPayload || '');
+    return true;
+  }
+  return false;
 }
 
 function handleInboxMessageAction(actionType, payload) {
@@ -20891,63 +21138,100 @@ function initOfficeCommAndSecretaryEvents() {
   const newsListEl = document.getElementById('office-news-list');
   if (newsListEl) {
     newsListEl.addEventListener('click', (e) => {
-      const profBtn = e.target.closest('[data-news-profile]');
-      if (profBtn) {
-        e.stopPropagation();
-        if (typeof openPlayerProfileModal === 'function') {
-          openPlayerProfileModal(profBtn.dataset.newsProfile);
-        }
-        return;
-      }
+      if (handleCommDetailActionClick(e)) return;
       const row = e.target.closest('[data-news-id]');
       if (row && row.dataset.newsId) {
-        gameState.expandedNewsId = (gameState.expandedNewsId === row.dataset.newsId) ? null : row.dataset.newsId;
-        renderOfficeCommPanel();
+        openNewsDetailSheet(row.dataset.newsId);
       }
     });
   }
   if (inboxListEl) {
     inboxListEl.addEventListener('click', (e) => {
-      const profBtn = e.target.closest('[data-msg-profile]');
-      if (profBtn) {
-        e.stopPropagation();
-        if (typeof openPlayerProfileModal === 'function') {
-          openPlayerProfileModal(profBtn.dataset.msgProfile);
-        }
-        return;
-      }
-      const negBtn = e.target.closest('[data-msg-negotiate]');
-      if (negBtn) {
-        e.stopPropagation();
-        if (typeof openTransferNegotiationModal === 'function') {
-          openTransferNegotiationModal(negBtn.dataset.msgNegotiate);
-        }
-        return;
-      }
-      const slBtn = e.target.closest('[data-msg-shortlist]');
-      if (slBtn) {
-        e.stopPropagation();
-        if (typeof toggleShortlist === 'function') {
-          toggleShortlist(slBtn.dataset.msgShortlist);
-          renderOfficeCommPanel();
-        }
-        return;
-      }
-      const actBtn = e.target.closest('[data-msg-action]');
-      if (actBtn) {
-        e.stopPropagation();
-        handleInboxMessageAction(actBtn.dataset.msgAction, actBtn.dataset.msgPayload || '');
-        return;
-      }
+      if (handleCommDetailActionClick(e)) return;
       const row = e.target.closest('[data-inbox-msg-id]');
       if (row && row.dataset.inboxMsgId) {
         const msgId = row.dataset.inboxMsgId;
         markInboxMessageRead(msgId);
-        gameState.expandedMessageId = (gameState.expandedMessageId === msgId) ? null : msgId;
         renderOfficeCommPanel();
         renderSecretaryBriefing();
+        openInboxMessageSheet(msgId);
       }
     });
+  }
+
+  const sheetOverlay = document.getElementById('comm-detail-sheet-overlay');
+  const sheetPanel = document.getElementById('comm-detail-sheet-panel');
+  const sheetBody = document.getElementById('comm-sheet-body');
+  const closeSheetBtn = document.getElementById('btn-close-comm-sheet');
+  if (closeSheetBtn) {
+    closeSheetBtn.addEventListener('click', closeCommDetailSheet);
+  }
+  if (sheetOverlay) {
+    sheetOverlay.addEventListener('click', (e) => {
+      if (e.target === sheetOverlay) closeCommDetailSheet();
+    });
+  }
+  if (sheetBody) {
+    sheetBody.addEventListener('click', (e) => {
+      handleCommDetailActionClick(e);
+    });
+  }
+  if (sheetPanel) {
+    let swipeStartY = 0;
+    let swipeStartX = 0;
+    let swipeStartTime = 0;
+    let swipeDeltaY = 0;
+    let isSwipingSheet = false;
+    let startedInScrollableBody = false;
+
+    sheetPanel.addEventListener('touchstart', (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      swipeStartY = t.clientY;
+      swipeStartX = t.clientX;
+      swipeStartTime = Date.now();
+      swipeDeltaY = 0;
+      isSwipingSheet = false;
+      startedInScrollableBody = Boolean(sheetBody && sheetBody.contains(e.target));
+    }, { passive: true });
+
+    sheetPanel.addEventListener('touchmove', (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dy = t.clientY - swipeStartY;
+      const dx = t.clientX - swipeStartX;
+
+      if (!isSwipingSheet) {
+        if (dy <= 0 || Math.abs(dy) < 6 || Math.abs(dy) <= Math.abs(dx)) return;
+        if (startedInScrollableBody && sheetBody && sheetBody.scrollTop > 2) {
+          return;
+        }
+        isSwipingSheet = true;
+      }
+
+      if (isSwipingSheet) {
+        swipeDeltaY = Math.max(0, dy);
+        if (e.cancelable) e.preventDefault();
+        sheetPanel.style.transition = 'none';
+        sheetPanel.style.transform = `translateY(${swipeDeltaY}px)`;
+      }
+    }, { passive: false });
+
+    const finishSwipe = () => {
+      if (!isSwipingSheet) return;
+      isSwipingSheet = false;
+      const elapsed = Math.max(1, Date.now() - swipeStartTime);
+      const velocity = swipeDeltaY / elapsed;
+      if (swipeDeltaY >= 45 || (swipeDeltaY >= 18 && velocity > 0.35)) {
+        closeCommDetailSheet();
+      } else {
+        sheetPanel.style.transition = '';
+        sheetPanel.style.transform = '';
+      }
+      swipeDeltaY = 0;
+    };
+    sheetPanel.addEventListener('touchend', finishSwipe, { passive: true });
+    sheetPanel.addEventListener('touchcancel', finishSwipe, { passive: true });
   }
 
   const closeSecBtn = document.getElementById('btn-close-secretary-modal');

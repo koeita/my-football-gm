@@ -20654,4 +20654,289 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   }
 }
 
+/* ==========================================================================
+   特徴詳細 吹き出しポップオーバー（非暗転・タグ直下/直上表示）
+   ========================================================================== */
+.profile-trait-popover {
+  position: fixed;
+  z-index: 35000;
+  width: min(296px, calc(100vw - 16px));
+  background: #24282c;
+  border: 1px solid rgba(46, 204, 113, 0.5);
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  color: #e2e8f0;
+  animation: traitPopoverIn 0.14s ease-out;
+  box-sizing: border-box;
+}
+
+.profile-trait-popover.hidden {
+  display: none !important;
+}
+
+@keyframes traitPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-trait-popover.is-above {
+  animation-name: traitPopoverInAbove;
+}
+
+@keyframes traitPopoverInAbove {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trait-popover-arrow {
+  position: absolute;
+  left: var(--arrow-left, 50%);
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  background: #24282c;
+  border-left: 1px solid rgba(46, 204, 113, 0.5);
+  border-top: 1px solid rgba(46, 204, 113, 0.5);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+.profile-trait-popover.is-above .trait-popover-arrow {
+  top: auto;
+  bottom: -6px;
+  border-left: none;
+  border-top: none;
+  border-right: 1px solid rgba(46, 204, 113, 0.5);
+  border-bottom: 1px solid rgba(46, 204, 113, 0.5);
+}
+
+.trait-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.trait-popover-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #2ecc71;
+  line-height: 1.3;
+}
+
+.trait-popover-close {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.trait-popover-close:hover {
+  color: #ffffff;
+}
+
+.trait-popover-desc {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+/* ==========================================================================
+   メッセージ・ニュース 一覧視認性向上 ＆ 上部スライドダウン詳細シート
+   ========================================================================== */
+.inbox-row.is-unread {
+  border-left: 2px solid #2ecc71;
+  padding-left: 8px;
+  background-color: rgba(46, 204, 113, 0.04);
+}
+
+.inbox-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.inbox-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.inbox-row-sender-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inbox-row .inbox-row-title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  font-size: 12.5px;
+}
+
+.news-row.is-highlight {
+  border-left: 2px solid #2ecc71;
+  padding-left: 8px;
+}
+
+.comm-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 29000;
+  background: rgba(0, 0, 0, 0.58);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  touch-action: none;
+}
+
+.comm-sheet-overlay.hidden {
+  display: none !important;
+}
+
+.comm-sheet-overlay.is-open {
+  opacity: 1;
+}
+
+.comm-sheet-panel {
+  width: 100%;
+  max-width: 680px;
+  max-height: 82dvh;
+  background: #1a1d20;
+  border-top: 1px solid rgba(46, 204, 113, 0.45);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px 12px 0 0;
+  padding: 6px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.7);
+  transform: translateY(100%);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.comm-sheet-overlay.is-open .comm-sheet-panel {
+  transform: translateY(0);
+}
+
+.comm-sheet-swipe-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 6px;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.comm-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.comm-sheet-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.comm-sheet-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.comm-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  touch-action: pan-y;
+}
+
+.comm-sheet-news-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comm-sheet-body-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #d1d5db;
+  white-space: pre-line;
+}
+
+.comm-sheet-handle {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .comm-sheet-panel {
+    max-width: 100%;
+    border-left: none;
+    border-right: none;
+    padding: 6px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .comm-sheet-title {
+    font-size: 14px;
+  }
+  .comm-sheet-body-text {
+    font-size: 12.5px;
+  }
+}
+
 

@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_0300">
+  <link rel="stylesheet" href="style.css?v=20261119_0500">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1730,6 +1730,24 @@
     </div>
   </div>
 
+  <!-- メッセージ・ニュース 下部スライドアップ詳細シート -->
+  <div id="comm-detail-sheet-overlay" class="comm-sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="comm-sheet-title">
+    <div class="comm-sheet-panel" id="comm-detail-sheet-panel">
+      <div class="comm-sheet-swipe-header" id="comm-sheet-swipe-footer">
+        <span class="comm-sheet-handle" aria-hidden="true"></span>
+      </div>
+      <div class="comm-sheet-header">
+        <div class="comm-sheet-meta">
+          <span class="comm-sender-label" id="comm-sheet-sender"></span>
+          <span class="comm-date-text mono" id="comm-sheet-date"></span>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-comm-sheet" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <h3 class="comm-sheet-title" id="comm-sheet-title"></h3>
+      <div class="comm-sheet-body" id="comm-sheet-body"></div>
+    </div>
+  </div>
+
   <!-- 試合前 作戦最終確認モーダル -->
   <div id="match-precheck-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="precheck-modal-title">
     <div class="modal-card match-precheck-card">
@@ -1962,6 +1980,6 @@
   <script src="match-engine.js?v=20261119_0300"></script>
   <script src="storage.js?v=20261119_0300"></script>
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_0400"></script>
+  <script src="main.js?v=20261119_0500"></script>
 </body>
 </html>
