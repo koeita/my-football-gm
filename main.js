@@ -2301,9 +2301,10 @@ function showGmModal(opts, fromQueue = false) {
   const { category, title, description, detailHtml, actions, hideSecretary, speaker, variant } = opts;
   const modalCard = overlay.querySelector('.gm-secretary-modal-card');
   if (modalCard) {
-    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'conflict-arbitration';
+    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'monthly-mvp-ceremony' || variant === 'conflict-arbitration';
     modalCard.classList.toggle('is-report-modal', isReportLike);
     modalCard.classList.toggle('is-monthly-ceremony', variant === 'monthly-ceremony');
+    modalCard.classList.toggle('is-monthly-mvp-ceremony', variant === 'monthly-mvp-ceremony');
     modalCard.classList.toggle('is-conflict-modal', variant === 'conflict-arbitration');
   }
 
@@ -12669,13 +12670,10 @@ function openPlayerProfileModal(playerId) {
     const ratInfo = getRatingTierInfo(r.avgRating);
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
     const ovrInfo = getYearlyRowOvrInfo(r, rIdx);
-    const awardsInline = Array.isArray(r.awards) && r.awards.length > 0
-      ? ` <span class="yearly-award-inline mono">${escapeCommHtml(r.awards.join(' · '))}</span>`
-      : '';
     return `
     <tr class="${r.isCurrent ? 'profile-yearly-current-row' : ''}">
       <td class="mono">${r.seasonYear}</td>
-      <td class="col-yearly-club">${r.clubName}${awardsInline}</td>
+      <td class="col-yearly-club">${r.clubName}</td>
       <td class="mono col-num">${r.age}</td>
       <td class="mono col-num">${r.appearances}</td>
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
@@ -12687,13 +12685,62 @@ function openPlayerProfileModal(playerId) {
   `;
   }).join('');
 
-  const awardCountsMap = new Map();
+  const awardsByYearMap = new Map();
+  const pushYearAward = (yrStr, code, label, isMonthly) => {
+    if (!label) return;
+    const key = String(yrStr || curSeasonStr || '-');
+    if (!awardsByYearMap.has(key)) awardsByYearMap.set(key, []);
+    const arr = awardsByYearMap.get(key);
+    if (!arr.some(item => item.label === label)) {
+      arr.push({ code: code || '', label, isMonthly: Boolean(isMonthly) });
+    }
+  };
   playerAwardsList.forEach(a => {
     if (!a || !a.label) return;
-    awardCountsMap.set(a.label, (awardCountsMap.get(a.label) || 0) + 1);
+    const yr = a.seasonYear || (a.season && typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(a.season) : curSeasonStr);
+    pushYearAward(yr, a.code, a.label, a.isMonthly);
   });
-  const careerAwardsSummaryHtml = awardCountsMap.size > 0
-    ? `<div class="profile-awards-summary mono"><span class="profile-awards-label">受賞歴</span><span class="profile-awards-vals">${Array.from(awardCountsMap.entries()).map(([lbl, cnt]) => `${escapeCommHtml(lbl)}${cnt > 1 ? ` x${cnt}` : ''}`).join(' · ')}</span></div>`
+  allRowsData.forEach(r => {
+    if (!r || !Array.isArray(r.awards)) return;
+    r.awards.forEach(lbl => {
+      pushYearAward(r.seasonYear || curSeasonStr, '', String(lbl), String(lbl).includes('月間'));
+    });
+  });
+
+  const sortedAwardYears = Array.from(awardsByYearMap.entries()).sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+  const totalAwardCount = sortedAwardYears.reduce((sum, [, items]) => sum + items.length, 0);
+  const getHonorToneClass = (code, label) => {
+    const c = String(code || '').toUpperCase();
+    const l = String(label || '');
+    if (c === 'TOP_SCORER' || c === 'YOUNG_PLAYER' || l.includes('得点王') || l.includes('若手')) return 'is-green';
+    if (c === 'TOP_ASSISTER' || c === 'BEST_11' || l.includes('アシスト') || l.includes('ベスト11')) return 'is-cyan';
+    return 'is-gold';
+  };
+  const honorIconFn = typeof buildAwardHonorIconSvg === 'function' ? buildAwardHonorIconSvg : (() => '');
+  const careerAwardsSummaryHtml = sortedAwardYears.length > 0
+    ? `
+      <div class="profile-awards-showcase">
+        <div class="profile-awards-showcase-head">
+          <span class="profile-awards-showcase-title">${honorIconFn('MVP', 'MVP', 15)}<span>受賞歴</span></span>
+          <span class="profile-awards-showcase-count mono">計 ${totalAwardCount}回</span>
+        </div>
+        <div class="profile-awards-year-list">
+          ${sortedAwardYears.map(([yrStr, items]) => `
+            <div class="profile-awards-year-row">
+              <span class="profile-awards-year mono">${escapeCommHtml(yrStr)}</span>
+              <div class="profile-awards-honors">
+                ${items.map(item => `
+                  <span class="profile-award-honor ${getHonorToneClass(item.code, item.label)}">
+                    ${honorIconFn(item.code, item.label, 13)}
+                    <span class="profile-award-honor-text">${escapeCommHtml(item.label)}</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `
     : '';
 
   const yearlyFotmobRows = allRowsData.map((r, rIdx) => {
@@ -12701,9 +12748,6 @@ function openPlayerProfileModal(playerId) {
     const ratDisp = (r.avgRating === '-' || !r.avgRating) ? 'N/A' : r.avgRating;
     const clubEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(r.clubName, 22, 'fotmob-yearly-emblem') : '';
     const ovrInfo = getYearlyRowOvrInfo(r, rIdx);
-    const rowAwardsHtml = Array.isArray(r.awards) && r.awards.length > 0
-      ? `<span class="yearly-award-inline mono">${escapeCommHtml(r.awards.join(' · '))}</span>`
-      : '';
     return `
       <div class="fotmob-yearly-row ${r.isCurrent ? 'is-current' : ''}">
         <div class="fotmob-yearly-left">
@@ -12711,7 +12755,6 @@ function openPlayerProfileModal(playerId) {
           <div class="fotmob-yearly-team-stack">
             <span class="fotmob-yearly-club">${r.clubName}</span>
             <span class="fotmob-yearly-season mono">${r.seasonYear} · ${r.age}歳</span>
-            ${rowAwardsHtml}
           </div>
         </div>
         <div class="fotmob-yearly-cols mono">
@@ -20700,6 +20743,9 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
         }
       ]
     });
+    if (monthlyMvp && typeof showMonthlyMvpAwardModal === 'function') {
+      showMonthlyMvpAwardModal(monthlyMvp);
+    }
     return true;
   }
   return false;
@@ -21657,8 +21703,47 @@ function buildAvatarSpecSnapshot(p) {
     hairColor: p.hairColor,
     skinColor: p.skinColor,
     facialHair: p.facialHair,
-    avatarSeed: p.avatarSeed
+    avatarSeed: p.avatarSeed,
+    avatarData: p.avatarData ? { ...p.avatarData } : null
   };
+}
+
+function buildAwardHonorIconSvg(code, label = '', size = 14) {
+  const c = String(code || '').toUpperCase();
+  const l = String(label || '');
+  const sz = Math.max(10, Number(size) || 14);
+  if (c === 'TOP_SCORER' || l.includes('得点王')) {
+    return `<svg class="award-honor-svg is-green" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18l-2-10-4 4-3-6-3 6-4-4-2 10z"></path><line x1="4" y1="21" x2="20" y2="21"></line></svg>`;
+  }
+  if (c === 'TOP_ASSISTER' || l.includes('アシスト')) {
+    return `<svg class="award-honor-svg is-cyan" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+  }
+  if (c === 'BEST_GK' || l.includes('最優秀GK')) {
+    return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"></path><path d="M9 12l2 2 4-4"></path></svg>`;
+  }
+  if (c === 'YOUNG_PLAYER' || l.includes('若手')) {
+    return `<svg class="award-honor-svg is-green" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-2 4 2-1-8"></path></svg>`;
+  }
+  if (c === 'BEST_11' || l.includes('ベスト11')) {
+    return `<svg class="award-honor-svg is-cyan" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"></circle><path d="M8.5 13.5L7 21l5-2.5L17 21l-1.5-7.5"></path></svg>`;
+  }
+  if (c.startsWith('MONTHLY_MVP') || l.includes('月間')) {
+    return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"></circle><polygon points="12 5.5 13.1 7.8 15.6 8.1 13.8 9.9 14.2 12.4 12 11.2 9.8 12.4 10.2 9.9 8.4 8.1 10.9 7.8 12 5.5" fill="currentColor" stroke="none"></polygon><path d="M9 14.5L7.5 22l4.5-2.2 4.5 2.2-1.5-7.5"></path></svg>`;
+  }
+  return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>`;
+}
+
+function renderAwardPlayerAvatarHtml(playerId, avatarSpec, clubObj = null, size = 28, extraClass = 'awards-row-avatar') {
+  if (typeof getPlayerAvatarHtml !== 'function') return '';
+  const found = (playerId && typeof findPlayerWithContextById === 'function')
+    ? findPlayerWithContextById(playerId)
+    : null;
+  const personObj = (found && found.player)
+    || avatarSpec
+    || (playerId ? { id: playerId, name: 'Player', pos: 'CM' } : null);
+  if (!personObj) return '';
+  const resolvedClub = clubObj || (found && found.club) || null;
+  return getPlayerAvatarHtml(personObj, resolvedClub, `avatar-sm ${extraClass}`, size);
 }
 
 function addPlayerAwardAndMilestone(player, { season, seasonYear, code, label, clubName, milestoneTitle, milestoneDesc, badge = 'AWARD', isMonthly = false }) {
@@ -21772,11 +21857,12 @@ function syncPlayerClubStatsToHallOfFame(playerClub, { retiredIds = null } = {})
     }
 
     const ssr = hof.singleSeasonRecords;
-    updateSingleSeasonRecordIfHigher(ssr, 'mostGoals', { playerId: p.id, name: p.name, pos: entry.pos, val: goals, seasonYear: seasonYearStr });
-    updateSingleSeasonRecordIfHigher(ssr, 'mostAssists', { playerId: p.id, name: p.name, pos: entry.pos, val: assists, seasonYear: seasonYearStr });
-    updateSingleSeasonRecordIfHigher(ssr, 'mostCleanSheets', { playerId: p.id, name: p.name, pos: entry.pos, val: cs, seasonYear: seasonYearStr });
+    const pAvatarSnap = buildAvatarSpecSnapshot(p);
+    updateSingleSeasonRecordIfHigher(ssr, 'mostGoals', { playerId: p.id, name: p.name, pos: entry.pos, val: goals, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    updateSingleSeasonRecordIfHigher(ssr, 'mostAssists', { playerId: p.id, name: p.name, pos: entry.pos, val: assists, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    updateSingleSeasonRecordIfHigher(ssr, 'mostCleanSheets', { playerId: p.id, name: p.name, pos: entry.pos, val: cs, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
     if (apps >= 15 && avgNum > 0) {
-      updateSingleSeasonRecordIfHigher(ssr, 'bestAvgRating', { playerId: p.id, name: p.name, pos: entry.pos, val: avgNum, seasonYear: seasonYearStr });
+      updateSingleSeasonRecordIfHigher(ssr, 'bestAvgRating', { playerId: p.id, name: p.name, pos: entry.pos, val: avgNum, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
     }
   }
 
@@ -22056,6 +22142,96 @@ function evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj) {
   return awardEntry;
 }
 
+function showMonthlyMvpAwardModal(monthlyMvp) {
+  if (!monthlyMvp || typeof showGmModal !== 'function') return;
+  const clubObj = typeof getClubById === 'function' ? getClubById(monthlyMvp.clubId) : null;
+  const avatarHtml = renderAwardPlayerAvatarHtml(
+    monthlyMvp.playerId,
+    monthlyMvp.avatarSpec,
+    clubObj,
+    56,
+    'monthly-mvp-avatar'
+  );
+  const emblemHtml = typeof getClubEmblemSvg === 'function'
+    ? getClubEmblemSvg(clubObj || monthlyMvp.clubName, 20, 'monthly-mvp-emblem')
+    : '';
+  const trophySvg = buildAwardHonorIconSvg('MONTHLY_MVP', '月間MVP', 16);
+  const canOpen = Boolean(monthlyMvp.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(monthlyMvp.playerId));
+  const ownTagHtml = monthlyMvp.isPlayerClub
+    ? '<span class="monthly-mvp-own-tag mono">自クラブ所属</span>'
+    : '';
+
+  const detailHtml = `
+    <div class="monthly-mvp-modal-wrap">
+      <div class="monthly-mvp-hero ${monthlyMvp.isPlayerClub ? 'is-player-club' : ''}">
+        <div class="monthly-mvp-avatar-frame">${avatarHtml}</div>
+        <div class="monthly-mvp-hero-meta">
+          <div class="monthly-mvp-kicker mono">
+            ${trophySvg}
+            <span>${escapeCommHtml(monthlyMvp.divisionLabel || 'ENG-D1')} · ${monthlyMvp.month}月度 最優秀選手</span>
+          </div>
+          <div class="monthly-mvp-player-row">
+            <span class="pos-tag pos-${escapeCommHtml(monthlyMvp.pos || 'MF')}">${escapeCommHtml(monthlyMvp.pos || 'MF')}</span>
+            <strong class="monthly-mvp-player-name">${escapeCommHtml(monthlyMvp.playerName)}</strong>
+          </div>
+          <div class="monthly-mvp-club-row">
+            ${emblemHtml}
+            <span class="monthly-mvp-club-name">${escapeCommHtml(monthlyMvp.clubName)}</span>
+            ${ownTagHtml}
+          </div>
+        </div>
+      </div>
+      <div class="monthly-mvp-stats-strip">
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">出場</span>
+          <span class="monthly-mvp-stat-val mono">${monthlyMvp.apps}試合</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">得点</span>
+          <span class="monthly-mvp-stat-val mono accent-green">${monthlyMvp.goals}G</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">アシスト</span>
+          <span class="monthly-mvp-stat-val mono text-cyan">${monthlyMvp.assists}A</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">平均評価</span>
+          <span class="monthly-mvp-stat-val mono accent-gold">${escapeCommHtml(monthlyMvp.avgRating)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const actions = [];
+  if (canOpen) {
+    actions.push({
+      label: '選手詳細を見る',
+      className: 'btn btn-secondary',
+      onClick: () => { if (typeof openPlayerProfileModal === 'function') openPlayerProfileModal(monthlyMvp.playerId); }
+    });
+  }
+  actions.push({
+    label: '表彰を閉じる',
+    className: 'btn btn-primary',
+    onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+  });
+
+  const descText = monthlyMvp.isPlayerClub
+    ? `自クラブの ${monthlyMvp.playerName} が ${monthlyMvp.month}月度の${monthlyMvp.divisionLabel || 'ENG-D1'}月間最優秀選手（月間MVP）に選出されました。`
+    : `${monthlyMvp.clubName} の ${monthlyMvp.playerName} が ${monthlyMvp.month}月度の${monthlyMvp.divisionLabel || 'ENG-D1'}月間最優秀選手（月間MVP）に選出されました。`;
+
+  showGmModal({
+    variant: 'monthly-mvp-ceremony',
+    hideSecretary: true,
+    category: `${monthlyMvp.year}年${monthlyMvp.month}月度 月間表彰`,
+    title: `${monthlyMvp.month}月度 月間MVP発表`,
+    description: descText,
+    detailHtml,
+    actions,
+    soundKey: 'sfx_notify'
+  });
+}
+
 function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, seasonNum, seasonYearStr) {
   const sortedClubs = [...(leagueClubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0));
   const clubRankMap = new Map();
@@ -22139,7 +22315,8 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
     won: bestMgrCand.club.won || 0,
     drawn: bestMgrCand.club.drawn || 0,
     lost: bestMgrCand.club.lost || 0,
-    pts: bestMgrCand.club.pts || 0
+    pts: bestMgrCand.club.pts || 0,
+    avatarSpec: buildAvatarSpecSnapshot(bestMgrCand.mgr)
   } : null;
 
   // 年間ベストイレブン（4-3-3配置）
@@ -22310,6 +22487,7 @@ function buildSeasonAwardsHtml(awardsObj) {
   const renderWinnerRow = (awardLabel, winner, statText, accentCls = 'accent-gold') => {
     if (!winner) return '';
     const clubObj = (typeof getClubById === 'function' && winner.clubId) ? getClubById(winner.clubId) : winner.clubName;
+    const avatarHtml = renderAwardPlayerAvatarHtml(winner.playerId, winner.avatarSpec, typeof clubObj === 'object' ? clubObj : null, 28, 'awards-row-avatar');
     const emblemHtml = (typeof getClubEmblemSvg === 'function' && clubObj) ? getClubEmblemSvg(clubObj, 18, 'awards-club-emblem') : '';
     const canOpen = Boolean(winner.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(winner.playerId));
     const nameHtml = canOpen
@@ -22319,6 +22497,7 @@ function buildSeasonAwardsHtml(awardsObj) {
       <div class="awards-title-row ${winner.isPlayerClub ? 'is-player-club' : ''}">
         <span class="awards-award-name ${accentCls}">${escapeCommHtml(awardLabel)}</span>
         <div class="awards-winner-main">
+          ${avatarHtml}
           ${emblemHtml}
           ${nameHtml}
           <span class="awards-club-code mono">${escapeCommHtml(winner.clubShortCode || winner.clubName || '')}</span>
@@ -22330,10 +22509,16 @@ function buildSeasonAwardsHtml(awardsObj) {
 
   const mgr = awardsObj.bestManager;
   const mgrClubObj = mgr && typeof getClubById === 'function' ? getClubById(mgr.clubId) : (mgr ? mgr.clubName : null);
+  const liveMgr = (mgr && mgrClubObj && typeof mgrClubObj === 'object' && mgrClubObj.manager && mgrClubObj.manager.name === mgr.name) ? mgrClubObj.manager : null;
+  const mgrAvatarObj = mgr ? (liveMgr || mgr.avatarSpec || { id: `mgr_${mgr.clubId || mgr.name}`, name: mgr.name }) : null;
+  const mgrAvatarHtml = (mgr && typeof getManagerAvatarHtml === 'function')
+    ? getManagerAvatarHtml(mgrAvatarObj, 'avatar-sm awards-row-avatar', 28)
+    : '';
   const mgrRowHtml = mgr ? `
     <div class="awards-title-row ${mgr.isPlayerClub ? 'is-player-club' : ''}">
       <span class="awards-award-name text-cyan">最優秀監督</span>
       <div class="awards-winner-main">
+        ${mgrAvatarHtml}
         ${(typeof getClubEmblemSvg === 'function' && mgrClubObj) ? getClubEmblemSvg(mgrClubObj, 18, 'awards-club-emblem') : ''}
         <span class="awards-winner-name">${escapeCommHtml(mgr.name)}</span>
         <span class="awards-club-code mono">${escapeCommHtml(mgr.clubShortCode || mgr.clubName)}</span>
@@ -22400,14 +22585,21 @@ function renderClubRecordsView() {
       { label: '単年最多完封', rec: ssr.mostCleanSheets, suffix: 'CS' },
       { label: '単年最高評価点', rec: ssr.bestAvgRating, suffix: '' }
     ];
-    const ssrHtml = recordItems.map(item => `
-      <div class="hof-record-row">
-        <span class="hof-record-label">${item.label}</span>
-        ${item.rec
-          ? `<span class="hof-record-val mono">${escapeCommHtml(item.rec.name)} <strong class="accent-gold">${item.rec.val}${item.suffix}</strong> <span class="text-muted">(${escapeCommHtml(item.rec.seasonYear)})</span></span>`
-          : '<span class="hof-record-val mono text-muted">記録待ち</span>'}
-      </div>
-    `).join('');
+    const ssrHtml = recordItems.map(item => {
+      let valHtml = '<span class="hof-record-val mono text-muted">記録待ち</span>';
+      if (item.rec) {
+        const hofPlayer = item.rec.playerId && hof.players ? hof.players[item.rec.playerId] : null;
+        const recSpec = item.rec.avatarSpec || (hofPlayer && hofPlayer.avatarSpec) || { id: item.rec.playerId || item.rec.name, name: item.rec.name, pos: item.rec.pos || 'CM' };
+        const recAvatarHtml = renderAwardPlayerAvatarHtml(item.rec.playerId, recSpec, playerClub, 22, 'awards-row-avatar-xs');
+        valHtml = `<span class="hof-record-val mono">${recAvatarHtml}<span class="hof-record-name">${escapeCommHtml(item.rec.name)}</span> <strong class="accent-gold">${item.rec.val}${item.suffix}</strong> <span class="text-muted">(${escapeCommHtml(item.rec.seasonYear)})</span></span>`;
+      }
+      return `
+        <div class="hof-record-row">
+          <span class="hof-record-label">${item.label}</span>
+          ${valHtml}
+        </div>
+      `;
+    }).join('');
 
     const rowsHtml = allHof.slice(0, 30).map((entry, idx) => {
       const canOpen = Boolean(!entry.isRetired && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(entry.id));
@@ -22415,6 +22607,8 @@ function renderClubRecordsView() {
       const statusCls = entry.isRetired ? 'text-muted' : (entry.departed ? 'text-muted' : 'accent-green');
       const awardsCount = Array.isArray(entry.awards) ? entry.awards.length : 0;
       const awardsSummary = awardsCount > 0 ? `<span class="hof-award-inline mono accent-gold">受賞 ${awardsCount}回</span>` : '';
+      const entrySpec = entry.avatarSpec || { id: entry.id, name: entry.name, pos: entry.pos || 'CM' };
+      const entryAvatarHtml = renderAwardPlayerAvatarHtml(entry.id, entrySpec, playerClub, 28, 'awards-row-avatar');
       const nameHtml = canOpen
         ? `<button type="button" class="player-name-link clickable-player-name" data-award-profile-id="${escapeCommHtml(entry.id)}">${escapeCommHtml(entry.name)}</button>`
         : `<span class="hof-player-name">${escapeCommHtml(entry.name)}</span>`;
@@ -22422,6 +22616,7 @@ function renderClubRecordsView() {
         <div class="hof-rank-row">
           <div class="hof-rank-left">
             <span class="hof-rank-num mono">${idx + 1}</span>
+            ${entryAvatarHtml}
             <span class="pos-tag pos-${escapeCommHtml(entry.pos)}">${escapeCommHtml(entry.pos)}</span>
             ${nameHtml}
             <span class="hof-player-status mono ${statusCls}">${statusLabel}</span>
@@ -22475,6 +22670,7 @@ function renderClubRecordsView() {
         <div class="awards-title-row ${item.c.isPlayer ? 'is-player-club' : ''}">
           <span class="awards-award-name accent-gold">${lbl}</span>
           <div class="awards-winner-main">
+            ${renderAwardPlayerAvatarHtml(item.p.id, item.p, item.c, 28, 'awards-row-avatar')}
             ${typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(item.c, 18, 'awards-club-emblem') : ''}
             <button type="button" class="player-name-link clickable-player-name awards-winner-name" data-award-profile-id="${escapeCommHtml(item.p.id)}">${escapeCommHtml(item.p.name)}</button>
             <span class="awards-club-code mono">${escapeCommHtml(getClubShortCode(item.c))}</span>
@@ -22498,11 +22694,14 @@ function renderClubRecordsView() {
     } else {
       const mRowsHtml = monthlyAwardsList.map(m => {
         const clubObj = (typeof getClubById === 'function' ? getClubById(m.clubId) : null) || m.clubName;
+        const mSpec = m.avatarSpec || { id: m.playerId || m.playerName, name: m.playerName, pos: m.pos || 'MF' };
+        const mAvatarHtml = renderAwardPlayerAvatarHtml(m.playerId, mSpec, typeof clubObj === 'object' ? clubObj : null, 28, 'awards-row-avatar');
         const canOpen = Boolean(m.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(m.playerId));
         return `
           <div class="monthly-award-row ${m.isPlayerClub ? 'is-player-club' : ''}">
             <div class="monthly-award-left">
               <span class="monthly-award-period mono">${m.year}/${String(m.month).padStart(2, '0')}</span>
+              ${mAvatarHtml}
               ${typeof getClubEmblemSvg === 'function' && clubObj ? getClubEmblemSvg(clubObj, 18, 'awards-club-emblem') : ''}
               ${canOpen
                 ? `<button type="button" class="player-name-link clickable-player-name" data-award-profile-id="${escapeCommHtml(m.playerId)}">${escapeCommHtml(m.playerName)}</button>`

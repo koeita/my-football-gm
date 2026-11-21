@@ -43,10 +43,11 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('.settlement-tab-bar', self.css)
 
     def test_2_monthly_mvp_milestones_and_late_title_race(self):
-        """月間MVP・試合後マイルストーン/連続ゴール・終盤タイトル争い速報を検証"""
+        """月間MVP・別モーダル表彰・試合後マイルストーン/連続ゴール・終盤タイトル争い速報を検証"""
         for sym in [
             'function captureMonthlyPlayerBaseline(',
             'function evaluateMonthlyMvpAward(',
+            'function showMonthlyMvpAwardModal(',
             'function checkPlayerMatchMilestonesAndStreaks(',
             'function checkLateSeasonTitleRaceNews(',
             'monthlyAwardsHistory:',
@@ -55,8 +56,10 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
             self.assertIn(sym, self.main_js)
 
         monthly_start = self.main_js.index('function sendMonthlyBoardReport(')
-        monthly_block = self.main_js[monthly_start:monthly_start + 1200]
+        monthly_end = self.main_js.index('function generateMatchweekNews(', monthly_start)
+        monthly_block = self.main_js[monthly_start:monthly_end]
         self.assertIn('evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj)', monthly_block)
+        self.assertIn('showMonthlyMvpAwardModal(monthlyMvp)', monthly_block)
 
         # handlePlayerMatchCompleted 先頭600文字制約を壊さず後方からフックしていること
         comp_start = self.main_js.index('function handlePlayerMatchCompleted(')
@@ -66,9 +69,10 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('checkLateSeasonTitleRaceNews()', comp_block)
 
     def test_3_yearly_profile_awards_and_career_milestones(self):
-        """選手プロフィールの年別MOM列・受賞歴・経歴マイルストーン統合を検証"""
-        self.assertIn('profile-awards-summary', self.main_js)
-        self.assertIn('yearly-award-inline', self.main_js)
+        """選手プロフィールの年別MOM列・上部年度別受賞歴ショーケース・経歴マイルストーン統合を検証"""
+        self.assertIn('profile-awards-showcase', self.main_js)
+        self.assertIn('function buildAwardHonorIconSvg(', self.main_js)
+        self.assertNotIn('yearly-award-inline', self.main_js)
         self.assertIn('<th class="col-num">MOM</th>', self.main_js)
         self.assertIn('totalMomSum', self.main_js)
 
@@ -80,12 +84,23 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('Array.isArray(p.milestones)', career_match.group(0))
 
     def test_4_team_records_subtab_storage_and_rules_compliance(self):
-        """チームタブ「記録・表彰」サブタブ・セーブ互換・絵文字禁止・波括弧バランスを検証"""
+        """チームタブ「記録・表彰」サブタブ・顔アバター表示・セーブ互換・絵文字禁止・波括弧バランスを検証"""
         self.assertIn('data-team-subtab="records"', self.html)
         self.assertIn('id="team-subview-records"', self.html)
         self.assertIn('id="club-records-panel"', self.html)
         self.assertIn('function renderClubRecordsView(', self.main_js)
+        self.assertIn('function renderAwardPlayerAvatarHtml(', self.main_js)
         self.assertIn("subtabKey === 'records'", self.main_js)
+
+        awards_start = self.main_js.index('function buildSeasonAwardsHtml(')
+        awards_end = self.main_js.index('function bindAwardProfileClicks(', awards_start)
+        awards_block = self.main_js[awards_start:awards_end]
+        self.assertIn('renderAwardPlayerAvatarHtml(', awards_block)
+        self.assertIn('getManagerAvatarHtml(', awards_block)
+
+        records_start = self.main_js.index('function renderClubRecordsView(')
+        records_block = self.main_js[records_start:]
+        self.assertGreaterEqual(records_block.count('renderAwardPlayerAvatarHtml('), 4)
 
         for field in ['seasonAwardsHistory:', 'monthlyAwardsHistory:', 'monthlyPlayerBaseline:', 'clubHallOfFame:']:
             self.assertIn(field, self.storage_js)

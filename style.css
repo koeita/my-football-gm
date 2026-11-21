@@ -21397,36 +21397,296 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-/* 選手プロフィール：年別成績の受賞歴・経歴バッジ */
-.profile-awards-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 6px 4px;
+/* 選手プロフィール：年別成績の上部・年度別受賞歴ショーケース */
+.profile-awards-showcase {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.11) 0%, rgba(36, 40, 44, 0.55) 100%);
+  border-left: 3px solid #f59e0b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 11px;
-  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
-.profile-awards-label {
-  color: #8b949e;
+.profile-awards-showcase-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.profile-awards-showcase-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.profile-awards-showcase-count {
+  font-size: 11px;
   font-weight: 700;
+  color: #cbd5e1;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.profile-awards-vals {
-  color: #f59e0b;
-  font-weight: 800;
-  line-height: 1.4;
+.profile-awards-year-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.yearly-award-inline {
+.profile-awards-year-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
+}
+
+.profile-awards-year {
+  width: 62px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  line-height: 1.6;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-awards-honors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-award-honor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-award-honor.is-gold {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.profile-award-honor.is-green {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.14);
+}
+
+.profile-award-honor.is-cyan {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.award-honor-svg {
   display: inline-block;
-  font-size: 10px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.award-honor-svg.is-gold { color: #f59e0b; }
+.award-honor-svg.is-green { color: #2ecc71; }
+.award-honor-svg.is-cyan { color: #38bdf8; }
+
+/* 記録・表彰用顔アバター */
+.player-avatar.awards-row-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  flex-shrink: 0;
+  background: #1a1d20;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+.player-avatar.awards-row-avatar-xs {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  flex-shrink: 0;
+  background: #1a1d20;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+.awards-title-row.is-player-club .player-avatar.awards-row-avatar,
+.monthly-award-row.is-player-club .player-avatar.awards-row-avatar {
+  border-color: #2ecc71;
+}
+
+/* 月間MVP 専用表彰モーダル */
+.gm-secretary-modal-card.is-monthly-mvp-ceremony {
+  border-top: 3px solid #f59e0b !important;
+  min-height: auto !important;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-stage-body {
+  padding-top: 12px;
+  background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.16), transparent 64%);
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-dialogue-card {
+  padding-top: 14px;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: #151920;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-nameplate-row {
+  margin-top: 0;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-pill-badge {
+  background: #f59e0b;
+  color: #1c1002;
+}
+
+.monthly-mvp-modal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.monthly-mvp-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(26, 29, 32, 0.65) 100%);
+  border-left: 3px solid #f59e0b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.monthly-mvp-hero.is-player-club {
+  border-left-color: #2ecc71;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.14) 0%, rgba(26, 29, 32, 0.65) 100%);
+}
+
+.monthly-mvp-avatar-frame {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-avatar.monthly-mvp-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #1a1d20;
+  border: 2px solid #f59e0b;
+  box-shadow: none;
+}
+
+.monthly-mvp-hero.is-player-club .player-avatar.monthly-mvp-avatar {
+  border-color: #2ecc71;
+}
+
+.monthly-mvp-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.monthly-mvp-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   font-weight: 800;
   color: #f59e0b;
-  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.monthly-mvp-player-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.monthly-mvp-player-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monthly-mvp-club-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.monthly-mvp-club-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monthly-mvp-own-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.monthly-mvp-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 6px 2px 2px;
+}
+
+.monthly-mvp-stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.monthly-mvp-stat-label {
+  font-size: 10.5px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.monthly-mvp-stat-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
 }
 
 .profile-timeline-badge.badge-award {
@@ -21457,12 +21717,13 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .hof-record-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 6px 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 12px;
+  min-width: 0;
 }
 
 .hof-record-label {
@@ -21474,11 +21735,21 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .hof-record-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #f1f5f9;
   font-size: 11.5px;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hof-record-name {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .hof-metric-bar {
@@ -21608,6 +21879,31 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     width: 100%;
     justify-content: flex-end;
     gap: 10px;
+  }
+  .profile-awards-year-row {
+    gap: 8px;
+  }
+  .profile-awards-year {
+    width: 54px;
+    font-size: 10.5px;
+  }
+  .profile-award-honor {
+    font-size: 11px;
+    padding: 2px 6px 2px 5px;
+  }
+  .monthly-mvp-hero {
+    gap: 10px;
+    padding: 9px 10px;
+  }
+  .player-avatar.monthly-mvp-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .monthly-mvp-player-name {
+    font-size: 14px;
+  }
+  .monthly-mvp-stat-val {
+    font-size: 12.5px;
   }
 }
 
