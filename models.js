@@ -3058,71 +3058,80 @@ function computeStatGrowth(player, isPlayerClub = false) {
     if (dSta > 0) dSta = Math.max(dSta + 1, Math.round(dSta * 1.30));
   }
 
-  // トレーニング＆メディカル施設Lvによる若手・成長期ボーナス
+  // トレーニング＆メディカル施設Lvによる成長期ボーナス（最大+1）
   if (isPlayerClub) {
     const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
-    if (trainingLv > 1 && age <= 26) {
-      const bonusChance = (trainingLv - 1) * 0.25;
-      const extraBonus = (trainingLv >= 4 && age <= 22) ? 1 : 0;
-      if (Math.random() < bonusChance) dAtk += 1 + extraBonus;
-      if (Math.random() < bonusChance) dDef += 1 + extraBonus;
+    if (trainingLv > 1 && age <= 25) {
+      const bonusChance = (trainingLv - 1) * 0.20;
+      if (Math.random() < bonusChance) dAtk += 1;
+      if (Math.random() < bonusChance) dDef += 1;
       if (Math.random() < bonusChance) dSta += 1;
     }
 
-    // 指導陣（COACHING STAFF）専門育成補正
+    // 指導陣（COACHING STAFF）専門育成補正（成長期は+1上限・衰え期は劣化緩和のみ）
     const playerClub = getPlayerClub();
     if (playerClub && playerClub.coaches) {
       const coaches = playerClub.coaches;
-      const pos = player.pos;
-
-      // 1. オフェンスコーチ（最大2名）：youthDev・coachingランクに応じたFW/WG/AM育成補正
-      if (['CF', 'LW', 'RW', 'AM'].includes(pos) && Array.isArray(coaches.attacking)) {
-        coaches.attacking.forEach(c => {
+      const pos = player.primaryPosition || player.pos || 'CM';
+      const getFieldCoachChance = (rank) => (rank === 'S' ? 0.42 : (rank === 'A' ? 0.32 : (rank === 'B' ? 0.22 : 0.14)));
+      const applyFieldCoachGroup = (coachList, eligiblePositions, deltaVal) => {
+        if (!Array.isArray(coachList) || coachList.length === 0) return deltaVal;
+        const isDirect = eligiblePositions.includes(pos);
+        const isHalf = pos === 'CM';
+        if (!isDirect && !isHalf) return deltaVal;
+        let totalChance = 0;
+        coachList.forEach(c => {
           if (!c) return;
           ensureCoachStats(c);
-          const yRk = getStaffStatRank(c.stats.youthDev);
-          const bonusAmt = (yRk === 'S' || yRk === 'A') ? 2 : 1;
-          const chance = yRk === 'S' ? 0.80 : (yRk === 'A' ? 0.65 : (yRk === 'B' ? 0.48 : 0.32));
-          if (Math.random() < chance) dAtk += bonusAmt;
+          totalChance += getFieldCoachChance(getStaffStatRank(c.stats.youthDev));
         });
-      }
+        if (isHalf) totalChance *= 0.5;
+        totalChance = Math.min(0.65, totalChance);
+        if (age <= 26) {
+          if (Math.random() < totalChance) deltaVal += 1;
+        } else if (age >= 30 && deltaVal < 0) {
+          if (Math.random() < Math.min(0.35, totalChance * 0.55)) deltaVal += 1;
+        }
+        return deltaVal;
+      };
 
-      // 2. ディフェンスコーチ（最大2名）：youthDevランクに応じたDF/DM育成補正
-      if (['CB', 'LB', 'RB', 'DM'].includes(pos) && Array.isArray(coaches.defending)) {
-        coaches.defending.forEach(c => {
-          if (!c) return;
-          ensureCoachStats(c);
-          const yRk = getStaffStatRank(c.stats.youthDev);
-          const bonusAmt = (yRk === 'S' || yRk === 'A') ? 2 : 1;
-          const chance = yRk === 'S' ? 0.80 : (yRk === 'A' ? 0.65 : (yRk === 'B' ? 0.48 : 0.32));
-          if (Math.random() < chance) dDef += bonusAmt;
-        });
-      }
+      // 1. オフェンスコーチ（最大2名）：攻撃陣成長＆ベテラン衰え緩和
+      dAtk = applyFieldCoachGroup(coaches.attacking, ['CF', 'ST', 'LW', 'RW', 'WG', 'AM', 'LM', 'RM', 'SM'], dAtk);
 
-      // 3. GKコーチ（1名）：GKの能力成長速度を引き上げ
+      // 2. ディフェンスコーチ（最大2名）：守備陣成長＆ベテラン衰え緩和
+      dDef = applyFieldCoachGroup(coaches.defending, ['CB', 'LB', 'RB', 'SB', 'LWB', 'RWB', 'DM'], dDef);
+
+      // 3. GKコーチ（1名）：GK成長＆衰え緩和
       if (pos === 'GK' && coaches.goalkeeping) {
         const c = coaches.goalkeeping;
         ensureCoachStats(c);
         const yRk = getStaffStatRank(c.stats.youthDev);
-        const bonusAmt = (yRk === 'S' || yRk === 'A') ? 3 : (yRk === 'B' ? 2 : 1);
-        dDef += bonusAmt;
-        if (Math.random() < 0.6) dSta += 1;
+        const gkChance = yRk === 'S' ? 0.65 : (yRk === 'A' ? 0.50 : (yRk === 'B' ? 0.35 : 0.22));
+        if (age <= 26) {
+          if (Math.random() < gkChance) dDef += 1;
+          if (yRk === 'S' && Math.random() < 0.20) dDef += 1;
+        } else if (age >= 30 && dDef < 0) {
+          if (Math.random() < gkChance * 0.55) dDef += 1;
+        }
       }
 
-      // 4. フィジカルコーチ（1名）：フィジカル成長促進
+      // 4. フィジカルコーチ（1名）：スタミナ成長＆ベテラン体力衰え緩和
       if (coaches.fitness) {
         const c = coaches.fitness;
         ensureCoachStats(c);
         const cRk = getStaffStatRank(c.stats.coaching);
-        const bonusAmt = (cRk === 'S' || cRk === 'A') ? 2 : 1;
-        const chance = cRk === 'S' ? 0.75 : (cRk === 'A' ? 0.60 : (cRk === 'B' ? 0.45 : 0.30));
-        if (Math.random() < chance) dSta += bonusAmt;
+        const fitChance = cRk === 'S' ? 0.60 : (cRk === 'A' ? 0.45 : (cRk === 'B' ? 0.30 : 0.18));
+        if (age <= 26) {
+          if (Math.random() < fitChance) dSta += 1;
+        } else if (age >= 30 && dSta < 0) {
+          if (Math.random() < fitChance * 0.60) dSta += 1;
+        }
       }
 
       // 5. コーチ陣の若手育成(youthDev) ＆ 監督の育成手腕(development)・ランク補正
       const coachEff = getClubCoachingEffects(playerClub);
       if (age <= 22 && coachEff.youthDevBonus > 0 && Math.random() < coachEff.youthDevBonus) {
-        if (player.pos === 'GK') dDef += 1;
+        if (pos === 'GK') dDef += 1;
         else { dAtk += 1; dDef += 1; }
       }
       if (playerClub.manager) {
@@ -3130,12 +3139,24 @@ function computeStatGrowth(player, isPlayerClub = false) {
         if (age <= 22 && Math.random() < mgrEff.youthGrowthBonus) {
           dAtk += 1;
           dDef += 1;
-        } else if (age <= 27 && mgrEff.allGrowthBonus > 0 && Math.random() < mgrEff.allGrowthBonus) {
+        } else if (age <= 26 && mgrEff.allGrowthBonus > 0 && Math.random() < mgrEff.allGrowthBonus) {
           dAtk += 1;
         }
       }
     }
   }
+
+  // 高OVR帯（80+）の収穫逓減（成長インフレ・全員99化を防止）
+  const applySoftCap = (delta, curVal) => {
+    if (delta <= 0) return delta;
+    if (curVal >= 88) return Math.min(1, Math.round(delta * 0.30));
+    if (curVal >= 84) return Math.min(2, Math.max(delta >= 2 ? 1 : 0, Math.round(delta * 0.50)));
+    if (curVal >= 80) return Math.min(3, Math.max(1, Math.round(delta * 0.72)));
+    return Math.min(5, delta);
+  };
+  dAtk = applySoftCap(dAtk, player.atk || 70);
+  dDef = applySoftCap(dDef, player.def || 70);
+  dSta = applySoftCap(dSta, player.sta || 70);
 
   return { dAtk, dDef, dSta };
 }
