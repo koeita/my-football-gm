@@ -1517,8 +1517,16 @@ function ensurePlayableClubStructure(club) {
   if (typeof club.supporters !== 'number') club.supporters = 14000;
   if (!club.formation) club.formation = '4-3-3';
   if (!club.tactic) club.tactic = 'counter';
-  if (!club.manager && typeof MANAGERS_DATABASE !== 'undefined' && typeof createManager === 'function') {
-    club.manager = createManager(MANAGERS_DATABASE[0], club.id, usedNames);
+  if (!club.manager && typeof MANAGERS_DATABASE !== 'undefined' && Array.isArray(MANAGERS_DATABASE) && MANAGERS_DATABASE.length > 0 && typeof createManager === 'function') {
+    const preferredRanks = rawTeamOvr >= 72 ? ['B', 'C'] : ['C', 'D'];
+    let mgrPool = MANAGERS_DATABASE.filter(m => m && preferredRanks.includes(m.rank));
+    if (mgrPool.length === 0) {
+      mgrPool = MANAGERS_DATABASE.filter(m => m && m.rank !== 'S' && m.rank !== 'A');
+    }
+    if (mgrPool.length === 0) mgrPool = MANAGERS_DATABASE;
+    const idSeed = String(club.id || club.name || 'd2').split('').reduce((acc, ch) => acc + ch.charCodeAt(0) * 19, 7);
+    const pickedDef = mgrPool[Math.abs(idSeed) % mgrPool.length];
+    club.manager = createManager(pickedDef, club.id, usedNames);
   }
   if (!club.coaches && typeof createInitialCoaches === 'function') {
     club.coaches = createInitialCoaches(Boolean(club.isPlayer));

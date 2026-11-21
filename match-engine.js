@@ -159,6 +159,52 @@ function selectWeightedMatchScorer(starters, rawTactic = 'balanced') {
   return pool[pool.length - 1];
 }
 
+const ASSIST_POSITION_WEIGHTS = {
+  AM: 18,
+  LW: 15, RW: 15, WG: 15,
+  LM: 12, RM: 12, SM: 12,
+  CM: 11,
+  LWB: 8.5, RWB: 8.5,
+  LB: 7.5, RB: 7.5, SB: 7.5,
+  CF: 6.0, ST: 6.0, FW: 6.0,
+  DM: 5.0,
+  CB: 1.8, DF: 2.5
+};
+
+/**
+ * 選手ポジション・戦術・OVRに基づく重み付きアシスト選手選出
+ */
+function selectWeightedMatchAssister(pool, scorer, rawTactic = 'balanced') {
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  const tactic = typeof normalizeTacticKey === 'function' ? normalizeTacticKey(rawTactic) : (rawTactic || 'balanced');
+  const cands = pool.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
+  if (cands.length === 0) return null;
+
+  let totalW = 0;
+  const weights = cands.map(p => {
+    const pos = p.assignedPos || p.primaryPosition || p.pos || 'CM';
+    let baseW = ASSIST_POSITION_WEIGHTS[pos] ?? 6.0;
+    if (tactic === 'wingplay' && ['LW', 'RW', 'WG', 'LM', 'RM', 'SM', 'LB', 'RB', 'LWB', 'RWB', 'SB'].includes(pos)) {
+      baseW *= 1.35;
+    } else if (tactic === 'possession' && (pos === 'AM' || pos === 'CM')) {
+      baseW *= 1.12;
+    }
+    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (typeof p.ovr === 'number' ? p.ovr : 70);
+    const skillMult = clamp(0.70 + ((ovr - 70) * 0.025), 0.65, 1.35);
+    const w = Math.max(0.2, baseW * skillMult);
+    totalW += w;
+    return w;
+  });
+
+  if (totalW <= 0) return cands[0];
+  let r = Math.random() * totalW;
+  for (let i = 0; i < cands.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return cands[i];
+  }
+  return cands[cands.length - 1];
+}
+
 function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, options = {}) {
   const { recordOfficial = true, homeSubs = [], awaySubs = [] } = options;
   const homeStarters = ensureClubStartersForMatch(homeClub);
@@ -166,39 +212,9 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, 
 
   const pickScorer = (pool, club) => selectWeightedMatchScorer(pool, club && club.tactic);
 
-  const assistPosWeights = {
-    AM: 18,
-    LW: 15, RW: 15, WG: 15,
-    LM: 12, RM: 12, SM: 12,
-    CM: 11,
-    LWB: 8.5, RWB: 8.5,
-    LB: 7.5, RB: 7.5, SB: 7.5,
-    CF: 6.0, ST: 6.0, FW: 6.0,
-    DM: 5.0,
-    CB: 1.8, DF: 2.5
-  };
-
-  const pickAssister = (pool, scorer) => {
+  const pickAssister = (pool, scorer, club) => {
     if (Math.random() > 0.72) return null;
-    const cands = pool.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
-    if (cands.length === 0) return null;
-    let totalW = 0;
-    const weights = cands.map(p => {
-      const pos = p.assignedPos || p.primaryPosition || p.pos || 'CM';
-      const baseW = assistPosWeights[pos] ?? 6.0;
-      const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (typeof p.ovr === 'number' ? p.ovr : 70);
-      const skillMult = clamp(0.70 + ((ovr - 70) * 0.025), 0.65, 1.35);
-      const w = Math.max(0.2, baseW * skillMult);
-      totalW += w;
-      return w;
-    });
-    if (totalW <= 0) return cands[0];
-    let r = Math.random() * totalW;
-    for (let i = 0; i < cands.length; i++) {
-      r -= weights[i];
-      if (r <= 0) return cands[i];
-    }
-    return cands[cands.length - 1];
+    return selectWeightedMatchAssister(pool, scorer, club && club.tactic);
   };
 
   const buildSideQuickScorers = (starters, subs, score, club) => {
@@ -209,7 +225,7 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, 
         ? [...starters.slice(0, Math.max(6, 11 - subs.length)), ...subs]
         : starters;
       const p = pickScorer(activePool, club);
-      const assister = pickAssister(activePool, p);
+      const assister = pickAssister(activePool, p, club);
       if (recordOfficial) {
         if (p) {
           p.goals = (p.goals || 0) + 1;
@@ -1943,33 +1959,9 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
   const getScorer = (starters, rawTactic) => selectWeightedMatchScorer(starters, rawTactic);
 
   const getAssister = (starters, scorer, rawTactic) => {
-    const tactic = normalizeTacticKey(rawTactic);
     // 約75%の確率でアシストが発生（残り25%は単独突破やPK/相手ミスなど）
     if (Math.random() < 0.25) return null;
-    const candidates = starters.filter(p => p.id !== scorer.id && POS_ROLE_GROUP[p.assignedPos || p.pos] !== 'GK');
-    if (candidates.length === 0) return null;
-
-    // ワイドアタック時は両翼（LW/RW/LM/RM/LB/RB/LWB/RWB）からのクロスアシスト確率が大幅UP
-    if (tactic === 'wingplay') {
-      const wideCandidates = candidates.filter(p => ['LW', 'RW', 'LM', 'RM', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
-      if (wideCandidates.length > 0 && Math.random() < 0.72) {
-        return wideCandidates[randInt(0, wideCandidates.length - 1)];
-      }
-    }
-
-    const mfs = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'MF');
-    const fws = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'FW');
-    const dfs = candidates.filter(p => POS_ROLE_GROUP[p.assignedPos || p.pos] === 'DF');
-
-    const r = Math.random();
-    if (r < 0.60 && mfs.length > 0) {
-      return mfs[randInt(0, mfs.length - 1)];
-    } else if (r < 0.85 && fws.length > 0) {
-      return fws[randInt(0, fws.length - 1)];
-    } else if (dfs.length > 0) {
-      return dfs[randInt(0, dfs.length - 1)];
-    }
-    return candidates[randInt(0, candidates.length - 1)];
+    return selectWeightedMatchAssister(starters, scorer, rawTactic);
   };
 
   const hTacticNorm = normalizeTacticKey(homeClub.tactic);
@@ -4170,8 +4162,8 @@ function openMatchPrecheckModal() {
           <div class="ui-kv-list">
             <div class="ui-kv-row">
               <div class="ui-kv-label accent-gold-bar">采配委任</div>
-              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap;">
-                <span class="mono" style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${gameState.managerDelegationEnabled ? '監督一任モード' : 'GM手動編成'}</span>
+              <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:4px 8px; flex-wrap:wrap;">
+                <span class="mono" style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; flex-shrink:0;">${gameState.managerDelegationEnabled ? '監督一任モード' : 'GM手動編成'}</span>
                 <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px; min-width: 92px; flex-shrink: 0; justify-content: center;">
                   ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
                 </button>

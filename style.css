@@ -448,11 +448,14 @@
 :root {
   --bg-main: #121417;
   --bg-panel: #1a1e23;
+  --bg-card: #1e2228;
   --bg-surface: #22272e;
   --bg-row-hover: #262c33;
   --bg-row-player: rgba(46, 204, 113, 0.10);
   --border-color: rgba(255, 255, 255, 0.09);
   --border-focus: rgba(46, 204, 113, 0.45);
+  --radius-sm: 4px;
+  --radius-md: 6px;
   --text-main: #f0f3f6;
   --text-muted: #8b949e;
   --accent-green: #2ecc71;
@@ -16324,9 +16327,25 @@ body {
   border-color: rgba(231, 76, 60, 0.4);
 }
 
-@media (min-width: 769px) and (max-width: 1380px) {
-  .status-metrics {
+@media (min-width: 1201px) and (max-width: 1380px) {
+  .status-header {
     gap: 10px;
+    padding: 8px 14px;
+    flex-wrap: wrap;
+  }
+  .brand-area {
+    flex-shrink: 0;
+  }
+  .brand-area .club-title {
+    white-space: nowrap;
+  }
+  .status-metrics {
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .status-metrics .metric-value {
+    font-size: 12.5px;
+    white-space: nowrap;
   }
 }
 
@@ -16661,7 +16680,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   margin-top: 6px;
   padding: 6px 8px;
   border-radius: 5px;
@@ -16671,6 +16691,15 @@ body {
 .precheck-delegation-status {
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.precheck-delegation-row .btn-manager-delegation {
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 @media (max-width: 768px) {
@@ -22112,6 +22141,249 @@ button.hof-record-name {
 #player-profile-modal,
 #player-profile-modal-overlay {
   z-index: 32000 !important;
+}
+
+/* 試合前作戦最終確認モーダル：采配委任ラベルの省略防止 */
+.precheck-tactics-bar .ui-kv-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.precheck-tactics-bar .ui-kv-label {
+  margin-top: 0;
+}
+
+/* 狭幅PC（タブレット・高DPI 800px〜1200px）：ヘッダー2段組＆編成・市場テーブルの収容最適化 */
+@media (min-width: 769px) and (max-width: 1200px) {
+  .status-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 10px;
+    padding: 8px 12px;
+  }
+  .brand-area {
+    flex: 1 1 auto;
+    min-width: 240px;
+    order: 1;
+  }
+  .brand-area .brand-top-row {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .brand-area .club-title-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .brand-area .club-title {
+    white-space: nowrap;
+    font-size: 16px;
+  }
+  .header-utility-actions {
+    order: 2;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .status-metrics {
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .status-metrics .metric-box {
+    padding-left: 7px;
+    flex-shrink: 0;
+  }
+  .status-metrics .metric-label {
+    font-size: 8.5px;
+    white-space: nowrap;
+  }
+  .status-metrics .metric-value {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .status-metrics .metric-sub-value {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  /* 編成 ＞ 選手一覧（14列を776px幅内に収める） */
+  .roster-table th,
+  .roster-table td {
+    padding: 5px 2.5px;
+    font-size: 11px;
+  }
+  .roster-table thead th {
+    font-size: 9.5px;
+    letter-spacing: 0;
+    padding: 5px 2px;
+  }
+  .roster-table th.col-pos,
+  .roster-table td.col-pos {
+    width: 40px;
+    max-width: 44px;
+    padding: 5px 2px;
+    text-align: center;
+  }
+  .roster-table td.col-pos .pos-sub-text {
+    display: block;
+    font-size: 8px;
+    line-height: 1.1;
+    margin: 1px 0 0;
+    max-width: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .roster-table td.col-name {
+    max-width: 142px;
+  }
+  .roster-table td.col-name .player-name-link {
+    gap: 3px;
+    white-space: nowrap;
+    max-width: 136px;
+    overflow: hidden;
+  }
+  .roster-table td.col-name .player-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .roster-table .player-avatar.table-avatar {
+    width: 20px;
+    height: 20px;
+    margin-right: 1px;
+    flex-shrink: 0;
+  }
+  .roster-table td.col-name .badge-hg,
+  .roster-table td.col-name .badge-u21,
+  .roster-table td.col-name .sub-badge {
+    font-size: 8.5px;
+    padding: 0 3px;
+    margin-left: 2px;
+  }
+  .roster-table .col-action {
+    width: auto;
+    min-width: 0;
+    padding: 5px 3px;
+  }
+  .roster-table .action-btn-grid {
+    gap: 3px !important;
+  }
+  .roster-table .action-slot {
+    width: auto !important;
+    min-width: 0 !important;
+    height: 24px;
+  }
+  .roster-table .action-slot:empty {
+    display: none;
+  }
+  .roster-table .action-slot > button,
+  .roster-table .action-slot > a {
+    width: auto !important;
+    padding: 2px 5px !important;
+    font-size: 10px !important;
+    white-space: nowrap;
+  }
+
+  /* 移籍 ＞ 市場（10列を776px幅内に収める） */
+  .market-table th,
+  .market-table td {
+    padding: 5px 3px;
+    font-size: 11px;
+  }
+  .market-table thead th {
+    font-size: 9.5px;
+    letter-spacing: 0;
+    padding: 5px 2px;
+  }
+  .market-table th.col-pos,
+  .market-table td.col-pos {
+    width: 42px;
+    max-width: 46px;
+    padding: 5px 2px;
+    text-align: center;
+  }
+  .market-table td.col-pos .pos-sub-text {
+    display: block;
+    font-size: 8px;
+    line-height: 1.1;
+    margin: 1px 0 0;
+    max-width: 42px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .market-table td.col-name {
+    max-width: 145px;
+  }
+  .market-table td.col-name .player-name-link {
+    gap: 3px;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .market-table .player-avatar.table-avatar {
+    width: 20px;
+    height: 20px;
+    margin-right: 1px;
+    flex-shrink: 0;
+  }
+  .market-table td.col-name .sub-badge {
+    font-size: 8.5px;
+    padding: 0 3px;
+  }
+  .market-table th.col-team,
+  .market-table td.col-team {
+    max-width: 112px;
+  }
+  .market-table td.col-team .team-cell-wrap {
+    gap: 4px;
+    max-width: 108px;
+    overflow: hidden;
+  }
+  .market-table td.col-team .club-emblem {
+    width: 14px;
+    height: 14px;
+  }
+  .market-table .col-action {
+    width: auto;
+    min-width: 0;
+    padding: 5px 3px;
+  }
+  .market-table .market-action-group {
+    gap: 3px;
+  }
+  .market-table .market-scout-slot-btn {
+    width: auto;
+    min-width: 38px;
+    height: 24px;
+    padding: 2px 5px !important;
+    font-size: 10px !important;
+  }
+  .market-table .market-offer-slot-btn,
+  .market-table .btn-market-direct-offer {
+    width: auto;
+    min-width: 42px;
+    height: 24px;
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+  .market-table .btn-shortlist-icon {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    padding: 2px !important;
+    font-size: 12px !important;
+  }
 }
 
 
