@@ -293,7 +293,11 @@ function saveGameToStorage(force = false) {
         pendingLineupConsultation: gameState.pendingLineupConsultation || null,
         totalPlayerMatchesPlayed: Number(gameState.totalPlayerMatchesPlayed || 0),
         lastConsultationMatchCount: Number(gameState.lastConsultationMatchCount || 0),
-        consultationSeq: Number(gameState.consultationSeq || 0)
+        consultationSeq: Number(gameState.consultationSeq || 0),
+        seasonAwardsHistory: Array.isArray(gameState.seasonAwardsHistory) ? gameState.seasonAwardsHistory.slice(0, 20) : [],
+        monthlyAwardsHistory: Array.isArray(gameState.monthlyAwardsHistory) ? gameState.monthlyAwardsHistory.slice(0, 24) : [],
+        monthlyPlayerBaseline: (gameState.monthlyPlayerBaseline && typeof gameState.monthlyPlayerBaseline === 'object') ? gameState.monthlyPlayerBaseline : {},
+        clubHallOfFame: (gameState.clubHallOfFame && typeof gameState.clubHallOfFame === 'object') ? gameState.clubHallOfFame : { players: {}, singleSeasonRecords: {}, milestonesIssued: {}, titleRaceNewsSeason: null }
       }
     };
     if (typeof dehydrateCompetitionsForSave === 'function') {
@@ -959,6 +963,16 @@ function loadGameFromStorage() {
     if (!Array.isArray(gameState.monthlyReports)) gameState.monthlyReports = [];
     if (gameState.pendingLineupConsultation === undefined) gameState.pendingLineupConsultation = null;
     if (!Array.isArray(gameState.pendingSponsorSlots)) gameState.pendingSponsorSlots = [];
+    if (!Array.isArray(gameState.seasonAwardsHistory)) gameState.seasonAwardsHistory = [];
+    if (!Array.isArray(gameState.monthlyAwardsHistory)) gameState.monthlyAwardsHistory = [];
+    if (!gameState.monthlyPlayerBaseline || typeof gameState.monthlyPlayerBaseline !== 'object') gameState.monthlyPlayerBaseline = {};
+    if (!gameState.clubHallOfFame || typeof gameState.clubHallOfFame !== 'object') {
+      gameState.clubHallOfFame = { players: {}, singleSeasonRecords: {}, milestonesIssued: {}, titleRaceNewsSeason: null };
+    } else {
+      if (!gameState.clubHallOfFame.players || typeof gameState.clubHallOfFame.players !== 'object') gameState.clubHallOfFame.players = {};
+      if (!gameState.clubHallOfFame.singleSeasonRecords || typeof gameState.clubHallOfFame.singleSeasonRecords !== 'object') gameState.clubHallOfFame.singleSeasonRecords = {};
+      if (!gameState.clubHallOfFame.milestonesIssued || typeof gameState.clubHallOfFame.milestonesIssued !== 'object') gameState.clubHallOfFame.milestonesIssued = {};
+    }
     if (typeof gameState.totalPlayerMatchesPlayed !== 'number') gameState.totalPlayerMatchesPlayed = 0;
     if (typeof gameState.lastConsultationMatchCount !== 'number') gameState.lastConsultationMatchCount = 0;
     if (typeof gameState.consultationSeq !== 'number') gameState.consultationSeq = 0;
@@ -1025,21 +1039,52 @@ function hideMainMenuScreen() {
   }
 }
 
+function extractHallOfFameSnapshot(hofState, clubName) {
+  if (!hofState || !hofState.players || Object.keys(hofState.players).length === 0) return null;
+  const hofList = Object.values(hofState.players).filter(Boolean);
+  const topApps = [...hofList].sort((a, b) => (b.apps || 0) - (a.apps || 0))[0] || null;
+  const topGoals = [...hofList].sort((a, b) => (b.goals || 0) - (a.goals || 0))[0] || null;
+  const topAssists = [...hofList].sort((a, b) => (b.assists || 0) - (a.assists || 0))[0] || null;
+  const ssr = hofState.singleSeasonRecords || {};
+  return {
+    clubName: clubName || '',
+    topApps: topApps ? { name: topApps.name, pos: topApps.pos, val: topApps.apps || 0 } : null,
+    topGoals: topGoals ? { name: topGoals.name, pos: topGoals.pos, val: topGoals.goals || 0 } : null,
+    topAssists: topAssists ? { name: topAssists.name, pos: topAssists.pos, val: topAssists.assists || 0 } : null,
+    singleSeasonGoals: ssr.mostGoals ? { name: ssr.mostGoals.name, val: ssr.mostGoals.val, seasonYear: ssr.mostGoals.seasonYear } : null
+  };
+}
+
 function updateCareerRecordsFromCurrentState() {
   try {
     const raw = localStorage.getItem(RECORDS_STORAGE_KEY);
-    const rec = raw ? JSON.parse(raw) : {
+    const rec = {
       titlesWon: 0,
       seasonsCompleted: 0,
       bestRank: null,
       maxFunds: 0,
-      topScorersHistory: []
+      topScorersHistory: [],
+      awardsHistory: [],
+      clubRecordsSnapshot: null,
+      ...(raw ? JSON.parse(raw) : {})
     };
     const playerClub = getPlayerClub();
     if (playerClub) {
       if (playerClub.funds > (rec.maxFunds || 0)) {
         rec.maxFunds = playerClub.funds;
       }
+      if (Array.isArray(gameState.seasonAwardsHistory) && gameState.seasonAwardsHistory.length > 0) {
+        rec.awardsHistory = gameState.seasonAwardsHistory.slice(0, 10).map(a => ({
+          season: a.season,
+          seasonYear: a.seasonYear,
+          divisionLabel: a.divisionLabel || 'ENG-D1',
+          mvp: a.mvp ? `${a.mvp.name} (${a.mvp.clubName})` : '-',
+          topScorer: a.topScorer ? `${a.topScorer.name} (${a.topScorer.goals}G)` : '-',
+          clubMvp: a.clubMvp ? `${a.clubMvp.name}` : '-'
+        }));
+      }
+      const snap = extractHallOfFameSnapshot(gameState.clubHallOfFame, playerClub.name);
+      if (snap) rec.clubRecordsSnapshot = snap;
       if (gameState.isSeasonOver) {
         const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
         const activeClubs = typeof getActivePlayerLeagueClubs === 'function'
@@ -1131,6 +1176,32 @@ function openRecordsModal() {
       ? allPlayers.slice(0, 3).map((s, i) => `<div class="records-scorer-item mono"><span>#${i + 1} ${s.name} (${s.clubName})</span><strong class="accent-gold">${s.goals} GOAL</strong></div>`).join('')
       : '<div class="records-empty mono">シーズン進行後に得点王記録が刻まれます</div>');
 
+  const hofState = (st && st.clubHallOfFame && st.clubHallOfFame.players)
+    ? st.clubHallOfFame
+    : ((typeof gameState !== 'undefined' && gameState.clubHallOfFame && gameState.clubHallOfFame.players) ? gameState.clubHallOfFame : null);
+  const snap = extractHallOfFameSnapshot(hofState, activeClub ? activeClub.name : '') || rec.clubRecordsSnapshot;
+  const hofRowsHtml = snap && (snap.topApps || snap.topGoals || snap.topAssists)
+    ? [
+        snap.topGoals ? `<div class="records-scorer-item mono"><span>通算最多得点: ${snap.topGoals.pos} ${snap.topGoals.name}</span><strong class="accent-green">${snap.topGoals.val} G</strong></div>` : '',
+        snap.topAssists ? `<div class="records-scorer-item mono"><span>通算最多アシスト: ${snap.topAssists.pos} ${snap.topAssists.name}</span><strong class="text-cyan">${snap.topAssists.val} A</strong></div>` : '',
+        snap.topApps ? `<div class="records-scorer-item mono"><span>通算最多出場: ${snap.topApps.pos} ${snap.topApps.name}</span><strong>${snap.topApps.val} 試合</strong></div>` : '',
+        snap.singleSeasonGoals ? `<div class="records-scorer-item mono"><span>単年最多得点 (${snap.singleSeasonGoals.seasonYear}): ${snap.singleSeasonGoals.name}</span><strong class="accent-gold">${snap.singleSeasonGoals.val} G</strong></div>` : ''
+      ].filter(Boolean).join('')
+    : '<div class="records-empty mono">試合やシーズンを重ねるとクラブ殿堂記録が刻まれます</div>';
+
+  const savedAwards = (st && Array.isArray(st.seasonAwardsHistory) && st.seasonAwardsHistory.length > 0)
+    ? st.seasonAwardsHistory.slice(0, 5).map(a => ({
+        season: a.season,
+        seasonYear: a.seasonYear,
+        mvp: a.mvp ? `${a.mvp.name} (${a.mvp.clubName})` : '-',
+        topScorer: a.topScorer ? `${a.topScorer.name} (${a.topScorer.goals}G)` : '-',
+        clubMvp: a.clubMvp ? `${a.clubMvp.name}` : '-'
+      }))
+    : (Array.isArray(rec.awardsHistory) ? rec.awardsHistory.slice(0, 5) : []);
+  const awardsRowsHtml = savedAwards.length > 0
+    ? savedAwards.map(a => `<div class="records-scorer-item mono"><span>S${a.season} (${a.seasonYear}) MVP: ${a.mvp}</span><strong class="accent-gold">クラブMVP: ${a.clubMvp}</strong></div>`).join('')
+    : '<div class="records-empty mono">シーズン終了後に歴代年間アワードが刻まれます</div>';
+
   bodyEl.innerHTML = `
     <div class="records-grid">
       <div class="records-stat-box">
@@ -1153,6 +1224,14 @@ function openRecordsModal() {
     <div class="records-section">
       <h4 class="records-section-title">現在の担当クラブ成績（${activeClub ? activeClub.name : 'チェルシー B'}）</h4>
       <div class="records-current-line mono">${currentStats}</div>
+    </div>
+    <div class="records-section">
+      <h4 class="records-section-title">クラブ歴代通算・単年記録</h4>
+      <div class="records-scorers-list">${hofRowsHtml}</div>
+    </div>
+    <div class="records-section">
+      <h4 class="records-section-title">歴代年間アワード受賞記録</h4>
+      <div class="records-scorers-list">${awardsRowsHtml}</div>
     </div>
     <div class="records-section">
       <h4 class="records-section-title">歴代・シーズン得点王記録</h4>

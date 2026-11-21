@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_0700">
+  <link rel="stylesheet" href="style.css?v=20261119_1100">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -386,6 +386,7 @@
         <button type="button" class="roster-subtab-btn active" data-team-subtab="standings" id="team-subtab-btn-standings" role="tab" aria-selected="true">順位表</button>
         <button type="button" class="roster-subtab-btn" data-team-subtab="schedule" id="team-subtab-btn-schedule" role="tab" aria-selected="false">日程・結果</button>
         <button type="button" class="roster-subtab-btn" data-team-subtab="stats" id="team-subtab-btn-stats" role="tab" aria-selected="false">個人スタッツ</button>
+        <button type="button" class="roster-subtab-btn" data-team-subtab="records" id="team-subtab-btn-records" role="tab" aria-selected="false">記録・表彰</button>
       </div>
 
       <!-- サブタブ1：順位表 -->
@@ -530,6 +531,13 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- サブタブ4：クラブ歴代記録・シーズン表彰・月間MVP -->
+      <div class="team-subview hidden" id="team-subview-records" role="tabpanel">
+        <div class="panel" id="club-records-panel">
+          <!-- JSでクラブ歴代殿堂・シーズン表彰・月間MVPを描画 -->
         </div>
       </div>
     </main>
@@ -1991,19 +1999,28 @@
         <button type="button" class="btn-modal-close mono" id="btn-close-season-summary" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body season-summary-modal-body">
-        <div class="summary-banner">
-          <p id="summary-reward-text" class="mono"></p>
-          <p id="summary-payroll-projection" class="mono"></p>
-          <p id="summary-contract-warning" class="mono text-danger"></p>
+        <div class="settlement-tab-bar" id="settlement-tab-bar" role="tablist">
+          <button type="button" class="settlement-tab-btn active" data-settlement-tab="awards" role="tab" aria-selected="true">シーズン表彰・ベスト11</button>
+          <button type="button" class="settlement-tab-btn" data-settlement-tab="finance" role="tab" aria-selected="false">決算・世代交代</button>
         </div>
-        <div class="summary-logs-wrapper">
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
-            <div id="summary-retirement-log" class="summary-retirement-list"></div>
+        <div class="settlement-tab-pane" id="summary-awards-pane" role="tabpanel">
+          <!-- JSで年間アワード・ベストイレブンを描画 -->
+        </div>
+        <div class="settlement-tab-pane hidden" id="summary-finance-pane" role="tabpanel">
+          <div class="summary-banner">
+            <p id="summary-reward-text" class="mono"></p>
+            <p id="summary-payroll-projection" class="mono"></p>
+            <p id="summary-contract-warning" class="mono text-danger"></p>
           </div>
-          <div class="summary-log-block">
-            <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
-            <div id="summary-aging-log" class="summary-details"></div>
+          <div class="summary-logs-wrapper">
+            <div class="summary-log-block">
+              <h4 class="summary-subhead">現役引退・契約満了・昇格通知</h4>
+              <div id="summary-retirement-log" class="summary-retirement-list"></div>
+            </div>
+            <div class="summary-log-block">
+              <h4 class="summary-subhead">選手加齢・成長曲線ログ</h4>
+              <div id="summary-aging-log" class="summary-details"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -2018,8 +2035,8 @@
   <script src="models.js?v=20261119_0800"></script>
   <script src="competitions.js?v=20261112_0400"></script>
   <script src="match-engine.js?v=20261119_0600"></script>
-  <script src="storage.js?v=20261119_0600"></script>
+  <script src="storage.js?v=20261119_0900"></script>
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_0800"></script>
+  <script src="main.js?v=20261119_1100"></script>
 </body>
 </html>

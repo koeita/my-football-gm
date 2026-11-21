@@ -253,7 +253,14 @@ const gameState = {
   consultationSeq: 0,
   recentConsultedPlayerIds: [],
   lastConflictCoachCategory: null,
-  pendingSponsorSlots: []
+  pendingSponsorSlots: [],
+  seasonAwardsHistory: [],
+  monthlyAwardsHistory: [],
+  monthlyPlayerBaseline: {},
+  clubHallOfFame: { players: {}, singleSeasonRecords: {}, milestonesIssued: {}, titleRaceNewsSeason: null },
+  recordsSubtab: 'hall',
+  hallOfFameSortKey: 'goals',
+  selectedAwardSeason: null
 };
 
 
@@ -2294,9 +2301,10 @@ function showGmModal(opts, fromQueue = false) {
   const { category, title, description, detailHtml, actions, hideSecretary, speaker, variant } = opts;
   const modalCard = overlay.querySelector('.gm-secretary-modal-card');
   if (modalCard) {
-    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'conflict-arbitration';
+    const isReportLike = variant === 'match-report' || variant === 'monthly-ceremony' || variant === 'monthly-mvp-ceremony' || variant === 'conflict-arbitration';
     modalCard.classList.toggle('is-report-modal', isReportLike);
     modalCard.classList.toggle('is-monthly-ceremony', variant === 'monthly-ceremony');
+    modalCard.classList.toggle('is-monthly-mvp-ceremony', variant === 'monthly-mvp-ceremony');
     modalCard.classList.toggle('is-conflict-modal', variant === 'conflict-arbitration');
   }
 
@@ -2786,12 +2794,20 @@ function processSeasonEnd(isSkipped = false) {
 
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
+  const retiredPlayerClubIds = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
   const processedAgedIds = new Set();
   gameState.expiredMarketPool = [];
   const finishedSeasonNum = gameState.season || 1;
   const finishedBaseYear = 2025 + finishedSeasonNum;
   const finishedYearStr = `${finishedBaseYear}-${String((finishedBaseYear + 1) % 100).padStart(2, '0')}`;
+
+  // 加齢・引退除去・放出リセットの直前に年間アワード＆ベスト11＆殿堂同期を実行
+  const awardsLeagueClubs = wasInD2 ? sortedD2 : sortedD1;
+  const awardsDivisionLabel = wasInD2 ? 'ENG-D2' : 'ENG-D1';
+  const seasonAwardsObj = (typeof evaluateAndRecordSeasonAwards === 'function')
+    ? evaluateAndRecordSeasonAwards(awardsLeagueClubs, awardsDivisionLabel, playerClub, finishedSeasonNum, finishedYearStr)
+    : null;
 
   for (const club of getAllManagedLeagueClubs()) {
     const expiredDepartures = new Set();
@@ -2809,6 +2825,7 @@ function processSeasonEnd(isSkipped = false) {
         p.isStarter = false;
         remainingPoolCount = Math.max(0, remainingPoolCount - 1);
         if (club.isPlayer) {
+          retiredPlayerClubIds.push(p.id);
           playerRetirementLogs.push(
             `[現役引退] ${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
           );
@@ -2907,6 +2924,9 @@ function processSeasonEnd(isSkipped = false) {
 
     club.players = club.players.filter(p => !p.isRetired && !expiredDepartures.has(p.id));
     ensureValidSquadAndStarters(club, playerRetirementLogs);
+    if (club.isPlayer && typeof syncPlayerClubStatsToHallOfFame === 'function') {
+      syncPlayerClubStatsToHallOfFame(club, { retiredIds: retiredPlayerClubIds });
+    }
 
     // 常設ユースチーム（U-21 Squad）の加齢およびポテンシャル急成長
     if (club.youthSquad && Array.isArray(club.youthSquad)) {
@@ -2984,7 +3004,8 @@ function processSeasonEnd(isSkipped = false) {
     offseasonPayrollSettled: playerResidualPayroll,
     remPayrollWeeks,
     retirementLogs: playerRetirementLogs,
-    agingLogs: playerAgingLogs
+    agingLogs: playerAgingLogs,
+    awards: seasonAwardsObj
   };
 
   switchTab('market');
@@ -6978,6 +6999,9 @@ function startNextSeason() {
           p.careerStats.goals = (p.careerStats.goals || 0) + histGoals;
           p.careerStats.assists = (p.careerStats.assists || 0) + histAssists;
         }
+        const seasonAwardLabels = Array.isArray(p.awards)
+          ? p.awards.filter(a => a && a.seasonYear === prevYearStr && !a.isMonthly).map(a => a.label)
+          : [];
         p.seasonHistory.push({
           seasonYear: prevYearStr,
           clubName: histClubName,
@@ -6985,8 +7009,11 @@ function startNextSeason() {
           appearances: histApps,
           goals: histGoals,
           assists: histAssists,
+          momCount: p.momCount || 0,
+          cleanSheets: p.cleanSheets || 0,
           avgRating: histRating,
-          ovr: getPlayerOverallRating(p)
+          ovr: getPlayerOverallRating(p),
+          awards: seasonAwardLabels
         });
       }
       p._joinedInOffseasonOfSeason = null;
@@ -7000,6 +7027,8 @@ function startNextSeason() {
       p.totalRating = 0;
       p.cleanSheets = 0;
       p.momCount = 0;
+      p.goalStreak = 0;
+      p._hofSynced = { apps: 0, goals: 0, assists: 0, cleanSheets: 0, momCount: 0 };
       p.yellowCards = 0;
       p.redCards = 0;
       p.compYellowAccum = { league: 0, domesticCup: 0, euroCup: 0 };
@@ -7135,6 +7164,9 @@ function startNextSeason() {
   gameState.pendingSponsorSlots = openSponsorSlots;
   if (openSponsorSlots.length > 0) {
     addDailyLog(`【スポンサー更改】新シーズン開幕に伴い、${openSponsorSlots.length}枠のスポンサー契約選定が可能になりました。`);
+  }
+  if (typeof captureMonthlyPlayerBaseline === 'function') {
+    captureMonthlyPlayerBaseline();
   }
   switchTab('office');
   renderAll();
@@ -7400,6 +7432,8 @@ function renderActiveTabView(force = false) {
       renderScheduleView();
     } else if (gameState.teamSubtab === 'stats') {
       renderTopScorers();
+    } else if (gameState.teamSubtab === 'records') {
+      if (typeof renderClubRecordsView === 'function') renderClubRecordsView();
     } else {
       renderStandings();
     }
@@ -7756,6 +7790,38 @@ function renderSeasonSettlement() {
       const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
       return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
     }).join('');
+  }
+
+  const awardsPaneEl = document.getElementById('summary-awards-pane');
+  const financePaneEl = document.getElementById('summary-finance-pane');
+  const tabBarEl = document.getElementById('settlement-tab-bar');
+  const hasAwards = Boolean(s.awards);
+  if (awardsPaneEl) {
+    awardsPaneEl.innerHTML = hasAwards && typeof buildSeasonAwardsHtml === 'function'
+      ? buildSeasonAwardsHtml(s.awards)
+      : '<div class="comm-empty-msg">今シーズンの表彰データはありません。</div>';
+    if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(awardsPaneEl);
+    if (typeof bindAwardProfileClicks === 'function') bindAwardProfileClicks(awardsPaneEl);
+  }
+  const setSettlementTab = (tabKey) => {
+    if (awardsPaneEl) awardsPaneEl.classList.toggle('hidden', tabKey !== 'awards');
+    if (financePaneEl) financePaneEl.classList.toggle('hidden', tabKey !== 'finance');
+    if (tabBarEl) {
+      tabBarEl.querySelectorAll('.settlement-tab-btn').forEach(b => {
+        const active = b.dataset.settlementTab === tabKey;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+    }
+  };
+  setSettlementTab(hasAwards ? 'awards' : 'finance');
+  if (tabBarEl && !tabBarEl._boundSettlementTabs) {
+    tabBarEl._boundSettlementTabs = true;
+    tabBarEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-settlement-tab]');
+      if (!btn || !btn.dataset.settlementTab) return;
+      setSettlementTab(btn.dataset.settlementTab);
+    });
   }
 
   if (!s._modalShown && !gameState.isGameOver && !gameState.pendingManagerCrisis) {
@@ -11204,6 +11270,174 @@ function findPlayerWithContextById(playerId) {
       }
     }
   }
+  const hofPlayers = gameState.clubHallOfFame && gameState.clubHallOfFame.players;
+  if (hofPlayers && typeof hofPlayers === 'object' && hofPlayers[playerId]) {
+    const entry = hofPlayers[playerId];
+    const spec = entry.avatarSpec || {};
+    const pos = entry.pos || spec.pos || 'CM';
+    const apps = entry.apps || 0;
+    const avgBase = entry.bestSeasonRating || 7.0;
+    const archPlayer = {
+      id: entry.id,
+      name: entry.name,
+      fullName: entry.fullName || entry.name,
+      nationality: entry.nationality || spec.nationality || 'England',
+      pos,
+      primaryPosition: pos,
+      secondaryPositions: [],
+      squadNumber: entry.squadNumber || 0,
+      age: entry.age || spec.age || 35,
+      atk: typeof entry.atk === 'number' ? entry.atk : 72,
+      def: typeof entry.def === 'number' ? entry.def : 70,
+      sta: typeof entry.sta === 'number' ? entry.sta : 75,
+      preferredFoot: entry.preferredFoot || 'Right',
+      height: entry.height || 180,
+      growthCurve: entry.growthCurve || 'standard',
+      attributes: entry.attributes ? { ...entry.attributes } : null,
+      salary: 0,
+      wage: 0,
+      contractYears: 0,
+      appearances: apps,
+      goals: entry.goals || 0,
+      assists: entry.assists || 0,
+      cleanSheets: entry.cleanSheets || 0,
+      momCount: entry.momCount || 0,
+      totalRating: Number((apps * avgBase).toFixed(2)),
+      fatigue: 0,
+      morale: 80,
+      isRetired: Boolean(entry.isRetired),
+      traits: Array.isArray(entry.traits) ? [...entry.traits] : [],
+      awards: Array.isArray(entry.awards) ? entry.awards.map(a => ({ ...a })) : [],
+      milestones: Array.isArray(entry.milestones) ? entry.milestones.map(m => ({ ...m })) : [],
+      seasonHistory: Array.isArray(entry.seasonHistory) ? entry.seasonHistory.map(r => ({ ...r })) : [],
+      careerStats: { appearances: apps, goals: entry.goals || 0, assists: entry.assists || 0 },
+      avatarData: spec.avatarData ? { ...spec.avatarData } : null
+    };
+    const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    const statusSuffix = entry.isRetired ? '（現役引退・クラブ殿堂）' : '（クラブ殿堂）';
+    return {
+      player: archPlayer,
+      club: playerClub,
+      clubName: `${playerClub ? playerClub.name : 'クラブ'}${statusSuffix}`,
+      isMarket: false,
+      isPlayerClub: true,
+      isYouth: false,
+      isArchiveProfile: true
+    };
+  }
+
+  let archiveAwardRec = null;
+  const collectedAwards = [];
+  const collectAwardItem = (item, seasonNum, seasonYear, code, label, clubNameFallback, isMonthly = false) => {
+    if (!item || item.playerId !== playerId) return;
+    if (!archiveAwardRec) archiveAwardRec = { item, clubNameFallback };
+    collectedAwards.push({
+      season: seasonNum,
+      seasonYear: seasonYear || (typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(seasonNum) : ''),
+      code,
+      label,
+      clubName: item.clubName || clubNameFallback || '',
+      isMonthly
+    });
+  };
+  if (Array.isArray(gameState.seasonAwardsHistory)) {
+    for (const sObj of gameState.seasonAwardsHistory) {
+      if (!sObj) continue;
+      collectAwardItem(sObj.mvp, sObj.season, sObj.seasonYear, 'MVP', '年間MVP');
+      collectAwardItem(sObj.topScorer, sObj.season, sObj.seasonYear, 'TOP_SCORER', '得点王');
+      collectAwardItem(sObj.topAssister, sObj.season, sObj.seasonYear, 'TOP_ASSISTER', 'アシスト王');
+      collectAwardItem(sObj.bestGk, sObj.season, sObj.seasonYear, 'BEST_GK', '最優秀GK');
+      collectAwardItem(sObj.youngPlayer, sObj.season, sObj.seasonYear, 'YOUNG_PLAYER', '最優秀若手');
+      collectAwardItem(sObj.clubMvp, sObj.season, sObj.seasonYear, 'CLUB_MVP', 'クラブMVP');
+      if (Array.isArray(sObj.bestEleven)) {
+        for (const b of sObj.bestEleven) {
+          collectAwardItem(b, sObj.season, sObj.seasonYear, 'BEST_11', 'ベスト11');
+        }
+      }
+    }
+  }
+  if (Array.isArray(gameState.monthlyAwardsHistory)) {
+    for (const m of gameState.monthlyAwardsHistory) {
+      if (!m || m.playerId !== playerId) continue;
+      if (!archiveAwardRec) {
+        archiveAwardRec = {
+          item: {
+            playerId: m.playerId,
+            name: m.playerName,
+            pos: m.pos || 'MF',
+            clubId: m.clubId,
+            clubName: m.clubName,
+            clubPrimaryColor: '#f59e0b',
+            appearances: m.apps || 0,
+            goals: m.goals || 0,
+            assists: m.assists || 0,
+            cleanSheets: 0,
+            momCount: 0,
+            avgRating: m.avgRating,
+            avatarSpec: m.avatarSpec
+          },
+          clubNameFallback: m.clubName
+        };
+      }
+      collectedAwards.push({
+        season: m.season || 1,
+        seasonYear: m.seasonYear || (typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(m.season || 1) : ''),
+        code: `MONTHLY_MVP_${m.year}_${m.month}`,
+        label: `${m.month}月間MVP`,
+        clubName: m.clubName || '',
+        isMonthly: true
+      });
+    }
+  }
+  if (archiveAwardRec && archiveAwardRec.item) {
+    const item = archiveAwardRec.item;
+    const spec = item.avatarSpec || {};
+    const pos = item.pos || spec.pos || 'CM';
+    const apps = item.appearances || 0;
+    const avgNum = parseFloat(item.avgRating);
+    const ratNum = !Number.isNaN(avgNum) ? avgNum : 7.0;
+    const resolvedClub = (item.clubId && typeof getClubById === 'function' ? getClubById(item.clubId) : null)
+      || { id: item.clubId || 'award_club', name: item.clubName || archiveAwardRec.clubNameFallback || 'クラブ', primaryColor: item.clubPrimaryColor || '#2ecc71' };
+    const archPlayer = {
+      id: item.playerId || playerId,
+      name: item.name,
+      fullName: item.name,
+      nationality: spec.nationality || 'England',
+      pos,
+      primaryPosition: pos,
+      secondaryPositions: [],
+      squadNumber: 10,
+      age: item.age || spec.age || 28,
+      atk: 76,
+      def: pos === 'GK' || pos === 'CB' || pos === 'LB' || pos === 'RB' ? 76 : 70,
+      sta: 78,
+      salary: 0,
+      wage: 0,
+      contractYears: 0,
+      appearances: apps,
+      goals: item.goals || 0,
+      assists: item.assists || 0,
+      cleanSheets: item.cleanSheets || 0,
+      momCount: item.momCount || 0,
+      totalRating: Number((apps * ratNum).toFixed(2)),
+      fatigue: 0,
+      morale: 80,
+      isRetired: true,
+      traits: [],
+      awards: collectedAwards,
+      milestones: [],
+      avatarData: spec.avatarData ? { ...spec.avatarData } : null
+    };
+    return {
+      player: archPlayer,
+      club: resolvedClub,
+      clubName: `${resolvedClub.name}（歴代受賞者）`,
+      isMarket: false,
+      isPlayerClub: Boolean(item.isPlayerClub),
+      isYouth: false,
+      isArchiveProfile: true
+    };
+  }
   return null;
 }
 
@@ -11869,6 +12103,18 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     });
   }
 
+  if (Array.isArray(p.milestones) && p.milestones.length > 0) {
+    p.milestones.forEach(ms => {
+      if (!ms || !ms.title) return;
+      careerEvents.push({
+        year: ms.year || `${curBaseYear}年`,
+        badge: ms.badge || 'RECORD',
+        title: ms.title,
+        desc: ms.desc || ''
+      });
+    });
+  }
+
   // 現在のステータス
   const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
   const curAssists = typeof p.assists === 'number' ? p.assists : 0;
@@ -12259,8 +12505,9 @@ function openPlayerProfileModal(playerId) {
   const effOvr = getEffectivePlayerRating(p);
   const playerClub = getPlayerClub();
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const isArchivedPlayer = Boolean(p.isRetired || ctx.isArchiveProfile);
   const isMyClubPlayer = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
-  const scoutView = (isMyClubPlayer || isYouth || isCandidate)
+  const scoutView = (isMyClubPlayer || isYouth || isCandidate || isArchivedPlayer)
     ? { isScouted: true, scoutLevel: 2, ovrDisplay: `${baseOvr}`, ovrMin: baseOvr, ovrMax: baseOvr }
     : (typeof getPlayerScoutedView === 'function'
       ? getPlayerScoutedView(p, false)
@@ -12298,13 +12545,17 @@ function openPlayerProfileModal(playerId) {
     : 0;
   const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
   const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
-  const roleStatusText = isMarket
-    ? '移籍リスト登録中'
-    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
-  const conditionText = isInjured
-    ? `負傷離脱中 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `あと約${p.injuryDays || (p.injuryWeeks * 7)}日`})`
-    : '良好 (出場可能)';
-  const conditionClass = isInjured ? 'text-danger' : 'accent-green';
+  const roleStatusText = isArchivedPlayer
+    ? '殿堂・記録アーカイブ'
+    : (isMarket
+      ? '移籍リスト登録中'
+      : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録')));
+  const conditionText = isArchivedPlayer
+    ? '記録アーカイブ (閲覧専用)'
+    : (isInjured
+      ? `負傷離脱中 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `あと約${p.injuryDays || (p.injuryWeeks * 7)}日`})`
+      : '良好 (出場可能)');
+  const conditionClass = isArchivedPlayer ? 'text-muted' : (isInjured ? 'text-danger' : 'accent-green');
 
   const footLabelMap = {
     Right: 'Right',
@@ -12347,7 +12598,7 @@ function openPlayerProfileModal(playerId) {
   const avatarCanvasEl = document.getElementById('profile-avatar-canvas');
   if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
     const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
-    const avatarClub = findAvatarClubForPlayer(p) || (isCandidate ? playerClub : null);
+    const avatarClub = findAvatarClubForPlayer(p) || (isCandidate ? playerClub : null) || ctx.club || null;
     generatePlayerAvatar(p, avatarCanvasEl, avatarClub);
   }
 
@@ -12385,7 +12636,15 @@ function openPlayerProfileModal(playerId) {
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
     let youthMetaHtml = '';
-    if (isYouth) {
+    if (isArchivedPlayer) {
+      youthMetaHtml = `
+        <span class="profile-bio-chip">通算出場 <strong class="accent-green">${careerApps}試合</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip">通算得点 <strong class="accent-gold">${careerGoals}G</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip text-muted">記録アーカイブ</span>
+      `;
+    } else if (isYouth) {
       const potRank = p.potential || p.potentialGrade || 'B';
       const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : (potRank === 'C' ? 'stat-rank-C' : (potRank === 'D' ? 'stat-rank-D' : 'stat-rank-E'))));
       youthMetaHtml = `
@@ -12515,8 +12774,23 @@ function openPlayerProfileModal(playerId) {
   // 年別成績テーブル行の組み立て（過去シーズン ＋ 今季行 ＋ 通算行）
   const lastHistoryRow = seasonHistory.length > 0 ? seasonHistory[seasonHistory.length - 1] : null;
   const hasCurrentSeasonInHistory = Boolean(lastHistoryRow && lastHistoryRow.seasonYear === curSeasonStr);
+  const playerAwardsList = Array.isArray(p.awards) ? p.awards : [];
+  const getSeasonAwardsForYear = (yrStr, storedAwards) => {
+    const list = Array.isArray(storedAwards) ? [...storedAwards] : [];
+    playerAwardsList.forEach(a => {
+      if (a && a.seasonYear === yrStr && a.label && !list.includes(a.label)) {
+        list.push(a.label);
+      }
+    });
+    return list;
+  };
   const allRowsData = [
-    ...seasonHistory.map(row => ({ ...row, isCurrent: false }))
+    ...seasonHistory.map(row => ({
+      ...row,
+      momCount: typeof row.momCount === 'number' ? row.momCount : 0,
+      awards: getSeasonAwardsForYear(row.seasonYear, row.awards),
+      isCurrent: false
+    }))
   ];
   if (!hasCurrentSeasonInHistory) {
     allRowsData.push({
@@ -12526,8 +12800,10 @@ function openPlayerProfileModal(playerId) {
       appearances: p.appearances || 0,
       goals: p.goals || 0,
       assists: typeof p.assists === 'number' ? p.assists : 0,
+      momCount: p.momCount || 0,
       avgRating: avgRating,
       ovr: baseOvr,
+      awards: getSeasonAwardsForYear(curSeasonStr, null),
       isCurrent: true
     });
   }
@@ -12542,6 +12818,7 @@ function openPlayerProfileModal(playerId) {
   const totalAppsSum = allRowsData.reduce((acc, r) => acc + (r.appearances || 0), 0);
   const totalGoalsSum = allRowsData.reduce((acc, r) => acc + (r.goals || 0), 0);
   const totalAssistsSum = allRowsData.reduce((acc, r) => acc + (r.assists || 0), 0);
+  const totalMomSum = allRowsData.reduce((acc, r) => acc + (r.momCount || 0), 0);
   let weightedRatingSum = 0;
   let ratedAppsSum = 0;
   for (const r of allRowsData) {
@@ -12582,11 +12859,70 @@ function openPlayerProfileModal(playerId) {
       <td class="mono col-num">${r.appearances}</td>
       <td class="mono col-num ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</td>
       <td class="mono col-num ${r.assists > 0 ? 'text-cyan' : ''}">${r.assists || 0}</td>
+      <td class="mono col-num ${(r.momCount || 0) > 0 ? 'accent-gold' : ''}">${r.momCount || 0}</td>
       <td class="col-num yearly-table-rat ${ratInfo.textClass} font-bold">${ratDisp}</td>
       <td class="col-num yearly-table-ovr ${ovrInfo.cls}">${ovrInfo.html}</td>
     </tr>
   `;
   }).join('');
+
+  const awardsByYearMap = new Map();
+  const pushYearAward = (yrStr, code, label, isMonthly) => {
+    if (!label) return;
+    const key = String(yrStr || curSeasonStr || '-');
+    if (!awardsByYearMap.has(key)) awardsByYearMap.set(key, []);
+    const arr = awardsByYearMap.get(key);
+    if (!arr.some(item => item.label === label)) {
+      arr.push({ code: code || '', label, isMonthly: Boolean(isMonthly) });
+    }
+  };
+  playerAwardsList.forEach(a => {
+    if (!a || !a.label) return;
+    const yr = a.seasonYear || (a.season && typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(a.season) : curSeasonStr);
+    pushYearAward(yr, a.code, a.label, a.isMonthly);
+  });
+  allRowsData.forEach(r => {
+    if (!r || !Array.isArray(r.awards)) return;
+    r.awards.forEach(lbl => {
+      pushYearAward(r.seasonYear || curSeasonStr, '', String(lbl), String(lbl).includes('月間'));
+    });
+  });
+
+  const sortedAwardYears = Array.from(awardsByYearMap.entries()).sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+  const totalAwardCount = sortedAwardYears.reduce((sum, [, items]) => sum + items.length, 0);
+  const getHonorToneClass = (code, label) => {
+    const c = String(code || '').toUpperCase();
+    const l = String(label || '');
+    if (c === 'TOP_SCORER' || c === 'YOUNG_PLAYER' || l.includes('得点王') || l.includes('若手')) return 'is-green';
+    if (c === 'TOP_ASSISTER' || c === 'BEST_11' || l.includes('アシスト') || l.includes('ベスト11')) return 'is-cyan';
+    return 'is-gold';
+  };
+  const honorIconFn = typeof buildAwardHonorIconSvg === 'function' ? buildAwardHonorIconSvg : (() => '');
+  const careerAwardsSummaryHtml = sortedAwardYears.length > 0
+    ? `
+      <div class="profile-awards-showcase">
+        <div class="profile-awards-showcase-head">
+          <span class="profile-awards-showcase-title">${honorIconFn('MVP', 'MVP', 15)}<span>受賞歴</span></span>
+          <span class="profile-awards-showcase-count mono">計 ${totalAwardCount}回</span>
+        </div>
+        <div class="profile-awards-year-list">
+          ${sortedAwardYears.map(([yrStr, items]) => `
+            <div class="profile-awards-year-row">
+              <span class="profile-awards-year mono">${escapeCommHtml(yrStr)}</span>
+              <div class="profile-awards-honors">
+                ${items.map(item => `
+                  <span class="profile-award-honor ${getHonorToneClass(item.code, item.label)}">
+                    ${honorIconFn(item.code, item.label, 13)}
+                    <span class="profile-award-honor-text">${escapeCommHtml(item.label)}</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `
+    : '';
 
   const yearlyFotmobRows = allRowsData.map((r, rIdx) => {
     const ratInfo = getRatingTierInfo(r.avgRating);
@@ -12606,6 +12942,7 @@ function openPlayerProfileModal(playerId) {
           <span class="fotmob-col-stat">${r.appearances}</span>
           <span class="fotmob-col-stat ${r.goals > 0 ? 'accent-green' : ''}">${r.goals}</span>
           <span class="fotmob-col-stat ${(r.assists || 0) > 0 ? 'text-cyan' : ''}">${r.assists || 0}</span>
+          <span class="fotmob-col-stat ${(r.momCount || 0) > 0 ? 'accent-gold' : ''}">${r.momCount || 0}</span>
           <span class="fotmob-col-ovr ${ovrInfo.cls}" style="background:none;">${ovrInfo.html}</span>
           <span class="fotmob-col-rat"><span class="fotmob-rating-pill ${ratInfo.pillClass}">${ratDisp}</span></span>
         </div>
@@ -12619,6 +12956,7 @@ function openPlayerProfileModal(playerId) {
         <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">試</span>
         <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">G</span>
         <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">A</span>
+        <span class="fotmob-col-stat" style="font-size:10px;color:#8b949e;">MOM</span>
         <span class="fotmob-col-ovr" style="font-size:10px;color:#8b949e;">OVR</span>
         <span class="fotmob-col-rat" style="font-size:10px;color:#8b949e;">評価</span>
       </div>
@@ -12640,7 +12978,7 @@ function openPlayerProfileModal(playerId) {
     </div>
   `).join('');
 
-  const abilityActionsHtml = isYouth ? `
+  const abilityActionsHtml = isArchivedPlayer ? '' : (isYouth ? `
     <div class="profile-ability-actions">
       <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
         トップチームへ昇格 (契約金 £40k · 週給 £${p.wage || 2.5}k · 3年)
@@ -12672,7 +13010,7 @@ function openPlayerProfileModal(playerId) {
         ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
       </button>
     </div>
-  ` : ''));
+  ` : '')));
 
   const canRevealProfileMeta = Boolean(scoutView.isScouted || isMyClubPlayer || isYouth);
   const growthCurveDisplay = canRevealProfileMeta
@@ -12829,17 +13167,29 @@ function openPlayerProfileModal(playerId) {
           <div class="profile-box-header">
             <span class="profile-box-title">年度別成績</span>
           </div>
+          ${careerAwardsSummaryHtml}
           <div class="profile-yearly-fotmob-list">
             ${yearlyFotmobHtml}
             <div class="fotmob-yearly-total mono">
               <span>通算 (${totalAppsSum}試合)</span>
-              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / 平均 <span class="fotmob-rating-pill ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
+              <span><strong>${totalGoalsSum}G</strong> / <strong>${totalAssistsSum}A</strong> / <strong class="accent-gold">${totalMomSum}MOM</strong> / 平均 <span class="fotmob-rating-pill ${getRatingTierInfo(careerAvgRating).pillClass}" style="padding:0;">${careerAvgRating}</span></span>
             </div>
           </div>
           <div class="profile-yearly-table-wrap">
             <table class="data-table profile-yearly-table">
-              <thead><tr><th>年度</th><th>所属クラブ</th><th class="col-num">年齢</th><th class="col-num">出場</th><th class="col-num">得点</th><th class="col-num">アシ</th><th class="col-num">評価点</th><th class="col-num">OVR</th></tr></thead>
+              <thead><tr><th>年度</th><th>所属クラブ</th><th class="col-num">年齢</th><th class="col-num">出場</th><th class="col-num">得点</th><th class="col-num">アシ</th><th class="col-num">MOM</th><th class="col-num">評価点</th><th class="col-num">OVR</th></tr></thead>
               <tbody>${yearlyRowsHtml}</tbody>
+              <tfoot>
+                <tr class="profile-yearly-total-row mono">
+                  <td colspan="3">通算成績</td>
+                  <td class="col-num">${totalAppsSum}</td>
+                  <td class="col-num accent-green">${totalGoalsSum}</td>
+                  <td class="col-num text-cyan">${totalAssistsSum}</td>
+                  <td class="col-num accent-gold">${totalMomSum}</td>
+                  <td class="col-num">${careerAvgRating}</td>
+                  <td class="col-num">-</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -13455,6 +13805,16 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.totalPlayerMatchesPlayed = 0;
   gameState.lastConsultationMatchCount = 0;
   gameState.consultationSeq = 0;
+  gameState.seasonAwardsHistory = [];
+  gameState.monthlyAwardsHistory = [];
+  gameState.monthlyPlayerBaseline = {};
+  gameState.clubHallOfFame = { players: {}, singleSeasonRecords: {}, milestonesIssued: {}, titleRaceNewsSeason: null };
+  gameState.recordsSubtab = 'hall';
+  gameState.hallOfFameSortKey = 'goals';
+  gameState.selectedAwardSeason = null;
+  if (typeof captureMonthlyPlayerBaseline === 'function') {
+    captureMonthlyPlayerBaseline();
+  }
   if (typeof ensureMonthlyLedger === 'function') {
     ensureMonthlyLedger(true);
   } else {
@@ -16769,6 +17129,12 @@ function openInitialStaffSetupModal(club) {
         if (typeof generateAndSendManagerWishReport === 'function') {
           initWish = generateAndSendManagerWishReport('プレシーズン指導体制発足');
         }
+        if (typeof captureMonthlyPlayerBaseline === 'function') {
+          captureMonthlyPlayerBaseline();
+        }
+        if (typeof syncPlayerClubStatsToHallOfFame === 'function') {
+          syncPlayerClubStatsToHallOfFame(playerClub);
+        }
       }
       modal.classList.add('hidden');
       setBodyModalLock(false);
@@ -16809,7 +17175,8 @@ function switchTeamSubtab(subtabKey, shouldRender = true) {
   const subviews = {
     standings: document.getElementById('team-subview-standings'),
     schedule: document.getElementById('team-subview-schedule'),
-    stats: document.getElementById('team-subview-stats')
+    stats: document.getElementById('team-subview-stats'),
+    records: document.getElementById('team-subview-records')
   };
 
   Object.keys(subviews).forEach(key => {
@@ -16826,6 +17193,8 @@ function switchTeamSubtab(subtabKey, shouldRender = true) {
     renderScheduleView();
   } else if (subtabKey === 'stats') {
     renderTopScorers();
+  } else if (subtabKey === 'records') {
+    if (typeof renderClubRecordsView === 'function') renderClubRecordsView();
   }
 }
 
@@ -20335,6 +20704,14 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     ]
   });
 
+  if (!matchData.isPreseason) {
+    if (typeof checkPlayerMatchMilestonesAndStreaks === 'function') {
+      checkPlayerMatchMilestonesAndStreaks(playerClub, matchData);
+    }
+    if (typeof checkLateSeasonTitleRaceNews === 'function') {
+      checkLateSeasonTitleRaceNews();
+    }
+  }
   checkAndTriggerLineupConsultation(matchData);
 }
 
@@ -20349,6 +20726,9 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
   const ledger = ensureMonthlyLedger(false, closingDayObj || dayObj);
   const reportYear = closingDayObj ? closingDayObj.year : ledger.year;
   const reportMonth = closingDayObj ? closingDayObj.month : (dayObj.month === 1 ? 12 : dayObj.month - 1);
+  const monthlyMvp = typeof evaluateMonthlyMvpAward === 'function'
+    ? evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj)
+    : null;
 
   const curFunds = playerClub.funds || 0;
   const netBalance = curFunds - (ledger.startFunds || 0);
@@ -20405,11 +20785,14 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
   });
   if (gameState.monthlyReports.length > 12) gameState.monthlyReports = gameState.monthlyReports.slice(0, 12);
 
+  const monthlyMvpMsgLine = monthlyMvp
+    ? `\n【月間MVP】${monthlyMvp.playerName}（${monthlyMvp.clubName} / ${monthlyMvp.apps}試 ${monthlyMvp.goals}G ${monthlyMvp.assists}A）`
+    : '';
   addInboxMessage({
     senderType: 'board',
     senderName: 'クラブ理事会・財務',
     title: `${reportMonth}月度 月次定例会（戦績・収支報告）`,
-    body: `【月間戦績】${recordSummary} ／ ${rankText}（目標: ${targetText}）\n【月間収支】試合収入 +${formatMoney(matchIncome)} / 売却 +${formatMoney(transferIn)} / 給与 -${formatMoney(payrollPaid)} / 補強 -${formatMoney(transferOut)} ／ 月間純収支 ${netSign}${formatMoney(netBalance)}（現在資金 ${formatMoney(curFunds)} · 安全移籍予算 ${formatMoney(safeBudget)} · 理事会信頼度 ${boardConf}%）。${statusComment}`,
+    body: `【月間戦績】${recordSummary} ／ ${rankText}（目標: ${targetText}）\n【月間収支】試合収入 +${formatMoney(matchIncome)} / 売却 +${formatMoney(transferIn)} / 給与 -${formatMoney(payrollPaid)} / 補強 -${formatMoney(transferOut)} ／ 月間純収支 ${netSign}${formatMoney(netBalance)}（現在資金 ${formatMoney(curFunds)} · 安全移籍予算 ${formatMoney(safeBudget)} · 理事会信頼度 ${boardConf}%）。${statusComment}${monthlyMvpMsgLine}`,
     actionType: 'goto-facilities',
     actionLabel: '経営・財務を確認'
   });
@@ -20476,6 +20859,10 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
               <span class="gm-ledger-label">今月戦績</span>
               <span class="gm-ledger-val">${escapeCommHtml(recordSummary)}</span>
             </div>
+            ${monthlyMvp ? `<div class="gm-ledger-row">
+              <span class="gm-ledger-label">月間MVP</span>
+              <span class="gm-ledger-val accent-gold">${escapeCommHtml(monthlyMvp.playerName)} (${escapeCommHtml(monthlyMvp.clubShortCode || monthlyMvp.clubName)} · ${monthlyMvp.goals}G${monthlyMvp.assists}A)</span>
+            </div>` : ''}
             <div class="gm-ledger-row">
               <span class="gm-ledger-label">順位 / シーズン目標</span>
               <span class="gm-ledger-val">${escapeCommHtml(rankText)} / ${escapeCommHtml(targetText)}</span>
@@ -20537,6 +20924,9 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
         }
       ]
     });
+    if (monthlyMvp && typeof showMonthlyMvpAwardModal === 'function') {
+      showMonthlyMvpAwardModal(monthlyMvp);
+    }
     return true;
   }
   return false;
@@ -21461,4 +21851,1121 @@ function initOfficeCommAndSecretaryEvents() {
     closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
 }
+
+// ==========================================================================
+// シーズン表彰・ベストイレブン・月間MVP・マイルストーン・クラブ殿堂システム
+// ==========================================================================
+function ensureClubHallOfFame() {
+  if (!gameState.clubHallOfFame || typeof gameState.clubHallOfFame !== 'object') {
+    gameState.clubHallOfFame = { players: {}, singleSeasonRecords: {}, milestonesIssued: {}, titleRaceNewsSeason: null };
+  }
+  const hof = gameState.clubHallOfFame;
+  if (!hof.players || typeof hof.players !== 'object') hof.players = {};
+  if (!hof.singleSeasonRecords || typeof hof.singleSeasonRecords !== 'object') hof.singleSeasonRecords = {};
+  if (!hof.milestonesIssued || typeof hof.milestonesIssued !== 'object') hof.milestonesIssued = {};
+  return hof;
+}
+
+function getCurrentSeasonYearStr(seasonNum = null) {
+  const s = Number(seasonNum || gameState.season || 1);
+  const baseYear = 2025 + s;
+  return `${baseYear}-${String((baseYear + 1) % 100).padStart(2, '0')}`;
+}
+
+function buildAvatarSpecSnapshot(p) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    name: p.name,
+    pos: p.pos || p.primaryPosition || 'CM',
+    nationality: p.nationality || 'England',
+    age: p.age || 24,
+    hairStyle: p.hairStyle,
+    hairColor: p.hairColor,
+    skinColor: p.skinColor,
+    facialHair: p.facialHair,
+    avatarSeed: p.avatarSeed,
+    avatarData: p.avatarData ? { ...p.avatarData } : null
+  };
+}
+
+function buildAwardHonorIconSvg(code, label = '', size = 14) {
+  const c = String(code || '').toUpperCase();
+  const l = String(label || '');
+  const sz = Math.max(10, Number(size) || 14);
+  if (c === 'TOP_SCORER' || l.includes('得点王')) {
+    return `<svg class="award-honor-svg is-green" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18l-2-10-4 4-3-6-3 6-4-4-2 10z"></path><line x1="4" y1="21" x2="20" y2="21"></line></svg>`;
+  }
+  if (c === 'TOP_ASSISTER' || l.includes('アシスト')) {
+    return `<svg class="award-honor-svg is-cyan" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+  }
+  if (c === 'BEST_GK' || l.includes('最優秀GK')) {
+    return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"></path><path d="M9 12l2 2 4-4"></path></svg>`;
+  }
+  if (c === 'YOUNG_PLAYER' || l.includes('若手')) {
+    return `<svg class="award-honor-svg is-green" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M9 13l-1 8 4-2 4 2-1-8"></path></svg>`;
+  }
+  if (c === 'BEST_11' || l.includes('ベスト11')) {
+    return `<svg class="award-honor-svg is-cyan" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"></circle><path d="M8.5 13.5L7 21l5-2.5L17 21l-1.5-7.5"></path></svg>`;
+  }
+  if (c.startsWith('MONTHLY_MVP') || l.includes('月間')) {
+    return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"></circle><polygon points="12 5.5 13.1 7.8 15.6 8.1 13.8 9.9 14.2 12.4 12 11.2 9.8 12.4 10.2 9.9 8.4 8.1 10.9 7.8 12 5.5" fill="currentColor" stroke="none"></polygon><path d="M9 14.5L7.5 22l4.5-2.2 4.5 2.2-1.5-7.5"></path></svg>`;
+  }
+  return `<svg class="award-honor-svg is-gold" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>`;
+}
+
+function renderAwardPlayerAvatarHtml(playerId, avatarSpec, clubObj = null, size = 28, extraClass = 'awards-row-avatar') {
+  if (typeof getPlayerAvatarHtml !== 'function') return '';
+  const found = (playerId && typeof findPlayerWithContextById === 'function')
+    ? findPlayerWithContextById(playerId)
+    : null;
+  const personObj = (found && found.player)
+    || avatarSpec
+    || (playerId ? { id: playerId, name: 'Player', pos: 'CM' } : null);
+  if (!personObj) return '';
+  const resolvedClub = clubObj || (found && found.club) || null;
+  return getPlayerAvatarHtml(personObj, resolvedClub, `avatar-sm ${extraClass}`, size);
+}
+
+function addPlayerAwardAndMilestone(player, { season, seasonYear, code, label, clubName, milestoneTitle, milestoneDesc, badge = 'AWARD', isMonthly = false }) {
+  if (!player) return;
+  if (!Array.isArray(player.awards)) player.awards = [];
+  const exists = player.awards.some(a => a && a.season === season && a.code === code && a.label === label);
+  if (!exists) {
+    player.awards.push({
+      season,
+      seasonYear,
+      code,
+      label,
+      clubName: clubName || '',
+      isMonthly: Boolean(isMonthly)
+    });
+  }
+  if (milestoneTitle) {
+    if (!Array.isArray(player.milestones)) player.milestones = [];
+    const mExists = player.milestones.some(m => m && m.year === seasonYear && m.title === milestoneTitle);
+    if (!mExists) {
+      player.milestones.push({
+        year: seasonYear,
+        badge,
+        title: milestoneTitle,
+        desc: milestoneDesc || ''
+      });
+    }
+  }
+}
+
+function updateSingleSeasonRecordIfHigher(ssr, key, candidate) {
+  if (!candidate || typeof candidate.val !== 'number' || candidate.val <= 0) return;
+  const cur = ssr[key];
+  if (!cur || candidate.val > cur.val) {
+    ssr[key] = candidate;
+  }
+}
+
+function syncPlayerClubStatsToHallOfFame(playerClub, { retiredIds = null } = {}) {
+  if (!playerClub || !Array.isArray(playerClub.players)) return;
+  const hof = ensureClubHallOfFame();
+  const seasonNum = gameState.season || 1;
+  const seasonYearStr = getCurrentSeasonYearStr(seasonNum);
+  const retiredSet = new Set(Array.isArray(retiredIds) ? retiredIds : []);
+  const activeIds = new Set();
+
+  for (const p of playerClub.players) {
+    if (!p || !p.id || (p.loanStatus && p.loanStatus.isLoanOut)) continue;
+    activeIds.add(p.id);
+    if (!p._hofSynced || typeof p._hofSynced !== 'object') {
+      p._hofSynced = { apps: 0, goals: 0, assists: 0, cleanSheets: 0, momCount: 0 };
+    }
+    const apps = p.appearances || 0;
+    const goals = p.goals || 0;
+    const assists = p.assists || 0;
+    const cs = p.cleanSheets || 0;
+    const mom = p.momCount || 0;
+
+    const dApps = Math.max(0, apps - (p._hofSynced.apps || 0));
+    const dGoals = Math.max(0, goals - (p._hofSynced.goals || 0));
+    const dAssists = Math.max(0, assists - (p._hofSynced.assists || 0));
+    const dCs = Math.max(0, cs - (p._hofSynced.cleanSheets || 0));
+    const dMom = Math.max(0, mom - (p._hofSynced.momCount || 0));
+
+    p._hofSynced = { apps, goals, assists, cleanSheets: cs, momCount: mom };
+
+    let entry = hof.players[p.id];
+    if (!entry) {
+      entry = {
+        id: p.id,
+        name: p.name,
+        fullName: p.fullName || p.name,
+        pos: p.primaryPosition || p.pos || 'CM',
+        apps: 0,
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0,
+        momCount: 0,
+        bestSeasonGoals: 0,
+        bestSeasonAssists: 0,
+        bestSeasonRating: 0,
+        awards: [],
+        lastSeason: seasonNum,
+        isRetired: false,
+        departed: false,
+        avatarSpec: buildAvatarSpecSnapshot(p)
+      };
+      hof.players[p.id] = entry;
+    }
+
+    entry.name = p.name;
+    entry.fullName = p.fullName || p.name;
+    entry.pos = p.primaryPosition || p.pos || entry.pos;
+    entry.nationality = p.nationality || entry.nationality || 'England';
+    entry.age = p.age || entry.age || 25;
+    entry.squadNumber = p.squadNumber || entry.squadNumber || 0;
+    entry.atk = typeof p.atk === 'number' ? p.atk : (entry.atk || 70);
+    entry.def = typeof p.def === 'number' ? p.def : (entry.def || 70);
+    entry.sta = typeof p.sta === 'number' ? p.sta : (entry.sta || 75);
+    entry.preferredFoot = p.preferredFoot || entry.preferredFoot || 'Right';
+    entry.height = p.height || entry.height || 180;
+    entry.growthCurve = p.growthCurve || p.growthType || entry.growthCurve || 'standard';
+    if (p.attributes && typeof p.attributes === 'object') {
+      entry.attributes = { ...p.attributes };
+    }
+    entry.traits = Array.isArray(p.traits) ? [...p.traits] : (entry.traits || []);
+    entry.milestones = Array.isArray(p.milestones) ? p.milestones.slice(-20) : (entry.milestones || []);
+    if (Array.isArray(p.seasonHistory) && p.seasonHistory.length > 0) {
+      entry.seasonHistory = p.seasonHistory.map(r => ({ ...r }));
+    }
+    entry.apps = (entry.apps || 0) + dApps;
+    entry.goals = (entry.goals || 0) + dGoals;
+    entry.assists = (entry.assists || 0) + dAssists;
+    entry.cleanSheets = (entry.cleanSheets || 0) + dCs;
+    entry.momCount = (entry.momCount || 0) + dMom;
+    entry.lastSeason = seasonNum;
+    entry.departed = false;
+    if (p.isRetired || retiredSet.has(p.id)) entry.isRetired = true;
+    entry.avatarSpec = buildAvatarSpecSnapshot(p);
+
+    if (goals > (entry.bestSeasonGoals || 0)) entry.bestSeasonGoals = goals;
+    if (assists > (entry.bestSeasonAssists || 0)) entry.bestSeasonAssists = assists;
+    const avgNum = apps > 0 ? Number(((p.totalRating || 0) / apps).toFixed(2)) : 0;
+    if (apps >= 15 && avgNum > (entry.bestSeasonRating || 0)) entry.bestSeasonRating = avgNum;
+
+    if (Array.isArray(p.awards) && p.awards.length > 0) {
+      entry.awards = p.awards.slice(-12);
+    }
+
+    const ssr = hof.singleSeasonRecords;
+    const pAvatarSnap = buildAvatarSpecSnapshot(p);
+    updateSingleSeasonRecordIfHigher(ssr, 'mostGoals', { playerId: p.id, name: p.name, pos: entry.pos, val: goals, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    updateSingleSeasonRecordIfHigher(ssr, 'mostAssists', { playerId: p.id, name: p.name, pos: entry.pos, val: assists, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    updateSingleSeasonRecordIfHigher(ssr, 'mostCleanSheets', { playerId: p.id, name: p.name, pos: entry.pos, val: cs, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    if (apps >= 15 && avgNum > 0) {
+      updateSingleSeasonRecordIfHigher(ssr, 'bestAvgRating', { playerId: p.id, name: p.name, pos: entry.pos, val: avgNum, seasonYear: seasonYearStr, avatarSpec: pAvatarSnap });
+    }
+  }
+
+  Object.values(hof.players).forEach(entry => {
+    if (!entry) return;
+    if (retiredSet.has(entry.id)) {
+      entry.isRetired = true;
+      entry.departed = false;
+    } else if (!activeIds.has(entry.id) && !entry.isRetired) {
+      entry.departed = true;
+    }
+  });
+}
+
+function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD', title, headline, desc }) {
+  const hof = ensureClubHallOfFame();
+  if (hof.milestonesIssued[key]) return;
+  hof.milestonesIssued[key] = true;
+
+  const seasonYear = getCurrentSeasonYearStr();
+  if (!Array.isArray(player.milestones)) player.milestones = [];
+  player.milestones.push({ year: seasonYear, badge, title, desc });
+
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【偉業達成】#${player.squadNumber || '-'} ${player.name}: ${title}`);
+  }
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: '選手',
+      clubId: playerClub.id,
+      playerId: player.id,
+      headline: headline || `${playerClub.name}・${player.name}、${title}`,
+      lead: `${playerClub.name} · ${player.pos}`,
+      body: desc,
+      highlight: true
+    });
+  }
+}
+
+function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
+  if (!playerClub || !matchData || matchData.isPreseason) return;
+  syncPlayerClubStatsToHallOfFame(playerClub);
+  const hof = ensureClubHallOfFame();
+  const seasonNum = gameState.season || 1;
+  const scorers = matchData.isPlayerHome ? (matchData.homeScorers || []) : (matchData.awayScorers || []);
+  const matchGoalsByPlayer = new Map();
+  for (const s of scorers) {
+    const pid = s && s.scorer ? s.scorer.id : null;
+    if (pid) matchGoalsByPlayer.set(pid, (matchGoalsByPlayer.get(pid) || 0) + 1);
+  }
+
+  const playedIds = new Set();
+  (playerClub.players || []).forEach(p => {
+    if (p && p.isStarter && !p.isRetired) playedIds.add(p.id);
+  });
+  const subEvents = matchData.isPlayerHome ? (matchData.homeSubEvents || []) : (matchData.awaySubEvents || []);
+  subEvents.forEach(ev => {
+    if (ev && ev.inPlayer && ev.inPlayer.id) playedIds.add(ev.inPlayer.id);
+  });
+
+  for (const p of (playerClub.players || [])) {
+    if (!p || !playedIds.has(p.id)) continue;
+    const matchG = matchGoalsByPlayer.get(p.id) || 0;
+    p.goalStreak = matchG > 0 ? (p.goalStreak || 0) + 1 : 0;
+
+    if (matchG >= 3) {
+      const hatKey = `hat_${seasonNum}_${gameState.currentDayIndex || 0}_${p.id}`;
+      recordPlayerMilestoneEvent(p, playerClub, hatKey, {
+        badge: 'RECORD',
+        title: `公式戦ハットトリック（1試合${matchG}得点）`,
+        headline: `${playerClub.name}・${p.name}が圧巻の${matchG}ゴール！ハットトリック達成`,
+        desc: `${matchData.compTitle || '公式戦'}で${p.name}が1試合${matchG}得点の爆発。勝利を大きく引き寄せた。`
+      });
+    }
+
+    if ([3, 5, 7, 10].includes(p.goalStreak)) {
+      const streakKey = `streak_${seasonNum}_${p.id}_${p.goalStreak}`;
+      recordPlayerMilestoneEvent(p, playerClub, streakKey, {
+        badge: 'RECORD',
+        title: `公式戦 ${p.goalStreak}試合連続ゴール`,
+        headline: `絶好調の${p.name}、公式戦${p.goalStreak}試合連続ゴールを記録`,
+        desc: `${playerClub.name}の攻撃を牽引する${p.name}が公式戦${p.goalStreak}試合連続でネットを揺らしている。`
+      });
+    }
+
+    const entry = hof.players[p.id];
+    if (!entry) continue;
+
+    for (const mApps of [50, 100, 150, 200, 300]) {
+      if ((entry.apps || 0) >= mApps) {
+        recordPlayerMilestoneEvent(p, playerClub, `apps_${p.id}_${mApps}`, {
+          badge: 'RECORD',
+          title: `クラブ公式戦 通算${mApps}試合出場達成`,
+          headline: `${playerClub.name}・${p.name}がクラブ通算${mApps}試合出場を達成`,
+          desc: `長期にわたりチームを支える${p.name}がクラブ公式戦通算${mApps}試合の節目に到達した。`
+        });
+      }
+    }
+    for (const mGoals of [25, 50, 100, 150]) {
+      if ((entry.goals || 0) >= mGoals) {
+        recordPlayerMilestoneEvent(p, playerClub, `goals_${p.id}_${mGoals}`, {
+          badge: 'RECORD',
+          title: `クラブ通算 ${mGoals}ゴール達成`,
+          headline: `${playerClub.name}の点取り屋・${p.name}がクラブ通算${mGoals}ゴールに到達`,
+          desc: `エース級の決定力を示す${p.name}がクラブ通算${mGoals}得点目を叩き込んだ。`
+        });
+      }
+    }
+    for (const mAst of [25, 50, 100]) {
+      if ((entry.assists || 0) >= mAst) {
+        recordPlayerMilestoneEvent(p, playerClub, `assists_${p.id}_${mAst}`, {
+          badge: 'RECORD',
+          title: `クラブ通算 ${mAst}アシスト達成`,
+          headline: `${playerClub.name}の司令塔・${p.name}がクラブ通算${mAst}アシストを記録`,
+          desc: `決定的なパスを供給し続ける${p.name}がクラブ通算${mAst}アシストの節目を迎えた。`
+        });
+      }
+    }
+  }
+}
+
+function checkLateSeasonTitleRaceNews() {
+  const hof = ensureClubHallOfFame();
+  const curSeason = gameState.season || 1;
+  const totalWeeks = gameState.totalWeeks || 38;
+  const curWeek = gameState.currentWeek || 0;
+  if (hof.titleRaceNewsSeason === curSeason) return;
+  if (curWeek < Math.max(1, totalWeeks - 6) || curWeek >= totalWeeks) return;
+
+  const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
+  const all = [];
+  leagueClubs.forEach(c => {
+    (c.players || []).forEach(p => {
+      if (p && !p.isRetired) all.push({ p, c });
+    });
+  });
+  const topG = [...all].sort((a, b) => (b.p.goals || 0) - (a.p.goals || 0)).slice(0, 3);
+  const topA = [...all].sort((a, b) => (b.p.assists || 0) - (a.p.assists || 0)).slice(0, 3);
+  if (topG.length === 0 || (topG[0].p.goals || 0) < 8) return;
+
+  hof.titleRaceNewsSeason = curSeason;
+  const rem = totalWeeks - curWeek;
+  const gText = topG.map((x, i) => `${i + 1}位 ${x.p.name}(${getClubShortCode(x.c)}・${x.p.goals}G)`).join(' / ');
+  const aText = topA.filter(x => (x.p.assists || 0) > 0).map((x, i) => `${i + 1}位 ${x.p.name}(${x.p.assists}A)`).join(' / ');
+  const divLabel = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) ? 'ENG-D2' : 'ENG-D1';
+
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: 'リーグ',
+      clubId: topG[0].c.id,
+      playerId: topG[0].p.id,
+      headline: `${divLabel} 終盤の個人タイトル争い白熱　残り${rem}節の得点王レース`,
+      lead: `${gText}`,
+      body: `リーグ終盤戦（残り${rem}節）に入り個人タイトル争いが熾烈を極めている。\n【得点ランキング上位】${gText}${aText ? `\n【アシスト上位】${aText}` : ''}`,
+      highlight: true
+    });
+  }
+}
+
+function captureMonthlyPlayerBaseline() {
+  const baseline = {};
+  const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
+  for (const c of leagueClubs) {
+    for (const p of (c.players || [])) {
+      if (!p || !p.id) continue;
+      baseline[p.id] = {
+        apps: p.appearances || 0,
+        goals: p.goals || 0,
+        assists: p.assists || 0,
+        totalRating: p.totalRating || 0,
+        cleanSheets: p.cleanSheets || 0,
+        momCount: p.momCount || 0
+      };
+    }
+  }
+  gameState.monthlyPlayerBaseline = baseline;
+}
+
+function evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj) {
+  const base = (gameState.monthlyPlayerBaseline && typeof gameState.monthlyPlayerBaseline === 'object')
+    ? gameState.monthlyPlayerBaseline
+    : {};
+  const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
+  const candidates = [];
+
+  for (const c of leagueClubs) {
+    for (const p of (c.players || [])) {
+      if (!p || !p.id || p.isRetired) continue;
+      const prev = base[p.id] || { apps: 0, goals: 0, assists: 0, totalRating: 0, cleanSheets: 0, momCount: 0 };
+      const dApps = Math.max(0, (p.appearances || 0) - (prev.apps || 0));
+      if (dApps < 2) continue;
+      const dGoals = Math.max(0, (p.goals || 0) - (prev.goals || 0));
+      const dAssists = Math.max(0, (p.assists || 0) - (prev.assists || 0));
+      const dRating = Math.max(0, (p.totalRating || 0) - (prev.totalRating || 0));
+      const dCs = Math.max(0, (p.cleanSheets || 0) - (prev.cleanSheets || 0));
+      const dMom = Math.max(0, (p.momCount || 0) - (prev.momCount || 0));
+      const monthAvg = dApps > 0 ? dRating / dApps : 6.7;
+      const score = dGoals * 4.5 + dAssists * 3.0 + dMom * 4.0 + dCs * 1.6 + Math.max(0, monthAvg - 6.0) * 10 + Math.min(dApps, 6) * 0.4;
+      candidates.push({
+        p,
+        c,
+        dApps,
+        dGoals,
+        dAssists,
+        dCs,
+        dMom,
+        monthAvg: monthAvg.toFixed(2),
+        score
+      });
+    }
+  }
+
+  captureMonthlyPlayerBaseline();
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.score - a.score || b.dGoals - a.dGoals);
+  const top = candidates[0];
+  const seasonNum = gameState.season || 1;
+  const seasonYear = getCurrentSeasonYearStr(seasonNum);
+  const divLabel = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) ? 'ENG-D2' : 'ENG-D1';
+
+  const awardEntry = {
+    season: seasonNum,
+    seasonYear,
+    year: reportYear,
+    month: reportMonth,
+    divisionLabel: divLabel,
+    playerId: top.p.id,
+    playerName: top.p.name,
+    pos: top.p.primaryPosition || top.p.pos || 'MF',
+    clubId: top.c.id,
+    clubName: top.c.name,
+    clubShortCode: getClubShortCode(top.c),
+    isPlayerClub: Boolean(top.c.isPlayer),
+    apps: top.dApps,
+    goals: top.dGoals,
+    assists: top.dAssists,
+    avgRating: top.monthAvg,
+    avatarSpec: buildAvatarSpecSnapshot(top.p)
+  };
+
+  if (!Array.isArray(gameState.monthlyAwardsHistory)) gameState.monthlyAwardsHistory = [];
+  gameState.monthlyAwardsHistory.unshift(awardEntry);
+  if (gameState.monthlyAwardsHistory.length > 24) gameState.monthlyAwardsHistory = gameState.monthlyAwardsHistory.slice(0, 24);
+
+  addPlayerAwardAndMilestone(top.p, {
+    season: seasonNum,
+    seasonYear,
+    code: `MONTHLY_MVP_${reportYear}_${reportMonth}`,
+    label: `${reportMonth}月間MVP`,
+    clubName: top.c.name,
+    badge: 'AWARD',
+    isMonthly: true,
+    milestoneTitle: `${divLabel} ${reportYear}年${reportMonth}月度 月間MVP受賞`,
+    milestoneDesc: `${top.dApps}試合 ${top.dGoals}G ${top.dAssists}A（平均評価 ${top.monthAvg}）の活躍で月間最優秀選手に選出。`
+  });
+
+  if (top.c.isPlayer) {
+    top.p.morale = Math.min(100, (top.p.morale || 75) + 6);
+    top.c.supporters = (top.c.supporters || 0) + 150;
+    syncPlayerClubStatsToHallOfFame(top.c);
+    if (typeof addDailyLog === 'function') {
+      addDailyLog(`【月間MVP受賞】自クラブの ${top.p.name} が ${reportMonth}月度の${divLabel}月間MVPに選出されました！（${top.dGoals}G ${top.dAssists}A / 評価 ${top.monthAvg}）`);
+    }
+  }
+  if (typeof addNewsItem === 'function') {
+    addNewsItem({
+      category: '選手',
+      clubId: top.c.id,
+      playerId: top.p.id,
+      headline: `${reportMonth}月度 ${divLabel} 月間MVPは ${top.p.name}（${top.c.name}）が受賞`,
+      lead: `${top.dApps}試合 ${top.dGoals}得点 ${top.dAssists}アシスト（平均 ${top.monthAvg}）`,
+      body: `${reportYear}年${reportMonth}月度の${divLabel}月間最優秀選手賞に${top.c.name}の${top.p.name}が輝いた。期間中${top.dApps}試合で${top.dGoals}ゴール${top.dAssists}アシストを記録し、チームを牽引した。`,
+      highlight: Boolean(top.c.isPlayer)
+    });
+  }
+  return awardEntry;
+}
+
+function showMonthlyMvpAwardModal(monthlyMvp) {
+  if (!monthlyMvp || typeof showGmModal !== 'function') return;
+  const clubObj = typeof getClubById === 'function' ? getClubById(monthlyMvp.clubId) : null;
+  const avatarHtml = renderAwardPlayerAvatarHtml(
+    monthlyMvp.playerId,
+    monthlyMvp.avatarSpec,
+    clubObj,
+    56,
+    'monthly-mvp-avatar'
+  );
+  const emblemHtml = typeof getClubEmblemSvg === 'function'
+    ? getClubEmblemSvg(clubObj || monthlyMvp.clubName, 20, 'monthly-mvp-emblem')
+    : '';
+  const trophySvg = buildAwardHonorIconSvg('MONTHLY_MVP', '月間MVP', 16);
+  const canOpen = Boolean(monthlyMvp.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(monthlyMvp.playerId));
+  const ownTagHtml = monthlyMvp.isPlayerClub
+    ? '<span class="monthly-mvp-own-tag mono">自クラブ所属</span>'
+    : '';
+
+  const detailHtml = `
+    <div class="monthly-mvp-modal-wrap">
+      <div class="monthly-mvp-hero ${monthlyMvp.isPlayerClub ? 'is-player-club' : ''}">
+        <div class="monthly-mvp-avatar-frame">${avatarHtml}</div>
+        <div class="monthly-mvp-hero-meta">
+          <div class="monthly-mvp-kicker mono">
+            ${trophySvg}
+            <span>${escapeCommHtml(monthlyMvp.divisionLabel || 'ENG-D1')} · ${monthlyMvp.month}月度 最優秀選手</span>
+          </div>
+          <div class="monthly-mvp-player-row">
+            <span class="pos-tag pos-${escapeCommHtml(monthlyMvp.pos || 'MF')}">${escapeCommHtml(monthlyMvp.pos || 'MF')}</span>
+            <strong class="monthly-mvp-player-name">${escapeCommHtml(monthlyMvp.playerName)}</strong>
+          </div>
+          <div class="monthly-mvp-club-row">
+            ${emblemHtml}
+            <span class="monthly-mvp-club-name">${escapeCommHtml(monthlyMvp.clubName)}</span>
+            ${ownTagHtml}
+          </div>
+        </div>
+      </div>
+      <div class="monthly-mvp-stats-strip">
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">出場</span>
+          <span class="monthly-mvp-stat-val mono">${monthlyMvp.apps}試合</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">得点</span>
+          <span class="monthly-mvp-stat-val mono accent-green">${monthlyMvp.goals}G</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">アシスト</span>
+          <span class="monthly-mvp-stat-val mono text-cyan">${monthlyMvp.assists}A</span>
+        </div>
+        <div class="monthly-mvp-stat-cell">
+          <span class="monthly-mvp-stat-label">平均評価</span>
+          <span class="monthly-mvp-stat-val mono accent-gold">${escapeCommHtml(monthlyMvp.avgRating)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const actions = [];
+  if (canOpen) {
+    actions.push({
+      label: '選手詳細を見る',
+      className: 'btn btn-secondary',
+      onClick: () => { if (typeof openPlayerProfileModal === 'function') openPlayerProfileModal(monthlyMvp.playerId); }
+    });
+  }
+  actions.push({
+    label: '表彰を閉じる',
+    className: 'btn btn-primary',
+    onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+  });
+
+  const descText = monthlyMvp.isPlayerClub
+    ? `自クラブの ${monthlyMvp.playerName} が ${monthlyMvp.month}月度の${monthlyMvp.divisionLabel || 'ENG-D1'}月間最優秀選手（月間MVP）に選出されました。`
+    : `${monthlyMvp.clubName} の ${monthlyMvp.playerName} が ${monthlyMvp.month}月度の${monthlyMvp.divisionLabel || 'ENG-D1'}月間最優秀選手（月間MVP）に選出されました。`;
+
+  showGmModal({
+    variant: 'monthly-mvp-ceremony',
+    hideSecretary: true,
+    category: `${monthlyMvp.year}年${monthlyMvp.month}月度 月間表彰`,
+    title: `${monthlyMvp.month}月度 月間MVP発表`,
+    description: descText,
+    detailHtml,
+    actions,
+    soundKey: 'sfx_notify'
+  });
+}
+
+function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, seasonNum, seasonYearStr) {
+  const sortedClubs = [...(leagueClubs || [])].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0));
+  const clubRankMap = new Map();
+  sortedClubs.forEach((c, idx) => {
+    if (c && c.id) clubRankMap.set(c.id, idx + 1);
+  });
+
+  const pool = [];
+  for (const club of sortedClubs) {
+    if (!club || !Array.isArray(club.players)) continue;
+    const rank = clubRankMap.get(club.id) || sortedClubs.length;
+    const rankBonus = Math.max(0, (sortedClubs.length - rank) * 0.45);
+    for (const p of club.players) {
+      if (!p || p.isRetired || (p.loanStatus && p.loanStatus.isLoanOut)) continue;
+      const apps = p.appearances || 0;
+      const goals = p.goals || 0;
+      const assists = p.assists || 0;
+      const cs = p.cleanSheets || 0;
+      const mom = p.momCount || 0;
+      const avgRatingNum = apps > 0 ? (p.totalRating || 0) / apps : 0;
+      const ovr = getPlayerOverallRating(p);
+      const pos = p.primaryPosition || p.assignedPos || p.pos || 'CM';
+      const mvpScore = goals * 2.4 + assists * 1.8 + mom * 3.0 + cs * 0.8 + Math.max(0, avgRatingNum - 6.0) * 14 + rankBonus + Math.min(apps, 46) * 0.25 + ovr * 0.05;
+      pool.push({ p, club, rank, apps, goals, assists, cs, mom, avgRatingNum, avgRating: apps > 0 ? avgRatingNum.toFixed(2) : 'N/A', ovr, pos, mvpScore });
+    }
+  }
+
+  const toSummary = (item) => item ? {
+    playerId: item.p.id,
+    name: item.p.name,
+    pos: item.pos,
+    age: item.p.age,
+    clubId: item.club.id,
+    clubName: item.club.name,
+    clubShortCode: getClubShortCode(item.club),
+    clubPrimaryColor: item.club.primaryColor || '#2ecc71',
+    isPlayerClub: Boolean(item.club.isPlayer),
+    appearances: item.apps,
+    goals: item.goals,
+    assists: item.assists,
+    cleanSheets: item.cs,
+    momCount: item.mom,
+    avgRating: item.avgRating,
+    avatarSpec: buildAvatarSpecSnapshot(item.p)
+  } : null;
+
+  const eligibleApps = pool.filter(x => x.apps >= 10);
+  const mvpPool = eligibleApps.length > 0 ? eligibleApps : pool;
+  const mvpItem = [...mvpPool].sort((a, b) => b.mvpScore - a.mvpScore || b.goals - a.goals)[0] || null;
+  const topScorerItem = [...pool].sort((a, b) => b.goals - a.goals || b.assists - a.assists || b.avgRatingNum - a.avgRatingNum)[0] || null;
+  const topAssisterItem = [...pool].sort((a, b) => b.assists - a.assists || b.goals - a.goals || b.avgRatingNum - a.avgRatingNum)[0] || null;
+
+  const gkPoolAll = pool.filter(x => x.pos === 'GK');
+  const gkPoolMin = gkPoolAll.filter(x => x.apps >= 5);
+  const gkPool = gkPoolMin.length > 0 ? gkPoolMin : gkPoolAll;
+  const bestGkItem = [...gkPool].sort((a, b) => (b.cs * 3 + b.avgRatingNum * 5 + b.apps * 0.2) - (a.cs * 3 + a.avgRatingNum * 5 + a.apps * 0.2))[0] || null;
+
+  const youngPoolAll = pool.filter(x => (x.p.age || 25) <= 21);
+  const youngPoolMin = youngPoolAll.filter(x => x.apps >= 5);
+  const youngPool = youngPoolMin.length > 0 ? youngPoolMin : youngPoolAll;
+  const youngItem = [...youngPool].sort((a, b) => b.mvpScore - a.mvpScore)[0] || null;
+
+  const playerPool = pool.filter(x => playerClub && x.club.id === playerClub.id);
+  const clubMvpItem = [...playerPool].sort((a, b) => b.mvpScore - a.mvpScore || b.goals - a.goals)[0] || null;
+
+  const mgrCandidates = sortedClubs.filter(c => c && c.manager).map((c, idx) => {
+    const rank = idx + 1;
+    const target = c.targetRank || 10;
+    const overAchieve = Math.max(-5, target - rank) * 2.5;
+    const ptsScore = (c.pts || 0) * 1.1 + (c.gd || 0) * 0.2 + overAchieve + (rank === 1 ? 18 : 0);
+    return { club: c, mgr: c.manager, rank, ptsScore };
+  }).sort((a, b) => b.ptsScore - a.ptsScore);
+  const bestMgrCand = mgrCandidates[0] || null;
+  const bestManager = bestMgrCand ? {
+    name: bestMgrCand.mgr.name,
+    clubId: bestMgrCand.club.id,
+    clubName: bestMgrCand.club.name,
+    clubShortCode: getClubShortCode(bestMgrCand.club),
+    isPlayerClub: Boolean(bestMgrCand.club.isPlayer),
+    rank: bestMgrCand.rank,
+    won: bestMgrCand.club.won || 0,
+    drawn: bestMgrCand.club.drawn || 0,
+    lost: bestMgrCand.club.lost || 0,
+    pts: bestMgrCand.club.pts || 0,
+    avatarSpec: buildAvatarSpecSnapshot(bestMgrCand.mgr)
+  } : null;
+
+  // 年間ベストイレブン（4-3-3配置）
+  const best11Slots = [
+    { slotPos: 'GK', targets: ['GK'], role: 'GK', x: 50, y: 86 },
+    { slotPos: 'LB', targets: ['LB', 'LWB'], role: 'DF', x: 16, y: 66 },
+    { slotPos: 'CB', targets: ['CB'], role: 'DF', x: 38, y: 69 },
+    { slotPos: 'CB', targets: ['CB'], role: 'DF', x: 62, y: 69 },
+    { slotPos: 'RB', targets: ['RB', 'RWB'], role: 'DF', x: 84, y: 66 },
+    { slotPos: 'CM', targets: ['DM', 'CM', 'AM'], role: 'MF', x: 24, y: 45 },
+    { slotPos: 'CM', targets: ['CM', 'DM', 'AM'], role: 'MF', x: 50, y: 49 },
+    { slotPos: 'CM', targets: ['AM', 'CM', 'DM'], role: 'MF', x: 76, y: 45 },
+    { slotPos: 'LW', targets: ['LW', 'LM', 'ST', 'CF'], role: 'FW', x: 20, y: 20 },
+    { slotPos: 'ST', targets: ['ST', 'CF'], role: 'FW', x: 50, y: 14 },
+    { slotPos: 'RW', targets: ['RW', 'RM', 'ST', 'CF'], role: 'FW', x: 80, y: 20 }
+  ];
+  const matchesTargets = (p, targets) => {
+    const pPositions = [
+      p.primaryPosition, p.assignedPos, p.pos,
+      ...(Array.isArray(p.mainPositions) ? p.mainPositions : []),
+      ...(Array.isArray(p.subPositions) ? p.subPositions : [])
+    ].filter(Boolean);
+    return targets.some(t => pPositions.includes(t));
+  };
+  const usedIds = new Set();
+  const sortedByMvp = [...mvpPool].sort((a, b) => b.mvpScore - a.mvpScore);
+  const fallbackPool = [...pool].sort((a, b) => b.mvpScore - a.mvpScore);
+  const bestEleven = [];
+
+  for (const slot of best11Slots) {
+    let picked = sortedByMvp.find(x => !usedIds.has(x.p.id) && matchesTargets(x.p, slot.targets))
+      || sortedByMvp.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
+      || fallbackPool.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
+      || fallbackPool.find(x => !usedIds.has(x.p.id));
+    if (picked) {
+      usedIds.add(picked.p.id);
+      bestEleven.push({
+        ...toSummary(picked),
+        slotPos: slot.slotPos,
+        x: slot.x,
+        y: slot.y,
+        itemRef: picked
+      });
+    }
+  }
+
+  let supporterBonus = 0;
+  const grantTitle = (item, code, label, mTitle, bonusSupporters = 0) => {
+    if (!item || !item.p) return;
+    addPlayerAwardAndMilestone(item.p, {
+      season: seasonNum,
+      seasonYear: seasonYearStr,
+      code,
+      label,
+      clubName: item.club.name,
+      badge: 'AWARD',
+      milestoneTitle: mTitle,
+      milestoneDesc: `${item.club.name}で${item.apps}試合 ${item.goals}G ${item.assists}A（平均評価 ${item.avgRating}）を記録。`
+    });
+    if (item.club.isPlayer && bonusSupporters > 0) {
+      item.p.morale = Math.min(100, (item.p.morale || 75) + 8);
+      supporterBonus += bonusSupporters;
+    }
+  };
+
+  grantTitle(mvpItem, 'MVP', '年間MVP', `${divisionLabel} 年間最優秀選手(MVP)`, 450);
+  grantTitle(topScorerItem, 'TOP_SCORER', '得点王', `${divisionLabel} 得点王 (${topScorerItem ? topScorerItem.goals : 0}得点)`, 300);
+  grantTitle(topAssisterItem, 'TOP_ASSISTER', 'アシスト王', `${divisionLabel} アシスト王 (${topAssisterItem ? topAssisterItem.assists : 0}アシスト)`, 250);
+  grantTitle(bestGkItem, 'BEST_GK', '最優秀GK', `${divisionLabel} 最優秀GK (${bestGkItem ? bestGkItem.cs : 0}完封)`, 250);
+  grantTitle(youngItem, 'YOUNG_PLAYER', '最優秀若手', `${divisionLabel} 最優秀若手選手`, 250);
+  grantTitle(clubMvpItem, 'CLUB_MVP', 'クラブMVP', `${playerClub ? playerClub.name : 'クラブ'} 年間クラブMVP`, 0);
+  bestEleven.forEach(b => {
+    if (b.itemRef) {
+      grantTitle(b.itemRef, 'BEST_11', 'ベスト11', `${divisionLabel} 年間ベストイレブン (${b.slotPos})`, 120);
+      delete b.itemRef;
+    }
+  });
+
+  if (playerClub && supporterBonus > 0) {
+    playerClub.supporters = (playerClub.supporters || 0) + supporterBonus;
+  }
+
+  const awardsObj = {
+    season: seasonNum,
+    seasonYear: seasonYearStr,
+    divisionLabel,
+    mvp: toSummary(mvpItem),
+    topScorer: toSummary(topScorerItem),
+    topAssister: toSummary(topAssisterItem),
+    bestGk: toSummary(bestGkItem),
+    youngPlayer: toSummary(youngItem),
+    clubMvp: toSummary(clubMvpItem),
+    bestManager,
+    bestEleven
+  };
+
+  if (!Array.isArray(gameState.seasonAwardsHistory)) gameState.seasonAwardsHistory = [];
+  gameState.seasonAwardsHistory = gameState.seasonAwardsHistory.filter(a => a && a.season !== seasonNum);
+  gameState.seasonAwardsHistory.unshift(awardsObj);
+  if (gameState.seasonAwardsHistory.length > 20) gameState.seasonAwardsHistory = gameState.seasonAwardsHistory.slice(0, 20);
+
+  if (playerClub) {
+    syncPlayerClubStatsToHallOfFame(playerClub);
+  }
+
+  if (typeof addDailyLog === 'function' && mvpItem && topScorerItem) {
+    addDailyLog(`【Season ${seasonNum} 表彰】MVP: ${mvpItem.p.name}(${mvpItem.club.name}) / 得点王: ${topScorerItem.p.name}(${topScorerItem.goals}G) / クラブMVP: ${clubMvpItem ? clubMvpItem.p.name : '-'}`);
+  }
+  if (typeof addNewsItem === 'function' && mvpItem && topScorerItem) {
+    const bodyLines = [
+      `年間MVP: ${mvpItem.p.name}（${mvpItem.club.name} / ${mvpItem.goals}G ${mvpItem.assists}A · 平均${mvpItem.avgRating}）`,
+      `得点王: ${topScorerItem.p.name}（${topScorerItem.club.name} / ${topScorerItem.goals}ゴール）`,
+      topAssisterItem ? `アシスト王: ${topAssisterItem.p.name}（${topAssisterItem.club.name} / ${topAssisterItem.assists}アシスト）` : '',
+      bestGkItem ? `最優秀GK: ${bestGkItem.p.name}（${bestGkItem.club.name} / ${bestGkItem.cs}完封）` : '',
+      youngItem ? `最優秀若手: ${youngItem.p.name}（${youngItem.club.name} / ${youngItem.p.age}歳）` : ''
+    ].filter(Boolean).join('\n');
+    addNewsItem({
+      category: 'リーグ',
+      clubId: mvpItem.club.id,
+      playerId: mvpItem.p.id,
+      headline: `${divisionLabel} ${seasonYearStr} 年間MVPに ${mvpItem.p.name}（${mvpItem.club.name}）が輝く`,
+      lead: `得点王は ${topScorerItem.p.name}(${topScorerItem.goals}G)`,
+      body: bodyLines,
+      highlight: true
+    });
+  }
+
+  return awardsObj;
+}
+
+function buildBestElevenPitchHtml(awardsObj) {
+  const best11 = (awardsObj && Array.isArray(awardsObj.bestEleven)) ? awardsObj.bestEleven : [];
+  if (best11.length === 0) return '';
+  const nodesHtml = best11.map(node => {
+    const clubObj = (typeof getClubById === 'function' ? getClubById(node.clubId) : null) || { id: node.clubId, name: node.clubName, primaryColor: node.clubPrimaryColor || '#2ecc71' };
+    const avatarHtml = (typeof getPlayerAvatarHtml === 'function')
+      ? getPlayerAvatarHtml(node.avatarSpec || { id: node.playerId, name: node.name, pos: node.pos }, clubObj, 'avatar-sm awards-best11-avatar', 32)
+      : '';
+    const canOpen = Boolean(node.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(node.playerId));
+    const statTag = node.slotPos === 'GK' ? `${node.cleanSheets}CS / ${node.avgRating}` : `${node.goals}G ${node.assists}A`;
+    return `
+      <div class="awards-best11-node ${node.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" style="left:${node.x}%; top:${node.y}%;" ${canOpen ? `data-award-profile-id="${escapeCommHtml(node.playerId)}"` : ''}>
+        <div class="awards-best11-avatar-wrap">${avatarHtml}<span class="awards-best11-pos mono">${escapeCommHtml(node.slotPos)}</span></div>
+        <div class="awards-best11-name">${escapeCommHtml(node.name)}</div>
+        <div class="awards-best11-sub mono">${escapeCommHtml(node.clubShortCode)} · ${statTag}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="awards-section-block">
+      <div class="flat-section-label mono">年間ベストイレブン (${escapeCommHtml(awardsObj.divisionLabel || 'ENG-D1')} · 4-3-3)</div>
+      <div class="awards-best11-pitch">
+        <div class="awards-pitch-midline" aria-hidden="true"></div>
+        <div class="awards-pitch-circle" aria-hidden="true"></div>
+        <div class="awards-pitch-box-top" aria-hidden="true"></div>
+        <div class="awards-pitch-box-bottom" aria-hidden="true"></div>
+        ${nodesHtml}
+      </div>
+    </div>
+  `;
+}
+
+function buildSeasonAwardsHtml(awardsObj) {
+  if (!awardsObj) {
+    return '<div class="comm-empty-msg">表彰データがまだありません。</div>';
+  }
+  const renderWinnerRow = (awardLabel, winner, statText, accentCls = 'accent-gold') => {
+    if (!winner) return '';
+    const clubObj = (typeof getClubById === 'function' && winner.clubId) ? getClubById(winner.clubId) : winner.clubName;
+    const avatarHtml = renderAwardPlayerAvatarHtml(winner.playerId, winner.avatarSpec, typeof clubObj === 'object' ? clubObj : null, 28, 'awards-row-avatar');
+    const emblemHtml = (typeof getClubEmblemSvg === 'function' && clubObj) ? getClubEmblemSvg(clubObj, 18, 'awards-club-emblem') : '';
+    const canOpen = Boolean(winner.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(winner.playerId));
+    const nameHtml = canOpen
+      ? `<button type="button" class="player-name-link clickable-player-name awards-winner-name" data-award-profile-id="${escapeCommHtml(winner.playerId)}">${escapeCommHtml(winner.name)}</button>`
+      : `<span class="awards-winner-name">${escapeCommHtml(winner.name)}</span>`;
+    return `
+      <div class="awards-title-row ${winner.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" ${canOpen ? `data-award-profile-id="${escapeCommHtml(winner.playerId)}"` : ''}>
+        <span class="awards-award-name ${accentCls}">${escapeCommHtml(awardLabel)}</span>
+        <div class="awards-winner-main">
+          ${avatarHtml}
+          ${emblemHtml}
+          ${nameHtml}
+          <span class="awards-club-code mono">${escapeCommHtml(winner.clubShortCode || winner.clubName || '')}</span>
+        </div>
+        <span class="awards-stat-inline mono">${escapeCommHtml(statText)}</span>
+      </div>
+    `;
+  };
+
+  const mgr = awardsObj.bestManager;
+  const mgrClubObj = mgr && typeof getClubById === 'function' ? getClubById(mgr.clubId) : (mgr ? mgr.clubName : null);
+  const liveMgr = (mgr && mgrClubObj && typeof mgrClubObj === 'object' && mgrClubObj.manager && mgrClubObj.manager.name === mgr.name) ? mgrClubObj.manager : null;
+  const mgrAvatarObj = mgr ? (liveMgr || mgr.avatarSpec || { id: `mgr_${mgr.clubId || mgr.name}`, name: mgr.name }) : null;
+  const mgrAvatarHtml = (mgr && typeof getManagerAvatarHtml === 'function')
+    ? getManagerAvatarHtml(mgrAvatarObj, 'avatar-sm awards-row-avatar', 28)
+    : '';
+  const mgrRowHtml = mgr ? `
+    <div class="awards-title-row ${mgr.isPlayerClub ? 'is-player-club' : ''}">
+      <span class="awards-award-name text-cyan">最優秀監督</span>
+      <div class="awards-winner-main">
+        ${mgrAvatarHtml}
+        ${(typeof getClubEmblemSvg === 'function' && mgrClubObj) ? getClubEmblemSvg(mgrClubObj, 18, 'awards-club-emblem') : ''}
+        <span class="awards-winner-name">${escapeCommHtml(mgr.name)}</span>
+        <span class="awards-club-code mono">${escapeCommHtml(mgr.clubShortCode || mgr.clubName)}</span>
+      </div>
+      <span class="awards-stat-inline mono">${mgr.rank}位 · ${mgr.pts}pt (${mgr.won}勝${mgr.drawn}分${mgr.lost}敗)</span>
+    </div>
+  ` : '';
+
+  const rowsHtml = [
+    renderWinnerRow('年間MVP', awardsObj.mvp, awardsObj.mvp ? `${awardsObj.mvp.goals}G ${awardsObj.mvp.assists}A · 平均 ${awardsObj.mvp.avgRating}` : '', 'accent-gold'),
+    renderWinnerRow('得点王', awardsObj.topScorer, awardsObj.topScorer ? `${awardsObj.topScorer.goals}ゴール (${awardsObj.topScorer.appearances}試合)` : '', 'accent-green'),
+    renderWinnerRow('アシスト王', awardsObj.topAssister, awardsObj.topAssister ? `${awardsObj.topAssister.assists}アシスト (${awardsObj.topAssister.appearances}試合)` : '', 'text-cyan'),
+    renderWinnerRow('最優秀GK', awardsObj.bestGk, awardsObj.bestGk ? `${awardsObj.bestGk.cleanSheets}完封 · 平均 ${awardsObj.bestGk.avgRating}` : '', 'accent-gold'),
+    renderWinnerRow('最優秀若手', awardsObj.youngPlayer, awardsObj.youngPlayer ? `${awardsObj.youngPlayer.age}歳 · ${awardsObj.youngPlayer.goals}G ${awardsObj.youngPlayer.assists}A` : '', 'accent-green'),
+    renderWinnerRow('クラブMVP', awardsObj.clubMvp, awardsObj.clubMvp ? `${awardsObj.clubMvp.goals}G ${awardsObj.clubMvp.assists}A · 平均 ${awardsObj.clubMvp.avgRating}` : '', 'accent-gold'),
+    mgrRowHtml
+  ].filter(Boolean).join('');
+
+  return `
+    <div class="awards-view-wrap">
+      <div class="awards-section-block">
+        <div class="flat-section-label mono">Season ${awardsObj.season} (${escapeCommHtml(awardsObj.seasonYear)}) 個人タイトル</div>
+        <div class="awards-title-list">${rowsHtml}</div>
+      </div>
+      ${buildBestElevenPitchHtml(awardsObj)}
+    </div>
+  `;
+}
+
+function bindAwardProfileClicks(containerEl) {
+  if (!containerEl || containerEl._awardClickBound) return;
+  containerEl._awardClickBound = true;
+  containerEl.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-award-profile-id]');
+    if (!target || !target.dataset.awardProfileId) return;
+    if (typeof openPlayerProfileModal === 'function') {
+      openPlayerProfileModal(target.dataset.awardProfileId);
+    }
+  });
+}
+
+function renderClubRecordsView() {
+  const panelEl = document.getElementById('club-records-panel');
+  if (!panelEl) return;
+  const playerClub = getPlayerClub();
+  if (playerClub) syncPlayerClubStatsToHallOfFame(playerClub);
+
+  const hof = ensureClubHallOfFame();
+  const subtab = gameState.recordsSubtab || 'hall';
+  const sortKey = gameState.hallOfFameSortKey || 'goals';
+  const ssr = hof.singleSeasonRecords || {};
+  const seasonAwardsList = Array.isArray(gameState.seasonAwardsHistory) ? gameState.seasonAwardsHistory : [];
+  const monthlyAwardsList = Array.isArray(gameState.monthlyAwardsHistory) ? gameState.monthlyAwardsHistory : [];
+
+  let contentHtml = '';
+
+  if (subtab === 'hall') {
+    const allHof = Object.values(hof.players || {}).filter(Boolean);
+    allHof.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0) || (b.apps || 0) - (a.apps || 0));
+
+    const recordItems = [
+      { label: '単年最多得点', rec: ssr.mostGoals, suffix: 'G' },
+      { label: '単年最多アシスト', rec: ssr.mostAssists, suffix: 'A' },
+      { label: '単年最多完封', rec: ssr.mostCleanSheets, suffix: 'CS' },
+      { label: '単年最高評価点', rec: ssr.bestAvgRating, suffix: '' }
+    ];
+    const ssrHtml = recordItems.map(item => {
+      let valHtml = '<span class="hof-record-val mono text-muted">記録待ち</span>';
+      let recCanOpen = false;
+      let recPidAttr = '';
+      if (item.rec) {
+        const hofPlayer = item.rec.playerId && hof.players ? hof.players[item.rec.playerId] : null;
+        const recSpec = item.rec.avatarSpec || (hofPlayer && hofPlayer.avatarSpec) || { id: item.rec.playerId || item.rec.name, name: item.rec.name, pos: item.rec.pos || 'CM' };
+        const recAvatarHtml = renderAwardPlayerAvatarHtml(item.rec.playerId, recSpec, playerClub, 22, 'awards-row-avatar-xs');
+        recCanOpen = Boolean(item.rec.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(item.rec.playerId));
+        if (recCanOpen) recPidAttr = `data-award-profile-id="${escapeCommHtml(item.rec.playerId)}"`;
+        const recNameHtml = recCanOpen
+          ? `<button type="button" class="player-name-link clickable-player-name hof-record-name" ${recPidAttr}>${escapeCommHtml(item.rec.name)}</button>`
+          : `<span class="hof-record-name">${escapeCommHtml(item.rec.name)}</span>`;
+        valHtml = `<span class="hof-record-val mono">${recAvatarHtml}${recNameHtml} <strong class="accent-gold">${item.rec.val}${item.suffix}</strong> <span class="text-muted">(${escapeCommHtml(item.rec.seasonYear)})</span></span>`;
+      }
+      return `
+        <div class="hof-record-row ${recCanOpen ? 'is-clickable' : ''}" ${recPidAttr}>
+          <span class="hof-record-label">${item.label}</span>
+          ${valHtml}
+        </div>
+      `;
+    }).join('');
+
+    const rowsHtml = allHof.slice(0, 30).map((entry, idx) => {
+      const canOpen = Boolean(entry.id && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(entry.id));
+      const pidAttr = canOpen ? `data-award-profile-id="${escapeCommHtml(entry.id)}"` : '';
+      const statusLabel = entry.isRetired ? '引退' : (entry.departed ? '退団' : '在籍');
+      const statusCls = entry.isRetired ? 'text-muted' : (entry.departed ? 'text-muted' : 'accent-green');
+      const awardsCount = Array.isArray(entry.awards) ? entry.awards.length : 0;
+      const awardsSummary = awardsCount > 0 ? `<span class="hof-award-inline mono accent-gold">受賞 ${awardsCount}回</span>` : '';
+      const entrySpec = entry.avatarSpec || { id: entry.id, name: entry.name, pos: entry.pos || 'CM' };
+      const entryAvatarHtml = renderAwardPlayerAvatarHtml(entry.id, entrySpec, playerClub, 28, 'awards-row-avatar');
+      const nameHtml = canOpen
+        ? `<button type="button" class="player-name-link clickable-player-name" ${pidAttr}>${escapeCommHtml(entry.name)}</button>`
+        : `<span class="hof-player-name">${escapeCommHtml(entry.name)}</span>`;
+      return `
+        <div class="hof-rank-row ${canOpen ? 'is-clickable' : ''}" ${pidAttr}>
+          <div class="hof-rank-left">
+            <span class="hof-rank-num mono">${idx + 1}</span>
+            ${entryAvatarHtml}
+            <span class="pos-tag pos-${escapeCommHtml(entry.pos)}">${escapeCommHtml(entry.pos)}</span>
+            ${nameHtml}
+            <span class="hof-player-status mono ${statusCls}">${statusLabel}</span>
+            ${awardsSummary}
+          </div>
+          <div class="hof-rank-stats mono">
+            <span class="hof-stat-cell ${sortKey === 'apps' ? 'is-focus' : ''}">${entry.apps || 0}試</span>
+            <span class="hof-stat-cell ${sortKey === 'goals' ? 'is-focus accent-green' : ''}">${entry.goals || 0}G</span>
+            <span class="hof-stat-cell ${sortKey === 'assists' ? 'is-focus text-cyan' : ''}">${entry.assists || 0}A</span>
+            <span class="hof-stat-cell ${sortKey === 'momCount' ? 'is-focus accent-gold' : ''}">${entry.momCount || 0}MOM</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    contentHtml = `
+      <div class="flat-section-label mono">クラブ単年レコード</div>
+      <div class="hof-records-grid">${ssrHtml}</div>
+      <div class="hof-metric-bar">
+        <span class="flat-section-label mono" style="margin:0;">クラブ通算ランキング (${playerClub ? escapeCommHtml(playerClub.name) : ''})</span>
+        <div class="inbox-filter-group">
+          <button type="button" class="btn-inbox-filter ${sortKey === 'goals' ? 'active' : ''}" data-hof-sort="goals">得点</button>
+          <button type="button" class="btn-inbox-filter ${sortKey === 'assists' ? 'active' : ''}" data-hof-sort="assists">アシスト</button>
+          <button type="button" class="btn-inbox-filter ${sortKey === 'apps' ? 'active' : ''}" data-hof-sort="apps">出場</button>
+          <button type="button" class="btn-inbox-filter ${sortKey === 'momCount' ? 'active' : ''}" data-hof-sort="momCount">MOM</button>
+        </div>
+      </div>
+      <div class="hof-rank-list">
+        ${rowsHtml || '<div class="comm-empty-msg">試合を行うとクラブ通算成績が記録されます。</div>'}
+      </div>
+    `;
+  } else if (subtab === 'season-awards') {
+    if (seasonAwardsList.length > 0) {
+      const targetSeason = gameState.selectedAwardSeason || seasonAwardsList[0].season;
+      const targetObj = seasonAwardsList.find(a => a && a.season === targetSeason) || seasonAwardsList[0];
+      const seasonButtonsHtml = seasonAwardsList.map(a => `
+        <button type="button" class="btn-inbox-filter ${a.season === targetObj.season ? 'active' : ''}" data-award-season="${a.season}">S${a.season} (${escapeCommHtml(a.seasonYear)})</button>
+      `).join('');
+      contentHtml = `
+        <div class="inbox-filter-group" style="margin-bottom:10px;">${seasonButtonsHtml}</div>
+        ${buildSeasonAwardsHtml(targetObj)}
+      `;
+    } else {
+      const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
+      const all = [];
+      leagueClubs.forEach(c => (c.players || []).forEach(p => { if (p && !p.isRetired) all.push({ p, c }); }));
+      const topG = [...all].sort((a, b) => (b.p.goals || 0) - (a.p.goals || 0))[0];
+      const topA = [...all].sort((a, b) => (b.p.assists || 0) - (a.p.assists || 0))[0];
+      const topGk = [...all].filter(x => (x.p.pos || x.p.primaryPosition) === 'GK').sort((a, b) => (b.p.cleanSheets || 0) - (a.p.cleanSheets || 0))[0];
+      const previewRow = (lbl, item, valStr) => item ? `
+        <div class="awards-title-row ${item.c.isPlayer ? 'is-player-club' : ''} is-clickable" data-award-profile-id="${escapeCommHtml(item.p.id)}">
+          <span class="awards-award-name accent-gold">${lbl}</span>
+          <div class="awards-winner-main">
+            ${renderAwardPlayerAvatarHtml(item.p.id, item.p, item.c, 28, 'awards-row-avatar')}
+            ${typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(item.c, 18, 'awards-club-emblem') : ''}
+            <button type="button" class="player-name-link clickable-player-name awards-winner-name" data-award-profile-id="${escapeCommHtml(item.p.id)}">${escapeCommHtml(item.p.name)}</button>
+            <span class="awards-club-code mono">${escapeCommHtml(getClubShortCode(item.c))}</span>
+          </div>
+          <span class="awards-stat-inline mono">${valStr}</span>
+        </div>
+      ` : '';
+      contentHtml = `
+        <div class="comm-empty-msg" style="padding:14px 4px;">シーズン終了時に年間アワードとベストイレブンが確定します。</div>
+        <div class="flat-section-label mono">今季 暫定個人タイトル首位</div>
+        <div class="awards-title-list">
+          ${previewRow('暫定得点王', topG, `${topG ? topG.p.goals : 0}G`)}
+          ${previewRow('暫定アシスト王', topA, `${topA ? topA.p.assists : 0}A`)}
+          ${previewRow('暫定最優秀GK', topGk, `${topGk ? topGk.p.cleanSheets : 0}CS`)}
+        </div>
+      `;
+    }
+  } else {
+    if (monthlyAwardsList.length === 0) {
+      contentHtml = '<div class="comm-empty-msg">月末定例会を迎えると、リーグ月間MVPの受賞履歴がここに記録されます。</div>';
+    } else {
+      const mRowsHtml = monthlyAwardsList.map(m => {
+        const clubObj = (typeof getClubById === 'function' ? getClubById(m.clubId) : null) || m.clubName;
+        const mSpec = m.avatarSpec || { id: m.playerId || m.playerName, name: m.playerName, pos: m.pos || 'MF' };
+        const mAvatarHtml = renderAwardPlayerAvatarHtml(m.playerId, mSpec, typeof clubObj === 'object' ? clubObj : null, 28, 'awards-row-avatar');
+        const canOpen = Boolean(m.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(m.playerId));
+        const pidAttr = canOpen ? `data-award-profile-id="${escapeCommHtml(m.playerId)}"` : '';
+        return `
+          <div class="monthly-award-row ${m.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" ${pidAttr}>
+            <div class="monthly-award-left">
+              <span class="monthly-award-period mono">${m.year}/${String(m.month).padStart(2, '0')}</span>
+              ${mAvatarHtml}
+              ${typeof getClubEmblemSvg === 'function' && clubObj ? getClubEmblemSvg(clubObj, 18, 'awards-club-emblem') : ''}
+              ${canOpen
+                ? `<button type="button" class="player-name-link clickable-player-name" ${pidAttr}>${escapeCommHtml(m.playerName)}</button>`
+                : `<span>${escapeCommHtml(m.playerName)}</span>`}
+              <span class="awards-club-code mono">${escapeCommHtml(m.clubShortCode || m.clubName)}</span>
+            </div>
+            <span class="awards-stat-inline mono">${m.apps}試 ${m.goals}G ${m.assists}A · ${m.avgRating}</span>
+          </div>
+        `;
+      }).join('');
+      contentHtml = `
+        <div class="flat-section-label mono">月間MVP受賞履歴</div>
+        <div class="awards-title-list">${mRowsHtml}</div>
+      `;
+    }
+  }
+
+  panelEl.innerHTML = `
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">クラブ記録・シーズン表彰</h2>
+      </div>
+      <span class="panel-subtitle mono">Season ${gameState.season || 1}</span>
+    </div>
+    <div class="records-subnav-bar">
+      <button type="button" class="btn-inbox-filter ${subtab === 'hall' ? 'active' : ''}" data-records-subtab="hall">クラブ殿堂・記録</button>
+      <button type="button" class="btn-inbox-filter ${subtab === 'season-awards' ? 'active' : ''}" data-records-subtab="season-awards">シーズン表彰・ベスト11</button>
+      <button type="button" class="btn-inbox-filter ${subtab === 'monthly-awards' ? 'active' : ''}" data-records-subtab="monthly-awards">月間MVP履歴</button>
+    </div>
+    <div class="records-panel-body">${contentHtml}</div>
+  `;
+
+  if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(panelEl);
+  bindAwardProfileClicks(panelEl);
+
+  if (!panelEl._recordsHandlersBound) {
+    panelEl._recordsHandlersBound = true;
+    panelEl.addEventListener('click', (e) => {
+      const subBtn = e.target.closest('[data-records-subtab]');
+      if (subBtn && subBtn.dataset.recordsSubtab) {
+        gameState.recordsSubtab = subBtn.dataset.recordsSubtab;
+        renderClubRecordsView();
+        return;
+      }
+      const sortBtn = e.target.closest('[data-hof-sort]');
+      if (sortBtn && sortBtn.dataset.hofSort) {
+        gameState.hallOfFameSortKey = sortBtn.dataset.hofSort;
+        renderClubRecordsView();
+        return;
+      }
+      const seasonBtn = e.target.closest('[data-award-season]');
+      if (seasonBtn && seasonBtn.dataset.awardSeason) {
+        gameState.selectedAwardSeason = Number(seasonBtn.dataset.awardSeason);
+        renderClubRecordsView();
+      }
+    });
+  }
+}
+
 

@@ -17674,29 +17674,29 @@ body {
   .fotmob-yearly-cols {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     flex-shrink: 0;
   }
   .fotmob-col-stat {
-    width: 24px;
+    width: 21px;
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #e2e8f0;
     font-variant-numeric: tabular-nums;
   }
   .fotmob-col-ovr {
-    min-width: 42px;
+    min-width: 34px;
     width: auto;
     text-align: center;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     flex-shrink: 0;
   }
   .fotmob-col-rat {
-    width: 38px;
+    width: 34px;
     text-align: center;
   }
   .fotmob-rating-pill {
@@ -21138,6 +21138,803 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     padding: 9px 12px;
     font-size: 12px;
   }
+}
+
+/* ==========================================================================
+   シーズン表彰・年間ベストイレブン・選手栄誉・クラブ殿堂・記録タブ
+   ========================================================================== */
+.settlement-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.settlement-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settlement-tab-btn.active {
+  color: #2ecc71;
+  border-bottom-color: #2ecc71;
+}
+
+.settlement-tab-pane.hidden {
+  display: none !important;
+}
+
+.awards-view-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.awards-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.awards-title-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.awards-title-row,
+.monthly-award-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.awards-title-row:last-child,
+.monthly-award-row:last-child {
+  border-bottom: none;
+}
+
+.awards-title-row.is-player-club,
+.monthly-award-row.is-player-club {
+  border-left: 2px solid #2ecc71;
+  padding-left: 8px;
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.awards-award-name {
+  font-size: 11.5px;
+  font-weight: 800;
+  min-width: 76px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.awards-winner-main,
+.monthly-award-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.awards-winner-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.awards-club-emblem {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.awards-club-code {
+  font-size: 10.5px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.awards-stat-inline {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.monthly-award-period {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  min-width: 54px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 年間ベストイレブン 4-3-3 ピッチビュー */
+.awards-best11-pitch {
+  position: relative;
+  width: 100%;
+  height: 360px;
+  background-color: #162e20;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.awards-pitch-midline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.awards-pitch-circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 66px;
+  height: 66px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.awards-pitch-box-top,
+.awards-pitch-box-bottom {
+  position: absolute;
+  left: 50%;
+  width: 44%;
+  height: 46px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.awards-pitch-box-top {
+  top: 0;
+  border-top: none;
+}
+
+.awards-pitch-box-bottom {
+  bottom: 0;
+  border-bottom: none;
+}
+
+.awards-best11-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 78px;
+  text-align: center;
+  z-index: 2;
+}
+
+.awards-best11-node.is-clickable {
+  cursor: pointer;
+}
+
+.awards-best11-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.awards-best11-avatar {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  border-radius: 50%;
+  background: rgba(26, 29, 32, 0.85);
+}
+
+.awards-best11-node.is-player-club .awards-best11-avatar {
+  outline: 1.5px solid #2ecc71;
+}
+
+.awards-best11-pos {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #2ecc71;
+  background: #1a1d20;
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.awards-best11-name {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #ffffff;
+  max-width: 76px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.awards-best11-node.is-player-club .awards-best11-name {
+  color: #2ecc71;
+}
+
+.awards-best11-sub {
+  font-size: 9px;
+  color: #cbd5e1;
+  white-space: nowrap;
+  line-height: 1.1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* 選手プロフィール：年別成績の上部・年度別受賞歴ショーケース */
+.profile-awards-showcase {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.11) 0%, rgba(36, 40, 44, 0.55) 100%);
+  border-left: 3px solid #f59e0b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.profile-awards-showcase-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.profile-awards-showcase-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.profile-awards-showcase-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-awards-year-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-awards-year-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  min-width: 0;
+}
+
+.profile-awards-year {
+  width: 62px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  line-height: 1.6;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-awards-honors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-award-honor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.profile-award-honor.is-gold {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.profile-award-honor.is-green {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.14);
+}
+
+.profile-award-honor.is-cyan {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.award-honor-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.award-honor-svg.is-gold { color: #f59e0b; }
+.award-honor-svg.is-green { color: #2ecc71; }
+.award-honor-svg.is-cyan { color: #38bdf8; }
+
+/* 記録・表彰用顔アバター */
+.player-avatar.awards-row-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  flex-shrink: 0;
+  background: #1a1d20;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+.player-avatar.awards-row-avatar-xs {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  flex-shrink: 0;
+  background: #1a1d20;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+
+.awards-title-row.is-player-club .player-avatar.awards-row-avatar,
+.monthly-award-row.is-player-club .player-avatar.awards-row-avatar {
+  border-color: #2ecc71;
+}
+
+/* 月間MVP 専用表彰モーダル */
+.gm-secretary-modal-card.is-monthly-mvp-ceremony {
+  border-top: 3px solid #f59e0b !important;
+  min-height: auto !important;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-stage-body {
+  padding-top: 12px;
+  background: radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.16), transparent 64%);
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-dialogue-card {
+  padding-top: 14px;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: #151920;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-nameplate-row {
+  margin-top: 0;
+}
+
+.gm-secretary-modal-card.is-monthly-mvp-ceremony .gm-vn-pill-badge {
+  background: #f59e0b;
+  color: #1c1002;
+}
+
+.monthly-mvp-modal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.monthly-mvp-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(26, 29, 32, 0.65) 100%);
+  border-left: 3px solid #f59e0b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.monthly-mvp-hero.is-player-club {
+  border-left-color: #2ecc71;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.14) 0%, rgba(26, 29, 32, 0.65) 100%);
+}
+
+.monthly-mvp-avatar-frame {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-avatar.monthly-mvp-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #1a1d20;
+  border: 2px solid #f59e0b;
+  box-shadow: none;
+}
+
+.monthly-mvp-hero.is-player-club .player-avatar.monthly-mvp-avatar {
+  border-color: #2ecc71;
+}
+
+.monthly-mvp-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.monthly-mvp-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #f59e0b;
+  white-space: nowrap;
+}
+
+.monthly-mvp-player-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.monthly-mvp-player-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monthly-mvp-club-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.monthly-mvp-club-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monthly-mvp-own-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.monthly-mvp-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 6px 2px 2px;
+}
+
+.monthly-mvp-stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.monthly-mvp-stat-label {
+  font-size: 10.5px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.monthly-mvp-stat-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.profile-timeline-badge.badge-award {
+  color: #f59e0b;
+}
+
+.profile-timeline-badge.badge-record {
+  color: #2ecc71;
+}
+
+/* チームタブ「記録・表彰」ビュー */
+.records-subnav-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 2px 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hof-records-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin-bottom: 14px;
+}
+
+.hof-record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.hof-record-label {
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hof-record-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f1f5f9;
+  font-size: 11.5px;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hof-record-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.hof-metric-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hof-rank-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hof-rank-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.hof-rank-row:last-child {
+  border-bottom: none;
+}
+
+.hof-rank-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hof-rank-num {
+  width: 20px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #8b949e;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.hof-player-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hof-player-status {
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hof-award-inline {
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hof-rank-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hof-stat-cell {
+  font-size: 11.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.hof-stat-cell.is-focus {
+  font-weight: 800;
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  #team-subnav-bar .roster-subtab-btn {
+    font-size: 11.5px !important;
+    padding: 0 2px !important;
+  }
+  .hof-records-grid {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .awards-title-row,
+  .monthly-award-row {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .awards-award-name {
+    min-width: 68px;
+    font-size: 11px;
+  }
+  .awards-best11-pitch {
+    height: 315px;
+  }
+  .awards-best11-node {
+    width: 68px;
+  }
+  .awards-best11-name {
+    font-size: 9.5px;
+    max-width: 66px;
+  }
+  .awards-best11-sub {
+    font-size: 8.5px;
+  }
+  .hof-rank-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .hof-rank-stats {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .profile-awards-year-row {
+    gap: 8px;
+  }
+  .profile-awards-year {
+    width: 54px;
+    font-size: 10.5px;
+  }
+  .profile-award-honor {
+    font-size: 11px;
+    padding: 2px 6px 2px 5px;
+  }
+  .monthly-mvp-hero {
+    gap: 10px;
+    padding: 9px 10px;
+  }
+  .player-avatar.monthly-mvp-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .monthly-mvp-player-name {
+    font-size: 14px;
+  }
+  .monthly-mvp-stat-val {
+    font-size: 12.5px;
+  }
+}
+
+/* 記録・表彰：行クリックで選手詳細オープン */
+.hof-record-row.is-clickable,
+.hof-rank-row.is-clickable,
+.awards-title-row.is-clickable,
+.monthly-award-row.is-clickable {
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+}
+
+.hof-record-row.is-clickable:hover,
+.hof-rank-row.is-clickable:hover,
+.awards-title-row.is-clickable:hover,
+.monthly-award-row.is-clickable:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+button.hof-record-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+#player-profile-modal,
+#player-profile-modal-overlay {
+  z-index: 32000 !important;
 }
 
 
