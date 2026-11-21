@@ -7565,7 +7565,7 @@ function renderHeader() {
     payrollEl.textContent = `${formatWage(weeklyPayroll)}`;
     payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
   }
-  setHeaderText('header-squad-size', `SQUAD: ${squadCount}名`);
+  setHeaderText('header-squad-size', `${squadCount}名`);
   setHeaderText('header-supporters', `${playerClub.supporters.toLocaleString()}人`);
 
   setHeaderText('tab-badge-roster', `${squadCount}名`);
@@ -22869,9 +22869,9 @@ function renderClubRecordsView() {
       const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
       const all = [];
       leagueClubs.forEach(c => (c.players || []).forEach(p => { if (p && !p.isRetired) all.push({ p, c }); }));
-      const topG = [...all].sort((a, b) => (b.p.goals || 0) - (a.p.goals || 0))[0];
-      const topA = [...all].sort((a, b) => (b.p.assists || 0) - (a.p.assists || 0))[0];
-      const topGk = [...all].filter(x => (x.p.pos || x.p.primaryPosition) === 'GK').sort((a, b) => (b.p.cleanSheets || 0) - (a.p.cleanSheets || 0))[0];
+      const topG = [...all].filter(x => (x.p.goals || 0) > 0).sort((a, b) => (b.p.goals || 0) - (a.p.goals || 0) || (b.p.assists || 0) - (a.p.assists || 0))[0] || null;
+      const topA = [...all].filter(x => (x.p.assists || 0) > 0).sort((a, b) => (b.p.assists || 0) - (a.p.assists || 0) || (b.p.goals || 0) - (a.p.goals || 0))[0] || null;
+      const topGk = [...all].filter(x => (x.p.pos || x.p.primaryPosition) === 'GK' && (x.p.cleanSheets || 0) > 0).sort((a, b) => (b.p.cleanSheets || 0) - (a.p.cleanSheets || 0))[0] || null;
       const previewRow = (lbl, item, valStr) => item ? `
         <div class="awards-title-row ${item.c.isPlayer ? 'is-player-club' : ''} is-clickable" data-award-profile-id="${escapeCommHtml(item.p.id)}">
           <span class="awards-award-name accent-gold">${lbl}</span>
@@ -22883,14 +22883,20 @@ function renderClubRecordsView() {
           </div>
           <span class="awards-stat-inline mono">${valStr}</span>
         </div>
-      ` : '';
+      ` : `
+        <div class="awards-title-row">
+          <span class="awards-award-name accent-gold">${lbl}</span>
+          <div class="awards-winner-main"><span class="text-muted" style="font-size:12px;">記録待ち</span></div>
+          <span class="awards-stat-inline mono text-muted">-</span>
+        </div>
+      `;
       contentHtml = `
         <div class="comm-empty-msg" style="padding:14px 4px;">シーズン終了時に年間アワードとベストイレブンが確定します。</div>
         <div class="flat-section-label mono">今季 暫定個人タイトル首位</div>
         <div class="awards-title-list">
-          ${previewRow('暫定得点王', topG, `${topG ? topG.p.goals : 0}G`)}
-          ${previewRow('暫定アシスト王', topA, `${topA ? topA.p.assists : 0}A`)}
-          ${previewRow('暫定最優秀GK', topGk, `${topGk ? topGk.p.cleanSheets : 0}CS`)}
+          ${previewRow('暫定得点王', topG, `${topG ? (topG.p.goals || 0) : 0}G`)}
+          ${previewRow('暫定アシスト王', topA, `${topA ? (topA.p.assists || 0) : 0}A`)}
+          ${previewRow('暫定最優秀GK', topGk, `${topGk ? (topGk.p.cleanSheets || 0) : 0}CS`)}
         </div>
       `;
     }

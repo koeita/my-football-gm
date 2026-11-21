@@ -6120,11 +6120,19 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
   }
 
-  .weekly-schedule-card {
-    flex: 0 0 92px !important;
-    min-width: 92px !important;
-    max-width: 92px !important;
-    padding: 4px 6px !important;
+  .weekly-schedule-card,
+  .weekly-schedule-track .day-card {
+    flex: 0 0 88px !important;
+    min-width: 88px !important;
+    max-width: 88px !important;
+    padding: 5px 6px !important;
+  }
+
+  .weekly-schedule-track .day-card-date,
+  .weekly-schedule-track .day-event-market,
+  .weekly-schedule-track .day-event-training,
+  .weekly-schedule-track .day-event-recovery {
+    white-space: nowrap;
   }
 
   /* 3. 画面最下部固定ボトムナビゲーションバー（ネイティブアプリ風・セーフエリア対応・完全不透明保証） */
@@ -12793,6 +12801,8 @@ button.hidden,
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-view-full-schedule:hover {
