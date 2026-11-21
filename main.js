@@ -11270,6 +11270,174 @@ function findPlayerWithContextById(playerId) {
       }
     }
   }
+  const hofPlayers = gameState.clubHallOfFame && gameState.clubHallOfFame.players;
+  if (hofPlayers && typeof hofPlayers === 'object' && hofPlayers[playerId]) {
+    const entry = hofPlayers[playerId];
+    const spec = entry.avatarSpec || {};
+    const pos = entry.pos || spec.pos || 'CM';
+    const apps = entry.apps || 0;
+    const avgBase = entry.bestSeasonRating || 7.0;
+    const archPlayer = {
+      id: entry.id,
+      name: entry.name,
+      fullName: entry.fullName || entry.name,
+      nationality: entry.nationality || spec.nationality || 'England',
+      pos,
+      primaryPosition: pos,
+      secondaryPositions: [],
+      squadNumber: entry.squadNumber || 0,
+      age: entry.age || spec.age || 35,
+      atk: typeof entry.atk === 'number' ? entry.atk : 72,
+      def: typeof entry.def === 'number' ? entry.def : 70,
+      sta: typeof entry.sta === 'number' ? entry.sta : 75,
+      preferredFoot: entry.preferredFoot || 'Right',
+      height: entry.height || 180,
+      growthCurve: entry.growthCurve || 'standard',
+      attributes: entry.attributes ? { ...entry.attributes } : null,
+      salary: 0,
+      wage: 0,
+      contractYears: 0,
+      appearances: apps,
+      goals: entry.goals || 0,
+      assists: entry.assists || 0,
+      cleanSheets: entry.cleanSheets || 0,
+      momCount: entry.momCount || 0,
+      totalRating: Number((apps * avgBase).toFixed(2)),
+      fatigue: 0,
+      morale: 80,
+      isRetired: Boolean(entry.isRetired),
+      traits: Array.isArray(entry.traits) ? [...entry.traits] : [],
+      awards: Array.isArray(entry.awards) ? entry.awards.map(a => ({ ...a })) : [],
+      milestones: Array.isArray(entry.milestones) ? entry.milestones.map(m => ({ ...m })) : [],
+      seasonHistory: Array.isArray(entry.seasonHistory) ? entry.seasonHistory.map(r => ({ ...r })) : [],
+      careerStats: { appearances: apps, goals: entry.goals || 0, assists: entry.assists || 0 },
+      avatarData: spec.avatarData ? { ...spec.avatarData } : null
+    };
+    const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    const statusSuffix = entry.isRetired ? '（現役引退・クラブ殿堂）' : '（クラブ殿堂）';
+    return {
+      player: archPlayer,
+      club: playerClub,
+      clubName: `${playerClub ? playerClub.name : 'クラブ'}${statusSuffix}`,
+      isMarket: false,
+      isPlayerClub: true,
+      isYouth: false,
+      isArchiveProfile: true
+    };
+  }
+
+  let archiveAwardRec = null;
+  const collectedAwards = [];
+  const collectAwardItem = (item, seasonNum, seasonYear, code, label, clubNameFallback, isMonthly = false) => {
+    if (!item || item.playerId !== playerId) return;
+    if (!archiveAwardRec) archiveAwardRec = { item, clubNameFallback };
+    collectedAwards.push({
+      season: seasonNum,
+      seasonYear: seasonYear || (typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(seasonNum) : ''),
+      code,
+      label,
+      clubName: item.clubName || clubNameFallback || '',
+      isMonthly
+    });
+  };
+  if (Array.isArray(gameState.seasonAwardsHistory)) {
+    for (const sObj of gameState.seasonAwardsHistory) {
+      if (!sObj) continue;
+      collectAwardItem(sObj.mvp, sObj.season, sObj.seasonYear, 'MVP', '年間MVP');
+      collectAwardItem(sObj.topScorer, sObj.season, sObj.seasonYear, 'TOP_SCORER', '得点王');
+      collectAwardItem(sObj.topAssister, sObj.season, sObj.seasonYear, 'TOP_ASSISTER', 'アシスト王');
+      collectAwardItem(sObj.bestGk, sObj.season, sObj.seasonYear, 'BEST_GK', '最優秀GK');
+      collectAwardItem(sObj.youngPlayer, sObj.season, sObj.seasonYear, 'YOUNG_PLAYER', '最優秀若手');
+      collectAwardItem(sObj.clubMvp, sObj.season, sObj.seasonYear, 'CLUB_MVP', 'クラブMVP');
+      if (Array.isArray(sObj.bestEleven)) {
+        for (const b of sObj.bestEleven) {
+          collectAwardItem(b, sObj.season, sObj.seasonYear, 'BEST_11', 'ベスト11');
+        }
+      }
+    }
+  }
+  if (Array.isArray(gameState.monthlyAwardsHistory)) {
+    for (const m of gameState.monthlyAwardsHistory) {
+      if (!m || m.playerId !== playerId) continue;
+      if (!archiveAwardRec) {
+        archiveAwardRec = {
+          item: {
+            playerId: m.playerId,
+            name: m.playerName,
+            pos: m.pos || 'MF',
+            clubId: m.clubId,
+            clubName: m.clubName,
+            clubPrimaryColor: '#f59e0b',
+            appearances: m.apps || 0,
+            goals: m.goals || 0,
+            assists: m.assists || 0,
+            cleanSheets: 0,
+            momCount: 0,
+            avgRating: m.avgRating,
+            avatarSpec: m.avatarSpec
+          },
+          clubNameFallback: m.clubName
+        };
+      }
+      collectedAwards.push({
+        season: m.season || 1,
+        seasonYear: m.seasonYear || (typeof getCurrentSeasonYearStr === 'function' ? getCurrentSeasonYearStr(m.season || 1) : ''),
+        code: `MONTHLY_MVP_${m.year}_${m.month}`,
+        label: `${m.month}月間MVP`,
+        clubName: m.clubName || '',
+        isMonthly: true
+      });
+    }
+  }
+  if (archiveAwardRec && archiveAwardRec.item) {
+    const item = archiveAwardRec.item;
+    const spec = item.avatarSpec || {};
+    const pos = item.pos || spec.pos || 'CM';
+    const apps = item.appearances || 0;
+    const avgNum = parseFloat(item.avgRating);
+    const ratNum = !Number.isNaN(avgNum) ? avgNum : 7.0;
+    const resolvedClub = (item.clubId && typeof getClubById === 'function' ? getClubById(item.clubId) : null)
+      || { id: item.clubId || 'award_club', name: item.clubName || archiveAwardRec.clubNameFallback || 'クラブ', primaryColor: item.clubPrimaryColor || '#2ecc71' };
+    const archPlayer = {
+      id: item.playerId || playerId,
+      name: item.name,
+      fullName: item.name,
+      nationality: spec.nationality || 'England',
+      pos,
+      primaryPosition: pos,
+      secondaryPositions: [],
+      squadNumber: 10,
+      age: item.age || spec.age || 28,
+      atk: 76,
+      def: pos === 'GK' || pos === 'CB' || pos === 'LB' || pos === 'RB' ? 76 : 70,
+      sta: 78,
+      salary: 0,
+      wage: 0,
+      contractYears: 0,
+      appearances: apps,
+      goals: item.goals || 0,
+      assists: item.assists || 0,
+      cleanSheets: item.cleanSheets || 0,
+      momCount: item.momCount || 0,
+      totalRating: Number((apps * ratNum).toFixed(2)),
+      fatigue: 0,
+      morale: 80,
+      isRetired: true,
+      traits: [],
+      awards: collectedAwards,
+      milestones: [],
+      avatarData: spec.avatarData ? { ...spec.avatarData } : null
+    };
+    return {
+      player: archPlayer,
+      club: resolvedClub,
+      clubName: `${resolvedClub.name}（歴代受賞者）`,
+      isMarket: false,
+      isPlayerClub: Boolean(item.isPlayerClub),
+      isYouth: false,
+      isArchiveProfile: true
+    };
+  }
   return null;
 }
 
@@ -12337,8 +12505,9 @@ function openPlayerProfileModal(playerId) {
   const effOvr = getEffectivePlayerRating(p);
   const playerClub = getPlayerClub();
   const isYouth = ctx.isYouth || (playerClub && playerClub.youthSquad || []).some(y => y.id === p.id);
+  const isArchivedPlayer = Boolean(p.isRetired || ctx.isArchiveProfile);
   const isMyClubPlayer = Boolean(ctx.isPlayerClub || (playerClub && playerClub.players && playerClub.players.some(x => x.id === p.id)));
-  const scoutView = (isMyClubPlayer || isYouth || isCandidate)
+  const scoutView = (isMyClubPlayer || isYouth || isCandidate || isArchivedPlayer)
     ? { isScouted: true, scoutLevel: 2, ovrDisplay: `${baseOvr}`, ovrMin: baseOvr, ovrMax: baseOvr }
     : (typeof getPlayerScoutedView === 'function'
       ? getPlayerScoutedView(p, false)
@@ -12376,13 +12545,17 @@ function openPlayerProfileModal(playerId) {
     : 0;
   const estMarketValue = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
   const weeklyWageVal = p.wage || Math.max(1, Math.round((p.salary || 520) / 52));
-  const roleStatusText = isMarket
-    ? '移籍リスト登録中'
-    : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録'));
-  const conditionText = isInjured
-    ? `負傷離脱中 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `あと約${p.injuryDays || (p.injuryWeeks * 7)}日`})`
-    : '良好 (出場可能)';
-  const conditionClass = isInjured ? 'text-danger' : 'accent-green';
+  const roleStatusText = isArchivedPlayer
+    ? '殿堂・記録アーカイブ'
+    : (isMarket
+      ? '移籍リスト登録中'
+      : (isYouth ? 'ユースアカデミー在籍' : (p.isStarter ? `スタメン起用 (${p.assignedPos || primaryPos})` : 'ベンチ・控え登録')));
+  const conditionText = isArchivedPlayer
+    ? '記録アーカイブ (閲覧専用)'
+    : (isInjured
+      ? `負傷離脱中 (${typeof formatPlayerInjuryDurationText === 'function' ? formatPlayerInjuryDurationText(p) : `あと約${p.injuryDays || (p.injuryWeeks * 7)}日`})`
+      : '良好 (出場可能)');
+  const conditionClass = isArchivedPlayer ? 'text-muted' : (isInjured ? 'text-danger' : 'accent-green');
 
   const footLabelMap = {
     Right: 'Right',
@@ -12425,7 +12598,7 @@ function openPlayerProfileModal(playerId) {
   const avatarCanvasEl = document.getElementById('profile-avatar-canvas');
   if (avatarCanvasEl && typeof generatePlayerAvatar === 'function') {
     const isCandidate = (gameState.youthCandidates || []).some(y => y.id === p.id);
-    const avatarClub = findAvatarClubForPlayer(p) || (isCandidate ? playerClub : null);
+    const avatarClub = findAvatarClubForPlayer(p) || (isCandidate ? playerClub : null) || ctx.club || null;
     generatePlayerAvatar(p, avatarCanvasEl, avatarClub);
   }
 
@@ -12463,7 +12636,15 @@ function openPlayerProfileModal(playerId) {
   const bioRowEl = document.getElementById('profile-bio-row');
   if (bioRowEl) {
     let youthMetaHtml = '';
-    if (isYouth) {
+    if (isArchivedPlayer) {
+      youthMetaHtml = `
+        <span class="profile-bio-chip">通算出場 <strong class="accent-green">${careerApps}試合</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip">通算得点 <strong class="accent-gold">${careerGoals}G</strong></span>
+        <span class="profile-bio-sep">·</span>
+        <span class="profile-bio-chip text-muted">記録アーカイブ</span>
+      `;
+    } else if (isYouth) {
       const potRank = p.potential || p.potentialGrade || 'B';
       const potRankClass = potRank === 'S' ? 'stat-rank-S' : (potRank === 'A' ? 'stat-rank-A' : (potRank === 'B' ? 'stat-rank-B' : (potRank === 'C' ? 'stat-rank-C' : (potRank === 'D' ? 'stat-rank-D' : 'stat-rank-E'))));
       youthMetaHtml = `
@@ -12797,7 +12978,7 @@ function openPlayerProfileModal(playerId) {
     </div>
   `).join('');
 
-  const abilityActionsHtml = isYouth ? `
+  const abilityActionsHtml = isArchivedPlayer ? '' : (isYouth ? `
     <div class="profile-ability-actions">
       <button type="button" class="btn btn-primary mono btn-modal-promote-youth" data-youth-id="${p.id}" style="flex: 1; font-weight: 700; padding: 9px 12px;">
         トップチームへ昇格 (契約金 £40k · 週給 £${p.wage || 2.5}k · 3年)
@@ -12829,7 +13010,7 @@ function openPlayerProfileModal(playerId) {
         ${p.contractRefused ? '契約延長交渉打ち切り済' : '契約延長交渉を開く'}
       </button>
     </div>
-  ` : ''));
+  ` : '')));
 
   const canRevealProfileMeta = Boolean(scoutView.isScouted || isMyClubPlayer || isYouth);
   const growthCurveDisplay = canRevealProfileMeta
@@ -21837,6 +22018,23 @@ function syncPlayerClubStatsToHallOfFame(playerClub, { retiredIds = null } = {})
     entry.name = p.name;
     entry.fullName = p.fullName || p.name;
     entry.pos = p.primaryPosition || p.pos || entry.pos;
+    entry.nationality = p.nationality || entry.nationality || 'England';
+    entry.age = p.age || entry.age || 25;
+    entry.squadNumber = p.squadNumber || entry.squadNumber || 0;
+    entry.atk = typeof p.atk === 'number' ? p.atk : (entry.atk || 70);
+    entry.def = typeof p.def === 'number' ? p.def : (entry.def || 70);
+    entry.sta = typeof p.sta === 'number' ? p.sta : (entry.sta || 75);
+    entry.preferredFoot = p.preferredFoot || entry.preferredFoot || 'Right';
+    entry.height = p.height || entry.height || 180;
+    entry.growthCurve = p.growthCurve || p.growthType || entry.growthCurve || 'standard';
+    if (p.attributes && typeof p.attributes === 'object') {
+      entry.attributes = { ...p.attributes };
+    }
+    entry.traits = Array.isArray(p.traits) ? [...p.traits] : (entry.traits || []);
+    entry.milestones = Array.isArray(p.milestones) ? p.milestones.slice(-20) : (entry.milestones || []);
+    if (Array.isArray(p.seasonHistory) && p.seasonHistory.length > 0) {
+      entry.seasonHistory = p.seasonHistory.map(r => ({ ...r }));
+    }
     entry.apps = (entry.apps || 0) + dApps;
     entry.goals = (entry.goals || 0) + dGoals;
     entry.assists = (entry.assists || 0) + dAssists;
@@ -22455,7 +22653,7 @@ function buildBestElevenPitchHtml(awardsObj) {
     const avatarHtml = (typeof getPlayerAvatarHtml === 'function')
       ? getPlayerAvatarHtml(node.avatarSpec || { id: node.playerId, name: node.name, pos: node.pos }, clubObj, 'avatar-sm awards-best11-avatar', 32)
       : '';
-    const canOpen = Boolean(typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(node.playerId));
+    const canOpen = Boolean(node.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(node.playerId));
     const statTag = node.slotPos === 'GK' ? `${node.cleanSheets}CS / ${node.avgRating}` : `${node.goals}G ${node.assists}A`;
     return `
       <div class="awards-best11-node ${node.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" style="left:${node.x}%; top:${node.y}%;" ${canOpen ? `data-award-profile-id="${escapeCommHtml(node.playerId)}"` : ''}>
@@ -22494,7 +22692,7 @@ function buildSeasonAwardsHtml(awardsObj) {
       ? `<button type="button" class="player-name-link clickable-player-name awards-winner-name" data-award-profile-id="${escapeCommHtml(winner.playerId)}">${escapeCommHtml(winner.name)}</button>`
       : `<span class="awards-winner-name">${escapeCommHtml(winner.name)}</span>`;
     return `
-      <div class="awards-title-row ${winner.isPlayerClub ? 'is-player-club' : ''}">
+      <div class="awards-title-row ${winner.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" ${canOpen ? `data-award-profile-id="${escapeCommHtml(winner.playerId)}"` : ''}>
         <span class="awards-award-name ${accentCls}">${escapeCommHtml(awardLabel)}</span>
         <div class="awards-winner-main">
           ${avatarHtml}
@@ -22587,14 +22785,21 @@ function renderClubRecordsView() {
     ];
     const ssrHtml = recordItems.map(item => {
       let valHtml = '<span class="hof-record-val mono text-muted">記録待ち</span>';
+      let recCanOpen = false;
+      let recPidAttr = '';
       if (item.rec) {
         const hofPlayer = item.rec.playerId && hof.players ? hof.players[item.rec.playerId] : null;
         const recSpec = item.rec.avatarSpec || (hofPlayer && hofPlayer.avatarSpec) || { id: item.rec.playerId || item.rec.name, name: item.rec.name, pos: item.rec.pos || 'CM' };
         const recAvatarHtml = renderAwardPlayerAvatarHtml(item.rec.playerId, recSpec, playerClub, 22, 'awards-row-avatar-xs');
-        valHtml = `<span class="hof-record-val mono">${recAvatarHtml}<span class="hof-record-name">${escapeCommHtml(item.rec.name)}</span> <strong class="accent-gold">${item.rec.val}${item.suffix}</strong> <span class="text-muted">(${escapeCommHtml(item.rec.seasonYear)})</span></span>`;
+        recCanOpen = Boolean(item.rec.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(item.rec.playerId));
+        if (recCanOpen) recPidAttr = `data-award-profile-id="${escapeCommHtml(item.rec.playerId)}"`;
+        const recNameHtml = recCanOpen
+          ? `<button type="button" class="player-name-link clickable-player-name hof-record-name" ${recPidAttr}>${escapeCommHtml(item.rec.name)}</button>`
+          : `<span class="hof-record-name">${escapeCommHtml(item.rec.name)}</span>`;
+        valHtml = `<span class="hof-record-val mono">${recAvatarHtml}${recNameHtml} <strong class="accent-gold">${item.rec.val}${item.suffix}</strong> <span class="text-muted">(${escapeCommHtml(item.rec.seasonYear)})</span></span>`;
       }
       return `
-        <div class="hof-record-row">
+        <div class="hof-record-row ${recCanOpen ? 'is-clickable' : ''}" ${recPidAttr}>
           <span class="hof-record-label">${item.label}</span>
           ${valHtml}
         </div>
@@ -22602,7 +22807,8 @@ function renderClubRecordsView() {
     }).join('');
 
     const rowsHtml = allHof.slice(0, 30).map((entry, idx) => {
-      const canOpen = Boolean(!entry.isRetired && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(entry.id));
+      const canOpen = Boolean(entry.id && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(entry.id));
+      const pidAttr = canOpen ? `data-award-profile-id="${escapeCommHtml(entry.id)}"` : '';
       const statusLabel = entry.isRetired ? '引退' : (entry.departed ? '退団' : '在籍');
       const statusCls = entry.isRetired ? 'text-muted' : (entry.departed ? 'text-muted' : 'accent-green');
       const awardsCount = Array.isArray(entry.awards) ? entry.awards.length : 0;
@@ -22610,10 +22816,10 @@ function renderClubRecordsView() {
       const entrySpec = entry.avatarSpec || { id: entry.id, name: entry.name, pos: entry.pos || 'CM' };
       const entryAvatarHtml = renderAwardPlayerAvatarHtml(entry.id, entrySpec, playerClub, 28, 'awards-row-avatar');
       const nameHtml = canOpen
-        ? `<button type="button" class="player-name-link clickable-player-name" data-award-profile-id="${escapeCommHtml(entry.id)}">${escapeCommHtml(entry.name)}</button>`
+        ? `<button type="button" class="player-name-link clickable-player-name" ${pidAttr}>${escapeCommHtml(entry.name)}</button>`
         : `<span class="hof-player-name">${escapeCommHtml(entry.name)}</span>`;
       return `
-        <div class="hof-rank-row">
+        <div class="hof-rank-row ${canOpen ? 'is-clickable' : ''}" ${pidAttr}>
           <div class="hof-rank-left">
             <span class="hof-rank-num mono">${idx + 1}</span>
             ${entryAvatarHtml}
@@ -22667,7 +22873,7 @@ function renderClubRecordsView() {
       const topA = [...all].sort((a, b) => (b.p.assists || 0) - (a.p.assists || 0))[0];
       const topGk = [...all].filter(x => (x.p.pos || x.p.primaryPosition) === 'GK').sort((a, b) => (b.p.cleanSheets || 0) - (a.p.cleanSheets || 0))[0];
       const previewRow = (lbl, item, valStr) => item ? `
-        <div class="awards-title-row ${item.c.isPlayer ? 'is-player-club' : ''}">
+        <div class="awards-title-row ${item.c.isPlayer ? 'is-player-club' : ''} is-clickable" data-award-profile-id="${escapeCommHtml(item.p.id)}">
           <span class="awards-award-name accent-gold">${lbl}</span>
           <div class="awards-winner-main">
             ${renderAwardPlayerAvatarHtml(item.p.id, item.p, item.c, 28, 'awards-row-avatar')}
@@ -22697,14 +22903,15 @@ function renderClubRecordsView() {
         const mSpec = m.avatarSpec || { id: m.playerId || m.playerName, name: m.playerName, pos: m.pos || 'MF' };
         const mAvatarHtml = renderAwardPlayerAvatarHtml(m.playerId, mSpec, typeof clubObj === 'object' ? clubObj : null, 28, 'awards-row-avatar');
         const canOpen = Boolean(m.playerId && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(m.playerId));
+        const pidAttr = canOpen ? `data-award-profile-id="${escapeCommHtml(m.playerId)}"` : '';
         return `
-          <div class="monthly-award-row ${m.isPlayerClub ? 'is-player-club' : ''}">
+          <div class="monthly-award-row ${m.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" ${pidAttr}>
             <div class="monthly-award-left">
               <span class="monthly-award-period mono">${m.year}/${String(m.month).padStart(2, '0')}</span>
               ${mAvatarHtml}
               ${typeof getClubEmblemSvg === 'function' && clubObj ? getClubEmblemSvg(clubObj, 18, 'awards-club-emblem') : ''}
               ${canOpen
-                ? `<button type="button" class="player-name-link clickable-player-name" data-award-profile-id="${escapeCommHtml(m.playerId)}">${escapeCommHtml(m.playerName)}</button>`
+                ? `<button type="button" class="player-name-link clickable-player-name" ${pidAttr}>${escapeCommHtml(m.playerName)}</button>`
                 : `<span>${escapeCommHtml(m.playerName)}</span>`}
               <span class="awards-club-code mono">${escapeCommHtml(m.clubShortCode || m.clubName)}</span>
             </div>

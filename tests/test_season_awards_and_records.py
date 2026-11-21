@@ -101,6 +101,16 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         records_start = self.main_js.index('function renderClubRecordsView(')
         records_block = self.main_js[records_start:]
         self.assertGreaterEqual(records_block.count('renderAwardPlayerAvatarHtml('), 4)
+        self.assertIn('hof-record-row ${recCanOpen', records_block)
+        self.assertIn('hof-rank-row ${canOpen', records_block)
+        self.assertIn('monthly-award-row ${m.isPlayerClub', records_block)
+        self.assertGreaterEqual(records_block.count('data-award-profile-id'), 4)
+
+        find_start = self.main_js.index('function findPlayerWithContextById(')
+        find_end = self.main_js.index('function getAttributeRankInfo(', find_start)
+        find_block = self.main_js[find_start:find_end]
+        self.assertIn('gameState.clubHallOfFame', find_block)
+        self.assertIn('isArchiveProfile: true', find_block)
 
         for field in ['seasonAwardsHistory:', 'monthlyAwardsHistory:', 'monthlyPlayerBaseline:', 'clubHallOfFame:']:
             self.assertIn(field, self.storage_js)

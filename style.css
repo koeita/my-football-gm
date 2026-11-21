@@ -21907,4 +21907,34 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   }
 }
 
+/* 記録・表彰：行クリックで選手詳細オープン */
+.hof-record-row.is-clickable,
+.hof-rank-row.is-clickable,
+.awards-title-row.is-clickable,
+.monthly-award-row.is-clickable {
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+}
+
+.hof-record-row.is-clickable:hover,
+.hof-rank-row.is-clickable:hover,
+.awards-title-row.is-clickable:hover,
+.monthly-award-row.is-clickable:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+button.hof-record-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+#player-profile-modal,
+#player-profile-modal-overlay {
+  z-index: 32000 !important;
+}
+
 
