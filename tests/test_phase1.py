@@ -25,7 +25,7 @@ class TestPhase1(unittest.TestCase):
     def test_squad_header_display(self):
         # No slash like 18 / 25
         self.assertIn("header-squad-size", self.js)
-        self.assertIn('`SQUAD: ${squadCount}名`', self.js)
+        self.assertIn("setHeaderText('header-squad-size', `${squadCount}名`);", self.js)
         self.assertIn('id="header-squad-size">20名</span>', self.html)
         self.assertIn('id="tab-badge-roster">20名</span>', self.html)
 

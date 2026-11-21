@@ -105,6 +105,8 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('hof-rank-row ${canOpen', records_block)
         self.assertIn('monthly-award-row ${m.isPlayerClub', records_block)
         self.assertGreaterEqual(records_block.count('data-award-profile-id'), 4)
+        self.assertIn('topGk.p.cleanSheets || 0', records_block)
+        self.assertIn('記録待ち', records_block)
 
         find_start = self.main_js.index('function findPlayerWithContextById(')
         find_end = self.main_js.index('function getAttributeRankInfo(', find_start)

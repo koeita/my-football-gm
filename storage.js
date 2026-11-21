@@ -1289,10 +1289,98 @@ function openSettingsModal() {
   if (autoHtCheck) autoHtCheck.checked = Boolean(appSettings.autoHalftimeResume);
   if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
   const mainMenuEl = document.getElementById('main-menu-screen');
+  const isOnMainMenu = Boolean(mainMenuEl && !mainMenuEl.classList.contains('hidden'));
   const titleReturnRow = overlay ? overlay.querySelector('.settings-title-return-row') : null;
   if (titleReturnRow) {
-    const isOnMainMenu = Boolean(mainMenuEl && !mainMenuEl.classList.contains('hidden'));
     titleReturnRow.classList.toggle('hidden', isOnMainMenu);
+  }
+  const summaryEl = document.getElementById('settings-mobile-header-summary');
+  if (summaryEl) {
+    if (isOnMainMenu) {
+      summaryEl.classList.add('hidden');
+      summaryEl.innerHTML = '';
+    } else {
+      const esc = (s) => (typeof escapeCommHtml === 'function')
+        ? escapeCommHtml(s)
+        : String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+      const clubEl = document.getElementById('header-club-name');
+      const clubHtml = clubEl ? clubEl.innerHTML : '';
+      const gmName = document.getElementById('header-gm-name')?.textContent || '';
+      const leagueLabel = document.querySelector('.status-header .game-label')?.textContent || '';
+      const finBadgeEl = document.getElementById('header-finance-badge');
+      const finText = finBadgeEl?.textContent || '';
+      const finStatusCls = finBadgeEl
+        ? Array.from(finBadgeEl.classList).find(c => c.startsWith('status-')) || 'status-healthy'
+        : 'status-healthy';
+      const targetRank = document.getElementById('header-target-rank')?.textContent || '';
+      const season = document.getElementById('header-season')?.textContent || '';
+      const curDate = document.getElementById('header-date')?.textContent || '';
+      const matchweek = document.getElementById('header-matchweek')?.textContent || '';
+      const fundsEl = document.getElementById('header-funds');
+      const fundsText = fundsEl?.textContent || '';
+      const fundsCls = fundsEl && fundsEl.classList.contains('text-danger') ? 'text-danger' : 'accent-gold';
+      const safeBudget = document.getElementById('header-safe-budget')?.textContent || '';
+      const safeEl = document.getElementById('header-safe-budget');
+      const safeCls = safeEl && safeEl.classList.contains('is-danger')
+        ? 'text-danger'
+        : (safeEl && safeEl.classList.contains('is-tight') ? 'accent-gold' : 'text-muted');
+      const payroll = document.getElementById('header-payroll')?.textContent || '';
+      const squad = document.getElementById('header-squad-size')?.textContent || '';
+      const supporters = document.getElementById('header-supporters')?.textContent || '';
+      const finColorCls = finStatusCls === 'status-healthy'
+        ? 'accent-green'
+        : (finStatusCls === 'status-danger' || finStatusCls === 'status-critical' ? 'text-danger' : 'accent-gold');
+
+      summaryEl.innerHTML = `
+        <div class="settings-mh-brand">
+          <div class="settings-mh-title-row">
+            <div class="settings-mh-club">${clubHtml}</div>
+            <span class="settings-mh-gm mono">GM: <strong>${esc(gmName)}</strong></span>
+          </div>
+          <div class="settings-mh-meta-row mono">
+            <span class="settings-mh-league">${esc(leagueLabel)}</span>
+            <span class="settings-mh-meta-sep">·</span>
+            <span class="settings-mh-fin ${finColorCls}">${esc(finText)}</span>
+            <span class="settings-mh-meta-sep">·</span>
+            <span class="settings-mh-target">${esc(targetRank)}</span>
+          </div>
+        </div>
+        <div class="settings-mh-grid">
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">SEASON</span>
+            <span class="settings-mh-val mono">${esc(season)}</span>
+          </div>
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">CURRENT DATE</span>
+            <span class="settings-mh-val mono accent-green">${esc(curDate)}</span>
+          </div>
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">MATCHWEEK</span>
+            <span class="settings-mh-val mono">${esc(matchweek)}</span>
+          </div>
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">WEEKLY PAYROLL</span>
+            <span class="settings-mh-val mono">${esc(payroll)}</span>
+          </div>
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">SQUAD</span>
+            <span class="settings-mh-val mono">${esc(squad)}</span>
+          </div>
+          <div class="settings-mh-item">
+            <span class="settings-mh-label mono">SUPPORTERS</span>
+            <span class="settings-mh-val mono">${esc(supporters)}</span>
+          </div>
+          <div class="settings-mh-item settings-mh-item-wide">
+            <span class="settings-mh-label mono">CLUB FUNDS</span>
+            <span class="settings-mh-val mono">
+              <strong class="${fundsCls}">${esc(fundsText)}</strong>
+              <span class="settings-mh-sub ${safeCls}">(${esc(safeBudget)})</span>
+            </span>
+          </div>
+        </div>
+      `;
+      summaryEl.classList.remove('hidden');
+    }
   }
   if (overlay) {
     if (!overlay._hasOverlayListener) {
@@ -1304,7 +1392,9 @@ function openSettingsModal() {
         }
       });
     }
+    const bodyEl = overlay.querySelector('.settings-modal-body');
     overlay.classList.remove('hidden');
+    if (bodyEl) bodyEl.scrollTop = 0;
     setBodyModalLock(true);
   }
 }
