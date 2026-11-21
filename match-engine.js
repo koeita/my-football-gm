@@ -166,13 +166,39 @@ function generateScorersForQuickMatch(homeClub, awayClub, homeScore, awayScore, 
 
   const pickScorer = (pool, club) => selectWeightedMatchScorer(pool, club && club.tactic);
 
+  const assistPosWeights = {
+    AM: 18,
+    LW: 15, RW: 15, WG: 15,
+    LM: 12, RM: 12, SM: 12,
+    CM: 11,
+    LWB: 8.5, RWB: 8.5,
+    LB: 7.5, RB: 7.5, SB: 7.5,
+    CF: 6.0, ST: 6.0, FW: 6.0,
+    DM: 5.0,
+    CB: 1.8, DF: 2.5
+  };
+
   const pickAssister = (pool, scorer) => {
     if (Math.random() > 0.72) return null;
     const cands = pool.filter(p => p && (!scorer || p.id !== scorer.id) && (p.assignedPos || p.pos) !== 'GK');
     if (cands.length === 0) return null;
-    const mfWg = cands.filter(p => ['AM', 'CM', 'LM', 'RM', 'DM', 'LW', 'RW', 'LB', 'RB', 'LWB', 'RWB'].includes(p.assignedPos || p.pos));
-    const astPool = mfWg.length > 0 && Math.random() < 0.8 ? mfWg : cands;
-    return astPool[Math.floor(Math.random() * astPool.length)] || null;
+    let totalW = 0;
+    const weights = cands.map(p => {
+      const pos = p.assignedPos || p.primaryPosition || p.pos || 'CM';
+      const baseW = assistPosWeights[pos] ?? 6.0;
+      const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : (typeof p.ovr === 'number' ? p.ovr : 70);
+      const skillMult = clamp(0.70 + ((ovr - 70) * 0.025), 0.65, 1.35);
+      const w = Math.max(0.2, baseW * skillMult);
+      totalW += w;
+      return w;
+    });
+    if (totalW <= 0) return cands[0];
+    let r = Math.random() * totalW;
+    for (let i = 0; i < cands.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return cands[i];
+    }
+    return cands[cands.length - 1];
   };
 
   const buildSideQuickScorers = (starters, subs, score, club) => {
@@ -1520,10 +1546,10 @@ function simulateMatch(homeClub, awayClub) {
       }
     } else if (myTac === 'wingplay') {
       // ④ ワイドアタック：サイド能力連動。中央固め(5バック/parkthebus/counter)を外から攻略しやすい
-      const wideBonus = 1.01 + clamp((myStats.wideOvrScore - 60) / 45, 0, 0.10);
+      const wideBonus = 1.00 + clamp((myStats.wideOvrScore - 60) / 50, 0, 0.09);
       attMult *= wideBonus;
       if (CENTRAL_DEF_FORMATIONS.includes(oppForm) || oppTac === 'parkthebus' || oppTac === 'counter') {
-        attMult *= 1.14;
+        attMult *= 1.12;
       } else if (oppTac === 'gegenpress') {
         attMult *= 0.92;
       }
