@@ -22939,10 +22939,10 @@ function renderClubRecordsView() {
       </div>
       <span class="panel-subtitle mono">Season ${gameState.season || 1}</span>
     </div>
-    <div class="records-subnav-bar">
-      <button type="button" class="btn-inbox-filter ${subtab === 'hall' ? 'active' : ''}" data-records-subtab="hall">クラブ殿堂・記録</button>
-      <button type="button" class="btn-inbox-filter ${subtab === 'season-awards' ? 'active' : ''}" data-records-subtab="season-awards">シーズン表彰・ベスト11</button>
-      <button type="button" class="btn-inbox-filter ${subtab === 'monthly-awards' ? 'active' : ''}" data-records-subtab="monthly-awards">月間MVP履歴</button>
+    <div class="records-subnav-bar" role="tablist" aria-label="記録・表彰メニュー">
+      <button type="button" class="records-subtab-btn ${subtab === 'hall' ? 'active' : ''}" data-records-subtab="hall" role="tab" aria-selected="${subtab === 'hall' ? 'true' : 'false'}">クラブ殿堂・記録</button>
+      <button type="button" class="records-subtab-btn ${subtab === 'season-awards' ? 'active' : ''}" data-records-subtab="season-awards" role="tab" aria-selected="${subtab === 'season-awards' ? 'true' : 'false'}">シーズン表彰・ベスト11</button>
+      <button type="button" class="records-subtab-btn ${subtab === 'monthly-awards' ? 'active' : ''}" data-records-subtab="monthly-awards" role="tab" aria-selected="${subtab === 'monthly-awards' ? 'true' : 'false'}">月間MVP履歴</button>
     </div>
     <div class="records-panel-body">${contentHtml}</div>
   `;
