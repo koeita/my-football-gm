@@ -14,6 +14,10 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
             self.storage_js = f.read()
         with open(os.path.join(self.root, 'style.css'), 'r', encoding='utf-8') as f:
             self.css = f.read()
+        with open(os.path.join(self.root, 'competitions.js'), 'r', encoding='utf-8') as f:
+            self.competitions_js = f.read()
+        with open(os.path.join(self.root, 'match-engine.js'), 'r', encoding='utf-8') as f:
+            self.match_engine_js = f.read()
 
     def test_1_season_awards_best11_and_settlement_modal(self):
         """年間アワード・ベスト11選出とprocessSeasonEnd順序、決算モーダルタブを検証"""
@@ -124,6 +128,48 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertEqual(self.main_js.count('{'), self.main_js.count('}'))
         self.assertEqual(self.storage_js.count('{'), self.storage_js.count('}'))
         self.assertEqual(self.css.count('{'), self.css.count('}'))
+
+    def test_5_audit_bugfixes_regression(self):
+        """E2E・コード監査修正項目の回帰検証"""
+        # 1. D2監督クローン防止
+        eps_match = re.search(r'function ensurePlayableClubStructure\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(eps_match)
+        self.assertNotIn('MANAGERS_DATABASE[0]', eps_match.group(0))
+        self.assertIn('preferredRanks', eps_match.group(0))
+
+        # 2. アシスト選出関数の統一
+        self.assertIn('function selectWeightedMatchAssister(', self.match_engine_js)
+        quick_match = re.search(r'function generateScorersForQuickMatch\([\s\S]*?\n\}', self.match_engine_js)
+        league_match = re.search(r'function processMatchScorersAndRatings\([\s\S]*?\n\}', self.match_engine_js)
+        self.assertIsNotNone(quick_match)
+        self.assertIsNotNone(league_match)
+        self.assertIn('selectWeightedMatchAssister(', quick_match.group(0))
+        self.assertIn('selectWeightedMatchAssister(', league_match.group(0))
+
+        # 3. 殿堂ベースライン初期化と加入箇所連携
+        self.assertIn('function initPlayerClubHofBaseline(', self.main_js)
+        self.assertGreaterEqual(self.main_js.count('initPlayerClubHofBaseline('), 4)
+
+        # 4. 解任再就職モーダルの自クラブ除外・旧データリセット
+        crisis_match = re.search(r'function openBoardCrisisModal\([\s\S]*?\n\}', self.main_js)
+        restart_match = re.search(r'function handleBoardRelegationRestart\([\s\S]*?\n\}', self.main_js)
+        self.assertIsNotNone(crisis_match)
+        self.assertIsNotNone(restart_match)
+        self.assertIn('.filter(c => c && !c.isPlayer)', crisis_match.group(0))
+        self.assertIn('gameState.clubHallOfFame =', restart_match.group(0))
+        self.assertIn('gameState.installments = []', restart_match.group(0))
+
+        # 5. 交渉モーダルのフリー選手年数上限整合
+        neg_match = re.search(r'function openTransferNegotiationModal\([\s\S]*?\n\}', self.main_js)
+        self.assertIsNotNone(neg_match)
+        self.assertIn('const maxAllowedYears = isFreeAgent ? 3 : 4;', neg_match.group(0))
+
+        # 6. CSS :root の変数補完
+        root_match = re.search(r':root\s*\{[^}]+\}', self.css)
+        self.assertIsNotNone(root_match)
+        self.assertIn('--bg-card:', root_match.group(0))
+        self.assertIn('--radius-md:', root_match.group(0))
+        self.assertIn('--radius-sm:', root_match.group(0))
 
 
 if __name__ == '__main__':
