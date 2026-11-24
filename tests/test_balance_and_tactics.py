@@ -81,6 +81,27 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('homeSubEvents: cupFinalRatings.homeSubEvents || [],', self.match_js)
         self.assertIn('isHome ? cupFinalRatings.homeSubs : cupFinalRatings.awaySubs', self.match_js)
 
+    def test_8_multi_year_sustainability_and_save_compression(self):
+        """長期プレイ均衡・CPUスカッド世代交代・2部収益・セーブ軽量化が組み込まれていること"""
+        self.assertIn('function replenishCpuSquadOffseason(', self.models_js)
+        self.assertIn('function getClubMaxSupporters(', self.models_js)
+        self.assertIn('function adjustClubSupporters(', self.models_js)
+        self.assertIn('replenishCpuSquadOffseason(club, usedCpuNames)', self.main_js)
+        self.assertIn('const d2HomeGate = Math.round(((h.supporters || 14000) * 0.055) / 10) * 10;', self.comp_js)
+        self.assertIn('const leagueCentralTvShare = isD2Club ? 2000 : 18000;', self.main_js)
+        self.assertIn('playCurrentMatchday(true)', self.main_js)
+        self.assertIn('const slimScheduleWeeks =', read_text('storage.js'))
+        self.assertIn('const slimSubEvent =', read_text('storage.js'))
+
+    def test_9_euro_calibration_confidence_and_clean_ui(self):
+        """欧州クラブ実力正規化・中位理事会信頼度緩和・キックオフ安定化とメタ表記除去が適用されていること"""
+        self.assertIn('function isForeignEuroClub(', self.comp_js)
+        self.assertIn('function getCalibratedForeignClubPower(', self.comp_js)
+        self.assertIn('const isEuroComp =', self.models_js)
+        self.assertIn('const isInToleranceZone =', self.models_js)
+        self.assertNotIn('animation: pulse-kickoff', self.style_css)
+        self.assertNotIn('animation: matchSummaryBtnPulse', self.style_css)
+
 
 if __name__ == '__main__':
     unittest.main()

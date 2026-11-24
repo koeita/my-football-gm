@@ -606,14 +606,18 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
     const stadiumLvPre = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
     const sponsorMatchMultPre = typeof getClubSponsorMatchIncomeMultiplier === 'function' ? getClubSponsorMatchIncomeMultiplier(playerClub) : 1.0;
-    const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.15) * sponsorMatchMultPre;
+    const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.10) * sponsorMatchMultPre;
     const gateIncome = isHome
       ? Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10
       : 0;
     const totalPreseasonIncome = prize + gateIncome;
 
     playerClub.funds = (playerClub.funds || 0) + totalPreseasonIncome;
-    playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + fanGain);
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(playerClub, fanGain);
+    } else {
+      playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + fanGain));
+    }
     playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
@@ -1096,7 +1100,7 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
-  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.10) * sponsorMatchMultLeague;
 
   let matchIncome = 0;
   let awayBroadcastingFee = 0;
@@ -1117,7 +1121,11 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
   }
 
   playerClub.funds = (playerClub.funds || 0) + matchIncome + awayBroadcastingFee;
-  playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + playerSupportersDelta);
+  if (typeof adjustClubSupporters === 'function') {
+    adjustClubSupporters(playerClub, playerSupportersDelta);
+  } else {
+    playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + playerSupportersDelta));
+  }
   updateManagerTrustAfterMatch(playerClub, Boolean(userWon), Boolean(userDraw));
 
   return { matchIncome, awayBroadcastingFee, playerSupportersDelta };
@@ -2207,13 +2215,13 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `[ホーム開催] マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)}${bonusNote} を計上`
+      text: `ホーム開催：マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)}${bonusNote} を計上`
     });
   } else if (!isPlayerHome) {
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `[アウェイ開催] プレミア放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
+      text: `アウェイ開催：プレミア放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
     });
   }
 
@@ -2273,7 +2281,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
-  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.10) * sponsorMatchMultLeague;
 
   for (const match of weekMatches) {
     const homeClub = getClubById(match.homeId);
@@ -2336,25 +2344,30 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     const prevHomeSupporters = homeClub.supporters;
     const prevAwaySupporters = awayClub.supporters;
 
+    const adjSup = (c, d) => {
+      if (typeof adjustClubSupporters === 'function') return adjustClubSupporters(c, d);
+      c.supporters = Math.min(50000, Math.max(5000, (c.supporters || 10000) + d));
+      return c.supporters;
+    };
     if (homeScore > awayScore) {
       homeClub.won += 1;
       homeClub.pts += 3;
       awayClub.lost += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(90, 240));
-      awayClub.supporters = Math.max(5000, awayClub.supporters - randInt(20, 80));
+      adjSup(homeClub, randInt(90, 240));
+      adjSup(awayClub, -randInt(20, 80));
     } else if (homeScore < awayScore) {
       awayClub.won += 1;
       awayClub.pts += 3;
       homeClub.lost += 1;
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(90, 240));
-      homeClub.supporters = Math.max(5000, homeClub.supporters - randInt(20, 80));
+      adjSup(awayClub, randInt(90, 240));
+      adjSup(homeClub, -randInt(20, 80));
     } else {
       homeClub.drawn += 1;
       awayClub.drawn += 1;
       homeClub.pts += 1;
       awayClub.pts += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(-10, 60));
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-10, 60));
+      adjSup(homeClub, randInt(-10, 60));
+      adjSup(awayClub, randInt(-10, 60));
     }
 
     const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;
@@ -2631,7 +2644,15 @@ function ensureClubStartersForMatch(club) {
     return targetClub.players.slice(0, 11);
   }
   if (!targetClub.players || targetClub.players.length === 0) {
-    const baseP = targetClub.basePower || targetClub.ovr || 74;
+    const cid = String(targetClub.id || '');
+    const isForeignEuroClubFlag = typeof isForeignEuroClub === 'function'
+      ? isForeignEuroClub(targetClub)
+      : Boolean((targetClub.country && targetClub.country !== 'ENG') || /^[a-z]{2}\d+$/.test(cid));
+    const calBase = (isForeignEuroClubFlag && typeof getCalibratedForeignClubPower === 'function')
+      ? getCalibratedForeignClubPower(targetClub)
+      : (targetClub.basePower || targetClub.ovr || 74);
+    // 自動生成時は sta=90 のため OVR が約+2高く算出される分を相殺して競技実力と一致させる
+    const baseP = isForeignEuroClubFlag ? Math.max(60, calBase - 2) : calBase;
     const positions = ['GK', 'LB', 'CB', 'CB', 'RB', 'DM', 'CM', 'AM', 'LW', 'CF', 'RW'];
     const defaultSquadNumbers = [1, 3, 4, 5, 2, 6, 8, 10, 11, 9, 7];
     const canonicalEuroIdMap = { pre_madrid: 'es01', pre_bayern: 'de01', pre_milan: 'it01', pre_paris: 'fr01' };
@@ -3827,9 +3848,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePasses}本 [${homePassAccuracy}%]</span>
-                  <span style="color:var(--text-muted);font-size:9.5px;">パス数 [成功率]</span>
-                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPasses}本 [${awayPassAccuracy}%]</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePasses}本 (${homePassAccuracy}%)</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">パス数（成功率）</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPasses}本 (${awayPassAccuracy}%)</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>

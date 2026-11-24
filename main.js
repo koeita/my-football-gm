@@ -1463,7 +1463,7 @@ function renderWeeklySchedule() {
       const isHome = matchInfo.isHome;
       const oppClub = matchInfo.oppClub;
       const oppCode = getClubShortCode(oppClub);
-      const compBadge = matchInfo.compCode ? `[${matchInfo.compCode}] ` : '';
+      const compBadge = matchInfo.compCode ? `${matchInfo.compCode} ` : '';
       const badgeCls = matchInfo.compCode ? `badge-comp-${matchInfo.compCode.toLowerCase()}` : '';
       eventHtml = `<span class="day-event-badge day-event-match ${badgeCls}">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
     } else if (day.isTransferDeadline) {
@@ -1522,7 +1522,11 @@ function skipToSeasonEnd() {
           curDay.played = true;
         }
       } else if (curDay.isMatchDay) {
-        playNextMatchweek(true);
+        if (typeof playCurrentMatchday === 'function') {
+          playCurrentMatchday(true);
+        } else {
+          playNextMatchweek(true);
+        }
         curDay.played = true;
       }
     }
@@ -1809,7 +1813,11 @@ function rejectPendingMegaOffer() {
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === offer.playerId);
   if (target) {
-    playerClub.supporters += 250;
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(playerClub, 250);
+    } else {
+      playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+    }
     target.megaOfferRejected = true;
     target.contractYears = Math.min(target.contractYears || 2, 2);
     const baseDemand = calculatePlayerDemandSalary(target);
@@ -2198,15 +2206,19 @@ function triggerSupporterPetitionEvent() {
     category: 'SUPPORTERS UNION PETITION',
     title: 'サポーター連合によるスタジアム設備拡張嘆願',
     description: `熱狂的なサポーター連合から、ホームスタジアムの観客席改修およびホスピタリティ拡充を求める要望書が提出されました。投資を行えばサポーター数が大幅に増加し、今後のホーム戦チケット収入が向上します。`,
-    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +1,300人増加（ホーム19試合のマッチデイ収入が毎試合約 +£120K 増加）`,
+    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +600人増加（ホーム19試合のマッチデイ収入が毎試合約 +£50K 増加）`,
     actions: [
       {
-        label: `設備投資を実施する（-${formatMoney(investCost)} / サポーター +1,300人）`,
+        label: `設備投資を実施する（-${formatMoney(investCost)} / サポーター +600人）`,
         className: 'btn btn-primary',
         disabled: playerClub.funds < investCost,
         onClick: () => {
           playerClub.funds -= investCost;
-          playerClub.supporters += 1300;
+          if (typeof adjustClubSupporters === 'function') {
+            adjustClubSupporters(playerClub, 600);
+          } else {
+            playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 600);
+          }
           renderAll();
         }
       },
@@ -2716,8 +2728,23 @@ function processSeasonEnd(isSkipped = false) {
   gameState.selectedPlayerId = null;
 
   const wasInD2 = isPlayerInSecondDivision();
-  const sortedD1 = getSortedStandings();
   const d2Comp = gameState.competitions && gameState.competitions.championship;
+  // シーズン終了決算前に別ディビジョンの未消化リーグ節を確実に消化完了する
+  if (!wasInD2 && d2Comp && Array.isArray(d2Comp.schedule) && typeof advanceChampionshipWeek === 'function') {
+    let d2Guard = 0;
+    while ((d2Comp.currentWeek || 0) < d2Comp.schedule.length && d2Guard < 50) {
+      d2Guard++;
+      advanceChampionshipWeek();
+    }
+  } else if (wasInD2 && typeof advanceFirstDivisionBackgroundWeek === 'function') {
+    let d1Guard = 0;
+    while ((gameState.clubs && gameState.clubs[0] ? (gameState.clubs[0].played || 0) : 38) < 38 && d1Guard < 42) {
+      d1Guard++;
+      advanceFirstDivisionBackgroundWeek();
+    }
+  }
+
+  const sortedD1 = getSortedStandings();
   const sortedD2 = d2Comp && Array.isArray(d2Comp.clubs)
     ? [...d2Comp.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0))
     : [];
@@ -2809,6 +2836,10 @@ function processSeasonEnd(isSkipped = false) {
     ? evaluateAndRecordSeasonAwards(awardsLeagueClubs, awardsDivisionLabel, playerClub, finishedSeasonNum, finishedYearStr)
     : null;
 
+  const usedCpuNames = new Set();
+  for (const c of getAllManagedLeagueClubs()) {
+    (c.players || []).forEach(pl => { if (pl && pl.name) usedCpuNames.add(pl.name); });
+  }
   for (const club of getAllManagedLeagueClubs()) {
     const expiredDepartures = new Set();
     let remainingPoolCount = (club.players || []).filter(pl => pl && !pl.isRetired).length;
@@ -2827,13 +2858,13 @@ function processSeasonEnd(isSkipped = false) {
         if (club.isPlayer) {
           retiredPlayerClubIds.push(p.id);
           playerRetirementLogs.push(
-            `[現役引退] ${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
+            `現役引退：${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
           );
         }
         continue;
       }
 
-      const { dAtk, dDef, dSta } = computeStatGrowth(p, club.isPlayer);
+      const { dAtk, dDef, dSta } = computeStatGrowth(p, club.isPlayer, club);
       const oldAtk = p.atk;
       const oldDef = p.def;
       const oldSta = p.sta;
@@ -2853,12 +2884,19 @@ function processSeasonEnd(isSkipped = false) {
       // ボスマン事前合意（preContract）締結済みの選手はCPUクラブが勝手に再契約しない
       if (!club.isPlayer && p.contractYears === 0 && !p.preContract && !preContractIds.has(p.id)) {
         const isLoanedPlayer = Boolean(p.loanStatus && (p.loanStatus.isLoan || p.loanStatus.isLoanOut));
+        const activeGksRemaining = (club.players || []).filter(pl => pl && !pl.isRetired && pl.pos === 'GK' && !expiredDepartures.has(pl.id)).length;
+        const canReleaseForTrim = (remainingPoolCount >= 25 || ((club.funds || 0) < 0 && remainingPoolCount >= 22))
+          && ((p.age || 25) >= 28 || remainingPoolCount >= 26)
+          && !(p.pos === 'GK' && activeGksRemaining <= 2);
         const canReleaseToFreeAgent = (
           !isLoanedPlayer &&
           !p.isStarter &&
-          remainingPoolCount >= 16 &&
-          gameState.expiredMarketPool.length < 4 &&
-          Math.random() < 0.35
+          !(p.pos === 'GK' && activeGksRemaining <= 2) &&
+          remainingPoolCount >= 20 &&
+          (
+            (canReleaseForTrim && Math.random() < 0.65) ||
+            (gameState.expiredMarketPool.length < 8 && Math.random() < 0.35)
+          )
         );
         if (canReleaseToFreeAgent) {
           if (!Array.isArray(p.seasonHistory)) {
@@ -2906,7 +2944,9 @@ function processSeasonEnd(isSkipped = false) {
           p._generatedInOffseasonOfSeason = finishedSeasonNum;
           expiredDepartures.add(p.id);
           remainingPoolCount = Math.max(0, remainingPoolCount - 1);
-          gameState.expiredMarketPool.push(p);
+          if (gameState.expiredMarketPool.length < 10) {
+            gameState.expiredMarketPool.push(p);
+          }
           continue;
         }
         p.contractYears = randInt(2, 4);
@@ -2929,6 +2969,9 @@ function processSeasonEnd(isSkipped = false) {
     }
 
     club.players = club.players.filter(p => !p.isRetired && !expiredDepartures.has(p.id));
+    if (!club.isPlayer && typeof replenishCpuSquadOffseason === 'function') {
+      replenishCpuSquadOffseason(club, usedCpuNames);
+    }
     ensureValidSquadAndStarters(club, playerRetirementLogs);
     if (club.isPlayer && typeof syncPlayerClubStatsToHallOfFame === 'function') {
       syncPlayerClubStatsToHallOfFame(club, { retiredIds: retiredPlayerClubIds });
@@ -3061,24 +3104,47 @@ function processSeasonEnd(isSkipped = false) {
       ]
     });
   } else if (mustPromoteThisSeason && (!promoRelResult || !promoRelResult.isPlayerPromoted)) {
-    gameState.isGameOver = true;
-    showGmModal({
-      allowDuringSkip: true,
-      category: 'BOARD OF DIRECTORS / DISMISSAL NOTICE',
-      title: '【GM解任通告】1年でのファーストディビジョン復帰失敗',
-      description: `セカンドディビジョン ${playerRank}位 に終わり、理事会より厳命されていた「1年でのファーストディビジョン（ENG-D1）復帰」を達成できませんでした。本日付でGM契約解除（ゲームオーバー）となります。`,
-      detailHtml: `最終順位: ENG-D2 ${playerRank}位（昇格ライン: 3位以内）`,
-      actions: [
-        {
-          label: '結果を受け入れる',
-          className: 'btn btn-secondary',
-          onClick: () => {
-            renderAll();
+    const curConf = playerClub && typeof playerClub.boardConfidence === 'number' ? playerClub.boardConfidence : 0;
+    if (playerClub && playerRank <= 6 && curConf >= 50 && !playerClub._relegationGraceUsed) {
+      playerClub._relegationGraceUsed = true;
+      playerClub.mustPromoteImmediate = true;
+      showGmModal({
+        allowDuringSkip: true,
+        soundKey: 'sfx_alert',
+        category: 'BOARD OF DIRECTORS / FINAL REPRIEVE',
+        title: '【理事会猶予通知】1部復帰へのラストチャンス（最終警告）',
+        description: `セカンドディビジョン ${playerRank}位 に終わり1年での即時復帰は逃しましたが、クラブ財政と現場の信頼を考慮し、理事会は来季1年限りの最終猶予を決定しました。来季は必ず1部昇格を果たしてください。`,
+        detailHtml: `最終順位: ENG-D2 ${playerRank}位 ／ 理事会信頼度: ${curConf}%`,
+        actions: [
+          {
+            label: '最終猶予を受け、来季こそ昇格を誓う',
+            className: 'btn btn-primary',
+            onClick: () => {
+              renderAll();
+            }
           }
-        }
-      ]
-    });
-    return;
+        ]
+      });
+    } else {
+      gameState.isGameOver = true;
+      showGmModal({
+        allowDuringSkip: true,
+        category: 'BOARD OF DIRECTORS / DISMISSAL NOTICE',
+        title: '【GM解任通告】1年でのファーストディビジョン復帰失敗',
+        description: `セカンドディビジョン ${playerRank}位 に終わり、理事会より厳命されていた「ファーストディビジョン（ENG-D1）復帰」を達成できませんでした。本日付でGM契約解除（ゲームオーバー）となります。`,
+        detailHtml: `最終順位: ENG-D2 ${playerRank}位（昇格ライン: 3位以内）`,
+        actions: [
+          {
+            label: '結果を受け入れる',
+            className: 'btn btn-secondary',
+            onClick: () => {
+              renderAll();
+            }
+          }
+        ]
+      });
+      return;
+    }
   }
 
   // シーズン内の未締結オファーを期限切れとして整理
@@ -4760,7 +4826,7 @@ function completeOutgoingTransferSigning(offerId) {
     }
 
     offer.status = 'signed';
-    addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
+    addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（内定済）となります。`);
     if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
@@ -5411,7 +5477,11 @@ function rejectIncomingOffer(offerId) {
     const playerClub = getPlayerClub();
     const target = playerClub ? playerClub.players.find(p => p.id === offer.playerId) : null;
     if (target) {
-      playerClub.supporters += 250;
+      if (typeof adjustClubSupporters === 'function') {
+        adjustClubSupporters(playerClub, 250);
+      } else {
+        playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+      }
       target.megaOfferRejected = true;
       target.contractYears = Math.min(target.contractYears || 2, 2);
       const baseDemand = calculatePlayerDemandSalary(target);
@@ -6068,7 +6138,11 @@ function upgradeFacility(facilityKey) {
   gameState.facilities[facilityKey] = nextLv;
 
   if (facilityKey === 'stadium') {
-    playerClub.supporters += 1200;
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(playerClub, 1200);
+    } else {
+      playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 1200);
+    }
   } else if (facilityKey === 'scouting') {
     // スカウト網強化時は即座に新規候補を2名追加リストアップ
     const usedNames = new Set();
@@ -6951,6 +7025,10 @@ function startNextSeason() {
   gameState.selectedSlotIndex = null;
   gameState.pendingMegaOffer = null;
   gameState.pendingLineupConsultation = null;
+  gameState.pendingBoardCrisis = false;
+  if (playerClub && typeof playerClub.boardConfidence === 'number') {
+    playerClub.boardConfidence = clamp(Math.round((playerClub.boardConfidence + 70) / 2), 45, 85);
+  }
   gameState.monthlyReports = [];
   if (typeof ensureMonthlyLedger === 'function') {
     ensureMonthlyLedger(true, initialDay || null);
@@ -7827,7 +7905,7 @@ function renderSeasonSettlement() {
   if (agingEl) {
     agingEl.innerHTML = s.agingLogs.map(item => {
       const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-      return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+      return `<div><span class="mono">${item.pos}</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
     }).join('');
   }
 
@@ -8895,7 +8973,7 @@ function renderTacticalBoard() {
 
   if (selectedSlot && selectedStarter) {
     const starterEff = getEffectivePlayerRating(selectedStarter);
-    if (subTitleEl) subTitleEl.textContent = `交代枠: [${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name}`;
+    if (subTitleEl) subTitleEl.textContent = `交代枠: ${selectedSlot.pos} #${selectedStarter.squadNumber} ${selectedStarter.name}`;
     if (clearBtnEl) clearBtnEl.classList.remove('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -9640,9 +9718,9 @@ function renderShortlist() {
     const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
-    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
-    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">内定済</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">無所属</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">契約最終年</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
 
     const activeOutOffer = (gameState.outgoingOffers || []).find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
@@ -10154,7 +10232,7 @@ function renderMarket() {
       : activeEuroClubs;
     if ((mf.category === 'ALL' || isEuroCat) && filteredEuroClubs.length > 0) {
       clubOptionsHtml += `<optgroup label="欧州主要クラブ">` +
-        filteredEuroClubs.map(c => `<option value="${c.id}">[${c.country}] ${c.name}</option>`).join('') +
+        filteredEuroClubs.map(c => `<option value="${c.id}">${c.country} ・ ${c.name}</option>`).join('') +
         `</optgroup>`;
     }
     const cacheKey = `${mf.category}_${d1Clubs.length}_${d2Clubs.length}_${activeEuroClubs.length}`;
@@ -10369,14 +10447,14 @@ function renderMarket() {
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
     const isScoutingNow = activeScouts.find(a => a.playerId === p.id);
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
-    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
-    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
-    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
-    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">内定済</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">無所属</span>' : '';
+    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">${c.country || 'EUR'}</span>` : '';
+    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">2部</span>` : '';
     const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const feeDisplay = formatMoney(fee);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">契約最終年</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
     const footBadge = formatFootBadge(p);
@@ -10548,7 +10626,7 @@ function renderYouthScoutingPanel() {
         return `
           <div class="youth-scout-task-row">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; flex-wrap:wrap;" class="mono">
-              <span><strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
+              <span><strong>${t.regionName}</strong> (${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月)</span>
               <div style="display:flex; align-items:center; gap:8px;">
                 <span class="accent-green">次回報告: ${nextRep}日後 (報告済:${repCnt}回)</span>
                 <span class="accent-gold">残${t.daysRemaining}日</span>
@@ -16578,7 +16656,7 @@ function renderCoachingStaffPanel() {
       return `
         <div class="coach-slot-card occupied">
           <div class="coach-slot-head">
-            <span class="coach-role-tag ${catClass} mono">[${slot.roleLabel}]</span>
+            <span class="coach-role-tag ${catClass} mono">${slot.roleLabel}</span>
             <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
           </div>
           <div class="coach-slot-main">
@@ -16609,7 +16687,7 @@ function renderCoachingStaffPanel() {
       return `
         <div class="coach-slot-card vacant">
           <div class="coach-slot-head" style="width: 100%;">
-            <span class="coach-role-tag ${catClass} mono text-muted">[${slot.roleLabel} (空席)]</span>
+            <span class="coach-role-tag ${catClass} mono text-muted">${slot.roleLabel} (空席)</span>
           </div>
           <div style="margin: 8px 0; font-size: 11px;" class="text-muted mono">${slot.effectDesc}</div>
           <button type="button" class="btn btn-hire-coach-slot mono" data-category="${slot.category}" data-index="${slot.index}">
@@ -16650,8 +16728,8 @@ function openCoachHireModal(category, slotIndex) {
   const roleLabels = { attacking: 'オフェンス', defending: 'ディフェンス', goalkeeping: 'GK', fitness: 'フィジカル' };
   const label = roleLabels[category] || category;
 
-  if (title) title.textContent = `[${label}コーチ] 招聘・交代`;
-  if (tag) tag.textContent = `[${label.toUpperCase()} COACH]`;
+  if (title) title.textContent = `${label}コーチ 招聘・交代`;
+  if (tag) tag.textContent = `${label.toUpperCase()} COACH`;
 
   if (!gameState.freeCoaches) gameState.freeCoaches = {};
   if (!Array.isArray(gameState.freeCoaches[category])) {
@@ -17158,8 +17236,8 @@ function openInitialStaffSetupModal(club) {
           optimizeClubStarters(playerClub);
         }
         syncManagerDelegationButtonUI();
-        addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
-        addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
+        addDailyLog(`PRE-SEASON：${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
+        addDailyLog(`PRE-SEASON：7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
         gameState.inboxMessages = [];
         gameState.newsFeed = [];
         if (typeof ensureInitialOfficeMessagesAndNews === 'function') {
@@ -17720,7 +17798,7 @@ function renderMonthCalendar() {
         matchInfoHtml = `
           <div class="cal-match-body">
             <div class="cal-match-header-row">
-              <span class="cal-cup-badge ${badgeClass}">[${compCode}]</span>
+              <span class="cal-cup-badge ${badgeClass}">${compCode}</span>
               <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
             </div>
             <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">
@@ -18657,6 +18735,23 @@ function renderBoardPsrSponsorPanel(club) {
   }
 }
 
+function collectEuroCompetitionTvParticipantSets(baseUclIds) {
+  const uclIds = new Set(baseUclIds || []);
+  const uelIds = new Set();
+  const ueclIds = new Set();
+  const comps = gameState.competitions || {};
+  if (comps.championsCup && Array.isArray(comps.championsCup.participants)) {
+    comps.championsCup.participants.forEach(c => { if (c && c.id) uclIds.add(c.id); });
+  }
+  if (comps.europaCup && Array.isArray(comps.europaCup.participants)) {
+    comps.europaCup.participants.forEach(c => { if (c && c.id) uelIds.add(c.id); });
+  }
+  if (comps.conferenceCup && Array.isArray(comps.conferenceCup.participants)) {
+    comps.conferenceCup.participants.forEach(c => { if (c && c.id) ueclIds.add(c.id); });
+  }
+  return { uclIds, uelIds, ueclIds };
+}
+
 function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
   if (Array.isArray(gameState.installments) && gameState.installments.length > 0) {
     const playerClub = getPlayerClub();
@@ -18690,6 +18785,8 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
       if (c && c.id) ectQualifiedIds.add(c.id);
     }
   }
+
+  const { uclIds, uelIds, ueclIds } = collectEuroCompetitionTvParticipantSets(ectQualifiedIds);
 
   let playerSponsorIncome = 0;
   const d1RankMap = new Map();
@@ -18762,8 +18859,18 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     const leaguePrize = isD2Club
       ? (d2RankMap.has(club.id) ? (PRIZE_MONEY_TABLE_D2[d2RankMap.get(club.id)] || 1500) : 2500)
       : (d1RankMap.has(club.id) ? (PRIZE_MONEY_TABLE[d1RankMap.get(club.id)] || 5000) : 12000);
-    const estMatchRev = Math.round((club.supporters || 14000) * gateUnit * homeMatches + awayTvUnit * awayMatches + leaguePrize + spRev);
-    const netProfit = estMatchRev - annualPayroll;
+    const leagueCentralTvShare = isD2Club ? 2000 : 18000;
+    const euroTvShare = isD2Club ? 0 : (uclIds.has(club.id) ? 10000 : (uelIds.has(club.id) ? 6000 : (ueclIds.has(club.id) ? 3000 : 0)));
+    const tvSolidarityShare = leagueCentralTvShare + euroTvShare;
+    let clubOperatingCost = isD2Club ? 4000 : 12000;
+    if (club.isPlayer) {
+      const fac = gameState.facilities || { stadium: 1, training: 1, scouting: 1 };
+      const rawOp = 4000 + (fac.stadium || 1) * 2500 + (fac.training || 1) * 2000 + (fac.scouting || 1) * 1500;
+      clubOperatingCost = isD2Club ? Math.round(rawOp * 0.55) : rawOp;
+    }
+    club.funds = (club.funds || 0) + tvSolidarityShare - clubOperatingCost;
+    const estMatchRev = Math.round((club.supporters || 14000) * gateUnit * homeMatches + awayTvUnit * awayMatches + leaguePrize + spRev + tvSolidarityShare);
+    const netProfit = estMatchRev - (annualPayroll + clubOperatingCost);
     if (!Array.isArray(club.psrHistory)) club.psrHistory = [];
     club.psrHistory.push({
       season: gameState.season || 1,
@@ -18785,6 +18892,11 @@ function processSeasonEndFinanceAndPSR(sortedD1, sortedD2) {
     } else if (club.psrSanction && club.psrSanction.transferBanWindows > 0) {
       club.psrSanction.transferBanWindows = Math.max(0, club.psrSanction.transferBanWindows - 1);
       club.psrSanction.pointsDeductedThisSeason = 0;
+    }
+
+    // CPUクラブの債務無限スパイラル防止（オーナー増資による債務半減圧縮、PSR評価自体は維持）
+    if (!club.isPlayer && (club.funds || 0) < -60000) {
+      club.funds = Math.round(club.funds * 0.5);
     }
   }
   return { playerSponsorIncome };
@@ -22425,7 +22537,11 @@ function evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj) {
 
   if (top.c.isPlayer) {
     top.p.morale = Math.min(100, (top.p.morale || 75) + 6);
-    top.c.supporters = (top.c.supporters || 0) + 150;
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(top.c, 150);
+    } else {
+      top.c.supporters = Math.min(50000, (top.c.supporters || 0) + 150);
+    }
     syncPlayerClubStatsToHallOfFame(top.c);
     if (typeof addDailyLog === 'function') {
       addDailyLog(`【月間MVP受賞】自クラブの ${top.p.name} が ${reportMonth}月度の${divLabel}月間MVPに選出されました！（${top.dGoals}G ${top.dAssists}A / 評価 ${top.monthAvg}）`);
@@ -22702,7 +22818,11 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
   });
 
   if (playerClub && supporterBonus > 0) {
-    playerClub.supporters = (playerClub.supporters || 0) + supporterBonus;
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(playerClub, supporterBonus);
+    } else {
+      playerClub.supporters = Math.min(50000, (playerClub.supporters || 0) + supporterBonus);
+    }
   }
 
   const awardsObj = {

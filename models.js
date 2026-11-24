@@ -2591,6 +2591,90 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 }
 
 /**
+ * オフシーズンにCPUクラブのスカッド人数・GK最低枠・U-21世代交代を自前アカデミー昇格で維持する
+ */
+function replenishCpuSquadOffseason(club, usedNames = null) {
+  if (!club || club.isPlayer || !Array.isArray(club.players)) return 0;
+  const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+  const nameSet = (usedNames instanceof Set) ? usedNames : new Set();
+  if (nameSet.size === 0) {
+    club.players.forEach(p => { if (p && p.name) nameSet.add(p.name); });
+  }
+
+  const isActive = (p) => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut);
+  const isD2 = club.division === 'd2' || club.tier === 'D2';
+  const baseTierOvr = isD2
+    ? clamp(Math.round((club.basePower || 60) - 2), 54, 65)
+    : clamp(Math.round((club.basePower || 70) - 4), 60, 74);
+
+  const dfPositions = ['CB', 'LB', 'RB'];
+  const mfPositions = ['DM', 'CM', 'LM', 'RM', 'AM'];
+  const fwPositions = ['LW', 'RW', 'CF'];
+  const fallbackPositions = ['CB', 'CM', 'CF', 'LB', 'RB', 'DM', 'LW', 'RW', 'AM'];
+
+  const createGraduate = (pos, ageRange = [17, 20]) => {
+    const targetOvr = clamp(baseTierOvr + randInt(-4, 4), isD2 ? 53 : 58, isD2 ? 68 : 77);
+    const p = createPlayer(pos, targetOvr + 2, false, nameSet, ageRange);
+    p.clubId = club.id;
+    p.isYouthGraduate = true;
+    p.isFreeAgent = false;
+    p.contractYears = randInt(3, 5);
+    p.wage = calculatePlayerWage(p.pos, p.atk, p.def, p.sta, p.age);
+    p.salary = p.wage * 52;
+    p.isStarter = false;
+    p.isBench = false;
+    if (typeof ensurePlayerHistoryAndCareer === 'function') {
+      ensurePlayerHistoryAndCareer(p, club.name);
+    }
+    club.players.push(p);
+    return p;
+  };
+
+  let added = 0;
+  const activePlayers = () => club.players.filter(isActive);
+
+  // 1. GK最低2名を保証
+  let guard = 0;
+  while (activePlayers().filter(p => p.pos === 'GK').length < 2 && club.players.length < maxSquad && guard < 3) {
+    guard++;
+    createGraduate('GK', [18, 20]);
+    added++;
+  }
+
+  // 2. バランスを見ながら最低23名までユース昇格で補充
+  guard = 0;
+  while (activePlayers().length < 23 && club.players.length < maxSquad && guard < 15) {
+    guard++;
+    const act = activePlayers();
+    const dfCount = act.filter(p => dfPositions.includes(p.pos)).length;
+    const mfCount = act.filter(p => mfPositions.includes(p.pos)).length;
+    const fwCount = act.filter(p => fwPositions.includes(p.pos)).length;
+    let nextPos;
+    if (dfCount < 7) nextPos = dfPositions[dfCount % dfPositions.length];
+    else if (mfCount < 7) nextPos = mfPositions[mfCount % mfPositions.length];
+    else if (fwCount < 5) nextPos = fwPositions[fwCount % fwPositions.length];
+    else nextPos = fallbackPositions[guard % fallbackPositions.length];
+    createGraduate(nextPos, [17, 20]);
+    added++;
+  }
+
+  // 3. 長期高齢化防止：各CPUクラブにU-21世代が最低3名在籍するよう毎年若手枠を補充
+  guard = 0;
+  while (activePlayers().filter(p => (p.age || 25) <= 21).length < 3 && club.players.length < 27 && guard < 2) {
+    guard++;
+    const act = activePlayers();
+    const pos = fallbackPositions[(act.length + guard) % fallbackPositions.length];
+    createGraduate(pos, [17, 19]);
+    added++;
+  }
+
+  if (added > 0 && typeof ensureClubSquadNumbers === 'function') {
+    ensureClubSquadNumbers(club);
+  }
+  return added;
+}
+
+/**
  * スロットと選手の最適マッチング用スコア計算
  */
 function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', options = {}) {
@@ -2644,9 +2728,19 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', opti
     score -= 60; // 完全不適性（大幅ペナルティ）
   }
 
+  const isEuroComp = (compCategory === 'championsCup' || compCategory === 'europaCup' || compCategory === 'conferenceCup');
   // 4. 蓄積疲労度を考慮したローテーション補正 ＆ 基礎スタミナ微調整
   const ftg = typeof player.fatigue === 'number' ? player.fatigue : 0;
-  if (ftg >= 80) {
+  if (isEuroComp && options && options.isCpuTurnover) {
+    // 欧州大会では主力温存による大幅戦力ダウンを抑え、高負荷域のみ休養させる
+    if (ftg >= 80) {
+      score -= 26;
+    } else if (ftg >= 65) {
+      score -= 12;
+    } else if (ftg <= 12) {
+      score += 2;
+    }
+  } else if (ftg >= 80) {
     score -= 28; // 限界・負傷危険域の選手は確実に休養させる
   } else if (ftg >= 60) {
     score -= 18; // 高疲労の主力を控えの実力者とターンオーバー
@@ -2672,11 +2766,15 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', opti
         score += 10;
       }
     }
-    if (apps >= 40) {
-      score -= Math.min(50, (apps - 39) * 2.2);
-    }
-    if (apps >= 52) {
-      score -= 25;
+    if (!isEuroComp) {
+      if (apps >= 40) {
+        score -= Math.min(50, (apps - 39) * 2.2);
+      }
+      if (apps >= 52) {
+        score -= 25;
+      }
+    } else if (apps >= 55) {
+      score -= 12;
     }
   }
 
@@ -2970,7 +3068,7 @@ function getSafeTransferBudget(club) {
 /**
  * 成長曲線（growthCurve）・年齢・トレーニング施設Lvに応じた能力変動値を算出
  */
-function computeStatGrowth(player, isPlayerClub = false) {
+function computeStatGrowth(player, isPlayerClub = false, clubContext = null) {
   const age = player.age;
   const curve = typeof normalizeGrowthCurveId === 'function'
     ? normalizeGrowthCurveId(player.growthCurve || player.growthType)
@@ -2979,54 +3077,54 @@ function computeStatGrowth(player, isPlayerClub = false) {
   let atkRange, defRange, staRange;
 
   if (curve === 'early_fade') {
-    if (age <= 22) {
-      atkRange = [2, 6]; defRange = [2, 6]; staRange = [1, 5];
-    } else if (age <= 25) {
-      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-1, 1];
+    if (age <= 21) {
+      atkRange = [2, 5]; defRange = [2, 5]; staRange = [1, 4];
+    } else if (age <= 26) {
+      atkRange = [-1, 1]; defRange = [-1, 1]; staRange = [-1, 1];
     } else {
       atkRange = [-4, -1]; defRange = [-4, -1]; staRange = [-5, -2];
     }
   } else if (curve === 'early_long') {
     if (age <= 22) {
-      atkRange = [2, 5]; defRange = [2, 5]; staRange = [1, 4];
+      atkRange = [1, 4]; defRange = [1, 4]; staRange = [1, 3];
     } else if (age <= 29) {
-      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-1, 2];
+      atkRange = [-1, 1]; defRange = [-1, 1]; staRange = [-1, 1];
     } else {
       atkRange = [-3, -1]; defRange = [-3, -1]; staRange = [-3, -1];
     }
   } else if (curve === 'steady_iron') {
-    if (age <= 26) {
-      atkRange = [1, 3]; defRange = [1, 3]; staRange = [1, 4];
+    if (age <= 25) {
+      atkRange = [1, 3]; defRange = [1, 3]; staRange = [1, 3];
     } else if (age <= 31) {
-      atkRange = [0, 2]; defRange = [0, 2]; staRange = [0, 2];
+      atkRange = [-1, 1]; defRange = [-1, 1]; staRange = [-1, 1];
     } else {
       atkRange = [-2, 0]; defRange = [-2, 0]; staRange = [-2, 0];
     }
   } else if (curve === 'late_bloom') {
     if (age <= 24) {
       atkRange = [0, 2]; defRange = [0, 2]; staRange = [0, 2];
-    } else if (age <= 30) {
-      atkRange = [1, 4]; defRange = [1, 4]; staRange = [0, 3];
+    } else if (age <= 29) {
+      atkRange = [1, 3]; defRange = [1, 3]; staRange = [0, 2];
     } else if (age <= 32) {
-      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-2, 1];
+      atkRange = [-1, 1]; defRange = [-1, 1]; staRange = [-2, 1];
     } else {
       atkRange = [-2, 0]; defRange = [-2, 0]; staRange = [-3, 0];
     }
   } else if (curve === 'fragile_genius') {
-    if (age <= 25) {
-      atkRange = [2, 6]; defRange = [2, 6]; staRange = [-1, 3];
+    if (age <= 24) {
+      atkRange = [2, 5]; defRange = [2, 5]; staRange = [-1, 2];
     } else if (age <= 29) {
-      atkRange = [0, 3]; defRange = [0, 3]; staRange = [-2, 1];
+      atkRange = [-1, 2]; defRange = [-1, 2]; staRange = [-2, 1];
     } else {
       atkRange = [-4, 0]; defRange = [-4, 0]; staRange = [-5, -1];
     }
   } else {
-    if (age <= 25) {
-      atkRange = [1, 4]; defRange = [1, 4]; staRange = [0, 4];
+    if (age <= 24) {
+      atkRange = [1, 3]; defRange = [1, 3]; staRange = [0, 3];
     } else if (age <= 29) {
-      atkRange = [0, 2];
-      defRange = [0, 2];
-      staRange = [-1, 2];
+      atkRange = [-1, 1];
+      defRange = [-1, 1];
+      staRange = [-1, 1];
     } else if (age === 30) {
       atkRange = [-1, 1];
       defRange = [-1, 1];
@@ -3146,9 +3244,14 @@ function computeStatGrowth(player, isPlayerClub = false) {
     }
   }
 
-  // 高OVR帯（80+）の収穫逓減（成長インフレ・全員99化を防止）
+  // 高OVR帯（80+）の収穫逓減（成長インフレ・全員99化を防止）＆2部CPUクラブの能力収束抑制
+  const isD2CpuClub = !isPlayerClub && clubContext && (clubContext.division === 'd2' || clubContext.tier === 'D2');
   const applySoftCap = (delta, curVal) => {
     if (delta <= 0) return delta;
+    if (isD2CpuClub) {
+      if (curVal >= 72) return Math.min(1, Math.round(delta * 0.35));
+      if (curVal >= 67) return Math.min(2, Math.round(delta * 0.65));
+    }
     if (curVal >= 88) return Math.min(1, Math.round(delta * 0.30));
     if (curVal >= 84) return Math.min(2, Math.max(delta >= 2 ? 1 : 0, Math.round(delta * 0.50)));
     if (curVal >= 80) return Math.min(3, Math.max(1, Math.round(delta * 0.72)));
@@ -3406,8 +3509,36 @@ function ensurePlayerRealismFields(player, isStarterHint = false) {
 /**
  * クラブオブジェクトのリアリティ拡張フィールドを後方互換補完
  */
+function getClubMaxSupporters(club) {
+  if (!club) return 35000;
+  const isD2 = club.division === 'd2' || club.tier === 'D2';
+  const initSup = club.initialSupporters || club.supporters || (isD2 ? 14000 : 18000);
+  if (club.isPlayer) {
+    const stadiumLv = (typeof gameState !== 'undefined' && gameState.facilities && gameState.facilities.stadium)
+      ? gameState.facilities.stadium
+      : 1;
+    const baseCap = Math.max(22000, Math.round(initSup * 1.15));
+    return Math.min(50000, baseCap + (stadiumLv - 1) * 5000);
+  }
+  if (isD2) {
+    return Math.min(24000, Math.max(14000, Math.round(initSup * 1.15)));
+  }
+  return Math.min(48000, Math.max(22000, Math.round(initSup * 1.25)));
+}
+
+function adjustClubSupporters(club, delta) {
+  if (!club) return 10000;
+  const maxSup = getClubMaxSupporters(club);
+  club.supporters = clamp(Math.round((club.supporters || 10000) + (delta || 0)), 5000, maxSup);
+  return club.supporters;
+}
+
 function ensureClubRealismFields(club) {
   if (!club) return;
+  if (typeof club.initialSupporters !== 'number') {
+    const isD2Init = club.division === 'd2' || club.tier === 'D2';
+    club.initialSupporters = club.supporters || (isD2Init ? 14000 : 18000);
+  }
   if (typeof club.basePower !== 'number') {
     const defMatch = (typeof CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CLUB_DEFINITIONS) ? CLUB_DEFINITIONS.find(d => d.id === club.id) : null)
       || (typeof CHAMPIONSHIP_CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CHAMPIONSHIP_CLUB_DEFINITIONS) ? CHAMPIONSHIP_CLUB_DEFINITIONS.find(d => d.id === club.id) : null)
@@ -3820,19 +3951,25 @@ function evaluateClubPSR(club) {
 function updateBoardConfidenceAfterMatch(club, compCategory, won, drawn) {
   if (!club) return;
   ensureClubRealismFields(club);
-  let delta = won ? 2 : (drawn ? 0 : -2);
+  let rank = 0;
+  const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
   if (compCategory === 'league' && typeof getSortedStandings === 'function') {
     const table = (club.division === 'd2' && gameState.competitions && gameState.competitions.championship)
       ? [...gameState.competitions.championship.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0))
       : getSortedStandings();
-    const rank = table.findIndex(c => c.id === club.id) + 1;
-    const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
-    if (rank > 0) {
-      if (rank <= target) delta += 1;
-      else if (rank >= target + 5) delta -= 2;
-    }
+    rank = table.findIndex(c => c.id === club.id) + 1;
+  }
+  const isInToleranceZone = compCategory === 'league' && rank > 0 && rank <= target + 3;
+  let delta = won ? 2 : (drawn ? 0 : (isInToleranceZone ? -1 : -2));
+  if (compCategory === 'league' && rank > 0) {
+    if (rank <= target) delta += 1;
+    else if (rank >= 17 || rank >= target + 8) delta -= 2;
+    else if (rank >= target + 5) delta -= 1;
   }
   club.boardConfidence = clamp((club.boardConfidence || 75) + delta, 0, 100);
+  if (club.isPlayer && club.boardConfidence >= 25 && gameState.pendingBoardCrisis) {
+    gameState.pendingBoardCrisis = false;
+  }
   if (club.isPlayer && club.boardConfidence <= 10 && !gameState.isSeasonOver && !gameState.isGameOver) {
     gameState.pendingBoardCrisis = true;
   }

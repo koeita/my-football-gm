@@ -303,6 +303,9 @@ function saveGameToStorage(force = false) {
     if (typeof dehydrateCompetitionsForSave === 'function') {
       payload.state.competitions = dehydrateCompetitionsForSave(gameState.competitions);
     }
+    const slimClubRef = (c) => (c && typeof c === 'object')
+      ? { id: c.id, name: c.name, shortName: c.shortName, shortCode: c.shortCode, isPlayer: Boolean(c.isPlayer), primaryColor: c.primaryColor, secondaryColor: c.secondaryColor, pattern: c.pattern, shape: c.shape, emblem: c.emblem }
+      : null;
     const slimScorerEntry = (s) => {
       if (!s || typeof s !== 'object') return s;
       return {
@@ -312,52 +315,132 @@ function saveGameToStorage(force = false) {
         assister: s.assister ? { id: s.assister.id, name: s.assister.name } : null
       };
     };
+    const slimSubEvent = (ev) => {
+      if (!ev || typeof ev !== 'object') return ev;
+      return {
+        minute: ev.minute,
+        clubId: ev.clubId,
+        outPlayer: ev.outPlayer ? { id: ev.outPlayer.id, name: ev.outPlayer.name, pos: ev.outPlayer.pos, squadNumber: ev.outPlayer.squadNumber } : null,
+        inPlayer: ev.inPlayer ? { id: ev.inPlayer.id, name: ev.inPlayer.name, pos: ev.inPlayer.pos, squadNumber: ev.inPlayer.squadNumber } : null
+      };
+    };
+    const slimRedCard = (ev) => {
+      if (!ev || typeof ev !== 'object') return ev;
+      return {
+        minute: ev.minute,
+        clubId: ev.clubId,
+        player: ev.player ? { id: ev.player.id, name: ev.player.name, pos: ev.player.pos } : null
+      };
+    };
+    const slimMatchRecord = (m, minimal = false) => {
+      if (!m || typeof m !== 'object') return m;
+      const out = { ...m };
+      if ('homeClub' in out) delete out.homeClub;
+      if ('awayClub' in out) delete out.awayClub;
+      if (minimal && !out.isPlayerMatch) {
+        delete out.momClub;
+        delete out.momPlayer;
+        delete out.homeScorers;
+        delete out.awayScorers;
+        delete out.homeSubEvents;
+        delete out.awaySubEvents;
+        delete out.redCardEvents;
+        return out;
+      }
+      if (out.momClub) out.momClub = slimClubRef(out.momClub);
+      if (out.momPlayer) {
+        out.momPlayer = {
+          id: out.momPlayer.id,
+          name: out.momPlayer.name,
+          squadNumber: out.momPlayer.squadNumber,
+          pos: out.momPlayer.pos,
+          assignedPos: out.momPlayer.assignedPos
+        };
+      }
+      if (Array.isArray(out.homeScorers)) out.homeScorers = out.homeScorers.map(slimScorerEntry);
+      if (Array.isArray(out.awayScorers)) out.awayScorers = out.awayScorers.map(slimScorerEntry);
+      if (Array.isArray(out.homeSubEvents)) out.homeSubEvents = out.homeSubEvents.map(slimSubEvent);
+      if (Array.isArray(out.awaySubEvents)) out.awaySubEvents = out.awaySubEvents.map(slimSubEvent);
+      if (Array.isArray(out.redCardEvents)) out.redCardEvents = out.redCardEvents.map(slimRedCard);
+      return out;
+    };
+    const slimScheduleWeeks = (sched, minimal = false) => {
+      if (!Array.isArray(sched)) return sched;
+      return sched.map(wk => Array.isArray(wk) ? wk.map(m => slimMatchRecord(m, minimal)) : wk);
+    };
     const slimMatchList = (arr) => (arr || []).map(r => ({
       ...r,
-      homeClub: r.homeClub ? { id: r.homeClub.id, name: r.homeClub.name, shortCode: r.homeClub.shortCode, isPlayer: r.homeClub.isPlayer, primaryColor: r.homeClub.primaryColor, secondaryColor: r.homeClub.secondaryColor, emblem: r.homeClub.emblem } : null,
-      awayClub: r.awayClub ? { id: r.awayClub.id, name: r.awayClub.name, shortCode: r.awayClub.shortCode, isPlayer: r.awayClub.isPlayer, primaryColor: r.awayClub.primaryColor, secondaryColor: r.awayClub.secondaryColor, emblem: r.awayClub.emblem } : null,
+      homeClub: slimClubRef(r.homeClub),
+      awayClub: slimClubRef(r.awayClub),
       momPlayer: r.momPlayer ? { id: r.momPlayer.id, name: r.momPlayer.name, squadNumber: r.momPlayer.squadNumber, pos: r.momPlayer.pos, assignedPos: r.momPlayer.assignedPos } : null,
-      momClub: r.momClub ? { id: r.momClub.id, name: r.momClub.name, shortCode: r.momClub.shortCode, isPlayer: r.momClub.isPlayer, primaryColor: r.momClub.primaryColor, secondaryColor: r.momClub.secondaryColor, emblem: r.momClub.emblem } : null,
+      momClub: slimClubRef(r.momClub),
       homeScorers: Array.isArray(r.homeScorers) ? r.homeScorers.map(slimScorerEntry) : [],
-      awayScorers: Array.isArray(r.awayScorers) ? r.awayScorers.map(slimScorerEntry) : []
+      awayScorers: Array.isArray(r.awayScorers) ? r.awayScorers.map(slimScorerEntry) : [],
+      homeSubEvents: Array.isArray(r.homeSubEvents) ? r.homeSubEvents.map(slimSubEvent) : [],
+      awaySubEvents: Array.isArray(r.awaySubEvents) ? r.awaySubEvents.map(slimSubEvent) : [],
+      redCardEvents: Array.isArray(r.redCardEvents) ? r.redCardEvents.map(slimRedCard) : []
     }));
+    payload.state.schedule = slimScheduleWeeks(gameState.schedule);
+    payload.state.d1BackgroundSchedule = slimScheduleWeeks(gameState.d1BackgroundSchedule);
     payload.state.lastWeekResults = slimMatchList(gameState.lastWeekResults);
     payload.state.matchHistory = slimMatchList(gameState.matchHistory);
 
     // シリアライズ容量削減（元データ破壊なし）：
-    // 1) calendar 内の matchFixture は schedule と完全重複するため除外（ロード時に再結合）
+    // 1) calendar 内の matchFixture は schedule と完全重複するため除外（ロード時に再結合）し、matchResult 内の選手/クラブ全量も軽量化
     if (Array.isArray(payload.state.calendar)) {
       payload.state.calendar = payload.state.calendar.map(d => {
         if (!d || typeof d !== 'object') return d;
-        if (!('matchFixture' in d)) return d;
         const { matchFixture, ...rest } = d;
+        if (rest.matchResult && typeof rest.matchResult === 'object') {
+          const mr = { ...rest.matchResult };
+          if (mr.oppClub) mr.oppClub = slimClubRef(mr.oppClub);
+          if (mr.momClub) mr.momClub = slimClubRef(mr.momClub);
+          if (mr.momPlayer) {
+            mr.momPlayer = { id: mr.momPlayer.id, name: mr.momPlayer.name, squadNumber: mr.momPlayer.squadNumber, pos: mr.momPlayer.pos };
+          }
+          if (Array.isArray(mr.scorers)) mr.scorers = mr.scorers.map(slimScorerEntry);
+          if (Array.isArray(mr.homeScorers)) mr.homeScorers = mr.homeScorers.map(slimScorerEntry);
+          if (Array.isArray(mr.awayScorers)) mr.awayScorers = mr.awayScorers.map(slimScorerEntry);
+          if (Array.isArray(mr.homeSubEvents)) mr.homeSubEvents = mr.homeSubEvents.map(slimSubEvent);
+          if (Array.isArray(mr.awaySubEvents)) mr.awaySubEvents = mr.awaySubEvents.map(slimSubEvent);
+          if (Array.isArray(mr.redCardEvents)) mr.redCardEvents = mr.redCardEvents.map(slimRedCard);
+          rest.matchResult = mr;
+        }
         return rest;
       });
     }
     // 2) 選手の attributes キャッシュは atk/def/sta/pos から再計算可能なため保存データから除外
+    const stripPlayerListAttrs = (arr, compressHist = false) => {
+      if (!Array.isArray(arr)) return arr;
+      return arr.map(p => {
+        if (!p || typeof p !== 'object') return p;
+        const { attributes, ...rest } = p;
+        if (compressHist) {
+          delete rest.valueHistory;
+          delete rest.seasonHistory;
+          delete rest.avatarData;
+        }
+        return rest;
+      });
+    };
     const stripClubPlayerAttrs = (clubsArr, compressCpuHist = false) => {
       if (!Array.isArray(clubsArr)) return clubsArr;
       return clubsArr.map(c => {
         if (!c || !Array.isArray(c.players)) return c;
-        return {
+        const copy = {
           ...c,
-          players: c.players.map(p => {
-            if (!p || typeof p !== 'object') return p;
-            const { attributes, ...rest } = p;
-            if (compressCpuHist && !c.isPlayer) {
-              if (Array.isArray(rest.valueHistory) && rest.valueHistory.length > 1) {
-                rest.valueHistory = rest.valueHistory.slice(-1);
-              }
-              if (Array.isArray(rest.seasonHistory) && rest.seasonHistory.length > 1) {
-                rest.seasonHistory = rest.seasonHistory.slice(-1);
-              }
-            }
-            return rest;
-          })
+          players: stripPlayerListAttrs(c.players, compressCpuHist && !c.isPlayer)
         };
+        if (Array.isArray(c.youthSquad)) {
+          copy.youthSquad = stripPlayerListAttrs(c.youthSquad, compressCpuHist && !c.isPlayer);
+        }
+        return copy;
       });
     };
     payload.state.clubs = stripClubPlayerAttrs(gameState.clubs, false);
+    payload.state.transferMarket = stripPlayerListAttrs(gameState.transferMarket, false);
+    payload.state.euroTransferList = stripPlayerListAttrs(gameState.euroTransferList, false);
+    payload.state.youthCandidates = stripPlayerListAttrs(gameState.youthCandidates, false);
     if (payload.state.competitions && payload.state.competitions.championship && Array.isArray(payload.state.competitions.championship.clubs)) {
       payload.state.competitions.championship = {
         ...payload.state.competitions.championship,
@@ -385,29 +468,51 @@ function saveGameToStorage(force = false) {
         || storageErr.code === 1014
       );
       if (!isQuotaErr) throw storageErr;
-      // Stage 1: 試合履歴・ログを圧縮してリトライ
+      // Stage 1: 試合履歴・ログ・CPU非プレイヤー日程イベントを圧縮してリトライ
       payload.state.matchHistory = payload.state.matchHistory.slice(-12);
       payload.state.lastWeekResults = [];
+      payload.state.schedule = slimScheduleWeeks(gameState.schedule, true);
+      payload.state.d1BackgroundSchedule = slimScheduleWeeks(gameState.d1BackgroundSchedule, true);
+      if (payload.state.competitions && payload.state.competitions.championship && Array.isArray(payload.state.competitions.championship.schedule)) {
+        payload.state.competitions.championship = {
+          ...payload.state.competitions.championship,
+          schedule: slimScheduleWeeks(payload.state.competitions.championship.schedule, true)
+        };
+      }
       payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 20) : [];
       payload.state.inboxMessages = Array.isArray(payload.state.inboxMessages) ? payload.state.inboxMessages.slice(0, 20) : [];
       payload.state.newsFeed = Array.isArray(payload.state.newsFeed) ? payload.state.newsFeed.slice(0, 20) : [];
       if (Array.isArray(payload.state.calendar)) {
         payload.state.calendar = payload.state.calendar.map(d => {
           if (!d || !d.matchResult) return d;
-          return { ...d, matchResult: { ...d.matchResult, scorers: [] } };
+          return { ...d, matchResult: { ...d.matchResult, scorers: [], homeScorers: [], awayScorers: [] } };
         });
       }
       try {
         tryWritePayload(payload);
         localStorageSaved = true;
       } catch (err2) {
-        // Stage 2: CPU選手の年度履歴・市場価値履歴を圧縮してリトライ
+        // Stage 2: CPU選手の履歴・不要な大会個人統計を圧縮してリトライ
         payload.state.clubs = stripClubPlayerAttrs(gameState.clubs, true);
         if (payload.state.competitions && payload.state.competitions.championship && Array.isArray(payload.state.competitions.championship.clubs)) {
           payload.state.competitions.championship = {
             ...payload.state.competitions.championship,
             clubs: stripClubPlayerAttrs(payload.state.competitions.championship.clubs, true)
           };
+        }
+        if (payload.state.competitionStats && typeof payload.state.competitionStats === 'object') {
+          const compactStats = {};
+          for (const [ck, tbl] of Object.entries(payload.state.competitionStats)) {
+            if (!tbl || typeof tbl !== 'object') continue;
+            const filtered = {};
+            for (const [pid, st] of Object.entries(tbl)) {
+              if (st && ((st.goals || 0) > 0 || (st.assists || 0) > 0 || (st.cleanSheets || 0) > 0 || (st.appearances || 0) >= 15)) {
+                filtered[pid] = st;
+              }
+            }
+            compactStats[ck] = filtered;
+          }
+          payload.state.competitionStats = compactStats;
         }
         const protectedIds = new Set();
         if (Array.isArray(gameState.outgoingOffers)) {
@@ -440,7 +545,7 @@ function saveGameToStorage(force = false) {
           const selected = important.concat(others.slice(0, remainingSlots));
           return selected.map(p => {
             if (!p || typeof p !== 'object') return p;
-            const { attributes, valueHistory, seasonHistory, ...rest } = p;
+            const { attributes, valueHistory, seasonHistory, avatarData, ...rest } = p;
             return rest;
           });
         };
@@ -450,11 +555,17 @@ function saveGameToStorage(force = false) {
           tryWritePayload(payload);
           localStorageSaved = true;
         } catch (err3) {
-          // Stage 3: 最終防衛ライン（履歴・ログ全削除、市場リスト最小化）
+          // Stage 3: 最終防衛ライン（履歴・ログ・外国選手キャッシュ圧縮、市場リスト最小化）
           payload.state.matchHistory = [];
           payload.state.dailyLogs = [];
           payload.state.inboxMessages = [];
           payload.state.newsFeed = [];
+          payload.state.monthlyPlayerBaseline = {};
+          payload.state.competitionStats = {};
+          if (payload.state.competitions && payload.state.competitions._foreignClubPlayers) {
+            payload.state.competitions = { ...payload.state.competitions };
+            delete payload.state.competitions._foreignClubPlayers;
+          }
           payload.state.transferMarket = slimPool(payload.state.transferMarket, 35);
           payload.state.euroTransferList = slimPool(payload.state.euroTransferList, 25);
           payload.state.youthCandidates = slimPool(payload.state.youthCandidates, 15);
