@@ -263,7 +263,38 @@ function prepareClubLineupForQuickMatch(club, compCategory = 'league') {
   }
 }
 
-function simQuickMatch(homeClub, awayClub, compCategory = 'league') {
+/**
+ * イングランド以外の欧州クラブ（定義済み他国クラブ）かを判定する
+ */
+function isForeignEuroClub(club) {
+  if (!club) return false;
+  if (club.country && club.country !== 'ENG') return true;
+  const cid = String(club.id || '');
+  return /^[a-z]{2}\d+$/.test(cid);
+}
+if (typeof window !== 'undefined') {
+  window.isForeignEuroClub = isForeignEuroClub;
+}
+
+/**
+ * 欧州他国クラブの定義値（basePower）をイングランド1部スカッド実効OVRスケールへ正規化する
+ */
+function getCalibratedForeignClubPower(club) {
+  if (!club) return 72;
+  const raw = typeof club.basePower === 'number' ? club.basePower : (typeof club.ovr === 'number' ? club.ovr : 74);
+  const cid = String(club.id || '');
+  const isBig5Foreign = /^(es|it|de|fr)\d/.test(cid);
+  if (isBig5Foreign) {
+    if (raw >= 80) return raw - 4;
+    return Math.max(66, raw - 3);
+  }
+  return Math.max(62, raw - 5);
+}
+if (typeof window !== 'undefined') {
+  window.getCalibratedForeignClubPower = getCalibratedForeignClubPower;
+}
+
+function simQuickMatch(homeClub, awayClub, compCategory = 'league', isKnockout = false) {
   prepareClubLineupForQuickMatch(homeClub, compCategory);
   prepareClubLineupForQuickMatch(awayClub, compCategory);
 
@@ -278,8 +309,11 @@ function simQuickMatch(homeClub, awayClub, compCategory = 'league') {
       }
     }
     if (c && c.basePower) {
-      const isD2Uninit = String(c.id || '').startsWith('c') || c.division === 'd2';
-      return isD2Uninit ? Math.max(54, c.basePower - 10) : c.basePower;
+      const cid = String(c.id || '');
+      const isD2Uninit = cid.startsWith('c') || c.division === 'd2';
+      if (isD2Uninit) return Math.max(54, c.basePower - 10);
+      if (isForeignEuroClub(c)) return getCalibratedForeignClubPower(c);
+      return c.basePower;
     }
     if (typeof calcClubOvr === 'function') {
       const ovr = calcClubOvr(c);
@@ -289,7 +323,8 @@ function simQuickMatch(homeClub, awayClub, compCategory = 'league') {
     return 75;
   };
 
-  const hp = getPower(homeClub) + 2.5; // ホームアドバンテージ
+  const homeBonus = isKnockout ? 1.0 : 2.5;
+  const hp = getPower(homeClub) + homeBonus; // ホームアドバンテージ
   const ap = getPower(awayClub);
   const diff = hp - ap;
 
@@ -317,7 +352,7 @@ function simQuickMatch(homeClub, awayClub, compCategory = 'league') {
 }
 
 function simKnockoutMatch(homeClub, awayClub, compCategory = 'domesticCup') {
-  const result = simQuickMatch(homeClub, awayClub, compCategory);
+  const result = simQuickMatch(homeClub, awayClub, compCategory, true);
   let { homeScore, awayScore } = result;
   let pkHome = null;
   let pkAway = null;

@@ -2728,9 +2728,19 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', opti
     score -= 60; // 完全不適性（大幅ペナルティ）
   }
 
+  const isEuroComp = (compCategory === 'championsCup' || compCategory === 'europaCup' || compCategory === 'conferenceCup');
   // 4. 蓄積疲労度を考慮したローテーション補正 ＆ 基礎スタミナ微調整
   const ftg = typeof player.fatigue === 'number' ? player.fatigue : 0;
-  if (ftg >= 80) {
+  if (isEuroComp && options && options.isCpuTurnover) {
+    // 欧州大会では主力温存による大幅戦力ダウンを抑え、高負荷域のみ休養させる
+    if (ftg >= 80) {
+      score -= 26;
+    } else if (ftg >= 65) {
+      score -= 12;
+    } else if (ftg <= 12) {
+      score += 2;
+    }
+  } else if (ftg >= 80) {
     score -= 28; // 限界・負傷危険域の選手は確実に休養させる
   } else if (ftg >= 60) {
     score -= 18; // 高疲労の主力を控えの実力者とターンオーバー
@@ -2756,11 +2766,15 @@ function calculateSlotPlayerScore(player, slotPos, compCategory = 'league', opti
         score += 10;
       }
     }
-    if (apps >= 40) {
-      score -= Math.min(50, (apps - 39) * 2.2);
-    }
-    if (apps >= 52) {
-      score -= 25;
+    if (!isEuroComp) {
+      if (apps >= 40) {
+        score -= Math.min(50, (apps - 39) * 2.2);
+      }
+      if (apps >= 52) {
+        score -= 25;
+      }
+    } else if (apps >= 55) {
+      score -= 12;
     }
   }
 
@@ -3937,18 +3951,20 @@ function evaluateClubPSR(club) {
 function updateBoardConfidenceAfterMatch(club, compCategory, won, drawn) {
   if (!club) return;
   ensureClubRealismFields(club);
-  let delta = won ? 2 : (drawn ? 0 : -2);
+  let rank = 0;
+  const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
   if (compCategory === 'league' && typeof getSortedStandings === 'function') {
     const table = (club.division === 'd2' && gameState.competitions && gameState.competitions.championship)
       ? [...gameState.competitions.championship.clubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0))
       : getSortedStandings();
-    const rank = table.findIndex(c => c.id === club.id) + 1;
-    const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
-    if (rank > 0) {
-      if (rank <= target) delta += 1;
-      else if (rank >= 17 || rank >= target + 8) delta -= 2;
-      else if (rank >= target + 5) delta -= 1;
-    }
+    rank = table.findIndex(c => c.id === club.id) + 1;
+  }
+  const isInToleranceZone = compCategory === 'league' && rank > 0 && rank <= target + 3;
+  let delta = won ? 2 : (drawn ? 0 : (isInToleranceZone ? -1 : -2));
+  if (compCategory === 'league' && rank > 0) {
+    if (rank <= target) delta += 1;
+    else if (rank >= 17 || rank >= target + 8) delta -= 2;
+    else if (rank >= target + 5) delta -= 1;
   }
   club.boardConfidence = clamp((club.boardConfidence || 75) + delta, 0, 100);
   if (club.isPlayer && club.boardConfidence >= 25 && gameState.pendingBoardCrisis) {

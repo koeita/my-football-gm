@@ -93,6 +93,15 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('const slimScheduleWeeks =', read_text('storage.js'))
         self.assertIn('const slimSubEvent =', read_text('storage.js'))
 
+    def test_9_euro_calibration_confidence_and_clean_ui(self):
+        """欧州クラブ実力正規化・中位理事会信頼度緩和・キックオフ安定化とメタ表記除去が適用されていること"""
+        self.assertIn('function isForeignEuroClub(', self.comp_js)
+        self.assertIn('function getCalibratedForeignClubPower(', self.comp_js)
+        self.assertIn('const isEuroComp =', self.models_js)
+        self.assertIn('const isInToleranceZone =', self.models_js)
+        self.assertNotIn('animation: pulse-kickoff', self.style_css)
+        self.assertNotIn('animation: matchSummaryBtnPulse', self.style_css)
+
 
 if __name__ == '__main__':
     unittest.main()

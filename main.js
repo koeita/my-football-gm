@@ -1463,7 +1463,7 @@ function renderWeeklySchedule() {
       const isHome = matchInfo.isHome;
       const oppClub = matchInfo.oppClub;
       const oppCode = getClubShortCode(oppClub);
-      const compBadge = matchInfo.compCode ? `[${matchInfo.compCode}] ` : '';
+      const compBadge = matchInfo.compCode ? `${matchInfo.compCode} ` : '';
       const badgeCls = matchInfo.compCode ? `badge-comp-${matchInfo.compCode.toLowerCase()}` : '';
       eventHtml = `<span class="day-event-badge day-event-match ${badgeCls}">${compBadge}vs ${oppCode} (${isHome ? 'H' : 'A'})</span>`;
     } else if (day.isTransferDeadline) {
@@ -2858,7 +2858,7 @@ function processSeasonEnd(isSkipped = false) {
         if (club.isPlayer) {
           retiredPlayerClubIds.push(p.id);
           playerRetirementLogs.push(
-            `[現役引退] ${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
+            `現役引退：${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
           );
         }
         continue;
@@ -4826,7 +4826,7 @@ function completeOutgoingTransferSigning(offerId) {
     }
 
     offer.status = 'signed';
-    addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（[内定済]）となります。`);
+    addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（内定済）となります。`);
     if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
@@ -7905,7 +7905,7 @@ function renderSeasonSettlement() {
   if (agingEl) {
     agingEl.innerHTML = s.agingLogs.map(item => {
       const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-      return `<div><span class="mono">[${item.pos}]</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+      return `<div><span class="mono">${item.pos}</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
     }).join('');
   }
 
@@ -8973,7 +8973,7 @@ function renderTacticalBoard() {
 
   if (selectedSlot && selectedStarter) {
     const starterEff = getEffectivePlayerRating(selectedStarter);
-    if (subTitleEl) subTitleEl.textContent = `交代枠: [${selectedSlot.pos}] #${selectedStarter.squadNumber} ${selectedStarter.name}`;
+    if (subTitleEl) subTitleEl.textContent = `交代枠: ${selectedSlot.pos} #${selectedStarter.squadNumber} ${selectedStarter.name}`;
     if (clearBtnEl) clearBtnEl.classList.remove('hidden');
     if (subGuideEl) subGuideEl.textContent = '';
 
@@ -9718,9 +9718,9 @@ function renderShortlist() {
     const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const isBargain = p.contractYears === 1;
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
-    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
-    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">内定済</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">無所属</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">契約最終年</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂済</span>' : '';
 
     const activeOutOffer = (gameState.outgoingOffers || []).find(o => o.playerId === p.id && (o.status === 'pending' || o.status === 'agreed' || o.status === 'cpu_counter'));
@@ -10232,7 +10232,7 @@ function renderMarket() {
       : activeEuroClubs;
     if ((mf.category === 'ALL' || isEuroCat) && filteredEuroClubs.length > 0) {
       clubOptionsHtml += `<optgroup label="欧州主要クラブ">` +
-        filteredEuroClubs.map(c => `<option value="${c.id}">[${c.country}] ${c.name}</option>`).join('') +
+        filteredEuroClubs.map(c => `<option value="${c.id}">${c.country} ・ ${c.name}</option>`).join('') +
         `</optgroup>`;
     }
     const cacheKey = `${mf.category}_${d1Clubs.length}_${d2Clubs.length}_${activeEuroClubs.length}`;
@@ -10447,14 +10447,14 @@ function renderMarket() {
     const scoutView = typeof getPlayerScoutedView === 'function' ? getPlayerScoutedView(p, entry.isMyClub) : { isScouted: true, ovrDisplay: `${getPlayerOverallRating(p)}`, feeKnown: true };
     const isScoutingNow = activeScouts.find(a => a.playerId === p.id);
     const isPreContracted = Array.isArray(gameState.preContractPlayers) && gameState.preContractPlayers.some(x => x.id === p.id);
-    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">[内定済]</span>' : '';
-    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">[無所属]</span>' : '';
-    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">[${c.country || 'EUR'}]</span>` : '';
-    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">[2部]</span>` : '';
+    const preContractBadge = isPreContracted ? '<span class="sub-badge badge-precontract">内定済</span>' : '';
+    const freeBadge = p.isFreeAgent ? '<span class="sub-badge badge-free">無所属</span>' : '';
+    const euroBadge = entry.category === 'EUROPE' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.35);">${c.country || 'EUR'}</span>` : '';
+    const d2Badge = entry.category === 'ENG_D2' ? `<span class="sub-badge badge-cat-tier" style="background:rgba(148,163,184,0.14);color:#cbd5e1;border-color:rgba(148,163,184,0.3);">2部</span>` : '';
     const fee = typeof calculatePlayerMarketValue === 'function' ? calculatePlayerMarketValue(p) : calculateTransferFee(p);
     const feeDisplay = formatMoney(fee);
     const isBargain = p.contractYears === 1 && !p.isFreeAgent;
-    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">[契約最終年]</span>' : '';
+    const bargainBadge = isBargain ? '<span class="sub-badge badge-bargain">契約最終年</span>' : '';
     const myClubBadge = entry.isMyClub ? '<span class="sub-badge" style="background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid #2ecc71;">自クラブ所属</span>' : '';
     const failedBadge = p.negotiationFailed ? '<span class="sub-badge badge-refused">交渉決裂</span>' : '';
     const footBadge = formatFootBadge(p);
@@ -10626,7 +10626,7 @@ function renderYouthScoutingPanel() {
         return `
           <div class="youth-scout-task-row">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; flex-wrap:wrap;" class="mono">
-              <span><strong>${t.regionName}</strong> [${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月]</span>
+              <span><strong>${t.regionName}</strong> (${t.targetRole === 'ANY' ? '全POS' : t.targetRole} / ${t.durationMonths || 3}ヶ月)</span>
               <div style="display:flex; align-items:center; gap:8px;">
                 <span class="accent-green">次回報告: ${nextRep}日後 (報告済:${repCnt}回)</span>
                 <span class="accent-gold">残${t.daysRemaining}日</span>
@@ -16656,7 +16656,7 @@ function renderCoachingStaffPanel() {
       return `
         <div class="coach-slot-card occupied">
           <div class="coach-slot-head">
-            <span class="coach-role-tag ${catClass} mono">[${slot.roleLabel}]</span>
+            <span class="coach-role-tag ${catClass} mono">${slot.roleLabel}</span>
             <span class="staff-specialty-tag">${c.specialty || '実戦指導型'}</span>
           </div>
           <div class="coach-slot-main">
@@ -16687,7 +16687,7 @@ function renderCoachingStaffPanel() {
       return `
         <div class="coach-slot-card vacant">
           <div class="coach-slot-head" style="width: 100%;">
-            <span class="coach-role-tag ${catClass} mono text-muted">[${slot.roleLabel} (空席)]</span>
+            <span class="coach-role-tag ${catClass} mono text-muted">${slot.roleLabel} (空席)</span>
           </div>
           <div style="margin: 8px 0; font-size: 11px;" class="text-muted mono">${slot.effectDesc}</div>
           <button type="button" class="btn btn-hire-coach-slot mono" data-category="${slot.category}" data-index="${slot.index}">
@@ -16728,8 +16728,8 @@ function openCoachHireModal(category, slotIndex) {
   const roleLabels = { attacking: 'オフェンス', defending: 'ディフェンス', goalkeeping: 'GK', fitness: 'フィジカル' };
   const label = roleLabels[category] || category;
 
-  if (title) title.textContent = `[${label}コーチ] 招聘・交代`;
-  if (tag) tag.textContent = `[${label.toUpperCase()} COACH]`;
+  if (title) title.textContent = `${label}コーチ 招聘・交代`;
+  if (tag) tag.textContent = `${label.toUpperCase()} COACH`;
 
   if (!gameState.freeCoaches) gameState.freeCoaches = {};
   if (!Array.isArray(gameState.freeCoaches[category])) {
@@ -17236,8 +17236,8 @@ function openInitialStaffSetupModal(club) {
           optimizeClubStarters(playerClub);
         }
         syncManagerDelegationButtonUI();
-        addDailyLog(`[PRE-SEASON] ${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
-        addDailyLog(`[PRE-SEASON] 7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
+        addDailyLog(`PRE-SEASON：${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
+        addDailyLog(`PRE-SEASON：7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
         gameState.inboxMessages = [];
         gameState.newsFeed = [];
         if (typeof ensureInitialOfficeMessagesAndNews === 'function') {
@@ -17798,7 +17798,7 @@ function renderMonthCalendar() {
         matchInfoHtml = `
           <div class="cal-match-body">
             <div class="cal-match-header-row">
-              <span class="cal-cup-badge ${badgeClass}">[${compCode}]</span>
+              <span class="cal-cup-badge ${badgeClass}">${compCode}</span>
               <span class="cal-venue-tag ${isHome ? 'venue-home' : 'venue-away'}">${isHome ? 'H' : 'A'}</span>
             </div>
             <div class="cal-opponent-name" title="${oppClub.name}" style="display:inline-flex;align-items:center;gap:3px;justify-content:center;">

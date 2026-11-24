@@ -5242,14 +5242,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   background-color: var(--accent-green);
   color: #111416;
   font-weight: 700;
-  animation: pulse-kickoff 1.6s infinite ease-in-out;
-  box-shadow: 0 0 14px rgba(46, 204, 113, 0.45);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
-@keyframes pulse-kickoff {
-  0% { transform: scale(1); box-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
-  50% { transform: scale(1.03); box-shadow: 0 0 18px rgba(46, 204, 113, 0.7); }
-  100% { transform: scale(1); box-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
+.btn-kickoff-pulse:hover {
+  background-color: #27ae60;
 }
 
 .weekly-schedule-bar {
@@ -11150,17 +11147,7 @@ body.modal-locked {
 }
 
 .btn-match-to-summary-pulse {
-  animation: matchSummaryBtnPulse 1.6s infinite ease-in-out;
-}
-@keyframes matchSummaryBtnPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
-  }
-  50% {
-    transform: scale(1.04);
-    box-shadow: 0 0 18px rgba(46, 204, 113, 0.8);
-  }
+  transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
 /* 非表示要素の最優先指定 */
@@ -12911,19 +12898,6 @@ button.hidden,
   background: #e74c3c !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.7) !important;
-  animation: pulse-offer-badge 1.8s infinite ease-in-out !important;
-}
-
-@keyframes pulse-offer-badge {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.88;
-  }
 }
 
 /* ==========================================
@@ -15247,20 +15221,24 @@ body {
 
 .btn-primary,
 .btn-kickoff-pulse {
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
+  background: #2ecc71 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #0f1419 !important;
   font-weight: 700 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
   letter-spacing: 0.02em !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease !important;
+}
+
+.btn-primary:hover,
+.btn-kickoff-pulse:hover {
+  background: #27ae60 !important;
 }
 
 .btn-primary:active,
 .btn-kickoff-pulse:active {
-  transform: scale(0.98) !important;
-  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25) !important;
+  background: #229954 !important;
 }
 
 /* 8. 業務一覧・秘書・進行ボタン統合パネル */
@@ -16072,6 +16050,21 @@ body {
 }
 
 @media (max-width: 768px) {
+  .summary-subnav-btn {
+    font-size: 10.5px !important;
+    padding: 6px 6px !important;
+    white-space: nowrap !important;
+  }
+  .summary-score-row {
+    gap: 4px !important;
+  }
+  .summary-score-center {
+    min-width: 78px !important;
+    padding: 0 2px !important;
+  }
+  .summary-club-role {
+    font-size: 8.5px !important;
+  }
   .summary-tab-pane {
     flex: 1 !important;
     min-height: 0 !important;
@@ -16248,6 +16241,11 @@ body {
 @media (max-width: 768px) {
   .profile-metrics-row-4col {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .stats-category-nav-bar {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    gap: 4px !important;
   }
   .stats-cat-btn {
     font-size: 11px !important;
@@ -22059,6 +22057,12 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   .monthly-award-row {
     flex-wrap: wrap;
     gap: 4px 8px;
+  }
+  .awards-stat-inline {
+    width: 100%;
+    text-align: right;
+    font-size: 11px;
+    color: #94a3b8;
   }
   .awards-award-name {
     min-width: 68px;

@@ -2215,13 +2215,13 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `[ホーム開催] マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)}${bonusNote} を計上`
+      text: `ホーム開催：マッチデイ入場料・グッズ売上 +${formatMoney(matchIncome)}${bonusNote} を計上`
     });
   } else if (!isPlayerHome) {
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `[アウェイ開催] プレミア放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
+      text: `アウェイ開催：プレミア放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
     });
   }
 
@@ -2644,7 +2644,15 @@ function ensureClubStartersForMatch(club) {
     return targetClub.players.slice(0, 11);
   }
   if (!targetClub.players || targetClub.players.length === 0) {
-    const baseP = targetClub.basePower || targetClub.ovr || 74;
+    const cid = String(targetClub.id || '');
+    const isForeignEuroClubFlag = typeof isForeignEuroClub === 'function'
+      ? isForeignEuroClub(targetClub)
+      : Boolean((targetClub.country && targetClub.country !== 'ENG') || /^[a-z]{2}\d+$/.test(cid));
+    const calBase = (isForeignEuroClubFlag && typeof getCalibratedForeignClubPower === 'function')
+      ? getCalibratedForeignClubPower(targetClub)
+      : (targetClub.basePower || targetClub.ovr || 74);
+    // 自動生成時は sta=90 のため OVR が約+2高く算出される分を相殺して競技実力と一致させる
+    const baseP = isForeignEuroClubFlag ? Math.max(60, calBase - 2) : calBase;
     const positions = ['GK', 'LB', 'CB', 'CB', 'RB', 'DM', 'CM', 'AM', 'LW', 'CF', 'RW'];
     const defaultSquadNumbers = [1, 3, 4, 5, 2, 6, 8, 10, 11, 9, 7];
     const canonicalEuroIdMap = { pre_madrid: 'es01', pre_bayern: 'de01', pre_milan: 'it01', pre_paris: 'fr01' };
@@ -3840,9 +3848,9 @@ function buildMatchSummaryHtml(md) {
               </div>
               <div class="stat-compare-row">
                 <div class="stat-compare-labels mono">
-                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePasses}本 [${homePassAccuracy}%]</span>
-                  <span style="color:var(--text-muted);font-size:9.5px;">パス数 [成功率]</span>
-                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPasses}本 [${awayPassAccuracy}%]</span>
+                  <span class="stat-val-home" style="color:${homeTheme.accentColor};">${homePasses}本 (${homePassAccuracy}%)</span>
+                  <span style="color:var(--text-muted);font-size:9.5px;">パス数（成功率）</span>
+                  <span class="stat-val-away" style="color:${awayTheme.accentColor};">${awayPasses}本 (${awayPassAccuracy}%)</span>
                 </div>
                 <div class="stat-compare-bar-track">
                   <div class="stat-bar-home" style="width:${homePassesPct}%;"></div>
