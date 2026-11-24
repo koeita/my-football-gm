@@ -555,6 +555,10 @@ function advanceChampionshipWeek() {
     m.awayScore = res.awayScore;
     m.played = true;
 
+    const d2HomeGate = Math.round(((h.supporters || 14000) * 0.055) / 10) * 10;
+    h.funds = (h.funds || 0) + d2HomeGate;
+    a.funds = (a.funds || 0) + 450;
+
     h.played++;
     a.played++;
     h.gf += res.homeScore;
@@ -568,10 +572,18 @@ function advanceChampionshipWeek() {
       h.won++;
       h.pts += 3;
       a.lost++;
+      if (typeof adjustClubSupporters === 'function') {
+        adjustClubSupporters(h, 60);
+        adjustClubSupporters(a, -25);
+      }
     } else if (res.homeScore < res.awayScore) {
       a.won++;
       a.pts += 3;
       h.lost++;
+      if (typeof adjustClubSupporters === 'function') {
+        adjustClubSupporters(a, 60);
+        adjustClubSupporters(h, -25);
+      }
     } else {
       h.drawn++;
       a.drawn++;
@@ -1560,8 +1572,41 @@ function dehydrateCompetitionsForSave(comps) {
     if (!c || typeof c !== 'object' || !c.id) return;
     if (engClubIds.has(c.id) || c.country === 'ENG') return;
     if (Array.isArray(c.players) && c.players.length > 0 && !foreignClubPlayers[c.id]) {
-      foreignClubPlayers[c.id] = c.players;
+      foreignClubPlayers[c.id] = c.players.map(p => {
+        if (!p || typeof p !== 'object') return p;
+        const { attributes, valueHistory, seasonHistory, avatarData, ...rest } = p;
+        return rest;
+      });
     }
+  };
+
+  const slimScorer = (s) => {
+    if (!s || typeof s !== 'object') return s;
+    return {
+      minute: s.minute,
+      name: s.name || (s.scorer && s.scorer.name) || '',
+      scorer: s.scorer ? { id: s.scorer.id, name: s.scorer.name } : null,
+      assister: s.assister ? { id: s.assister.id, name: s.assister.name } : null
+    };
+  };
+
+  const slimSubEvent = (ev) => {
+    if (!ev || typeof ev !== 'object') return ev;
+    return {
+      minute: ev.minute,
+      clubId: ev.clubId,
+      outPlayer: ev.outPlayer ? { id: ev.outPlayer.id, name: ev.outPlayer.name, pos: ev.outPlayer.pos, squadNumber: ev.outPlayer.squadNumber } : null,
+      inPlayer: ev.inPlayer ? { id: ev.inPlayer.id, name: ev.inPlayer.name, pos: ev.inPlayer.pos, squadNumber: ev.inPlayer.squadNumber } : null
+    };
+  };
+
+  const slimRedCard = (ev) => {
+    if (!ev || typeof ev !== 'object') return ev;
+    return {
+      minute: ev.minute,
+      clubId: ev.clubId,
+      player: ev.player ? { id: ev.player.id, name: ev.player.name, pos: ev.player.pos } : null
+    };
   };
 
   const slimClub = (c) => {
@@ -1601,6 +1646,21 @@ function dehydrateCompetitionsForSave(comps) {
       awayClub: slimClub(m.awayClub),
       winnerClub: slimClub(m.winnerClub)
     };
+    if (m.momClub) out.momClub = slimClub(m.momClub);
+    if (m.momPlayer) {
+      out.momPlayer = {
+        id: m.momPlayer.id,
+        name: m.momPlayer.name,
+        squadNumber: m.momPlayer.squadNumber,
+        pos: m.momPlayer.pos,
+        assignedPos: m.momPlayer.assignedPos
+      };
+    }
+    if (Array.isArray(m.homeScorers)) out.homeScorers = m.homeScorers.map(slimScorer);
+    if (Array.isArray(m.awayScorers)) out.awayScorers = m.awayScorers.map(slimScorer);
+    if (Array.isArray(m.homeSubEvents)) out.homeSubEvents = m.homeSubEvents.map(slimSubEvent);
+    if (Array.isArray(m.awaySubEvents)) out.awaySubEvents = m.awaySubEvents.map(slimSubEvent);
+    if (Array.isArray(m.redCardEvents)) out.redCardEvents = m.redCardEvents.map(slimRedCard);
     if (m.otherHomeClub) out.otherHomeClub = slimClub(m.otherHomeClub);
     if (m.otherAwayClub) out.otherAwayClub = slimClub(m.otherAwayClub);
     return out;
@@ -1611,9 +1671,13 @@ function dehydrateCompetitionsForSave(comps) {
     if (!comp || typeof comp !== 'object' || key === '_foreignClubPlayers') {
       continue;
     }
-    // 2部リーグ正本（championship.clubs）は選手データをそのまま保持する
+    // 2部リーグ正本（championship.clubs）は選手データを保持しつつ日程データ内の重いクラブ/選手埋め込みのみ軽量化する
     if (key === 'championship') {
-      result[key] = comp;
+      const champCopy = { ...comp };
+      if (Array.isArray(comp.schedule)) {
+        champCopy.schedule = comp.schedule.map(wk => Array.isArray(wk) ? wk.map(slimMatch) : wk);
+      }
+      result[key] = champCopy;
       continue;
     }
     const copy = { ...comp };
@@ -1739,6 +1803,13 @@ function rehydrateCompetitionsClubRefs() {
     }
   });
 
+  const champ = gameState.competitions.championship;
+  if (champ && Array.isArray(champ.schedule)) {
+    champ.schedule.forEach(wk => {
+      if (Array.isArray(wk)) wk.forEach(relinkMatch);
+    });
+  }
+
   const pre = gameState.competitions.preseasonCup;
   if (pre && Array.isArray(pre.matches)) {
     pre.matches.forEach(relinkMatch);
@@ -1804,6 +1875,7 @@ function processPromotionAndRelegation() {
     pc.targetLabel = '17位以内（残留）';
     if (pc.isPlayer) {
       pc.mustPromoteImmediate = false;
+      pc._relegationGraceUsed = false;
     }
     newP1Clubs.push(pc);
   });

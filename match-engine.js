@@ -606,14 +606,18 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
     const stadiumLvPre = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
     const sponsorMatchMultPre = typeof getClubSponsorMatchIncomeMultiplier === 'function' ? getClubSponsorMatchIncomeMultiplier(playerClub) : 1.0;
-    const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.15) * sponsorMatchMultPre;
+    const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.10) * sponsorMatchMultPre;
     const gateIncome = isHome
       ? Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10
       : 0;
     const totalPreseasonIncome = prize + gateIncome;
 
     playerClub.funds = (playerClub.funds || 0) + totalPreseasonIncome;
-    playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + fanGain);
+    if (typeof adjustClubSupporters === 'function') {
+      adjustClubSupporters(playerClub, fanGain);
+    } else {
+      playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + fanGain));
+    }
     playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
@@ -1096,7 +1100,7 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
-  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.10) * sponsorMatchMultLeague;
 
   let matchIncome = 0;
   let awayBroadcastingFee = 0;
@@ -1117,7 +1121,11 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
   }
 
   playerClub.funds = (playerClub.funds || 0) + matchIncome + awayBroadcastingFee;
-  playerClub.supporters = Math.max(5000, (playerClub.supporters || 10000) + playerSupportersDelta);
+  if (typeof adjustClubSupporters === 'function') {
+    adjustClubSupporters(playerClub, playerSupportersDelta);
+  } else {
+    playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + playerSupportersDelta));
+  }
   updateManagerTrustAfterMatch(playerClub, Boolean(userWon), Boolean(userDraw));
 
   return { matchIncome, awayBroadcastingFee, playerSupportersDelta };
@@ -2273,7 +2281,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
-  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.15) * sponsorMatchMultLeague;
+  const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.10) * sponsorMatchMultLeague;
 
   for (const match of weekMatches) {
     const homeClub = getClubById(match.homeId);
@@ -2336,25 +2344,30 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     const prevHomeSupporters = homeClub.supporters;
     const prevAwaySupporters = awayClub.supporters;
 
+    const adjSup = (c, d) => {
+      if (typeof adjustClubSupporters === 'function') return adjustClubSupporters(c, d);
+      c.supporters = Math.min(50000, Math.max(5000, (c.supporters || 10000) + d));
+      return c.supporters;
+    };
     if (homeScore > awayScore) {
       homeClub.won += 1;
       homeClub.pts += 3;
       awayClub.lost += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(90, 240));
-      awayClub.supporters = Math.max(5000, awayClub.supporters - randInt(20, 80));
+      adjSup(homeClub, randInt(90, 240));
+      adjSup(awayClub, -randInt(20, 80));
     } else if (homeScore < awayScore) {
       awayClub.won += 1;
       awayClub.pts += 3;
       homeClub.lost += 1;
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(90, 240));
-      homeClub.supporters = Math.max(5000, homeClub.supporters - randInt(20, 80));
+      adjSup(awayClub, randInt(90, 240));
+      adjSup(homeClub, -randInt(20, 80));
     } else {
       homeClub.drawn += 1;
       awayClub.drawn += 1;
       homeClub.pts += 1;
       awayClub.pts += 1;
-      homeClub.supporters = Math.max(5000, homeClub.supporters + randInt(-10, 60));
-      awayClub.supporters = Math.max(5000, awayClub.supporters + randInt(-10, 60));
+      adjSup(homeClub, randInt(-10, 60));
+      adjSup(awayClub, randInt(-10, 60));
     }
 
     const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;

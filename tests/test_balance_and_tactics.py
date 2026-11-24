@@ -81,6 +81,18 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('homeSubEvents: cupFinalRatings.homeSubEvents || [],', self.match_js)
         self.assertIn('isHome ? cupFinalRatings.homeSubs : cupFinalRatings.awaySubs', self.match_js)
 
+    def test_8_multi_year_sustainability_and_save_compression(self):
+        """長期プレイ均衡・CPUスカッド世代交代・2部収益・セーブ軽量化が組み込まれていること"""
+        self.assertIn('function replenishCpuSquadOffseason(', self.models_js)
+        self.assertIn('function getClubMaxSupporters(', self.models_js)
+        self.assertIn('function adjustClubSupporters(', self.models_js)
+        self.assertIn('replenishCpuSquadOffseason(club, usedCpuNames)', self.main_js)
+        self.assertIn('const d2HomeGate = Math.round(((h.supporters || 14000) * 0.055) / 10) * 10;', self.comp_js)
+        self.assertIn('const leagueCentralTvShare = isD2Club ? 2000 : 18000;', self.main_js)
+        self.assertIn('playCurrentMatchday(true)', self.main_js)
+        self.assertIn('const slimScheduleWeeks =', read_text('storage.js'))
+        self.assertIn('const slimSubEvent =', read_text('storage.js'))
+
 
 if __name__ == '__main__':
     unittest.main()
