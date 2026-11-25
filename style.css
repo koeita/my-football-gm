@@ -22775,15 +22775,15 @@ button.hof-record-name {
 .commercial-root {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .commercial-setup-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 14px;
   background: rgba(46, 204, 113, 0.08);
   border-bottom: 1px solid rgba(46, 204, 113, 0.25);
 }
@@ -22798,8 +22798,8 @@ button.hof-record-name {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 9px 14px;
+  gap: 10px;
+  padding: 8px 14px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -22814,7 +22814,7 @@ button.hof-record-name {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 0;
+  padding: 6px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -22849,13 +22849,6 @@ button.hof-record-name {
   white-space: nowrap;
 }
 
-.commercial-row-action {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 .commercial-step-btn:disabled,
 .commercial-merch-toggle:disabled,
 .commercial-price-range:disabled {
@@ -22865,9 +22858,9 @@ button.hof-record-name {
 
 .commercial-summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px 12px;
-  padding: 10px 14px 12px;
+  padding: 8px 14px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -22892,12 +22885,11 @@ button.hof-record-name {
   flex-shrink: 0;
 }
 
-.commercial-summary-sub {
+.commercial-summary-pct {
   font-size: 11px;
+  font-weight: 600;
   color: #8b949e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-left: 3px;
 }
 
 .commercial-subnav {
@@ -22908,7 +22900,7 @@ button.hof-record-name {
 }
 
 .commercial-subtab-btn {
-  padding: 8px 14px;
+  padding: 7px 14px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -22926,15 +22918,15 @@ button.hof-record-name {
 }
 
 .commercial-section-body {
-  padding: 0 14px 14px;
+  padding: 0 14px 12px;
 }
 
 .commercial-stadium-hero {
   display: grid;
-  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
-  padding: 12px 0 14px;
+  padding: 10px 0 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -23014,7 +23006,7 @@ button.hof-record-name {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 4px;
+  padding: 8px 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   transition: background 0.12s ease;
 }
@@ -23032,8 +23024,8 @@ button.hof-record-name {
 }
 
 .commercial-stadium-thumb {
-  width: 88px;
-  height: 45px;
+  width: 64px;
+  height: 34px;
   flex-shrink: 0;
   overflow: hidden;
   background: #161a1e;
@@ -23047,17 +23039,13 @@ button.hof-record-name {
   gap: 2px;
 }
 
-.commercial-row-title-line {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .commercial-row-name {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .commercial-row-sub {
@@ -23081,12 +23069,6 @@ button.hof-record-name {
   flex-shrink: 0;
 }
 
-.commercial-metric-cap {
-  font-size: 10px;
-  color: #8b949e;
-  white-space: nowrap;
-}
-
 .commercial-metric-num {
   font-size: 12px;
   font-weight: 700;
@@ -23094,18 +23076,24 @@ button.hof-record-name {
   flex-shrink: 0;
 }
 
+.commercial-ticket-rev,
+.commercial-merch-net {
+  min-width: 84px;
+  text-align: right;
+}
+
 .commercial-seatmap-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 6px;
+  padding: 10px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .commercial-seatmap-svg {
   width: 100%;
-  max-width: 380px;
+  max-width: 320px;
   height: auto;
   display: block;
 }
@@ -23116,7 +23104,7 @@ button.hof-record-name {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 8px 0;
+  padding: 7px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -23170,7 +23158,7 @@ button.hof-record-name {
 }
 
 .commercial-merch-toggle {
-  min-width: 60px;
+  min-width: 56px;
   padding: 5px 8px;
   font-size: 11px;
   font-weight: 700;
@@ -23193,7 +23181,7 @@ button.hof-record-name {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 4px 4px;
+  padding: 10px 4px 4px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -23204,8 +23192,15 @@ button.hof-record-name {
 
 @media (max-width: 600px) {
   .commercial-summary-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 10px 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .commercial-summary-val {
+    font-size: 13px;
+  }
+  .commercial-subnav {
+    padding: 0 10px;
   }
   .commercial-section-body {
     padding: 0 10px 12px;
@@ -23215,29 +23210,39 @@ button.hof-record-name {
     gap: 10px;
   }
   .commercial-flat-row {
-    flex-wrap: wrap;
     gap: 8px;
-    padding: 10px 2px;
+    padding: 8px 2px;
   }
-  .commercial-flat-row > .commercial-row-main {
-    flex: 1 1 calc(100% - 76px);
+  .commercial-flat-row:not([data-stadium-preview-row]) {
+    flex-wrap: wrap;
+  }
+  .commercial-flat-row:not([data-stadium-preview-row]) > .commercial-row-main {
+    flex: 1 1 calc(100% - 68px);
     min-width: 0;
+  }
+  .commercial-flat-row[data-stadium-preview-row] {
+    flex-wrap: nowrap;
   }
   .commercial-row-metrics {
     width: 100%;
     justify-content: space-between;
     gap: 8px;
   }
-  .commercial-metric-col {
-    align-items: flex-start;
+  .commercial-ticket-rev,
+  .commercial-merch-net {
+    min-width: 0;
   }
   .commercial-price-range {
     width: 84px;
   }
-  .commercial-setup-bar,
-  .commercial-locked-bar {
+  .commercial-setup-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+  .commercial-locked-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
   }
   .commercial-hero-nav {
     gap: 6px;
@@ -23245,10 +23250,6 @@ button.hof-record-name {
   .commercial-hero-nav-btn {
     padding: 5px 8px;
     font-size: 11px;
-  }
-  .commercial-row-action {
-    width: 100%;
-    justify-content: flex-end;
   }
   .commercial-total-footer {
     flex-wrap: wrap;
