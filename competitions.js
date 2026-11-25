@@ -1561,7 +1561,7 @@ function ensurePlayableClubStructure(club) {
     club.youthSquad = createYouthSquad(usedNames);
   }
   if (typeof club.funds !== 'number') club.funds = 28000;
-  if (typeof club.supporters !== 'number') club.supporters = 14000;
+  if (typeof club.supporters !== 'number') club.supporters = 18000;
   if (!club.formation) club.formation = '4-3-3';
   if (!club.tactic) club.tactic = 'counter';
   if (!club.manager && typeof MANAGERS_DATABASE !== 'undefined' && Array.isArray(MANAGERS_DATABASE) && MANAGERS_DATABASE.length > 0 && typeof createManager === 'function') {

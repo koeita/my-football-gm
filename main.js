@@ -1879,7 +1879,7 @@ function rejectPendingMegaOffer() {
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, 250);
     } else {
-      playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 250);
     }
     target.megaOfferRejected = true;
     target.contractYears = Math.min(target.contractYears || 2, 2);
@@ -2269,10 +2269,10 @@ function triggerSupporterPetitionEvent() {
     category: 'SUPPORTERS UNION PETITION',
     title: 'サポーター連合によるスタジアム設備拡張嘆願',
     description: `熱狂的なサポーター連合から、ホームスタジアムの観客席改修およびホスピタリティ拡充を求める要望書が提出されました。投資を行えばサポーター数が大幅に増加し、今後のホーム戦チケット収入が向上します。`,
-    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +600人増加（ホーム19試合のマッチデイ収入が毎試合約 +£50K 増加）`,
+    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：ファン総数 ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}（ホーム開催時の来場増・収入増）`,
     actions: [
       {
-        label: `設備投資を実施する（-${formatMoney(investCost)} / サポーター +600人）`,
+        label: `設備投資を実施する（-${formatMoney(investCost)} / ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}）`,
         className: 'btn btn-primary',
         disabled: playerClub.funds < investCost,
         onClick: () => {
@@ -2280,13 +2280,13 @@ function triggerSupporterPetitionEvent() {
           if (typeof adjustClubSupporters === 'function') {
             adjustClubSupporters(playerClub, 600);
           } else {
-            playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 600);
+            playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 600);
           }
           renderAll();
         }
       },
       {
-        label: '予算温存のため見送る（サポーター -150人）',
+        label: `予算温存のため見送る（ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(Math.max(5000, (playerClub.supporters || 18000) - 150), -150) : '-150人'}）`,
         className: 'btn btn-secondary',
         onClick: () => {
           playerClub.supporters = Math.max(5000, playerClub.supporters - 150);
@@ -5653,7 +5653,7 @@ function rejectIncomingOffer(offerId) {
       if (typeof adjustClubSupporters === 'function') {
         adjustClubSupporters(playerClub, 250);
       } else {
-        playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+        playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 250);
       }
       target.megaOfferRejected = true;
       target.contractYears = Math.min(target.contractYears || 2, 2);
@@ -6314,7 +6314,7 @@ function upgradeFacility(facilityKey) {
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, 1500);
     } else {
-      playerClub.supporters = Math.min(60000, (playerClub.supporters || 10000) + 1500);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 1500);
     }
     addDailyLog(`【商業設備改修】スタジアム周辺・商業設備を Lv.${nextLv} へ拡充しました（サポーター上限拡大・物販効率UP・新規ファン獲得）。`);
   } else if (facilityKey === 'scouting') {
@@ -7881,7 +7881,7 @@ function renderHeader() {
     payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
   }
   setHeaderText('header-squad-size', `${squadCount}名`);
-  setHeaderText('header-supporters', `${playerClub.supporters.toLocaleString()}人`);
+  setHeaderText('header-supporters', typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${playerClub.supporters.toLocaleString()}人`);
 
   setHeaderText('tab-badge-roster', `${squadCount}名`);
 
@@ -13906,8 +13906,8 @@ function renderIntroClubDetail() {
         <span class="detail-metric-val">OVR <span class="${getOvrTierClass(club.basePower)}">${club.basePower}</span></span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">サポーター規模</span>
-        <span class="detail-metric-val mono">${club.supporters.toLocaleString()}人</span>
+        <span class="detail-metric-label">ファン総数</span>
+        <span class="detail-metric-val mono">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(club)) : `${club.supporters.toLocaleString()}人`}</span>
       </div>
     </div>
 
@@ -21477,7 +21477,7 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     speech = `GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）お疲れ様でございました。今回の収支および次回試合の予定をご報告申し上げます。`;
   }
 
-  const fanStr = `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
+  const fanStr = typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(playerClub, supportersDelta) : `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
   const incomeSubNote = matchData.isPreseason
     ? (gateIncome > 0 && prizeIncome > 0
       ? `賞金+${formatMoney(prizeIncome)} · 入場+${formatMoney(gateIncome)}`
@@ -21523,9 +21523,9 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
             <span class="gm-report-kpi-sub">安全枠 ${formatMoney(safeBudget)}</span>
           </div>
           <div class="gm-report-kpi-cell">
-            <span class="gm-report-kpi-label">サポーター</span>
+            <span class="gm-report-kpi-label">ファン総数</span>
             <span class="gm-report-kpi-val mono ${fanDeltaCls}">${fanStr}</span>
-            <span class="gm-report-kpi-sub">${((playerClub.supporters || 0)).toLocaleString()}人</span>
+            <span class="gm-report-kpi-sub">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${((playerClub.supporters || 0)).toLocaleString()}人`}</span>
           </div>
         </div>
         <div class="gm-report-next-bar">
@@ -23480,7 +23480,7 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, supporterBonus);
     } else {
-      playerClub.supporters = Math.min(50000, (playerClub.supporters || 0) + supporterBonus);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 0) + supporterBonus);
     }
   }
 
@@ -24077,61 +24077,48 @@ function buildCommercialStadiumHeroInnerHtml(playerClub, comm, proj, previewPres
     : ` <span class="${diffNetK >= 0 ? 'accent-green' : 'accent-red'}">(${diffSign}${formatMoney(Math.abs(diffNetK))})</span>`;
   const fitInfo = getStadiumFitInfo(previewProj.supporters, previewCap, previewProj.fillRatePct, previewProj.isDeficit);
 
-  let statusBadgeText = '比較プレビュー';
-  let statusBadgeCls = 'accent-gold';
+  let statusBadgeText = '';
+  let statusBadgeCls = 'accent-green';
   if (isCurrent && isPlanned) {
-    statusBadgeText = '現在の本拠地';
-    statusBadgeCls = 'accent-green';
+    statusBadgeText = '使用中';
   } else if (isPlanned) {
-    statusBadgeText = '計画採用中（確定時精算）';
-    statusBadgeCls = 'accent-green';
+    statusBadgeText = '仮選択中';
   } else if (isCurrent) {
-    statusBadgeText = '保有中の現本拠地';
-    statusBadgeCls = 'accent-green';
+    statusBadgeText = '保有中';
   }
 
   let actionBtnHtml = '';
   if (locked) {
-    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${isCurrent ? '使用中の本拠地（確定済）' : '今季確定済（変更不可）'}</button>`;
+    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${isCurrent ? '使用中' : '変更不可'}</button>`;
   } else if (isPlanned) {
-    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${isCurrent ? '現在選択中（本拠地）' : '興行計画に仮選択中'}</button>`;
+    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>選択中</button>`;
   } else if (isOwned) {
-    actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">このスタジアムを計画に選ぶ（無料）</button>`;
+    actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">このスタジアムを選ぶ</button>`;
   } else if (canAfford) {
-    actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm mono" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">計画に選ぶ（建設費 ${formatMoney(buildCost)}）</button>`;
+    actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm mono" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">このスタジアムを選ぶ (${formatMoney(buildCost)})</button>`;
   } else {
-    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>資金不足（必要 ${formatMoney(buildCost)}）</button>`;
+    actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>資金不足 (${formatMoney(buildCost)})</button>`;
   }
 
-  const share = previewPreset.seatShare || { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 };
   return `
     <div class="commercial-stadium-stage">${svgHero}</div>
     <div class="commercial-stadium-meta">
       <div class="commercial-stadium-title-row">
         <h3 class="commercial-stadium-title">${escapeCommHtml(previewPreset.name)}</h3>
-        <span class="commercial-row-sub mono ${statusBadgeCls}">${statusBadgeText}</span>
+        ${statusBadgeText ? `<span class="commercial-row-sub mono ${statusBadgeCls}">${statusBadgeText}</span>` : ''}
       </div>
-      <div class="commercial-row-sub">${escapeCommHtml(previewPreset.summary)}</div>
       <div class="commercial-inline-kv-list">
         <div class="commercial-inline-kv-row">
-          <span class="commercial-kv-label">固定収容席数 / 適性</span>
-          <span class="commercial-kv-val mono">${previewCap.toLocaleString()}席 · <span class="${fitInfo.cls}">${fitInfo.label}</span></span>
+          <span class="commercial-kv-label">収容 / 予想来場</span>
+          <span class="commercial-kv-val mono">${previewCap.toLocaleString()}席 · ${previewProj.totalAttendance.toLocaleString()}人 (${previewProj.fillRatePct}%) <span class="${fitInfo.cls}">${fitInfo.label}</span></span>
         </div>
         <div class="commercial-inline-kv-row">
-          <span class="commercial-kv-label">試算来場者数（現在ファン数基準）</span>
-          <span class="commercial-kv-val mono accent-green">${previewProj.totalAttendance.toLocaleString()}人（稼働 ${previewProj.fillRatePct}%）</span>
+          <span class="commercial-kv-label">建設費 / 維持費</span>
+          <span class="commercial-kv-val mono">${isOwned ? '<span class="accent-green">保有済</span>' : `<span class="accent-gold">${formatMoney(buildCost)}</span>`} / -${formatMoney(previewMaint)}</span>
         </div>
         <div class="commercial-inline-kv-row">
-          <span class="commercial-kv-label">建設費 / 1試合維持費</span>
-          <span class="commercial-kv-val mono">${isOwned ? '<span class="accent-green">保有済 (£0)</span>' : `<span class="accent-gold">${formatMoney(buildCost)}</span>`} / -${formatMoney(previewMaint)}</span>
-        </div>
-        <div class="commercial-inline-kv-row">
-          <span class="commercial-kv-label">1試合予想純収益</span>
+          <span class="commercial-kv-label">1試合純収益</span>
           <span class="commercial-kv-val mono">${formatSignedMoneyHtml(previewProj.netMatchdayIncomeK)}${diffNetHtml}</span>
-        </div>
-        <div class="commercial-inline-kv-row">
-          <span class="commercial-kv-label">座席配分</span>
-          <span class="commercial-kv-val mono">裏${Math.round(share.goal * 100)}% / B${Math.round(share.back * 100)}% / M${Math.round(share.main * 100)}% / VIP${Math.round(share.vip * 100)}%</span>
         </div>
       </div>
       <div>${actionBtnHtml}</div>
@@ -24185,8 +24172,6 @@ function renderCommercialManagementPanel() {
   const comm = playerClub.commercial || {};
   const locked = isCommercialPlanLocked();
   const subtab = gameState.commercialSubtab || 'stadium';
-  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
-  const homeMatchCount = isD2 ? 23 : 19;
   const proj = typeof calculateProjectedMatchdayCommercial === 'function'
     ? calculateProjectedMatchdayCommercial(playerClub, { useDraft: !locked })
     : null;
@@ -24196,26 +24181,23 @@ function renderCommercialManagementPanel() {
   const netCls = proj.netMatchdayIncomeK >= 0 ? 'accent-green' : 'accent-red';
   const netSign = proj.netMatchdayIncomeK >= 0 ? '+' : '';
   const merchSign = proj.merchNetK >= 0 ? '+' : '';
-  const seasonEstimateK = proj.netMatchdayIncomeK * homeMatchCount;
-  const facilityLv = proj.stadium.facilityLv || 1;
-  const merchBonusPct = Math.round(((proj.stadium.facilityMerchMult || 1) - 1) * 100);
   const pendingBuildCostK = (!locked && !proj.isOwned) ? (proj.buildCostK || 0) : 0;
   const canConfirm = !locked && ((playerClub.funds || 0) >= pendingBuildCostK);
 
   const setupPromptText = pendingBuildCostK > 0
-    ? `計画中: ${escapeCommHtml(proj.stadium.name)}（確定時に建設費 -${formatMoney(pendingBuildCostK)} を精算 / 確定後変更不可）`
-    : '今季興行計画 · 確定後はシーズン終了まで変更不可';
+    ? `計画中: ${escapeCommHtml(proj.stadium.name)} (建設費 -${formatMoney(pendingBuildCostK)})`
+    : `今季興行計画 · ${escapeCommHtml(proj.stadium.name)}`;
 
   const setupBannerHtml = gameState.pendingCommercialSetup
     ? `
       <div class="commercial-setup-bar">
         <span class="commercial-setup-text">${setupPromptText}</span>
-        <button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup" ${canConfirm ? '' : 'disabled'}>${canConfirm ? '興行計画を確定する' : '資金不足で確定不可'}</button>
+        <button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup" ${canConfirm ? '' : 'disabled'}>${canConfirm ? '興行計画を確定' : '資金不足'}</button>
       </div>
     `
     : `
       <div class="commercial-locked-bar">
-        <span class="commercial-locked-text">今季の興行計画は確定済みです（数値の変更はできません · 来季開幕時に再設定可能）</span>
+        <span class="commercial-locked-text">今季確定済（来季まで変更不可）</span>
         <span class="commercial-row-sub mono accent-green">確定ロック中</span>
       </div>
     `;
@@ -24223,33 +24205,25 @@ function renderCommercialManagementPanel() {
   const summaryHtml = `
     <div class="commercial-summary-strip">
       <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">サポーター数 / 上限</span>
-        <span class="commercial-summary-val mono">${proj.supporters.toLocaleString()}人 / ${proj.maxSupporters.toLocaleString()}人</span>
-        <span class="commercial-summary-sub">来場上限＝サポーター数 · 商業設備Lv.${facilityLv}（物販+${merchBonusPct}%）</span>
+        <span class="commercial-summary-label">ファン総数</span>
+        <span class="commercial-summary-val mono">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${proj.supporters.toLocaleString()}人`}</span>
       </div>
       <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">${pendingBuildCostK > 0 ? '計画中スタジアム / 予想来場' : '本拠地 / 予想来場'}</span>
-        <span class="commercial-summary-val mono">${proj.totalAttendance.toLocaleString()}人（稼働 ${proj.fillRatePct}%）</span>
-        <span class="commercial-summary-sub">${escapeCommHtml(proj.stadium.name)} · ${proj.totalCapacity.toLocaleString()}席（来場率 ${proj.supporterTurnoutPct}%）</span>
+        <span class="commercial-summary-label">予想来場</span>
+        <span class="commercial-summary-val mono">${proj.totalAttendance.toLocaleString()}人<span class="commercial-summary-pct">(${proj.fillRatePct}%)</span></span>
       </div>
       <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">チケット / グッズ / 維持費</span>
-        <span class="commercial-summary-val mono accent-green">+${formatMoney(proj.ticketRevenueK)}</span>
-        <span class="commercial-summary-sub">グッズ ${merchSign}${formatMoney(proj.merchNetK)} · 維持費 -${formatMoney(proj.maintenanceK)}</span>
-      </div>
-      <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">1試合予想純収益</span>
+        <span class="commercial-summary-label">1試合純収益</span>
         <span class="commercial-summary-val mono ${netCls}">${netSign}${formatMoney(proj.netMatchdayIncomeK)}</span>
-        <span class="commercial-summary-sub">リーグH ${homeMatchCount}試合換算 ${seasonEstimateK >= 0 ? '+' : ''}${formatMoney(seasonEstimateK)}</span>
       </div>
     </div>
   `;
 
   const navHtml = `
     <div class="commercial-subnav" role="tablist" aria-label="興行設定セクション">
-      <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム選択</button>
-      <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット価格</button>
-      <button type="button" class="commercial-subtab-btn ${subtab === 'merch' ? 'active' : ''}" data-commercial-tab="merch" role="tab" aria-selected="${subtab === 'merch' ? 'true' : 'false'}">グッズ展開・収支</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'merch' ? 'active' : ''}" data-commercial-tab="merch" role="tab" aria-selected="${subtab === 'merch' ? 'true' : 'false'}">グッズ</button>
     </div>
   `;
 
@@ -24267,49 +24241,34 @@ function renderCommercialManagementPanel() {
     const listRowsHtml = presets.map(st => {
       const stProj = calculateProjectedMatchdayCommercial(playerClub, { overrideStadiumId: st.id });
       const cap = stProj.totalCapacity;
-      const maint = stProj.maintenanceK;
       const rowIsCurrent = st.id === comm.stadiumId;
       const rowIsPlanned = st.id === proj.stadium.id;
       const rowIsOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(st.id);
       const rowSelected = st.id === previewPreset.id;
       const rowFit = getStadiumFitInfo(stProj.supporters, cap, stProj.fillRatePct, stProj.isDeficit);
       const rowCost = rowIsOwned ? 0 : (st.buildCostK || 0);
-      const rowCanAfford = (playerClub.funds || 0) >= rowCost;
       const thumbSvg = typeof getStadiumIllustrationSvg === 'function'
         ? getStadiumIllustrationSvg(st.id, playerClub, stadiumLv, true)
         : '';
 
-      let rowActionHtml = '';
-      if (locked) {
-        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${rowIsCurrent ? '使用中' : (rowIsOwned ? '保有済' : formatMoney(rowCost))}</button>`;
-      } else if (rowIsPlanned) {
-        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${rowIsCurrent ? '使用中' : '仮選択中'}</button>`;
-      } else if (rowIsOwned) {
-        rowActionHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${st.id}">切替(無料)</button>`;
-      } else if (rowCanAfford) {
-        rowActionHtml = `<button type="button" class="btn btn-primary btn-sm mono" data-commercial-action="select-stadium" data-stadium-id="${st.id}">選択 ${formatMoney(rowCost)}</button>`;
-      } else {
-        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>不足 ${formatMoney(rowCost)}</button>`;
-      }
-
       const costText = rowIsOwned ? '保有済' : `建設 ${formatMoney(rowCost)}`;
+      let rowStateHtml = `<span class="${rowFit.cls} commercial-row-sub">${rowFit.label}</span>`;
+      if (rowIsCurrent && rowIsPlanned) {
+        rowStateHtml = '<span class="accent-green commercial-row-sub">使用中</span>';
+      } else if (rowIsPlanned) {
+        rowStateHtml = '<span class="accent-green commercial-row-sub">選択中</span>';
+      }
 
       return `
         <div class="commercial-flat-row is-clickable ${rowSelected ? 'is-selected' : ''}" data-stadium-preview-row="${st.id}">
           <div class="commercial-stadium-thumb">${thumbSvg}</div>
           <div class="commercial-row-main">
-            <div class="commercial-row-title-line">
-              <span class="commercial-row-name">${escapeCommHtml(st.name)}</span>
-              <span class="${rowFit.cls} commercial-row-sub">${rowFit.label}</span>
-            </div>
-            <div class="commercial-row-sub mono">収容 ${cap.toLocaleString()}席 · 試算 ${stProj.totalAttendance.toLocaleString()}人 (${stProj.fillRatePct}%) · ${costText}</div>
+            <div class="commercial-row-name">${escapeCommHtml(st.name)}</div>
+            <div class="commercial-row-sub mono">${cap.toLocaleString()}席 · ${costText}</div>
           </div>
-          <div class="commercial-row-metrics">
-            <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">1試合純収益 / 維持費</span>
-              <span class="commercial-metric-num mono">${formatSignedMoneyHtml(stProj.netMatchdayIncomeK)} / -${formatMoney(maint)}</span>
-            </div>
-            <div class="commercial-row-action">${rowActionHtml}</div>
+          <div class="commercial-metric-col">
+            <span class="commercial-metric-num mono">${formatSignedMoneyHtml(stProj.netMatchdayIncomeK)}</span>
+            ${rowStateHtml}
           </div>
         </div>
       `;
@@ -24334,11 +24293,8 @@ function renderCommercialManagementPanel() {
       return `
         <div class="commercial-flat-row ${isActive ? 'is-selected' : ''}" data-seat-zone="${z.id}">
           <div class="commercial-row-main">
-            <div class="commercial-row-title-line">
-              <span class="commercial-row-name">${escapeCommHtml(z.name)}</span>
-              <span class="commercial-row-sub">${escapeCommHtml(z.subLabel)}</span>
-            </div>
-            <div class="commercial-row-sub mono">席数 ${z.capacity.toLocaleString()}席（ファン割当 ${z.potentialSupporters.toLocaleString()}人）· 予想 ${z.attendance.toLocaleString()}人（稼働 ${z.occupancyPct}%）· 基準 £${z.fairPrice}</div>
+            <div class="commercial-row-name">${escapeCommHtml(z.name)}</div>
+            <div class="commercial-row-sub mono">${z.attendance.toLocaleString()} / ${z.capacity.toLocaleString()}席 (${z.occupancyPct}%) · 基準 £${z.fairPrice}</div>
           </div>
           <div class="commercial-row-metrics">
             <div class="commercial-stepper">
@@ -24347,10 +24303,7 @@ function renderCommercialManagementPanel() {
               <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="${z.step}" aria-label="${z.name}を値上げ" ${disabledAttr}>+</button>
             </div>
             <input type="range" class="commercial-price-range" min="${z.minPrice}" max="${z.maxPrice}" step="${z.step}" value="${z.price}" data-ticket-range-zone="${z.id}" aria-label="${z.name}価格スライダー" ${disabledAttr}>
-            <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">予想売上 / 評判</span>
-              <span class="commercial-metric-num mono"><span class="accent-green">+${formatMoney(z.revenueK)}</span> · <span class="${z.ratingClass}">${z.ratingLabel}</span></span>
-            </div>
+            <div class="commercial-metric-num commercial-ticket-rev mono"><span class="accent-green">+${formatMoney(z.revenueK)}</span> <span class="${z.ratingClass}">${z.ratingLabel}</span></div>
           </div>
         </div>
       `;
@@ -24359,10 +24312,9 @@ function renderCommercialManagementPanel() {
     bodyHtml = `
       <div class="commercial-seatmap-wrap">
         ${seatMapSvg}
-        <span class="commercial-row-sub">来場上限: サポーター数 ${proj.supporters.toLocaleString()}人（座席エリアクリックで該当行を強調）</span>
       </div>
       <div class="commercial-preset-bar">
-        <span class="commercial-row-sub">価格方針プリセット${locked ? '（確定済みのため変更不可）' : ''}</span>
+        <span class="commercial-row-sub">プリセット</span>
         <div class="commercial-preset-actions">
           <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="fan" ${disabledAttr}>ファン重視</button>
           <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="balanced" ${disabledAttr}>適正バランス</button>
@@ -24380,14 +24332,11 @@ function renderCommercialManagementPanel() {
       return `
         <div class="commercial-flat-row ${m.enabled ? 'is-selected' : ''}">
           <button type="button" class="commercial-merch-toggle ${m.enabled ? 'is-on' : ''}" data-commercial-action="merch-toggle" data-merch-id="${m.id}" ${disabledAttr}>
-            ${m.enabled ? '販売中' : '停止中'}
+            ${m.enabled ? '販売中' : '停止'}
           </button>
           <div class="commercial-row-main">
-            <div class="commercial-row-title-line">
-              <span class="commercial-row-name">${escapeCommHtml(m.name)}</span>
-              <span class="commercial-row-sub">${escapeCommHtml(m.targetLabel)}</span>
-            </div>
-            <div class="commercial-row-sub mono">固定費 -${formatMoney(m.fixedCostK)} / 原価 £${m.unitCost} / 予想販売 ${m.unitsSold.toLocaleString()}個</div>
+            <div class="commercial-row-name">${escapeCommHtml(m.name)}</div>
+            <div class="commercial-row-sub mono">固定 -${formatMoney(m.fixedCostK)} · 予想 ${m.unitsSold.toLocaleString()}個</div>
           </div>
           <div class="commercial-row-metrics">
             <div class="commercial-stepper">
@@ -24395,14 +24344,7 @@ function renderCommercialManagementPanel() {
               <span class="commercial-step-price mono">£${m.price}</span>
               <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="${m.step}" aria-label="${m.name}を値上げ" ${disabledAttr}>+</button>
             </div>
-            <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">売上 / 総コスト</span>
-              <span class="commercial-metric-num mono">+${formatMoney(m.revenueK)} / -${formatMoney(m.totalCostK)}</span>
-            </div>
-            <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">純利益${m.enabled ? '' : ' (参考)'}</span>
-              <span class="commercial-metric-num mono ${netCls}">${netPrefix}${formatMoney(m.netProfitK)}${deficitText}</span>
-            </div>
+            <span class="commercial-metric-num commercial-merch-net mono ${netCls}">${netPrefix}${formatMoney(m.netProfitK)}${deficitText}</span>
           </div>
         </div>
       `;
@@ -24410,17 +24352,17 @@ function renderCommercialManagementPanel() {
 
     bodyHtml = `
       <div class="commercial-preset-bar">
-        <span class="commercial-row-sub">${locked ? '確定済みのため変更不可' : '品目別収支バランス（固定費＋原価）'}</span>
+        <span class="commercial-row-sub">自動設定</span>
         <div class="commercial-preset-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe" ${disabledAttr}>堅実構成</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced" ${disabledAttr}>黒字のみ自動</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="all" ${disabledAttr}>全品展開</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe" ${disabledAttr}>堅実</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced" ${disabledAttr}>黒字のみ</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="all" ${disabledAttr}>全品</button>
         </div>
       </div>
       <div class="commercial-flat-list">${merchRowsHtml}</div>
       <div class="commercial-total-footer">
-        <span class="commercial-kv-label">展開中 ${proj.enabledMerchCount}品目 合計</span>
-        <span class="mono">売上 +${formatMoney(proj.merchRevenueK)} ／ コスト -${formatMoney(proj.merchCostK)} ／ 純利益 <span class="${merchNetCls}">${merchSign}${formatMoney(proj.merchNetK)}</span></span>
+        <span class="commercial-kv-label">展開中 ${proj.enabledMerchCount}品目</span>
+        <span class="mono">グッズ純利益 <span class="${merchNetCls}">${merchSign}${formatMoney(proj.merchNetK)}</span></span>
       </div>
     `;
   }

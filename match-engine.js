@@ -3945,8 +3945,8 @@ function buildMatchSummaryHtml(md) {
                   <span class="ui-plate-val accent-gold">+${formatMoney(revenueAmount)}</span>
                 </div>
                 <div class="ui-stat-plate">
-                  <span class="ui-plate-label">サポーター増減</span>
-                  <span class="ui-plate-val" style="color:${supColor};">${supSign}${supDelta.toLocaleString()}人</span>
+                  <span class="ui-plate-label">ファン増減</span>
+                  <span class="ui-plate-val" style="color:${supColor};">${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(playerClub, supDelta) : `${supSign}${supDelta.toLocaleString()}人`}</span>
                 </div>
               </div>
               ${momPlayer ? `

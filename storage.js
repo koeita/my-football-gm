@@ -1488,7 +1488,7 @@ function openSettingsModal() {
             <span class="settings-mh-val mono">${esc(squad)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">サポーター</span>
+            <span class="settings-mh-label mono">ファン総数</span>
             <span class="settings-mh-val mono">${esc(supporters)}</span>
           </div>
           <div class="settings-mh-item settings-mh-item-wide">
