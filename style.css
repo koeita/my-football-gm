@@ -23252,6 +23252,15 @@ button.hof-record-name {
     padding: 5px 8px;
     font-size: 11px;
   }
+  .commercial-inline-kv-row {
+    align-items: flex-start;
+  }
+  .commercial-kv-val {
+    white-space: normal;
+    text-align: right;
+    flex-shrink: 1;
+    min-width: 0;
+  }
   .commercial-total-footer {
     flex-wrap: wrap;
   }

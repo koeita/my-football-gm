@@ -2269,10 +2269,10 @@ function triggerSupporterPetitionEvent() {
     category: 'SUPPORTERS UNION PETITION',
     title: 'サポーター連合によるスタジアム設備拡張嘆願',
     description: `熱狂的なサポーター連合から、ホームスタジアムの観客席改修およびホスピタリティ拡充を求める要望書が提出されました。投資を行えばサポーター数が大幅に増加し、今後のホーム戦チケット収入が向上します。`,
-    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：サポーター数 +600人増加（ホーム19試合のマッチデイ収入が毎試合約 +£50K 増加）`,
+    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：ファン総数 ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}（ホーム開催時の来場増・収入増）`,
     actions: [
       {
-        label: `設備投資を実施する（-${formatMoney(investCost)} / サポーター +600人）`,
+        label: `設備投資を実施する（-${formatMoney(investCost)} / ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}）`,
         className: 'btn btn-primary',
         disabled: playerClub.funds < investCost,
         onClick: () => {
@@ -2286,7 +2286,7 @@ function triggerSupporterPetitionEvent() {
         }
       },
       {
-        label: '予算温存のため見送る（サポーター -150人）',
+        label: `予算温存のため見送る（ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(Math.max(5000, (playerClub.supporters || 18000) - 150), -150) : '-150人'}）`,
         className: 'btn btn-secondary',
         onClick: () => {
           playerClub.supporters = Math.max(5000, playerClub.supporters - 150);
@@ -7881,7 +7881,7 @@ function renderHeader() {
     payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
   }
   setHeaderText('header-squad-size', `${squadCount}名`);
-  setHeaderText('header-supporters', `${playerClub.supporters.toLocaleString()}人`);
+  setHeaderText('header-supporters', typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${playerClub.supporters.toLocaleString()}人`);
 
   setHeaderText('tab-badge-roster', `${squadCount}名`);
 
@@ -13906,8 +13906,8 @@ function renderIntroClubDetail() {
         <span class="detail-metric-val">OVR <span class="${getOvrTierClass(club.basePower)}">${club.basePower}</span></span>
       </div>
       <div class="detail-metric-card">
-        <span class="detail-metric-label">サポーター規模</span>
-        <span class="detail-metric-val mono">${club.supporters.toLocaleString()}人</span>
+        <span class="detail-metric-label">ファン総数</span>
+        <span class="detail-metric-val mono">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(club)) : `${club.supporters.toLocaleString()}人`}</span>
       </div>
     </div>
 
@@ -21477,7 +21477,7 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     speech = `GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）お疲れ様でございました。今回の収支および次回試合の予定をご報告申し上げます。`;
   }
 
-  const fanStr = `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
+  const fanStr = typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(playerClub, supportersDelta) : `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
   const incomeSubNote = matchData.isPreseason
     ? (gateIncome > 0 && prizeIncome > 0
       ? `賞金+${formatMoney(prizeIncome)} · 入場+${formatMoney(gateIncome)}`
@@ -21523,9 +21523,9 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
             <span class="gm-report-kpi-sub">安全枠 ${formatMoney(safeBudget)}</span>
           </div>
           <div class="gm-report-kpi-cell">
-            <span class="gm-report-kpi-label">サポーター</span>
+            <span class="gm-report-kpi-label">ファン総数</span>
             <span class="gm-report-kpi-val mono ${fanDeltaCls}">${fanStr}</span>
-            <span class="gm-report-kpi-sub">${((playerClub.supporters || 0)).toLocaleString()}人</span>
+            <span class="gm-report-kpi-sub">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${((playerClub.supporters || 0)).toLocaleString()}人`}</span>
           </div>
         </div>
         <div class="gm-report-next-bar">
@@ -24205,8 +24205,8 @@ function renderCommercialManagementPanel() {
   const summaryHtml = `
     <div class="commercial-summary-strip">
       <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">サポーター</span>
-        <span class="commercial-summary-val mono">${proj.supporters.toLocaleString()}人</span>
+        <span class="commercial-summary-label">ファン総数</span>
+        <span class="commercial-summary-val mono">${typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${proj.supporters.toLocaleString()}人`}</span>
       </div>
       <div class="commercial-summary-cell">
         <span class="commercial-summary-label">予想来場</span>

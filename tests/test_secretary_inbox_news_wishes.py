@@ -577,6 +577,10 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('function ensureClubCommercialState(', self.models_js)
         self.assertIn('function getClubStadiumInfo(', self.models_js)
         self.assertIn('function calculateProjectedMatchdayCommercial(', self.models_js)
+        self.assertIn('function convertSupportersToGlobalFans(', self.models_js)
+        self.assertIn('function getClubGlobalFans(', self.models_js)
+        self.assertIn('function formatGlobalFans(', self.models_js)
+        self.assertIn('ファン総数', self.html)
 
         self.assertGreaterEqual(match_js.count('calculateProjectedMatchdayCommercial('), 3)
         self.assertIn('commercialBreakdown:', match_js)

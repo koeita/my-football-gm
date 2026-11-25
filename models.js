@@ -3549,6 +3549,44 @@ function adjustClubSupporters(club, delta) {
 }
 
 /**
+ * 内部動員規模（club.supporters）から世界規模のファン総数へ単調変換する
+ */
+function convertSupportersToGlobalFans(supportersVal) {
+  const s = Math.max(5000, Number(supportersVal || 18000));
+  const ratio = Math.max(1000, s - 7500) / 15500;
+  return Math.round(5000000 * Math.pow(ratio, 2.65));
+}
+
+function getClubGlobalFans(club) {
+  return convertSupportersToGlobalFans(club ? club.supporters : 18000);
+}
+
+function formatGlobalFans(fans) {
+  const val = Math.round(Number(fans || 0));
+  const abs = Math.abs(val);
+  if (abs >= 100000000) {
+    return `${(val / 100000000).toFixed(2)}億人`;
+  }
+  if (abs >= 10000) {
+    return `${Math.round(val / 10000).toLocaleString()}万人`;
+  }
+  return `${val.toLocaleString()}人`;
+}
+
+function formatGlobalFansDelta(clubOrSupporters, supportersDelta) {
+  const delta = Number(supportersDelta || 0);
+  if (delta === 0) return '±0人';
+  const curSup = typeof clubOrSupporters === 'object' && clubOrSupporters
+    ? (clubOrSupporters.supporters || 18000)
+    : Number(clubOrSupporters || 18000);
+  const prevSup = Math.max(5000, curSup - delta);
+  const diff = convertSupportersToGlobalFans(curSup) - convertSupportersToGlobalFans(prevSup);
+  if (diff === 0) return '±0人';
+  const sign = diff > 0 ? '+' : '-';
+  return `${sign}${formatGlobalFans(Math.abs(diff))}`;
+}
+
+/**
  * クラブの興行状態（スタジアム・席別チケット価格・グッズ展開設定）を安全に補完する
  */
 function ensureClubCommercialState(club) {
