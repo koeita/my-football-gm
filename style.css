@@ -5360,12 +5360,12 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .weekly-schedule-track .day-card.is-day-sliding {
-  animation: weeklyDaySlideIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: weeklyDaySlideIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform;
 }
 
 .weekly-schedule-track .day-card.is-day-sliding:last-child {
-  animation: weeklyDayFadeSlideIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: weeklyDayFadeSlideIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -13637,10 +13637,11 @@ button.hidden,
   #view-team[data-schedule-mode="calendar"] .team-schedule-panel {
     display: flex !important;
     flex-direction: column !important;
-    /* 画面高さからヘッダー、チームサブタブバー(48px)、ボトムナビ、微小余白を引いたぴったり高さ */
-    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
-    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
+    /* 画面高さからヘッダー、app上部6px、チームサブタブバー48px、ボトムナビ、下部余白を差し引いた確実な収まり高さ */
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 74px) !important;
+    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 74px) !important;
     margin-bottom: 0 !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
 
@@ -13673,7 +13674,8 @@ button.hidden,
     flex-direction: column !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
-    padding: 2px 3px 3px 3px !important;
+    padding: 2px 3px 6px 3px !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
   .calendar-weekdays-row {

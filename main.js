@@ -1357,18 +1357,18 @@ function startAdvancingToNextMatch() {
     clearInterval(gameState.calendarAdvanceTimer);
   }
 
-  // 120ms間隔で1日ずつカタカタ進める演出
+  // 260ms間隔で1日ずつ進める演出
   gameState.calendarAdvanceTimer = setInterval(() => {
     const shouldStop = advanceCalendarDay(true);
 
-    // カタカタ動くヘッダー日付と週間スケジュールのみ部分更新して高速演出
+    // ヘッダー日付と週間スケジュールのみ部分更新してスライド演出
     renderHeader();
     renderWeeklySchedule();
 
     if (shouldStop || !gameState.isAdvancingCalendar) {
       stopAdvancingCalendar();
     }
-  }, 120);
+  }, 260);
 }
 
 /**
@@ -1504,7 +1504,7 @@ function renderWeeklySchedule() {
     weeklySlideCleanupTimer = setTimeout(() => {
       trackEl.querySelectorAll('.day-card.is-day-sliding').forEach(el => el.classList.remove('is-day-sliding'));
       weeklySlideCleanupTimer = null;
-    }, 300);
+    }, 250);
   }
 }
 
