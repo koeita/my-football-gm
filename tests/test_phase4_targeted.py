@@ -217,15 +217,18 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("Boolean(matchInfo && matchInfo.oppClub && !day.played)", self.main_js)
 
     def test_mobile_calendar_fixed_six_rows_and_zero_scroll(self):
-        """モバイルカレンダーが常に6行（全42マス）分の枠を確保し、縦スクロールゼロで1画面に収まること"""
-        # 1. main.js で常に42マス（7列×6行）分の枠を生成していること
-        self.assertIn("while (cellsHtml.length < 42)", self.main_js)
+        """縦スクロール式シーズンカレンダー（全月セクション・7列グリッド）が正しく構成されていること"""
+        # 1. main.js で全月セクションと7列グリッド（行末補完）を描画し、スクロール同期を備えていること
+        self.assertIn("class=\"cal-month-section\"", self.main_js)
+        self.assertIn("while (cellsHtml.length % 7 !== 0)", self.main_js)
         self.assertIn("cellsHtml.push('<div class=\"cal-day-cell is-empty\" aria-hidden=\"true\"></div>')", self.main_js)
 
-        # 2. style.css モバイルカレンダーで 6行均等グリッドが設定されていること
-        self.assertIn("grid-template-rows: repeat(6, 1fr) !important;", self.style_css)
+        # 2. style.css モバイルカレンダーで縦スクロールコンテナ＆7列月グリッドが設定されていること
+        self.assertIn(".cal-month-grid {", self.style_css)
+        self.assertIn("grid-template-columns: repeat(7, minmax(0, 1fr));", self.style_css)
+        self.assertIn("touch-action: pan-y !important;", self.style_css)
 
-        # 3. カレンダー表示時にスクロールをゼロにする overflow: hidden 設定
+        # 3. カレンダー表示時に外枠ドキュメントの縦スクロールを抑制していること
         self.assertIn("body[data-active-tab=\"team\"][data-team-subtab=\"schedule\"][data-schedule-mode=\"calendar\"]", self.style_css)
         self.assertIn("overflow: hidden !important;", self.style_css)
 

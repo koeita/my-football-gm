@@ -111,6 +111,7 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertIn('touch-action: pan-y !important;', self.style_css)
         self.assertIn('grid-template-columns: repeat(7, minmax(0, 1fr));', self.style_css)
         self.assertIn('height: 54px;', self.style_css)
+        self.assertNotIn('過密日程注意', self.main_js)
 
 
 if __name__ == '__main__':
