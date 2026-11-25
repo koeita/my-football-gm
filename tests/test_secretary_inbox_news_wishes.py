@@ -589,13 +589,18 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             'pendingCommercialSetup:',
             "action: 'open-commercial-setup'",
             'function isCommercialPlanLocked(',
+            'function buildCommercialStadiumHeroInnerHtml(',
+            'function updateCommercialStadiumPreviewDom(',
             'function renderCommercialManagementPanel(',
             'function selectOrBuildCommercialStadium(',
             'function adjustTicketTierPrice(',
             'function toggleMerchandiseItem(',
             'function confirmCommercialSetupTask(',
+            'data-commercial-stadium-hero',
         ]:
             self.assertIn(sym, self.main_js)
+
+        self.assertIn('touch-action: manipulation;', self.css)
 
         self.assertIn('スタジアム周辺・商業設備', self.data_js)
         self.assertIn('buildCostK: 130000', self.data_js)

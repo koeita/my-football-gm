@@ -22828,6 +22828,9 @@ button.hof-record-name {
   white-space: nowrap;
   flex-shrink: 0;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .commercial-hero-nav-btn:hover {
