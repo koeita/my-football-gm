@@ -26,7 +26,7 @@
   <section id="main-menu-screen" class="main-menu-screen" aria-label="タイトル画面">
     <div class="main-menu-inner">
       <header class="main-menu-header">
-        <span class="main-menu-eyebrow mono">ENGLAND PREMIER DIVISION / 20 CLUBS</span>
+        <span class="main-menu-eyebrow mono">ENG-D1 / 全20クラブ</span>
         <h1 class="main-menu-title mono">FOOTBALL GM SIMULATOR</h1>
         <p class="main-menu-subtitle">欧州クラブ経営シミュレーション</p>
       </header>
@@ -37,7 +37,7 @@
             <span class="menu-btn-jp">続きから始める</span>
             <span class="menu-btn-en mono">CONTINUE</span>
           </span>
-          <span class="menu-btn-sub mono" id="menu-continue-meta">セーブデータなし</span>
+          <span class="menu-btn-sub mono" id="menu-continue-meta">記録データなし</span>
         </button>
 
         <button type="button" class="menu-dashboard-btn" id="btn-menu-new-career">
@@ -45,7 +45,7 @@
             <span class="menu-btn-jp">新規キャリア</span>
             <span class="menu-btn-en mono">NEW CAREER</span>
           </span>
-          <span class="menu-btn-sub mono">GM就任・担当クラブ選択へ進む</span>
+          <span class="menu-btn-sub mono">クラブ選定・GM就任へ</span>
         </button>
 
         <button type="button" class="menu-dashboard-btn" id="btn-menu-records">
@@ -53,7 +53,7 @@
             <span class="menu-btn-jp">クラブ殿堂・実績</span>
             <span class="menu-btn-en mono">RECORDS</span>
           </span>
-          <span class="menu-btn-sub mono">通算優勝回数・歴代得点王・キャリア記録</span>
+          <span class="menu-btn-sub mono">通算優勝回数・歴代得点王・通算記録</span>
         </button>
 
         <button type="button" class="menu-dashboard-btn" id="btn-menu-settings">
@@ -61,13 +61,13 @@
             <span class="menu-btn-jp">環境設定</span>
             <span class="menu-btn-en mono">SETTINGS</span>
           </span>
-          <span class="menu-btn-sub mono">音量調整・オートセーブ・データ管理</span>
+          <span class="menu-btn-sub mono">音量調整・自動保存・データ管理</span>
         </button>
       </nav>
 
       <footer class="main-menu-footer">
         <p class="main-menu-version mono">Version 1.0.0</p>
-        <p class="main-menu-disclaimer">※登場するクラブ・人物は架空のものです。</p>
+        <p class="main-menu-disclaimer">登場するクラブ・大会・人物はすべて架空のものです</p>
       </footer>
     </div>
   </section>
@@ -78,7 +78,7 @@
   <header class="status-header">
       <div class="brand-area">
         <div class="brand-top-row">
-          <span class="game-label">ENG-D1 PREMIER DIVISION</span>
+          <span class="game-label" id="header-league-label">ENG-D1</span>
           <span class="finance-status-badge status-healthy" id="header-finance-badge">健全</span>
           <span class="target-rank-badge mono" id="header-target-rank">目標：4位以内</span>
         </div>
@@ -90,34 +90,34 @@
 
       <div class="status-metrics">
         <div class="metric-box">
-          <span class="metric-label">SEASON</span>
+          <span class="metric-label">シーズン</span>
           <span class="metric-value mono" id="header-season">1年目</span>
         </div>
         <div class="metric-box calendar-date-box">
-          <span class="metric-label">CURRENT DATE</span>
+          <span class="metric-label">日付</span>
           <span class="metric-value mono accent-green" id="header-date">2026年 8月1日 (土)</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">MATCHWEEK</span>
+          <span class="metric-label">日程</span>
           <span class="metric-value mono" id="header-matchweek">第1節 / 全38節</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">CLUB FUNDS</span>
+          <span class="metric-label">資金</span>
           <div class="metric-value-inline-row">
             <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
             <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全 £40.0M</span>
           </div>
         </div>
         <div class="metric-box">
-          <span class="metric-label" id="header-payroll-label">WEEKLY PAYROLL</span>
+          <span class="metric-label" id="header-payroll-label">週給総額</span>
           <span class="metric-value mono" id="header-payroll">£0</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">SQUAD</span>
+          <span class="metric-label">登録選手</span>
           <span class="metric-value mono" id="header-squad-size">20名</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">SUPPORTERS</span>
+          <span class="metric-label">サポーター</span>
           <span class="metric-value mono" id="header-supporters">18,000人</span>
         </div>
       </div>
@@ -275,17 +275,17 @@
               <span>新シーズン開幕</span>
             </button>
             <button type="button" class="btn-office-primary-cta is-danger hidden" id="btn-restart-game">
-              <span>やり直す</span>
+              <span>タイトルへ戻る</span>
             </button>
           </div>
         </div>
       </section>
 
-      <!-- 移籍市場最終日（DEADLINE DAY）カウントダウンパネル -->
+      <!-- 移籍市場最終日 カウントダウンパネル -->
       <section class="office-deadline-section hidden" id="office-deadline-section" aria-label="移籍市場最終日カウントダウン">
         <div class="deadline-banner-top">
           <div class="deadline-banner-info">
-            <span class="deadline-banner-tag mono">DEADLINE DAY</span>
+            <span class="deadline-banner-tag mono">移籍最終日</span>
             <div class="deadline-clock-row">
               <strong class="deadline-banner-clock mono" id="deadline-banner-clock">10:00</strong>
               <span class="deadline-banner-rem mono" id="deadline-banner-rem">閉幕まで残り 14時間</span>
@@ -311,8 +311,8 @@
         </div>
       </section>
 
-      <!-- 本日の試合（MATCHDAY）プレビューパネル（試合日のみ業務タスク直下に表示） -->
-      <section class="office-matchday-section hidden" id="office-matchday-section" aria-label="本日の試合（MATCHDAY）">
+      <!-- 本日の試合プレビューパネル（試合日のみ業務タスク直下に表示） -->
+      <section class="office-matchday-section hidden" id="office-matchday-section" aria-label="本日の試合">
         <div id="matchday-hero-container">
           <!-- JSで matchday-card-preview を描画 -->
         </div>
@@ -325,8 +325,8 @@
           <h3 class="weekly-schedule-title">週間スケジュール</h3>
         </div>
         <div class="weekly-schedule-badges mono">
-          <button type="button" class="btn-view-full-schedule mono" id="btn-view-full-schedule" title="シーズン全日程・結果を表示">全日程 ➔</button>
-          <span class="market-status-pill badge-market-open" id="weekly-market-badge">移籍市場 OPEN</span>
+          <button type="button" class="btn-view-full-schedule mono" id="btn-view-full-schedule" title="シーズン全日程・結果を表示">全日程</button>
+          <span class="market-status-pill badge-market-open" id="weekly-market-badge">移籍市場 開催中</span>
           <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次戦まで 0日</span>
         </div>
       </div>
@@ -396,7 +396,7 @@
             <div>
               <h2 class="panel-title">リーグ順位表</h2>
             </div>
-            <span class="panel-subtitle mono" id="standings-status-text">MATCHWEEK 0 / 38</span>
+            <span class="panel-subtitle mono" id="standings-status-text">第1節 / 全38節</span>
           </div>
           <!-- 大会切り替えセグメントコントロール -->
           <div class="comp-segment-nav" id="comp-segment-nav" role="tablist" aria-label="大会切り替え">
@@ -501,7 +501,7 @@
             <div>
               <h2 class="panel-title" id="stats-panel-title">リーグ得点ランキング</h2>
             </div>
-            <span class="panel-subtitle mono" id="stats-panel-subtitle">TOP 10</span>
+            <span class="panel-subtitle mono" id="stats-panel-subtitle">上位10名</span>
           </div>
           <!-- 個人スタッツ：大会切り替えセグメントコントロール -->
           <div class="comp-segment-nav" id="stats-comp-segment-nav" role="tablist" aria-label="個人スタッツ大会切り替え">
@@ -613,7 +613,7 @@
                   <path d="M 568 406 A 16 16 0 0 1 584 390" fill="none" stroke="rgba(240, 242, 245, 0.24)" stroke-width="1.6" />
                 </svg>
 
-                <div class="pitch-direction-label mono">ATTACK DIRECTION ▲</div>
+                <div class="pitch-direction-label mono">攻撃方向 ▲</div>
 
                 <!-- スタメン11名のノード配置レイヤー -->
                 <div class="pitch-nodes-layer" id="pitch-nodes-layer">
@@ -715,7 +715,7 @@
             <div class="tactics-header-title-wrap">
               <h2 class="panel-title">戦術設定</h2>
             </div>
-            <span class="tactic-active-badge mono" id="current-tactic-badge">POSSESSION</span>
+            <span class="tactic-active-badge" id="current-tactic-badge">ポゼッション</span>
           </div>
           <div class="panel-body">
             <!-- 役割指定・自動交代方針・チーム連携バー（戦術タブ配置） -->
@@ -787,10 +787,9 @@
                 <div class="tactics-guide-item active-guide" data-tactic-card="possession">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
-                      <span class="tactics-detail-badge mono accent-green">STYLE 01</span>
-                      <h3 class="tactics-detail-title">ポゼッション（Possession / ショートパス主導）</h3>
+                      <h3 class="tactics-detail-title">ポゼッション</h3>
                     </div>
-                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                    <span class="tactics-active-indicator mono">適用中</span>
                   </div>
                   <div class="tactics-detail-body">
                     <div class="tactics-detail-row">
@@ -812,10 +811,9 @@
                 <div class="tactics-guide-item" data-tactic-card="gegenpress">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
-                      <span class="tactics-detail-badge mono text-danger">STYLE 02</span>
-                      <h3 class="tactics-detail-title">ゲーゲンプレス（Gegenpress / 前線奪取速攻）</h3>
+                      <h3 class="tactics-detail-title">ゲーゲンプレス</h3>
                     </div>
-                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                    <span class="tactics-active-indicator mono">適用中</span>
                   </div>
                   <div class="tactics-detail-body">
                     <div class="tactics-detail-row">
@@ -837,10 +835,9 @@
                 <div class="tactics-guide-item" data-tactic-card="counter">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
-                      <span class="tactics-detail-badge mono accent-gold">STYLE 03</span>
-                      <h3 class="tactics-detail-title">ダイレクトカウンター（Direct Counter / 堅守ロング速攻）</h3>
+                      <h3 class="tactics-detail-title">ダイレクトカウンター</h3>
                     </div>
-                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                    <span class="tactics-active-indicator mono">適用中</span>
                   </div>
                   <div class="tactics-detail-body">
                     <div class="tactics-detail-row">
@@ -854,7 +851,7 @@
                   </div>
                   <div class="tactics-tags-row">
                     <span class="tactic-tag tag-gold">俊足アタッカー活用</span>
-                    <span class="tactic-tag tag-gold">対強豪ジャイアントキリング</span>
+                    <span class="tactic-tag tag-gold">強豪相手の一撃</span>
                     <span class="tactic-tag tag-gold">体力温存・省消耗</span>
                   </div>
                 </div>
@@ -862,10 +859,9 @@
                 <div class="tactics-guide-item" data-tactic-card="wingplay">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
-                      <span class="tactics-detail-badge mono accent-cyan">STYLE 04</span>
-                      <h3 class="tactics-detail-title">ワイドアタック（Wing Play / サイドアタック）</h3>
+                      <h3 class="tactics-detail-title">ワイドアタック</h3>
                     </div>
-                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                    <span class="tactics-active-indicator mono">適用中</span>
                   </div>
                   <div class="tactics-detail-body">
                     <div class="tactics-detail-row">
@@ -878,8 +874,8 @@
                     </div>
                   </div>
                   <div class="tactics-tags-row">
-                    <span class="tactic-tag tag-cyan">両翼ドリブル突破＆クロス</span>
-                    <span class="tactic-tag tag-cyan">中央密集ブロック攻略</span>
+                    <span class="tactic-tag tag-cyan">両翼突破＆クロス</span>
+                    <span class="tactic-tag tag-cyan">中央ブロック攻略</span>
                     <span class="tactic-tag tag-pos">両翼の質が鍵</span>
                   </div>
                 </div>
@@ -887,10 +883,9 @@
                 <div class="tactics-guide-item" data-tactic-card="parkthebus">
                   <div class="tactics-detail-head">
                     <div class="tactics-detail-titles">
-                      <span class="tactics-detail-badge mono" style="color: #a78bfa;">STYLE 05</span>
-                      <h3 class="tactics-detail-title">ウルトラディフェンス（Park the Bus / 徹底堅守）</h3>
+                      <h3 class="tactics-detail-title">ウルトラディフェンス</h3>
                     </div>
-                    <span class="tactics-active-indicator mono">適用中の基本戦術</span>
+                    <span class="tactics-active-indicator mono">適用中</span>
                   </div>
                   <div class="tactics-detail-body">
                     <div class="tactics-detail-row">
@@ -905,7 +900,7 @@
                   <div class="tactics-tags-row">
                     <span class="tactic-tag tag-purple">ゴール前要塞化</span>
                     <span class="tactic-tag tag-purple">失点激減（リード死守）</span>
-                    <span class="tactic-tag tag-warn">攻撃制限（勝点1・逃げ切り狙い）</span>
+                    <span class="tactic-tag tag-warn">攻撃制限（逃げ切り狙い）</span>
                   </div>
                 </div>
               </div>
@@ -938,7 +933,7 @@
           <!-- 移籍市場フィルターバー -->
           <div class="market-filter-bar">
             <div class="filter-group">
-              <label class="filter-label mono">LEAGUE:</label>
+              <label class="filter-label mono">リーグ</label>
               <select id="market-filter-category" class="market-select mono">
                 <option value="ALL">全カテゴリー</option>
                 <option value="ENG_D1">イングランド1部 (ENG-D1)</option>
@@ -961,14 +956,14 @@
             </div>
 
             <div class="filter-group">
-              <label class="filter-label mono">CLUB:</label>
+              <label class="filter-label mono">クラブ</label>
               <select id="market-filter-club" class="market-select mono">
                 <option value="ALL">全クラブ</option>
               </select>
             </div>
 
             <div class="filter-group">
-              <label class="filter-label mono">POS:</label>
+              <label class="filter-label mono">POS</label>
               <select id="market-filter-pos" class="market-select mono">
                 <option value="ALL">全ポジション</option>
                 <option value="GK">GK</option>
@@ -987,7 +982,7 @@
             </div>
 
             <div class="filter-group">
-              <label class="filter-label mono">AGE:</label>
+              <label class="filter-label mono">年齢</label>
               <select id="market-filter-age" class="market-select mono">
                 <option value="ALL">全年齢</option>
                 <option value="U21">U-21 (21歳以下)</option>
@@ -998,7 +993,7 @@
             </div>
 
             <div class="filter-group">
-              <label class="filter-label mono">STATUS:</label>
+              <label class="filter-label mono">状態</label>
               <select id="market-filter-status" class="market-select mono">
                 <option value="ALL">すべて</option>
                 <option value="EXPIRING">契約残1年</option>
@@ -1010,7 +1005,7 @@
             </div>
 
             <div class="filter-group">
-              <label class="filter-label mono">SORT:</label>
+              <label class="filter-label mono">並び順</label>
               <select id="market-filter-sort" class="market-select mono">
                 <optgroup label="総合・市場価値">
                   <option value="ovr-desc">OVR 高い順</option>
@@ -1046,7 +1041,7 @@
             </div>
 
             <div class="filter-group filter-search-wrap">
-              <label class="filter-label mono">SEARCH:</label>
+              <label class="filter-label mono">検索</label>
               <div class="filter-search-row">
                 <input type="text" id="market-filter-search" class="market-search-input" placeholder="選手名・クラブ検索...">
                 <button type="button" id="btn-market-filter-reset" class="btn btn-secondary btn-sm mono" style="white-space:nowrap;flex-shrink:0;">リセット</button>
@@ -1262,10 +1257,10 @@
       <div class="modal-header">
         <div class="intro-header-row">
           <div class="intro-header-left">
-            <span class="modal-category mono">INAUGURATION / PREMIER DIVISION GM APPOINTMENT</span>
+            <span class="modal-category mono">ENG-D1 / GM就任</span>
             <h2 class="modal-title" id="intro-modal-title">ゼネラルマネージャー（GM）就任契約</h2>
           </div>
-          <span class="intro-badge mono">ENGLAND 20 CLUBS</span>
+          <span class="intro-badge mono">全20クラブ</span>
         </div>
       </div>
 
@@ -1282,7 +1277,7 @@
         <div class="intro-filter-bar">
           <div class="club-filter-tags" id="club-filter-tags">
             <button type="button" class="btn-filter-tag active" data-filter="all"><span class="filter-label-pc">すべて (20)</span><span class="filter-label-sp">すべて</span></button>
-            <button type="button" class="btn-filter-tag" data-filter="title_ucl"><span class="filter-label-pc">優勝・CL圏 (6)</span><span class="filter-label-sp">優勝・CL</span></button>
+            <button type="button" class="btn-filter-tag" data-filter="title_ucl"><span class="filter-label-pc">優勝・ECT圏 (6)</span><span class="filter-label-sp">優勝・ECT</span></button>
             <button type="button" class="btn-filter-tag" data-filter="euro_race"><span class="filter-label-pc">欧州カップ狙い (4)</span><span class="filter-label-sp">欧州狙い</span></button>
             <button type="button" class="btn-filter-tag" data-filter="mid_table"><span class="filter-label-pc">中位定着 (6)</span><span class="filter-label-sp">中位定着</span></button>
             <button type="button" class="btn-filter-tag" data-filter="relegation"><span class="filter-label-pc">残留争い (4)</span><span class="filter-label-sp">残留争い</span></button>
@@ -1343,7 +1338,7 @@
         <div class="gm-vn-dialogue-card" id="gm-vn-dialogue-card">
           <div class="gm-vn-dialogue-top">
             <div class="gm-vn-nameplate-row">
-              <span class="modal-category mono" id="modal-category">CLUB BRIEFING</span>
+              <span class="modal-category mono" id="modal-category">クラブ報告</span>
             </div>
             <p class="modal-description" id="modal-description"></p>
           </div>
@@ -1677,7 +1672,7 @@
         </div>
         <div class="settings-row settings-danger-zone">
           <div class="settings-label-col">
-            <span class="settings-label">セーブデータ・殿堂記録の初期化</span>
+            <span class="settings-label">進行データ・殿堂記録の初期化</span>
             <span class="settings-desc">保存されている進行データと通算実績を完全に消去します</span>
           </div>
           <div class="settings-control-col">
@@ -1779,7 +1774,7 @@
     <div class="modal-card info-popup-card">
       <div class="info-popup-header">
         <div class="info-popup-title-wrap">
-          <span class="info-popup-tag mono" id="info-popup-tag">INFO</span>
+          <span class="info-popup-tag mono" id="info-popup-tag"></span>
           <h2 class="info-popup-title" id="info-popup-title">詳細情報</h2>
         </div>
         <button type="button" class="btn-modal-close mono" id="btn-close-info-popup" aria-label="閉じる" title="閉じる (Esc)">✕</button>
@@ -1903,7 +1898,7 @@
             <!-- ハーフタイム一時停止オーバーレイ（45分到達時に表示） -->
             <div class="match-halftime-overlay hidden" id="match-halftime-overlay">
               <div class="halftime-card">
-                <span class="halftime-badge mono">HALF TIME / 前半終了</span>
+                <span class="halftime-badge mono">前半終了</span>
                 <div class="halftime-score mono" id="halftime-score-display">0 - 0</div>
                 <div class="halftime-stats-mini mono" id="halftime-stats-mini">支配率 50% : 50%</div>
                 <button type="button" class="btn btn-primary btn-halftime-resume" id="btn-match-resume-second-half">
@@ -1981,7 +1976,7 @@
         <!-- JSで相手クラブの順位・戦術・想定スタメン11人スカッドを描画 -->
       </div>
       <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; align-items: center;">
-        <button type="button" class="btn btn-primary btn-sm mono" id="btn-go-to-tactics-board" style="font-weight: 700; padding: 8px 16px;">作戦ボードへ移動して準備 ➔</button>
+        <button type="button" class="btn btn-primary btn-sm mono" id="btn-go-to-tactics-board" style="font-weight: 700; padding: 8px 16px;">作戦ボードへ移動</button>
       </div>
     </div>
   </div>

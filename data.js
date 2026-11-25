@@ -842,8 +842,8 @@ function getClubEmblemSvg(clubOrNameOrId, size = 24, extraClass = '') {
 const CLUB_SELECT_CATEGORIES = {
   title_ucl: {
     key: 'title_ucl',
-    label: '優勝・CL圏',
-    mobileLabel: '優勝・CL',
+    label: '優勝・ECT圏',
+    mobileLabel: '優勝・ECT',
     targetHint: '目標 1〜5位',
     badgeClass: 'cat-title-ucl'
   },
@@ -1956,7 +1956,7 @@ const FACILITY_DEFINITIONS = {
     maxLevel: 5,
     // Lv.1->2: £10M, Lv.2->3: £15M, Lv.3->4: £22M, Lv.4->5: £30M
     costs: [0, 10000, 15000, 22000, 30000],
-    desc: 'スタジアム周辺の交通アクセス・物販コンコース・VIPラウンジを整備し、サポーター上限・グッズ物販効率・価格耐性を高めます（収容席数の拡大は「スタジアム・興行」から上位スタジアムへ移転してください）。',
+    desc: 'スタジアム周辺の交通アクセス・物販コンコース・VIPラウンジを整備し、サポーター上限・グッズ物販効率・価格耐性を高めます（収容席数は「スタジアム・興行」の本拠地選択で変更）。',
     getEffectText: (lv) => {
       const tiers = [
         '標準設備（ファン上限+0 / 物販+0%）',

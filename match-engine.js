@@ -2258,7 +2258,7 @@ function generateMatchTickerEvents(playerMatch, homeScorers, awayScorers) {
     events.push({
       time: 'FINANCE',
       type: 'revenue',
-      text: `アウェイ開催：プレミア放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
+      text: `アウェイ開催：リーグ放映権分配金 +${formatMoney(awayBroadcastingFee || 500)} を計上`
     });
   }
 
@@ -2933,7 +2933,7 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       side: sub.side,
       club: sub.club,
       actor: sub.inPlayer,
-      text: `選手交代 [${sub.club.name}] OUT ${fmtNum(sub.outPlayer)}${sub.outPlayer.name} ➔ IN ${fmtNum(sub.inPlayer)}${sub.inPlayer.name}`
+      text: `選手交代（${sub.club.name}）OUT ${fmtNum(sub.outPlayer)}${sub.outPlayer.name} → IN ${fmtNum(sub.inPlayer)}${sub.inPlayer.name}`
     };
     byMinute[min] = ev;
   });
@@ -3656,11 +3656,11 @@ function buildSummaryPlayerRatingsHtml(homeClub, awayClub, md, resolvedKits = nu
     <div class="summary-ratings-team-tabs">
       <button type="button" class="summary-team-tab-btn ${defaultTeam === 'home' ? 'active' : ''}" data-ratings-team="home" style="${homeTheme.inlineVars}">
         ${getClubEmblemSvg(homeClub, 16)}
-        <span class="mono">${getClubShortCode(homeClub)} (HOME)${homeClub.isPlayer ? ' ★' : ''}</span>
+        <span class="mono">${getClubShortCode(homeClub)} (HOME)</span>
       </button>
       <button type="button" class="summary-team-tab-btn ${defaultTeam === 'away' ? 'active' : ''}" data-ratings-team="away" style="${awayTheme.inlineVars}">
         ${getClubEmblemSvg(awayClub, 16)}
-        <span class="mono">${getClubShortCode(awayClub)} (AWAY)${awayClub.isPlayer ? ' ★' : ''}</span>
+        <span class="mono">${getClubShortCode(awayClub)} (AWAY)</span>
       </button>
     </div>
     <div class="summary-ratings-grid">
@@ -3954,7 +3954,7 @@ function buildMatchSummaryHtml(md) {
                   <div class="mom-left">
                     ${typeof getPlayerAvatarHtml === 'function' ? getPlayerAvatarHtml(momPlayer, momClub, 'avatar-sm', 32) : ''}
                     <div class="mom-info">
-                      <span class="mom-tag">★ MAN OF THE MATCH</span>
+                      <span class="mom-tag">MAN OF THE MATCH</span>
                       <span class="mom-name">${momPlayer.squadNumber ? '#' + momPlayer.squadNumber + ' ' : ''}${momPlayer.name} (${momPlayer.assignedPos || momPlayer.pos})</span>
                     </div>
                   </div>
@@ -4173,9 +4173,9 @@ function openMatchPrecheckModal() {
     const isOutOfPos = fitInfo.type !== 'main';
 
     let fitBadge = '';
-    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="background:rgba(56,189,248,0.18);color:#38bdf8;font-size:9px;">◯ 薄適性</span>';
-    else if (fitInfo.type === 'semi') fitBadge = '<span class="precheck-tag" style="background:rgba(241,196,15,0.18);color:#f1c40f;font-size:9px;">△ 近接</span>';
-    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="background:rgba(231,76,60,0.2);color:#e74c3c;font-size:9px;">✕ 不適</span>';
+    if (fitInfo.type === 'sub') fitBadge = '<span class="precheck-tag" style="color:#38bdf8;font-size:10px;background:none;">薄適性</span>';
+    else if (fitInfo.type === 'semi') fitBadge = '<span class="precheck-tag" style="color:#f1c40f;font-size:10px;background:none;">近接</span>';
+    else if (fitInfo.type === 'out') fitBadge = '<span class="precheck-tag" style="color:#e74c3c;font-size:10px;background:none;">不適</span>';
 
     const ftgVal = getPlayerFatigue(p);
     const ftgSt = getPlayerFatigueStatus(ftgVal);

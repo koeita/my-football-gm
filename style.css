@@ -22828,6 +22828,9 @@ button.hof-record-name {
   white-space: nowrap;
   flex-shrink: 0;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .commercial-hero-nav-btn:hover {
@@ -23249,6 +23252,134 @@ button.hof-record-name {
   }
   .commercial-total-footer {
     flex-wrap: wrap;
+  }
+}
+
+/* ==========================================================================
+   全画面フラット統一＆ステータスタグ枠線撤廃（GEMINI.md準拠）
+   ========================================================================== */
+
+.facility-card {
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  padding: 12px 4px;
+}
+
+.facility-card.facility-maxed {
+  border-top: none;
+  border-bottom-color: rgba(46, 204, 113, 0.25);
+}
+
+.youth-report-card {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  padding: 10px 4px;
+}
+
+.tactic-tag,
+.tactic-mini-tag {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tactics-tags-row {
+  gap: 6px 14px;
+}
+
+.chem-pill {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.ui-stat-plate {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 0 !important;
+  padding: 4px 2px !important;
+}
+
+.finance-status-badge,
+.target-rank-badge,
+.market-status-pill {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.scout-key-badge {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: var(--accent-gold) !important;
+  font-weight: 700 !important;
+}
+
+.facility-metric-item {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 0 !important;
+  padding: 4px 2px !important;
+}
+
+.facility-lv-badge,
+.facility-card.facility-maxed .facility-lv-badge {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.tactic-active-badge {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.metric-sub-value,
+.metric-sub-value.is-tight,
+.metric-sub-value.is-danger {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.main-menu-eyebrow {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+@media (max-width: 768px) {
+  #market-subnav-bar {
+    gap: 2px !important;
+  }
+  #market-subnav-bar .roster-subtab-btn {
+    flex: 1 1 auto !important;
+    font-size: 11px !important;
+    padding: 0 4px !important;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  #facilities-subview-investment .power-badge {
+    white-space: normal;
+    line-height: 1.35;
   }
 }
 

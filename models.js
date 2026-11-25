@@ -2489,7 +2489,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     youthGk.contractYears = 3;
     club.players.push(youthGk);
     if (noticeLogs && club.isPlayer) {
-      noticeLogs.push(`[アカデミー緊急昇格] GK ${youthGk.name} (18歳) がトップチームに昇格しました`);
+      noticeLogs.push(`【ユース緊急昇格】GK ${youthGk.name} (${youthGk.age || 18}歳) がトップチームに昇格しました`);
     }
   }
 
@@ -2505,7 +2505,7 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
     youth.contractYears = 3;
     club.players.push(youth);
     if (noticeLogs && club.isPlayer) {
-      noticeLogs.push(`[アカデミー昇格] ${missingPos} ${youth.name} (${youth.age}歳) がトップチームに昇格しました`);
+      noticeLogs.push(`【ユース昇格】${missingPos} ${youth.name} (${youth.age}歳) がトップチームに昇格しました`);
     }
   }
 
