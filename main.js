@@ -256,6 +256,7 @@ const gameState = {
   pendingSponsorSlots: [],
   sponsorDeadlineDayIndex: null,
   sponsorWindowClosed: false,
+  pendingInitialStaffSetup: false,
   seasonAwardsHistory: [],
   monthlyAwardsHistory: [],
   monthlyPlayerBaseline: {},
@@ -1004,9 +1005,47 @@ function advanceDeadlineHour(skipRender = false) {
   return true;
 }
 
+function blockIfPendingInitialStaffSetup() {
+  if (!gameState.pendingInitialStaffSetup || isFastForwardingSeason) return false;
+  if (typeof stopAdvancingCalendar === 'function') {
+    stopAdvancingCalendar();
+  }
+  if (typeof showSecretaryModal === 'function') {
+    const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    showSecretaryModal({
+      topic: '就任初期タスク未完了',
+      title: '監督・コーチ陣の選任が必要です',
+      speech: '日程を進める前に、まずは監督とコーチ陣の体制を確定させる必要がございます。執務室の業務タスクから「監督・コーチ陣の選任」を行ってください。',
+      actions: [
+        {
+          label: '執務室へ戻る',
+          className: 'btn btn-secondary',
+          onClick: () => {
+            if (typeof switchTab === 'function') switchTab('office');
+            if (typeof renderAll === 'function') renderAll();
+          }
+        },
+        {
+          label: '監督・コーチを選任する',
+          className: 'btn btn-primary',
+          onClick: () => {
+            if (pClub && typeof openInitialStaffSetupModal === 'function') {
+              openInitialStaffSetupModal(pClub, { mode: 'staff' });
+            }
+          }
+        }
+      ]
+    });
+  }
+  return true;
+}
+
 function advanceCalendarDay(skipRender = false) {
   if (gameState.isGameOver || gameState.isSeasonOver) {
     stopAdvancingCalendar();
+    return true;
+  }
+  if (!skipRender && blockIfPendingInitialStaffSetup()) {
     return true;
   }
 
@@ -1347,6 +1386,9 @@ function advanceCalendarDay(skipRender = false) {
  */
 function startAdvancingToNextMatch() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) {
+    return;
+  }
+  if (blockIfPendingInitialStaffSetup()) {
     return;
   }
   // 既に本日の試合が未消化なら、キックオフを実行
@@ -2523,6 +2565,65 @@ function buildWishModalDetailHtml(playerClub, wish) {
 }
 
 /**
+ * 秘書着任直後のオンボーディング案内モーダル（執務室の業務タスクへ誘導）
+ */
+function showSecretaryOnboardingBriefing(playerClub) {
+  if (!playerClub || typeof showSecretaryModal !== 'function') return;
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
+  const spWin = typeof getSponsorContractWindowInfo === 'function'
+    ? getSponsorContractWindowInfo()
+    : { deadlineLabel: '8/31', daysLeft: 61, pendingSlots: gameState.pendingSponsorSlots || [] };
+  const safeBudget = typeof getSafeTransferBudget === 'function' ? getSafeTransferBudget(playerClub) : (playerClub.funds || 0);
+
+  let speech = '';
+  if (sec.tone === 'active') {
+    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは執務室の「業務タスク」から、監督・コーチ陣の選任とスポンサー契約（期限 ${spWin.deadlineLabel}）を進めていきましょう！`;
+  } else if (sec.tone === 'calm') {
+    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは執務室の「業務タスク」にある「監督・コーチ陣の選任」と「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」をご確認の上、着手をお願いいたします。`;
+  } else {
+    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。執務室の「業務タスク」に最優先事項として「監督・コーチ陣の選任」および「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」をご用意いたしましたので、順次お手続きくださいませ。`;
+  }
+
+  const detailHtml = `
+    <div class="gm-modal-flat-list">
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">目標順位</span>
+        <span class="gm-modal-flat-val accent-green">${escapeCommHtml(playerClub.targetLabel || '上位進出')}</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">保有資金 / 安全移籍予算</span>
+        <span class="gm-modal-flat-val accent-gold mono">${formatMoney(playerClub.funds)} / ${formatMoney(safeBudget)}</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">最優先業務 1</span>
+        <span class="gm-modal-flat-val">監督・コーチ陣の選任（執務室タスク）</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">最優先業務 2</span>
+        <span class="gm-modal-flat-val">スポンサー契約の締結（期限 ${escapeCommHtml(spWin.deadlineLabel)}）</span>
+      </div>
+    </div>
+  `;
+
+  showSecretaryModal({
+    topic: '秘書着任挨拶・業務案内',
+    title: `${playerClub.name} 業務スタート`,
+    speech,
+    detailHtml,
+    actions: [
+      {
+        label: '執務室で業務を始める',
+        className: 'btn btn-primary',
+        onClick: () => {
+          if (typeof switchTab === 'function') switchTab('office');
+          if (typeof renderAll === 'function') renderAll();
+        }
+      }
+    ]
+  });
+}
+
+/**
  * クラブ着任時および新シーズン開幕時の秘書ブリーフィングモーダル
  */
 function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false, wish = null) {
@@ -2533,29 +2634,37 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
   const wishPosText = (activeWish && Array.isArray(activeWish.positions) && activeWish.positions.length > 0)
     ? activeWish.positions.join('・')
     : '戦力全体のバランス';
-  const topic = isFirstCareer ? '就任初日ブリーフィング' : `Season ${gameState.season} 開幕報告`;
+  const topic = isFirstCareer ? '指導体制発足・補強相談' : `Season ${gameState.season} 開幕報告`;
   const title = isFirstCareer
-    ? `${playerClub.name} プレシーズン開始`
+    ? `${playerClub.name} 指導体制始動`
     : `Season ${gameState.season} 新体制始動`;
+
+  const spWin = typeof getSponsorContractWindowInfo === 'function'
+    ? getSponsorContractWindowInfo()
+    : {
+        isOpen: Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0,
+        deadlineLabel: '8/31'
+      };
+  const hasPendingSponsors = spWin.isOpen;
 
   let speech = '';
   if (sec.tone === 'active') {
     speech = isFirstCareer
-      ? `GM、${playerClub.name}へのご着任おめでとうございます！7月1日より移籍市場が解禁されました。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
+      ? `GM、${mgrName}監督のもと新体制が整いましたね！7月1日より移籍市場が解禁されています。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
       : `GM、Season ${gameState.season}の開幕です！移籍市場もオープンしています。${mgrName}監督の補強希望「${wishPosText}」を確認して動き出しましょう。`;
   } else if (sec.tone === 'calm') {
     speech = isFirstCareer
-      ? `GM、着任初日の確認です。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
+      ? `GM、${mgrName}監督との指導体制が発足しました。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
       : `GM、Season ${gameState.season}の基準日が開始しました。安全移籍予算と目標順位を確認の上、${mgrName}監督が求める「${wishPosText}」の精査を推奨します。`;
   } else {
     speech = isFirstCareer
-      ? `GM、${playerClub.name}へのご着任にあたりご挨拶申し上げます。本日よりプレシーズンおよび移籍市場が開幕いたしました。${mgrName}監督からは「${wishPosText}」の補強要望が届いております。`
+      ? `GM、${mgrName}監督およびコーチ陣の選任が完了いたしました。本日より移籍市場も開幕しており、${mgrName}監督からは「${wishPosText}」の補強要望が届いております。`
       : `GM、Season ${gameState.season}が開幕いたしました。移籍市場も同時に開いておりますので、目標達成に向け${mgrName}監督の補強希望「${wishPosText}」をご確認のうえご指示ください。`;
   }
+  if (hasPendingSponsors) {
+    speech += `なお、未契約のスポンサー枠は執務室の業務タスクから期限（${spWin.deadlineLabel}）までに締結してください。`;
+  }
 
-  const hasPendingSponsors = typeof getSponsorContractWindowInfo === 'function'
-    ? getSponsorContractWindowInfo().isOpen
-    : (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0);
   showSecretaryModal({
     topic,
     title,
@@ -2570,14 +2679,11 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
         }
       },
       {
-        label: hasPendingSponsors ? 'スポンサー契約へ進む' : '業務を開始する',
+        label: '執務室で業務を続ける',
         className: 'btn btn-primary',
         onClick: () => {
-          if (hasPendingSponsors && typeof openSponsorSelectionModal === 'function') {
-            openSponsorSelectionModal(playerClub);
-          } else if (typeof renderAll === 'function') {
-            renderAll();
-          }
+          if (typeof switchTab === 'function') switchTab('office');
+          if (typeof renderAll === 'function') renderAll();
         }
       }
     ]
@@ -6310,6 +6416,13 @@ function handleGmDutyAction(actionKey) {
   if (actionKey === 'open-lineup-consultation') {
     if (gameState.pendingLineupConsultation && typeof openLineupConsultationModal === 'function') {
       openLineupConsultationModal(gameState.pendingLineupConsultation);
+    }
+    return;
+  }
+
+  if (actionKey === 'open-initial-staff-setup') {
+    if (typeof openInitialStaffSetupModal === 'function') {
+      openInitialStaffSetupModal(getPlayerClub(), { mode: 'staff' });
     }
     return;
   }
@@ -10864,10 +10977,10 @@ function getGmDutyIconSvg(actionKey, level) {
   if (actionKey === 'goto-pitch' || actionKey === 'play-match' || actionKey === 'open-lineup-consultation') {
     return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="12" y1="4" x2="12" y2="20"></line><circle cx="12" cy="12" r="2.5"></circle></svg>';
   }
-  if (actionKey === 'goto-roster-table') {
+  if (actionKey === 'goto-roster-table' || actionKey === 'open-sponsor-selection') {
     return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>';
   }
-  if (actionKey === 'goto-youth') {
+  if (actionKey === 'goto-youth' || actionKey === 'open-initial-staff-setup') {
     return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
   }
   if (actionKey === 'goto-facilities') {
@@ -10960,6 +11073,17 @@ function renderGmDuties() {
       desc: `資金 ${formatMoney(playerClub.funds)} の赤字です`,
       warningText: '次季開幕までに黒字化しないと解任となります',
       action: 'goto-roster-table'
+    });
+  }
+
+  if (gameState.pendingInitialStaffSetup && !gameState.isSeasonOver && !gameState.isGameOver) {
+    duties.push({
+      level: 'critical',
+      badge: '人事',
+      title: '監督・コーチ陣の選任',
+      desc: '今シーズンを託す監督と4部門のコーチを選定します',
+      warningText: '選任完了まで日程を進行できません',
+      action: 'open-initial-staff-setup'
     });
   }
 
@@ -13795,11 +13919,23 @@ function confirmIntroAndStartGame() {
   }
   setupNewGame(gameState.selectedClubId);
   const playerClub = getPlayerClub();
+  if (playerClub) {
+    gameState.pendingInitialStaffSetup = true;
+    playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+    playerClub.sponsors = { chest: null, sleeve: null, training: null, stadium: null, partners: [] };
+    playerClub.sponsor = null;
+    if (typeof initSponsorContractWindow === 'function') {
+      initSponsorContractWindow(['chest', 'sleeve', 'training', 'stadium', 'partners']);
+    } else {
+      gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+    }
+  }
+  renderAll();
   if (typeof saveGameToStorage === 'function') {
     saveGameToStorage(true);
   }
   if (typeof openInitialStaffSetupModal === 'function' && playerClub) {
-    openInitialStaffSetupModal(playerClub);
+    openInitialStaffSetupModal(playerClub, { mode: 'secretary' });
   }
 }
 
@@ -13992,6 +14128,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.pendingSponsorSlots = [];
   gameState.sponsorDeadlineDayIndex = null;
   gameState.sponsorWindowClosed = false;
+  gameState.pendingInitialStaffSetup = false;
+  window._preseasonStaffCandidatesCache = null;
   gameState.totalPlayerMatchesPlayed = 0;
   gameState.lastConsultationMatchCount = 0;
   gameState.consultationSeq = 0;
@@ -16975,152 +17113,182 @@ function sackCoach(category, slotIndex) {
 /**
  * プレシーズン開幕前：指導陣編成モーダル（監督・初期コーチ選定）を開く
  */
-function openInitialStaffSetupModal(club) {
+function openInitialStaffSetupModal(club, options = {}) {
   const modal = document.getElementById('initial-staff-setup-modal');
   const body = document.getElementById('staff-setup-body');
   const confirmBtn = document.getElementById('btn-confirm-initial-staff');
-  if (!modal || !body) return;
+  const deferBtn = document.getElementById('btn-defer-initial-staff');
+  if (!modal || !body || !club) return;
 
-  const usedNames = new Set();
-  (club.players || []).forEach(p => { usedNames.add(p.name); });
+  const mode = (options && options.mode) || (gameState.pendingInitialStaffSetup ? 'staff' : 'secretary');
 
-  // 選択クラブの格(reputation)・戦力(basePower)・ディビジョンに応じた候補の強さスケーリング
-  const isD2Club = Boolean(club && (club.division === 'd2' || String(club.id || '').startsWith('c')));
-  const clubRep = club ? (club.reputation || (club.basePower ? club.basePower * 80 : 4500)) : 4500;
-  const clubPower = club ? (club.basePower || 65) : 65;
+  const getOrBuildStaffCandidates = () => {
+    const cache = window._preseasonStaffCandidatesCache;
+    if (cache && cache.clubId === club.id && cache.season === gameState.season) {
+      return { managerCandidates: cache.managerCandidates, coachCandidates: cache.coachCandidates };
+    }
 
-  // 全体水準は同等で「尖っている能力が異なる」トレードオフ型プロファイル（S/A/B, S/S/C, A/S/B 等）
-  let mgrProfiles = [];
-  let coachProfiles = [];
-  let baseMgrWage = 62;
-  let baseCoachWage = 20;
+    const usedNames = new Set();
+    (club.players || []).forEach(p => { usedNames.add(p.name); });
 
-  if (!isD2Club && (clubRep >= 6600 || clubPower >= 73)) {
-    baseMgrWage = 115;
-    baseCoachWage = 32;
-    mgrProfiles = [
-      { focus: 'tactics', rank: 'S', stats: { tactics: 92, motivation: 81, development: 72, discipline: 79 } },     // S/A/B/A
-      { focus: 'motivation', rank: 'S', stats: { tactics: 80, motivation: 93, development: 89, discipline: 62 } },  // A/S/S/C
-      { focus: 'development', rank: 'S', stats: { tactics: 73, motivation: 80, development: 92, discipline: 81 } }, // B/A/S/A
-      { focus: 'discipline', rank: 'S', stats: { tactics: 89, motivation: 63, development: 79, discipline: 91 } }   // S/C/A/S
-    ];
-    coachProfiles = [
-      { focus: 'coaching', rank: 'A', stats: { coaching: 90, youthDev: 72, analysis: 81 } }, // S/B/A
-      { focus: 'youthDev', rank: 'A', stats: { coaching: 71, youthDev: 91, analysis: 82 } }, // B/S/A
-      { focus: 'analysis', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 90 } }  // S/C/S
-    ];
-  } else if (!isD2Club && (clubRep >= 5200 || clubPower >= 68)) {
-    baseMgrWage = 86;
-    baseCoachWage = 25;
-    mgrProfiles = [
-      { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 56, discipline: 79 } },     // S/B/D/A
-      { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 55 } },  // B/S/A/D
-      { focus: 'development', rank: 'A', stats: { tactics: 63, motivation: 78, development: 89, discipline: 72 } }, // C/A/S/B
-      { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 54, development: 71, discipline: 89 } }   // A/D/B/S
-    ];
-    coachProfiles = [
-      { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 55, analysis: 73 } }, // S/D/B
-      { focus: 'youthDev', rank: 'A', stats: { coaching: 73, youthDev: 89, analysis: 61 } }, // B/S/C
-      { focus: 'analysis', rank: 'A', stats: { coaching: 80, youthDev: 71, analysis: 81 } }  // A/B/A
-    ];
-  } else if (!isD2Club && (clubRep >= 3800 || clubPower >= 59)) {
-    baseMgrWage = 62;
-    baseCoachWage = 18;
-    mgrProfiles = [
-      { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 54, discipline: 71 } },     // A/B/D/B
-      { focus: 'motivation', rank: 'B', stats: { tactics: 56, motivation: 83, development: 71, discipline: 68 } },  // D/A/B/B
-      { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 55, development: 84, discipline: 69 } }, // B/D/A/B
-      { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 52, discipline: 83 } }   // B/B/D/A
-    ];
-    coachProfiles = [
-      { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 53, analysis: 69 } }, // A/D/B
-      { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 54 } }, // B/A/D
-      { focus: 'analysis', rank: 'B', stats: { coaching: 59, youthDev: 70, analysis: 82 } }  // C/B/A
-    ];
-  } else {
-    baseMgrWage = 40;
-    baseCoachWage = 12;
-    mgrProfiles = [
-      { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 59, development: 46, discipline: 64 } },     // B/C/E/C
-      { focus: 'motivation', rank: 'C', stats: { tactics: 51, motivation: 75, development: 68, discipline: 45 } },  // D/B/B/E
-      { focus: 'development', rank: 'C', stats: { tactics: 65, motivation: 47, development: 75, discipline: 59 } }, // C/E/B/C
-      { focus: 'discipline', rank: 'C', stats: { tactics: 56, motivation: 68, development: 45, discipline: 74 } }   // D/B/E/B
-    ];
-    coachProfiles = [
-      { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 46, analysis: 61 } }, // B/E/C
-      { focus: 'youthDev', rank: 'C', stats: { coaching: 53, youthDev: 75, analysis: 47 } }, // D/B/E
-      { focus: 'analysis', rank: 'C', stats: { coaching: 61, youthDev: 52, analysis: 74 } }  // C/D/B
-    ];
-  }
+    // 選択クラブの格(reputation)・戦力(basePower)・ディビジョンに応じた候補の強さスケーリング
+    const isD2Club = Boolean(club && (club.division === 'd2' || String(club.id || '').startsWith('c')));
+    const clubRep = club ? (club.reputation || (club.basePower ? club.basePower * 80 : 4500)) : 4500;
+    const clubPower = club ? (club.basePower || 65) : 65;
 
-  const tacticPool = [
-    { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
-    { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
-    { formation: '3-5-2', tactic: 'counter', label: 'カウンター' },
-    { formation: '4-4-2', tactic: 'wingplay', label: 'ワイドアタック' },
-    { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
-  ];
-  const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
-  const shuffledMgrProfiles = [...mgrProfiles].sort(() => Math.random() - 0.5);
+    let mgrProfiles = [];
+    let coachProfiles = [];
+    let baseMgrWage = 62;
+    let baseCoachWage = 20;
 
-  const managerCandidates = shuffledMgrProfiles.map((prof, i) => {
-    const cfg = shuffledTactics[i];
-    const nat = ['Spain', 'Germany', 'England', 'Portugal', 'Italy'][i % 5];
-    const mgrObj = typeof createManager === 'function'
-      ? createManager({
-          nationality: nat,
-          age: 39 + randInt(0, 18),
+    if (!isD2Club && (clubRep >= 6600 || clubPower >= 73)) {
+      baseMgrWage = 115;
+      baseCoachWage = 32;
+      mgrProfiles = [
+        { focus: 'tactics', rank: 'S', stats: { tactics: 92, motivation: 81, development: 72, discipline: 79 } },
+        { focus: 'motivation', rank: 'S', stats: { tactics: 80, motivation: 93, development: 89, discipline: 62 } },
+        { focus: 'development', rank: 'S', stats: { tactics: 73, motivation: 80, development: 92, discipline: 81 } },
+        { focus: 'discipline', rank: 'S', stats: { tactics: 89, motivation: 63, development: 79, discipline: 91 } }
+      ];
+      coachProfiles = [
+        { focus: 'coaching', rank: 'A', stats: { coaching: 90, youthDev: 72, analysis: 81 } },
+        { focus: 'youthDev', rank: 'A', stats: { coaching: 71, youthDev: 91, analysis: 82 } },
+        { focus: 'analysis', rank: 'A', stats: { coaching: 89, youthDev: 61, analysis: 90 } }
+      ];
+    } else if (!isD2Club && (clubRep >= 5200 || clubPower >= 68)) {
+      baseMgrWage = 86;
+      baseCoachWage = 25;
+      mgrProfiles = [
+        { focus: 'tactics', rank: 'A', stats: { tactics: 89, motivation: 72, development: 56, discipline: 79 } },
+        { focus: 'motivation', rank: 'A', stats: { tactics: 73, motivation: 90, development: 79, discipline: 55 } },
+        { focus: 'development', rank: 'A', stats: { tactics: 63, motivation: 78, development: 89, discipline: 72 } },
+        { focus: 'discipline', rank: 'A', stats: { tactics: 80, motivation: 54, development: 71, discipline: 89 } }
+      ];
+      coachProfiles = [
+        { focus: 'coaching', rank: 'A', stats: { coaching: 89, youthDev: 55, analysis: 73 } },
+        { focus: 'youthDev', rank: 'A', stats: { coaching: 73, youthDev: 89, analysis: 61 } },
+        { focus: 'analysis', rank: 'A', stats: { coaching: 80, youthDev: 71, analysis: 81 } }
+      ];
+    } else if (!isD2Club && (clubRep >= 3800 || clubPower >= 59)) {
+      baseMgrWage = 62;
+      baseCoachWage = 18;
+      mgrProfiles = [
+        { focus: 'tactics', rank: 'B', stats: { tactics: 82, motivation: 69, development: 54, discipline: 71 } },
+        { focus: 'motivation', rank: 'B', stats: { tactics: 56, motivation: 83, development: 71, discipline: 68 } },
+        { focus: 'development', rank: 'B', stats: { tactics: 70, motivation: 55, development: 84, discipline: 69 } },
+        { focus: 'discipline', rank: 'B', stats: { tactics: 72, motivation: 70, development: 52, discipline: 83 } }
+      ];
+      coachProfiles = [
+        { focus: 'coaching', rank: 'B', stats: { coaching: 82, youthDev: 53, analysis: 69 } },
+        { focus: 'youthDev', rank: 'B', stats: { coaching: 69, youthDev: 83, analysis: 54 } },
+        { focus: 'analysis', rank: 'B', stats: { coaching: 59, youthDev: 70, analysis: 82 } }
+      ];
+    } else {
+      baseMgrWage = 40;
+      baseCoachWage = 12;
+      mgrProfiles = [
+        { focus: 'tactics', rank: 'C', stats: { tactics: 74, motivation: 59, development: 46, discipline: 64 } },
+        { focus: 'motivation', rank: 'C', stats: { tactics: 51, motivation: 75, development: 68, discipline: 45 } },
+        { focus: 'development', rank: 'C', stats: { tactics: 65, motivation: 47, development: 75, discipline: 59 } },
+        { focus: 'discipline', rank: 'C', stats: { tactics: 56, motivation: 68, development: 45, discipline: 74 } }
+      ];
+      coachProfiles = [
+        { focus: 'coaching', rank: 'C', stats: { coaching: 74, youthDev: 46, analysis: 61 } },
+        { focus: 'youthDev', rank: 'C', stats: { coaching: 53, youthDev: 75, analysis: 47 } },
+        { focus: 'analysis', rank: 'C', stats: { coaching: 61, youthDev: 52, analysis: 74 } }
+      ];
+    }
+
+    const tacticPool = [
+      { formation: '4-3-3', tactic: 'gegenpress', label: 'ゲーゲンプレス' },
+      { formation: '4-2-3-1', tactic: 'possession', label: 'ポゼッション' },
+      { formation: '3-5-2', tactic: 'counter', label: 'カウンター' },
+      { formation: '4-4-2', tactic: 'wingplay', label: 'ワイドアタック' },
+      { formation: '5-3-2', tactic: 'parkthebus', label: 'ウルトラディフェンス' }
+    ];
+    const shuffledTactics = [...tacticPool].sort(() => Math.random() - 0.5).slice(0, 4);
+    const shuffledMgrProfiles = [...mgrProfiles].sort(() => Math.random() - 0.5);
+
+    const managerCandidates = shuffledMgrProfiles.map((prof, i) => {
+      const cfg = shuffledTactics[i];
+      const nat = ['Spain', 'Germany', 'England', 'Portugal', 'Italy'][i % 5];
+      const mgrObj = typeof createManager === 'function'
+        ? createManager({
+            nationality: nat,
+            age: 39 + randInt(0, 18),
+            rank: prof.rank,
+            focus: prof.focus,
+            stats: prof.stats,
+            preferredFormation: cfg.formation,
+            preferredTactic: cfg.tactic,
+            weeklyWage: baseMgrWage + randInt(-4, 5),
+            trust: 85,
+            contractYears: 3
+          }, club.id, usedNames)
+        : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: prof.rank, stats: prof.stats, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: baseMgrWage, trust: 85, contractYears: 3 };
+      mgrObj.tacticLabel = cfg.label;
+      return mgrObj;
+    });
+
+    const buildCoachCandidates = (cat) => {
+      const db = (typeof COACHES_DATABASE !== 'undefined' && Array.isArray(COACHES_DATABASE[cat])) ? COACHES_DATABASE[cat] : [];
+      const shuffledProfs = [...coachProfiles].sort(() => Math.random() - 0.5);
+      return shuffledProfs.map((prof, idx) => {
+        const exactMatch = db.find(d => d.focus === prof.focus) || db[idx % Math.max(1, db.length)] || { nationality: 'England', age: 46 };
+        return createCoach({
+          ...exactMatch,
           rank: prof.rank,
           focus: prof.focus,
           stats: prof.stats,
-          preferredFormation: cfg.formation,
-          preferredTactic: cfg.tactic,
-          weeklyWage: baseMgrWage + randInt(-4, 5),
-          trust: 85,
-          contractYears: 3
-        }, club.id, usedNames)
-      : { id: `mgr_init_${i}`, name: 'M. Keller', nationality: nat, age: 44, rank: prof.rank, stats: prof.stats, preferredFormation: cfg.formation, preferredTactic: cfg.tactic, weeklyWage: baseMgrWage, trust: 85, contractYears: 3 };
-    mgrObj.tacticLabel = cfg.label;
-    return mgrObj;
-  });
-
-  // 4部門それぞれの初期コーチ候補（同水準・異なる尖り方を持つ3名を選択可能にする）
-  const buildCoachCandidates = (cat) => {
-    const db = (typeof COACHES_DATABASE !== 'undefined' && Array.isArray(COACHES_DATABASE[cat])) ? COACHES_DATABASE[cat] : [];
-    const shuffledProfs = [...coachProfiles].sort(() => Math.random() - 0.5);
-    return shuffledProfs.map((prof, idx) => {
-      const exactMatch = db.find(d => d.focus === prof.focus) || db[idx % Math.max(1, db.length)] || { nationality: 'England', age: 46 };
-      return createCoach({
-        ...exactMatch,
-        rank: prof.rank,
-        focus: prof.focus,
-        stats: prof.stats,
-        weeklyWage: baseCoachWage + randInt(-2, 3)
-      }, cat, usedNames);
-    });
-  };
-  const coachCandidates = {
-    attacking: buildCoachCandidates('attacking'),
-    defending: buildCoachCandidates('defending'),
-    goalkeeping: buildCoachCandidates('goalkeeping'),
-    fitness: buildCoachCandidates('fitness')
+          weeklyWage: baseCoachWage + randInt(-2, 3)
+        }, cat, usedNames);
+      });
+    };
+    const coachCandidates = {
+      attacking: buildCoachCandidates('attacking'),
+      defending: buildCoachCandidates('defending'),
+      goalkeeping: buildCoachCandidates('goalkeeping'),
+      fitness: buildCoachCandidates('fitness')
+    };
+    window._preseasonStaffCandidatesCache = {
+      clubId: club.id,
+      season: gameState.season,
+      managerCandidates,
+      coachCandidates
+    };
+    return { managerCandidates, coachCandidates };
   };
 
+  const candSet = mode === 'staff' ? getOrBuildStaffCandidates() : { managerCandidates: [], coachCandidates: {} };
   window._preseasonStaffSetup = {
+    mode,
     step: 1,
     selectedManagerIdx: 0,
     selectedSecretaryId: gameState.secretaryId || 'sec_claire',
     selectedCoachIdx: { attacking: 0, defending: 0, goalkeeping: 0, fitness: 0 },
-    candidates: managerCandidates,
-    coachCandidates,
-    club: club
+    candidates: candSet.managerCandidates,
+    coachCandidates: candSet.coachCandidates,
+    club
   };
+
+  if (deferBtn) {
+    if (mode === 'staff') {
+      deferBtn.classList.remove('hidden');
+      deferBtn.onclick = () => {
+        modal.classList.add('hidden');
+        setBodyModalLock(false);
+      };
+    } else {
+      deferBtn.classList.add('hidden');
+      deferBtn.onclick = null;
+    }
+  }
 
   const renderModalContent = () => {
     const state = window._preseasonStaffSetup;
     const titleEl = document.getElementById('staff-setup-title');
-    if (state.step === 1) {
-      if (titleEl) titleEl.textContent = '担当秘書の選任 (1 / 3)';
+    if (state.mode === 'secretary') {
+      if (titleEl) titleEl.textContent = '担当秘書の選任';
       const secretaries = typeof SECRETARIES_DATABASE !== 'undefined' && Array.isArray(SECRETARIES_DATABASE)
         ? SECRETARIES_DATABASE
         : [];
@@ -17135,7 +17303,7 @@ function openInitialStaffSetupModal(club) {
         <div class="flat-section-label mono">サポート秘書</div>
         <div style="display: flex; flex-direction: column;">${secretariesHtml}</div>
       `;
-      if (confirmBtn) confirmBtn.textContent = '次へ：監督を選ぶ ▶';
+      if (confirmBtn) confirmBtn.textContent = '担当秘書を確定する';
       if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(body);
 
       body.querySelectorAll('[data-init-sec-id]').forEach(row => {
@@ -17144,8 +17312,8 @@ function openInitialStaffSetupModal(club) {
           renderModalContent();
         });
       });
-    } else if (state.step === 2) {
-      if (titleEl) titleEl.textContent = '監督の選任 (2 / 3)';
+    } else if (state.step === 1) {
+      if (titleEl) titleEl.textContent = '監督の選任';
       const managersHtml = state.candidates.map((m, idx) => {
         const isSelected = idx === state.selectedManagerIdx;
         const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(m, 'avatar-md', 44) : '';
@@ -17180,22 +17348,12 @@ function openInitialStaffSetupModal(club) {
       }).join('');
 
       body.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span class="flat-section-label mono" style="margin:0;">ヘッドコーチ（監督）</span>
-          <button type="button" class="btn btn-secondary btn-sm mono" id="btn-back-to-sec-step">◀ 秘書選択へ戻る</button>
-        </div>
+        <div class="flat-section-label mono" style="margin-bottom:4px;">ヘッドコーチ（監督）</div>
         <div style="display: flex; flex-direction: column;">${managersHtml}</div>
       `;
       if (confirmBtn) confirmBtn.textContent = '次へ：コーチを選ぶ ▶';
       if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(body);
 
-      const backToSecBtn = document.getElementById('btn-back-to-sec-step');
-      if (backToSecBtn) {
-        backToSecBtn.addEventListener('click', () => {
-          state.step = 1;
-          renderModalContent();
-        });
-      }
       body.querySelectorAll('.staff-candidate-card').forEach(card => {
         card.addEventListener('click', (e) => {
           state.selectedManagerIdx = parseInt(e.currentTarget.dataset.mgrIndex, 10);
@@ -17203,7 +17361,7 @@ function openInitialStaffSetupModal(club) {
         });
       });
     } else {
-      if (titleEl) titleEl.textContent = 'コーチの選任 (3 / 3)';
+      if (titleEl) titleEl.textContent = 'コーチの選任';
       const catMeta = [
         { cat: 'attacking', role: 'オフェンスコーチ' },
         { cat: 'defending', role: 'ディフェンスコーチ' },
@@ -17251,12 +17409,12 @@ function openInitialStaffSetupModal(club) {
         </div>
         ${sectionsHtml}
       `;
-      if (confirmBtn) confirmBtn.textContent = '指導体制を確定して開幕へ';
+      if (confirmBtn) confirmBtn.textContent = '指導体制を確定する';
 
       const backBtn = document.getElementById('btn-back-to-mgr-step');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
-          state.step = 2;
+          state.step = 1;
           renderModalContent();
         });
       }
@@ -17279,16 +17437,34 @@ function openInitialStaffSetupModal(club) {
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       const state = window._preseasonStaffSetup;
+      const playerClub = state.club || club || getPlayerClub();
+      if (state.mode === 'secretary') {
+        if (state.selectedSecretaryId) {
+          gameState.secretaryId = state.selectedSecretaryId;
+        }
+        const chosenSec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+        if (chosenSec && typeof addDailyLog === 'function') {
+          addDailyLog(`PRE-SEASON：担当秘書として ${chosenSec.name} が着任しました。`);
+        }
+        modal.classList.add('hidden');
+        setBodyModalLock(false);
+        if (typeof switchTab === 'function') switchTab('office');
+        renderAll();
+        if (typeof saveGameToStorage === 'function') {
+          saveGameToStorage(true);
+        }
+        if (typeof showSecretaryOnboardingBriefing === 'function' && playerClub) {
+          showSecretaryOnboardingBriefing(playerClub);
+        }
+        return;
+      }
+
       if (state.step === 1) {
         state.step = 2;
         renderModalContent();
         return;
       }
-      if (state.step === 2) {
-        state.step = 3;
-        renderModalContent();
-        return;
-      }
+
       const selectedMgr = state.candidates[state.selectedManagerIdx];
       const selCoaches = {
         attacking: [ state.coachCandidates.attacking[state.selectedCoachIdx.attacking || 0] ].filter(Boolean),
@@ -17296,24 +17472,14 @@ function openInitialStaffSetupModal(club) {
         goalkeeping: state.coachCandidates.goalkeeping[state.selectedCoachIdx.goalkeeping || 0] || null,
         fitness: state.coachCandidates.fitness[state.selectedCoachIdx.fitness || 0] || null
       };
-      const playerClub = club || getPlayerClub();
-      if (state.selectedSecretaryId) {
-        gameState.secretaryId = state.selectedSecretaryId;
-      }
       let initWish = null;
       if (playerClub && selectedMgr) {
         playerClub.manager = selectedMgr;
         playerClub.formation = selectedMgr.preferredFormation;
         playerClub.tactic = selectedMgr.preferredTactic;
         playerClub.coaches = selCoaches;
-        playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
-        playerClub.sponsors = { chest: null, sleeve: null, training: null, stadium: null, partners: [] };
-        playerClub.sponsor = null;
-        if (typeof initSponsorContractWindow === 'function') {
-          initSponsorContractWindow(['chest', 'sleeve', 'training', 'stadium', 'partners']);
-        } else {
-          gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
-        }
+        gameState.pendingInitialStaffSetup = false;
+        window._preseasonStaffCandidatesCache = null;
         if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
           applyManagerPreMatchDelegation(playerClub, true);
         } else {
@@ -17321,9 +17487,6 @@ function openInitialStaffSetupModal(club) {
         }
         syncManagerDelegationButtonUI();
         addDailyLog(`PRE-SEASON：${selectedMgr.name} 監督および選任コーチ陣が就任し、新シーズン指導体制が発足しました（得意: ${selectedMgr.preferredFormation} / ${selectedMgr.tacticLabel}）。`);
-        addDailyLog(`PRE-SEASON：7月1日よりプレシーズンおよび夏の移籍市場が開幕しました。`);
-        gameState.inboxMessages = [];
-        gameState.newsFeed = [];
         if (typeof ensureInitialOfficeMessagesAndNews === 'function') {
           ensureInitialOfficeMessagesAndNews();
         }
