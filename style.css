@@ -16977,11 +16977,17 @@ body {
   .neg-clauses-grid { grid-template-columns: 1fr; }
 }
 .day-event-intl,
+.cal-event-tag.cal-event-intl,
 .cal-event-intl {
-  background: rgba(56, 189, 248, 0.16);
+  background: transparent !important;
   color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: none !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  border-radius: 0 !important;
   font-weight: 700;
+}
+.cal-event-tag.cal-event-intl {
+  padding: 1px 0 2px;
 }
 .ev-sub {
   color: #38bdf8;
