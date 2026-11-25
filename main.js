@@ -2558,7 +2558,7 @@ function buildWishModalDetailHtml(playerClub, wish) {
     rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督補強希望 (${escapeCommHtml(wish.managerName || '監督')})</span><span class="gm-modal-flat-val" style="color:#38bdf8;">${escapeCommHtml(wish.positions.join('・'))}（布陣 ${escapeCommHtml(wish.formation || '4-3-3')}）</span></div>`);
     (wish.candidates || []).slice(0, 3).forEach(c => {
       const feeTxt = c.isFreeAgent ? '£0' : formatMoney(c.estimatedFee);
-      rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label"><strong style="color:#38bdf8;">${escapeCommHtml(c.pos)}</strong> ${escapeCommHtml(c.name)} (${escapeCommHtml(c.clubName)})</span><span class="gm-modal-flat-val mono">OVR ${c.ovr} · 推定 ${feeTxt}</span></div>`);
+      rows.push(`<div class="gm-modal-flat-row"><span class="gm-modal-flat-label"><strong class="pos-inline pos-${escapeCommHtml(c.pos)}">${escapeCommHtml(c.pos)}</strong> ${escapeCommHtml(c.name)} (${escapeCommHtml(c.clubName)})</span><span class="gm-modal-flat-val mono">OVR ${c.ovr} · 推定 ${feeTxt}</span></div>`);
     });
   }
   return rows.length > 0 ? `<div class="gm-modal-flat-list">${rows.join('')}</div>` : '';
@@ -3753,6 +3753,14 @@ function refreshNegCashflowWarning(bodyEl = null) {
 /**
  * プロフィール・交渉・オファー各モーダル共通の選手ヘッダー表示データを生成する
  */
+function formatColoredPosListHtml(posList, isSub = false) {
+  if (!Array.isArray(posList) || posList.length === 0) return '';
+  return posList.map(pos => {
+    const safePos = escapeCommHtml(pos);
+    return `<span class="pos-inline pos-${safePos}${isSub ? ' is-subpos' : ''}">${safePos}</span>`;
+  }).join('·');
+}
+
 function buildUnifiedPlayerModalHeaderData(p, clubObj, clubLabelText, opts = {}) {
   if (!p) return null;
   const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
@@ -3769,7 +3777,7 @@ function buildUnifiedPlayerModalHeaderData(p, clubObj, clubLabelText, opts = {})
   const footHtml = typeof formatFootBadge === 'function' ? formatFootBadge(p) : '';
   const nationalityDisplay = `<span style="display:inline-flex;align-items:center;gap:5px;"><span class="profile-flag-wrapper">${flagHtml}</span><span>${rawNat}</span></span>`;
   const subPosTextHtml = subsFiltered.length > 0
-    ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+    ? `<span class="profile-meta-subpos">/${formatColoredPosListHtml(subsFiltered, true)}</span>`
     : '';
   const emblemHtml = (clubObj && typeof getClubEmblemSvg === 'function')
     ? getClubEmblemSvg(clubObj, 17, 'profile-club-emblem')
@@ -3785,7 +3793,7 @@ function buildUnifiedPlayerModalHeaderData(p, clubObj, clubLabelText, opts = {})
     squadNumText: (!opts.isFreeAgent && p.squadNumber) ? `#${p.squadNumber}` : '',
     nameHtml: `<span class="profile-name-main">${p.fullName || p.name}</span><span class="profile-age-inline">(${p.age})</span>`,
     posMetaHtml: `
-      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-mainpos">${formatColoredPosListHtml(mains, false)}</span>${subPosTextHtml}
       <span class="profile-meta-sep">|</span>
       <span class="profile-meta-foot">${footHtml}</span>
       <span class="profile-meta-text">${heightText}</span>
@@ -5689,7 +5697,7 @@ function openCounterOfferModal(offerId) {
         </div>
         <div class="counter-player-unified-meta">
           <div class="counter-player-title-row">
-            <span class="profile-meta-mainpos mono">${offer.playerPos}</span>
+            <span class="profile-meta-mainpos pos-inline pos-${escapeCommHtml(offer.playerPos)} mono">${escapeCommHtml(offer.playerPos)}</span>
             <span class="counter-player-fullname">${dispName} <span class="profile-age-inline">(${offer.playerAge})</span></span>
             <span class="profile-top-squad-num mono">#${offer.squadNumber}</span>
           </div>
@@ -10098,7 +10106,7 @@ function renderIncomingOffers() {
             </button>
             <div class="offer-player-meta">
               <div class="offer-player-name">
-                <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
+                <span class="pos-inline pos-${escapeCommHtml(offer.playerPos)} mono" style="font-weight:800;">${offer.playerPos}</span>
                 <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
                   #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
                 </button>
@@ -10229,7 +10237,7 @@ function renderIncomingOffers() {
           </button>
           <div class="offer-player-meta">
             <div class="offer-player-name">
-              <span class="accent-green mono" style="font-weight:800;">${offer.playerPos}</span>
+              <span class="pos-inline pos-${escapeCommHtml(offer.playerPos)} mono" style="font-weight:800;">${offer.playerPos}</span>
               <button type="button" class="player-name-link clickable-player-name" data-profile-id="${offer.playerId}" title="選手詳細プロフィール表示" style="font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: none; padding: 0; color: #fff;">
                 #${offer.squadNumber} ${(target && (target.fullName || target.name)) || offer.playerName}
               </button>
@@ -12922,10 +12930,10 @@ function openPlayerProfileModal(playerId) {
   const posPillEl = document.getElementById('profile-pos-pill');
   if (posPillEl) {
     const subPosTextHtml = subsFiltered.length > 0
-      ? `<span class="profile-meta-subpos">/${subsFiltered.join('·')}</span>`
+      ? `<span class="profile-meta-subpos">/${formatColoredPosListHtml(subsFiltered, true)}</span>`
       : '';
     posPillEl.innerHTML = `
-      <span class="profile-meta-mainpos">${mains.join('·')}</span>${subPosTextHtml}
+      <span class="profile-meta-mainpos">${formatColoredPosListHtml(mains, false)}</span>${subPosTextHtml}
       <span class="profile-meta-sep">|</span>
       <span class="profile-meta-foot">${formatFootBadge(p)}</span>
       <span class="profile-meta-text">${heightText}</span>
@@ -18407,7 +18415,7 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
     const oppOvrCls = sv.isScouted ? getOvrTierClass(p.calculatedOvr) : '';
     return `
       <tr style="${isKey ? 'background:rgba(245,158,11,0.08);' : ''}">
-        <td class="mono" style="font-weight:700; width:44px;"><span class="pos-badge pos-${roleGroup.toLowerCase()}">${pos}</span></td>
+        <td class="mono" style="font-weight:700; width:44px;"><span class="pos-badge pos-${roleGroup.toLowerCase()} pos-${escapeCommHtml(pos)}">${pos}</span></td>
         <td>
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-weight:${isKey ? '800' : '500'}; color:${isKey ? '#ffffff' : '#cbd5e1'};">${p.name}</span>
@@ -22172,7 +22180,7 @@ function buildInboxCandidatesHtml(m) {
     return `
       <div class="wish-candidate-row">
         <div class="wish-candidate-info">
-          <span class="wish-candidate-pos mono">${escapeCommHtml(c.pos)}</span>
+          <span class="wish-candidate-pos pos-${escapeCommHtml(c.pos)} mono">${escapeCommHtml(c.pos)}</span>
           <span class="wish-candidate-name">${escapeCommHtml(c.name)}</span>
           <span class="wish-candidate-meta mono">OVR ${c.ovr} · ${c.age}歳 · ${escapeCommHtml(c.clubName)}</span>
           <span class="wish-candidate-fee mono">${feeLabel}</span>
@@ -23397,7 +23405,7 @@ function buildBestElevenPitchHtml(awardsObj) {
     const statTag = node.slotPos === 'GK' ? `${node.cleanSheets || 0}CS / ${node.avgRating || '-'}` : `${node.goals || 0}G ${node.assists || 0}A`;
     return `
       <div class="awards-best11-node ${node.isPlayerClub ? 'is-player-club' : ''} ${canOpen ? 'is-clickable' : ''}" style="left:${node.x}%; top:${node.y}%;" ${canOpen ? `data-award-profile-id="${escapeCommHtml(node.playerId)}"` : ''}>
-        <div class="awards-best11-avatar-wrap">${avatarHtml}<span class="awards-best11-pos mono">${escapeCommHtml(node.slotPos)}</span></div>
+        <div class="awards-best11-avatar-wrap">${avatarHtml}<span class="awards-best11-pos pos-${escapeCommHtml(node.slotPos)} mono">${escapeCommHtml(node.slotPos)}</span></div>
         <div class="awards-best11-name">${escapeCommHtml(node.name)}</div>
         <div class="awards-best11-sub mono">${escapeCommHtml(node.clubShortCode)} · ${statTag}</div>
       </div>

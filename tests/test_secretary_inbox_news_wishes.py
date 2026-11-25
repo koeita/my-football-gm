@@ -541,6 +541,24 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('id="btn-defer-initial-staff"', self.html)
         self.assertNotIn("スポンサー契約へ進む", self.main_js)
 
+    def test_20_fw_positions_lw_rw_cf_are_red(self):
+        """全画面で LW / RW / CF ポジション表示が赤色（var(--danger-red)）に統一されていること"""
+        self.assertIn('.pos-LW, .pos-RW, .pos-WG, .pos-CF, .pos-ST { color: var(--danger-red); }', self.css)
+        self.assertNotIn('.pos-LW, .pos-RW, .pos-WG, .pos-CF { color: var(--accent-gold); }', self.css)
+        pitch_fw_pos = self.css.index('.pitch-node.pos-group-FW .pitch-node-pos')
+        pitch_fw_block = self.css[pitch_fw_pos:pitch_fw_pos + 120]
+        self.assertIn('color: var(--danger-red);', pitch_fw_block)
+        self.assertNotIn('color: var(--accent-gold);', pitch_fw_block)
+        for css_sel in [
+            '.pos-badge.pos-fw',
+            '.rating-pos-tag.pos-CF',
+            '.wish-candidate-pos.pos-CF',
+            '.awards-best11-pos.pos-CF',
+            '.pos-inline.pos-CF',
+        ]:
+            self.assertIn(css_sel, self.css)
+        self.assertIn('function formatColoredPosListHtml(', self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()

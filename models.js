@@ -424,7 +424,8 @@ function formatPlayerPositionsHtml(p) {
   if (subs.length === 0) {
     return wrappedMajors;
   }
-  return `${wrappedMajors}<span class="pos-sub-text">/ ${subs.join('・')}</span>`;
+  const subsHtml = subs.map(s => `<span class="pos-inline pos-${s} is-subpos">${s}</span>`).join('・');
+  return `${wrappedMajors}<span class="pos-sub-text">/ ${subsHtml}</span>`;
 }
 
 /**

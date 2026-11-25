@@ -1255,7 +1255,9 @@ const POS_ROLE_GROUP = {
   AM: 'MF',
   LW: 'FW',
   RW: 'FW',
-  CF: 'FW'
+  CF: 'FW',
+  ST: 'FW',
+  WG: 'FW'
 };
 
 // 全8種類のフォーメーション定義（ピッチ座標 x: 0〜100%, y: 0〜100% ※上が相手ゴール方向）

@@ -1373,7 +1373,7 @@ body {
 .pos-GK { color: var(--accent-gold); }
 .pos-CB, .pos-LB, .pos-RB, .pos-LWB, .pos-RWB, .pos-SB { color: #38bdf8; }
 .pos-DM, .pos-CM, .pos-LM, .pos-RM, .pos-SM, .pos-AM { color: var(--accent-green); }
-.pos-LW, .pos-RW, .pos-WG, .pos-CF { color: var(--accent-gold); }
+.pos-LW, .pos-RW, .pos-WG, .pos-CF, .pos-ST { color: var(--danger-red); }
 
 /* 配置枠セレクトボックス */
 .slot-select {
@@ -2532,7 +2532,7 @@ body {
 }
 
 .pitch-node.pos-group-FW .pitch-node-pos {
-  color: var(--accent-gold);
+  color: var(--danger-red);
 }
 
 .pitch-node-ovr {
@@ -22709,6 +22709,45 @@ button.hof-record-name {
     padding: 2px !important;
     font-size: 12px !important;
   }
+}
+
+/* 全画面ポジションカラー統一（GK:金 / DF:空色 / MF:緑 / FW(LW,RW,CF,WG,ST):赤） */
+.pos-inline.pos-GK,
+.pos-badge.pos-gk,
+.pos-badge.pos-GK,
+.rating-pos-tag.pos-GK,
+.wish-candidate-pos.pos-GK,
+.awards-best11-pos.pos-GK {
+  color: var(--accent-gold);
+}
+
+.pos-inline.pos-CB, .pos-inline.pos-LB, .pos-inline.pos-RB, .pos-inline.pos-LWB, .pos-inline.pos-RWB, .pos-inline.pos-SB,
+.pos-badge.pos-df, .pos-badge.pos-CB, .pos-badge.pos-LB, .pos-badge.pos-RB, .pos-badge.pos-LWB, .pos-badge.pos-RWB, .pos-badge.pos-SB,
+.rating-pos-tag.pos-CB, .rating-pos-tag.pos-LB, .rating-pos-tag.pos-RB, .rating-pos-tag.pos-LWB, .rating-pos-tag.pos-RWB, .rating-pos-tag.pos-SB,
+.wish-candidate-pos.pos-CB, .wish-candidate-pos.pos-LB, .wish-candidate-pos.pos-RB, .wish-candidate-pos.pos-LWB, .wish-candidate-pos.pos-RWB, .wish-candidate-pos.pos-SB,
+.awards-best11-pos.pos-CB, .awards-best11-pos.pos-LB, .awards-best11-pos.pos-RB, .awards-best11-pos.pos-LWB, .awards-best11-pos.pos-RWB, .awards-best11-pos.pos-SB {
+  color: #38bdf8;
+}
+
+.pos-inline.pos-DM, .pos-inline.pos-CM, .pos-inline.pos-LM, .pos-inline.pos-RM, .pos-inline.pos-SM, .pos-inline.pos-AM,
+.pos-badge.pos-mf, .pos-badge.pos-DM, .pos-badge.pos-CM, .pos-badge.pos-LM, .pos-badge.pos-RM, .pos-badge.pos-SM, .pos-badge.pos-AM,
+.rating-pos-tag.pos-DM, .rating-pos-tag.pos-CM, .rating-pos-tag.pos-LM, .rating-pos-tag.pos-RM, .rating-pos-tag.pos-SM, .rating-pos-tag.pos-AM,
+.wish-candidate-pos.pos-DM, .wish-candidate-pos.pos-CM, .wish-candidate-pos.pos-LM, .wish-candidate-pos.pos-RM, .wish-candidate-pos.pos-SM, .wish-candidate-pos.pos-AM,
+.awards-best11-pos.pos-DM, .awards-best11-pos.pos-CM, .awards-best11-pos.pos-LM, .awards-best11-pos.pos-RM, .awards-best11-pos.pos-SM, .awards-best11-pos.pos-AM {
+  color: var(--accent-green);
+}
+
+.pos-inline.pos-LW, .pos-inline.pos-RW, .pos-inline.pos-WG, .pos-inline.pos-CF, .pos-inline.pos-ST,
+.pos-badge.pos-fw, .pos-badge.pos-LW, .pos-badge.pos-RW, .pos-badge.pos-WG, .pos-badge.pos-CF, .pos-badge.pos-ST,
+.rating-pos-tag.pos-LW, .rating-pos-tag.pos-RW, .rating-pos-tag.pos-WG, .rating-pos-tag.pos-CF, .rating-pos-tag.pos-ST,
+.wish-candidate-pos.pos-LW, .wish-candidate-pos.pos-RW, .wish-candidate-pos.pos-WG, .wish-candidate-pos.pos-CF, .wish-candidate-pos.pos-ST,
+.awards-best11-pos.pos-LW, .awards-best11-pos.pos-RW, .awards-best11-pos.pos-WG, .awards-best11-pos.pos-CF, .awards-best11-pos.pos-ST {
+  color: var(--danger-red);
+}
+
+.pos-inline.is-subpos {
+  opacity: 0.8;
+  font-weight: 700;
 }
 
 
