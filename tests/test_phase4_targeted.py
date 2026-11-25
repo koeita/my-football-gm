@@ -217,14 +217,15 @@ class TestPhase4Targeted(unittest.TestCase):
         self.assertIn("Boolean(matchInfo && matchInfo.oppClub && !day.played)", self.main_js)
 
     def test_mobile_calendar_fixed_six_rows_and_zero_scroll(self):
-        """縦スクロール式シーズンカレンダー（全月セクション・7列グリッド）が正しく構成されていること"""
-        # 1. main.js で全月セクションと7列グリッド（行末補完）を描画し、スクロール同期を備えていること
-        self.assertIn("class=\"cal-month-section\"", self.main_js)
+        """縦スクロール式シーズンカレンダー（連続7列グリッド）が正しく構成されていること"""
+        # 1. main.js で連続7列グリッド（行末補完・月初アンカー）を描画し、スクロール同期を備えていること
+        self.assertIn("class=\"cal-continuous-grid\"", self.main_js)
+        self.assertIn("data-cal-month-start=", self.main_js)
         self.assertIn("while (cellsHtml.length % 7 !== 0)", self.main_js)
         self.assertIn("cellsHtml.push('<div class=\"cal-day-cell is-empty\" aria-hidden=\"true\"></div>')", self.main_js)
 
-        # 2. style.css モバイルカレンダーで縦スクロールコンテナ＆7列月グリッドが設定されていること
-        self.assertIn(".cal-month-grid {", self.style_css)
+        # 2. style.css モバイルカレンダーで縦スクロールコンテナ＆連続7列グリッドが設定されていること
+        self.assertIn(".cal-continuous-grid {", self.style_css)
         self.assertIn("grid-template-columns: repeat(7, minmax(0, 1fr));", self.style_css)
         self.assertIn("touch-action: pan-y !important;", self.style_css)
 

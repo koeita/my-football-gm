@@ -13433,32 +13433,19 @@ button.hidden,
   box-sizing: border-box;
 }
 
-.cal-month-section {
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.cal-month-divider {
-  padding: 8px 6px 5px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #cbd5e1;
-  background: #14171c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  letter-spacing: 0.04em;
-}
-
-.cal-month-divider.is-current-month {
-  color: #2ecc71;
-  border-bottom-color: rgba(46, 204, 113, 0.4);
-}
-
-.cal-month-grid {
+.cal-continuous-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
   width: 100%;
+  flex-shrink: 0;
   box-sizing: border-box;
+}
+
+.cal-day-cell.is-month-start .cal-day-num {
+  color: #2ecc71;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* マス目（日付セル） */
@@ -13742,10 +13729,6 @@ button.hidden,
     padding-bottom: 18px !important;
     gap: 0 !important;
     box-sizing: border-box !important;
-  }
-  .cal-month-divider {
-    padding: 7px 4px 4px !important;
-    font-size: 11px !important;
   }
   .cal-day-cell {
     min-height: 76px !important;
@@ -15391,6 +15374,16 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   border-radius: 0 !important;
   transition: background-color 0.15s ease !important;
+}
+
+.cal-day-cell.is-alt-month:not(.has-match):not(.is-current-day) {
+  background: #1a1e24 !important;
+}
+
+.cal-day-cell.is-month-start .cal-day-num {
+  color: #2ecc71 !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
 }
 
 .cal-day-cell:hover {
