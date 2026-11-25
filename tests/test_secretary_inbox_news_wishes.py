@@ -42,7 +42,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('function selectSecretary(', self.main_js)
         self.assertIn('function getGmDutyIconSvg(', self.main_js)
         self.assertIn('data-init-sec-id', self.main_js)
-        self.assertIn("担当秘書の選任 (1 / 3)", self.main_js)
+        self.assertIn("担当秘書の選任", self.main_js)
         self.assertIn('業務一覧', self.main_js)
         for css_sym in ['.btn-office-primary-cta', '.duty-icon-stack', '.duty-icon-pill', '.gm-task-chevron']:
             self.assertIn(css_sym, self.css)
@@ -498,6 +498,48 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('applyPromisedNextMatchSwaps(club);', self.models_js)
         self.assertIn('club.promisedNextMatchSwaps', self.main_js)
         self.assertIn('playerClub.promisedNextMatchSwaps = [];', self.main_js)
+
+    def test_18_sponsor_deadline_and_consultation_player_profile(self):
+        """スポンサー契約の受付期限と、相談モーダルからの選手プロフィール起動導線を検証"""
+        for sym in [
+            'sponsorDeadlineDayIndex:',
+            'sponsorWindowClosed:',
+            'function resolveSponsorDeadlineDayIndex(',
+            'function initSponsorContractWindow(',
+            'function getSponsorContractWindowInfo(',
+            'function processSponsorWindowExpiryDaily(',
+            'function buildConsultationPlayerRowHtml(',
+            'data-consult-player-id',
+            'openPlayerProfileModal(pid)',
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('sponsorDeadlineDayIndex:', self.storage_js)
+        self.assertIn('sponsorWindowClosed:', self.storage_js)
+        for css_sel in [
+            '.sponsor-deadline-text',
+            '.sponsor-expired-empty',
+            '.gm-modal-flat-row.is-player-link',
+            '.gm-consult-profile-cue',
+            '.gm-modal-sec-avatar-wrap.is-player-clickable',
+        ]:
+            self.assertIn(css_sel, self.css)
+        self.assertNotIn('経営・財務を確認', self.main_js)
+
+    def test_19_onboarding_secretary_first_and_duty_tasks(self):
+        """新規開始時は秘書先行選任→秘書案内→執務室業務タスクから監督・コーチとスポンサーを進める流れを検証"""
+        for sym in [
+            'pendingInitialStaffSetup:',
+            'function blockIfPendingInitialStaffSetup(',
+            'function showSecretaryOnboardingBriefing(',
+            "action: 'open-initial-staff-setup'",
+            "openInitialStaffSetupModal(playerClub, { mode: 'secretary' })",
+            "openInitialStaffSetupModal(getPlayerClub(), { mode: 'staff' })",
+            'btn-defer-initial-staff',
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('pendingInitialStaffSetup:', self.storage_js)
+        self.assertIn('id="btn-defer-initial-staff"', self.html)
+        self.assertNotIn("スポンサー契約へ進む", self.main_js)
 
 
 if __name__ == '__main__':

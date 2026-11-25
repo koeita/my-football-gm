@@ -17678,6 +17678,30 @@ body {
   color: #94a3b8;
 }
 
+.sponsor-deadline-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sponsor-deadline-text.is-urgent {
+  color: #fbbf24;
+}
+
+.sponsor-deadline-text.is-expired {
+  color: #94a3b8;
+}
+
+.sponsor-expired-empty {
+  padding: 18px 4px;
+  font-size: 12px;
+  color: #8b949e;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .sponsor-options-list {
   display: flex;
   flex-direction: column;
@@ -19558,6 +19582,45 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   white-space: normal;
   word-break: break-word;
   line-height: 1.4;
+}
+
+.gm-modal-flat-row.is-player-link {
+  cursor: pointer;
+  padding-left: 4px;
+  padding-right: 4px;
+  transition: background-color 0.14s ease;
+}
+
+.gm-modal-flat-row.is-player-link:hover,
+.gm-modal-flat-row.is-player-link:focus-visible {
+  background: rgba(46, 204, 113, 0.08);
+  outline: none;
+}
+
+.gm-consult-player-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.gm-consult-profile-cue {
+  color: #2ecc71;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gm-conflict-players {
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gm-modal-sec-avatar-wrap.is-player-clickable,
+.gm-vn-pill-badge.is-player-clickable {
+  cursor: pointer;
 }
 
 #gm-modal-overlay .modal-detail-box:empty {
