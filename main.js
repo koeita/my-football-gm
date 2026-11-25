@@ -14516,6 +14516,13 @@ function initTacticalDragAndDrop() {
     cleanupDrag();
     lastHoverDropTarget = null;
   });
+
+  // 長押し準備前（縦スワイプ優先時）は抑止せず、ドラッグ準備完了後／ドラッグ中のみネイティブスクロールを抑制
+  document.addEventListener('touchmove', (e) => {
+    if (dragSource && (isDragging || isTouchReady) && e.cancelable) {
+      e.preventDefault();
+    }
+  }, { passive: false });
 }
 
 function initGame() {
@@ -18507,7 +18514,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       `;
     }
 
-    bodyEl.innerHTML = `<div class="sponsor-slot-tabs">${tabsHtml}</div>${listHtml}`;
+    bodyEl.innerHTML = `<div class="sponsor-slot-tabs">${tabsHtml}</div><div class="sponsor-modal-list-scroll">${listHtml}</div>`;
 
     bodyEl.querySelectorAll('[data-sponsor-tab]').forEach(btn => {
       btn.addEventListener('click', () => {

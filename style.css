@@ -5263,14 +5263,18 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 5px;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: 24px;
+  height: 24px;
 }
 
 .weekly-schedule-title-group {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .weekly-schedule-label {
@@ -5285,12 +5289,16 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
+  white-space: nowrap;
 }
 
 .weekly-schedule-badges {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .market-status-pill {
@@ -5299,6 +5307,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   padding: 1px 6px;
   border-radius: 3px;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-market-open {
@@ -5316,11 +5326,15 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .weekly-ticker-hint {
   font-size: 10.5px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .weekly-schedule-track {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -5332,8 +5346,13 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 48px;
-  transition: all 0.15s ease;
+  height: 54px;
+  min-height: 54px;
+  max-height: 54px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   position: relative;
 }
 
@@ -5356,6 +5375,11 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 3px;
+  height: 16px;
+  line-height: 16px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .day-card-date {
@@ -5363,6 +5387,10 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   font-size: 10.5px;
   font-weight: 700;
   color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .day-card-today-badge {
@@ -5374,23 +5402,39 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   padding: 1px 3px;
   border-radius: 2px;
   line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .day-card-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  gap: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
   justify-content: center;
+  overflow: hidden;
 }
 
-.day-event-badge {
+.day-event-badge,
+.day-event-training,
+.day-event-recovery,
+.day-event-market {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 20px;
+  line-height: 18px;
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 4px;
+  padding: 1px 3px;
   border-radius: 2px;
   text-align: center;
-  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .day-event-match {
@@ -5402,30 +5446,28 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
 .day-event-training {
   color: var(--text-muted);
-  font-size: 10px;
-  text-align: center;
+  font-weight: 500;
 }
 
 .day-event-recovery {
   color: #3498db;
-  font-size: 10px;
-  text-align: center;
+  font-weight: 500;
 }
 
 .day-event-market {
   color: var(--accent-gold);
-  font-size: 9px;
-  text-align: center;
+  font-size: 9.5px;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
   .weekly-schedule-track {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
   .weekly-schedule-track {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -6105,7 +6147,41 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   }
 
   .weekly-schedule-header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 42px !important;
+    gap: 4px 6px !important;
     margin-bottom: 4px !important;
+  }
+
+  .weekly-schedule-title-group {
+    margin-right: auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  .weekly-schedule-badges {
+    display: contents !important;
+  }
+
+  .btn-view-full-schedule,
+  .market-status-pill {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    height: 20px !important;
+    line-height: 18px !important;
+    box-sizing: border-box !important;
+  }
+
+  .weekly-ticker-hint {
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    height: 16px !important;
+    line-height: 16px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .weekly-schedule-track {
@@ -6122,13 +6198,21 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 
   .weekly-schedule-card,
   .weekly-schedule-track .day-card {
-    flex: 0 0 88px !important;
-    min-width: 88px !important;
-    max-width: 88px !important;
+    flex: 0 0 104px !important;
+    min-width: 104px !important;
+    max-width: 104px !important;
+    height: 54px !important;
+    min-height: 54px !important;
+    max-height: 54px !important;
     padding: 5px 6px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .weekly-schedule-track .day-card-date,
+  .weekly-schedule-track .day-event-badge,
+  .weekly-schedule-track .day-event-match,
+  .weekly-schedule-track .day-event-intl,
   .weekly-schedule-track .day-event-market,
   .weekly-schedule-track .day-event-training,
   .weekly-schedule-track .day-event-recovery {
@@ -7209,8 +7293,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 /* ==========================================================================
    作戦ボード・控え選手ドラッグ＆ドロップ & カードタップUI
    ========================================================================== */
-.pitch-node,
-.bench-sub-item {
+.pitch-node:not(.bench-sub-item) {
   user-select: none !important;
   -webkit-user-select: none !important;
   -webkit-touch-callout: none !important;
@@ -7218,11 +7301,31 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
   cursor: grab !important;
 }
 
-.pitch-node *,
-.bench-sub-item * {
+.pitch-node:not(.bench-sub-item) * {
   touch-action: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+}
+
+.bench-sub-item {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  touch-action: pan-y !important;
+  cursor: grab !important;
+}
+
+.bench-sub-item * {
+  touch-action: pan-y !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.bench-sub-item.touch-drag-ready,
+.bench-sub-item.touch-drag-ready *,
+body.is-tactical-dragging .bench-sub-item,
+body.is-tactical-dragging .bench-sub-item * {
+  touch-action: none !important;
 }
 
 .pitch-node:active,
@@ -7876,7 +7979,7 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     box-sizing: border-box !important;
   }
   .bench-sub-item * {
-    touch-action: none !important;
+    touch-action: pan-y !important;
     user-select: none !important;
     -webkit-user-select: none !important;
   }
@@ -12562,6 +12665,11 @@ button.hidden,
     touch-action: pan-y !important;
   }
 
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-bench-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card):not(.touch-drag-ready) *,
+  body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-reserves-list .bench-sub-item.pitch-node:not(.tactical-drag-ghost-card):not(.touch-drag-ready) * {
+    touch-action: pan-y !important;
+  }
+
   /* モバイル作戦ボード：スタメン選手カードもベンチ選手と同じ見た目・質感・固定幅に統一 */
   body[data-active-tab="roster"][data-roster-subtab="board"] #pitch-nodes-layer .pitch-node:not(.tactical-drag-ghost-card) {
     width: 114px !important;
@@ -16869,11 +16977,17 @@ body {
   .neg-clauses-grid { grid-template-columns: 1fr; }
 }
 .day-event-intl,
+.cal-event-tag.cal-event-intl,
 .cal-event-intl {
-  background: rgba(56, 189, 248, 0.16);
+  background: transparent !important;
   color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: none !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  border-radius: 0 !important;
   font-weight: 700;
+}
+.cal-event-tag.cal-event-intl {
+  padding: 1px 0 2px;
 }
 .ev-sub {
   color: #38bdf8;
@@ -17352,15 +17466,51 @@ body {
   background: rgba(46, 204, 113, 0.24);
 }
 
-/* スポンサー選定モーダル（横並びフラット下線タブ＋フラットリスト型） */
+/* スポンサー選定モーダル（固定枠＋枠タブ常時固定＋リスト個別スクロール） */
+.sponsor-select-card {
+  width: 100%;
+  max-width: 680px;
+  height: min(620px, 86vh);
+  height: min(620px, 86dvh);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sponsor-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
 .sponsor-slot-tabs {
   display: flex;
   align-items: stretch;
+  flex-shrink: 0;
   width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  margin-bottom: 10px;
+  margin-bottom: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-x !important;
   scrollbar-width: none;
+}
+
+.sponsor-modal-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 10px 16px 12px;
 }
 
 .sponsor-slot-tabs::-webkit-scrollbar {
@@ -17377,13 +17527,17 @@ body {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   color: #8b949e;
   font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
+  touch-action: pan-x !important;
   transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.sponsor-slot-tab * {
+  touch-action: pan-x !important;
 }
 
 .sponsor-slot-tab:hover {

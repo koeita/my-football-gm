@@ -102,6 +102,16 @@ class TestBalanceAndTactics(unittest.TestCase):
         self.assertNotIn('animation: pulse-kickoff', self.style_css)
         self.assertNotIn('animation: matchSummaryBtnPulse', self.style_css)
 
+    def test_10_sponsor_tabs_reserve_swipe_and_weekly_schedule_stability(self):
+        """スポンサー枠タブ固定、ベンチ外カード上スワイプ透過、週間スケジュール寸法固定が実装されていること"""
+        self.assertIn('<div class="sponsor-modal-list-scroll">', self.main_js)
+        self.assertIn('.sponsor-select-card {', self.style_css)
+        self.assertIn('.sponsor-modal-list-scroll {', self.style_css)
+        self.assertIn('.pitch-node:not(.bench-sub-item) {', self.style_css)
+        self.assertIn('touch-action: pan-y !important;', self.style_css)
+        self.assertIn('grid-template-columns: repeat(7, minmax(0, 1fr));', self.style_css)
+        self.assertIn('height: 54px;', self.style_css)
+
 
 if __name__ == '__main__':
     unittest.main()
