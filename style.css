@@ -22894,13 +22894,15 @@ button.hof-record-name {
 
 .commercial-subnav {
   display: flex;
-  gap: 4px;
-  padding: 0 14px;
+  gap: 0;
+  padding: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .commercial-subtab-btn {
-  padding: 7px 14px;
+  flex: 1 1 0;
+  text-align: center;
+  padding: 8px 6px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -22909,7 +22911,6 @@ button.hof-record-name {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .commercial-subtab-btn.active {
@@ -23200,7 +23201,7 @@ button.hof-record-name {
     font-size: 13px;
   }
   .commercial-subnav {
-    padding: 0 10px;
+    padding: 0;
   }
   .commercial-section-body {
     padding: 0 10px 12px;
