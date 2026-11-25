@@ -594,7 +594,7 @@ function saveGameToStorage(force = false) {
     console.error('[saveGameToStorage] Failed to save game:', e);
     if (!hasShownStorageQuotaWarning && typeof addDailyLog === 'function') {
       hasShownStorageQuotaWarning = true;
-      addDailyLog('【システム警告】ブラウザの保存容量上限によりオートセーブに失敗しました。不要なタブや履歴を整理してください。');
+      addDailyLog('【保存容量上限】空き容量不足のため自動保存できませんでした。');
     }
 
     return false;
@@ -1126,7 +1126,7 @@ function updateContinueButtonUI() {
   } else {
     btnContinue.disabled = true;
     btnContinue.classList.add('is-disabled');
-    metaEl.textContent = 'セーブデータなし';
+    metaEl.textContent = '記録データなし';
   }
 }
 
@@ -1468,31 +1468,31 @@ function openSettingsModal() {
         </div>
         <div class="settings-mh-grid">
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">SEASON</span>
+            <span class="settings-mh-label mono">シーズン</span>
             <span class="settings-mh-val mono">${esc(season)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">CURRENT DATE</span>
+            <span class="settings-mh-label mono">日付</span>
             <span class="settings-mh-val mono accent-green">${esc(curDate)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">MATCHWEEK</span>
+            <span class="settings-mh-label mono">日程</span>
             <span class="settings-mh-val mono">${esc(matchweek)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">WEEKLY PAYROLL</span>
+            <span class="settings-mh-label mono">週給総額</span>
             <span class="settings-mh-val mono">${esc(payroll)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">SQUAD</span>
+            <span class="settings-mh-label mono">登録選手</span>
             <span class="settings-mh-val mono">${esc(squad)}</span>
           </div>
           <div class="settings-mh-item">
-            <span class="settings-mh-label mono">SUPPORTERS</span>
+            <span class="settings-mh-label mono">サポーター</span>
             <span class="settings-mh-val mono">${esc(supporters)}</span>
           </div>
           <div class="settings-mh-item settings-mh-item-wide">
-            <span class="settings-mh-label mono">CLUB FUNDS</span>
+            <span class="settings-mh-label mono">資金</span>
             <span class="settings-mh-val mono">
               <strong class="${fundsCls}">${esc(fundsText)}</strong>
               <span class="settings-mh-sub ${safeCls}">(${esc(safeBudget)})</span>
@@ -1664,7 +1664,7 @@ function initMainMenuAndModals() {
   const btnResetAll = document.getElementById('btn-reset-all-data');
   if (btnResetAll) {
     btnResetAll.addEventListener('click', () => {
-      const ok = window.confirm('保存されているセーブデータおよび殿堂記録をすべて消去します。よろしいですか？');
+      const ok = window.confirm('保存されている進行データと殿堂記録をすべて消去しますか？');
       if (!ok) return;
       try {
         localStorage.removeItem(SAVE_STORAGE_KEY);

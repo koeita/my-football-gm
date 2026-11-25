@@ -611,6 +611,45 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('.commercial-locked-bar', self.css)
         self.assertIn('.commercial-hero-nav', self.css)
 
+    def test_22_ui_text_unification_and_flat_compliance(self):
+        """表記統一・メタ表現/実在リーグ名称の排除・フラットCSS適用を検証"""
+        forbidden_html = [
+            'PREMIER DIVISION',
+            '優勝・CL',
+            'STYLE 01',
+            'ATTACK DIRECTION',
+            'CLUB BRIEFING',
+            'DEADLINE DAY',
+            'MATCHWEEK 0 / 38',
+            'セーブデータなし',
+        ]
+        for term in forbidden_html:
+            self.assertNotIn(term, self.html)
+
+        forbidden_main = [
+            '[監督空席]',
+            '所属選手・戦術・契約',
+            '選手市場 (MARKET)',
+            '（ゲームオーバー）',
+            'SPONSORSHIP / スポンサー契約',
+            'BOARD / 理事会信頼度',
+            'READY FOR KICKOFF',
+        ]
+        for term in forbidden_main:
+            self.assertNotIn(term, self.main_js)
+
+        self.assertNotIn('>POSSESSION<', self.html)
+        self.assertNotIn('プレミア放映権分配金', self.match_js)
+        self.assertNotIn('優勝・CL', self.data_js)
+        self.assertNotIn('[アカデミー昇格]', self.models_js)
+        self.assertNotIn('セーブデータなし', self.storage_js)
+        self.assertIn('.tactic-tag,', self.css)
+        self.assertIn('.chem-pill {', self.css)
+        self.assertIn('.ui-stat-plate {', self.css)
+        self.assertIn('.facility-metric-item {', self.css)
+        self.assertIn('.facility-lv-badge,', self.css)
+        self.assertIn('#market-subnav-bar .roster-subtab-btn', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()

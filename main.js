@@ -93,7 +93,7 @@ function checkAndShowManagerTrustCrisis() {
           }
           club.manager = null;
           gameState.managerDelegationEnabled = false;
-          addDailyLog(`【双方合意退任】戦術方針の相違により、${oldName}監督が違約金なしで退任しました。「監督・指導陣」タブから後任を招聘してください。`);
+          addDailyLog(`【双方合意退任】戦術方針の相違により、${oldName}監督が違約金なしで退任しました（経営 > 監督・指導陣）。`);
           renderAll();
         }
       }
@@ -1019,10 +1019,10 @@ function blockIfPendingInitialStaffSetup() {
     showSecretaryModal({
       topic: '就任初期タスク未完了',
       title: '監督・コーチ陣の選任が必要です',
-      speech: '日程を進める前に、まずは監督とコーチ陣の体制を確定させる必要がございます。執務室の業務タスクから「監督・コーチ陣の選任」を行ってください。',
+      speech: '日程を進める前に、監督とコーチ陣の選任が必要です。本部の業務タスクからお手続きください。',
       actions: [
         {
-          label: '執務室へ戻る',
+          label: '本部へ戻る',
           className: 'btn btn-secondary',
           onClick: () => {
             if (typeof switchTab === 'function') switchTab('office');
@@ -1219,7 +1219,7 @@ function advanceCalendarDay(skipRender = false) {
               }
             },
             {
-              label: '執務室で閉じる',
+              label: '本部へ戻る',
               className: 'btn btn-secondary',
               onClick: () => { renderAll(); }
             }
@@ -1461,10 +1461,10 @@ function renderWeeklySchedule() {
       marketBadgeEl.className = 'market-status-pill badge-market-open';
     } else if (currentDay.windowOpen) {
       const windowName = (currentDay.month === 7 || currentDay.month === 8) ? '夏期' : '冬期';
-      marketBadgeEl.textContent = `${windowName} 移籍市場 OPEN`;
+      marketBadgeEl.textContent = `${windowName}移籍市場 開催中`;
       marketBadgeEl.className = 'market-status-pill badge-market-open';
     } else {
-      marketBadgeEl.textContent = '移籍市場 CLOSED';
+      marketBadgeEl.textContent = '移籍市場 期間外';
       marketBadgeEl.className = 'market-status-pill badge-market-closed';
     }
   }
@@ -2581,11 +2581,11 @@ function showSecretaryOnboardingBriefing(playerClub) {
 
   let speech = '';
   if (sec.tone === 'active') {
-    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは執務室の「業務タスク」から、監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム＆興行設定を進めていきましょう！`;
+    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは本部の業務タスクから、監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・興行設定を進めていきましょう！`;
   } else if (sec.tone === 'calm') {
-    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは執務室の「業務タスク」にある「監督・コーチ陣の選任」「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」「スタジアム・チケット・グッズ設定」をご確認の上、着手をお願いいたします。`;
+    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは本部の業務タスクにある「監督・コーチ陣の選任」「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」「スタジアム・チケット・グッズ設定」をご確認ください。`;
   } else {
-    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。執務室の「業務タスク」に最優先事項として監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・チケット・グッズ設定をご用意いたしましたので、順次お手続きくださいませ。`;
+    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。本部の業務タスクに最優先事項として監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・チケット・グッズ設定をご用意いたしましたので、順次お手続きくださいませ。`;
   }
 
   const detailHtml = `
@@ -2600,7 +2600,7 @@ function showSecretaryOnboardingBriefing(playerClub) {
       </div>
       <div class="gm-modal-flat-row">
         <span class="gm-modal-flat-label">最優先業務 1</span>
-        <span class="gm-modal-flat-val">監督・コーチ陣の選任（執務室タスク）</span>
+        <span class="gm-modal-flat-val">監督・コーチ陣の選任（本部タスク）</span>
       </div>
       <div class="gm-modal-flat-row">
         <span class="gm-modal-flat-label">最優先業務 2</span>
@@ -2608,7 +2608,7 @@ function showSecretaryOnboardingBriefing(playerClub) {
       </div>
       <div class="gm-modal-flat-row">
         <span class="gm-modal-flat-label">最優先業務 3</span>
-        <span class="gm-modal-flat-val">スタジアム選定・チケット・グッズ設定（執務室タスク）</span>
+        <span class="gm-modal-flat-val">スタジアム選定・チケット・グッズ設定（本部タスク）</span>
       </div>
     </div>
   `;
@@ -2620,7 +2620,7 @@ function showSecretaryOnboardingBriefing(playerClub) {
     detailHtml,
     actions: [
       {
-        label: '執務室で業務を始める',
+        label: '本部で業務を始める',
         className: 'btn btn-primary',
         onClick: () => {
           if (typeof switchTab === 'function') switchTab('office');
@@ -2670,7 +2670,7 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
       : `GM、Season ${gameState.season}が開幕いたしました。移籍市場も同時に開いておりますので、目標達成に向け${mgrName}監督の補強希望「${wishPosText}」をご確認のうえご指示ください。`;
   }
   if (hasPendingSponsors) {
-    speech += `なお、未契約のスポンサー枠は執務室の業務タスクから期限（${spWin.deadlineLabel}）までに締結してください。`;
+    speech += `なお、未契約のスポンサー枠は本部の業務タスクから期限（${spWin.deadlineLabel}）までに締結できます。`;
   }
 
   showSecretaryModal({
@@ -2687,7 +2687,7 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
         }
       },
       {
-        label: '執務室で業務を続ける',
+        label: '本部で業務を続ける',
         className: 'btn btn-primary',
         onClick: () => {
           if (typeof switchTab === 'function') switchTab('office');
@@ -3296,7 +3296,7 @@ function processSeasonEnd(isSkipped = false) {
         allowDuringSkip: true,
         category: 'BOARD OF DIRECTORS / DISMISSAL NOTICE',
         title: '【GM解任通告】1年でのファーストディビジョン復帰失敗',
-        description: `セカンドディビジョン ${playerRank}位 に終わり、理事会より厳命されていた「ファーストディビジョン（ENG-D1）復帰」を達成できませんでした。本日付でGM契約解除（ゲームオーバー）となります。`,
+        description: `セカンドディビジョン ${playerRank}位 に終わり、理事会より厳命されていた「ファーストディビジョン（ENG-D1）復帰」を達成できませんでした。本日付でGM契約解除・退任となります。`,
         detailHtml: `最終順位: ENG-D2 ${playerRank}位（昇格ライン: 3位以内）`,
         actions: [
           {
@@ -6545,7 +6545,7 @@ function setTeamTactic(tacticKey) {
   });
 
   const badgeEl = document.getElementById('current-tactic-badge');
-  if (badgeEl) badgeEl.textContent = TACTICS_DEFINITIONS[normalizedKey].badge;
+  if (badgeEl) badgeEl.textContent = typeof getManagerTacticLabel === 'function' ? getManagerTacticLabel(normalizedKey) : TACTICS_DEFINITIONS[normalizedKey].name;
   const descEl = document.getElementById('current-tactic-desc');
   if (descEl) descEl.textContent = TACTICS_DEFINITIONS[normalizedKey].desc;
 
@@ -7247,7 +7247,7 @@ function startNextSeason() {
   if (playerClub && playerClub.manager) {
     const pMgr = playerClub.manager;
     if ((pMgr.age || 45) >= 72) {
-      addDailyLog(`監督人事：${pMgr.name}監督（${pMgr.age}歳）が勇退し、監督が退任しました。経営タブから後任監督を招聘してください。`);
+      addDailyLog(`【監督退任】${pMgr.name}監督（${pMgr.age}歳）が勇退しました（経営 > 監督・指導陣）。`);
       playerClub.manager = null;
     } else if ((pMgr.contractYears || 0) <= 0) {
       pMgr.contractYears = 1;
@@ -7474,7 +7474,7 @@ function startNextSeason() {
   if (openSponsorSlots.length > 0) {
     addDailyLog(`【スポンサー更改】新シーズン開幕に伴い、${openSponsorSlots.length}枠のスポンサー契約選定が可能になりました。`);
   }
-  addDailyLog('【興行計画】新シーズンのスタジアム・席別チケット価格・グッズ展開の見直しが執務室タスクに追加されました。');
+  addDailyLog('【興行計画】新シーズンのスタジアム・チケット・グッズ設定が本部の業務タスクに追加されました。');
   if (typeof captureMonthlyPlayerBaseline === 'function') {
     captureMonthlyPlayerBaseline();
   }
@@ -7819,6 +7819,11 @@ function renderHeader() {
   if (headerClubEl) {
     headerClubEl.innerHTML = `${getClubEmblemSvg(playerClub, 24, 'header-club-emblem')}<span>${playerClub.name}</span>`;
   }
+  const headerLeagueEl = document.getElementById('header-league-label');
+  if (headerLeagueEl) {
+    const inD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+    headerLeagueEl.textContent = inD2 ? 'ENG-D2' : 'ENG-D1';
+  }
   setHeaderText('header-gm-name', gameState.gmName);
   setHeaderText('header-target-rank', `目標：${playerClub.targetLabel || '4位以内'}`);
   setHeaderText('header-season', `${gameState.season}年目`);
@@ -7835,11 +7840,11 @@ function renderHeader() {
   }
 
   if (gameState.isGameOver) {
-    setHeaderText('header-matchweek', 'GM解任 (GAME OVER)');
+    setHeaderText('header-matchweek', 'GM退任');
   } else if (gameState.isSeasonOver) {
-    setHeaderText('header-matchweek', 'オフシーズン (移籍・契約)');
+    setHeaderText('header-matchweek', 'オフシーズン');
   } else if (gameState.currentWeek === 0 && (!currentDay || !currentDay.isMatchDay)) {
-    setHeaderText('header-matchweek', 'PRE-SEASON');
+    setHeaderText('header-matchweek', '開幕前'); // PRE-SEASON
   } else {
     const nextWeek = Math.min(gameState.currentWeek + 1, gameState.totalWeeks);
     setHeaderText('header-matchweek', `第${nextWeek}節 / 全${gameState.totalWeeks}節`);
@@ -8064,11 +8069,11 @@ function renderSeasonSettlement() {
 
   const projEl = document.getElementById('summary-payroll-projection');
   const deficitWarning = playerClub.funds < 0
-    ? ' 【警告：現在債務超過です。選手売却・放出で黒字化してから開幕してください】'
-    : (safeBudget < 0 ? ' 【注意：週給規模が試合収入見込みを上回っています。過剰補強に注意】' : '');
+    ? ' · 債務超過中（収支改善が必要）'
+    : (safeBudget < 0 ? ' · 週給規模過多（収支超過注意）' : '');
   if (projEl) {
     projEl.textContent =
-      `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） ➜ 実質補強可能予算（安全枠）：${formatMoney(safeBudget)}${deficitWarning}`;
+      `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） / 実質補強予算：${formatMoney(safeBudget)}${deficitWarning}`;
     projEl.className = (playerClub.funds < 0 || safeBudget < 0) ? 'mono text-danger' : 'mono accent-green';
   }
 
@@ -8077,7 +8082,7 @@ function renderSeasonSettlement() {
   if (contractWarnEl) {
     if (expiringPlayers.length > 0) {
       const names = expiringPlayers.map(p => `${p.pos} ${p.name}`).join('、');
-      contractWarnEl.textContent = `【要確認】契約満了選手（${expiringPlayers.length}名）：${names} — 残留させる場合は「所属選手・戦術・契約」タブで「契約延長」を行ってください（未更新のまま開幕するとフリー移籍で退団します）。`;
+      contractWarnEl.textContent = `契約満了選手（${expiringPlayers.length}名）：${names}（未更新で開幕すると自由契約で退団）`;
       contractWarnEl.classList.remove('hidden');
     } else {
       contractWarnEl.textContent = '';
@@ -8909,10 +8914,10 @@ function renderMatchLog() {
   if (panelTitle) panelTitle.textContent = '試合結果・進行ログ';
 
   if (gameState.lastWeekResults.length === 0) {
-    if (subtitle) subtitle.textContent = 'READY FOR KICKOFF';
+    if (subtitle) subtitle.textContent = '開幕直前';
     const nextMatches = gameState.schedule[0] || [];
     container.innerHTML = `
-      <div class="empty-log-message">シーズン開幕前です。「次の試合まで進める」または「日程を進める」でシーズンを開始してください。</div>
+      <div class="empty-log-message">シーズン開幕前</div>
       ${nextMatches.map(m => {
         const home = getClubById(m.homeId);
         const away = getClubById(m.awayId);
@@ -9428,7 +9433,7 @@ function renderTacticsOverview() {
   const tacticDef = TACTICS_DEFINITIONS[currentTactic];
   if (tacticDef) {
     const badge = document.getElementById('current-tactic-badge');
-    if (badge) badge.textContent = tacticDef.badge;
+    if (badge) badge.textContent = typeof getManagerTacticLabel === 'function' ? getManagerTacticLabel(currentTactic) : tacticDef.name;
     const desc = document.getElementById('current-tactic-desc');
     if (desc) desc.textContent = tacticDef.desc;
   }
@@ -9538,7 +9543,7 @@ function renderRoster() {
   if (tacticDef) {
     const badge = document.getElementById('current-tactic-badge');
     const desc = document.getElementById('current-tactic-desc');
-    if (badge) badge.textContent = tacticDef.badge;
+    if (badge) badge.textContent = typeof getManagerTacticLabel === 'function' ? getManagerTacticLabel(currentTactic) : tacticDef.name;
     if (desc) desc.textContent = tacticDef.desc;
   }
 
@@ -9604,11 +9609,11 @@ function renderRoster() {
     let fitBadge = '';
     if (p.isStarter) {
       if (fitInfo.type === 'sub') {
-        fitBadge = '<span class="sub-badge badge-subpos" style="color:#38bdf8;border-color:rgba(56,189,248,0.4);">◯ 薄適性</span>';
+        fitBadge = '<span class="sub-badge badge-subpos" style="color:#38bdf8;border:none;background:none;">薄適性</span>';
       } else if (fitInfo.type === 'semi') {
-        fitBadge = '<span class="sub-badge badge-warn" style="color:#f1c40f;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.15);">△ 近接</span>';
+        fitBadge = '<span class="sub-badge badge-warn" style="color:#f1c40f;border:none;background:none;">近接</span>';
       } else if (fitInfo.type === 'out') {
-        fitBadge = '<span class="sub-badge badge-penalty">✕ 不適</span>';
+        fitBadge = '<span class="sub-badge badge-penalty" style="border:none;background:none;">不適</span>';
       }
     }
     const trainingBadge = p.positionTraining
@@ -9892,7 +9897,7 @@ function renderShortlist() {
     tbody.innerHTML = `
       <tr>
         <td colspan="10" class="empty-log-message" style="text-align: center; padding: 28px;">
-          現在獲得ターゲットに登録されている選手はいません。「選手市場 (MARKET)」タブから気になる選手を「＋ SHORTLIST」で追加してください。
+          獲得ターゲットは未登録です（移籍 > 選手市場から追加）
         </td>
       </tr>
     `;
@@ -10623,7 +10628,7 @@ function renderMarket() {
     tbody.innerHTML = `
       <tr>
         <td colspan="10" class="empty-log-message" style="text-align: center; padding: 24px;">
-          条件に合致する選手が見つかりませんでした。フィルターを変更してください。
+          該当する選手はいません
         </td>
       </tr>
     `;
@@ -10683,7 +10688,7 @@ function renderMarket() {
           scoutBtn = `<button type="button" class="btn btn-secondary btn-sm btn-scout-dispatch mono market-scout-slot-btn" data-scout-player-id="${p.id}" title="スカウトを派遣して能力・契約条件を解明">調査</button>`;
         }
       }
-      const shortlistBtn = `<button type="button" class="btn btn-sm btn-shortlist-toggle btn-shortlist-icon ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? '獲得ターゲット解除' : '獲得ターゲットに追加'}">${inShortlist ? '★' : '☆'}</button>`;
+      const shortlistBtn = `<button type="button" class="btn btn-sm btn-shortlist-toggle btn-shortlist-icon ${inShortlist ? 'is-active' : 'btn-outline'}" data-shortlist-toggle="${p.id}" title="${inShortlist ? '獲得ターゲット解除' : '獲得ターゲットに追加'}">${inShortlist ? '済' : '+'}</button>`;
       actionBtnHtml = `<div class="market-action-group">${scoutBtn}${directOfferBtn}${shortlistBtn}</div>`;
     }
 
@@ -10752,7 +10757,7 @@ function renderYouthSquad() {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" class="empty-log-message" style="text-align: center; padding: 20px;">
-          現在ユースチーム選手はいません。シーズン終了時に新アカデミー生が入団します。
+          ユース所属選手なし（シーズン終了時に新アカデミー生が入団）
         </td>
       </tr>
     `;
@@ -10814,7 +10819,7 @@ function renderYouthScoutingPanel() {
   ).join('');
 
   const tasksHtml = activeTasks.length === 0
-    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">現在派遣中のユーススカウトはありません。数ヶ月単位で派遣すると毎月レポートが届きます。</div>`
+    ? `<div class="mono text-muted" style="font-size: 11px; padding: 6px 0;">派遣中のスカウトなし</div>`
     : activeTasks.map(t => {
         const pct = Math.max(5, Math.min(100, Math.round(((t.totalDays - t.daysRemaining) / Math.max(1, t.totalDays)) * 100)));
         const nextRep = typeof t.daysUntilNextReport === 'number' ? t.daysUntilNextReport : 30;
@@ -10839,7 +10844,7 @@ function renderYouthScoutingPanel() {
   const topFull = (club.players || []).length >= (typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50);
 
   const reportsHtml = reports.length === 0
-    ? `<div class="mono text-muted" style="font-size: 11px; padding: 8px 0;">発掘済みレポートはまだありません。スカウトを派遣すると有望株が報告されます。</div>`
+    ? `<div class="mono text-muted" style="font-size: 11px; padding: 8px 0;">発掘レポートなし</div>`
     : `<div class="youth-reports-grid">${reports.map(y => {
         const ovr = getPlayerOverallRating(y);
         const nat = y.nationality || 'England';
@@ -11233,7 +11238,7 @@ function renderGmDuties() {
       badge: '推奨',
       title: `負傷者交代（${injuredStarters.length}名）`,
       desc: `${injuredStarters[0].fullName || injuredStarters[0].name} らが負傷離脱中`,
-      warningText: '控え選手と交代してください',
+      warningText: '控え選手との交代が必要',
       action: 'goto-pitch'
     };
   } else if (lowTrustManager) {
@@ -11411,8 +11416,8 @@ function renderFacilitiesAndYouth() {
     const sLv = f.stadium || 1;
     const stInfo = typeof getClubStadiumInfo === 'function' ? getClubStadiumInfo(playerClub) : null;
     stadiumBonusEl.textContent = stInfo
-      ? `商業設備 Lv.${sLv}（物販+${(sLv - 1) * 6}%） / ${stInfo.name} ${(stInfo.capacity || 0).toLocaleString()}席`
-      : `Lv.${sLv}（${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)}）`;
+      ? `商業設備 Lv.${sLv} (物販+${(sLv - 1) * 6}%)・${(stInfo.capacity || 0).toLocaleString()}席`
+      : `商業設備 Lv.${sLv} (${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)})`;
   }
   if (gameState.facilitiesSubtab === 'commercial' && typeof renderCommercialManagementPanel === 'function') {
     renderCommercialManagementPanel();
@@ -13353,7 +13358,7 @@ function openPlayerProfileModal(playerId) {
         ${p.negotiationFailed ? '今ウィンドウ交渉決裂済' : '獲得交渉を開く'}
       </button>
       <button type="button" class="btn btn-secondary btn-sm mono" data-profile-shortlist-toggle="${p.id}" style="padding: 8px 14px; font-weight: 700;">
-        ${isInShortlist(p.id) ? '★ 候補済' : '☆ 候補追加'}
+        ${isInShortlist(p.id) ? 'ターゲット登録済' : 'ターゲットに追加'}
       </button>
     </div>`;
   })() : (isMyClubPlayer && !isCandidate && !(p.loanStatus && p.loanStatus.isLoan) ? `
@@ -13664,7 +13669,7 @@ function openPlayerProfileModal(playerId) {
         e.stopPropagation();
         const pid = btnProfileSl.dataset.profileShortlistToggle;
         toggleShortlist(pid);
-        btnProfileSl.textContent = isInShortlist(pid) ? '★ 候補登録済' : '☆ 候補に追加';
+        btnProfileSl.textContent = isInShortlist(pid) ? 'ターゲット登録済' : 'ターゲットに追加';
       });
     }
   }
@@ -16270,7 +16275,7 @@ function renderTacticalManagerBanner() {
   if (!club.manager) {
     container.innerHTML = `
       <div class="manager-banner-inner" style="justify-content: center;">
-        <span class="text-danger mono font-bold">[監督空席] 経営タブの「監督人事」から後任監督を招聘してください</span>
+        <span class="text-danger mono font-bold">監督不在 · 経営 &gt; 監督・指導陣</span>
       </div>
     `;
     return;
@@ -16497,7 +16502,7 @@ function renderManagerManagementPanel() {
     currentCardHtml = `
       <div class="manager-current-card" style="border-color: rgba(231, 76, 60, 0.4); justify-content: center; padding: 24px; text-align: center;">
         <div class="mono text-danger font-bold" style="font-size: 14px; margin-bottom: 12px;">
-          現在、監督が不在（空席）です。後任監督をスカウトして新監督を招聘してください。
+          監督不在 · 後任監督の招聘が必要
         </div>
         <div>
           <button type="button" class="btn btn-primary mono" id="btn-open-change-manager" style="font-weight: 700; padding: 10px 24px; font-size: 14px;">
@@ -16866,7 +16871,7 @@ function sackCurrentManager() {
   if (!gameState.freeManagers) gameState.freeManagers = [];
   gameState.freeManagers.push(sacked);
 
-  addDailyLog(`[監督人事] ${sacked.name}監督を解任しました（違約金: £${fee.toLocaleString()}k）`);
+  addDailyLog(`【監督人事】${sacked.name}監督を解任しました（違約金: £${fee.toLocaleString()}k）`);
   renderAll();
   return true;
 }
@@ -17207,9 +17212,9 @@ function hireCoach(category, slotIndex, coachId) {
 
   if (oldCoach) {
     gameState.freeCoaches[category].push(oldCoach);
-    addDailyLog(`[指導陣交代] ${oldCoach.name}コーチとの契約を終了し、${newCoach.name}コーチ（${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+    addDailyLog(`【指導陣交代】${oldCoach.name}コーチとの契約を終了し、${newCoach.name}コーチ（${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
   } else {
-    addDailyLog(`[指導陣招聘] ${newCoach.name}コーチ（${newCoach.roleLabel} / ${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
+    addDailyLog(`【指導陣招聘】${newCoach.name}コーチ（${newCoach.roleLabel} / ${newCoach.specialty || '専門'}）と新規契約しました（週給: £${newCoach.weeklyWage}k）`);
   }
 
   renderAll();
@@ -17237,7 +17242,7 @@ function sackCoach(category, slotIndex) {
   if (!Array.isArray(gameState.freeCoaches[category])) gameState.freeCoaches[category] = [];
   gameState.freeCoaches[category].push(targetCoach);
 
-  addDailyLog(`[指導陣解任] ${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しました。`);
+  addDailyLog(`【指導陣解任】${targetCoach.name}コーチ（${targetCoach.roleLabel}）を解任しました。`);
   renderAll();
 }
 
@@ -17793,7 +17798,7 @@ function renderSeasonSchedule() {
         <div class="fixture-right-col">
           <span class="fixture-result-badge ${resClass}">${resLabel}</span>
           <span class="fixture-score-text">${match.homeScore} - ${match.awayScore}</span>
-          <span class="fixture-replay-hint mono">サマリー ➔</span>
+          <span class="fixture-replay-hint mono">サマリー →</span>
         </div>
       `;
     } else if (isNext) {
@@ -18542,7 +18547,7 @@ function renderFixtureScoutingModal({ titleText, match, playerClub, oppClub, isH
         <td>
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-weight:${isKey ? '800' : '500'}; color:${isKey ? '#ffffff' : '#cbd5e1'};">${p.name}</span>
-            ${isKey ? '<span class="scout-key-badge">★ KEY</span>' : ''}
+            ${isKey ? '<span class="scout-key-badge">主力</span>' : ''}
           </div>
         </td>
         <td class="mono" style="color:var(--text-muted); width:44px;">${p.age}歳</td>
@@ -19296,7 +19301,7 @@ function renderBoardPsrSponsorPanel(club) {
     <div class="board-psr-grid">
       <div class="board-psr-card">
         <div class="board-sponsor-head">
-          <div class="board-psr-title mono" style="margin-bottom:0;">SPONSORSHIP / スポンサー契約</div>
+          <div class="board-psr-title mono" style="margin-bottom:0;">スポンサー契約</div>
           <button type="button" class="btn-sponsor-manage mono" id="btn-open-sponsor-select-panel">${hasOpenSlot ? '契約を選定' : '契約確認'}</button>
         </div>
         <div class="board-sponsor-rows">${singleRowsHtml}${partnerRowHtml}</div>
@@ -19306,13 +19311,13 @@ function renderBoardPsrSponsorPanel(club) {
         </div>
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono">PSR / 3年累積財務規律</div>
+        <div class="board-psr-title mono">PSR財務規律（3年累積）</div>
         <div class="board-psr-main mono ${psr.isBreach ? 'text-danger' : 'accent-green'}">${formatMoney(psr.total3YrNet)}</div>
         <div class="board-psr-sub mono">許容赤字上限: ${formatMoney(typeof PSR_MAX_3YR_DEFICIT !== 'undefined' ? PSR_MAX_3YR_DEFICIT : -35000)}</div>
         <div class="board-psr-sub">状態: ${sanctionText}</div>
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono">BOARD / 理事会信頼度 & クラブ格</div>
+        <div class="board-psr-title mono">理事会評価・クラブ格</div>
         <div class="board-psr-main mono ${conf >= 60 ? 'accent-green' : (conf >= 35 ? 'accent-gold' : 'text-danger')}">${conf}%</div>
         <div class="board-psr-sub mono">今季目標順位: ${targetRank}位以内</div>
         <div class="board-psr-sub mono">クラブ格(Rep): ${club.reputation || 4000}</div>
@@ -19566,7 +19571,7 @@ function openBoardCrisisModal() {
   const offerBtns = d2Clubs.map(c => `
     <button type="button" class="btn btn-primary btn-sm mono" data-restart-club-id="${c.id}" style="width:100%; margin-bottom:8px; justify-content:space-between; display:flex;">
       <span>${c.name} (ENG-D2)</span>
-      <span>GM就任へ ➔</span>
+      <span>就任へ →</span>
     </button>
   `).join('');
 
@@ -19579,7 +19584,7 @@ function openBoardCrisisModal() {
       ${offerBtns}
     </div>
     <button type="button" class="btn btn-danger btn-sm mono" id="btn-board-crisis-retire" style="width:100%;">
-      キャリア終了（ゲームオーバー）
+      GM契約解除・退任
     </button>
   `;
 
@@ -20051,8 +20056,8 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
     senderName: `${mgr.name} 監督`,
     title: `補強への謝意：${signedPlayer.name} の加入を歓迎`,
     body: isRecommended
-      ? `私が推薦した ${signedPlayer.name}（${signedPlayer.pos} / OVR ${ovr}）の獲得に尽力いただきありがとうございます。構想に完璧に合致する戦力です。（監督信頼度 +${trustBonus} ➔ ${mgr.trust}%）`
-      : `要望していた ${matchedPos} への ${signedPlayer.name}（OVR ${ovr}）獲得ありがとうございます。チーム競争力と層の厚みが大きく改善しました。（監督信頼度 +${trustBonus} ➔ ${mgr.trust}%）`,
+      ? `私が推薦した ${signedPlayer.name}（${signedPlayer.pos} / OVR ${ovr}）の獲得に尽力いただきありがとうございます。構想に完璧に合致する戦力です。（監督信頼度 +${trustBonus} → ${mgr.trust}%）`
+      : `要望していた ${matchedPos} への ${signedPlayer.name}（OVR ${ovr}）獲得ありがとうございます。チーム競争力と層の厚みが大きく改善しました。（監督信頼度 +${trustBonus} → ${mgr.trust}%）`,
     actionType: 'goto-pitch',
     actionLabel: '作戦ボードで起用'
   });
@@ -20061,7 +20066,7 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
     const wishDetailRows = [
       `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">加入選手</span><span class="gm-modal-flat-val accent-green">${escapeCommHtml(signedPlayer.name)} (${escapeCommHtml(signedPlayer.pos)} / OVR ${ovr})</span></div>`,
       `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">達成項目</span><span class="gm-modal-flat-val">${escapeCommHtml(bonusLabel)}</span></div>`,
-      `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督信頼度 (${escapeCommHtml(mgr.name)})</span><span class="gm-modal-flat-val accent-green">+${trustBonus} ➔ ${mgr.trust}%</span></div>`
+      `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督信頼度 (${escapeCommHtml(mgr.name)})</span><span class="gm-modal-flat-val accent-green">+${trustBonus} → ${mgr.trust}%</span></div>`
     ];
     showSecretaryModal({
       topic: '監督補強要望の達成',
@@ -24074,7 +24079,7 @@ function renderCommercialManagementPanel() {
 
   const setupPromptText = pendingBuildCostK > 0
     ? `計画中: ${escapeCommHtml(proj.stadium.name)}（確定時に建設費 -${formatMoney(pendingBuildCostK)} を精算 / 確定後変更不可）`
-    : '今シーズンのスタジアム・チケット価格・グッズ展開を決定してください（確定後は今季終了まで変更できません）';
+    : '今季興行計画 · 確定後はシーズン終了まで変更不可';
 
   const setupBannerHtml = gameState.pendingCommercialSetup
     ? `
@@ -24305,7 +24310,7 @@ function renderCommercialManagementPanel() {
     bodyHtml = `
       <div class="commercial-seatmap-wrap">
         ${seatMapSvg}
-        <span class="commercial-row-sub">来場上限は現在サポーター数（${proj.supporters.toLocaleString()}人）です。値下げだけでサポーター数以上に席は埋まりません。</span>
+        <span class="commercial-row-sub">来場上限: サポーター数 ${proj.supporters.toLocaleString()}人（座席エリアクリックで該当行を強調）</span>
       </div>
       <div class="commercial-preset-bar">
         <span class="commercial-row-sub">価格方針プリセット${locked ? '（確定済みのため変更不可）' : ''}</span>
@@ -24356,7 +24361,7 @@ function renderCommercialManagementPanel() {
 
     bodyHtml = `
       <div class="commercial-preset-bar">
-        <span class="commercial-row-sub">${locked ? '確定済みのため品揃え・価格は変更できません' : '来場者規模に合わせて固定費負けしない商品を選定してください（赤字商品はOFF推奨）'}</span>
+        <span class="commercial-row-sub">${locked ? '確定済みのため変更不可' : '品目別収支バランス（固定費＋原価）'}</span>
         <div class="commercial-preset-actions">
           <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe" ${disabledAttr}>堅実構成</button>
           <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced" ${disabledAttr}>黒字のみ自動</button>
