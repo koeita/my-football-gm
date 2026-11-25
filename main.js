@@ -2183,24 +2183,47 @@ function triggerYouthAwakeningEvent() {
       SoundEngine.playSfx('jingle_awaken');
     }
     renderAll();
-    if (typeof showConsultationReplyModal === 'function') {
-      const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
-      const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
-      showConsultationReplyModal({
-        speaker: {
-          kind: 'player',
-          person: youth,
-          name: youthDisplayName,
-          roleLabel: `U-21 ${youth.pos}`,
-          club: playerClub
-        },
-        topic: 'ユース覚醒報告',
-        title: `${youthDisplayName} の返答`,
-        soundKey: 'none',
-        speech: intensive
-          ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
-          : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
-      });
+    const showReplyAfterBreakthrough = () => {
+      if (typeof showConsultationReplyModal === 'function') {
+        const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
+        const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
+        showConsultationReplyModal({
+          speaker: {
+            kind: 'player',
+            person: youth,
+            name: youthDisplayName,
+            roleLabel: `U-21 ${youth.pos}`,
+            club: playerClub
+          },
+          topic: 'ユース覚醒報告',
+          title: `${youthDisplayName} の返答`,
+          soundKey: 'none',
+          speech: intensive
+            ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
+            : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
+        });
+      }
+    };
+    if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+      CinematicOverlay.enqueue({
+        type: 'player_breakthrough',
+        tier: 'normal',
+        theme: 'green',
+        eyebrow: 'PLAYER BREAKTHROUGH',
+        title: `${youthDisplayName} 才能開花`,
+        subtitle: res.gainedTrait ? `新特徴「${res.gainedTrait}」習得` : 'U-21アカデミー急成長',
+        player: youth,
+        club: playerClub,
+        metrics: [
+          { label: 'POS', value: youth.pos || 'MF' },
+          { label: 'OVR', value: `${res.beforeOvr} → ${res.afterOvr}`, tone: 'green' },
+          { label: 'POT', value: res.afterPot, tone: 'gold' }
+        ],
+        sfx: null,
+        durationMs: 2500
+      }, showReplyAfterBreakthrough);
+    } else {
+      showReplyAfterBreakthrough();
     }
   };
 
@@ -3223,8 +3246,59 @@ function processSeasonEnd(isSkipped = false) {
   };
 
   switchTab('market');
-  if (!isSkipped && playerRank === 1 && typeof SoundEngine !== 'undefined' && SoundEngine) {
+  const seasonDivLabel = wasInD2 ? 'ENG-D2' : 'ENG-D1';
+  let playedVictoryCin = false;
+  if (!isSkipped && playerRank === 1 && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    playedVictoryCin = CinematicOverlay.enqueue({
+      type: 'trophy_championship',
+      tier: 'major',
+      theme: 'gold',
+      trophyType: 'league',
+      eyebrow: `${seasonDivLabel} リーグ優勝`,
+      title: `${playerClub.name} リーグ制覇`,
+      subtitle: `${gameState.season}年目シーズン 第1位フィニッシュ`,
+      club: playerClub,
+      metrics: [
+        { label: '最終順位', value: '1位', tone: 'gold' },
+        { label: '賞金収入', value: `+${formatMoney(playerPrize)}`, tone: 'green' }
+      ],
+      confetti: true,
+      sfx: 'jingle_victory',
+      durationMs: 3600
+    });
+  }
+  if (!playedVictoryCin && !isSkipped && playerRank === 1 && typeof SoundEngine !== 'undefined' && SoundEngine) {
     SoundEngine.playSfx('jingle_victory');
+  }
+
+  if (!isSkipped && seasonAwardsObj && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    const seasonAwardTargets = [
+      { item: seasonAwardsObj.mvp, code: 'MVP', title: '年間MVP受賞' },
+      { item: seasonAwardsObj.topScorer, code: 'TOP_SCORER', title: 'リーグ得点王' },
+      { item: seasonAwardsObj.youngPlayer, code: 'YOUNG_PLAYER', title: '最優秀若手選手' }
+    ].filter(a => a.item && a.item.isPlayerClub);
+    if (seasonAwardTargets.length > 0) {
+      const topAw = seasonAwardTargets[0];
+      const foundPl = (typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(topAw.item.playerId)) || { player: { id: topAw.item.playerId, name: topAw.item.playerName, pos: topAw.item.pos, ...topAw.item.avatarSpec }, club: playerClub };
+      CinematicOverlay.enqueue({
+        type: 'individual_award',
+        tier: 'major',
+        theme: 'gold',
+        awardCode: topAw.code,
+        eyebrow: `${seasonDivLabel} シーズン個人賞`,
+        title: `${topAw.item.playerName} ${topAw.title}`,
+        subtitle: `${playerClub.name} · ${gameState.season}年目シーズン`,
+        player: foundPl.player,
+        club: playerClub,
+        metrics: [
+          { label: '出場', value: `${topAw.item.apps || 0}試合` },
+          { label: '得点 / アシスト', value: `${topAw.item.goals || 0}G ${topAw.item.assists || 0}A`, tone: 'green' },
+          { label: '平均評価', value: String(topAw.item.avgRating || '-'), tone: 'gold' }
+        ],
+        sfx: 'jingle_awaken',
+        durationMs: 2800
+      });
+    }
   }
 
   // 昇降格判定の実行（実際の1部・2部クラブ入れ替えは新シーズン開幕時に実施し、オフシーズン中は今季の最終順位表を保持する）
@@ -3233,6 +3307,23 @@ function processSeasonEnd(isSkipped = false) {
     ? evaluatePromotionAndRelegation()
     : ((typeof processPromotionAndRelegation === 'function') ? processPromotionAndRelegation() : null);
   if (promoRelResult && promoRelResult.isPlayerRelegated) {
+    if (!isSkipped && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+      CinematicOverlay.enqueue({
+        type: 'division_change',
+        tier: 'major',
+        theme: 'crimson',
+        eyebrow: 'ENG-D2 降格決定',
+        title: `${playerClub.name} 2部降格`,
+        subtitle: `ENG-D1 最終順位 ${playerRank}位`,
+        club: playerClub,
+        metrics: [
+          { label: '来季リーグ', value: 'ENG-D2', tone: 'red' },
+          { label: '目標', value: '1年での1部復帰' }
+        ],
+        sfx: 'sfx_alert',
+        durationMs: 3000
+      });
+    }
     showGmModal({
       allowDuringSkip: true,
       soundKey: 'sfx_alert',
@@ -3251,6 +3342,24 @@ function processSeasonEnd(isSkipped = false) {
       ]
     });
   } else if (promoRelResult && promoRelResult.isPlayerPromoted) {
+    if (!isSkipped && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+      CinematicOverlay.enqueue({
+        type: 'division_change',
+        tier: 'major',
+        theme: 'gold',
+        eyebrow: 'ENG-D1 昇格決定',
+        title: `${playerClub.name} 1部昇格`,
+        subtitle: `ENG-D2 ${playerRank}位で昇格権獲得`,
+        club: playerClub,
+        metrics: [
+          { label: '来季リーグ', value: 'ENG-D1', tone: 'gold' },
+          { label: '最終順位', value: `${playerRank}位`, tone: 'green' }
+        ],
+        confetti: true,
+        sfx: playedVictoryCin ? null : 'jingle_victory',
+        durationMs: 3200
+      });
+    }
     showGmModal({
       allowDuringSkip: true,
       soundKey: 'jingle_victory',
@@ -4562,7 +4671,26 @@ function submitNegotiationOffer() {
           highlight: true
         });
       }
-      if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+      const renewalOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(target) : '-';
+      const renewalWage = formatWage(Math.max(5, Math.round(session.offeredSalary / 52)));
+      const playedRenewalCin = typeof CinematicOverlay !== 'undefined' && CinematicOverlay && CinematicOverlay.enqueue({
+        type: 'contract_renewal',
+        tier: 'normal',
+        theme: 'gold',
+        eyebrow: 'CONTRACT RENEWAL',
+        title: `${target.name} 契約更新`,
+        subtitle: `${playerClub.name}との新契約にサイン`,
+        player: target,
+        club: playerClub,
+        metrics: [
+          { label: '残契約', value: `${newContractYears}年`, tone: 'gold' },
+          { label: '新週給', value: renewalWage },
+          { label: 'OVR', value: String(renewalOvr), tone: 'green' }
+        ],
+        sfx: 'sfx_deal',
+        durationMs: 2400
+      });
+      if (!playedRenewalCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
       renderNegotiationModal();
       renderAll();
       return;
@@ -4915,6 +5043,51 @@ function acceptCpuCounterOffer(offerId) {
   renderAll();
 }
 
+function triggerPlayerDepartureCinematic(playerClub, player, eyebrowText, subtitleText, feeLabel, feeValue, feeTone = 'gold') {
+  if (typeof CinematicOverlay === 'undefined' || !CinematicOverlay || !player) return false;
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : '-';
+  return CinematicOverlay.enqueue({
+    type: 'player_departure',
+    tier: 'normal',
+    theme: 'slate',
+    eyebrow: eyebrowText,
+    title: `${player.name} 退団`,
+    subtitle: subtitleText,
+    player,
+    club: playerClub,
+    metrics: [
+      { label: 'POS', value: player.pos || 'MF' },
+      { label: 'OVR', value: String(ovr) },
+      { label: feeLabel, value: feeValue, tone: feeTone }
+    ],
+    sfx: 'sfx_applause',
+    durationMs: 2200
+  });
+}
+
+function triggerYouthPromotionCinematic(playerClub, player, yearsCount, wageVal) {
+  if (typeof CinematicOverlay === 'undefined' || !CinematicOverlay || !player) return false;
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : '-';
+  const pot = player.potential || player.potentialGrade || 'B';
+  return CinematicOverlay.enqueue({
+    type: 'youth_promotion',
+    tier: 'major',
+    theme: 'green',
+    eyebrow: 'ACADEMY PROMOTION',
+    title: `${player.name} トップ昇格`,
+    subtitle: `${playerClub ? playerClub.name : ''} U-21アカデミーからプロ契約`,
+    player,
+    club: playerClub,
+    metrics: [
+      { label: '背番号 / POS', value: `#${player.squadNumber || '-'} ${player.pos || 'MF'}` },
+      { label: 'OVR / POT', value: `${ovr} / ${pot}`, tone: 'gold' },
+      { label: '契約 / 週給', value: `${yearsCount}年 · ${formatWage(wageVal)}`, tone: 'green' }
+    ],
+    sfx: 'jingle_awaken',
+    durationMs: 2600
+  });
+}
+
 function completeOutgoingTransferSigning(offerId) {
   if (gameState.isGameOver || gameState.isSimulating) return;
   const playerClub = getPlayerClub();
@@ -5000,7 +5173,26 @@ function completeOutgoingTransferSigning(offerId) {
 
     offer.status = 'signed';
     addDailyLog(`【事前合意締結完了】${target.pos} ${target.name} と来シーズンの事前合意（ボスマン移籍）を締結しました！来季7月1日付で正式合流（内定済）となります。`);
-    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+    const preOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(target) : 70;
+    const isStarPre = Number(preOvr) >= 82;
+    const playedPreCin = typeof CinematicOverlay !== 'undefined' && CinematicOverlay && CinematicOverlay.enqueue({
+      type: 'player_signing',
+      tier: 'major',
+      theme: isStarPre ? 'gold' : 'green',
+      eyebrow: 'PRE-CONTRACT SIGNED',
+      title: `${target.name} 来季加入内定`,
+      subtitle: `${playerClub.name} へ来季7月1日合流`,
+      player: target,
+      club: playerClub,
+      metrics: [
+        { label: 'POS / 年齢', value: `${target.pos || 'MF'} · ${target.age || '-'}歳` },
+        { label: 'OVR', value: String(preOvr), tone: isStarPre ? 'gold' : 'green' },
+        { label: '契約年数', value: `${offer.offeredYears || 3}年` }
+      ],
+      sfx: isStarPre ? 'jingle_awaken' : 'sfx_deal',
+      durationMs: 2600
+    });
+    if (!playedPreCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -5229,7 +5421,31 @@ function completeOutgoingTransferSigning(offerId) {
     checkAndRewardManagerWishOnSigning(target, dealType);
   }
 
-  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+  const signedOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(target) : 70;
+  const isStarSign = Number(signedOvr) >= 82;
+  const signEyebrow = dealType === 'loan' ? 'LOAN SIGNING' : (dealType === 'free_agent' ? 'FREE TRANSFER' : 'NEW SIGNING');
+  const signMetricLbl = dealType === 'loan' ? 'レンタル負担' : '移籍金';
+  const signMetricVal = dealType === 'loan'
+    ? `週給 ${offer.loanCoveragePercent || 100}%`
+    : (dealType === 'free_agent' ? '£0 (無所属)' : formatMoney(offer.offeredFee || 0));
+  const playedSignCin = typeof CinematicOverlay !== 'undefined' && CinematicOverlay && CinematicOverlay.enqueue({
+    type: 'player_signing',
+    tier: 'major',
+    theme: isStarSign ? 'gold' : 'green',
+    eyebrow: signEyebrow,
+    title: `${target.name} 加入決定`,
+    subtitle: `${playerClub.name} 新背番号 #${target.squadNumber || '-'}`,
+    player: target,
+    club: playerClub,
+    metrics: [
+      { label: 'POS / OVR', value: `${target.pos || 'MF'} · ${signedOvr}`, tone: isStarSign ? 'gold' : 'green' },
+      { label: signMetricLbl, value: signMetricVal, tone: 'gold' },
+      { label: '契約', value: `${target.contractYears || offer.offeredYears || 1}年` }
+    ],
+    sfx: isStarSign ? 'jingle_awaken' : 'sfx_deal',
+    durationMs: isStarSign ? 3000 : 2500
+  });
+  if (!playedSignCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -5601,7 +5817,8 @@ function acceptIncomingOffer(offerId) {
     ensureValidSquadAndStarters(playerClub);
 
     addDailyLog(`【レンタル放出】#${target.squadNumber || '-'} ${target.name} が ${offer.buyerClubName} への1年間期限付き移籍（レンタル放出）へ旅立ちました！給与は全額相手負担で、シーズン終了後に急成長して復帰します。`);
-    if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+    const playedLoanOutCin = triggerPlayerDepartureCinematic(playerClub, target, 'LOAN DEPARTURE', `${offer.buyerClubName} へ期限付き移籍`, '期間', '1年レンタル', '');
+    if (!playedLoanOutCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
     updateMarketBadges();
     renderAll();
     return;
@@ -5631,7 +5848,8 @@ function acceptIncomingOffer(offerId) {
     });
   }
 
-  if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+  const playedSellCin = triggerPlayerDepartureCinematic(playerClub, target, 'TRANSFER DEPARTURE', `${offer.buyerClubName} へ完全移籍`, '売却益', `+${formatMoney(saleFee)}`, 'green');
+  if (!playedSellCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
   updateMarketBadges();
   renderAll();
 }
@@ -6008,6 +6226,7 @@ function acceptIncomingOfferModal() {
   }
 
   closeIncomingOfferModal();
+  triggerPlayerDepartureCinematic(playerClub, target, 'TRANSFER DEPARTURE', `${offer.buyerClubName} へ完全移籍`, '売却益', `+${formatMoney(offer.offerFee || 0)}`, 'green');
   updateMarketBadges();
   renderAll();
 }
@@ -6170,6 +6389,7 @@ function promoteYouthPlayer(youthId) {
   ensureValidSquadAndStarters(playerClub);
 
   addDailyLog(`【U-21アカデミー昇格】${youth.pos} #${youth.squadNumber} ${youth.name} がプロ契約締結（初回契約金 £40k / 週給 ${formatWage(youth.wage)} / 3年契約）`);
+  triggerYouthPromotionCinematic(playerClub, youth, 3, youth.wage);
 
   renderAll();
   return true;
@@ -6279,6 +6499,7 @@ function releaseRosterPlayer(playerId) {
   if (typeof addDailyLog === 'function') {
     addDailyLog(`【自由契約・退団】#${target.squadNumber || '-'} ${target.name} が自由契約となり、フリー市場へ移籍可能選手として登録されました。`);
   }
+  triggerPlayerDepartureCinematic(playerClub, target, 'CONTRACT TERMINATED', `${playerClub.name} を自由契約で退団`, '状態', 'フリー移籍', '');
 
   ensureValidSquadAndStarters(playerClub);
   renderAll();
@@ -6385,6 +6606,7 @@ function promoteYouthCandidate(candidateId) {
   const msg = `【ユース昇格完了】${prospect.pos} ${prospect.name}（${prospect.age}歳 / OVR ${getPlayerOverallRating(prospect)}）とプロ契約（移籍金 £0・年俸 £800K）を締結しトップチームへ登録しました。`;
   gameState.facilityFeedback = msg;
   addDailyLog(msg);
+  triggerYouthPromotionCinematic(playerClub, prospect, 4, prospect.wage);
   renderAll();
 }
 
@@ -16936,28 +17158,50 @@ function hireNewManager(managerId) {
     });
   }
   renderAll();
-  if (typeof showSecretaryModal === 'function') {
-    const wishPos = newMgrWish && Array.isArray(newMgrWish.positions) && newMgrWish.positions.length > 0
-      ? newMgrWish.positions.join('・')
-      : 'スカッド全体の調整';
-    showSecretaryModal({
-      topic: '新監督就任報告',
-      title: `${newMgr.name} 監督が就任`,
-      speech: `GM、${newMgr.name}監督（得意: ${newMgr.preferredFormation} / ${tacticLabel}）との契約が完了しました。新体制の初動として「${wishPos}」の補強要望を受け取っています。`,
-      detailHtml: buildWishModalDetailHtml(club, newMgrWish),
-      actions: [
-        {
-          label: '移籍市場を見る',
-          className: 'btn btn-secondary',
-          onClick: () => { if (typeof switchTab === 'function') switchTab('market'); }
-        },
-        {
-          label: '承知した',
-          className: 'btn btn-primary',
-          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
-        }
-      ]
-    });
+  const openMgrBriefing = () => {
+    if (typeof showSecretaryModal === 'function') {
+      const wishPos = newMgrWish && Array.isArray(newMgrWish.positions) && newMgrWish.positions.length > 0
+        ? newMgrWish.positions.join('・')
+        : 'スカッド全体の調整';
+      showSecretaryModal({
+        topic: '新監督就任報告',
+        title: `${newMgr.name} 監督が就任`,
+        speech: `GM、${newMgr.name}監督（得意: ${newMgr.preferredFormation} / ${tacticLabel}）との契約が完了しました。新体制の初動として「${wishPos}」の補強要望を受け取っています。`,
+        detailHtml: buildWishModalDetailHtml(club, newMgrWish),
+        actions: [
+          {
+            label: '移籍市場を見る',
+            className: 'btn btn-secondary',
+            onClick: () => { if (typeof switchTab === 'function') switchTab('market'); }
+          },
+          {
+            label: '承知した',
+            className: 'btn btn-primary',
+            onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+          }
+        ]
+      });
+    }
+  };
+  if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    CinematicOverlay.enqueue({
+      type: 'manager_appointed',
+      tier: 'major',
+      theme: 'green',
+      eyebrow: 'NEW MANAGER APPOINTED',
+      title: `${newMgr.name} 監督就任`,
+      subtitle: `${club.name} 新指揮官`,
+      club,
+      metrics: [
+        { label: '監督ランク', value: `Rank ${newMgr.rank || 'B'}`, tone: 'gold' },
+        { label: '得意戦術', value: tacticLabel },
+        { label: '基本陣形', value: newMgr.preferredFormation || '4-3-3', tone: 'green' }
+      ],
+      sfx: 'sfx_deal',
+      durationMs: 2600
+    }, openMgrBriefing);
+  } else {
+    openMgrBriefing();
   }
   return true;
 }
@@ -19184,7 +19428,27 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
       }
 
       if (signedNames.length > 0) {
-        if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+        const hasPrimarySlot = st.editableSet.has('chest') || st.editableSet.has('stadium');
+        let playedSponsorCin = false;
+        if ((hasPrimarySlot || totalAddedAnnual >= 5000) && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+          playedSponsorCin = CinematicOverlay.enqueue({
+            type: 'sponsor_deal',
+            tier: 'normal',
+            theme: 'gold',
+            eyebrow: 'PARTNERSHIP DEAL',
+            title: `${st.club.name} スポンサー契約締結`,
+            subtitle: signedNames.slice(0, 2).join(' · '),
+            club: st.club,
+            metrics: [
+              { label: '基本年額合計', value: `+${formatMoney(totalAddedAnnual)}/年`, tone: 'gold' },
+              { label: '契約一時金', value: totalSigningBonus > 0 ? `+${formatMoney(totalSigningBonus)}` : '£0', tone: totalSigningBonus > 0 ? 'green' : '' },
+              { label: '契約件数', value: `${signedNames.length}件` }
+            ],
+            sfx: 'sfx_deal',
+            durationMs: 2400
+          });
+        }
+        if (!playedSponsorCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
         const signNote = totalSigningBonus > 0 ? ` / 契約一時金 +${formatMoney(totalSigningBonus)}` : '';
         addDailyLog(`【スポンサー契約締結】${signedNames.join(' / ')}（基本年額計 ${formatMoney(totalAddedAnnual)}${signNote}）と合意しました。`);
         if (typeof addNewsItem === 'function') {
@@ -23222,6 +23486,29 @@ function evaluateMonthlyMvpAward(reportYear, reportMonth, dayObj) {
 
 function showMonthlyMvpAwardModal(monthlyMvp) {
   if (!monthlyMvp || typeof showGmModal !== 'function') return;
+  if (monthlyMvp.isPlayerClub && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    const clubObjCin = typeof getClubById === 'function' ? getClubById(monthlyMvp.clubId) : getPlayerClub();
+    const playerCin = (typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(monthlyMvp.playerId)?.player)
+      || { id: monthlyMvp.playerId, name: monthlyMvp.playerName, pos: monthlyMvp.pos, ...monthlyMvp.avatarSpec };
+    CinematicOverlay.enqueue({
+      type: 'individual_award',
+      tier: 'major',
+      theme: 'gold',
+      awardCode: `MONTHLY_MVP_${monthlyMvp.year}_${monthlyMvp.month}`,
+      eyebrow: `${monthlyMvp.divisionLabel || 'ENG-D1'} ${monthlyMvp.month}月度MVP`,
+      title: `${monthlyMvp.playerName} 月間MVP受賞`,
+      subtitle: monthlyMvp.clubName || '',
+      player: playerCin,
+      club: clubObjCin,
+      metrics: [
+        { label: '出場', value: `${monthlyMvp.apps}試合` },
+        { label: '得点 / アシスト', value: `${monthlyMvp.goals}G ${monthlyMvp.assists}A`, tone: 'green' },
+        { label: '平均評価', value: String(monthlyMvp.avgRating || '-'), tone: 'gold' }
+      ],
+      sfx: 'jingle_awaken',
+      durationMs: 2600
+    });
+  }
   const clubObj = typeof getClubById === 'function' ? getClubById(monthlyMvp.clubId) : null;
   const avatarHtml = renderAwardPlayerAvatarHtml(
     monthlyMvp.playerId,
@@ -24035,6 +24322,27 @@ function confirmCommercialSetupTask() {
     addDailyLog(`【興行計画確定】${proj.stadium.name}（${proj.totalCapacity.toLocaleString()}席 / 予想来場 ${proj.totalAttendance.toLocaleString()}人${costNote}）にて今季の興行設定を確定しました（1試合予想純収益 ${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)} · シーズン中変更不可）。`);
   }
   renderAll();
+  if (buildCostK > 0 && proj && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    CinematicOverlay.enqueue({
+      type: 'stadium_inauguration',
+      tier: 'major',
+      theme: 'gold',
+      eyebrow: 'NEW STADIUM INAUGURATION',
+      title: `${proj.stadium.name} 落成`,
+      subtitle: `${playerClub.name} 新本拠地決定`,
+      club: playerClub,
+      stadiumId: targetStadiumId,
+      stadiumLv: (gameState.facilities && gameState.facilities.stadium) || 1,
+      metrics: [
+        { label: '収容席数', value: `${proj.totalCapacity.toLocaleString()}席`, tone: 'green' },
+        { label: '建設投資額', value: formatMoney(buildCostK), tone: 'gold' },
+        { label: '1試合純収益目安', value: `${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)}` }
+      ],
+      confetti: true,
+      sfx: 'jingle_victory',
+      durationMs: 3200
+    });
+  }
   if (typeof saveGameToStorage === 'function') saveGameToStorage(true);
 }
 

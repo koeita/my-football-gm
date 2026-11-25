@@ -116,7 +116,8 @@ const appSettings = {
   seVolume: 80,
   autoSaveEnabled: true,
   matchSpeed: 2,
-  autoHalftimeResume: false
+  autoHalftimeResume: false,
+  cinematicMode: 'all'
 };
 
 function loadSettingsFromStorage() {
@@ -131,6 +132,7 @@ function loadSettingsFromStorage() {
       if (typeof parsed.autoSaveEnabled === 'boolean') appSettings.autoSaveEnabled = parsed.autoSaveEnabled;
       if (typeof parsed.matchSpeed === 'number') appSettings.matchSpeed = parsed.matchSpeed;
       if (typeof parsed.autoHalftimeResume === 'boolean') appSettings.autoHalftimeResume = parsed.autoHalftimeResume;
+      if (parsed.cinematicMode === 'all' || parsed.cinematicMode === 'major' || parsed.cinematicMode === 'off') appSettings.cinematicMode = parsed.cinematicMode;
     }
   } catch (e) {}
   if (typeof SoundEngine !== 'undefined' && SoundEngine && typeof SoundEngine.syncFromSettings === 'function') {
@@ -1409,6 +1411,8 @@ function openSettingsModal() {
   if (speedSelect) speedSelect.value = String(appSettings.matchSpeed || 2);
   if (autoHtCheck) autoHtCheck.checked = Boolean(appSettings.autoHalftimeResume);
   if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
+  const cinematicSelect = document.getElementById('setting-cinematic-mode');
+  if (cinematicSelect) cinematicSelect.value = appSettings.cinematicMode || 'all';
   const mainMenuEl = document.getElementById('main-menu-screen');
   const isOnMainMenu = Boolean(mainMenuEl && !mainMenuEl.classList.contains('hidden'));
   const titleReturnRow = overlay ? overlay.querySelector('.settings-title-return-row') : null;
@@ -1657,6 +1661,15 @@ function initMainMenuAndModals() {
     autoHtCheck.addEventListener('change', (e) => {
       appSettings.autoHalftimeResume = !!e.target.checked;
       if (autoHtLabel) autoHtLabel.textContent = appSettings.autoHalftimeResume ? 'ENABLED' : 'OFF';
+      saveSettingsToStorage();
+    });
+  }
+
+  const cinematicSelect = document.getElementById('setting-cinematic-mode');
+  if (cinematicSelect) {
+    cinematicSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      appSettings.cinematicMode = (val === 'major' || val === 'off') ? val : 'all';
       saveSettingsToStorage();
     });
   }
