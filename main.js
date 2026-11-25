@@ -21440,11 +21440,6 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
       `,
       actions: [
         {
-          label: '経営・財務を確認',
-          className: 'btn btn-secondary',
-          onClick: () => { if (typeof switchTab === 'function') switchTab('facilities'); }
-        },
-        {
           label: '定例会を完了する',
           className: 'btn btn-primary',
           onClick: () => { if (typeof renderAll === 'function') renderAll(); }

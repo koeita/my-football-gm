@@ -523,6 +523,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             '.gm-modal-sec-avatar-wrap.is-player-clickable',
         ]:
             self.assertIn(css_sel, self.css)
+        self.assertNotIn('経営・財務を確認', self.main_js)
 
 
 if __name__ == '__main__':
