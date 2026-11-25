@@ -5360,12 +5360,12 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 }
 
 .weekly-schedule-track .day-card.is-day-sliding {
-  animation: weeklyDaySlideIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: weeklyDaySlideIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform;
 }
 
 .weekly-schedule-track .day-card.is-day-sliding:last-child {
-  animation: weeklyDayFadeSlideIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: weeklyDayFadeSlideIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -13395,15 +13395,16 @@ button.hidden,
 
 .calendar-weekdays-row {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
   text-align: center;
   padding: 4px 0;
   font-size: 11px;
   font-weight: 700;
   color: #8a94a0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .calendar-weekdays-row .col-sun {
@@ -13414,12 +13415,37 @@ button.hidden,
   color: #3498db;
 }
 
+/* 縦スクロール式シーズンカレンダー */
 .calendar-days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 0;
   width: 100%;
+  max-height: calc(100vh - 250px);
+  min-height: 440px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  position: relative;
+  padding-bottom: 16px;
   box-sizing: border-box;
+}
+
+.cal-continuous-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.cal-day-cell.is-month-start .cal-day-num {
+  color: #2ecc71;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* マス目（日付セル） */
@@ -13637,10 +13663,11 @@ button.hidden,
   #view-team[data-schedule-mode="calendar"] .team-schedule-panel {
     display: flex !important;
     flex-direction: column !important;
-    /* 画面高さからヘッダー、チームサブタブバー(48px)、ボトムナビ、微小余白を引いたぴったり高さ */
-    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
-    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 56px) !important;
+    /* 画面高さからヘッダー、app上部6px、チームサブタブバー48px、ボトムナビ、下部余白を差し引いた確実な収まり高さ */
+    height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 74px) !important;
+    max-height: calc(100dvh - var(--header-total-h) - var(--tab-nav-total-h) - 74px) !important;
     margin-bottom: 0 !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
 
@@ -13673,31 +13700,39 @@ button.hidden,
     flex-direction: column !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
-    padding: 2px 3px 3px 3px !important;
+    padding: 2px 3px 6px 3px !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
   .calendar-weekdays-row {
     flex-shrink: 0 !important;
     display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
-    gap: 2.5px !important;
-    padding: 2px 0 !important;
-    margin-bottom: 2px !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    padding: 3px 0 !important;
+    margin-bottom: 0 !important;
     font-size: 10px !important;
   }
   .calendar-days-grid {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
-    grid-template-rows: repeat(6, 1fr) !important;
+    display: flex !important;
+    flex-direction: column !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
     height: 100% !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    position: relative !important;
+    padding-bottom: 18px !important;
     gap: 0 !important;
     box-sizing: border-box !important;
   }
   .cal-day-cell {
-    min-height: 0 !important;
-    height: 100% !important;
+    min-height: 76px !important;
+    height: 76px !important;
     padding: 2px 2px !important;
     border-radius: 0 !important;
     display: flex !important;
@@ -15339,6 +15374,16 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   border-radius: 0 !important;
   transition: background-color 0.15s ease !important;
+}
+
+.cal-day-cell.is-alt-month:not(.has-match):not(.is-current-day) {
+  background: #1a1e24 !important;
+}
+
+.cal-day-cell.is-month-start .cal-day-num {
+  color: #2ecc71 !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
 }
 
 .cal-day-cell:hover {

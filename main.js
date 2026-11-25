@@ -1357,18 +1357,18 @@ function startAdvancingToNextMatch() {
     clearInterval(gameState.calendarAdvanceTimer);
   }
 
-  // 120ms間隔で1日ずつカタカタ進める演出
+  // 260ms間隔で1日ずつ進める演出
   gameState.calendarAdvanceTimer = setInterval(() => {
     const shouldStop = advanceCalendarDay(true);
 
-    // カタカタ動くヘッダー日付と週間スケジュールのみ部分更新して高速演出
+    // ヘッダー日付と週間スケジュールのみ部分更新してスライド演出
     renderHeader();
     renderWeeklySchedule();
 
     if (shouldStop || !gameState.isAdvancingCalendar) {
       stopAdvancingCalendar();
     }
-  }, 120);
+  }, 260);
 }
 
 /**
@@ -1434,17 +1434,14 @@ function renderWeeklySchedule() {
   }
 
   if (hintEl) {
-    const congestion = typeof checkScheduleCongestion === 'function' ? checkScheduleCongestion() : { isCongested: false };
-    const congestionPrefix = congestion.isCongested ? '<span class="congested-alert-tag mono">過密日程注意</span> ' : '';
-
     if (gameState.isSeasonOver) {
       hintEl.innerHTML = 'シーズン終了（オフ期間）';
     } else if (daysUntilMatch === 0) {
-      hintEl.innerHTML = `${congestionPrefix}本日 Matchday（${nextMatchTitle}）`;
+      hintEl.innerHTML = `本日 Matchday（${nextMatchTitle}）`;
     } else if (daysUntilMatch !== null) {
-      hintEl.innerHTML = `${congestionPrefix}次戦（${nextMatchTitle}）まで ${daysUntilMatch}日`;
+      hintEl.innerHTML = `次戦（${nextMatchTitle}）まで ${daysUntilMatch}日`;
     } else {
-      hintEl.innerHTML = `${congestionPrefix}全日程消化完了`;
+      hintEl.innerHTML = '全日程消化完了';
     }
   }
 
@@ -1504,7 +1501,7 @@ function renderWeeklySchedule() {
     weeklySlideCleanupTimer = setTimeout(() => {
       trackEl.querySelectorAll('.day-card.is-day-sliding').forEach(el => el.classList.remove('is-day-sliding'));
       weeklySlideCleanupTimer = null;
-    }, 300);
+    }, 250);
   }
 }
 
@@ -17329,6 +17326,11 @@ function switchTeamSubtab(subtabKey, shouldRender = true) {
   if (subtabKey === 'standings') {
     renderStandings();
   } else if (subtabKey === 'schedule') {
+    const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+    if (curDay) {
+      gameState.calendarViewYear = curDay.year;
+      gameState.calendarViewMonth = curDay.month;
+    }
     renderScheduleView();
   } else if (subtabKey === 'stats') {
     renderTopScorers();
@@ -17624,7 +17626,7 @@ function switchScheduleViewMode(mode, updateState = true) {
   updateScheduleSummaryBadges();
 
   if (currentMode === 'calendar') {
-    renderMonthCalendar();
+    renderMonthCalendar({ scrollToTarget: true });
   } else {
     renderSeasonSchedule();
   }
@@ -17666,6 +17668,22 @@ function updateScheduleSummaryBadges() {
   if (recordEl) recordEl.textContent = `${wonCount}勝 ${drawnCount}分 ${lostCount}敗`;
 }
 
+let calProgrammaticScrollUntil = 0;
+
+/**
+ * 指定年月の1日セルへカレンダーを縦スクロールさせる
+ */
+function scrollCalendarToMonth(year, month, behavior = 'auto') {
+  const gridEl = document.getElementById('calendar-days-grid');
+  if (!gridEl) return;
+  const targetCell = gridEl.querySelector(`.cal-day-cell[data-cal-month-start="${year}-${month}"]`)
+    || gridEl.querySelector(`.cal-day-cell[data-cal-year="${year}"][data-cal-month="${month}"]`);
+  if (!targetCell) return;
+  const top = Math.max(0, Math.round(targetCell.getBoundingClientRect().top - gridEl.getBoundingClientRect().top + gridEl.scrollTop));
+  calProgrammaticScrollUntil = performance.now() + (behavior === 'smooth' ? 450 : 120);
+  gridEl.scrollTo({ top, behavior });
+}
+
 /**
  * 月送りナビゲーション（delta: -1 前月, +1 翌月）
  */
@@ -17700,7 +17718,16 @@ function changeCalendarMonth(delta) {
 
   gameState.calendarViewYear = y;
   gameState.calendarViewMonth = m;
-  renderMonthCalendar();
+  const labelEl = document.getElementById('calendar-current-month-label');
+  if (labelEl) {
+    labelEl.textContent = `${y}年 ${m}月`;
+  }
+  const gridEl = document.getElementById('calendar-days-grid');
+  if (gridEl && gridEl.querySelector(`.cal-day-cell[data-cal-month-start="${y}-${m}"]`)) {
+    scrollCalendarToMonth(y, m, 'smooth');
+  } else {
+    renderMonthCalendar({ scrollToTarget: true });
+  }
 }
 
 /**
@@ -17708,63 +17735,43 @@ function changeCalendarMonth(delta) {
  */
 function resetCalendarToCurrentMonth() {
   const curDay = getCurrentCalendarDay();
-  if (curDay) {
-    gameState.calendarViewYear = curDay.year;
-    gameState.calendarViewMonth = curDay.month;
-  } else {
-    gameState.calendarViewYear = 2025 + gameState.season;
-    gameState.calendarViewMonth = 8;
+  const y = curDay ? curDay.year : (2025 + gameState.season);
+  const m = curDay ? curDay.month : 8;
+  gameState.calendarViewYear = y;
+  gameState.calendarViewMonth = m;
+  const labelEl = document.getElementById('calendar-current-month-label');
+  if (labelEl) {
+    labelEl.textContent = `${y}年 ${m}月`;
   }
-  renderMonthCalendar();
+  const gridEl = document.getElementById('calendar-days-grid');
+  if (gridEl && gridEl.querySelector(`.cal-day-cell[data-cal-month-start="${y}-${m}"]`)) {
+    scrollCalendarToMonth(y, m, 'smooth');
+  } else {
+    renderMonthCalendar({ scrollToTarget: true });
+  }
 }
 
 /**
- * 月間カレンダーグリッド（7列マス目）の描画
+ * シーズン全日程分の連続7列日付セルHTMLを構築するヘルパー（月の切れ目で改行せず連続連結）
  */
-function renderMonthCalendar() {
-  const gridEl = document.getElementById('calendar-days-grid');
-  const labelEl = document.getElementById('calendar-current-month-label');
-  if (!gridEl) return;
-
-  const playerClub = getPlayerClub();
-  if (!playerClub || !gameState.calendar || gameState.calendar.length === 0) {
-    gridEl.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted);">カレンダーデータがありません。</div>';
-    return;
-  }
-
-  // 表示年月のフォールバック
-  if (!gameState.calendarViewYear) {
-    const curDay = getCurrentCalendarDay();
-    gameState.calendarViewYear = curDay ? curDay.year : (2025 + gameState.season);
-    gameState.calendarViewMonth = curDay ? curDay.month : 8;
-  }
-
-  const curYear = gameState.calendarViewYear;
-  const curMonth = gameState.calendarViewMonth;
-
-  if (labelEl) {
-    labelEl.textContent = `${curYear}年 ${curMonth}月`;
-  }
-
-  // 当月のカレンダー日配列を取得
-  const monthDays = gameState.calendar.filter(d => d.year === curYear && d.month === curMonth);
-  if (monthDays.length === 0) {
-    gridEl.innerHTML = '<div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted);">該当月の日程データがありません。</div>';
-    return;
-  }
-
+function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
+  if (!Array.isArray(allDays) || allDays.length === 0) return '';
   const cellsHtml = [];
 
-  // 初日の曜日に応じた空セルの挿入（0:日〜6:土）
-  const firstDayOfWeek = monthDays[0].dayOfWeek;
+  // 初日の曜日に応じた先頭空セルのみ挿入（0:日〜6:土）
+  const firstDayOfWeek = allDays[0].dayOfWeek;
   for (let i = 0; i < firstDayOfWeek; i++) {
     cellsHtml.push('<div class="cal-day-cell is-empty" aria-hidden="true"></div>');
   }
 
-  // 当月の各日マス目の描画
-  monthDays.forEach(d => {
-    const isCurrentDay = (d.dayIndex === gameState.currentDayIndex);
+  // 全日程の各日マス目を連続描画
+  allDays.forEach(d => {
+    const isCurrentDay = (d.dayIndex === inGameDayIndex);
     const dayColClass = d.dayOfWeek === 0 ? 'col-sun' : (d.dayOfWeek === 6 ? 'col-sat' : '');
+    const isMonthStart = (d.day === 1);
+    const monthToneClass = (d.month % 2 === 0) ? 'is-alt-month' : '';
+    const monthStartClass = isMonthStart ? 'is-month-start' : '';
+    const monthStartAttr = isMonthStart ? `data-cal-month-start="${d.year}-${d.month}"` : '';
 
     let matchInfoHtml = '';
     let matchClass = '';
@@ -17840,7 +17847,6 @@ function renderMonthCalendar() {
         const isHome = match.homeId === playerClub.id;
         const oppId = isHome ? match.awayId : match.homeId;
         const oppClub = getClubById(oppId) || { name: oppId, shortName: oppId };
-        const oppName = oppClub.shortName || (typeof getClubShortCode === 'function' ? getClubShortCode(oppClub) : oppClub.name.replace(/\s+[A-Z]+$/g, '').trim());
 
         const isPlayed = match.played || (d.matchWeek <= gameState.currentWeek && match.homeScore !== null);
         const isNext = !isPlayed && (d.matchWeek === gameState.currentWeek + 1);
@@ -17891,11 +17897,12 @@ function renderMonthCalendar() {
     }
 
     const currentDayClass = isCurrentDay ? 'is-current-day' : '';
+    const dayLabel = isMonthStart ? `${d.month}/1` : `${d.day}`;
 
     cellsHtml.push(`
-      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${matchClass}" ${cellAttr}>
+      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${monthToneClass} ${monthStartClass} ${matchClass}" data-cal-year="${d.year}" data-cal-month="${d.month}" ${monthStartAttr} ${cellAttr}>
         <div class="cal-cell-header">
-          <span class="cal-day-num">${d.day}</span>
+          <span class="cal-day-num">${dayLabel}</span>
           ${isCurrentDay ? '<span class="cal-today-badge mono">TODAY</span>' : ''}
         </div>
         ${eventTagHtml}
@@ -17904,12 +17911,95 @@ function renderMonthCalendar() {
     `);
   });
 
-  // 常に6行分（全42マス：7列 × 6行）のスペースを確保するため、末尾を空セルで埋める
-  while (cellsHtml.length < 42) {
+  // シーズン最終週の末尾のみ空セルで補完（7列グリッドの行末を揃える）
+  while (cellsHtml.length % 7 !== 0) {
     cellsHtml.push('<div class="cal-day-cell is-empty" aria-hidden="true"></div>');
   }
 
-  gridEl.innerHTML = cellsHtml.join('');
+  return cellsHtml.join('');
+}
+
+/**
+ * 縦スクロール連動で表示中年月ラベルを同期するリスナーを登録
+ */
+function bindCalendarScrollSync(gridEl) {
+  if (!gridEl || gridEl.dataset.calScrollBound === '1') return;
+  gridEl.dataset.calScrollBound = '1';
+  let scrollRafId = null;
+
+  gridEl.addEventListener('scroll', () => {
+    if (performance.now() < calProgrammaticScrollUntil) return;
+    if (scrollRafId) return;
+    scrollRafId = requestAnimationFrame(() => {
+      scrollRafId = null;
+      if (performance.now() < calProgrammaticScrollUntil) return;
+      const anchors = gridEl.querySelectorAll('.cal-day-cell[data-cal-month-start]');
+      if (!anchors || anchors.length === 0) return;
+
+      const gridRectTop = gridEl.getBoundingClientRect().top;
+      let activeAnchor = anchors[0];
+      for (let i = 0; i < anchors.length; i++) {
+        const anchorTop = anchors[i].getBoundingClientRect().top - gridRectTop;
+        if (anchorTop <= 40) {
+          activeAnchor = anchors[i];
+        } else {
+          break;
+        }
+      }
+
+      const y = parseInt(activeAnchor.dataset.calYear, 10);
+      const m = parseInt(activeAnchor.dataset.calMonth, 10);
+      if (!Number.isNaN(y) && !Number.isNaN(m)) {
+        gameState.calendarViewYear = y;
+        gameState.calendarViewMonth = m;
+        const labelEl = document.getElementById('calendar-current-month-label');
+        if (labelEl) {
+          labelEl.textContent = `${y}年 ${m}月`;
+        }
+      }
+    });
+  }, { passive: true });
+}
+
+/**
+ * 縦スクロール式シーズンカレンダー（連続7列グリッド）の描画
+ */
+function renderMonthCalendar(options = {}) {
+  const gridEl = document.getElementById('calendar-days-grid');
+  const labelEl = document.getElementById('calendar-current-month-label');
+  if (!gridEl) return;
+
+  const playerClub = getPlayerClub();
+  if (!playerClub || !gameState.calendar || gameState.calendar.length === 0) {
+    gridEl.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">カレンダーデータがありません。</div>';
+    return;
+  }
+
+  const curDay = getCurrentCalendarDay();
+  if (!gameState.calendarViewYear) {
+    gameState.calendarViewYear = curDay ? curDay.year : (2025 + gameState.season);
+    gameState.calendarViewMonth = curDay ? curDay.month : 8;
+  }
+
+  const targetYear = gameState.calendarViewYear;
+  const targetMonth = gameState.calendarViewMonth;
+  if (labelEl) {
+    labelEl.textContent = `${targetYear}年 ${targetMonth}月`;
+  }
+
+  const wasEmpty = !gridEl.querySelector('.cal-continuous-grid');
+  const prevScrollTop = gridEl.scrollTop;
+
+  const cellsHtml = buildContinuousCalendarCellsHtml(gameState.calendar, playerClub, gameState.currentDayIndex);
+  gridEl.innerHTML = `<div class="cal-continuous-grid">${cellsHtml}</div>`;
+
+  bindCalendarScrollSync(gridEl);
+
+  if (options.scrollToTarget || wasEmpty) {
+    scrollCalendarToMonth(targetYear, targetMonth, 'auto');
+  } else {
+    gridEl.scrollTop = prevScrollTop;
+  }
 }
 
 /**
