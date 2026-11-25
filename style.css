@@ -22366,6 +22366,15 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
     font-size: 11.5px !important;
     padding: 0 2px !important;
   }
+  #facilities-subnav-bar {
+    gap: 2px !important;
+  }
+  #facilities-subnav-bar .roster-subtab-btn {
+    flex: 1 1 auto !important;
+    font-size: 10.5px !important;
+    padding: 0 4px !important;
+    letter-spacing: -0.02em;
+  }
   .records-subtab-btn {
     font-size: 11px;
     padding: 7px 4px;
@@ -22748,6 +22757,412 @@ button.hof-record-name {
 .pos-inline.is-subpos {
   opacity: 0.8;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   スタジアム選定・席別チケット・グッズ収支管理（GEMINI.md フラット規約準拠）
+   ========================================================================== */
+
+.commercial-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.commercial-setup-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(46, 204, 113, 0.08);
+  border-bottom: 1px solid rgba(46, 204, 113, 0.25);
+}
+
+.commercial-setup-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.commercial-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-summary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.commercial-summary-label {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.commercial-summary-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-summary-sub {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commercial-subnav {
+  display: flex;
+  gap: 4px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-subtab-btn {
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-subtab-btn.active {
+  color: var(--accent-green);
+  border-bottom-color: var(--accent-green);
+}
+
+.commercial-section-body {
+  padding: 0 14px 14px;
+}
+
+.commercial-stadium-hero {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-stadium-stage {
+  width: 100%;
+  background: #161a1e;
+  overflow: hidden;
+}
+
+.commercial-stadium-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.commercial-stadium-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.commercial-stadium-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.commercial-stadium-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.commercial-inline-kv-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.commercial-inline-kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+}
+
+.commercial-inline-kv-row:last-child {
+  border-bottom: none;
+}
+
+.commercial-kv-label {
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.commercial-kv-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-flat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.commercial-flat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.12s ease;
+}
+
+.commercial-flat-row.is-clickable {
+  cursor: pointer;
+}
+
+.commercial-flat-row.is-clickable:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.commercial-flat-row.is-selected {
+  background: rgba(46, 204, 113, 0.06);
+}
+
+.commercial-stadium-thumb {
+  width: 88px;
+  height: 45px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #161a1e;
+}
+
+.commercial-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.commercial-row-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.commercial-row-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.commercial-row-sub {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.commercial-row-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.commercial-metric-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-metric-cap {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.commercial-metric-num {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-seatmap-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-seatmap-svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  display: block;
+}
+
+.commercial-preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-preset-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.commercial-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-step-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: #24282c;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.commercial-step-btn:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.commercial-step-price {
+  min-width: 44px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-price-range {
+  width: 110px;
+  accent-color: #2ecc71;
+  cursor: pointer;
+}
+
+.commercial-merch-toggle {
+  min-width: 60px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #24282c;
+  color: #8b949e;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-merch-toggle.is-on {
+  background: rgba(46, 204, 113, 0.16);
+  border-color: rgba(46, 204, 113, 0.45);
+  color: var(--accent-green);
+}
+
+.commercial-total-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.accent-red {
+  color: var(--danger-red);
+}
+
+@media (max-width: 600px) {
+  .commercial-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px 10px;
+  }
+  .commercial-section-body {
+    padding: 0 10px 12px;
+  }
+  .commercial-stadium-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .commercial-flat-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 2px;
+  }
+  .commercial-flat-row > .commercial-row-main {
+    flex: 1 1 calc(100% - 76px);
+    min-width: 0;
+  }
+  .commercial-row-metrics {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .commercial-metric-col {
+    align-items: flex-start;
+  }
+  .commercial-price-range {
+    width: 84px;
+  }
+  .commercial-setup-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .commercial-total-footer {
+    flex-wrap: wrap;
+  }
 }
 
 

@@ -1482,3 +1482,203 @@ function getSecretaryBustHtml(secretary, extraClass = 'secretary-bust-canvas') {
   }
 }
 
+/**
+ * スタジアム建築イラストSVGを生成する（クラブカラー・改修Lv反映）
+ */
+function getStadiumIllustrationSvg(stadiumId = 'heritage_ground', club = null, stadiumLv = 1, compact = false) {
+  const safeHex = (val, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(String(val || '').trim()) ? String(val).trim() : fallback);
+  const primary = safeHex(club && club.primaryColor, '#2ecc71');
+  const secondary = safeHex(club && club.secondaryColor, '#f1c40f');
+  const lv = Math.max(1, Math.min(5, Number(stadiumLv || 1)));
+  const uid = `st_${String(stadiumId || 'heritage_ground').replace(/[^a-z0-9_]/gi, '')}_${compact ? 's' : 'l'}`;
+
+  let architecture = '';
+  if (stadiumId === 'compact_fortress') {
+    architecture = `
+      <!-- 四隅フラッドライト -->
+      <line x1="34" y1="36" x2="34" y2="86" stroke="#7d8590" stroke-width="2.5"/>
+      <rect x="24" y="28" width="20" height="9" fill="#cfd8dc"/>
+      <rect x="26" y="30" width="16" height="5" fill="#fff8e1"/>
+      <line x1="326" y1="36" x2="326" y2="86" stroke="#7d8590" stroke-width="2.5"/>
+      <rect x="316" y="28" width="20" height="9" fill="#cfd8dc"/>
+      <rect x="318" y="30" width="16" height="5" fill="#fff8e1"/>
+      <!-- 急勾配要塞スタンド本体 -->
+      <polygon points="22,126 42,60 318,60 338,126" fill="#2b3137" stroke="#444c56" stroke-width="1.5"/>
+      <polygon points="42,60 56,50 304,50 318,60" fill="#3a424a"/>
+      <rect x="52" y="54" width="256" height="4" fill="${primary}"/>
+      <!-- 2層観客帯 -->
+      <rect x="44" y="70" width="272" height="16" fill="#1b2024"/>
+      <rect x="48" y="73" width="264" height="5" fill="${primary}" opacity="0.85"/>
+      <rect x="48" y="80" width="264" height="3" fill="${secondary}" opacity="0.75"/>
+      <rect x="38" y="92" width="284" height="18" fill="#161a1d"/>
+      <rect x="42" y="96" width="276" height="6" fill="${primary}" opacity="0.9"/>
+      <!-- 中央コンコース入口 -->
+      <rect x="160" y="110" width="40" height="16" fill="#101417"/>
+      <rect x="164" y="113" width="32" height="3" fill="${secondary}"/>
+    `;
+  } else if (stadiumId === 'modern_bowl') {
+    architecture = `
+      <!-- 流線型キャノピー屋根 -->
+      <path d="M 24 88 Q 180 34 336 88 L 322 104 Q 180 62 38 104 Z" fill="#3b444d" stroke="#6c7883" stroke-width="1.5"/>
+      <path d="M 38 86 Q 180 42 322 86" fill="none" stroke="${primary}" stroke-width="3.5"/>
+      <path d="M 48 92 Q 180 50 312 92" fill="none" stroke="${secondary}" stroke-width="1.5" opacity="0.85"/>
+      <!-- ボウル外壁とガラスコンコース -->
+      <path d="M 32 98 Q 180 68 328 98 L 336 128 L 24 128 Z" fill="#23282e" stroke="#3c444d" stroke-width="1.5"/>
+      <rect x="54" y="100" width="252" height="12" rx="3" fill="#2c3e50" opacity="0.85"/>
+      <rect x="58" y="103" width="244" height="3" fill="#81d4fa" opacity="0.35"/>
+      <rect x="64" y="116" width="232" height="8" fill="${primary}" opacity="0.65"/>
+      <!-- 屋根裏ライトリング -->
+      <line x1="78" y1="68" x2="282" y2="68" stroke="#fff8e1" stroke-width="2" stroke-dasharray="10 8" opacity="0.8"/>
+    `;
+  } else if (stadiumId === 'sky_arch_dome') {
+    architecture = `
+      <!-- 大アーチ鉄骨トラス -->
+      <path d="M 20 124 Q 180 8 340 124" fill="none" stroke="#cfd8dc" stroke-width="5"/>
+      <path d="M 28 124 Q 180 18 332 124" fill="none" stroke="${primary}" stroke-width="2"/>
+      <!-- 半透明ガラスドーム屋根 -->
+      <path d="M 34 94 Q 180 46 326 94 L 312 106 Q 180 70 48 106 Z" fill="#34495e" opacity="0.72" stroke="#85929e" stroke-width="1"/>
+      <!-- スタンド＆VIPガラススカイボックス帯 -->
+      <polygon points="28,128 48,88 312,88 332,128" fill="#21262b" stroke="#454f59" stroke-width="1.5"/>
+      <rect x="66" y="92" width="228" height="10" fill="#151b21" stroke="${secondary}" stroke-width="1"/>
+      <rect x="70" y="94" width="220" height="6" fill="${secondary}" opacity="0.35"/>
+      <rect x="50" y="106" width="260" height="14" fill="#181c20"/>
+      <rect x="54" y="110" width="252" height="5" fill="${primary}" opacity="0.85"/>
+    `;
+  } else if (stadiumId === 'grand_cathedral') {
+    architecture = `
+      <!-- シンボリック・ツインタワー照明 -->
+      <rect x="44" y="24" width="12" height="82" fill="#394149" stroke="#626d78" stroke-width="1"/>
+      <rect x="40" y="20" width="20" height="8" fill="#dfe6e9"/>
+      <rect x="42" y="22" width="16" height="4" fill="#fff8e1"/>
+      <rect x="304" y="24" width="12" height="82" fill="#394149" stroke="#626d78" stroke-width="1"/>
+      <rect x="300" y="20" width="20" height="8" fill="#dfe6e9"/>
+      <rect x="302" y="22" width="16" height="4" fill="#fff8e1"/>
+      <!-- 3層メガスタンド＋大屋根 -->
+      <polygon points="18,128 36,48 324,48 342,128" fill="#262c32" stroke="#505962" stroke-width="1.5"/>
+      <polygon points="36,48 54,36 306,36 324,48" fill="#3e464f"/>
+      <rect x="50" y="42" width="260" height="5" fill="${secondary}"/>
+      <!-- 上中下3層スタンド帯 -->
+      <rect x="46" y="56" width="268" height="15" fill="#171b1f"/>
+      <rect x="50" y="60" width="260" height="6" fill="${primary}" opacity="0.9"/>
+      <rect x="40" y="76" width="280" height="16" fill="#15191d"/>
+      <rect x="44" y="80" width="272" height="7" fill="${primary}" opacity="0.8"/>
+      <rect x="32" y="97" width="296" height="18" fill="#121619"/>
+      <rect x="36" y="102" width="288" height="6" fill="${secondary}" opacity="0.75"/>
+      <rect x="150" y="116" width="60" height="12" fill="#0d1013"/>
+    `;
+  } else {
+    // heritage_ground (デフォルト：伝統レンガ建築＋4トラス照明)
+    architecture = `
+      <!-- 4基のクラシカル照明鉄塔 -->
+      <line x1="42" y1="30" x2="48" y2="76" stroke="#8a949e" stroke-width="2"/>
+      <rect x="34" y="24" width="16" height="8" fill="#d0d7de"/>
+      <rect x="36" y="26" width="12" height="4" fill="#fff8e1"/>
+      <line x1="318" y1="30" x2="312" y2="76" stroke="#8a949e" stroke-width="2"/>
+      <rect x="310" y="24" width="16" height="8" fill="#d0d7de"/>
+      <rect x="312" y="26" width="12" height="4" fill="#fff8e1"/>
+      <!-- 切妻屋根＆レンガ外壁 -->
+      <polygon points="48,74 180,50 312,74" fill="#373f47" stroke="#5a6570" stroke-width="1.5"/>
+      <rect x="44" y="74" width="272" height="54" fill="#6b3a2e" stroke="#4a261d" stroke-width="1.5"/>
+      <rect x="44" y="74" width="272" height="6" fill="${primary}"/>
+      <rect x="56" y="84" width="248" height="20" fill="#181c20"/>
+      <rect x="60" y="88" width="240" height="7" fill="${primary}" opacity="0.85"/>
+      <rect x="60" y="97" width="240" height="3" fill="${secondary}" opacity="0.8"/>
+      <!-- レンガアーチゲート -->
+      <rect x="78" y="110" width="24" height="18" rx="10" fill="#121518"/>
+      <rect x="168" y="108" width="24" height="20" rx="10" fill="#121518"/>
+      <rect x="258" y="110" width="24" height="18" rx="10" fill="#121518"/>
+    `;
+  }
+
+  // 改修Lvに応じた照明ドット数・上層グレード表記
+  let levelDots = '';
+  for (let i = 0; i < 5; i++) {
+    levelDots += `<rect x="${296 + i * 10}" y="12" width="7" height="4" fill="${i < lv ? '#2ecc71' : '#2c3238'}"/>`;
+  }
+
+  return `
+    <svg viewBox="0 0 360 184" class="commercial-stadium-svg ${compact ? 'is-compact' : ''}" role="img" aria-label="スタジアム外観グラフィック">
+      <defs>
+        <linearGradient id="${uid}_sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#131920"/>
+          <stop offset="100%" stop-color="#1d242c"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="360" height="184" fill="url(#${uid}_sky)"/>
+      <!-- 遠景ナイトグロウ -->
+      <ellipse cx="180" cy="112" rx="145" ry="26" fill="${primary}" opacity="0.08"/>
+      ${levelDots}
+      ${architecture}
+      <!-- 前景ピッチ＆タッチライン -->
+      <polygon points="8,184 36,128 324,128 352,184" fill="#1e6b3a"/>
+      <polygon points="62,184 80,128 122,128 112,184" fill="#237842"/>
+      <polygon points="164,184 166,128 194,128 196,184" fill="#237842"/>
+      <polygon points="248,184 238,128 280,128 298,184" fill="#237842"/>
+      <line x1="36" y1="128" x2="324" y2="128" stroke="${primary}" stroke-width="3"/>
+      <line x1="40" y1="133" x2="320" y2="133" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+      <ellipse cx="180" cy="158" rx="28" ry="11" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.2"/>
+      <line x1="180" y1="133" x2="180" y2="184" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
+      <!-- サイドLEDバナー -->
+      <rect x="60" y="126" width="240" height="4" fill="${secondary}" opacity="0.8"/>
+    </svg>
+  `.trim();
+}
+
+/**
+ * 席ランク別の俯瞰座席マップSVGを生成する
+ */
+function getStadiumSeatingMapSvg(stadiumId = 'heritage_ground', club = null, zoneResults = [], activeZoneId = null) {
+  const safeHex = (val, fallback) => (/^#[0-9a-fA-F]{3,8}$/.test(String(val || '').trim()) ? String(val).trim() : fallback);
+  const primary = safeHex(club && club.primaryColor, '#2ecc71');
+  const getZoneOcc = (id) => {
+    const found = Array.isArray(zoneResults) ? zoneResults.find(z => z && z.id === id) : null;
+    return found ? `${found.occupancyPct}%` : '--%';
+  };
+  const zoneFill = (id, baseColor) => (activeZoneId === id ? primary : baseColor);
+  const zoneStroke = (id) => (activeZoneId === id ? '#ffffff' : 'rgba(255,255,255,0.22)');
+
+  return `
+    <svg viewBox="0 0 320 164" class="commercial-seatmap-svg" role="img" aria-label="スタジアム座席配置マップ">
+      <rect x="0" y="0" width="320" height="164" rx="6" fill="#161a1e"/>
+
+      <!-- バックスタンド（上段） -->
+      <g class="seat-map-zone ${activeZoneId === 'back' ? 'is-active' : ''}" data-seat-zone="back" style="cursor:pointer;">
+        <rect x="60" y="10" width="200" height="28" rx="3" fill="${zoneFill('back', '#27313b')}" stroke="${zoneStroke('back')}" stroke-width="1.2"/>
+        <text x="160" y="27" text-anchor="middle" fill="#e6edf3" font-size="10" font-weight="700">バックスタンド · ${getZoneOcc('back')}</text>
+      </g>
+
+      <!-- ゴール裏（左右エンド） -->
+      <g class="seat-map-zone ${activeZoneId === 'goal' ? 'is-active' : ''}" data-seat-zone="goal" style="cursor:pointer;">
+        <rect x="12" y="42" width="44" height="78" rx="3" fill="${zoneFill('goal', '#2e3842')}" stroke="${zoneStroke('goal')}" stroke-width="1.2"/>
+        <rect x="264" y="42" width="44" height="78" rx="3" fill="${zoneFill('goal', '#2e3842')}" stroke="${zoneStroke('goal')}" stroke-width="1.2"/>
+        <text x="34" y="77" text-anchor="middle" fill="#e6edf3" font-size="9" font-weight="700">ゴール裏</text>
+        <text x="34" y="91" text-anchor="middle" fill="#2ecc71" font-size="9" font-weight="700">${getZoneOcc('goal')}</text>
+        <text x="286" y="77" text-anchor="middle" fill="#e6edf3" font-size="9" font-weight="700">ゴール裏</text>
+        <text x="286" y="91" text-anchor="middle" fill="#2ecc71" font-size="9" font-weight="700">${getZoneOcc('goal')}</text>
+      </g>
+
+      <!-- 中央ピッチ -->
+      <rect x="64" y="44" width="192" height="74" rx="2" fill="#1e6b3a" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+      <rect x="96" y="44" width="32" height="74" fill="#237842"/>
+      <rect x="160" y="44" width="32" height="74" fill="#237842"/>
+      <rect x="224" y="44" width="32" height="74" fill="#237842"/>
+      <line x1="160" y1="44" x2="160" y2="118" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+      <circle cx="160" cy="81" r="14" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+      <rect x="64" y="65" width="18" height="32" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+      <rect x="238" y="65" width="18" height="32" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+
+      <!-- VIPボックス（メインスタンド中央前面） -->
+      <g class="seat-map-zone ${activeZoneId === 'vip' ? 'is-active' : ''}" data-seat-zone="vip" style="cursor:pointer;">
+        <rect x="104" y="122" width="112" height="16" rx="2" fill="${zoneFill('vip', '#4d3b18')}" stroke="${activeZoneId === 'vip' ? '#ffffff' : '#f1c40f'}" stroke-width="1.2"/>
+        <text x="160" y="133" text-anchor="middle" fill="#f7dc6f" font-size="9" font-weight="700">VIPボックス · ${getZoneOcc('vip')}</text>
+      </g>
+
+      <!-- メインスタンド（下段） -->
+      <g class="seat-map-zone ${activeZoneId === 'main' ? 'is-active' : ''}" data-seat-zone="main" style="cursor:pointer;">
+        <path d="M 60 122 L 100 122 L 100 140 L 220 140 L 220 122 L 260 122 L 260 158 L 60 158 Z" fill="${zoneFill('main', '#29333d')}" stroke="${zoneStroke('main')}" stroke-width="1.2"/>
+        <text x="160" y="152" text-anchor="middle" fill="#e6edf3" font-size="10" font-weight="700">メインスタンド · ${getZoneOcc('main')}</text>
+      </g>
+    </svg>
+  `.trim();
+}
+

@@ -1998,6 +1998,232 @@ const FACILITY_DEFINITIONS = {
 };
 
 // ==========================================================================
+// スタジアムプリセット・席別チケットランク・グッズ展開カタログ
+// ==========================================================================
+
+const STADIUM_PRESETS = [
+  {
+    id: 'heritage_ground',
+    name: 'ヘリテージ・ブリック・グラウンド',
+    styleLabel: '伝統レンガ建築',
+    baseCapacity: 22000,
+    levelCapacityStep: 5000,
+    buildCostK: 0,
+    maintenancePerMatchK: 120,
+    ticketDemandBonus: 1.00,
+    merchDemandBonus: 1.00,
+    vipToleranceBonus: 0.00,
+    supporterGrowthBonus: 15,
+    seatShare: { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 },
+    summary: '維持費が低く堅実な伝統型スタジアム。手堅い興行基盤を築けます。'
+  },
+  {
+    id: 'compact_fortress',
+    name: 'コンパクト・フォートレス',
+    styleLabel: '急勾配密着型',
+    baseCapacity: 26000,
+    levelCapacityStep: 5500,
+    buildCostK: 2500,
+    maintenancePerMatchK: 165,
+    ticketDemandBonus: 1.08,
+    merchDemandBonus: 1.05,
+    vipToleranceBonus: 0.03,
+    supporterGrowthBonus: 25,
+    seatShare: { goal: 0.38, back: 0.28, main: 0.24, vip: 0.10 },
+    summary: 'ピッチとの距離が近いゴール裏重視の要塞。高い稼働率と応援熱が魅力です。'
+  },
+  {
+    id: 'modern_bowl',
+    name: 'モダン・ボウル・アリーナ',
+    styleLabel: '流線型コンコース',
+    baseCapacity: 34000,
+    levelCapacityStep: 6500,
+    buildCostK: 7500,
+    maintenancePerMatchK: 250,
+    ticketDemandBonus: 1.05,
+    merchDemandBonus: 1.15,
+    vipToleranceBonus: 0.06,
+    supporterGrowthBonus: 30,
+    seatShare: { goal: 0.28, back: 0.30, main: 0.28, vip: 0.14 },
+    summary: '広い物販コンコースを備え、グッズ売上の伸びに優れる万能型スタジアムです。'
+  },
+  {
+    id: 'sky_arch_dome',
+    name: 'スカイアーチ・ガラスドーム',
+    styleLabel: '大アーチVIP特化',
+    baseCapacity: 38000,
+    levelCapacityStep: 7000,
+    buildCostK: 13000,
+    maintenancePerMatchK: 350,
+    ticketDemandBonus: 1.06,
+    merchDemandBonus: 1.12,
+    vipToleranceBonus: 0.14,
+    supporterGrowthBonus: 35,
+    seatShare: { goal: 0.24, back: 0.26, main: 0.30, vip: 0.20 },
+    summary: '充実したVIPスカイボックスを備え、高単価座席でも客足が落ちにくい設計です。'
+  },
+  {
+    id: 'grand_cathedral',
+    name: 'グランド・カテドラル',
+    styleLabel: '3層メガスタジアム',
+    baseCapacity: 46000,
+    levelCapacityStep: 8000,
+    buildCostK: 20000,
+    maintenancePerMatchK: 480,
+    ticketDemandBonus: 1.10,
+    merchDemandBonus: 1.18,
+    vipToleranceBonus: 0.12,
+    supporterGrowthBonus: 55,
+    seatShare: { goal: 0.28, back: 0.28, main: 0.26, vip: 0.18 },
+    summary: '圧倒的収容力とブランド力を誇る聖地。満員時の興行・グッズ収益は最高峰です。'
+  }
+];
+
+const TICKET_SEAT_TIERS = [
+  {
+    id: 'goal',
+    name: 'ゴール裏',
+    subLabel: '熱狂・立見ゾーン',
+    d1FairPrice: 35,
+    d2FairPrice: 24,
+    minPrice: 14,
+    maxPrice: 70,
+    step: 2,
+    elasticity: 1.65,
+    moodWeight: 1.4
+  },
+  {
+    id: 'back',
+    name: 'バックスタンド',
+    subLabel: '一般・ファミリー席',
+    d1FairPrice: 55,
+    d2FairPrice: 38,
+    minPrice: 24,
+    maxPrice: 100,
+    step: 2,
+    elasticity: 1.35,
+    moodWeight: 1.0
+  },
+  {
+    id: 'main',
+    name: 'メインスタンド',
+    subLabel: '中央上位指定席',
+    d1FairPrice: 85,
+    d2FairPrice: 58,
+    minPrice: 40,
+    maxPrice: 150,
+    step: 5,
+    elasticity: 1.10,
+    moodWeight: 0.8
+  },
+  {
+    id: 'vip',
+    name: 'VIPボックス',
+    subLabel: '専用ラウンジ付個室',
+    d1FairPrice: 240,
+    d2FairPrice: 160,
+    minPrice: 100,
+    maxPrice: 420,
+    step: 10,
+    elasticity: 0.78,
+    moodWeight: 0.4
+  }
+];
+
+const MERCHANDISE_CATALOG = [
+  {
+    id: 'scarf',
+    name: 'マフラータオル',
+    targetLabel: '全来場者・低原価定番',
+    fixedCostK: 15,
+    unitCost: 4,
+    defaultPrice: 18,
+    minPrice: 10,
+    maxPrice: 34,
+    step: 2,
+    baseBuyRate: 0.34,
+    elasticity: 1.35,
+    audienceScope: 'all',
+    supporterBonus: 8
+  },
+  {
+    id: 'food_drink',
+    name: 'スタジアムグルメ',
+    targetLabel: '全来場者・高回転飲食',
+    fixedCostK: 45,
+    unitCost: 5,
+    defaultPrice: 14,
+    minPrice: 8,
+    maxPrice: 24,
+    step: 1,
+    baseBuyRate: 0.56,
+    elasticity: 1.25,
+    audienceScope: 'all',
+    supporterBonus: 10
+  },
+  {
+    id: 'replica_kit',
+    name: 'レプリカユニフォーム',
+    targetLabel: '全来場者・中規模以上向け',
+    fixedCostK: 75,
+    unitCost: 26,
+    defaultPrice: 75,
+    minPrice: 45,
+    maxPrice: 120,
+    step: 5,
+    baseBuyRate: 0.11,
+    elasticity: 1.45,
+    audienceScope: 'all',
+    supporterBonus: 15
+  },
+  {
+    id: 'kids_cap',
+    name: 'キッズ＆キャップ',
+    targetLabel: 'バック/メイン席客向け',
+    fixedCostK: 25,
+    unitCost: 7,
+    defaultPrice: 24,
+    minPrice: 14,
+    maxPrice: 42,
+    step: 2,
+    baseBuyRate: 0.15,
+    elasticity: 1.30,
+    audienceScope: 'back_main',
+    supporterBonus: 22
+  },
+  {
+    id: 'collector_box',
+    name: '限定マッチデーBOX',
+    targetLabel: '全来場者・大型動員向け高固定費',
+    fixedCostK: 115,
+    unitCost: 42,
+    defaultPrice: 120,
+    minPrice: 80,
+    maxPrice: 190,
+    step: 5,
+    baseBuyRate: 0.048,
+    elasticity: 1.40,
+    audienceScope: 'all',
+    supporterBonus: 5
+  },
+  {
+    id: 'vip_gift',
+    name: 'VIPラウンジギフト',
+    targetLabel: 'VIP席客限定・法人向け',
+    fixedCostK: 65,
+    unitCost: 38,
+    defaultPrice: 165,
+    minPrice: 100,
+    maxPrice: 260,
+    step: 5,
+    baseBuyRate: 0.44,
+    elasticity: 0.85,
+    audienceScope: 'vip',
+    supporterBonus: 6
+  }
+];
+
+// ==========================================================================
 // 純粋汎用ユーティリティ関数
 // ==========================================================================
 

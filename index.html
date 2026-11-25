@@ -1143,6 +1143,7 @@
       <!-- 経営サブタブ切り替えナビゲーションバー -->
       <div class="roster-subnav-bar facilities-subnav-bar" id="facilities-subnav-bar" role="tablist" aria-label="経営メニュー">
         <button type="button" class="roster-subtab-btn active" data-facilities-subtab="investment" id="facilities-subtab-btn-investment" role="tab" aria-selected="true">施設投資</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="commercial" id="facilities-subtab-btn-commercial" role="tab" aria-selected="false">スタジアム・興行</button>
         <button type="button" class="roster-subtab-btn" data-facilities-subtab="staff" id="facilities-subtab-btn-staff" role="tab" aria-selected="false">監督・指導陣</button>
         <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユースチーム</button>
       </div>
@@ -1169,6 +1170,15 @@
             <div class="board-psr-sponsor-panel" id="board-psr-sponsor-panel" style="margin-top: 16px;">
               <!-- JSでスポンサー契約・PSR財務・理事会評価を描画 -->
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- サブタブ1.5：スタジアム・チケット・グッズ興行管理 -->
+      <div class="facilities-subview hidden" id="facilities-subview-commercial" role="tabpanel">
+        <div class="panel">
+          <div id="commercial-management-root">
+            <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
           </div>
         </div>
       </div>

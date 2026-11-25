@@ -273,6 +273,8 @@ function saveGameToStorage(force = false) {
         sponsorDeadlineDayIndex: typeof gameState.sponsorDeadlineDayIndex === 'number' ? gameState.sponsorDeadlineDayIndex : null,
         sponsorWindowClosed: Boolean(gameState.sponsorWindowClosed),
         pendingInitialStaffSetup: Boolean(gameState.pendingInitialStaffSetup),
+        pendingCommercialSetup: Boolean(gameState.pendingCommercialSetup),
+        commercialSubtab: gameState.commercialSubtab || 'stadium',
         facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
         marketSubtab: gameState.marketSubtab || 'market',
         marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' },
@@ -1080,6 +1082,8 @@ function loadGameFromStorage() {
     if (typeof gameState.sponsorDeadlineDayIndex !== 'number') gameState.sponsorDeadlineDayIndex = null;
     if (typeof gameState.sponsorWindowClosed !== 'boolean') gameState.sponsorWindowClosed = false;
     if (typeof gameState.pendingInitialStaffSetup !== 'boolean') gameState.pendingInitialStaffSetup = false;
+    if (typeof gameState.pendingCommercialSetup !== 'boolean') gameState.pendingCommercialSetup = false;
+    if (!gameState.commercialSubtab) gameState.commercialSubtab = 'stadium';
     if (!Array.isArray(gameState.seasonAwardsHistory)) gameState.seasonAwardsHistory = [];
     if (!Array.isArray(gameState.monthlyAwardsHistory)) gameState.monthlyAwardsHistory = [];
     if (!gameState.monthlyPlayerBaseline || typeof gameState.monthlyPlayerBaseline !== 'object') gameState.monthlyPlayerBaseline = {};

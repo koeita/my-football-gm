@@ -319,7 +319,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertNotIn('display: block !important;', mini_block)
         self.assertIn('.gm-tasks-mini-summary.hidden', self.css)
         duties_idx = self.main_js.index('function renderGmDuties()')
-        duties_tail = self.main_js[duties_idx + 4500:duties_idx + 12500]
+        duties_tail = self.main_js[duties_idx + 4500:duties_idx + 14500]
         self.assertIn("miniSummaryEl.innerHTML = ''", duties_tail)
         self.assertIn("listEl.innerHTML = ''", duties_tail)
 
@@ -558,6 +558,48 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         ]:
             self.assertIn(css_sel, self.css)
         self.assertIn('function formatColoredPosListHtml(', self.main_js)
+
+    def test_21_stadium_ticket_merch_commercial_system(self):
+        """スタジアム選定（グラフィック付）・席ランク別チケット価格・グッズ収支バランスと業務統合を検証"""
+        data_js = self.data_js
+        avatar_js = self.avatar_js
+        match_js = self.match_js
+
+        for st_id in ['heritage_ground', 'compact_fortress', 'modern_bowl', 'sky_arch_dome', 'grand_cathedral']:
+            self.assertIn(st_id, data_js)
+        for tier_id in ['goal', 'back', 'main', 'vip']:
+            self.assertIn(f"id: '{tier_id}'", data_js)
+        for merch_id in ['scarf', 'food_drink', 'replica_kit', 'kids_cap', 'collector_box', 'vip_gift']:
+            self.assertIn(f"id: '{merch_id}'", data_js)
+
+        self.assertIn('function getStadiumIllustrationSvg(', avatar_js)
+        self.assertIn('function getStadiumSeatingMapSvg(', avatar_js)
+        self.assertIn('function ensureClubCommercialState(', self.models_js)
+        self.assertIn('function getClubStadiumInfo(', self.models_js)
+        self.assertIn('function calculateProjectedMatchdayCommercial(', self.models_js)
+
+        self.assertGreaterEqual(match_js.count('calculateProjectedMatchdayCommercial('), 3)
+        self.assertIn('commercialBreakdown:', match_js)
+
+        self.assertIn('id="facilities-subtab-btn-commercial"', self.html)
+        self.assertIn('id="facilities-subview-commercial"', self.html)
+        self.assertIn('id="commercial-management-root"', self.html)
+
+        for sym in [
+            'pendingCommercialSetup:',
+            "action: 'open-commercial-setup'",
+            'function renderCommercialManagementPanel(',
+            'function selectOrBuildCommercialStadium(',
+            'function adjustTicketTierPrice(',
+            'function toggleMerchandiseItem(',
+            'function confirmCommercialSetupTask(',
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        self.assertIn('pendingCommercialSetup:', self.storage_js)
+        self.assertIn('commercialSubtab:', self.storage_js)
+        self.assertIn('.commercial-stadium-svg', self.css)
+        self.assertIn('.commercial-seatmap-svg', self.css)
 
 
 if __name__ == '__main__':

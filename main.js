@@ -257,6 +257,10 @@ const gameState = {
   sponsorDeadlineDayIndex: null,
   sponsorWindowClosed: false,
   pendingInitialStaffSetup: false,
+  pendingCommercialSetup: false,
+  commercialSubtab: 'stadium',
+  selectedStadiumPreviewId: null,
+  activeTicketSeatZone: null,
   seasonAwardsHistory: [],
   monthlyAwardsHistory: [],
   monthlyPlayerBaseline: {},
@@ -2577,11 +2581,11 @@ function showSecretaryOnboardingBriefing(playerClub) {
 
   let speech = '';
   if (sec.tone === 'active') {
-    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは執務室の「業務タスク」から、監督・コーチ陣の選任とスポンサー契約（期限 ${spWin.deadlineLabel}）を進めていきましょう！`;
+    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは執務室の「業務タスク」から、監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム＆興行設定を進めていきましょう！`;
   } else if (sec.tone === 'calm') {
-    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは執務室の「業務タスク」にある「監督・コーチ陣の選任」と「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」をご確認の上、着手をお願いいたします。`;
+    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは執務室の「業務タスク」にある「監督・コーチ陣の選任」「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」「スタジアム・チケット・グッズ設定」をご確認の上、着手をお願いいたします。`;
   } else {
-    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。執務室の「業務タスク」に最優先事項として「監督・コーチ陣の選任」および「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」をご用意いたしましたので、順次お手続きくださいませ。`;
+    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。執務室の「業務タスク」に最優先事項として監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・チケット・グッズ設定をご用意いたしましたので、順次お手続きくださいませ。`;
   }
 
   const detailHtml = `
@@ -2601,6 +2605,10 @@ function showSecretaryOnboardingBriefing(playerClub) {
       <div class="gm-modal-flat-row">
         <span class="gm-modal-flat-label">最優先業務 2</span>
         <span class="gm-modal-flat-val">スポンサー契約の締結（期限 ${escapeCommHtml(spWin.deadlineLabel)}）</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">最優先業務 3</span>
+        <span class="gm-modal-flat-val">スタジアム選定・チケット・グッズ設定（執務室タスク）</span>
       </div>
     </div>
   `;
@@ -6442,6 +6450,12 @@ function handleGmDutyAction(actionKey) {
     return;
   }
 
+  if (actionKey === 'open-commercial-setup') {
+    switchTab('facilities');
+    switchFacilitiesSubtab('commercial');
+    return;
+  }
+
   if (actionKey && actionKey.startsWith('negotiate-player:')) {
     const pid = actionKey.split(':')[1];
     switchTab('roster');
@@ -7453,9 +7467,11 @@ function startNextSeason() {
   } else {
     gameState.pendingSponsorSlots = openSponsorSlots;
   }
+  gameState.pendingCommercialSetup = true;
   if (openSponsorSlots.length > 0) {
     addDailyLog(`【スポンサー更改】新シーズン開幕に伴い、${openSponsorSlots.length}枠のスポンサー契約選定が可能になりました。`);
   }
+  addDailyLog('【興行計画】新シーズンのスタジアム・席別チケット価格・グッズ展開の見直しが執務室タスクに追加されました。');
   if (typeof captureMonthlyPlayerBaseline === 'function') {
     captureMonthlyPlayerBaseline();
   }
@@ -9775,6 +9791,7 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   // サブビューの表示切り替え
   const subviews = {
     investment: document.getElementById('facilities-subview-investment'),
+    commercial: document.getElementById('facilities-subview-commercial'),
     staff: document.getElementById('facilities-subview-staff'),
     youth: document.getElementById('facilities-subview-youth')
   };
@@ -9789,6 +9806,8 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   if (!shouldRender) return;
   if (subtabKey === 'investment') {
     renderFacilitiesAndYouth();
+  } else if (subtabKey === 'commercial') {
+    renderCommercialManagementPanel();
   } else if (subtabKey === 'staff') {
     renderManagerManagementPanel();
     renderCoachingStaffPanel();
@@ -11175,6 +11194,15 @@ function renderGmDuties() {
     }
     duties.push(spDuty);
   }
+  if (gameState.pendingCommercialSetup && !gameState.isSeasonOver && !gameState.isGameOver) {
+    duties.push({
+      level: 'recommended',
+      badge: '興行',
+      title: 'スタジアム・チケット・グッズ設定',
+      desc: 'ホームスタジアムの選定と席別チケット価格・グッズ収支バランスを設定します',
+      action: 'open-commercial-setup'
+    });
+  }
   if (gameState.pendingLineupConsultation) {
     const lc = gameState.pendingLineupConsultation;
     duties.push({
@@ -11378,7 +11406,13 @@ function renderFacilitiesAndYouth() {
   const stadiumBonusEl = document.getElementById('facilities-stadium-bonus');
   if (stadiumBonusEl) {
     const sLv = f.stadium || 1;
-    stadiumBonusEl.textContent = `Lv.${sLv}（${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)}）`;
+    const stInfo = typeof getClubStadiumInfo === 'function' ? getClubStadiumInfo(playerClub) : null;
+    stadiumBonusEl.textContent = stInfo
+      ? `${stInfo.name} · ${(stInfo.capacity || 0).toLocaleString()}席 (Lv.${sLv})`
+      : `Lv.${sLv}（${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)}）`;
+  }
+  if (gameState.facilitiesSubtab === 'commercial' && typeof renderCommercialManagementPanel === 'function') {
+    renderCommercialManagementPanel();
   }
 
   const feedbackBanner = document.getElementById('facility-feedback-banner');
@@ -13929,6 +13963,7 @@ function confirmIntroAndStartGame() {
   const playerClub = getPlayerClub();
   if (playerClub) {
     gameState.pendingInitialStaffSetup = true;
+    gameState.pendingCommercialSetup = true;
     playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
     playerClub.sponsors = { chest: null, sleeve: null, training: null, stadium: null, partners: [] };
     playerClub.sponsor = null;
@@ -15625,6 +15660,87 @@ function initGame() {
       const upgradeBtn = e.target.closest('[data-upgrade-facility]');
       if (upgradeBtn && upgradeBtn.dataset.upgradeFacility) {
         upgradeFacility(upgradeBtn.dataset.upgradeFacility);
+      }
+    });
+  }
+
+  const commercialView = document.getElementById('facilities-subview-commercial');
+  if (commercialView) {
+    commercialView.addEventListener('click', (e) => {
+      const subBtn = e.target.closest('[data-commercial-tab]');
+      if (subBtn && subBtn.dataset.commercialTab) {
+        gameState.commercialSubtab = subBtn.dataset.commercialTab;
+        renderCommercialManagementPanel();
+        return;
+      }
+      const actionBtn = e.target.closest('[data-commercial-action]');
+      if (actionBtn && actionBtn.dataset.commercialAction) {
+        const act = actionBtn.dataset.commercialAction;
+        if (act === 'confirm-setup') {
+          confirmCommercialSetupTask();
+          return;
+        }
+        if (act === 'select-stadium' && actionBtn.dataset.stadiumId) {
+          selectOrBuildCommercialStadium(actionBtn.dataset.stadiumId);
+          return;
+        }
+        if (act === 'preview-stadium' && actionBtn.dataset.stadiumId) {
+          previewCommercialStadium(actionBtn.dataset.stadiumId);
+          return;
+        }
+        if (act === 'ticket-preset' && actionBtn.dataset.preset) {
+          applyTicketPricePreset(actionBtn.dataset.preset);
+          return;
+        }
+        if (act === 'ticket-step' && actionBtn.dataset.zoneId) {
+          const delta = Number(actionBtn.dataset.delta || 0);
+          const club = getPlayerClub();
+          if (club && typeof ensureClubCommercialState === 'function') {
+            const comm = ensureClubCommercialState(club);
+            const cur = Number((comm.ticketPrices && comm.ticketPrices[actionBtn.dataset.zoneId]) || 0);
+            adjustTicketTierPrice(actionBtn.dataset.zoneId, cur + delta);
+          }
+          return;
+        }
+        if (act === 'merch-preset' && actionBtn.dataset.preset) {
+          applyMerchandisePreset(actionBtn.dataset.preset);
+          return;
+        }
+        if (act === 'merch-toggle' && actionBtn.dataset.merchId) {
+          toggleMerchandiseItem(actionBtn.dataset.merchId);
+          return;
+        }
+        if (act === 'merch-step' && actionBtn.dataset.merchId) {
+          const delta = Number(actionBtn.dataset.delta || 0);
+          const club = getPlayerClub();
+          if (club && typeof ensureClubCommercialState === 'function') {
+            const comm = ensureClubCommercialState(club);
+            const cur = Number((comm.merchandise && comm.merchandise[actionBtn.dataset.merchId] && comm.merchandise[actionBtn.dataset.merchId].price) || 0);
+            adjustMerchandisePrice(actionBtn.dataset.merchId, cur + delta);
+          }
+          return;
+        }
+      }
+      const previewRow = e.target.closest('[data-stadium-preview-row]');
+      if (previewRow && previewRow.dataset.stadiumPreviewRow && !e.target.closest('button')) {
+        previewCommercialStadium(previewRow.dataset.stadiumPreviewRow);
+        return;
+      }
+      const seatZone = e.target.closest('[data-seat-zone]');
+      if (seatZone && seatZone.dataset.seatZone) {
+        gameState.activeTicketSeatZone = seatZone.dataset.seatZone;
+        renderCommercialManagementPanel();
+      }
+    });
+    commercialView.addEventListener('input', (e) => {
+      const ticketSlider = e.target.closest('[data-ticket-range-zone]');
+      if (ticketSlider && ticketSlider.dataset.ticketRangeZone) {
+        adjustTicketTierPrice(ticketSlider.dataset.ticketRangeZone, Number(ticketSlider.value));
+        return;
+      }
+      const merchSlider = e.target.closest('[data-merch-range-id]');
+      if (merchSlider && merchSlider.dataset.merchRangeId) {
+        adjustMerchandisePrice(merchSlider.dataset.merchRangeId, Number(merchSlider.value));
       }
     });
   }
@@ -21290,6 +21406,13 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
   ledger.ga += oppScore;
   ledger.matchIncome += earnedIncome;
   ledger.supportersDelta += supportersDelta;
+  if (isHome && matchData.commercialBreakdown && !isFastForwardingSeason) {
+    const bd = matchData.commercialBreakdown;
+    const merchSign = bd.merchNetK >= 0 ? '+' : '';
+    addDailyLog(
+      `【興行収支】${bd.stadiumName ? bd.stadiumName + ' / ' : ''}入場 ${(bd.totalAttendance || 0).toLocaleString()}人（${bd.fillRatePct || 0}%）｜チケット +${formatMoney(bd.ticketRevenueK)} / グッズ純益 ${merchSign}${formatMoney(bd.merchNetK)} / 維持費 -${formatMoney(bd.maintenanceK)} → 試合収入 +${formatMoney(earnedIncome)}`
+    );
+  }
   if (Array.isArray(ledger.matches)) {
     ledger.matches.push({
       comp: matchData.compTitle || (matchData.week ? `第${matchData.week}節` : '公式戦'),
@@ -21345,7 +21468,9 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     ? (gateIncome > 0 && prizeIncome > 0
       ? `賞金+${formatMoney(prizeIncome)} · 入場+${formatMoney(gateIncome)}`
       : (gateIncome > 0 ? '入場・グッズ収入' : 'WCT大会賞金'))
-    : (isHome ? '入場料・グッズ・放映' : 'アウェイ放映権料');
+    : (isHome && matchData.commercialBreakdown
+      ? `入場${(matchData.commercialBreakdown.totalAttendance || 0).toLocaleString()}人(${matchData.commercialBreakdown.fillRatePct || 0}%) · チケット+${formatMoney(matchData.commercialBreakdown.ticketRevenueK)}`
+      : (isHome ? '入場料・グッズ・放映' : 'アウェイ放映権料'));
   const fanDeltaCls = supportersDelta >= 0 ? 'accent-green' : 'text-danger';
 
   showSecretaryModal({
@@ -23720,6 +23845,424 @@ function renderClubRecordsView() {
       }
     });
   }
+}
+
+// ==========================================================================
+// スタジアム選定・席別チケット価格・グッズ収支管理UI
+// ==========================================================================
+
+function previewCommercialStadium(stadiumId) {
+  if (!stadiumId) return;
+  gameState.selectedStadiumPreviewId = stadiumId;
+  renderCommercialManagementPanel();
+}
+
+function selectOrBuildCommercialStadium(stadiumId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const comm = ensureClubCommercialState(playerClub);
+  const preset = (typeof STADIUM_PRESETS !== 'undefined' ? STADIUM_PRESETS : []).find(p => p.id === stadiumId);
+  if (!preset) return;
+  if (comm.stadiumId === preset.id) return;
+
+  const isOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(preset.id);
+  const costK = isOwned ? 0 : (preset.buildCostK || 0);
+  if (costK > 0 && (playerClub.funds || 0) < costK) return;
+
+  if (costK > 0) {
+    playerClub.funds -= costK;
+  }
+  if (!Array.isArray(comm.ownedStadiumIds)) comm.ownedStadiumIds = [];
+  if (!comm.ownedStadiumIds.includes(preset.id)) {
+    comm.ownedStadiumIds.push(preset.id);
+  }
+  comm.stadiumId = preset.id;
+  gameState.selectedStadiumPreviewId = preset.id;
+  markAllViewsDirty();
+
+  const costNote = costK > 0 ? `（建設・移転費 -${formatMoney(costK)}）` : '（本拠地切替・無料）';
+  addDailyLog(`【スタジアム決定】ホームスタジアムを「${preset.name}」に設定しました${costNote}。`);
+  renderAll();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(300);
+}
+
+function adjustTicketTierPrice(zoneId, newPrice) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const tier = (typeof TICKET_SEAT_TIERS !== 'undefined' ? TICKET_SEAT_TIERS : []).find(t => t.id === zoneId);
+  if (!tier) return;
+  const comm = ensureClubCommercialState(playerClub);
+  comm.ticketPrices[zoneId] = clamp(Math.round(newPrice), tier.minPrice, tier.maxPrice);
+  gameState.activeTicketSeatZone = zoneId;
+  renderCommercialManagementPanel();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(500);
+}
+
+function applyTicketPricePreset(presetKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const comm = ensureClubCommercialState(playerClub);
+  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const multMap = { fan: 0.85, balanced: 1.0, revenue: 1.18 };
+  const mult = multMap[presetKey] || 1.0;
+
+  for (const tier of (typeof TICKET_SEAT_TIERS !== 'undefined' ? TICKET_SEAT_TIERS : [])) {
+    const fair = isD2 ? tier.d2FairPrice : tier.d1FairPrice;
+    const raw = Math.round((fair * mult) / (tier.step || 1)) * (tier.step || 1);
+    comm.ticketPrices[tier.id] = clamp(raw, tier.minPrice, tier.maxPrice);
+  }
+  renderCommercialManagementPanel();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
+}
+
+function toggleMerchandiseItem(itemId) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const comm = ensureClubCommercialState(playerClub);
+  if (!comm.merchandise || !comm.merchandise[itemId]) return;
+  comm.merchandise[itemId].enabled = !comm.merchandise[itemId].enabled;
+  renderCommercialManagementPanel();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
+}
+
+function adjustMerchandisePrice(itemId, newPrice) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const item = (typeof MERCHANDISE_CATALOG !== 'undefined' ? MERCHANDISE_CATALOG : []).find(m => m.id === itemId);
+  if (!item) return;
+  const comm = ensureClubCommercialState(playerClub);
+  if (!comm.merchandise[itemId]) {
+    comm.merchandise[itemId] = { enabled: true, price: item.defaultPrice };
+  }
+  comm.merchandise[itemId].price = clamp(Math.round(newPrice), item.minPrice, item.maxPrice);
+  renderCommercialManagementPanel();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(500);
+}
+
+function applyMerchandisePreset(presetKey) {
+  if (gameState.isGameOver || gameState.isSimulating) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
+  const comm = ensureClubCommercialState(playerClub);
+  const proj = typeof calculateProjectedMatchdayCommercial === 'function'
+    ? calculateProjectedMatchdayCommercial(playerClub)
+    : null;
+  const catalog = typeof MERCHANDISE_CATALOG !== 'undefined' ? MERCHANDISE_CATALOG : [];
+
+  for (const item of catalog) {
+    if (!comm.merchandise[item.id]) {
+      comm.merchandise[item.id] = { enabled: false, price: item.defaultPrice };
+    }
+    comm.merchandise[item.id].price = item.defaultPrice;
+    if (presetKey === 'safe') {
+      comm.merchandise[item.id].enabled = (item.id === 'scarf' || item.id === 'food_drink' || item.id === 'kids_cap');
+    } else if (presetKey === 'all') {
+      comm.merchandise[item.id].enabled = true;
+    } else {
+      const mRes = proj && Array.isArray(proj.merchResults) ? proj.merchResults.find(r => r.id === item.id) : null;
+      comm.merchandise[item.id].enabled = mRes ? (mRes.netProfitK >= 0) : (item.id === 'scarf' || item.id === 'food_drink');
+    }
+  }
+  renderCommercialManagementPanel();
+  if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
+}
+
+function confirmCommercialSetupTask() {
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+  const proj = typeof calculateProjectedMatchdayCommercial === 'function'
+    ? calculateProjectedMatchdayCommercial(playerClub)
+    : null;
+  gameState.pendingCommercialSetup = false;
+  if (proj) {
+    addDailyLog(`【興行計画確定】${proj.stadium.name}（収容 ${proj.totalCapacity.toLocaleString()}席）にて予想1試合純収益 ${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)} で承認しました。`);
+  }
+  renderAll();
+  if (typeof saveGameToStorage === 'function') saveGameToStorage(true);
+}
+
+function renderCommercialManagementPanel() {
+  const root = document.getElementById('commercial-management-root');
+  if (!root) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (typeof ensureClubCommercialState === 'function') {
+    ensureClubCommercialState(playerClub);
+  }
+  const comm = playerClub.commercial || {};
+  const subtab = gameState.commercialSubtab || 'stadium';
+  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const homeMatchCount = isD2 ? 23 : 19;
+  const proj = typeof calculateProjectedMatchdayCommercial === 'function'
+    ? calculateProjectedMatchdayCommercial(playerClub)
+    : null;
+  if (!proj) return;
+
+  const merchNetCls = proj.merchNetK >= 0 ? 'accent-green' : 'accent-red';
+  const netCls = proj.netMatchdayIncomeK >= 0 ? 'accent-green' : 'accent-red';
+  const netSign = proj.netMatchdayIncomeK >= 0 ? '+' : '';
+  const merchSign = proj.merchNetK >= 0 ? '+' : '';
+  const seasonEstimateK = proj.netMatchdayIncomeK * homeMatchCount;
+
+  const setupBannerHtml = gameState.pendingCommercialSetup
+    ? `
+      <div class="commercial-setup-bar">
+        <span class="commercial-setup-text">今シーズンのスタジアム・席別チケット価格・グッズ展開を設定し、興行計画を確定してください</span>
+        <button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup">興行計画を確定する</button>
+      </div>
+    `
+    : '';
+
+  const summaryHtml = `
+    <div class="commercial-summary-strip">
+      <div class="commercial-summary-cell">
+        <span class="commercial-summary-label">本拠地 / 予想来場</span>
+        <span class="commercial-summary-val mono">${proj.totalAttendance.toLocaleString()}人 (${proj.fillRatePct}%)</span>
+        <span class="commercial-summary-sub">${escapeCommHtml(proj.stadium.name)} · ${proj.totalCapacity.toLocaleString()}席</span>
+      </div>
+      <div class="commercial-summary-cell">
+        <span class="commercial-summary-label">チケット予想売上</span>
+        <span class="commercial-summary-val mono accent-green">+${formatMoney(proj.ticketRevenueK)}</span>
+        <span class="commercial-summary-sub">4席合計 · スポンサー補正 ×${proj.sponsorMult.toFixed(2)}</span>
+      </div>
+      <div class="commercial-summary-cell">
+        <span class="commercial-summary-label">グッズ収支 / 維持費</span>
+        <span class="commercial-summary-val mono ${merchNetCls}">${merchSign}${formatMoney(proj.merchNetK)}</span>
+        <span class="commercial-summary-sub">${proj.enabledMerchCount}品展開 · 維持費 -${formatMoney(proj.maintenanceK)}</span>
+      </div>
+      <div class="commercial-summary-cell">
+        <span class="commercial-summary-label">1試合予想純収益</span>
+        <span class="commercial-summary-val mono ${netCls}">${netSign}${formatMoney(proj.netMatchdayIncomeK)}</span>
+        <span class="commercial-summary-sub">リーグH ${homeMatchCount}試合換算 ${seasonEstimateK >= 0 ? '+' : ''}${formatMoney(seasonEstimateK)}</span>
+      </div>
+    </div>
+  `;
+
+  const navHtml = `
+    <div class="commercial-subnav" role="tablist" aria-label="興行設定セクション">
+      <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム選択</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット価格</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'merch' ? 'active' : ''}" data-commercial-tab="merch" role="tab" aria-selected="${subtab === 'merch' ? 'true' : 'false'}">グッズ展開・収支</button>
+    </div>
+  `;
+
+  let bodyHtml = '';
+  const presets = typeof STADIUM_PRESETS !== 'undefined' ? STADIUM_PRESETS : [];
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+
+  if (subtab === 'stadium') {
+    const previewId = gameState.selectedStadiumPreviewId && presets.some(p => p.id === gameState.selectedStadiumPreviewId)
+      ? gameState.selectedStadiumPreviewId
+      : proj.stadium.id;
+    const previewPreset = presets.find(p => p.id === previewId) || proj.stadium;
+    const isCurrent = previewPreset.id === comm.stadiumId;
+    const isOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(previewPreset.id);
+    const previewCap = previewPreset.baseCapacity + (stadiumLv - 1) * (previewPreset.levelCapacityStep || 5000);
+    const previewMaint = Math.round((previewPreset.maintenancePerMatchK || 120) * (1 + (stadiumLv - 1) * 0.14));
+    const buildCost = isOwned ? 0 : (previewPreset.buildCostK || 0);
+    const canAfford = (playerClub.funds || 0) >= buildCost;
+    const svgHero = typeof getStadiumIllustrationSvg === 'function'
+      ? getStadiumIllustrationSvg(previewPreset.id, playerClub, stadiumLv, false)
+      : '';
+
+    let actionBtnHtml = '';
+    if (isCurrent) {
+      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>使用中のスタジアム</button>`;
+    } else if (isOwned) {
+      actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">このスタジアムへ切替（無料）</button>`;
+    } else if (canAfford) {
+      actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm mono" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">建設・移転する（${formatMoney(buildCost)}）</button>`;
+    } else {
+      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>資金不足（必要 ${formatMoney(buildCost)}）</button>`;
+    }
+
+    const share = previewPreset.seatShare || { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 };
+    const listRowsHtml = presets.map(st => {
+      const cap = st.baseCapacity + (stadiumLv - 1) * (st.levelCapacityStep || 5000);
+      const maint = Math.round((st.maintenancePerMatchK || 120) * (1 + (stadiumLv - 1) * 0.14));
+      const rowIsCurrent = st.id === comm.stadiumId;
+      const rowIsOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(st.id);
+      const rowSelected = st.id === previewPreset.id;
+      const thumbSvg = typeof getStadiumIllustrationSvg === 'function'
+        ? getStadiumIllustrationSvg(st.id, playerClub, stadiumLv, true)
+        : '';
+      const statusHtml = rowIsCurrent
+        ? `<span class="accent-green mono">使用中</span>`
+        : (rowIsOwned
+          ? `<span class="accent-green mono">保有済</span>`
+          : `<span class="accent-gold mono">${formatMoney(st.buildCostK)}</span>`);
+
+      return `
+        <div class="commercial-flat-row is-clickable ${rowSelected ? 'is-selected' : ''}" data-stadium-preview-row="${st.id}">
+          <div class="commercial-stadium-thumb">${thumbSvg}</div>
+          <div class="commercial-row-main">
+            <div class="commercial-row-title-line">
+              <span class="commercial-row-name">${escapeCommHtml(st.name)}</span>
+              <span class="commercial-row-sub">${escapeCommHtml(st.styleLabel)}</span>
+            </div>
+            <div class="commercial-row-sub">VIP ${Math.round((st.seatShare.vip || 0.1) * 100)}% · 集客 ×${st.ticketDemandBonus.toFixed(2)} · 物販 ×${st.merchDemandBonus.toFixed(2)}</div>
+          </div>
+          <div class="commercial-row-metrics">
+            <div class="commercial-metric-col">
+              <span class="commercial-metric-cap">収容 / 維持費</span>
+              <span class="commercial-metric-num mono">${cap.toLocaleString()}席 / -${formatMoney(maint)}</span>
+            </div>
+            <div class="commercial-metric-col">
+              <span class="commercial-metric-cap">導入費用</span>
+              <span class="commercial-metric-num">${statusHtml}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    bodyHtml = `
+      <div class="commercial-stadium-hero">
+        <div class="commercial-stadium-stage">${svgHero}</div>
+        <div class="commercial-stadium-meta">
+          <div class="commercial-stadium-title-row">
+            <h3 class="commercial-stadium-title">${escapeCommHtml(previewPreset.name)}</h3>
+            <span class="commercial-row-sub mono">施設Lv.${stadiumLv}</span>
+          </div>
+          <div class="commercial-row-sub">${escapeCommHtml(previewPreset.summary)}</div>
+          <div class="commercial-inline-kv-list">
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">収容人数</span>
+              <span class="commercial-kv-val mono accent-green">${previewCap.toLocaleString()}席</span>
+            </div>
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">座席配分</span>
+              <span class="commercial-kv-val mono">裏${Math.round(share.goal * 100)}% / B${Math.round(share.back * 100)}% / M${Math.round(share.main * 100)}% / VIP${Math.round(share.vip * 100)}%</span>
+            </div>
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">1試合維持費</span>
+              <span class="commercial-kv-val mono accent-gold">-${formatMoney(previewMaint)}</span>
+            </div>
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">興行特性</span>
+              <span class="commercial-kv-val mono">集客×${previewPreset.ticketDemandBonus.toFixed(2)} · 物販×${previewPreset.merchDemandBonus.toFixed(2)}</span>
+            </div>
+          </div>
+          <div>${actionBtnHtml}</div>
+        </div>
+      </div>
+      <div class="commercial-flat-list">${listRowsHtml}</div>
+    `;
+  } else if (subtab === 'tickets') {
+    const seatMapSvg = typeof getStadiumSeatingMapSvg === 'function'
+      ? getStadiumSeatingMapSvg(proj.stadium.id, playerClub, proj.zoneResults, gameState.activeTicketSeatZone)
+      : '';
+    const rowsHtml = proj.zoneResults.map(z => {
+      const isActive = gameState.activeTicketSeatZone === z.id;
+      return `
+        <div class="commercial-flat-row ${isActive ? 'is-selected' : ''}" data-seat-zone="${z.id}">
+          <div class="commercial-row-main">
+            <div class="commercial-row-title-line">
+              <span class="commercial-row-name">${escapeCommHtml(z.name)}</span>
+              <span class="commercial-row-sub">${escapeCommHtml(z.subLabel)}</span>
+            </div>
+            <div class="commercial-row-sub mono">席数 ${z.capacity.toLocaleString()}席 · 予想 ${z.attendance.toLocaleString()}人（稼働率 ${z.occupancyPct}%）· 基準 £${z.fairPrice}</div>
+          </div>
+          <div class="commercial-row-metrics">
+            <div class="commercial-stepper">
+              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="-${z.step}" aria-label="${z.name}を値下げ">-</button>
+              <span class="commercial-step-price mono">£${z.price}</span>
+              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="${z.step}" aria-label="${z.name}を値上げ">+</button>
+            </div>
+            <input type="range" class="commercial-price-range" min="${z.minPrice}" max="${z.maxPrice}" step="${z.step}" value="${z.price}" data-ticket-range-zone="${z.id}" aria-label="${z.name}価格スライダー">
+            <div class="commercial-metric-col">
+              <span class="commercial-metric-cap">予想売上 / 評判</span>
+              <span class="commercial-metric-num mono"><span class="accent-green">+${formatMoney(z.revenueK)}</span> · <span class="${z.ratingClass}">${z.ratingLabel}</span></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    bodyHtml = `
+      <div class="commercial-seatmap-wrap">
+        ${seatMapSvg}
+        <span class="commercial-row-sub">座席エリアをクリックすると該当ランクの調整行をハイライトします</span>
+      </div>
+      <div class="commercial-preset-bar">
+        <span class="commercial-row-sub">価格方針プリセット</span>
+        <div class="commercial-preset-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="fan">ファン重視</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="balanced">適正バランス</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="revenue">収益優先</button>
+        </div>
+      </div>
+      <div class="commercial-flat-list">${rowsHtml}</div>
+    `;
+  } else {
+    const merchRowsHtml = proj.merchResults.map(m => {
+      const netCls = m.netProfitK >= 0 ? 'accent-green' : 'accent-red';
+      const netPrefix = m.netProfitK >= 0 ? '+' : '';
+      const deficitText = m.isDeficit ? ' 赤字見込' : '';
+      return `
+        <div class="commercial-flat-row ${m.enabled ? 'is-selected' : ''}">
+          <button type="button" class="commercial-merch-toggle ${m.enabled ? 'is-on' : ''}" data-commercial-action="merch-toggle" data-merch-id="${m.id}">
+            ${m.enabled ? '販売中' : '停止中'}
+          </button>
+          <div class="commercial-row-main">
+            <div class="commercial-row-title-line">
+              <span class="commercial-row-name">${escapeCommHtml(m.name)}</span>
+              <span class="commercial-row-sub">${escapeCommHtml(m.targetLabel)}</span>
+            </div>
+            <div class="commercial-row-sub mono">固定費 -${formatMoney(m.fixedCostK)} / 原価 £${m.unitCost} / 予想販売 ${m.unitsSold.toLocaleString()}個</div>
+          </div>
+          <div class="commercial-row-metrics">
+            <div class="commercial-stepper">
+              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="-${m.step}" aria-label="${m.name}を値下げ">-</button>
+              <span class="commercial-step-price mono">£${m.price}</span>
+              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="${m.step}" aria-label="${m.name}を値上げ">+</button>
+            </div>
+            <div class="commercial-metric-col">
+              <span class="commercial-metric-cap">売上 / 総コスト</span>
+              <span class="commercial-metric-num mono">+${formatMoney(m.revenueK)} / -${formatMoney(m.totalCostK)}</span>
+            </div>
+            <div class="commercial-metric-col">
+              <span class="commercial-metric-cap">純利益${m.enabled ? '' : ' (参考)'}</span>
+              <span class="commercial-metric-num mono ${netCls}">${netPrefix}${formatMoney(m.netProfitK)}${deficitText}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    bodyHtml = `
+      <div class="commercial-preset-bar">
+        <span class="commercial-row-sub">来場者規模に合わせて固定費負けしない商品を選定してください（赤字商品はOFF推奨）</span>
+        <div class="commercial-preset-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe">堅実構成</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced">黒字のみ自動</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="all">全品展開</button>
+        </div>
+      </div>
+      <div class="commercial-flat-list">${merchRowsHtml}</div>
+      <div class="commercial-total-footer">
+        <span class="commercial-kv-label">展開中 ${proj.enabledMerchCount}品目 合計</span>
+        <span class="mono">売上 +${formatMoney(proj.merchRevenueK)} ／ コスト -${formatMoney(proj.merchCostK)} ／ 純利益 <span class="${merchNetCls}">${merchSign}${formatMoney(proj.merchNetK)}</span></span>
+      </div>
+    `;
+  }
+
+  root.innerHTML = `
+    <div class="commercial-root">
+      ${setupBannerHtml}
+      ${summaryHtml}
+      ${navHtml}
+      <div class="commercial-section-body">
+        ${bodyHtml}
+      </div>
+    </div>
+  `;
 }
 
 
