@@ -652,6 +652,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       compTitle: `WCT ${myMatch.roundName}`,
       compCode: 'WCT',
       isPreseason: true,
+      isTournamentFinal: roundNum === 3,
       userWon,
       homeClub: matchHomeClub,
       awayClub: matchAwayClub,
@@ -1048,6 +1049,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     compTitle: `${comp.name} ${cupRoundTitle}`,
     isEuroLeague: false,
     isKnockout: true,
+    isTournamentFinal: roundKey === 'FINAL',
     userWon,
     pkHome: simRes.pkHome,
     pkAway: simRes.pkAway,
@@ -4031,6 +4033,70 @@ function transitionToMatchSummary(isQuickResult = false) {
 
   if (typeof renderAvatarCanvases === 'function') {
     renderAvatarCanvases(summaryBody);
+  }
+
+  if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay && md && md.isPlayerMatch) {
+    const isPlayerHome = Boolean(md.homeClub && md.homeClub.isPlayer);
+    const myScore = isPlayerHome ? md.homeScore : md.awayScore;
+    const oppScore = isPlayerHome ? md.awayScore : md.homeScore;
+    const isFinalMatch = Boolean(md.isTournamentFinal) || (
+      md.compTitle
+      && /決勝$/.test(String(md.compTitle).trim())
+      && !String(md.compTitle).includes('プレーオフ')
+    );
+
+    if (!isQuickResult || isFinalMatch) {
+      const outcomeWin = md.isKnockout ? Boolean(md.userWon) : (myScore > oppScore);
+      const outcomeDraw = !md.isKnockout && myScore === oppScore;
+      const ftTheme = outcomeWin ? 'green' : (outcomeDraw ? 'slate' : 'crimson');
+      const ftTitle = outcomeWin ? '試合終了 · 勝利' : (outcomeDraw ? '試合終了 · 引分' : '試合終了 · 敗戦');
+      const ftMetrics = [
+        { label: '結果', value: outcomeWin ? 'WIN' : (outcomeDraw ? 'DRAW' : 'LOSE'), tone: outcomeWin ? 'green' : (outcomeDraw ? '' : 'red') }
+      ];
+      if (isPlayerHome && md.commercialBreakdown && typeof md.commercialBreakdown.totalAttendance === 'number') {
+        ftMetrics.push({ label: '観客動員', value: `${md.commercialBreakdown.totalAttendance.toLocaleString()}人` });
+      }
+      if (typeof md.matchIncome === 'number' && md.matchIncome > 0) {
+        ftMetrics.push({ label: isPlayerHome ? '試合収入' : '放映収入', value: `+${formatMoney(md.matchIncome)}`, tone: 'gold' });
+      }
+      CinematicOverlay.enqueue({
+        type: 'match_fulltime',
+        tier: isFinalMatch ? 'major' : 'normal',
+        theme: ftTheme,
+        eyebrow: md.compTitle || `第${md.week || 1}節 公式戦`,
+        title: ftTitle,
+        club: md.homeClub,
+        awayClub: md.awayClub,
+        score: { home: md.homeScore, away: md.awayScore, pkHome: md.pkHome, pkAway: md.pkAway },
+        metrics: ftMetrics,
+        sfx: null,
+        durationMs: 1700
+      });
+    }
+
+    const wonFinalTrophy = isFinalMatch && (md.isKnockout ? Boolean(md.userWon) : (myScore > oppScore));
+    if (wonFinalTrophy) {
+      const playerClubObj = isPlayerHome ? md.homeClub : md.awayClub;
+      const compLabel = String(md.compTitle || '').replace(/\s*決勝$/, '').trim() || '大会';
+      const isEuroTrophy = /ECT|EPC|ECS|欧州/.test(compLabel);
+      CinematicOverlay.enqueue({
+        type: 'trophy_championship',
+        tier: 'major',
+        theme: 'gold',
+        trophyType: isEuroTrophy ? 'euro' : 'cup',
+        eyebrow: `${compLabel} 優勝`,
+        title: `${playerClubObj ? playerClubObj.name : ''} タイトル獲得`,
+        subtitle: `${md.homeClub ? md.homeClub.name : ''} ${md.homeScore}-${md.awayScore} ${md.awayClub ? md.awayClub.name : ''}`,
+        club: playerClubObj,
+        metrics: [
+          { label: '大会', value: compLabel, tone: 'gold' },
+          { label: 'シーズン', value: `${(typeof gameState !== 'undefined' && gameState.season) || 1}年目` }
+        ],
+        confetti: true,
+        sfx: myScore === oppScore ? 'jingle_victory' : null,
+        durationMs: 3600
+      });
+    }
   }
 }
 

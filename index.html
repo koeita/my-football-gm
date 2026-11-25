@@ -1660,6 +1660,19 @@
             </label>
           </div>
         </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">イベント演出</span>
+            <span class="settings-desc">選手獲得・昇格・優勝・試合終了時のフルスクリーン演出を表示します</span>
+          </div>
+          <div class="settings-control-col">
+            <select id="setting-cinematic-mode" class="settings-select mono">
+              <option value="all">すべて表示</option>
+              <option value="major">重要イベントのみ</option>
+              <option value="off">オフ</option>
+            </select>
+          </div>
+        </div>
         <div class="settings-row settings-title-return-row">
           <div class="settings-label-col">
             <span class="settings-label">メインメニュー</span>
@@ -2043,7 +2056,10 @@
   <script src="competitions.js?v=20261119_2000"></script>
   <script src="match-engine.js?v=20261119_2000"></script>
   <script src="storage.js?v=20261119_3000"></script>
+  <div id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
+
   <script src="audio.js?v=20261119_0300"></script>
-  <script src="main.js?v=20261119_3200"></script></script>
+  <script src="cinematic.js?v=20261126_0100"></script>
+  <script src="main.js?v=20261119_3200"></script>
 </body>
 </html>
