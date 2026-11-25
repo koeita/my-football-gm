@@ -254,6 +254,8 @@ const gameState = {
   recentConsultedPlayerIds: [],
   lastConflictCoachCategory: null,
   pendingSponsorSlots: [],
+  sponsorDeadlineDayIndex: null,
+  sponsorWindowClosed: false,
   seasonAwardsHistory: [],
   monthlyAwardsHistory: [],
   monthlyPlayerBaseline: {},
@@ -1185,9 +1187,12 @@ function advanceCalendarDay(skipRender = false) {
     }
   }
 
-  // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新
+  // 2. 移籍ウィンドウ期間中のイベント判定＆受信オファー期限更新＆スポンサー受付期限判定
   const incomingResponded = updateIncomingOffersExpiry();
   const outgoingResponded = updateOutgoingOffersExpiry();
+  if (typeof processSponsorWindowExpiryDaily === 'function') {
+    processSponsorWindowExpiryDaily();
+  }
   let eventTriggered = winterMarketEvent;
   if (incomingResponded || outgoingResponded) {
     eventTriggered = true;
@@ -2304,7 +2309,12 @@ function getModalSpeakerPillClass(kind) {
 function buildModalSpeakerPillHtml(speakerObj) {
   if (!speakerObj) return '';
   const extraCls = getModalSpeakerPillClass(speakerObj.kind);
-  return `<span class="gm-vn-pill-badge${extraCls}"><span class="gm-modal-sec-name">${escapeCommHtml(speakerObj.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(speakerObj.roleLabel)}</span></span>`;
+  const playerId = (speakerObj.kind === 'player' && speakerObj.person && speakerObj.person.id) ? speakerObj.person.id : '';
+  const clickableCls = playerId ? ' is-player-clickable' : '';
+  const clickableAttr = playerId
+    ? ` data-consult-player-id="${escapeCommHtml(playerId)}" role="button" tabindex="0" title="${escapeCommHtml(speakerObj.name)}のプロフィールを開く"`
+    : '';
+  return `<span class="gm-vn-pill-badge${extraCls}${clickableCls}"${clickableAttr}><span class="gm-modal-sec-name">${escapeCommHtml(speakerObj.name)}</span><span class="gm-modal-sec-role">${escapeCommHtml(speakerObj.roleLabel)}</span></span>`;
 }
 
 function showGmModal(opts, fromQueue = false) {
@@ -2373,7 +2383,12 @@ function showGmModal(opts, fromQueue = false) {
       secBox.classList.remove('hidden');
     } else {
       const bustHtml = resolveModalSpeakerBustHtml(activeSpeaker.kind, activeSpeaker.person, activeSpeaker.club);
-      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap">${bustHtml}</div>`;
+      const playerId = (activeSpeaker.kind === 'player' && activeSpeaker.person && activeSpeaker.person.id) ? activeSpeaker.person.id : '';
+      const clickableCls = playerId ? ' is-player-clickable' : '';
+      const clickableAttr = playerId
+        ? ` data-consult-player-id="${escapeCommHtml(playerId)}" role="button" tabindex="0" title="${escapeCommHtml(activeSpeaker.name)}のプロフィールを開く"`
+        : '';
+      secBox.innerHTML = `<div class="gm-modal-sec-avatar-wrap${clickableCls}"${clickableAttr}>${bustHtml}</div>`;
       secBox.classList.remove('hidden');
     }
   }
@@ -2434,10 +2449,30 @@ function showGmModal(opts, fromQueue = false) {
     dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
     dialogueCard.onclick = singleTapNextBtn
       ? (e) => {
-          if (e.target.closest('button, a, #modal-detail-box')) return;
+          if (e.target.closest('button, a, #modal-detail-box, [data-consult-player-id]')) return;
           singleTapNextBtn.click();
         }
       : null;
+  }
+
+  if (overlay.dataset.consultProfileBound !== '1') {
+    overlay.dataset.consultProfileBound = '1';
+    const handleConsultPlayerTrigger = (e) => {
+      const target = e.target.closest('[data-consult-player-id]');
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pid = target.dataset.consultPlayerId;
+      if (pid && typeof openPlayerProfileModal === 'function') {
+        openPlayerProfileModal(pid);
+      }
+    };
+    overlay.addEventListener('click', handleConsultPlayerTrigger);
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        handleConsultPlayerTrigger(e);
+      }
+    });
   }
 
   overlay.classList.remove('hidden');
@@ -2518,7 +2553,9 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
       : `GM、Season ${gameState.season}が開幕いたしました。移籍市場も同時に開いておりますので、目標達成に向け${mgrName}監督の補強希望「${wishPosText}」をご確認のうえご指示ください。`;
   }
 
-  const hasPendingSponsors = Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0;
+  const hasPendingSponsors = typeof getSponsorContractWindowInfo === 'function'
+    ? getSponsorContractWindowInfo().isOpen
+    : (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0);
   showSecretaryModal({
     topic,
     title,
@@ -7290,7 +7327,11 @@ function startNextSeason() {
   const openSponsorSlots = ['chest', 'sleeve', 'training', 'stadium'].filter(k => !playerClub.sponsors || !playerClub.sponsors[k]);
   const curPartners = (playerClub.sponsors && Array.isArray(playerClub.sponsors.partners)) ? playerClub.sponsors.partners.filter(Boolean) : [];
   if (curPartners.length < 2) openSponsorSlots.push('partners');
-  gameState.pendingSponsorSlots = openSponsorSlots;
+  if (typeof initSponsorContractWindow === 'function') {
+    initSponsorContractWindow(openSponsorSlots);
+  } else {
+    gameState.pendingSponsorSlots = openSponsorSlots;
+  }
   if (openSponsorSlots.length > 0) {
     addDailyLog(`【スポンサー更改】新シーズン開幕に伴い、${openSponsorSlots.length}枠のスポンサー契約選定が可能になりました。`);
   }
@@ -10980,14 +11021,27 @@ function renderGmDuties() {
       action: 'goto-market-offers'
     });
   }
-  if (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0 && !gameState.isSeasonOver) {
-    duties.push({
+  const spWin = typeof getSponsorContractWindowInfo === 'function'
+    ? getSponsorContractWindowInfo()
+    : {
+        isOpen: Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0 && !gameState.isSeasonOver,
+        pendingSlots: gameState.pendingSponsorSlots || [],
+        deadlineLabel: '8/31',
+        daysLeft: 0
+      };
+  if (spWin.isOpen) {
+    const spLeftText = spWin.daysLeft === 0 ? '本日締切' : `残${spWin.daysLeft}日`;
+    const spDuty = {
       level: 'recommended',
       badge: '契約',
       title: 'スポンサー契約の締結',
-      desc: `胸・袖・施設・公式パートナーの未契約枠（${gameState.pendingSponsorSlots.length}枠）を選定します`,
+      desc: `未契約 ${spWin.pendingSlots.length}枠 · 期限 ${spWin.deadlineLabel}（${spLeftText}）`,
       action: 'open-sponsor-selection'
-    });
+    };
+    if (spWin.daysLeft <= 7) {
+      spDuty.warningText = spWin.daysLeft === 0 ? '本日締切：未契約枠は失効します' : `受付終了まであと${spWin.daysLeft}日`;
+    }
+    duties.push(spDuty);
   }
   if (gameState.pendingLineupConsultation) {
     const lc = gameState.pendingLineupConsultation;
@@ -13487,25 +13541,29 @@ function closePlayerProfileModal() {
   if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
   gameState.profileModalPlayerId = null;
 
-  // モーダルを閉じた後、直前のスクロール位置（選手一覧や市場の閲覧位置）を確実に復元
-  const savedY = lastProfileOpenScrollY;
-  const savedContainers = [...lastProfileOpenContainerScrolls];
-  const restoreScrollPos = () => {
-    if (typeof savedY === 'number') {
-      window.scrollTo(0, savedY);
-      if (document.documentElement) document.documentElement.scrollTop = savedY;
-      if (document.body) document.body.scrollTop = savedY;
-    }
-    savedContainers.forEach(({ el, top }) => {
-      if (el && el.scrollTop !== top) {
-        el.scrollTop = top;
+  // 他モーダル（相談モーダル等）が背面で開いている場合は、背景スクロール復元を行わず元モーダルを維持
+  const hasRemainingOpenModal = document.querySelectorAll('.modal-overlay:not(.hidden), #gm-modal-overlay:not(.hidden)').length > 0;
+  if (!hasRemainingOpenModal) {
+    // モーダルを閉じた後、直前のスクロール位置（選手一覧や市場の閲覧位置）を確実に復元
+    const savedY = lastProfileOpenScrollY;
+    const savedContainers = [...lastProfileOpenContainerScrolls];
+    const restoreScrollPos = () => {
+      if (typeof savedY === 'number') {
+        window.scrollTo(0, savedY);
+        if (document.documentElement) document.documentElement.scrollTop = savedY;
+        if (document.body) document.body.scrollTop = savedY;
       }
-    });
-  };
-  restoreScrollPos();
-  requestAnimationFrame(restoreScrollPos);
-  setTimeout(restoreScrollPos, 20);
-  setTimeout(restoreScrollPos, 60);
+      savedContainers.forEach(({ el, top }) => {
+        if (el && el.scrollTop !== top) {
+          el.scrollTop = top;
+        }
+      });
+    };
+    restoreScrollPos();
+    requestAnimationFrame(restoreScrollPos);
+    setTimeout(restoreScrollPos, 20);
+    setTimeout(restoreScrollPos, 60);
+  }
 }
 
 let introClubFilter = 'all';
@@ -13931,6 +13989,9 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.expandedMessageId = null;
   gameState.monthlyReports = [];
   gameState.pendingLineupConsultation = null;
+  gameState.pendingSponsorSlots = [];
+  gameState.sponsorDeadlineDayIndex = null;
+  gameState.sponsorWindowClosed = false;
   gameState.totalPlayerMatchesPlayed = 0;
   gameState.lastConsultationMatchCount = 0;
   gameState.consultationSeq = 0;
@@ -17248,7 +17309,11 @@ function openInitialStaffSetupModal(club) {
         playerClub._skipAutoSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
         playerClub.sponsors = { chest: null, sleeve: null, training: null, stadium: null, partners: [] };
         playerClub.sponsor = null;
-        gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+        if (typeof initSponsorContractWindow === 'function') {
+          initSponsorContractWindow(['chest', 'sleeve', 'training', 'stadium', 'partners']);
+        } else {
+          gameState.pendingSponsorSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+        }
         if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
           applyManagerPreMatchDelegation(playerClub, true);
         } else {
@@ -18313,6 +18378,74 @@ function closePendingMatchPreviewModal() {
 // 経営・スポンサー・PSR・理事会解任再スタート・代表ウィーク
 // ==========================================================================
 
+function resolveSponsorDeadlineDayIndex() {
+  const cal = Array.isArray(gameState.calendar) ? gameState.calendar : [];
+  if (cal.length === 0) return null;
+  const aug31 = cal.find(d => d && d.month === 8 && d.day === 31);
+  if (aug31 && typeof aug31.dayIndex === 'number') return aug31.dayIndex;
+  const augDeadline = cal.find(d => d && d.isTransferDeadline && d.month === 8);
+  if (augDeadline && typeof augDeadline.dayIndex === 'number') return augDeadline.dayIndex;
+  return Math.min(cal.length - 1, (gameState.currentDayIndex || 0) + 60);
+}
+
+function initSponsorContractWindow(openSlots) {
+  const slots = Array.isArray(openSlots) ? [...new Set(openSlots.filter(Boolean))] : [];
+  gameState.pendingSponsorSlots = slots;
+  gameState.sponsorDeadlineDayIndex = resolveSponsorDeadlineDayIndex();
+  gameState.sponsorWindowClosed = slots.length === 0;
+}
+
+function getSponsorContractWindowInfo() {
+  const pendingSlots = Array.isArray(gameState.pendingSponsorSlots) ? gameState.pendingSponsorSlots : [];
+  const deadlineIdx = typeof gameState.sponsorDeadlineDayIndex === 'number'
+    ? gameState.sponsorDeadlineDayIndex
+    : resolveSponsorDeadlineDayIndex();
+  const cal = Array.isArray(gameState.calendar) ? gameState.calendar : [];
+  const deadlineDay = (deadlineIdx != null && deadlineIdx >= 0 && deadlineIdx < cal.length) ? cal[deadlineIdx] : null;
+  const curIdx = gameState.currentDayIndex || 0;
+  const isExpired = Boolean(gameState.sponsorWindowClosed) || (deadlineIdx != null && deadlineIdx >= 0 && curIdx > deadlineIdx);
+  const daysLeft = isExpired || deadlineIdx == null ? 0 : Math.max(0, deadlineIdx - curIdx);
+  const deadlineLabel = deadlineDay ? `${deadlineDay.month}/${deadlineDay.day}` : '8/31';
+  const isOpen = !isExpired && !gameState.isSeasonOver && pendingSlots.length > 0;
+  return { isOpen, isExpired, daysLeft, deadlineIdx, deadlineLabel, pendingSlots };
+}
+
+function processSponsorWindowExpiryDaily() {
+  const info = getSponsorContractWindowInfo();
+  if (info.pendingSlots.length > 0 && info.deadlineIdx != null && (gameState.currentDayIndex || 0) > info.deadlineIdx) {
+    const expiredSlots = [...info.pendingSlots];
+    const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    if (playerClub) {
+      playerClub._skipAutoSponsorSlots = [...new Set([...(playerClub._skipAutoSponsorSlots || []), ...expiredSlots])];
+    }
+    gameState.pendingSponsorSlots = [];
+    gameState.sponsorWindowClosed = true;
+    if (typeof closeSponsorSelectionModal === 'function') {
+      closeSponsorSelectionModal();
+    }
+    if (typeof addDailyLog === 'function') {
+      addDailyLog(`【スポンサー受付終了】期限（${info.deadlineLabel}）を過ぎたため、未契約だった${expiredSlots.length}枠のスポンサー募集は終了しました（次シーズン開幕時に再募集されます）。`);
+    }
+    if (typeof addInboxMessage === 'function') {
+      const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: '秘書' };
+      addInboxMessage({
+        senderType: 'secretary',
+        senderName: sec.name,
+        title: `スポンサー契約 受付期限終了（${info.deadlineLabel}）`,
+        body: `今シーズンの新規スポンサー契約の受付期限（${info.deadlineLabel}）を過ぎたため、未契約だった${expiredSlots.length}枠のオファーは終了いたしました。次シーズン開幕時に改めて候補企業をご案内いたします。`,
+        actionType: null,
+        actionLabel: '',
+        actionPayload: null
+      });
+    }
+    return true;
+  }
+  if (info.deadlineIdx != null && (gameState.currentDayIndex || 0) > info.deadlineIdx && !gameState.sponsorWindowClosed) {
+    gameState.sponsorWindowClosed = true;
+  }
+  return false;
+}
+
 function getAvailableSponsorOffers(club, slotKey) {
   const templates = typeof getSponsorSlotTemplates === 'function'
     ? getSponsorSlotTemplates(slotKey)
@@ -18429,15 +18562,19 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
   if (!Array.isArray(playerClub.sponsors.partners)) playerClub.sponsors.partners = [];
 
   const allSlots = ['chest', 'sleeve', 'training', 'stadium', 'partners'];
+  const spWin = getSponsorContractWindowInfo();
+  const isWindowExpired = spWin.isExpired;
   const currentOpenSlots = allSlots.filter(k => k === 'partners'
     ? playerClub.sponsors.partners.filter(Boolean).length < 2
     : !playerClub.sponsors[k]);
-  const openSlots = Array.isArray(targetSlots) && targetSlots.length > 0
-    ? targetSlots
-    : (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0
-      ? gameState.pendingSponsorSlots
-      : currentOpenSlots);
-  const editableSet = new Set(openSlots.length > 0 ? openSlots : currentOpenSlots);
+  const openSlots = isWindowExpired
+    ? []
+    : (Array.isArray(targetSlots) && targetSlots.length > 0
+      ? targetSlots
+      : (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0
+        ? gameState.pendingSponsorSlots
+        : currentOpenSlots));
+  const editableSet = new Set(isWindowExpired ? [] : (openSlots.length > 0 ? openSlots : currentOpenSlots));
 
   const selectedBySlot = {};
   for (const sKey of allSlots) {
@@ -18454,11 +18591,16 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
     }
   }
 
-  const initialSlot = allSlots.find(k => editableSet.has(k)) || 'chest';
+  const initialSlot = allSlots.find(k => editableSet.has(k))
+    || allSlots.find(k => k === 'partners' ? playerClub.sponsors.partners.filter(Boolean).length > 0 : Boolean(playerClub.sponsors[k]))
+    || 'chest';
   window._sponsorSelectionState = {
     club: playerClub,
     allSlots,
     editableSet,
+    isWindowExpired,
+    deadlineLabel: spWin.deadlineLabel,
+    daysLeft: spWin.daysLeft,
     activeSlot: initialSlot,
     selectedBySlot
   };
@@ -18490,14 +18632,22 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
 
     const curMeta = slotMeta[st.activeSlot] || {};
     const curIsEditable = st.editableSet.has(st.activeSlot);
+    const deadlineMetaHtml = st.isWindowExpired
+      ? `<span class="mono sponsor-deadline-text is-expired">今季受付終了（期限 ${st.deadlineLabel}）</span>`
+      : (st.editableSet.size > 0
+        ? `<span class="mono sponsor-deadline-text ${st.daysLeft <= 7 ? 'is-urgent' : ''}">期限 ${st.deadlineLabel}（${st.daysLeft === 0 ? '本日締切' : `残${st.daysLeft}日`}）</span>`
+        : '');
     let listHtml = '';
 
     if (st.activeSlot === 'partners') {
       const existingPartners = (st.club.sponsors.partners || []).filter(Boolean);
       const existingNames = new Set(existingPartners.map(p => p.name));
       const needCount = Math.max(0, 2 - existingPartners.length);
+      const effectiveNeedCount = curIsEditable ? needCount : 0;
       const pickedIds = Array.isArray(st.selectedBySlot.partners) ? st.selectedBySlot.partners : [];
-      const offers = getAvailableSponsorOffers(st.club, 'partners').filter(o => !existingNames.has(o.name));
+      const offers = effectiveNeedCount > 0
+        ? getAvailableSponsorOffers(st.club, 'partners').filter(o => !existingNames.has(o.name))
+        : [];
 
       const existingHtml = existingPartners.map(sp => `
         <div class="sponsor-option-row is-selected">
@@ -18519,7 +18669,7 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
         </div>
       `).join('');
 
-      const newHtml = needCount > 0 ? offers.map(o => {
+      const newHtml = effectiveNeedCount > 0 ? offers.map(o => {
         const isSel = pickedIds.includes(o.id);
         return `
           <div class="sponsor-option-row ${isSel ? 'is-selected' : ''}"
@@ -18546,12 +18696,20 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
         `;
       }).join('') : '';
 
+      const expiredEmptyHtml = (!curIsEditable && existingPartners.length === 0)
+        ? `<div class="sponsor-expired-empty">今季のスポンサー契約受付（期限 ${st.deadlineLabel}）は終了しました。次シーズン開幕時に改めて選定できます。</div>`
+        : '';
+
+      const partnerLeftLabel = curIsEditable && effectiveNeedCount > 0
+        ? `${curMeta.desc || ''}（あと ${effectiveNeedCount}社）`
+        : (curMeta.desc || '');
+
       listHtml = `
         <div class="sponsor-slot-summary">
-          <span>${curMeta.desc || ''}</span>
-          <span class="mono">${needCount > 0 ? `あと ${needCount}社選択可能` : '2社契約済み'}</span>
+          <span>${partnerLeftLabel}</span>
+          ${deadlineMetaHtml || `<span class="mono">${existingPartners.length >= 2 ? '2社契約済み' : '受付終了'}</span>`}
         </div>
-        <div class="sponsor-options-list">${existingHtml}${newHtml}</div>
+        <div class="sponsor-options-list">${existingHtml}${newHtml}${expiredEmptyHtml}</div>
       `;
     } else if (!curIsEditable && st.club.sponsors[st.activeSlot]) {
       const sp = st.club.sponsors[st.activeSlot];
@@ -18580,13 +18738,21 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
           </div>
         </div>
       `;
+    } else if (!curIsEditable) {
+      listHtml = `
+        <div class="sponsor-slot-summary">
+          <span>${curMeta.desc || ''}</span>
+          ${deadlineMetaHtml || '<span class="mono">受付終了</span>'}
+        </div>
+        <div class="sponsor-expired-empty">今季のスポンサー契約受付（期限 ${st.deadlineLabel}）は終了しました。次シーズン開幕時に改めて選定できます。</div>
+      `;
     } else {
       const offers = getAvailableSponsorOffers(st.club, st.activeSlot);
       const pickedId = st.selectedBySlot[st.activeSlot];
       listHtml = `
         <div class="sponsor-slot-summary">
-          <span>${curMeta.desc || ''}</span>
-          <span class="mono">クラブ格 ${st.club.reputation || 4000}</span>
+          <span>${curMeta.desc || ''}（格 ${st.club.reputation || 4000}）</span>
+          ${deadlineMetaHtml || ''}
         </div>
         <div class="sponsor-options-list">
           ${offers.map(o => {
@@ -18653,7 +18819,9 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
     const confirmBtn = document.getElementById('btn-confirm-sponsor-modal');
     if (confirmBtn) {
       confirmBtn.disabled = st.editableSet.size === 0;
-      confirmBtn.textContent = st.editableSet.size === 0 ? 'すべて契約中' : '契約を確定する';
+      confirmBtn.textContent = st.editableSet.size === 0
+        ? (st.isWindowExpired ? '受付終了' : 'すべて契約中')
+        : '契約を確定する';
     }
   };
 
@@ -18710,6 +18878,9 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
         st.club._skipAutoSponsorSlots = st.club._skipAutoSponsorSlots.filter(k => !st.editableSet.has(k));
       }
       gameState.pendingSponsorSlots = (gameState.pendingSponsorSlots || []).filter(k => !st.editableSet.has(k));
+      if (gameState.pendingSponsorSlots.length === 0) {
+        gameState.sponsorWindowClosed = true;
+      }
 
       if (signedNames.length > 0) {
         if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
@@ -18753,7 +18924,18 @@ function renderBoardPsrSponsorPanel(club) {
     { key: 'training', label: '練習場' },
     { key: 'stadium', label: 'スタジアム' }
   ];
-  const hasOpenSlot = slotDefs.some(d => !slotsObj[d.key]) || partnerList.length < 2 || (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0);
+  const spWin = typeof getSponsorContractWindowInfo === 'function'
+    ? getSponsorContractWindowInfo()
+    : {
+        isOpen: slotDefs.some(d => !slotsObj[d.key]) || partnerList.length < 2 || (Array.isArray(gameState.pendingSponsorSlots) && gameState.pendingSponsorSlots.length > 0),
+        isExpired: false,
+        deadlineLabel: '8/31',
+        daysLeft: 0
+      };
+  const hasOpenSlot = spWin.isOpen;
+  const openSlotStatusText = spWin.isOpen
+    ? `未契約（期限 ${spWin.deadlineLabel} / ${spWin.daysLeft === 0 ? '本日締切' : `残${spWin.daysLeft}日`}）`
+    : '未契約（今季受付終了）';
   const totalBaseAnnual = typeof getClubTotalBaseSponsorIncome === 'function'
     ? getClubTotalBaseSponsorIncome(club, isPlayerInSecondDivision())
     : slotDefs.reduce((sum, d) => sum + ((slotsObj[d.key] && slotsObj[d.key].baseAnnual) || 0), 0);
@@ -18765,7 +18947,7 @@ function renderBoardPsrSponsorPanel(club) {
         <div class="board-sponsor-row">
           <div class="board-sponsor-row-left">
             <span class="board-sponsor-slot">${d.label}</span>
-            <span class="board-sponsor-name is-open">未契約（選定可能）</span>
+            <span class="board-sponsor-name ${spWin.isOpen ? 'is-open' : 'text-muted'}">${openSlotStatusText}</span>
           </div>
           <div class="board-sponsor-row-right mono">
             <span class="board-sponsor-fee text-muted">£0/年</span>
@@ -18790,12 +18972,15 @@ function renderBoardPsrSponsorPanel(club) {
   const partnerSum = partnerList.reduce((acc, p) => acc + (p.baseAnnual || 0), 0);
   const partnerNamesText = partnerList.length > 0
     ? partnerList.map(p => `${p.name} (残${p.yearsRemaining || 1}年)`).join(' / ')
-    : '未契約（最大2社選定可能）';
+    : openSlotStatusText;
+  const partnerNameCls = partnerList.length < 2
+    ? (spWin.isOpen ? 'is-open' : (partnerList.length === 0 ? 'text-muted' : ''))
+    : '';
   const partnerRowHtml = `
     <div class="board-sponsor-row">
       <div class="board-sponsor-row-left">
         <span class="board-sponsor-slot">公式パートナー (${partnerList.length}/2社)</span>
-        <span class="board-sponsor-name ${partnerList.length < 2 ? 'is-open' : ''}">${escapeCommHtml(partnerNamesText)}</span>
+        <span class="board-sponsor-name ${partnerNameCls}">${escapeCommHtml(partnerNamesText)}</span>
       </div>
       <div class="board-sponsor-row-right mono">
         <span class="board-sponsor-fee ${partnerList.length > 0 ? 'accent-gold' : 'text-muted'}">${formatMoney(partnerSum)}/年</span>
@@ -20671,6 +20856,22 @@ function findClubCoachById(club, coachId) {
   return entry ? entry.coach : null;
 }
 
+function buildConsultationPlayerRowHtml(label, player, extraText = '') {
+  if (!player || !player.id) return '';
+  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || '-');
+  const pName = player.fullName || player.name || '';
+  const suffix = extraText ? ` / ${extraText}` : '';
+  return `
+    <div class="gm-modal-flat-row is-player-link" data-consult-player-id="${escapeCommHtml(player.id)}" role="button" tabindex="0" title="${escapeCommHtml(pName)}のプロフィールを開く">
+      <span class="gm-modal-flat-label">${escapeCommHtml(label)}</span>
+      <span class="gm-modal-flat-val gm-consult-player-val">
+        <span>${escapeCommHtml(player.pos || '')} ${escapeCommHtml(pName)}（OVR ${ovr}${escapeCommHtml(suffix)}）</span>
+        <span class="gm-consult-profile-cue">詳細 ›</span>
+      </span>
+    </div>
+  `;
+}
+
 function openLineupConsultationModal(consultation) {
   if (!consultation || typeof showSecretaryModal !== 'function') return;
   const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
@@ -20684,6 +20885,12 @@ function openLineupConsultationModal(consultation) {
         right: { kind: 'coach', person: coachObj, name: coachObj.name, roleLabel: consultation.coachRoleLabel || 'コーチ' },
         club
       };
+      const outP = consultation.outPlayerId ? (club.players || []).find(p => p && p.id === consultation.outPlayerId) : null;
+      const inP = consultation.inPlayerId ? (club.players || []).find(p => p && p.id === consultation.inPlayerId) : null;
+      const conflictPlayerRowsHtml = [
+        buildConsultationPlayerRowHtml('監督推薦', outP, outP ? `${outP.age || '-'}歳` : ''),
+        buildConsultationPlayerRowHtml('コーチ推薦', inP, inP ? `${inP.age || '-'}歳` : '')
+      ].filter(Boolean).join('');
       const detailHtml = `
         <div class="gm-conflict-compare">
           <div class="gm-conflict-stance is-mgr">
@@ -20696,6 +20903,7 @@ function openLineupConsultationModal(consultation) {
           </div>
           ${consultation.impactSummary ? `<div class="gm-conflict-impact">${escapeCommHtml(consultation.impactSummary)}</div>` : ''}
         </div>
+        ${conflictPlayerRowsHtml ? `<div class="gm-modal-flat-list gm-conflict-players">${conflictPlayerRowsHtml}</div>` : ''}
       `;
       showSecretaryModal({
         variant: 'conflict-arbitration',
@@ -20759,12 +20967,44 @@ function openLineupConsultationModal(consultation) {
     }
   }
 
-  const rowsHtml = (consultation.detailRows || []).map(([k, v]) => `
-    <div class="gm-modal-flat-row">
-      <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
-      <span class="gm-modal-flat-val">${escapeCommHtml(v)}</span>
-    </div>
-  `).join('');
+  let rowsHtml = '';
+  if (consultation.kind === 'player' && club) {
+    const mainPid = consultation.playerId || consultation.inPlayerId;
+    const mainP = mainPid ? (club.players || []).find(p => p && p.id === mainPid) : null;
+    const outP = (consultation.outPlayerId && consultation.outPlayerId !== mainPid)
+      ? (club.players || []).find(p => p && p.id === consultation.outPlayerId)
+      : null;
+    rowsHtml = [
+      buildConsultationPlayerRowHtml('相談選手', mainP, mainP ? `${mainP.age || '-'}歳` : ''),
+      buildConsultationPlayerRowHtml('現行先発', outP, outP ? `${outP.age || '-'}歳` : '')
+    ].filter(Boolean).join('');
+  } else {
+    rowsHtml = (consultation.detailRows || []).map(([k, v]) => {
+      let linkedPlayerId = null;
+      if (k && k.includes('(OUT)') && consultation.outPlayerId) {
+        linkedPlayerId = consultation.outPlayerId;
+      } else if (k && k.includes('(IN)') && consultation.inPlayerId) {
+        linkedPlayerId = consultation.inPlayerId;
+      }
+      if (linkedPlayerId) {
+        return `
+          <div class="gm-modal-flat-row is-player-link" data-consult-player-id="${escapeCommHtml(linkedPlayerId)}" role="button" tabindex="0" title="選手プロフィールを開く">
+            <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
+            <span class="gm-modal-flat-val gm-consult-player-val">
+              <span>${escapeCommHtml(v)}</span>
+              <span class="gm-consult-profile-cue">詳細 ›</span>
+            </span>
+          </div>
+        `;
+      }
+      return `
+        <div class="gm-modal-flat-row">
+          <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
+          <span class="gm-modal-flat-val">${escapeCommHtml(v)}</span>
+        </div>
+      `;
+    }).join('');
+  }
   const declineLabel = consultation.kind === 'manager'
     ? '現行布陣を維持する'
     : (consultation.kind === 'coach' ? '現行方針を維持する' : '競争を勝ち取るよう伝える');
@@ -21080,8 +21320,8 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
     senderName: 'クラブ理事会・財務',
     title: `${reportMonth}月度 月次定例会（戦績・収支報告）`,
     body: `【月間戦績】${recordSummary} ／ ${rankText}（目標: ${targetText}）\n【月間収支】試合収入 +${formatMoney(matchIncome)} / 売却 +${formatMoney(transferIn)} / 給与 -${formatMoney(payrollPaid)} / 補強 -${formatMoney(transferOut)} ／ 月間純収支 ${netSign}${formatMoney(netBalance)}（現在資金 ${formatMoney(curFunds)} · 安全移籍予算 ${formatMoney(safeBudget)} · 理事会信頼度 ${boardConf}%）。${statusComment}${monthlyMvpMsgLine}`,
-    actionType: 'goto-facilities',
-    actionLabel: '経営・財務を確認'
+    actionType: null,
+    actionLabel: ''
   });
   addDailyLog(`【月次定例会 (${reportMonth}月度)】${recordSummary} / 月間純収支 ${netSign}${formatMoney(netBalance)}（資金 ${formatMoney(curFunds)}）`);
 

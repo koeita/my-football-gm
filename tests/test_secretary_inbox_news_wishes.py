@@ -499,6 +499,31 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('club.promisedNextMatchSwaps', self.main_js)
         self.assertIn('playerClub.promisedNextMatchSwaps = [];', self.main_js)
 
+    def test_18_sponsor_deadline_and_consultation_player_profile(self):
+        """スポンサー契約の受付期限と、相談モーダルからの選手プロフィール起動導線を検証"""
+        for sym in [
+            'sponsorDeadlineDayIndex:',
+            'sponsorWindowClosed:',
+            'function resolveSponsorDeadlineDayIndex(',
+            'function initSponsorContractWindow(',
+            'function getSponsorContractWindowInfo(',
+            'function processSponsorWindowExpiryDaily(',
+            'function buildConsultationPlayerRowHtml(',
+            'data-consult-player-id',
+            'openPlayerProfileModal(pid)',
+        ]:
+            self.assertIn(sym, self.main_js)
+        self.assertIn('sponsorDeadlineDayIndex:', self.storage_js)
+        self.assertIn('sponsorWindowClosed:', self.storage_js)
+        for css_sel in [
+            '.sponsor-deadline-text',
+            '.sponsor-expired-empty',
+            '.gm-modal-flat-row.is-player-link',
+            '.gm-consult-profile-cue',
+            '.gm-modal-sec-avatar-wrap.is-player-clickable',
+        ]:
+            self.assertIn(css_sel, self.css)
+
 
 if __name__ == '__main__':
     unittest.main()
