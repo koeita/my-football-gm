@@ -1383,6 +1383,9 @@ function stopAdvancingCalendar() {
   renderAll();
 }
 
+let lastRenderedWeeklyDayIndex = null;
+let weeklySlideCleanupTimer = null;
+
 /**
  * 直近1週間のスケジュール（週間カレンダーウィジェット）の描画
  */
@@ -1395,6 +1398,9 @@ function renderWeeklySchedule() {
   const playerClub = getPlayerClub();
   const currentIdx = Math.min(gameState.currentDayIndex, gameState.calendar.length - 1);
   const currentDay = gameState.calendar[currentIdx];
+  const prevIdx = lastRenderedWeeklyDayIndex;
+  lastRenderedWeeklyDayIndex = currentIdx;
+  const shouldSlide = prevIdx !== null && currentIdx > prevIdx && !isFastForwardingSeason && !gameState.isSimulating;
 
   // 移籍市場バッジの更新
   if (marketBadgeEl && currentDay) {
@@ -1480,7 +1486,7 @@ function renderWeeklySchedule() {
 
     const isClickable = isToday && isMatch;
     return `
-      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''} ${matchCompClass} ${isClickable ? 'is-clickable' : ''}" ${isClickable ? 'role="button" tabindex="0" onclick="openMatchPrecheckModal()"' : ''} title="${isClickable ? 'タップで作戦確認・キックオフ' : ''}">
+      <div class="day-card ${isToday ? 'is-today' : ''} ${isMatch ? 'is-matchday' : ''} ${matchCompClass} ${isClickable ? 'is-clickable' : ''} ${shouldSlide ? 'is-day-sliding' : ''}" ${isClickable ? 'role="button" tabindex="0" onclick="openMatchPrecheckModal()"' : ''} title="${isClickable ? 'タップで作戦確認・キックオフ' : ''}">
         <div class="day-card-header">
           <span class="day-card-date">${day.month}/${day.day} (${day.dayOfWeekName})</span>
           ${isToday ? '<span class="day-card-today-badge">TODAY</span>' : ''}
@@ -1491,6 +1497,15 @@ function renderWeeklySchedule() {
       </div>
     `;
   }).join('');
+
+  if (shouldSlide) {
+    trackEl.scrollLeft = 0;
+    if (weeklySlideCleanupTimer) clearTimeout(weeklySlideCleanupTimer);
+    weeklySlideCleanupTimer = setTimeout(() => {
+      trackEl.querySelectorAll('.day-card.is-day-sliding').forEach(el => el.classList.remove('is-day-sliding'));
+      weeklySlideCleanupTimer = null;
+    }, 300);
+  }
 }
 
 /**
