@@ -1016,10 +1016,14 @@ function blockIfPendingInitialStaffSetup() {
   }
   if (typeof showSecretaryModal === 'function') {
     const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('staff_required', {}, sec)
+      : { pages: ['日程を進める前に、監督とコーチ陣の選任が必要です。本部の業務タスクからお手続きください。'] };
     showSecretaryModal({
       topic: '就任初期タスク未完了',
       title: '監督・コーチ陣の選任が必要です',
-      speech: '日程を進める前に、監督とコーチ陣の選任が必要です。本部の業務タスクからお手続きください。',
+      speechPages: dlg.pages,
       actions: [
         {
           label: '本部へ戻る',
@@ -1205,10 +1209,14 @@ function advanceCalendarDay(skipRender = false) {
       stopAdvancingCalendar();
       if (typeof showSecretaryModal === 'function' && pClubWinter) {
         const posLabel = winterWish && Array.isArray(winterWish.positions) ? winterWish.positions.join('・') : '補強ポイント';
+        const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+        const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+          ? SecretaryDialogue.getEventDialogue('winter_market_open', { posLabel }, sec)
+          : { pages: [`1月1日より冬の移籍ウィンドウが開幕いたしました。監督から後半戦へ向けた ${posLabel} の補強要望書と推薦選手リストが届いております。`] };
         showSecretaryModal({
           topic: '冬期移籍市場開幕',
           title: '冬の移籍市場オープンと後半戦補強要望',
-          speech: `1月1日より冬の移籍ウィンドウが開幕いたしました。監督から後半戦へ向けた ${posLabel} の補強要望書と推薦選手リストが届いております。`,
+          speechPages: dlg.pages,
           detailHtml: typeof buildWishModalDetailHtml === 'function' ? buildWishModalDetailHtml(pClubWinter, winterWish) : '',
           actions: [
             {
@@ -1236,7 +1244,10 @@ function advanceCalendarDay(skipRender = false) {
   if (typeof processSponsorWindowExpiryDaily === 'function') {
     processSponsorWindowExpiryDaily();
   }
-  let eventTriggered = winterMarketEvent;
+  const secretaryAlertTriggered = (!isFastForwardingSeason && typeof checkAndShowSecretaryImportantAlerts === 'function')
+    ? checkAndShowSecretaryImportantAlerts(nextDay)
+    : false;
+  let eventTriggered = winterMarketEvent || secretaryAlertTriggered;
   if (incomingResponded || outgoingResponded) {
     eventTriggered = true;
   }
@@ -1325,10 +1336,14 @@ function advanceCalendarDay(skipRender = false) {
     }
     stopAdvancingCalendar();
     if (typeof showSecretaryModal === 'function') {
+      const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+      const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+        ? SecretaryDialogue.getEventDialogue('deadline_day', { displayDate: nextDay.displayDate }, sec)
+        : { pages: ['本日をもって今ウィンドウの移籍市場が閉幕いたします。合意済みの獲得契約や未回答の売却オファーが残っていないか、最終確認をお願いいたします。'] };
       showSecretaryModal({
         topic: 'デッドラインデイ',
         title: '移籍市場最終日のご案内',
-        speech: '本日をもって今ウィンドウの移籍市場が閉幕いたします。合意済みの獲得契約や未回答の売却オファーが残っていないか、最終確認をお願いいたします。',
+        speechPages: dlg.pages,
         detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">本日付</span><span class="gm-modal-flat-val mono">${nextDay.displayDate}</span></div></div>`,
         actions: [
           {
@@ -2476,53 +2491,107 @@ function showGmModal(opts, fromQueue = false) {
     }
   }
   if (titleEl) titleEl.textContent = title || '';
-  if (descEl) {
-    descEl.textContent = description || '';
-    descEl.classList.remove('gm-vn-speech-anim');
-    void descEl.offsetWidth;
-    descEl.classList.add('gm-vn-speech-anim');
-  }
   if (detailEl) detailEl.innerHTML = detailHtml || '';
 
+  const pages = Array.isArray(opts.speechPages) && opts.speechPages.length > 0
+    ? opts.speechPages.filter(p => p !== undefined && p !== null).map(p => String(p))
+    : [description || ''];
+  if (pages.length === 0) pages.push('');
+  let currentPageIdx = 0;
+
   const actionsContainer = document.getElementById('modal-actions');
-  let singleTapNextBtn = null;
-  if (actionsContainer) {
-    actionsContainer.innerHTML = '';
-    const actList = actions || [];
-    const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
-    actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
+  const renderDialoguePage = () => {
+    if (descEl) {
+      descEl.textContent = pages[currentPageIdx] || '';
+      descEl.classList.remove('gm-vn-speech-anim');
+      void descEl.offsetWidth;
+      descEl.classList.add('gm-vn-speech-anim');
+    }
 
-    actList.forEach(act => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      if (isSingleNextPrompt) {
-        btn.className = 'gm-vn-next-prompt-btn';
-        btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
-        singleTapNextBtn = btn;
+    let singleTapNextBtn = null;
+    if (actionsContainer) {
+      actionsContainer.innerHTML = '';
+      if (currentPageIdx < pages.length - 1) {
+        actionsContainer.classList.add('is-single-prompt');
+        const navWrap = document.createElement('div');
+        navWrap.className = 'gm-vn-page-nav';
+
+        const leftGroup = document.createElement('div');
+        leftGroup.className = 'gm-vn-page-left';
+
+        const counterEl = document.createElement('span');
+        counterEl.className = 'gm-vn-page-counter mono';
+        counterEl.textContent = `${currentPageIdx + 1} / ${pages.length}`;
+        leftGroup.appendChild(counterEl);
+
+        const skipBtn = document.createElement('button');
+        skipBtn.type = 'button';
+        skipBtn.className = 'gm-vn-skip-pages-btn';
+        skipBtn.dataset.vnPageSkip = '1';
+        skipBtn.textContent = 'スキップ';
+        skipBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
+          currentPageIdx = pages.length - 1;
+          renderDialoguePage();
+        });
+        leftGroup.appendChild(skipBtn);
+
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'gm-vn-next-prompt-btn';
+        nextBtn.dataset.vnPageNext = '1';
+        nextBtn.innerHTML = '<span>次へ</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        nextBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
+          currentPageIdx = Math.min(pages.length - 1, currentPageIdx + 1);
+          renderDialoguePage();
+        });
+        singleTapNextBtn = nextBtn;
+
+        navWrap.appendChild(leftGroup);
+        navWrap.appendChild(nextBtn);
+        actionsContainer.appendChild(navWrap);
       } else {
-        btn.className = act.className || 'btn btn-primary';
-        btn.textContent = act.label;
-      }
-      if (act.disabled) btn.disabled = true;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        overlay.classList.add('hidden');
-        if (act.onClick) act.onClick();
-        flushNextGmModalOrUnlock();
-      });
-      actionsContainer.appendChild(btn);
-    });
-  }
+        const actList = actions || [];
+        const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
+        actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
 
-  if (dialogueCard) {
-    dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
-    dialogueCard.onclick = singleTapNextBtn
-      ? (e) => {
-          if (e.target.closest('button, a, #modal-detail-box, [data-consult-player-id]')) return;
-          singleTapNextBtn.click();
-        }
-      : null;
-  }
+        actList.forEach(act => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          if (isSingleNextPrompt) {
+            btn.className = 'gm-vn-next-prompt-btn';
+            btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+            singleTapNextBtn = btn;
+          } else {
+            btn.className = act.className || 'btn btn-primary';
+            btn.textContent = act.label;
+          }
+          if (act.disabled) btn.disabled = true;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            overlay.classList.add('hidden');
+            if (act.onClick) act.onClick();
+            flushNextGmModalOrUnlock();
+          });
+          actionsContainer.appendChild(btn);
+        });
+      }
+    }
+
+    if (dialogueCard) {
+      dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
+      dialogueCard.onclick = singleTapNextBtn
+        ? (e) => {
+            if (e.target.closest('button, a, #modal-detail-box, [data-consult-player-id]')) return;
+            singleTapNextBtn.click();
+          }
+        : null;
+    }
+  };
+  renderDialoguePage();
 
   if (overlay.dataset.consultProfileBound !== '1') {
     overlay.dataset.consultProfileBound = '1';
@@ -2557,21 +2626,137 @@ function showGmModal(opts, fromQueue = false) {
 /**
  * 秘書が直接報告・進行案内を行う専用モーダル表示ヘルパー
  */
-function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', detailHtml = '', actions = null, speaker = null, variant = null, soundKey = null }) {
-  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
+function showSecretaryModal({ topic = '進行ブリーフィング', title = '', speech = '', speechPages = null, detailHtml = '', actions = null, speaker = null, variant = null, soundKey = null }) {
+  const resolvedPages = Array.isArray(speechPages) && speechPages.length > 0 ? speechPages : null;
+  const primarySpeech = resolvedPages ? resolvedPages[0] : speech;
   const resolvedActions = Array.isArray(actions) && actions.length > 0
     ? actions
     : [{ label: 'タップで次へ', isNextPrompt: true, onClick: () => { if (typeof renderAll === 'function') renderAll(); } }];
   showGmModal({
     category: topic,
     title,
-    description: speech,
+    description: primarySpeech,
+    speechPages: resolvedPages,
     detailHtml,
     actions: resolvedActions,
     speaker,
     variant,
     soundKey
   });
+}
+
+function checkAndShowSecretaryImportantAlerts(dayObj) {
+  if (!dayObj || isFastForwardingSeason || gameState.isGameOver || typeof showSecretaryModal !== 'function') return false;
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub) return false;
+  if (!gameState._secAlertsShown || typeof gameState._secAlertsShown !== 'object') {
+    gameState._secAlertsShown = {};
+  }
+  const s = gameState.season || 1;
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  const hasHelper = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue;
+
+  // 1. スポンサー期限7日前アラート
+  const spKey = `sp7_s${s}`;
+  if (!gameState._secAlertsShown[spKey] && typeof getSponsorContractWindowInfo === 'function') {
+    const spWin = getSponsorContractWindowInfo();
+    if (spWin && spWin.isOpen && spWin.daysLeft >= 1 && spWin.daysLeft <= 7 && Array.isArray(spWin.pendingSlots) && spWin.pendingSlots.length > 0) {
+      gameState._secAlertsShown[spKey] = true;
+      if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
+      const dlg = hasHelper
+        ? SecretaryDialogue.getEventDialogue('sponsor_deadline_soon', { deadlineLabel: spWin.deadlineLabel, daysLeft: spWin.daysLeft, pendingCount: spWin.pendingSlots.length }, sec)
+        : { pages: [`スポンサー契約の期限（${spWin.deadlineLabel}）まで残り${spWin.daysLeft}日です。`] };
+      showSecretaryModal({
+        topic: 'スポンサー契約期限',
+        title: `スポンサー締切まで残り ${spWin.daysLeft}日`,
+        speechPages: dlg.pages,
+        detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">未契約枠 / 期限</span><span class="gm-modal-flat-val accent-gold mono">${spWin.pendingSlots.length}枠 / ${escapeCommHtml(spWin.deadlineLabel)}</span></div></div>`,
+        actions: [
+          { label: 'スポンサー契約を選ぶ', className: 'btn btn-primary', onClick: () => { if (typeof openSponsorSelectionModal === 'function') openSponsorSelectionModal(playerClub); } },
+          { label: '後で確認する', className: 'btn btn-secondary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }
+        ]
+      });
+      return true;
+    }
+  }
+
+  // 2. 開幕直前の興行計画未確定リマインド
+  const commKey = `comm_s${s}`;
+  if (!gameState._secAlertsShown[commKey] && gameState.pendingCommercialSetup && !gameState.pendingInitialStaffSetup) {
+    const nf = typeof findNextScheduledPlayerMatch === 'function' ? findNextScheduledPlayerMatch() : null;
+    if (nf && nf.matchInfo && !nf.matchInfo.isCup && nf.daysAhead <= 3) {
+      gameState._secAlertsShown[commKey] = true;
+      if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
+      const dlg = hasHelper
+        ? SecretaryDialogue.getEventDialogue('commercial_setup_reminder', {}, sec)
+        : { pages: ['リーグ開幕戦が迫っていますが、今季の興行計画が未確定です。'] };
+      showSecretaryModal({
+        topic: '興行計画確認',
+        title: 'スタジアム・興行計画が未確定です',
+        speechPages: dlg.pages,
+        detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">リーグ開幕まで</span><span class="gm-modal-flat-val accent-gold mono">${nf.daysAhead === 0 ? '本日開幕' : `${nf.daysAhead}日後`}</span></div></div>`,
+        actions: [
+          { label: 'スタジアム・興行を設定する', className: 'btn btn-primary', onClick: () => { if (typeof switchTab === 'function') switchTab('facilities'); if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab('commercial'); } },
+          { label: '後で確認する', className: 'btn btn-secondary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }
+        ]
+      });
+      return true;
+    }
+  }
+
+  // 3. 契約満了危機（12/1 または 1/1）
+  const expKey = `exp_s${s}_${dayObj.month}`;
+  if (!gameState._secAlertsShown[expKey] && ((dayObj.month === 12 && dayObj.day === 1) || (dayObj.month === 1 && dayObj.day === 1))) {
+    const expiring = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoan) && !(p.loanStatus && p.loanStatus.isLoanOut) && !p.preContractDeparture && (p.contractYears || 0) <= 1)
+      .sort((a, b) => (typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(b) - getPlayerOverallRating(a) : 0));
+    if (expiring.length >= 2) {
+      gameState._secAlertsShown[expKey] = true;
+      if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
+      const namesText = expiring.slice(0, 3).map(p => p.name).join('・');
+      const dlg = hasHelper
+        ? SecretaryDialogue.getEventDialogue('contract_expiry_warning', { expiringCount: expiring.length, namesText }, sec)
+        : { pages: [`${namesText} など${expiring.length}名の契約残りが1年となっております。`] };
+      const expRows = expiring.slice(0, 3).map(p => `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">${escapeCommHtml(p.pos)} ${escapeCommHtml(p.name)}</span><span class="gm-modal-flat-val text-danger mono">残${p.contractYears || 0}年 / OVR ${typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : '-'}</span></div>`).join('');
+      showSecretaryModal({
+        topic: '契約満了注意',
+        title: `契約残り1年の選手が ${expiring.length}名 います`,
+        speechPages: dlg.pages,
+        detailHtml: `<div class="gm-modal-flat-list">${expRows}</div>`,
+        actions: [
+          { label: '選手一覧で確認する', className: 'btn btn-primary', onClick: () => { if (typeof switchTab === 'function') switchTab('roster'); if (typeof switchRosterSubtab === 'function') switchRosterSubtab('list'); } },
+          { label: '後で対応する', className: 'btn btn-secondary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }
+        ]
+      });
+      return true;
+    }
+  }
+
+  // 4. PSR財務規律警戒 / 理事会信頼度危機
+  const crisisKey = `crisis_s${s}`;
+  if (!gameState._secAlertsShown[crisisKey]) {
+    const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(playerClub) : { isBreach: false, total3YrNet: 0 };
+    const boardConf = typeof playerClub.boardConfidence === 'number' ? playerClub.boardConfidence : 75;
+    if (psr.isBreach || boardConf < 45) {
+      gameState._secAlertsShown[crisisKey] = true;
+      if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
+      const dlg = hasHelper
+        ? SecretaryDialogue.getEventDialogue('psr_or_board_crisis', { isPsrBreach: psr.isBreach, boardConfidence: boardConf }, sec)
+        : { pages: ['クラブ財務（PSR）または理事会信頼度が警戒水準に入っています。'] };
+      showSecretaryModal({
+        topic: psr.isBreach ? 'PSR財務警告' : '理事会評価警告',
+        title: psr.isBreach ? 'PSR財務規律 警戒ライン' : `理事会信頼度低下 (${boardConf}%)`,
+        speechPages: dlg.pages,
+        detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">理事会信頼度 / 3年PSR</span><span class="gm-modal-flat-val text-danger mono">${boardConf}% / ${psr.isBreach ? '赤字超過警戒' : '正常範囲'}</span></div></div>`,
+        actions: [
+          { label: '施設・財務を確認する', className: 'btn btn-primary', onClick: () => { if (typeof switchTab === 'function') switchTab('facilities'); if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab('investment'); } },
+          { label: '承知した', className: 'btn btn-secondary', onClick: () => { if (typeof renderAll === 'function') renderAll(); } }
+        ]
+      });
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function buildWishModalDetailHtml(playerClub, wish) {
@@ -2602,14 +2787,9 @@ function showSecretaryOnboardingBriefing(playerClub) {
     : { deadlineLabel: '8/31', daysLeft: 61, pendingSlots: gameState.pendingSponsorSlots || [] };
   const safeBudget = typeof getSafeTransferBudget === 'function' ? getSafeTransferBudget(playerClub) : (playerClub.funds || 0);
 
-  let speech = '';
-  if (sec.tone === 'active') {
-    speech = `GM、改めまして ${playerClub.name} へのご着任おめでとうございます！秘書の ${sec.name} です。まずは本部の業務タスクから、監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・興行設定を進めていきましょう！`;
-  } else if (sec.tone === 'calm') {
-    speech = `${playerClub.name} 担当秘書を拝命しました ${sec.name} です。まずは本部の業務タスクにある「監督・コーチ陣の選任」「スポンサー契約の締結（期限 ${spWin.deadlineLabel}）」「スタジアム・チケット・グッズ設定」をご確認ください。`;
-  } else {
-    speech = `GM、${playerClub.name} の担当秘書を務めさせていただきます ${sec.name} でございます。本部の業務タスクに最優先事項として監督・コーチ陣の選任、スポンサー契約（期限 ${spWin.deadlineLabel}）、スタジアム・チケット・グッズ設定をご用意いたしましたので、順次お手続きくださいませ。`;
-  }
+  const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+    ? SecretaryDialogue.getEventDialogue('onboarding', { clubName: playerClub.name, deadlineLabel: spWin.deadlineLabel }, sec)
+    : { pages: [`GM、${playerClub.name} の担当秘書 ${sec.name} です。本部の業務タスクから最優先業務をお進めください。`] };
 
   const detailHtml = `
     <div class="gm-modal-flat-list">
@@ -2639,7 +2819,7 @@ function showSecretaryOnboardingBriefing(playerClub) {
   showSecretaryModal({
     topic: '秘書着任挨拶・業務案内',
     title: `${playerClub.name} 業務スタート`,
-    speech,
+    speechPages: dlg.pages,
     detailHtml,
     actions: [
       {
@@ -2678,28 +2858,21 @@ function showSecretaryClubOpeningBriefing(playerClub, mgr, isFirstCareer = false
       };
   const hasPendingSponsors = spWin.isOpen;
 
-  let speech = '';
-  if (sec.tone === 'active') {
-    speech = isFirstCareer
-      ? `GM、${mgrName}監督のもと新体制が整いましたね！7月1日より移籍市場が解禁されています。${mgrName}監督からは「${wishPosText}」の補強希望が届いています。`
-      : `GM、Season ${gameState.season}の開幕です！移籍市場もオープンしています。${mgrName}監督の補強希望「${wishPosText}」を確認して動き出しましょう。`;
-  } else if (sec.tone === 'calm') {
-    speech = isFirstCareer
-      ? `GM、${mgrName}監督との指導体制が発足しました。本日7月1日より夏の移籍市場が開いています。${mgrName}監督との初期査定では「${wishPosText}」の補強優先度が高い結果となりました。`
-      : `GM、Season ${gameState.season}の基準日が開始しました。安全移籍予算と目標順位を確認の上、${mgrName}監督が求める「${wishPosText}」の精査を推奨します。`;
-  } else {
-    speech = isFirstCareer
-      ? `GM、${mgrName}監督およびコーチ陣の選任が完了いたしました。本日より移籍市場も開幕しており、${mgrName}監督からは「${wishPosText}」の補強要望が届いております。`
-      : `GM、Season ${gameState.season}が開幕いたしました。移籍市場も同時に開いておりますので、目標達成に向け${mgrName}監督の補強希望「${wishPosText}」をご確認のうえご指示ください。`;
-  }
-  if (hasPendingSponsors) {
-    speech += `なお、未契約のスポンサー枠は本部の業務タスクから期限（${spWin.deadlineLabel}）までに締結できます。`;
-  }
+  const openDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+    ? SecretaryDialogue.getEventDialogue('club_opening', {
+        isFirstCareer,
+        season: gameState.season,
+        mgrName,
+        wishPosText,
+        hasPendingSponsors,
+        deadlineLabel: spWin.deadlineLabel
+      }, sec)
+    : { pages: [`${mgrName}監督との体制が整いました。${wishPosText}の補強要望をご確認ください。`] };
 
   showSecretaryModal({
     topic,
     title,
-    speech,
+    speechPages: openDlg.pages,
     detailHtml: buildWishModalDetailHtml(playerClub, activeWish),
     actions: [
       {
@@ -3441,6 +3614,30 @@ function processSeasonEnd(isSkipped = false) {
 
   // シーズン終了時は移籍市場閉幕中のため未締結オファー・メガオファーを整理し、不要なオファータスクを残さない
   gameState.pendingMegaOffer = null;
+
+  if (!isSkipped && !gameState.isGameOver && typeof showSecretaryModal === 'function') {
+    const secOff = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const offDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('offseason_guide', { rank: playerRank, divLabel: seasonDivLabel }, secOff)
+      : { pages: [`今シーズンの全日程が完了し、${seasonDivLabel} 第${playerRank}位となりました。オフ期間中に契約更新・ユース昇格・補強をお進めください。`] };
+    showSecretaryModal({
+      topic: 'オフシーズン案内',
+      title: `Season ${gameState.season} 終了・オフシーズン開始`,
+      speechPages: offDlg.pages,
+      actions: [
+        {
+          label: '選手一覧・契約確認へ',
+          className: 'btn btn-secondary',
+          onClick: () => { if (typeof switchTab === 'function') switchTab('roster'); if (typeof switchRosterSubtab === 'function') switchRosterSubtab('list'); }
+        },
+        {
+          label: '了解した',
+          className: 'btn btn-primary',
+          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+        }
+      ]
+    });
+  }
 }
 
 /**
@@ -4980,10 +5177,15 @@ function updateOutgoingOffersExpiry() {
         <span class="gm-modal-flat-val mono" style="color:${color};">${outcome} · ${formatMoney(fee)}</span>
       </div>
     `).join('');
+    const secOut = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const hasAgreedOut = respondedItems.some(r => r && r.outcome && r.outcome.includes('合意'));
+    const outDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('outgoing_offer_reply', { hasAgreed: hasAgreedOut }, secOut)
+      : { pages: ['送信していた獲得オファーに対する相手クラブからの回答が届いております。オファー一覧より契約確定または再判断を行ってください。'] };
     showSecretaryModal({
       topic: '移籍交渉回答',
       title: `獲得オファーの回答が届きました（${respondedItems.length}件）`,
-      speech: '送信していた獲得オファーに対する相手クラブからの回答が届いております。オファー一覧より契約確定または再判断を行ってください。',
+      speechPages: outDlg.pages,
       detailHtml: `<div class="gm-modal-flat-list">${rowsHtml}</div>`,
       actions: [
         {
@@ -5572,10 +5774,18 @@ function triggerIncomingTransferOffer(force = false) {
     });
   }
   if (typeof showSecretaryModal === 'function') {
+    const secInc = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const incDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('incoming_offer', {
+          buyerClubName,
+          playerText: `${target.pos} ${target.name}（OVR ${newOffer.ovr}）`,
+          feeText: formatMoney(offerFee)
+        }, secInc)
+      : { pages: [`${buyerClubName}より当クラブ所属の ${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対して正式な買取打診が届いております。回答期限は5日間です。`] };
     showSecretaryModal({
       topic: '買取オファー着信',
       title: `${buyerClubName}から ${target.name} への獲得オファー`,
-      speech: `${buyerClubName}より当クラブ所属の ${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対して正式な買取打診が届いております。回答期限は5日間です。`,
+      speechPages: incDlg.pages,
       detailHtml: `
         <div class="gm-modal-flat-list">
           <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">対象選手</span><span class="gm-modal-flat-val">${escapeCommHtml(target.pos)} #${target.squadNumber || '-'} ${escapeCommHtml(target.name)} (OVR ${newOffer.ovr})</span></div>
@@ -17163,10 +17373,19 @@ function hireNewManager(managerId) {
       const wishPos = newMgrWish && Array.isArray(newMgrWish.positions) && newMgrWish.positions.length > 0
         ? newMgrWish.positions.join('・')
         : 'スカッド全体の調整';
+      const secMgr = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+      const mgrDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+        ? SecretaryDialogue.getEventDialogue('manager_hired', {
+            mgrName: newMgr.name,
+            formation: newMgr.preferredFormation,
+            tacticLabel,
+            wishPos
+          }, secMgr)
+        : { pages: [`GM、${newMgr.name}監督（得意: ${newMgr.preferredFormation} / ${tacticLabel}）との契約が完了しました。新体制の初動として「${wishPos}」の補強要望を受け取っています。`] };
       showSecretaryModal({
         topic: '新監督就任報告',
         title: `${newMgr.name} 監督が就任`,
-        speech: `GM、${newMgr.name}監督（得意: ${newMgr.preferredFormation} / ${tacticLabel}）との契約が完了しました。新体制の初動として「${wishPos}」の補強要望を受け取っています。`,
+        speechPages: mgrDlg.pages,
         detailHtml: buildWishModalDetailHtml(club, newMgrWish),
         actions: [
           {
@@ -20334,10 +20553,19 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
       `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">達成項目</span><span class="gm-modal-flat-val">${escapeCommHtml(bonusLabel)}</span></div>`,
       `<div class="gm-modal-flat-row"><span class="gm-modal-flat-label">監督信頼度 (${escapeCommHtml(mgr.name)})</span><span class="gm-modal-flat-val accent-green">+${trustBonus} → ${mgr.trust}%</span></div>`
     ];
+    const secWish = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const wishDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('signing_manager_thanks', {
+          playerName: signedPlayer.name,
+          mgrName: mgr.name,
+          isRecommended,
+          matchedPos
+        }, secWish)
+      : { pages: [`GM、${signedPlayer.name}選手の獲得お疲れさまです。${mgr.name}監督から感謝のメッセージが届いています。`] };
     showSecretaryModal({
       topic: '監督補強要望の達成',
       title: `${signedPlayer.name} の加入を監督が歓迎`,
-      speech: `GM、${signedPlayer.name}選手の獲得お疲れさまです。${mgr.name}監督から「${isRecommended ? '推薦した狙い通りの戦力だ' : `${matchedPos}の厚みが大きく改善した`}」と感謝のメッセージが届いています。`,
+      speechPages: wishDlg.pages,
       detailHtml: `<div class="gm-modal-flat-list">${wishDetailRows.join('')}</div>`,
       actions: [
         {
@@ -21732,14 +21960,13 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
   }
 
   const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
-  let speech = '';
-  if (sec.tone === 'active') {
-    speech = `GM、${compLabel}（vs ${oppName}）お疲れ様でした！${myScore}-${oppScore}の${resultLabel}です。試合収入 ${formatMoney(earnedIncome)} と次回予定をまとめましたのでご確認ください。`;
-  } else if (sec.tone === 'calm') {
-    speech = `GM、${compLabel}の結果（${myScore}-${oppScore} / ${resultLabel}）および今試合の収支と次戦スケジュールを報告いたします。`;
-  } else {
-    speech = `GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）お疲れ様でございました。今回の収支および次回試合の予定をご報告申し上げます。`;
-  }
+  const isFinalReport = Boolean(matchData.isTournamentFinal) || (matchData.compTitle && /決勝$/.test(String(matchData.compTitle).trim()) && !String(matchData.compTitle).includes('プレーオフ'));
+  const matchDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+    ? SecretaryDialogue.getEventDialogue('match_report', {
+        compLabel, oppName, myScore, oppScore, resultLabel,
+        won: userWon, draw: userDraw, isFinal: isFinalReport
+      }, sec)
+    : { pages: [`GM、${compLabel}、${oppName}戦（${myScore}-${oppScore}・${resultLabel}）の収支および次回予定をご報告申し上げます。`] };
 
   const fanStr = typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(playerClub, supportersDelta) : `${supportersDelta >= 0 ? '+' : ''}${supportersDelta.toLocaleString()}人`;
   const incomeSubNote = matchData.isPreseason
@@ -21755,7 +21982,7 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
     variant: 'match-report',
     topic: matchData.isPreseason ? '試合後報告（WCT）' : '試合後報告',
     title: `${compLabel} 試合結果・収支報告`,
-    speech,
+    speechPages: matchDlg.pages,
     detailHtml: `
       <div class="gm-report-wrap">
         <div class="gm-report-scoreboard">
@@ -21908,14 +22135,17 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
     if (typeof stopAdvancingCalendar === 'function') stopAdvancingCalendar();
     const netColorCls = netBalance >= 0 ? 'accent-green' : 'text-danger';
     const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: 'C. Bennett', tone: 'polite' };
-    let meetingSpeech = '';
-    if (sec.tone === 'active') {
-      meetingSpeech = `GM、${reportMonth}月度の月次定例経営会議を開催します！今月の戦績と収支決算をまとめました。理事会評価も踏まえて次月の指針を固めましょう。`;
-    } else if (sec.tone === 'calm') {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の定例経営会議を開始します。今月の戦績実績、収支決算、ならびに理事会評価をご確認ください。`;
-    } else {
-      meetingSpeech = `GM、${reportYear}年${reportMonth}月度の月次定例経営会議のお時間でございます。今月の戦績ならびに財務決算の詳細をご報告申し上げます。`;
-    }
+    const isOnTarget = Boolean(rankIdx >= 0 && rankIdx + 1 <= (playerClub.targetRank || 8));
+    const meetingDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('monthly_meeting', {
+          year: reportYear,
+          month: reportMonth,
+          boardConfidence: boardConf,
+          isPsrBreach: Boolean(psr && psr.isBreach),
+          netBalance,
+          onTarget: isOnTarget
+        }, sec)
+      : { pages: [`GM、${reportYear}年${reportMonth}月度の月次定例経営会議のお時間でございます。`] };
 
     let evalScore = Number(boardConf) || 50;
     if (netBalance > 0) evalScore += 10;
@@ -21939,7 +22169,7 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
       variant: 'monthly-ceremony',
       topic: '月次定例会',
       title: `${reportYear}年${reportMonth}月度 月次定例報告会`,
-      speech: meetingSpeech,
+      speechPages: meetingDlg.pages,
       detailHtml: `
         <div class="gm-ceremony-wrap">
           <div class="gm-ceremony-banner">
@@ -22323,6 +22553,67 @@ function renderSecretaryBriefing() {
   const changeBtn = document.getElementById('btn-open-secretary-modal');
   if (changeBtn) {
     changeBtn.addEventListener('click', openSecretarySelectModal);
+  }
+
+  const adviceEl = document.getElementById('secretary-office-advice');
+  if (adviceEl) {
+    if (playerClub && typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue) {
+      const curDay = typeof getCurrentCalendarDay === 'function' ? getCurrentCalendarDay() : null;
+      const spWin = typeof getSponsorContractWindowInfo === 'function' ? getSponsorContractWindowInfo() : { isOpen: false, daysLeft: 99 };
+      const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(playerClub) : { isBreach: false };
+      const urgentExpiringCount = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoan) && !(p.loanStatus && p.loanStatus.isLoanOut) && !p.preContractDeparture && (p.contractYears || 0) <= 1).length;
+      const openOfferCount = ((gameState.incomingOffers || []).filter(o => o && (o.status === 'pending' || o.status === 'counter_agreed')).length)
+        + ((gameState.outgoingOffers || []).filter(o => o && (o.status === 'agreed' || o.status === 'cpu_counter')).length);
+      let winStreak = 0;
+      let lossStreak = 0;
+      if (Array.isArray(gameState.schedule)) {
+        const playedMatches = [];
+        for (const weekArr of gameState.schedule) {
+          if (!Array.isArray(weekArr)) continue;
+          const m = weekArr.find(x => x && x.played && (x.homeId === playerClub.id || x.awayId === playerClub.id));
+          if (m) playedMatches.push(m);
+        }
+        for (let i = playedMatches.length - 1; i >= 0; i--) {
+          const m = playedMatches[i];
+          const isH = m.homeId === playerClub.id;
+          const diff = isH ? (m.homeScore - m.awayScore) : (m.awayScore - m.homeScore);
+          if (i === playedMatches.length - 1) {
+            if (diff > 0) winStreak = 1;
+            else if (diff < 0) lossStreak = 1;
+            else break;
+          } else if (winStreak > 0 && diff > 0) {
+            winStreak++;
+          } else if (lossStreak > 0 && diff < 0) {
+            lossStreak++;
+          } else {
+            break;
+          }
+        }
+      }
+      const isMatchDay = typeof isTodayMatchDayPending === 'function' ? isTodayMatchDayPending() : false;
+      const adviceText = SecretaryDialogue.getOfficeBriefingAdvice({
+        staffMissing: Boolean(gameState.pendingInitialStaffSetup),
+        isDeadlineDay: Boolean(curDay && curDay.isTransferDeadline),
+        pendingCommercialSetup: Boolean(gameState.pendingCommercialSetup),
+        hasPendingSponsors: Boolean(spWin && spWin.isOpen),
+        sponsorDaysLeft: spWin ? spWin.daysLeft : 99,
+        isMatchDay,
+        matchLabel: curDay && curDay.isCupMatchDay ? 'カップ戦' : '公式戦',
+        isPsrBreach: Boolean(psr && psr.isBreach),
+        boardConfidence: typeof playerClub.boardConfidence === 'number' ? playerClub.boardConfidence : 75,
+        urgentExpiringCount,
+        isWindowOpen: Boolean(typeof isTransferWindowCurrentlyOpen === 'function' ? isTransferWindowCurrentlyOpen() : false),
+        openOfferCount,
+        winStreak,
+        lossStreak,
+        isSeasonOver: Boolean(gameState.isSeasonOver)
+      }, sec);
+      adviceEl.innerHTML = `<span class="secretary-office-advice-speaker mono">${escapeCommHtml(sec.name)}</span><span class="secretary-office-advice-text">${escapeCommHtml(adviceText)}</span>`;
+      adviceEl.classList.remove('hidden');
+    } else {
+      adviceEl.classList.add('hidden');
+      adviceEl.innerHTML = '';
+    }
   }
 }
 
