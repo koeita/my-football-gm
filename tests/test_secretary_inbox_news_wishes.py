@@ -588,6 +588,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         for sym in [
             'pendingCommercialSetup:',
             "action: 'open-commercial-setup'",
+            'function isCommercialPlanLocked(',
             'function renderCommercialManagementPanel(',
             'function selectOrBuildCommercialStadium(',
             'function adjustTicketTierPrice(',
@@ -596,10 +597,13 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         ]:
             self.assertIn(sym, self.main_js)
 
+        self.assertIn('スタジアム周辺・商業設備', self.data_js)
+        self.assertIn('overrideStadiumId = null', self.models_js)
         self.assertIn('pendingCommercialSetup:', self.storage_js)
         self.assertIn('commercialSubtab:', self.storage_js)
         self.assertIn('.commercial-stadium-svg', self.css)
         self.assertIn('.commercial-seatmap-svg', self.css)
+        self.assertIn('.commercial-locked-bar', self.css)
 
 
 if __name__ == '__main__':

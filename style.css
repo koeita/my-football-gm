@@ -22785,6 +22785,73 @@ button.hof-record-name {
   color: var(--text-primary);
 }
 
+.commercial-locked-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-locked-text {
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.commercial-stadium-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.commercial-stadium-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.commercial-stadium-pick-btn.is-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-green);
+}
+
+.commercial-stadium-pick-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  flex-shrink: 0;
+}
+
+.commercial-row-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.commercial-step-btn:disabled,
+.commercial-merch-toggle:disabled,
+.commercial-price-range:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .commercial-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -23156,9 +23223,21 @@ button.hof-record-name {
   .commercial-price-range {
     width: 84px;
   }
-  .commercial-setup-bar {
+  .commercial-setup-bar,
+  .commercial-locked-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+  .commercial-stadium-picker-bar {
+    gap: 2px;
+  }
+  .commercial-stadium-pick-btn {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  .commercial-row-action {
+    width: 100%;
+    justify-content: flex-end;
   }
   .commercial-total-footer {
     flex-wrap: wrap;

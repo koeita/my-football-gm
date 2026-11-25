@@ -6310,10 +6310,11 @@ function upgradeFacility(facilityKey) {
 
   if (facilityKey === 'stadium') {
     if (typeof adjustClubSupporters === 'function') {
-      adjustClubSupporters(playerClub, 1200);
+      adjustClubSupporters(playerClub, 1500);
     } else {
-      playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 1200);
+      playerClub.supporters = Math.min(60000, (playerClub.supporters || 10000) + 1500);
     }
+    addDailyLog(`【商業設備改修】スタジアム周辺・商業設備を Lv.${nextLv} へ拡充しました（サポーター上限拡大・物販効率UP・新規ファン獲得）。`);
   } else if (facilityKey === 'scouting') {
     // スカウト網強化時は即座に新規候補を2名追加リストアップ
     const usedNames = new Set();
@@ -11408,7 +11409,7 @@ function renderFacilitiesAndYouth() {
     const sLv = f.stadium || 1;
     const stInfo = typeof getClubStadiumInfo === 'function' ? getClubStadiumInfo(playerClub) : null;
     stadiumBonusEl.textContent = stInfo
-      ? `${stInfo.name} · ${(stInfo.capacity || 0).toLocaleString()}席 (Lv.${sLv})`
+      ? `商業設備 Lv.${sLv}（物販+${(sLv - 1) * 6}%） / ${stInfo.name} ${(stInfo.capacity || 0).toLocaleString()}席`
       : `Lv.${sLv}（${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)}）`;
   }
   if (gameState.facilitiesSubtab === 'commercial' && typeof renderCommercialManagementPanel === 'function') {
@@ -23851,6 +23852,10 @@ function renderClubRecordsView() {
 // スタジアム選定・席別チケット価格・グッズ収支管理UI
 // ==========================================================================
 
+function isCommercialPlanLocked() {
+  return !gameState.pendingCommercialSetup || Boolean(gameState.isGameOver || gameState.isSimulating);
+}
+
 function previewCommercialStadium(stadiumId) {
   if (!stadiumId) return;
   gameState.selectedStadiumPreviewId = stadiumId;
@@ -23858,7 +23863,7 @@ function previewCommercialStadium(stadiumId) {
 }
 
 function selectOrBuildCommercialStadium(stadiumId) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const comm = ensureClubCommercialState(playerClub);
@@ -23888,7 +23893,7 @@ function selectOrBuildCommercialStadium(stadiumId) {
 }
 
 function adjustTicketTierPrice(zoneId, newPrice) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const tier = (typeof TICKET_SEAT_TIERS !== 'undefined' ? TICKET_SEAT_TIERS : []).find(t => t.id === zoneId);
@@ -23901,7 +23906,7 @@ function adjustTicketTierPrice(zoneId, newPrice) {
 }
 
 function applyTicketPricePreset(presetKey) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const comm = ensureClubCommercialState(playerClub);
@@ -23919,7 +23924,7 @@ function applyTicketPricePreset(presetKey) {
 }
 
 function toggleMerchandiseItem(itemId) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const comm = ensureClubCommercialState(playerClub);
@@ -23930,7 +23935,7 @@ function toggleMerchandiseItem(itemId) {
 }
 
 function adjustMerchandisePrice(itemId, newPrice) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const item = (typeof MERCHANDISE_CATALOG !== 'undefined' ? MERCHANDISE_CATALOG : []).find(m => m.id === itemId);
@@ -23945,7 +23950,7 @@ function adjustMerchandisePrice(itemId, newPrice) {
 }
 
 function applyMerchandisePreset(presetKey) {
-  if (gameState.isGameOver || gameState.isSimulating) return;
+  if (isCommercialPlanLocked()) return;
   const playerClub = getPlayerClub();
   if (!playerClub || typeof ensureClubCommercialState !== 'function') return;
   const comm = ensureClubCommercialState(playerClub);
@@ -23974,16 +23979,29 @@ function applyMerchandisePreset(presetKey) {
 
 function confirmCommercialSetupTask() {
   const playerClub = getPlayerClub();
-  if (!playerClub) return;
+  if (!playerClub || !gameState.pendingCommercialSetup) return;
   const proj = typeof calculateProjectedMatchdayCommercial === 'function'
     ? calculateProjectedMatchdayCommercial(playerClub)
     : null;
   gameState.pendingCommercialSetup = false;
   if (proj) {
-    addDailyLog(`【興行計画確定】${proj.stadium.name}（収容 ${proj.totalCapacity.toLocaleString()}席）にて予想1試合純収益 ${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)} で承認しました。`);
+    addDailyLog(`【興行計画確定】${proj.stadium.name}（${proj.totalCapacity.toLocaleString()}席 / 予想来場 ${proj.totalAttendance.toLocaleString()}人）にて今季の興行設定を確定しました（1試合予想純収益 ${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)} · シーズン中変更不可）。`);
   }
   renderAll();
   if (typeof saveGameToStorage === 'function') saveGameToStorage(true);
+}
+
+function getStadiumFitInfo(supporters, capacity, fillRatePct) {
+  if (supporters >= capacity * 0.96) {
+    return { label: '満員見込・拡張候補', cls: 'accent-gold' };
+  }
+  if (fillRatePct >= 62) {
+    return { label: '適正規模', cls: 'accent-green' };
+  }
+  if (fillRatePct >= 45) {
+    return { label: '余裕あり', cls: 'accent-gold' };
+  }
+  return { label: '大型・空席多め', cls: 'accent-red' };
 }
 
 function renderCommercialManagementPanel() {
@@ -23996,6 +24014,7 @@ function renderCommercialManagementPanel() {
     ensureClubCommercialState(playerClub);
   }
   const comm = playerClub.commercial || {};
+  const locked = isCommercialPlanLocked();
   const subtab = gameState.commercialSubtab || 'stadium';
   const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
   const homeMatchCount = isD2 ? 23 : 19;
@@ -24009,32 +24028,39 @@ function renderCommercialManagementPanel() {
   const netSign = proj.netMatchdayIncomeK >= 0 ? '+' : '';
   const merchSign = proj.merchNetK >= 0 ? '+' : '';
   const seasonEstimateK = proj.netMatchdayIncomeK * homeMatchCount;
+  const facilityLv = proj.stadium.facilityLv || 1;
+  const merchBonusPct = Math.round(((proj.stadium.facilityMerchMult || 1) - 1) * 100);
 
   const setupBannerHtml = gameState.pendingCommercialSetup
     ? `
       <div class="commercial-setup-bar">
-        <span class="commercial-setup-text">今シーズンのスタジアム・席別チケット価格・グッズ展開を設定し、興行計画を確定してください</span>
+        <span class="commercial-setup-text">今シーズンのスタジアム・チケット価格・グッズ展開を決定してください（確定後は今季終了まで変更できません）</span>
         <button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup">興行計画を確定する</button>
       </div>
     `
-    : '';
+    : `
+      <div class="commercial-locked-bar">
+        <span class="commercial-locked-text">今季の興行計画は確定済みです（数値の変更はできません · 来季開幕時に再設定可能）</span>
+        <span class="commercial-row-sub mono accent-green">確定ロック中</span>
+      </div>
+    `;
 
   const summaryHtml = `
     <div class="commercial-summary-strip">
       <div class="commercial-summary-cell">
+        <span class="commercial-summary-label">サポーター数 / 上限</span>
+        <span class="commercial-summary-val mono">${proj.supporters.toLocaleString()}人 / ${proj.maxSupporters.toLocaleString()}人</span>
+        <span class="commercial-summary-sub">来場上限＝サポーター数 · 商業設備Lv.${facilityLv}（物販+${merchBonusPct}%）</span>
+      </div>
+      <div class="commercial-summary-cell">
         <span class="commercial-summary-label">本拠地 / 予想来場</span>
-        <span class="commercial-summary-val mono">${proj.totalAttendance.toLocaleString()}人 (${proj.fillRatePct}%)</span>
-        <span class="commercial-summary-sub">${escapeCommHtml(proj.stadium.name)} · ${proj.totalCapacity.toLocaleString()}席</span>
+        <span class="commercial-summary-val mono">${proj.totalAttendance.toLocaleString()}人（稼働 ${proj.fillRatePct}%）</span>
+        <span class="commercial-summary-sub">${escapeCommHtml(proj.stadium.name)} · ${proj.totalCapacity.toLocaleString()}席（来場率 ${proj.supporterTurnoutPct}%）</span>
       </div>
       <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">チケット予想売上</span>
+        <span class="commercial-summary-label">チケット / グッズ / 維持費</span>
         <span class="commercial-summary-val mono accent-green">+${formatMoney(proj.ticketRevenueK)}</span>
-        <span class="commercial-summary-sub">4席合計 · スポンサー補正 ×${proj.sponsorMult.toFixed(2)}</span>
-      </div>
-      <div class="commercial-summary-cell">
-        <span class="commercial-summary-label">グッズ収支 / 維持費</span>
-        <span class="commercial-summary-val mono ${merchNetCls}">${merchSign}${formatMoney(proj.merchNetK)}</span>
-        <span class="commercial-summary-sub">${proj.enabledMerchCount}品展開 · 維持費 -${formatMoney(proj.maintenanceK)}</span>
+        <span class="commercial-summary-sub">グッズ ${merchSign}${formatMoney(proj.merchNetK)} · 維持費 -${formatMoney(proj.maintenanceK)}</span>
       </div>
       <div class="commercial-summary-cell">
         <span class="commercial-summary-label">1試合予想純収益</span>
@@ -24061,19 +24087,27 @@ function renderCommercialManagementPanel() {
       ? gameState.selectedStadiumPreviewId
       : proj.stadium.id;
     const previewPreset = presets.find(p => p.id === previewId) || proj.stadium;
+    const previewProj = calculateProjectedMatchdayCommercial(playerClub, { overrideStadiumId: previewPreset.id });
     const isCurrent = previewPreset.id === comm.stadiumId;
     const isOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(previewPreset.id);
-    const previewCap = previewPreset.baseCapacity + (stadiumLv - 1) * (previewPreset.levelCapacityStep || 5000);
-    const previewMaint = Math.round((previewPreset.maintenancePerMatchK || 120) * (1 + (stadiumLv - 1) * 0.14));
+    const previewCap = previewProj.totalCapacity;
+    const previewMaint = previewProj.maintenanceK;
     const buildCost = isOwned ? 0 : (previewPreset.buildCostK || 0);
     const canAfford = (playerClub.funds || 0) >= buildCost;
     const svgHero = typeof getStadiumIllustrationSvg === 'function'
       ? getStadiumIllustrationSvg(previewPreset.id, playerClub, stadiumLv, false)
       : '';
+    const diffNetK = previewProj.netMatchdayIncomeK - proj.netMatchdayIncomeK;
+    const diffNetHtml = isCurrent
+      ? ''
+      : ` <span class="${diffNetK >= 0 ? 'accent-green' : 'accent-red'}">(${diffNetK >= 0 ? '+' : ''}${formatMoney(diffNetK)})</span>`;
+    const fitInfo = getStadiumFitInfo(previewProj.supporters, previewCap, previewProj.fillRatePct);
 
     let actionBtnHtml = '';
     if (isCurrent) {
-      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>使用中のスタジアム</button>`;
+      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>使用中の本拠地</button>`;
+    } else if (locked) {
+      actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>今季確定済（変更不可）</button>`;
     } else if (isOwned) {
       actionBtnHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${previewPreset.id}">このスタジアムへ切替（無料）</button>`;
     } else if (canAfford) {
@@ -24082,21 +24116,44 @@ function renderCommercialManagementPanel() {
       actionBtnHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>資金不足（必要 ${formatMoney(buildCost)}）</button>`;
     }
 
+    const pickerHtml = presets.map(st => {
+      const pIsCur = st.id === comm.stadiumId;
+      const pIsActive = st.id === previewPreset.id;
+      return `
+        <button type="button" class="commercial-stadium-pick-btn ${pIsActive ? 'is-active' : ''}" data-commercial-action="preview-stadium" data-stadium-id="${st.id}">
+          ${pIsCur ? '<span class="commercial-stadium-pick-dot" aria-hidden="true"></span>' : ''}
+          <span>${escapeCommHtml(st.name.split('・')[0])} (${(st.capacity || st.baseCapacity).toLocaleString()}席)</span>
+        </button>
+      `;
+    }).join('');
+
     const share = previewPreset.seatShare || { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 };
     const listRowsHtml = presets.map(st => {
-      const cap = st.baseCapacity + (stadiumLv - 1) * (st.levelCapacityStep || 5000);
-      const maint = Math.round((st.maintenancePerMatchK || 120) * (1 + (stadiumLv - 1) * 0.14));
+      const stProj = calculateProjectedMatchdayCommercial(playerClub, { overrideStadiumId: st.id });
+      const cap = stProj.totalCapacity;
+      const maint = stProj.maintenanceK;
       const rowIsCurrent = st.id === comm.stadiumId;
       const rowIsOwned = Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(st.id);
       const rowSelected = st.id === previewPreset.id;
+      const rowFit = getStadiumFitInfo(stProj.supporters, cap, stProj.fillRatePct);
+      const rowCost = rowIsOwned ? 0 : (st.buildCostK || 0);
+      const rowCanAfford = (playerClub.funds || 0) >= rowCost;
       const thumbSvg = typeof getStadiumIllustrationSvg === 'function'
         ? getStadiumIllustrationSvg(st.id, playerClub, stadiumLv, true)
         : '';
-      const statusHtml = rowIsCurrent
-        ? `<span class="accent-green mono">使用中</span>`
-        : (rowIsOwned
-          ? `<span class="accent-green mono">保有済</span>`
-          : `<span class="accent-gold mono">${formatMoney(st.buildCostK)}</span>`);
+
+      let rowActionHtml = '';
+      if (rowIsCurrent) {
+        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>使用中</button>`;
+      } else if (locked) {
+        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm" disabled>${rowIsOwned ? '保有済' : formatMoney(rowCost)}</button>`;
+      } else if (rowIsOwned) {
+        rowActionHtml = `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="select-stadium" data-stadium-id="${st.id}">切替(無料)</button>`;
+      } else if (rowCanAfford) {
+        rowActionHtml = `<button type="button" class="btn btn-primary btn-sm mono" data-commercial-action="select-stadium" data-stadium-id="${st.id}">移転 ${formatMoney(rowCost)}</button>`;
+      } else {
+        rowActionHtml = `<button type="button" class="btn btn-secondary btn-sm mono" disabled>不足 ${formatMoney(rowCost)}</button>`;
+      }
 
       return `
         <div class="commercial-flat-row is-clickable ${rowSelected ? 'is-selected' : ''}" data-stadium-preview-row="${st.id}">
@@ -24104,49 +24161,47 @@ function renderCommercialManagementPanel() {
           <div class="commercial-row-main">
             <div class="commercial-row-title-line">
               <span class="commercial-row-name">${escapeCommHtml(st.name)}</span>
-              <span class="commercial-row-sub">${escapeCommHtml(st.styleLabel)}</span>
+              <span class="${rowFit.cls} commercial-row-sub">${rowFit.label}</span>
             </div>
-            <div class="commercial-row-sub">VIP ${Math.round((st.seatShare.vip || 0.1) * 100)}% · 集客 ×${st.ticketDemandBonus.toFixed(2)} · 物販 ×${st.merchDemandBonus.toFixed(2)}</div>
+            <div class="commercial-row-sub mono">収容 ${cap.toLocaleString()}席 · 試算 ${stProj.totalAttendance.toLocaleString()}人 (${stProj.fillRatePct}%) · VIP${Math.round((st.seatShare.vip || 0.1) * 100)}%</div>
           </div>
           <div class="commercial-row-metrics">
             <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">収容 / 維持費</span>
-              <span class="commercial-metric-num mono">${cap.toLocaleString()}席 / -${formatMoney(maint)}</span>
+              <span class="commercial-metric-cap">1試合純収益 / 維持費</span>
+              <span class="commercial-metric-num mono"><span class="accent-green">+${formatMoney(stProj.netMatchdayIncomeK)}</span> / -${formatMoney(maint)}</span>
             </div>
-            <div class="commercial-metric-col">
-              <span class="commercial-metric-cap">導入費用</span>
-              <span class="commercial-metric-num">${statusHtml}</span>
-            </div>
+            <div class="commercial-row-action">${rowActionHtml}</div>
           </div>
         </div>
       `;
     }).join('');
 
     bodyHtml = `
+      <div class="commercial-stadium-picker-bar">${pickerHtml}</div>
       <div class="commercial-stadium-hero">
         <div class="commercial-stadium-stage">${svgHero}</div>
         <div class="commercial-stadium-meta">
           <div class="commercial-stadium-title-row">
             <h3 class="commercial-stadium-title">${escapeCommHtml(previewPreset.name)}</h3>
-            <span class="commercial-row-sub mono">施設Lv.${stadiumLv}</span>
+            <span class="commercial-row-sub mono ${isCurrent ? 'accent-green' : 'accent-gold'}">${isCurrent ? '現在の本拠地' : '比較プレビュー中'}</span>
           </div>
           <div class="commercial-row-sub">${escapeCommHtml(previewPreset.summary)}</div>
           <div class="commercial-inline-kv-list">
             <div class="commercial-inline-kv-row">
-              <span class="commercial-kv-label">収容人数</span>
-              <span class="commercial-kv-val mono accent-green">${previewCap.toLocaleString()}席</span>
+              <span class="commercial-kv-label">固定収容席数 / 適性</span>
+              <span class="commercial-kv-val mono">${previewCap.toLocaleString()}席 · <span class="${fitInfo.cls}">${fitInfo.label}</span></span>
+            </div>
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">試算来場者数（現在ファン数基準）</span>
+              <span class="commercial-kv-val mono accent-green">${previewProj.totalAttendance.toLocaleString()}人（稼働 ${previewProj.fillRatePct}%）</span>
+            </div>
+            <div class="commercial-inline-kv-row">
+              <span class="commercial-kv-label">1試合維持費 / 予想純収益</span>
+              <span class="commercial-kv-val mono">-${formatMoney(previewMaint)} / <span class="accent-green">+${formatMoney(previewProj.netMatchdayIncomeK)}</span>${diffNetHtml}</span>
             </div>
             <div class="commercial-inline-kv-row">
               <span class="commercial-kv-label">座席配分</span>
               <span class="commercial-kv-val mono">裏${Math.round(share.goal * 100)}% / B${Math.round(share.back * 100)}% / M${Math.round(share.main * 100)}% / VIP${Math.round(share.vip * 100)}%</span>
-            </div>
-            <div class="commercial-inline-kv-row">
-              <span class="commercial-kv-label">1試合維持費</span>
-              <span class="commercial-kv-val mono accent-gold">-${formatMoney(previewMaint)}</span>
-            </div>
-            <div class="commercial-inline-kv-row">
-              <span class="commercial-kv-label">興行特性</span>
-              <span class="commercial-kv-val mono">集客×${previewPreset.ticketDemandBonus.toFixed(2)} · 物販×${previewPreset.merchDemandBonus.toFixed(2)}</span>
             </div>
           </div>
           <div>${actionBtnHtml}</div>
@@ -24158,6 +24213,7 @@ function renderCommercialManagementPanel() {
     const seatMapSvg = typeof getStadiumSeatingMapSvg === 'function'
       ? getStadiumSeatingMapSvg(proj.stadium.id, playerClub, proj.zoneResults, gameState.activeTicketSeatZone)
       : '';
+    const disabledAttr = locked ? 'disabled' : '';
     const rowsHtml = proj.zoneResults.map(z => {
       const isActive = gameState.activeTicketSeatZone === z.id;
       return `
@@ -24167,15 +24223,15 @@ function renderCommercialManagementPanel() {
               <span class="commercial-row-name">${escapeCommHtml(z.name)}</span>
               <span class="commercial-row-sub">${escapeCommHtml(z.subLabel)}</span>
             </div>
-            <div class="commercial-row-sub mono">席数 ${z.capacity.toLocaleString()}席 · 予想 ${z.attendance.toLocaleString()}人（稼働率 ${z.occupancyPct}%）· 基準 £${z.fairPrice}</div>
+            <div class="commercial-row-sub mono">席数 ${z.capacity.toLocaleString()}席（ファン割当 ${z.potentialSupporters.toLocaleString()}人）· 予想 ${z.attendance.toLocaleString()}人（稼働 ${z.occupancyPct}%）· 基準 £${z.fairPrice}</div>
           </div>
           <div class="commercial-row-metrics">
             <div class="commercial-stepper">
-              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="-${z.step}" aria-label="${z.name}を値下げ">-</button>
+              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="-${z.step}" aria-label="${z.name}を値下げ" ${disabledAttr}>-</button>
               <span class="commercial-step-price mono">£${z.price}</span>
-              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="${z.step}" aria-label="${z.name}を値上げ">+</button>
+              <button type="button" class="commercial-step-btn" data-commercial-action="ticket-step" data-zone-id="${z.id}" data-delta="${z.step}" aria-label="${z.name}を値上げ" ${disabledAttr}>+</button>
             </div>
-            <input type="range" class="commercial-price-range" min="${z.minPrice}" max="${z.maxPrice}" step="${z.step}" value="${z.price}" data-ticket-range-zone="${z.id}" aria-label="${z.name}価格スライダー">
+            <input type="range" class="commercial-price-range" min="${z.minPrice}" max="${z.maxPrice}" step="${z.step}" value="${z.price}" data-ticket-range-zone="${z.id}" aria-label="${z.name}価格スライダー" ${disabledAttr}>
             <div class="commercial-metric-col">
               <span class="commercial-metric-cap">予想売上 / 評判</span>
               <span class="commercial-metric-num mono"><span class="accent-green">+${formatMoney(z.revenueK)}</span> · <span class="${z.ratingClass}">${z.ratingLabel}</span></span>
@@ -24188,26 +24244,27 @@ function renderCommercialManagementPanel() {
     bodyHtml = `
       <div class="commercial-seatmap-wrap">
         ${seatMapSvg}
-        <span class="commercial-row-sub">座席エリアをクリックすると該当ランクの調整行をハイライトします</span>
+        <span class="commercial-row-sub">来場上限は現在サポーター数（${proj.supporters.toLocaleString()}人）です。値下げだけでサポーター数以上に席は埋まりません。</span>
       </div>
       <div class="commercial-preset-bar">
-        <span class="commercial-row-sub">価格方針プリセット</span>
+        <span class="commercial-row-sub">価格方針プリセット${locked ? '（確定済みのため変更不可）' : ''}</span>
         <div class="commercial-preset-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="fan">ファン重視</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="balanced">適正バランス</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="revenue">収益優先</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="fan" ${disabledAttr}>ファン重視</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="balanced" ${disabledAttr}>適正バランス</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="ticket-preset" data-preset="revenue" ${disabledAttr}>収益優先</button>
         </div>
       </div>
       <div class="commercial-flat-list">${rowsHtml}</div>
     `;
   } else {
+    const disabledAttr = locked ? 'disabled' : '';
     const merchRowsHtml = proj.merchResults.map(m => {
       const netCls = m.netProfitK >= 0 ? 'accent-green' : 'accent-red';
       const netPrefix = m.netProfitK >= 0 ? '+' : '';
       const deficitText = m.isDeficit ? ' 赤字見込' : '';
       return `
         <div class="commercial-flat-row ${m.enabled ? 'is-selected' : ''}">
-          <button type="button" class="commercial-merch-toggle ${m.enabled ? 'is-on' : ''}" data-commercial-action="merch-toggle" data-merch-id="${m.id}">
+          <button type="button" class="commercial-merch-toggle ${m.enabled ? 'is-on' : ''}" data-commercial-action="merch-toggle" data-merch-id="${m.id}" ${disabledAttr}>
             ${m.enabled ? '販売中' : '停止中'}
           </button>
           <div class="commercial-row-main">
@@ -24219,9 +24276,9 @@ function renderCommercialManagementPanel() {
           </div>
           <div class="commercial-row-metrics">
             <div class="commercial-stepper">
-              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="-${m.step}" aria-label="${m.name}を値下げ">-</button>
+              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="-${m.step}" aria-label="${m.name}を値下げ" ${disabledAttr}>-</button>
               <span class="commercial-step-price mono">£${m.price}</span>
-              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="${m.step}" aria-label="${m.name}を値上げ">+</button>
+              <button type="button" class="commercial-step-btn" data-commercial-action="merch-step" data-merch-id="${m.id}" data-delta="${m.step}" aria-label="${m.name}を値上げ" ${disabledAttr}>+</button>
             </div>
             <div class="commercial-metric-col">
               <span class="commercial-metric-cap">売上 / 総コスト</span>
@@ -24238,11 +24295,11 @@ function renderCommercialManagementPanel() {
 
     bodyHtml = `
       <div class="commercial-preset-bar">
-        <span class="commercial-row-sub">来場者規模に合わせて固定費負けしない商品を選定してください（赤字商品はOFF推奨）</span>
+        <span class="commercial-row-sub">${locked ? '確定済みのため品揃え・価格は変更できません' : '来場者規模に合わせて固定費負けしない商品を選定してください（赤字商品はOFF推奨）'}</span>
         <div class="commercial-preset-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe">堅実構成</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced">黒字のみ自動</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="all">全品展開</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="safe" ${disabledAttr}>堅実構成</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="balanced" ${disabledAttr}>黒字のみ自動</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="merch-preset" data-preset="all" ${disabledAttr}>全品展開</button>
         </div>
       </div>
       <div class="commercial-flat-list">${merchRowsHtml}</div>

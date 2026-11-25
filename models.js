@@ -3522,17 +3522,18 @@ function getClubMaxSupporters(club) {
   const initSup = club.initialSupporters || club.supporters || (isD2 ? 14000 : 18000);
   if (club.isPlayer) {
     const stadiumLv = (typeof gameState !== 'undefined' && gameState.facilities && gameState.facilities.stadium)
-      ? gameState.facilities.stadium
+      ? Math.max(1, Math.min(5, Number(gameState.facilities.stadium || 1)))
       : 1;
-    const baseCap = Math.max(22000, Math.round(initSup * 1.15));
-    const lvCap = Math.min(50000, baseCap + (stadiumLv - 1) * 5000);
+    let stCap = 20000;
     if (typeof getClubStadiumInfo === 'function') {
       const stInfo = getClubStadiumInfo(club);
       if (stInfo && stInfo.capacity) {
-        return Math.min(72000, Math.max(lvCap, stInfo.capacity));
+        stCap = stInfo.capacity;
       }
     }
-    return lvCap;
+    const baseCap = Math.max(22000, Math.round(initSup * 1.15), Math.round(stCap * 1.05));
+    const lvBonus = (stadiumLv - 1) * 4500;
+    return Math.min(60000, baseCap + lvBonus);
   }
   if (isD2) {
     return Math.min(24000, Math.max(14000, Math.round(initSup * 1.15)));
@@ -3605,19 +3606,20 @@ function ensureClubCommercialState(club) {
 }
 
 /**
- * クラブの現在スタジアム仕様と実効収容人数を返す
+ * クラブの現在スタジアム仕様と固定収容人数・商業設備補正を返す
  */
-function getClubStadiumInfo(club) {
+function getClubStadiumInfo(club, overrideStadiumId = null) {
   const presets = typeof STADIUM_PRESETS !== 'undefined' && Array.isArray(STADIUM_PRESETS) ? STADIUM_PRESETS : [];
   const comm = ensureClubCommercialState(club);
   const fallback = presets[0] || {
     id: 'heritage_ground',
     name: 'ヘリテージ・ブリック・グラウンド',
     styleLabel: '伝統レンガ建築',
-    baseCapacity: 22000,
-    levelCapacityStep: 5000,
+    capacity: 20000,
+    baseCapacity: 20000,
     buildCostK: 0,
-    maintenancePerMatchK: 120,
+    maintenancePerMatchK: 100,
+    turnoutBonus: 0,
     ticketDemandBonus: 1.0,
     merchDemandBonus: 1.0,
     vipToleranceBonus: 0,
@@ -3625,15 +3627,19 @@ function getClubStadiumInfo(club) {
     seatShare: { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 },
     summary: ''
   };
-  const preset = presets.find(p => comm && p.id === comm.stadiumId) || fallback;
+  const targetId = overrideStadiumId || (comm && comm.stadiumId);
+  const preset = presets.find(p => p.id === targetId) || fallback;
   const stadiumLv = (club && club.isPlayer && typeof gameState !== 'undefined' && gameState.facilities && gameState.facilities.stadium)
     ? Math.max(1, Math.min(5, Number(gameState.facilities.stadium || 1)))
     : 1;
-  const capacity = preset.baseCapacity + (stadiumLv - 1) * (preset.levelCapacityStep || 5000);
-  const maintenancePerMatchK = Math.round((preset.maintenancePerMatchK || 120) * (1 + (stadiumLv - 1) * 0.14));
+  const capacity = preset.capacity || preset.baseCapacity || 20000;
+  const maintenancePerMatchK = preset.maintenancePerMatchK || 100;
   return {
     ...preset,
     stadiumLv,
+    facilityLv: stadiumLv,
+    facilityMerchMult: 1 + (stadiumLv - 1) * 0.06,
+    facilityPriceTolerance: (stadiumLv - 1) * 0.03,
     capacity,
     maintenancePerMatchK
   };
@@ -3644,7 +3650,7 @@ function getClubStadiumInfo(club) {
  */
 function calculateProjectedMatchdayCommercial(club, options = {}) {
   const comm = ensureClubCommercialState(club);
-  const stadium = getClubStadiumInfo(club);
+  const stadium = getClubStadiumInfo(club, options.overrideStadiumId || null);
   const tiers = typeof TICKET_SEAT_TIERS !== 'undefined' && Array.isArray(TICKET_SEAT_TIERS) ? TICKET_SEAT_TIERS : [];
   const catalog = typeof MERCHANDISE_CATALOG !== 'undefined' && Array.isArray(MERCHANDISE_CATALOG) ? MERCHANDISE_CATALOG : [];
 
@@ -3652,51 +3658,65 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
     ? (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision())
     : Boolean(club && (club.division === 'd2' || club.tier === 'D2'));
   const matchType = options.matchType || (isD2 ? 'league_d2' : 'league_d1');
-  const matchDemandMap = {
-    preseason: 0.58,
-    league_d2: 0.86,
-    league_d1: 1.00,
-    league: isD2 ? 0.86 : 1.00,
-    domestic: 0.94,
-    euroLeague: 1.14,
-    euroPlayoff: 1.22
+  const matchBaseTurnoutMap = {
+    preseason: 0.55,
+    league_d2: 0.78,
+    league_d1: 0.85,
+    league: isD2 ? 0.78 : 0.85,
+    domestic: 0.82,
+    euroLeague: 0.90,
+    euroPlayoff: 0.93
   };
-  const matchDemandMult = matchDemandMap[matchType] || 1.0;
+  const baseMatchTurnout = matchBaseTurnoutMap[matchType] || 0.85;
 
   let oppFactor = 1.0;
+  let oppTurnoutBonus = 0;
   if (options.opponentClub) {
     const oppSup = Number(options.opponentClub.supporters || 18000);
-    if (oppSup >= 30000) oppFactor = 1.12;
-    else if (oppSup >= 22000) oppFactor = 1.05;
+    if (oppSup >= 30000) {
+      oppFactor = 1.12;
+      oppTurnoutBonus = 0.05;
+    } else if (oppSup >= 22000) {
+      oppFactor = 1.05;
+      oppTurnoutBonus = 0.025;
+    }
   }
-  const supporters = Math.max(5000, Number((club && club.supporters) || 15000));
+  const supporters = Math.max(5000, Math.round(Number((club && club.supporters) || 15000)));
+  const maxSupporters = typeof getClubMaxSupporters === 'function' ? getClubMaxSupporters(club) : 50000;
   const sponsorMult = typeof getClubSponsorMatchIncomeMultiplier === 'function'
     ? getClubSponsorMatchIncomeMultiplier(club)
     : 1.0;
+  const baseTurnoutRate = clamp(baseMatchTurnout + (stadium.turnoutBonus || 0) + oppTurnoutBonus, 0.40, 0.95);
 
   let totalAttendance = 0;
   let ticketRevenueK = 0;
   let vipAttendance = 0;
   let backMainAttendance = 0;
   let supporterMoodDelta = 0;
+  let assignedPotentialSum = 0;
 
-  const zoneResults = tiers.map(tier => {
+  const zoneResults = tiers.map((tier, idx) => {
     const share = (stadium.seatShare && stadium.seatShare[tier.id]) || 0.25;
     const zoneCapacity = Math.max(100, Math.round(stadium.capacity * share));
+    const zonePotential = idx === tiers.length - 1
+      ? Math.max(0, supporters - assignedPotentialSum)
+      : Math.round(supporters * share);
+    assignedPotentialSum += zonePotential;
+
     const price = comm && comm.ticketPrices ? (comm.ticketPrices[tier.id] || tier.d1FairPrice) : tier.d1FairPrice;
     const baseFair = isD2 ? tier.d2FairPrice : tier.d1FairPrice;
     const fairPrice = Math.round(baseFair * (oppFactor > 1.05 ? 1.06 : 1.0));
-    const rawDemand = supporters * matchDemandMult * (stadium.ticketDemandBonus || 1.0) * oppFactor * share * 1.12;
 
     const priceRatio = price / Math.max(1, fairPrice);
-    const effectiveRatio = tier.id === 'vip'
-      ? priceRatio / (1 + (stadium.vipToleranceBonus || 0))
-      : priceRatio;
-    const priceFactor = effectiveRatio <= 1
-      ? 1 + (1 - effectiveRatio) * 0.45
-      : Math.max(0.10, Math.pow(1 / effectiveRatio, tier.elasticity || 1.2));
+    const tol = (stadium.facilityPriceTolerance || 0) + (tier.id === 'vip' ? (stadium.vipToleranceBonus || 0) : 0);
+    const effectiveRatio = priceRatio / (1 + tol);
+    // 値下げによる動員増は最大+10%まで。総サポーター数を超えて客を呼ぶことはできない
+    const priceTurnoutMult = effectiveRatio <= 1
+      ? 1 + Math.min(0.10, (1 - effectiveRatio) * 0.25)
+      : Math.max(0.12, Math.pow(1 / effectiveRatio, tier.elasticity || 1.2));
 
-    const attendance = clamp(Math.round(rawDemand * priceFactor), 0, zoneCapacity);
+    const zoneTurnoutRate = clamp(baseTurnoutRate * priceTurnoutMult, 0.05, 0.98);
+    const attendance = clamp(Math.round(zonePotential * zoneTurnoutRate), 0, Math.min(zoneCapacity, zonePotential));
     const occupancyPct = Math.round((attendance / Math.max(1, zoneCapacity)) * 100);
     const revenueK = Math.round((attendance * price) / 1000);
 
@@ -3732,6 +3752,7 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
       name: tier.name,
       subLabel: tier.subLabel,
       capacity: zoneCapacity,
+      potentialSupporters: zonePotential,
       attendance,
       occupancyPct,
       price,
@@ -3745,7 +3766,9 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
     };
   });
 
+  totalAttendance = clamp(totalAttendance, 0, Math.min(stadium.capacity, supporters));
   const fillRatePct = Math.round((totalAttendance / Math.max(1, stadium.capacity)) * 100);
+  const supporterTurnoutPct = Math.round((totalAttendance / Math.max(1, supporters)) * 100);
   if (fillRatePct >= 82) {
     supporterMoodDelta += Math.round((stadium.supporterGrowthBonus || 15) * (fillRatePct / 100));
   }
@@ -3765,7 +3788,8 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
       : (item.audienceScope === 'back_main' ? backMainAttendance : totalAttendance);
     const priceRatio = price / Math.max(1, item.defaultPrice);
     const demandMult = Math.max(0.12, Math.pow(1 / Math.max(0.5, priceRatio), item.elasticity || 1.2))
-      * (stadium.merchDemandBonus || 1.0);
+      * (stadium.merchDemandBonus || 1.0)
+      * (stadium.facilityMerchMult || 1.0);
     const unitsSold = Math.max(0, Math.round(targetAudience * (item.baseBuyRate || 0.1) * demandMult));
     const revenueK = Math.round((unitsSold * price) / 1000);
     const variableCostK = Math.round((unitsSold * (item.unitCost || 0)) / 1000);
@@ -3777,7 +3801,7 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
       merchRevenueK += revenueK;
       merchCostK += totalCostK;
       if (netProfitK >= 0) {
-        supporterMoodDelta += Math.round((item.supporterBonus || 0) * Math.min(1.2, fillRatePct / 80));
+        supporterMoodDelta += Math.round((item.supporterBonus || 0) * Math.min(1.2, supporterTurnoutPct / 80));
       }
     }
 
@@ -3810,6 +3834,10 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
 
   return {
     stadium,
+    supporters,
+    maxSupporters,
+    maxPossibleAttendance: Math.min(stadium.capacity, supporters),
+    supporterTurnoutPct,
     totalCapacity: stadium.capacity,
     totalAttendance,
     fillRatePct,
