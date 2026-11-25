@@ -607,24 +607,33 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const stadiumLvPre = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
     const sponsorMatchMultPre = typeof getClubSponsorMatchIncomeMultiplier === 'function' ? getClubSponsorMatchIncomeMultiplier(playerClub) : 1.0;
     const stadiumMultPre = (1 + (stadiumLvPre - 1) * 0.10) * sponsorMatchMultPre;
+    const preComm = (isHome && typeof calculateProjectedMatchdayCommercial === 'function')
+      ? calculateProjectedMatchdayCommercial(playerClub, { matchType: 'preseason', opponentClub: oppClub, addVariance: true })
+      : null;
     const gateIncome = isHome
-      ? Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10
+      ? (preComm ? Math.max(-500, preComm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10)
       : 0;
     const totalPreseasonIncome = prize + gateIncome;
 
     playerClub.funds = (playerClub.funds || 0) + totalPreseasonIncome;
+    const preMoodFanGain = preComm ? Math.round((preComm.supporterMoodDelta || 0) * 0.4) : 0;
+    const totalPreFanGain = fanGain + preMoodFanGain;
     if (typeof adjustClubSupporters === 'function') {
-      adjustClubSupporters(playerClub, fanGain);
+      adjustClubSupporters(playerClub, totalPreFanGain);
     } else {
-      playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + fanGain));
+      playerClub.supporters = Math.min(50000, Math.max(5000, (playerClub.supporters || 10000) + totalPreFanGain));
     }
     playerClub.morale = Math.min(100, (playerClub.morale || 70) + moraleGain);
 
     const resText = userWon ? '勝利！' : (userDraw ? '引分' : '敗戦');
     const finalBonusText = (roundNum === 3 && userWon) ? ' WCTトロフィー獲得！' : '';
-    const gateNoteText = gateIncome > 0 ? ` / 入場・グッズ+${formatMoney(gateIncome)}` : '';
+    const gateNoteText = gateIncome > 0
+      ? (preComm
+        ? ` / 興行純収支+${formatMoney(gateIncome)}（入場${preComm.totalAttendance.toLocaleString()}人・チケット+${formatMoney(preComm.ticketRevenueK)}・グッズ${preComm.merchNetK >= 0 ? '+' : ''}${formatMoney(preComm.merchNetK)}）`
+        : ` / 入場・グッズ+${formatMoney(gateIncome)}`)
+      : '';
     const emitPreseasonPostMatchLogAndToast = () => {
-      addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)}${gateNoteText} / サポーター+${fanGain}人）`);
+      addDailyLog(`【WCT ${myMatch.roundName}】vs ${oppClub.name} (${isHome ? 'H' : 'A'}) ${myScore}-${oppScore} で${resText}${finalBonusText}（賞金+${formatMoney(prize)}${gateNoteText} / サポーター${totalPreFanGain >= 0 ? '+' : ''}${totalPreFanGain}人）`);
     };
 
     currentDay.played = true;
@@ -793,6 +802,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       isPlayerHome: isHome,
       isPlayerMatch: true,
       matchIncome: euroFin.matchIncome,
+      commercialBreakdown: euroFin.commercialBreakdown || null,
       awayBroadcastingFee: euroFin.awayBroadcastingFee,
       homeSubEvents: cupRatings.homeSubEvents || [],
       awaySubEvents: cupRatings.awaySubEvents || [],
@@ -910,6 +920,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       isPlayerHome: isHome,
       isPlayerMatch: true,
       matchIncome: poFin.matchIncome,
+      commercialBreakdown: poFin.commercialBreakdown || null,
       awayBroadcastingFee: poFin.awayBroadcastingFee,
       homeSubEvents: poRatings.homeSubEvents || [],
       awaySubEvents: poRatings.awaySubEvents || [],
@@ -1058,6 +1069,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     isPlayerHome: isHome,
     isPlayerMatch: true,
     matchIncome: koFin.matchIncome,
+    commercialBreakdown: koFin.commercialBreakdown || null,
     awayBroadcastingFee: koFin.awayBroadcastingFee,
     homeSubEvents: cupFinalRatings.homeSubEvents || [],
     awaySubEvents: cupFinalRatings.awaySubEvents || [],
@@ -1095,29 +1107,39 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
 
 function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userDraw, mode = 'domestic') {
   if (!playerClub) {
-    return { matchIncome: 0, awayBroadcastingFee: 0, playerSupportersDelta: 0 };
+    return { matchIncome: 0, awayBroadcastingFee: 0, playerSupportersDelta: 0, commercialBreakdown: null };
   }
   const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
   const pClubLeague = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const sponsorMatchMultLeague = (pClubLeague && typeof getClubSponsorMatchIncomeMultiplier === 'function') ? getClubSponsorMatchIncomeMultiplier(pClubLeague) : 1.0;
   const stadiumMultiplier = (1 + (stadiumLv - 1) * 0.10) * sponsorMatchMultLeague;
 
+  const comm = (isHome && typeof calculateProjectedMatchdayCommercial === 'function')
+    ? calculateProjectedMatchdayCommercial(playerClub, { matchType: mode, addVariance: true })
+    : null;
+
   let matchIncome = 0;
   let awayBroadcastingFee = 0;
   let playerSupportersDelta = 0;
 
   if (mode === 'euroLeague') {
-    matchIncome = isHome ? Math.round(((playerClub.supporters || 15000) * 0.095 * stadiumMultiplier) / 10) * 10 : 0;
+    matchIncome = isHome
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.095 * stadiumMultiplier) / 10) * 10)
+      : 0;
     awayBroadcastingFee = !isHome ? 2200 : 0;
-    playerSupportersDelta = userWon ? 180 : (userDraw ? 40 : -50);
+    playerSupportersDelta = (userWon ? 180 : (userDraw ? 40 : -50)) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
   } else if (mode === 'euroPlayoff') {
-    matchIncome = isHome ? Math.round(((playerClub.supporters || 15000) * 0.10 * stadiumMultiplier) / 10) * 10 : 0;
+    matchIncome = isHome
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.10 * stadiumMultiplier) / 10) * 10)
+      : 0;
     awayBroadcastingFee = !isHome ? 2500 : 0;
-    playerSupportersDelta = userWon ? 200 : -60;
+    playerSupportersDelta = (userWon ? 200 : -60) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
   } else {
-    matchIncome = isHome ? Math.round(((playerClub.supporters || 15000) * 0.08 * stadiumMultiplier) / 10) * 10 : 0;
+    matchIncome = isHome
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.08 * stadiumMultiplier) / 10) * 10)
+      : 0;
     awayBroadcastingFee = !isHome ? 1500 : 0;
-    playerSupportersDelta = userWon ? 160 : -40;
+    playerSupportersDelta = (userWon ? 160 : -40) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
   }
 
   playerClub.funds = (playerClub.funds || 0) + matchIncome + awayBroadcastingFee;
@@ -1128,7 +1150,22 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
   }
   updateManagerTrustAfterMatch(playerClub, Boolean(userWon), Boolean(userDraw));
 
-  return { matchIncome, awayBroadcastingFee, playerSupportersDelta };
+  const commercialBreakdown = comm
+    ? {
+        stadiumName: comm.stadium ? comm.stadium.name : '',
+        totalAttendance: comm.totalAttendance,
+        totalCapacity: comm.totalCapacity,
+        fillRatePct: comm.fillRatePct,
+        ticketRevenueK: comm.ticketRevenueK,
+        merchRevenueK: comm.merchRevenueK,
+        merchCostK: comm.merchCostK,
+        merchNetK: comm.merchNetK,
+        maintenanceK: comm.maintenanceK,
+        netMatchdayIncomeK: matchIncome
+      }
+    : null;
+
+  return { matchIncome, awayBroadcastingFee, playerSupportersDelta, commercialBreakdown };
 }
 
 function advanceFirstDivisionBackgroundWeek() {
@@ -2318,13 +2355,40 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
     match.played = true;
 
     const isD2League = (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision());
-    // ホーム開催時：1部はサポーター規模×0.085（£1.2M〜£2.5M）、2部は×0.055（£0.6M〜£1.0M）＋スタジアム拡張Lv補正
+    // ホーム開催時：プレイヤークラブはスタジアム・席別チケット・グッズ設定から実興行収支を算出
     const gateUnit = isD2League ? 0.055 : 0.085;
     const rawIncome = homeClub.supporters * gateUnit + randInt(-30, 30);
-    const effectiveIncome = homeClub.isPlayer ? rawIncome * stadiumMultiplier : rawIncome;
-    const matchIncome = Math.round(effectiveIncome / 10) * 10;
+    let matchIncome = Math.round((homeClub.isPlayer ? rawIncome * stadiumMultiplier : rawIncome) / 10) * 10;
+    let leagueCommercialBreakdown = null;
+    let commercialMoodDelta = 0;
+    if (homeClub.isPlayer && typeof calculateProjectedMatchdayCommercial === 'function') {
+      const comm = calculateProjectedMatchdayCommercial(homeClub, {
+        matchType: isD2League ? 'league_d2' : 'league_d1',
+        opponentClub: awayClub,
+        addVariance: true
+      });
+      if (comm) {
+        matchIncome = Math.max(-1500, comm.netMatchdayIncomeK);
+        commercialMoodDelta = comm.supporterMoodDelta || 0;
+        leagueCommercialBreakdown = {
+          stadiumName: comm.stadium ? comm.stadium.name : '',
+          totalAttendance: comm.totalAttendance,
+          totalCapacity: comm.totalCapacity,
+          fillRatePct: comm.fillRatePct,
+          ticketRevenueK: comm.ticketRevenueK,
+          merchRevenueK: comm.merchRevenueK,
+          merchCostK: comm.merchCostK,
+          merchNetK: comm.merchNetK,
+          maintenanceK: comm.maintenanceK,
+          netMatchdayIncomeK: matchIncome
+        };
+      }
+    }
     homeClub.funds += matchIncome;
     match.homeRevenue = matchIncome;
+    if (leagueCommercialBreakdown) {
+      match.commercialBreakdown = leagueCommercialBreakdown;
+    }
 
     // アウェイ戦：1部はプレミア放映権料 £1.6M（1,600 £K）、2部は £450K（450 £K）
     const awayBroadcastingFee = isD2League ? 450 : 1600;
@@ -2369,6 +2433,9 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
       adjSup(homeClub, randInt(-10, 60));
       adjSup(awayClub, randInt(-10, 60));
     }
+    if (homeClub.isPlayer && commercialMoodDelta !== 0) {
+      adjSup(homeClub, commercialMoodDelta);
+    }
 
     const homeSupportersDelta = homeClub.supporters - prevHomeSupporters;
     const awaySupportersDelta = awayClub.supporters - prevAwaySupporters;
@@ -2408,6 +2475,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
       isPlayerHome: homeClub.isPlayer,
       isPlayerMatch: homeClub.isPlayer || awayClub.isPlayer,
       matchIncome,
+      commercialBreakdown: match.commercialBreakdown || null,
       awayBroadcastingFee,
       playerSupportersDelta: homeClub.isPlayer ? homeSupportersDelta : awaySupportersDelta,
       homeScorers,
