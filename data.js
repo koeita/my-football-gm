@@ -893,7 +893,7 @@ const CLUB_DEFINITIONS = [
     desc: '潤沢な資金と世界屈指の戦力を誇る強豪クラブ',
     basePower: 76,
     initialFunds: 298000, // £298.0M
-    supporters: 21500,
+    supporters: 42000,
     targetRank: 1,
     targetLabel: '1位（優勝）',
     defaultTactic: 'possession',
@@ -909,7 +909,7 @@ const CLUB_DEFINITIONS = [
     desc: '世界的な人気と莫大な商業収入を持つ伝統の赤い名門',
     basePower: 74,
     initialFunds: 284000, // £284.0M
-    supporters: 22000,
+    supporters: 44000,
     targetRank: 3,
     targetLabel: '3位以内',
     defaultTactic: 'counter',
@@ -925,7 +925,7 @@ const CLUB_DEFINITIONS = [
     desc: '熱狂的なサポーターと激しいゲーゲンプレスを武器とする強豪',
     basePower: 75,
     initialFunds: 264000, // £264.0M
-    supporters: 21000,
+    supporters: 43000,
     targetRank: 2,
     targetLabel: '2位以内',
     defaultTactic: 'gegenpress',
@@ -941,7 +941,7 @@ const CLUB_DEFINITIONS = [
     desc: '華麗なパスサッカーと若手育成に定評がある北ロンドンの雄',
     basePower: 75,
     initialFunds: 282000, // £282.0M
-    supporters: 20500,
+    supporters: 41000,
     targetRank: 1,
     targetLabel: '1位（優勝）',
     defaultTactic: 'possession',
@@ -957,7 +957,7 @@ const CLUB_DEFINITIONS = [
     desc: '積極的な大型補強で欧州王座奪還を狙う西ロンドンの強豪',
     basePower: 72,
     initialFunds: 239000, // £239.0M
-    supporters: 19000,
+    supporters: 36000,
     targetRank: 4,
     targetLabel: '4位以内',
     defaultTactic: 'possession',
@@ -973,7 +973,7 @@ const CLUB_DEFINITIONS = [
     desc: '最新鋭スタジアムと前線からの速攻を備える北ロンドンの白百合',
     basePower: 71,
     initialFunds: 204000, // £204.0M
-    supporters: 18500,
+    supporters: 38000,
     targetRank: 5,
     targetLabel: '5位以内',
     defaultTactic: 'gegenpress',
@@ -989,7 +989,7 @@ const CLUB_DEFINITIONS = [
     desc: '新オーナー参入で急成長を遂げる北部の熱狂的クラブ',
     basePower: 70,
     initialFunds: 191000, // £191.0M
-    supporters: 18000,
+    supporters: 35000,
     targetRank: 6,
     targetLabel: '6位以内',
     defaultTactic: 'wingplay',
@@ -1005,7 +1005,7 @@ const CLUB_DEFINITIONS = [
     desc: '智将のもとで欧州カップ戦出場を狙うバーミンガムの古豪',
     basePower: 69,
     initialFunds: 166000, // £166.0M
-    supporters: 16800,
+    supporters: 32000,
     targetRank: 6,
     targetLabel: '6位以内',
     defaultTactic: 'counter',
@@ -1021,7 +1021,7 @@ const CLUB_DEFINITIONS = [
     desc: 'データ分析と独自スカウティングでビッグクラブに挑む新興勢力',
     basePower: 67,
     initialFunds: 148000, // £148.0M
-    supporters: 15000,
+    supporters: 26000,
     targetRank: 8,
     targetLabel: '8位以内',
     defaultTactic: 'possession',
@@ -1037,7 +1037,7 @@ const CLUB_DEFINITIONS = [
     desc: '抜群の身体能力を持つウイングと育成組織が光る南ロンドンの雄',
     basePower: 66,
     initialFunds: 142000, // £142.0M
-    supporters: 14800,
+    supporters: 24500,
     targetRank: 9,
     targetLabel: '9位以内',
     defaultTactic: 'wingplay',
@@ -1053,7 +1053,7 @@ const CLUB_DEFINITIONS = [
     desc: 'テムズ川沿いの伝統スタジアムを本拠とする西ロンドンの古豪',
     basePower: 65,
     initialFunds: 131000, // £131.0M
-    supporters: 14000,
+    supporters: 23500,
     targetRank: 11,
     targetLabel: '11位以内',
     defaultTactic: 'wingplay',
@@ -1069,7 +1069,7 @@ const CLUB_DEFINITIONS = [
     desc: '徹底した統計モデルとセットプレー戦術で1部に定着した知性派',
     basePower: 64,
     initialFunds: 127000, // £127.0M
-    supporters: 13200,
+    supporters: 21500,
     targetRank: 12,
     targetLabel: '12位以内',
     defaultTactic: 'gegenpress',
@@ -1085,7 +1085,7 @@ const CLUB_DEFINITIONS = [
     desc: '長年1部リーグを守り続けるマージーサイドの誇り高き青き伝統',
     basePower: 64,
     initialFunds: 128000, // £128.0M
-    supporters: 15500,
+    supporters: 29000,
     targetRank: 13,
     targetLabel: '13位以内',
     defaultTactic: 'parkthebus',
@@ -1101,7 +1101,7 @@ const CLUB_DEFINITIONS = [
     desc: '南部のリゾート都市を拠点にアグレッシブなサッカーを展開',
     basePower: 63,
     initialFunds: 122000, // £122.0M
-    supporters: 12500,
+    supporters: 20000,
     targetRank: 14,
     targetLabel: '14位以内',
     defaultTactic: 'gegenpress',
@@ -1117,7 +1117,7 @@ const CLUB_DEFINITIONS = [
     desc: 'かつて欧州連覇を成し遂げた歴史を持つ伝統のフォレスト',
     basePower: 63,
     initialFunds: 121000, // £121.0M
-    supporters: 13800,
+    supporters: 25500,
     targetRank: 15,
     targetLabel: '15位以内',
     defaultTactic: 'counter',
@@ -1133,7 +1133,7 @@ const CLUB_DEFINITIONS = [
     desc: '熱狂的なサポーターと運動量豊富なサッカーで1部へ定着した北部の名門',
     basePower: 62,
     initialFunds: 118000, // £118.0M
-    supporters: 15000,
+    supporters: 28000,
     targetRank: 15,
     targetLabel: '15位以内',
     defaultTactic: 'gegenpress',
@@ -1149,7 +1149,7 @@ const CLUB_DEFINITIONS = [
     desc: '巨大なスタジアムと熱い地元の声援を背に1部で戦う北東部の古豪',
     basePower: 61,
     initialFunds: 108000, // £108.0M
-    supporters: 14200,
+    supporters: 27500,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'counter',
@@ -1165,7 +1165,7 @@ const CLUB_DEFINITIONS = [
     desc: '組織力と攻撃的なスタイルで1部残留に挑む東部の昇格組',
     basePower: 60,
     initialFunds: 99000, // £99.0M
-    supporters: 11800,
+    supporters: 22000,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'possession',
@@ -1181,7 +1181,7 @@ const CLUB_DEFINITIONS = [
     desc: '粘り強い戦いで2部から這い上がり1部の舞台へ戻ってきた中部の古豪',
     basePower: 59,
     initialFunds: 95000, // £95.0M
-    supporters: 11400,
+    supporters: 21000,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'counter',
@@ -1197,7 +1197,7 @@ const CLUB_DEFINITIONS = [
     desc: '堅実な守備とカウンターを武器に大舞台での生き残りを懸ける挑戦者',
     basePower: 59,
     initialFunds: 94000, // £94.0M
-    supporters: 11000,
+    supporters: 19500,
     targetRank: 17,
     targetLabel: '17位以内（残留）',
     defaultTactic: 'parkthebus',

@@ -3517,9 +3517,9 @@ function ensurePlayerRealismFields(player, isStarterHint = false) {
  * クラブオブジェクトのリアリティ拡張フィールドを後方互換補完
  */
 function getClubMaxSupporters(club) {
-  if (!club) return 35000;
+  if (!club) return 45000;
   const isD2 = club.division === 'd2' || club.tier === 'D2';
-  const initSup = club.initialSupporters || club.supporters || (isD2 ? 14000 : 18000);
+  const initSup = club.initialSupporters || club.supporters || (isD2 ? 18000 : 26000);
   if (club.isPlayer) {
     const stadiumLv = (typeof gameState !== 'undefined' && gameState.facilities && gameState.facilities.stadium)
       ? Math.max(1, Math.min(5, Number(gameState.facilities.stadium || 1)))
@@ -3531,14 +3531,14 @@ function getClubMaxSupporters(club) {
         stCap = stInfo.capacity;
       }
     }
-    const baseCap = Math.max(22000, Math.round(initSup * 1.15), Math.round(stCap * 1.05));
+    const baseCap = Math.max(26000, Math.round(initSup * 1.15), Math.round(stCap * 1.05));
     const lvBonus = (stadiumLv - 1) * 4500;
-    return Math.min(60000, baseCap + lvBonus);
+    return Math.min(75000, baseCap + lvBonus);
   }
   if (isD2) {
-    return Math.min(24000, Math.max(14000, Math.round(initSup * 1.15)));
+    return Math.min(34000, Math.max(18000, Math.round(initSup * 1.15)));
   }
-  return Math.min(48000, Math.max(22000, Math.round(initSup * 1.25)));
+  return Math.min(65000, Math.max(24000, Math.round(initSup * 1.25)));
 }
 
 function adjustClubSupporters(club, delta) {
@@ -3691,10 +3691,10 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
   let oppTurnoutBonus = 0;
   if (options.opponentClub) {
     const oppSup = Number(options.opponentClub.supporters || 18000);
-    if (oppSup >= 30000) {
+    if (oppSup >= 38000) {
       oppFactor = 1.12;
       oppTurnoutBonus = 0.05;
-    } else if (oppSup >= 22000) {
+    } else if (oppSup >= 28000) {
       oppFactor = 1.05;
       oppTurnoutBonus = 0.025;
     }
@@ -3902,7 +3902,7 @@ function ensureClubRealismFields(club) {
   ensureClubCommercialState(club);
   if (typeof club.initialSupporters !== 'number') {
     const isD2Init = club.division === 'd2' || club.tier === 'D2';
-    club.initialSupporters = club.supporters || (isD2Init ? 14000 : 18000);
+    club.initialSupporters = club.supporters || (isD2Init ? 18000 : 26000);
   }
   if (typeof club.basePower !== 'number') {
     const defMatch = (typeof CLUB_DEFINITIONS !== 'undefined' && Array.isArray(CLUB_DEFINITIONS) ? CLUB_DEFINITIONS.find(d => d.id === club.id) : null)

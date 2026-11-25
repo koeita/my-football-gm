@@ -1879,7 +1879,7 @@ function rejectPendingMegaOffer() {
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, 250);
     } else {
-      playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 250);
     }
     target.megaOfferRejected = true;
     target.contractYears = Math.min(target.contractYears || 2, 2);
@@ -2280,7 +2280,7 @@ function triggerSupporterPetitionEvent() {
           if (typeof adjustClubSupporters === 'function') {
             adjustClubSupporters(playerClub, 600);
           } else {
-            playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 600);
+            playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 600);
           }
           renderAll();
         }
@@ -5653,7 +5653,7 @@ function rejectIncomingOffer(offerId) {
       if (typeof adjustClubSupporters === 'function') {
         adjustClubSupporters(playerClub, 250);
       } else {
-        playerClub.supporters = Math.min(50000, (playerClub.supporters || 10000) + 250);
+        playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 250);
       }
       target.megaOfferRejected = true;
       target.contractYears = Math.min(target.contractYears || 2, 2);
@@ -6314,7 +6314,7 @@ function upgradeFacility(facilityKey) {
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, 1500);
     } else {
-      playerClub.supporters = Math.min(60000, (playerClub.supporters || 10000) + 1500);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 1500);
     }
     addDailyLog(`【商業設備改修】スタジアム周辺・商業設備を Lv.${nextLv} へ拡充しました（サポーター上限拡大・物販効率UP・新規ファン獲得）。`);
   } else if (facilityKey === 'scouting') {
@@ -23480,7 +23480,7 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, supporterBonus);
     } else {
-      playerClub.supporters = Math.min(50000, (playerClub.supporters || 0) + supporterBonus);
+      playerClub.supporters = Math.min(75000, (playerClub.supporters || 0) + supporterBonus);
     }
   }
 
