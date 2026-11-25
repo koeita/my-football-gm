@@ -20199,8 +20199,8 @@ function buildManagerConsultation(club) {
         outPlayerId: troubledStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['交代推奨 (OUT)', `${troubledStarter.pos} ${troubledStarter.fullName || troubledStarter.name}（OVR ${tOvr}）`],
-          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr} / ${fitLabel}）`]
+          ['交代推奨 (OUT)', troubledStarter.fullName || troubledStarter.name],
+          ['起用推奨 (IN)', candidate.fullName || candidate.name]
         ],
         acceptLabel: `監督案を採用（${candidate.name} を先発起用）`
       };
@@ -20231,8 +20231,8 @@ function buildManagerConsultation(club) {
         outPlayerId: slumping.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['交代推奨 (OUT)', `${slumping.pos} ${slumping.fullName || slumping.name}（OVR ${tOvr} / 評価 ${avgStr}）`],
-          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+          ['交代推奨 (OUT)', slumping.fullName || slumping.name],
+          ['起用推奨 (IN)', candidate.fullName || candidate.name]
         ],
         acceptLabel: `監督案を採用（${candidate.name} を先発起用）`
       };
@@ -20296,8 +20296,8 @@ function buildManagerConsultation(club) {
         outPlayerId: replaceStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['抜擢候補 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）`],
-          ['入替枠 (OUT)', `${replaceStarter.pos} ${replaceStarter.fullName || replaceStarter.name}（OVR ${tOvr}）`]
+          ['抜擢候補 (IN)', candidate.fullName || candidate.name],
+          ['入替枠 (OUT)', replaceStarter.fullName || replaceStarter.name]
         ],
         acceptLabel: `監督案を採用（${candidate.name} を先発抜擢）`
       };
@@ -20475,8 +20475,8 @@ function buildCoachConsultation(club) {
         outPlayerId: targetStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['交代推奨 (OUT)', `${targetStarter.pos} ${targetStarter.fullName || targetStarter.name}（OVR ${getPlayerOverallRating(targetStarter)}）`],
-          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+          ['交代推奨 (OUT)', targetStarter.fullName || targetStarter.name],
+          ['起用推奨 (IN)', candidate.fullName || candidate.name]
         ],
         acceptLabel: `コーチ案を採用（${candidate.name} を起用）`
       };
@@ -20509,8 +20509,8 @@ function buildCoachConsultation(club) {
         outPlayerId: targetStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['交代推奨 (OUT)', `${targetStarter.pos} ${targetStarter.fullName || targetStarter.name}（OVR ${getPlayerOverallRating(targetStarter)}）`],
-          ['起用推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+          ['交代推奨 (OUT)', targetStarter.fullName || targetStarter.name],
+          ['起用推奨 (IN)', candidate.fullName || candidate.name]
         ],
         acceptLabel: `コーチ案を採用（${candidate.name} を起用）`
       };
@@ -20542,8 +20542,8 @@ function buildCoachConsultation(club) {
         outPlayerId: tiredStarter.id,
         inPlayerId: candidate.id,
         detailRows: [
-          ['休養推奨 (OUT)', `${tiredStarter.pos} ${tiredStarter.fullName || tiredStarter.name}（OVR ${getPlayerOverallRating(tiredStarter)}）`],
-          ['代役推奨 (IN)', `${candidate.pos} ${candidate.fullName || candidate.name}（OVR ${cOvr}）`]
+          ['休養推奨 (OUT)', tiredStarter.fullName || tiredStarter.name],
+          ['代役推奨 (IN)', candidate.fullName || candidate.name]
         ],
         acceptLabel: `コーチ案を採用（${tiredStarter.name} を休養）`
       };
@@ -21019,17 +21019,14 @@ function findClubCoachById(club, coachId) {
   return entry ? entry.coach : null;
 }
 
-function buildConsultationPlayerRowHtml(label, player, extraText = '') {
+function buildConsultationPlayerRowHtml(label, player) {
   if (!player || !player.id) return '';
-  const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(player) : (player.ovr || '-');
   const pName = player.fullName || player.name || '';
-  const suffix = extraText ? ` / ${extraText}` : '';
   return `
-    <div class="gm-modal-flat-row is-player-link" data-consult-player-id="${escapeCommHtml(player.id)}" role="button" tabindex="0" title="${escapeCommHtml(pName)}のプロフィールを開く">
+    <div class="gm-modal-flat-row is-player-link">
       <span class="gm-modal-flat-label">${escapeCommHtml(label)}</span>
       <span class="gm-modal-flat-val gm-consult-player-val">
-        <span>${escapeCommHtml(player.pos || '')} ${escapeCommHtml(pName)}（OVR ${ovr}${escapeCommHtml(suffix)}）</span>
-        <span class="gm-consult-profile-cue">詳細 ›</span>
+        <button type="button" class="gm-consult-player-name-link" data-consult-player-id="${escapeCommHtml(player.id)}" title="${escapeCommHtml(pName)}のプロフィールを開く">${escapeCommHtml(pName)}</button>
       </span>
     </div>
   `;
@@ -21051,8 +21048,8 @@ function openLineupConsultationModal(consultation) {
       const outP = consultation.outPlayerId ? (club.players || []).find(p => p && p.id === consultation.outPlayerId) : null;
       const inP = consultation.inPlayerId ? (club.players || []).find(p => p && p.id === consultation.inPlayerId) : null;
       const conflictPlayerRowsHtml = [
-        buildConsultationPlayerRowHtml('監督推薦', outP, outP ? `${outP.age || '-'}歳` : ''),
-        buildConsultationPlayerRowHtml('コーチ推薦', inP, inP ? `${inP.age || '-'}歳` : '')
+        buildConsultationPlayerRowHtml('監督推薦', outP),
+        buildConsultationPlayerRowHtml('コーチ推薦', inP)
       ].filter(Boolean).join('');
       const detailHtml = `
         <div class="gm-conflict-compare">
@@ -21138,8 +21135,8 @@ function openLineupConsultationModal(consultation) {
       ? (club.players || []).find(p => p && p.id === consultation.outPlayerId)
       : null;
     rowsHtml = [
-      buildConsultationPlayerRowHtml('相談選手', mainP, mainP ? `${mainP.age || '-'}歳` : ''),
-      buildConsultationPlayerRowHtml('現行先発', outP, outP ? `${outP.age || '-'}歳` : '')
+      buildConsultationPlayerRowHtml('相談選手', mainP),
+      buildConsultationPlayerRowHtml('現行先発', outP)
     ].filter(Boolean).join('');
   } else {
     rowsHtml = (consultation.detailRows || []).map(([k, v]) => {
@@ -21150,12 +21147,17 @@ function openLineupConsultationModal(consultation) {
         linkedPlayerId = consultation.inPlayerId;
       }
       if (linkedPlayerId) {
+        const linkedPlayer = club && Array.isArray(club.players)
+          ? club.players.find(p => p && p.id === linkedPlayerId)
+          : null;
+        if (linkedPlayer) {
+          return buildConsultationPlayerRowHtml(k, linkedPlayer);
+        }
         return `
-          <div class="gm-modal-flat-row is-player-link" data-consult-player-id="${escapeCommHtml(linkedPlayerId)}" role="button" tabindex="0" title="選手プロフィールを開く">
+          <div class="gm-modal-flat-row is-player-link">
             <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
             <span class="gm-modal-flat-val gm-consult-player-val">
-              <span>${escapeCommHtml(v)}</span>
-              <span class="gm-consult-profile-cue">詳細 ›</span>
+              <button type="button" class="gm-consult-player-name-link" data-consult-player-id="${escapeCommHtml(linkedPlayerId)}" title="選手プロフィールを開く">${escapeCommHtml(v)}</button>
             </span>
           </div>
         `;

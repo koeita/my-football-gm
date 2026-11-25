@@ -519,7 +519,7 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             '.sponsor-deadline-text',
             '.sponsor-expired-empty',
             '.gm-modal-flat-row.is-player-link',
-            '.gm-consult-profile-cue',
+            '.gm-consult-player-name-link',
             '.gm-modal-sec-avatar-wrap.is-player-clickable',
         ]:
             self.assertIn(css_sel, self.css)

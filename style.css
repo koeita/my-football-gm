@@ -19585,32 +19585,36 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .gm-modal-flat-row.is-player-link {
-  cursor: pointer;
-  padding-left: 4px;
-  padding-right: 4px;
-  transition: background-color 0.14s ease;
-}
-
-.gm-modal-flat-row.is-player-link:hover,
-.gm-modal-flat-row.is-player-link:focus-visible {
-  background: rgba(46, 204, 113, 0.08);
-  outline: none;
+  align-items: center;
 }
 
 .gm-consult-player-val {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 4px 8px;
 }
 
-.gm-consult-profile-cue {
-  color: #2ecc71;
-  font-size: 11px;
+.gm-consult-player-name-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
   font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
+  color: #2ecc71;
+  text-align: right;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(46, 204, 113, 0.45);
+  cursor: pointer;
+  transition: color 0.14s ease, text-decoration-color 0.14s ease;
+}
+
+.gm-consult-player-name-link:hover,
+.gm-consult-player-name-link:focus-visible {
+  color: #4ade80;
+  text-decoration-color: #4ade80;
+  outline: none;
 }
 
 .gm-conflict-players {
