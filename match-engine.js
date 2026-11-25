@@ -611,7 +611,7 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
       ? calculateProjectedMatchdayCommercial(playerClub, { matchType: 'preseason', opponentClub: oppClub, addVariance: true })
       : null;
     const gateIncome = isHome
-      ? (preComm ? Math.max(100, preComm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10)
+      ? (preComm ? Math.max(-500, preComm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.055 * stadiumMultPre) / 10) * 10)
       : 0;
     const totalPreseasonIncome = prize + gateIncome;
 
@@ -1124,19 +1124,19 @@ function applyCupMatchFinancialsAndSupporters(playerClub, isHome, userWon, userD
 
   if (mode === 'euroLeague') {
     matchIncome = isHome
-      ? (comm ? Math.max(120, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.095 * stadiumMultiplier) / 10) * 10)
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.095 * stadiumMultiplier) / 10) * 10)
       : 0;
     awayBroadcastingFee = !isHome ? 2200 : 0;
     playerSupportersDelta = (userWon ? 180 : (userDraw ? 40 : -50)) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
   } else if (mode === 'euroPlayoff') {
     matchIncome = isHome
-      ? (comm ? Math.max(140, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.10 * stadiumMultiplier) / 10) * 10)
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.10 * stadiumMultiplier) / 10) * 10)
       : 0;
     awayBroadcastingFee = !isHome ? 2500 : 0;
     playerSupportersDelta = (userWon ? 200 : -60) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
   } else {
     matchIncome = isHome
-      ? (comm ? Math.max(100, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.08 * stadiumMultiplier) / 10) * 10)
+      ? (comm ? Math.max(-1500, comm.netMatchdayIncomeK) : Math.round(((playerClub.supporters || 15000) * 0.08 * stadiumMultiplier) / 10) * 10)
       : 0;
     awayBroadcastingFee = !isHome ? 1500 : 0;
     playerSupportersDelta = (userWon ? 160 : -40) + (comm ? Math.round((comm.supporterMoodDelta || 0) * 0.6) : 0);
@@ -2368,7 +2368,7 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
         addVariance: true
       });
       if (comm) {
-        matchIncome = Math.max(50, comm.netMatchdayIncomeK);
+        matchIncome = Math.max(-1500, comm.netMatchdayIncomeK);
         commercialMoodDelta = comm.supporterMoodDelta || 0;
         leagueCommercialBreakdown = {
           stadiumName: comm.stadium ? comm.stadium.name : '',

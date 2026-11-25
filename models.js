@@ -3574,6 +3574,9 @@ function ensureClubCommercialState(club) {
   if (!c.ownedStadiumIds.includes(c.stadiumId)) {
     c.ownedStadiumIds.push(c.stadiumId);
   }
+  if (!c.draftStadiumId || (validPresetIds.size > 0 && !validPresetIds.has(c.draftStadiumId))) {
+    c.draftStadiumId = null;
+  }
   if (!c.ticketPrices || typeof c.ticketPrices !== 'object') {
     c.ticketPrices = {};
   }
@@ -3606,6 +3609,19 @@ function ensureClubCommercialState(club) {
 }
 
 /**
+ * 興行計画で現在参照している下書きまたは確定済みスタジアムIDを返す
+ */
+function getEffectivePlanningStadiumId(club) {
+  const comm = ensureClubCommercialState(club);
+  if (!comm) return 'heritage_ground';
+  const hasPending = typeof gameState !== 'undefined' && Boolean(gameState && gameState.pendingCommercialSetup);
+  if (hasPending && comm.draftStadiumId) {
+    return comm.draftStadiumId;
+  }
+  return comm.stadiumId || 'heritage_ground';
+}
+
+/**
  * クラブの現在スタジアム仕様と固定収容人数・商業設備補正を返す
  */
 function getClubStadiumInfo(club, overrideStadiumId = null) {
@@ -3618,7 +3634,7 @@ function getClubStadiumInfo(club, overrideStadiumId = null) {
     capacity: 20000,
     baseCapacity: 20000,
     buildCostK: 0,
-    maintenancePerMatchK: 100,
+    maintenancePerMatchK: 140,
     turnoutBonus: 0,
     ticketDemandBonus: 1.0,
     merchDemandBonus: 1.0,
@@ -3633,7 +3649,7 @@ function getClubStadiumInfo(club, overrideStadiumId = null) {
     ? Math.max(1, Math.min(5, Number(gameState.facilities.stadium || 1)))
     : 1;
   const capacity = preset.capacity || preset.baseCapacity || 20000;
-  const maintenancePerMatchK = preset.maintenancePerMatchK || 100;
+  const maintenancePerMatchK = preset.maintenancePerMatchK || 140;
   return {
     ...preset,
     stadiumLv,
@@ -3650,7 +3666,9 @@ function getClubStadiumInfo(club, overrideStadiumId = null) {
  */
 function calculateProjectedMatchdayCommercial(club, options = {}) {
   const comm = ensureClubCommercialState(club);
-  const stadium = getClubStadiumInfo(club, options.overrideStadiumId || null);
+  const resolvedStadiumId = options.overrideStadiumId
+    || (options.useDraft ? getEffectivePlanningStadiumId(club) : (comm && comm.stadiumId));
+  const stadium = getClubStadiumInfo(club, resolvedStadiumId);
   const tiers = typeof TICKET_SEAT_TIERS !== 'undefined' && Array.isArray(TICKET_SEAT_TIERS) ? TICKET_SEAT_TIERS : [];
   const catalog = typeof MERCHANDISE_CATALOG !== 'undefined' && Array.isArray(MERCHANDISE_CATALOG) ? MERCHANDISE_CATALOG : [];
 
@@ -3688,6 +3706,14 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
     : 1.0;
   const baseTurnoutRate = clamp(baseMatchTurnout + (stadium.turnoutBonus || 0) + oppTurnoutBonus, 0.40, 0.95);
 
+  // クラブ自身のディビジョン・格に基づく固有のファン層構成（大型スタジアムへ移ってもVIPファンが急に湧かない）
+  const clubRep = Number((club && club.reputation) || 4000);
+  const fanShare = isD2
+    ? { goal: 0.38, back: 0.32, main: 0.24, vip: 0.06 }
+    : (clubRep >= 6200
+      ? { goal: 0.32, back: 0.29, main: 0.27, vip: 0.12 }
+      : { goal: 0.35, back: 0.30, main: 0.26, vip: 0.09 });
+
   let totalAttendance = 0;
   let ticketRevenueK = 0;
   let vipAttendance = 0;
@@ -3696,11 +3722,12 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
   let assignedPotentialSum = 0;
 
   const zoneResults = tiers.map((tier, idx) => {
-    const share = (stadium.seatShare && stadium.seatShare[tier.id]) || 0.25;
-    const zoneCapacity = Math.max(100, Math.round(stadium.capacity * share));
+    const seatRatio = (stadium.seatShare && stadium.seatShare[tier.id]) || 0.25;
+    const zoneCapacity = Math.max(100, Math.round(stadium.capacity * seatRatio));
+    const potShare = fanShare[tier.id] || 0.25;
     const zonePotential = idx === tiers.length - 1
       ? Math.max(0, supporters - assignedPotentialSum)
-      : Math.round(supporters * share);
+      : Math.round(supporters * potShare);
     assignedPotentialSum += zonePotential;
 
     const price = comm && comm.ticketPrices ? (comm.ticketPrices[tier.id] || tier.d1FairPrice) : tier.d1FairPrice;
@@ -3771,7 +3798,15 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
   const supporterTurnoutPct = Math.round((totalAttendance / Math.max(1, supporters)) * 100);
   if (fillRatePct >= 82) {
     supporterMoodDelta += Math.round((stadium.supporterGrowthBonus || 15) * (fillRatePct / 100));
+  } else if (fillRatePct < 50) {
+    // 空席が目立ちすぎるとスタジアムの雰囲気低下でファン熱意が下がる
+    supporterMoodDelta -= 15;
   }
+
+  // 稼働率60%未満の空席過多スタジアムでは物販購買意欲が低下する（最低0.65倍）
+  const emptyAtmosphereMerchMult = fillRatePct < 60
+    ? clamp(0.65 + (fillRatePct / 60) * 0.35, 0.65, 1.0)
+    : 1.0;
 
   let merchRevenueK = 0;
   let merchCostK = 0;
@@ -3789,7 +3824,8 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
     const priceRatio = price / Math.max(1, item.defaultPrice);
     const demandMult = Math.max(0.12, Math.pow(1 / Math.max(0.5, priceRatio), item.elasticity || 1.2))
       * (stadium.merchDemandBonus || 1.0)
-      * (stadium.facilityMerchMult || 1.0);
+      * (stadium.facilityMerchMult || 1.0)
+      * emptyAtmosphereMerchMult;
     const unitsSold = Math.max(0, Math.round(targetAudience * (item.baseBuyRate || 0.1) * demandMult));
     const revenueK = Math.round((unitsSold * price) / 1000);
     const variableCostK = Math.round((unitsSold * (item.unitCost || 0)) / 1000);
@@ -3831,9 +3867,14 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
   const varianceMult = options.addVariance ? (0.97 + Math.random() * 0.06) : 1.0;
   const rawNetK = (ticketRevenueK + merchNetK + sponsorBonusK - stadium.maintenancePerMatchK) * varianceMult;
   const netMatchdayIncomeK = Math.round(rawNetK / 10) * 10;
+  const isOwned = Boolean(comm && Array.isArray(comm.ownedStadiumIds) && comm.ownedStadiumIds.includes(stadium.id));
+  const buildCostK = isOwned ? 0 : (stadium.buildCostK || 0);
 
   return {
     stadium,
+    isOwned,
+    buildCostK,
+    isDeficit: netMatchdayIncomeK < 0,
     supporters,
     maxSupporters,
     maxPossibleAttendance: Math.min(stadium.capacity, supporters),

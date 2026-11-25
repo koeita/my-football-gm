@@ -598,12 +598,18 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             self.assertIn(sym, self.main_js)
 
         self.assertIn('スタジアム周辺・商業設備', self.data_js)
-        self.assertIn('overrideStadiumId = null', self.models_js)
+        self.assertIn('buildCostK: 130000', self.data_js)
+        self.assertIn('maintenancePerMatchK: 1950', self.data_js)
+        self.assertIn('overrideStadiumId', self.models_js)
+        self.assertIn('draftStadiumId', self.models_js)
+        self.assertIn('setBodyModalLock(true);', self.main_js[self.main_js.index('function showInfoPopup('):self.main_js.index('function showInfoPopup(') + 750])
+        self.assertIn('setBodyModalLock(false);', self.main_js[self.main_js.index('function closeInfoPopup('):self.main_js.index('function closeInfoPopup(') + 450])
         self.assertIn('pendingCommercialSetup:', self.storage_js)
         self.assertIn('commercialSubtab:', self.storage_js)
         self.assertIn('.commercial-stadium-svg', self.css)
         self.assertIn('.commercial-seatmap-svg', self.css)
         self.assertIn('.commercial-locked-bar', self.css)
+        self.assertIn('.commercial-hero-nav', self.css)
 
 
 if __name__ == '__main__':

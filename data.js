@@ -2015,14 +2015,14 @@ const STADIUM_PRESETS = [
     capacity: 20000,
     baseCapacity: 20000,
     buildCostK: 0,
-    maintenancePerMatchK: 100,
+    maintenancePerMatchK: 140,
     turnoutBonus: 0.00,
     ticketDemandBonus: 1.00,
     merchDemandBonus: 1.00,
     vipToleranceBonus: 0.00,
     supporterGrowthBonus: 15,
     seatShare: { goal: 0.34, back: 0.30, main: 0.28, vip: 0.08 },
-    summary: '維持費が低く堅実な伝統型スタジアム（固定20,000席）。手堅い興行基盤を築けます。'
+    summary: '初期保有の堅実な伝統型スタジアム（固定20,000席）。維持費が低く安定経営に向きます。'
   },
   {
     id: 'compact_fortress',
@@ -2030,15 +2030,15 @@ const STADIUM_PRESETS = [
     styleLabel: '急勾配密着型',
     capacity: 25000,
     baseCapacity: 25000,
-    buildCostK: 3000,
-    maintenancePerMatchK: 145,
+    buildCostK: 18000,
+    maintenancePerMatchK: 340,
     turnoutBonus: 0.03,
     ticketDemandBonus: 1.03,
     merchDemandBonus: 1.05,
     vipToleranceBonus: 0.03,
     supporterGrowthBonus: 25,
     seatShare: { goal: 0.38, back: 0.28, main: 0.24, vip: 0.10 },
-    summary: 'ピッチとの距離が近いゴール裏重視の要塞（固定25,000席）。高い来場率と応援熱が魅力です。'
+    summary: '急勾配スタンドで高い来場率を生む要塞（固定25,000席・建設費£18.0M）。ファン2.2万人超から好採算です。'
   },
   {
     id: 'modern_bowl',
@@ -2046,15 +2046,15 @@ const STADIUM_PRESETS = [
     styleLabel: '流線型コンコース',
     capacity: 32000,
     baseCapacity: 32000,
-    buildCostK: 8000,
-    maintenancePerMatchK: 220,
+    buildCostK: 45000,
+    maintenancePerMatchK: 720,
     turnoutBonus: 0.02,
     ticketDemandBonus: 1.02,
     merchDemandBonus: 1.15,
     vipToleranceBonus: 0.06,
     supporterGrowthBonus: 30,
     seatShare: { goal: 0.28, back: 0.30, main: 0.28, vip: 0.14 },
-    summary: '広い物販コンコースを備え、グッズ売上の伸びに優れる万能型スタジアム（固定32,000席）です。'
+    summary: '広い物販コンコースを備える万能アリーナ（固定32,000席・建設費£45.0M）。維持費に見合う集客が必要です。'
   },
   {
     id: 'sky_arch_dome',
@@ -2062,15 +2062,15 @@ const STADIUM_PRESETS = [
     styleLabel: '大アーチVIP特化',
     capacity: 40000,
     baseCapacity: 40000,
-    buildCostK: 14000,
-    maintenancePerMatchK: 310,
+    buildCostK: 80000,
+    maintenancePerMatchK: 1250,
     turnoutBonus: 0.03,
     ticketDemandBonus: 1.03,
     merchDemandBonus: 1.12,
     vipToleranceBonus: 0.14,
     supporterGrowthBonus: 35,
     seatShare: { goal: 0.24, back: 0.26, main: 0.30, vip: 0.20 },
-    summary: '充実したVIPスカイボックスを備え、高単価座席でも客足が落ちにくい設計（固定40,000席）です。'
+    summary: '大型VIP設備を備えた近代ドーム（固定40,000席・建設費£80.0M）。空席が多いと高額維持費で赤字化します。'
   },
   {
     id: 'grand_cathedral',
@@ -2078,15 +2078,15 @@ const STADIUM_PRESETS = [
     styleLabel: '3層メガスタジアム',
     capacity: 50000,
     baseCapacity: 50000,
-    buildCostK: 22000,
-    maintenancePerMatchK: 430,
+    buildCostK: 130000,
+    maintenancePerMatchK: 1950,
     turnoutBonus: 0.04,
     ticketDemandBonus: 1.04,
     merchDemandBonus: 1.18,
     vipToleranceBonus: 0.12,
     supporterGrowthBonus: 50,
     seatShare: { goal: 0.28, back: 0.28, main: 0.26, vip: 0.18 },
-    summary: '圧倒的収容力とブランド力を誇る聖地（固定50,000席）。大規模サポーター下での収益は最高峰です。'
+    summary: 'メガクラブ級の超大型聖地（固定50,000席・建設費£130.0M）。維持費が極めて高く満員級ファン基盤が必須です。'
   }
 ];
 
