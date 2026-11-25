@@ -23751,3 +23751,79 @@ button.hof-record-name {
 }
 
 
+
+/* ==========================================================================
+   秘書ノベルページ送り＆本部状況別一言アドバイス（GEMINI.md準拠）
+   ========================================================================== */
+
+.gm-vn-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.gm-vn-page-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gm-vn-page-counter {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.gm-vn-skip-pages-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #8b949e;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gm-vn-skip-pages-btn:hover {
+  color: var(--text-primary);
+}
+
+.secretary-office-advice {
+  padding: 6px 2px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b1bac4;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.secretary-office-advice-speaker {
+  color: #2ecc71;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.secretary-office-advice-text {
+  min-width: 0;
+  color: #d1d5db;
+}
+
+.gm-tasks-panel.is-collapsed .secretary-office-advice {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .secretary-office-advice {
+    font-size: 11.5px;
+    padding: 5px 0 7px;
+  }
+}
