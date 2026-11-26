@@ -174,15 +174,19 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         self.assertIn("'deadline_window_closed'", self.main_js)
 
     def test_9_iphone_fullscreen_and_sns_account_avatars(self):
-        """iPhone風全画面スマホUIとSNS個別アカウントアイコン・サポーター増量を検証"""
+        """iPhone風全画面スマホUI・上部タップ全画面・本部戻り・SNS個別アイコンを検証"""
         self.assertGreaterEqual(self.data_js.count("handle: '@"), 28)
-        for id_name in ['comm-phone-backdrop', 'comm-phone-time', 'btn-phone-fullscreen', 'comm-phone-homebar']:
+        for id_name in ['comm-phone-backdrop', 'comm-phone-time', 'comm-phone-homebar']:
             self.assertIn(f'id="{id_name}"', self.html)
+        self.assertNotIn('id="btn-phone-fullscreen"', self.html)
         self.assertIn('comm-phone-island', self.html)
-        for cls in ['.comm-phone-island', '.office-comm-panel.is-phone-fullscreen', '.btn-phone-fullscreen', '.sns-avatar-svg', '.sns-media-icon-svg', '.sns-verified-badge']:
+        self.assertIn('comm-phone-battery-pill', self.html)
+        for cls in ['.comm-phone-island', '.comm-phone-battery-pill', '.office-comm-panel.is-phone-fullscreen', '.sns-avatar-svg', '.sns-media-icon-svg', '.sns-verified-badge']:
             self.assertIn(cls, self.css)
         for fn in ['function setCommPhoneFullscreen(', 'function toggleCommPhoneFullscreen(', 'function buildSnsFanPixelAvatarSvg(', 'function buildSnsMediaIconSvg(', 'function buildSnsAccountAvatarHtml(']:
             self.assertIn(fn, self.main_js)
+        self.assertIn("phoneStatusbar.addEventListener('click', toggleCommPhoneFullscreen)", self.main_js)
+        self.assertIn("document.getElementById('tab-btn-office')", self.main_js)
 
         emoji_pattern = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
         self.assertIsNone(emoji_pattern.search(self.data_js[self.data_js.index('SNS_ACCOUNT_POOLS'):]))

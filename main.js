@@ -8101,7 +8101,7 @@ function resetTabScrollPositions() {
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
   if (!tabName) return;
-  if (tabName !== 'office' && typeof setCommPhoneFullscreen === 'function') {
+  if (typeof setCommPhoneFullscreen === 'function' && typeof isCommPhoneFullscreen !== 'undefined' && isCommPhoneFullscreen) {
     setCommPhoneFullscreen(false);
   }
 
@@ -23636,9 +23636,21 @@ function initOfficeCommAndSecretaryEvents() {
     closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
 
-  const fsBtn = document.getElementById('btn-phone-fullscreen');
-  if (fsBtn) {
-    fsBtn.addEventListener('click', toggleCommPhoneFullscreen);
+  const phoneStatusbar = document.getElementById('comm-phone-statusbar');
+  if (phoneStatusbar) {
+    phoneStatusbar.addEventListener('click', toggleCommPhoneFullscreen);
+    phoneStatusbar.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleCommPhoneFullscreen();
+      }
+    });
+  }
+  const officeTabBtn = document.getElementById('tab-btn-office');
+  if (officeTabBtn) {
+    officeTabBtn.addEventListener('click', () => {
+      if (isCommPhoneFullscreen) setCommPhoneFullscreen(false);
+    });
   }
   const phoneBackdrop = document.getElementById('comm-phone-backdrop');
   if (phoneBackdrop) {
@@ -23669,23 +23681,25 @@ function setCommPhoneFullscreen(open) {
   isCommPhoneFullscreen = Boolean(open);
   const panel = document.getElementById('office-comm-panel');
   const backdrop = document.getElementById('comm-phone-backdrop');
-  const btn = document.getElementById('btn-phone-fullscreen');
-  const labelEl = document.getElementById('btn-phone-fullscreen-label');
-  if (panel) panel.classList.toggle('is-phone-fullscreen', isCommPhoneFullscreen);
+  const statusbar = document.getElementById('comm-phone-statusbar');
+  if (panel) {
+    if (isCommPhoneFullscreen && typeof window !== 'undefined' && window.innerWidth > 768) {
+      const stickyHdr = document.querySelector('.header-nav-sticky-wrapper');
+      const hdrBottom = stickyHdr ? Math.round(stickyHdr.getBoundingClientRect().bottom) : 116;
+      panel.style.setProperty('--phone-fs-top', `${Math.max(108, hdrBottom + 10)}px`);
+    } else {
+      panel.style.removeProperty('--phone-fs-top');
+    }
+    panel.classList.toggle('is-phone-fullscreen', isCommPhoneFullscreen);
+  }
   if (backdrop) backdrop.classList.toggle('hidden', !isCommPhoneFullscreen);
   if (typeof document !== 'undefined' && document.body) {
     document.body.classList.toggle('phone-fullscreen-open', isCommPhoneFullscreen);
   }
-  if (btn) {
-    btn.setAttribute('aria-expanded', isCommPhoneFullscreen ? 'true' : 'false');
-    btn.title = isCommPhoneFullscreen ? '通常表示に戻す' : 'スマホを全画面で開く';
-    const exp = btn.querySelector('.phone-fs-icon-expand');
-    const cmp = btn.querySelector('.phone-fs-icon-compress');
-    if (exp) exp.classList.toggle('hidden', isCommPhoneFullscreen);
-    if (cmp) cmp.classList.toggle('hidden', !isCommPhoneFullscreen);
-  }
-  if (labelEl) {
-    labelEl.textContent = isCommPhoneFullscreen ? '閉じる' : '全画面';
+  if (statusbar) {
+    statusbar.setAttribute('aria-expanded', isCommPhoneFullscreen ? 'true' : 'false');
+    statusbar.setAttribute('aria-label', isCommPhoneFullscreen ? '全画面表示を閉じる' : 'スマホを全画面表示する');
+    statusbar.title = isCommPhoneFullscreen ? '上部タップまたは本部タブで戻る' : '上部をタップして全画面表示';
   }
 }
 
