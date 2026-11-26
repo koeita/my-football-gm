@@ -9981,6 +9981,15 @@ function renderRoster() {
 
   const activeRosterPlayers = playerClub.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   const activeRosterCount = activeRosterPlayers.length;
+  const loanOutCount = (playerClub.players || []).filter(p => p && !p.isRetired && p.loanStatus && p.loanStatus.isLoanOut).length;
+  const maxSquad = typeof MAX_SQUAD_SIZE === 'number' ? MAX_SQUAD_SIZE : 50;
+  const rosterTotalEl = document.getElementById('roster-total-count');
+  if (rosterTotalEl) {
+    rosterTotalEl.textContent = loanOutCount > 0
+      ? `合計 ${activeRosterCount}/${maxSquad}名（貸出${loanOutCount}名）`
+      : `合計 ${activeRosterCount}/${maxSquad}名`;
+    rosterTotalEl.className = `roster-total-count mono ${activeRosterCount >= maxSquad ? 'text-danger' : 'accent-green'}`;
+  }
   const gkCount = activeRosterPlayers.filter(p => p.pos === 'GK').length;
 
   const sortedPlayers = [...activeRosterPlayers].sort((a, b) => {
