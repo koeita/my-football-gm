@@ -8101,6 +8101,9 @@ function resetTabScrollPositions() {
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
   if (!tabName) return;
+  if (tabName !== 'office' && typeof setCommPhoneFullscreen === 'function') {
+    setCommPhoneFullscreen(false);
+  }
 
   // 1. 直前のタブのスクロール位置を保存
   const previousTab = gameState.activeTab;
@@ -22972,6 +22975,7 @@ function renderOfficeCommPanel() {
   const tabNewsBtn = document.getElementById('office-comm-tab-news');
   const tabSnsBtn = document.getElementById('office-comm-tab-sns');
   const carrierEl = document.getElementById('comm-phone-carrier');
+  const phoneTimeEl = document.getElementById('comm-phone-time');
   const phoneDateEl = document.getElementById('comm-phone-date');
   if (!inboxListEl || !newsListEl) return;
 
@@ -22988,7 +22992,17 @@ function renderOfficeCommPanel() {
 
   if (carrierEl) {
     const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
-    carrierEl.textContent = pClub ? `${getClubShortCode(pClub)} MOBILE` : 'GM MOBILE';
+    carrierEl.textContent = pClub ? `${getClubShortCode(pClub)} 5G` : 'GM 5G';
+  }
+  if (phoneTimeEl) {
+    if (typeof isDeadlineDayHourlyActive === 'function' && isDeadlineDayHourlyActive()) {
+      const hr = String(Number(gameState.deadlineDayState.hour) || 10).padStart(2, '0');
+      phoneTimeEl.textContent = `${hr}:00`;
+    } else if (typeof isTodayMatchDayPending === 'function' && isTodayMatchDayPending()) {
+      phoneTimeEl.textContent = '15:00';
+    } else {
+      phoneTimeEl.textContent = '09:41';
+    }
   }
   if (phoneDateEl) {
     phoneDateEl.textContent = getCurrentCommDateLabel();
@@ -23151,8 +23165,8 @@ function renderOfficeCommPanel() {
     const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
     snsListEl.innerHTML = filteredSns.slice(0, 30).map(post => {
       const roleCls = `is-role-${post.authorType || 'fan'}`;
-      const avatarHtml = (post.authorType === 'official' && pClub && typeof getClubEmblemSvg === 'function')
-        ? `<div class="sns-avatar-circle is-official">${getClubEmblemSvg(pClub, 24, 'sns-official-emblem')}</div>`
+      const avatarHtml = typeof buildSnsAccountAvatarHtml === 'function'
+        ? buildSnsAccountAvatarHtml(post, pClub)
         : `<div class="sns-avatar-circle ${roleCls} mono">${escapeCommHtml((post.displayName || 'U').slice(0, 1))}</div>`;
       const tagsLine = (Array.isArray(post.tags) && post.tags.length > 0)
         ? `<div class="sns-post-tags mono">${post.tags.slice(0, 3).map(t => `<span>${escapeCommHtml(t)}</span>`).join('')}</div>`
@@ -23621,6 +23635,186 @@ function initOfficeCommAndSecretaryEvents() {
   if (closeGmBtn) {
     closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
+
+  const fsBtn = document.getElementById('btn-phone-fullscreen');
+  if (fsBtn) {
+    fsBtn.addEventListener('click', toggleCommPhoneFullscreen);
+  }
+  const phoneBackdrop = document.getElementById('comm-phone-backdrop');
+  if (phoneBackdrop) {
+    phoneBackdrop.addEventListener('click', () => setCommPhoneFullscreen(false));
+  }
+  const phoneHomebar = document.getElementById('comm-phone-homebar');
+  if (phoneHomebar) {
+    phoneHomebar.addEventListener('click', () => {
+      if (isCommPhoneFullscreen) setCommPhoneFullscreen(false);
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !isCommPhoneFullscreen) return;
+    const blockingIds = ['comm-detail-sheet-overlay', 'gm-modal-overlay', 'player-profile-modal-overlay', 'cinematic-overlay', 'season-summary-box', 'match-event-modal'];
+    const anyModalOpen = blockingIds.some(id => {
+      const el = document.getElementById(id);
+      return el && !el.classList.contains('hidden');
+    });
+    if (!anyModalOpen) {
+      setCommPhoneFullscreen(false);
+    }
+  });
+}
+
+let isCommPhoneFullscreen = false;
+
+function setCommPhoneFullscreen(open) {
+  isCommPhoneFullscreen = Boolean(open);
+  const panel = document.getElementById('office-comm-panel');
+  const backdrop = document.getElementById('comm-phone-backdrop');
+  const btn = document.getElementById('btn-phone-fullscreen');
+  const labelEl = document.getElementById('btn-phone-fullscreen-label');
+  if (panel) panel.classList.toggle('is-phone-fullscreen', isCommPhoneFullscreen);
+  if (backdrop) backdrop.classList.toggle('hidden', !isCommPhoneFullscreen);
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.classList.toggle('phone-fullscreen-open', isCommPhoneFullscreen);
+  }
+  if (btn) {
+    btn.setAttribute('aria-expanded', isCommPhoneFullscreen ? 'true' : 'false');
+    btn.title = isCommPhoneFullscreen ? '通常表示に戻す' : 'スマホを全画面で開く';
+    const exp = btn.querySelector('.phone-fs-icon-expand');
+    const cmp = btn.querySelector('.phone-fs-icon-compress');
+    if (exp) exp.classList.toggle('hidden', isCommPhoneFullscreen);
+    if (cmp) cmp.classList.toggle('hidden', !isCommPhoneFullscreen);
+  }
+  if (labelEl) {
+    labelEl.textContent = isCommPhoneFullscreen ? '閉じる' : '全画面';
+  }
+}
+
+function toggleCommPhoneFullscreen() {
+  setCommPhoneFullscreen(!isCommPhoneFullscreen);
+}
+
+function hashSnsString(str) {
+  let h = 2166136261;
+  const s = String(str || '');
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function buildSnsFanPixelAvatarSvg(spec, clubPrimary = '#2ecc71', clubSecondary = '#f1c40f') {
+  const s = spec || {};
+  const skin = s.skin || '#f1c27d';
+  const hair = s.hair || '#2c1b18';
+  const bg = s.bg || '#1e293b';
+  const hairStyle = s.hairStyle || 'short';
+  const acc = s.accessory || 'none';
+  const shirtMode = s.shirtMode || 'club';
+
+  let shirtColor = clubPrimary;
+  if (shirtMode === 'away') shirtColor = clubSecondary;
+  else if (shirtMode === 'retro') shirtColor = '#b45309';
+  else if (shirtMode === 'dark') shirtColor = '#334155';
+
+  let hairLayer = '';
+  if (hairStyle === 'cap') {
+    hairLayer = `<rect x="4" y="2" width="8" height="3" fill="${clubPrimary}"/><rect x="3" y="4" width="11" height="1" fill="${clubSecondary}"/>`;
+  } else if (hairStyle === 'beanie') {
+    hairLayer = `<rect x="4" y="2" width="8" height="2" fill="${clubPrimary}"/><rect x="4" y="4" width="8" height="1" fill="${clubSecondary}"/>`;
+  } else if (hairStyle === 'spiky') {
+    hairLayer = `<rect x="5" y="2" width="1" height="2" fill="${hair}"/><rect x="7" y="1" width="2" height="3" fill="${hair}"/><rect x="10" y="2" width="1" height="2" fill="${hair}"/><rect x="4" y="3" width="8" height="2" fill="${hair}"/>`;
+  } else if (hairStyle === 'long') {
+    hairLayer = `<rect x="4" y="3" width="8" height="2" fill="${hair}"/><rect x="4" y="5" width="1" height="6" fill="${hair}"/><rect x="11" y="5" width="1" height="6" fill="${hair}"/>`;
+  } else if (hairStyle === 'bob') {
+    hairLayer = `<rect x="4" y="3" width="8" height="2" fill="${hair}"/><rect x="4" y="5" width="1" height="4" fill="${hair}"/><rect x="11" y="5" width="1" height="4" fill="${hair}"/>`;
+  } else {
+    hairLayer = `<rect x="5" y="3" width="6" height="2" fill="${hair}"/><rect x="4" y="4" width="1" height="2" fill="${hair}"/><rect x="11" y="4" width="1" height="2" fill="${hair}"/>`;
+  }
+
+  let accLayer = '';
+  if (acc === 'glasses') {
+    accLayer = `<rect x="5" y="6" width="3" height="2" fill="#0f172a" opacity="0.45"/><rect x="8" y="7" width="1" height="1" fill="#94a3b8"/><rect x="8" y="6" width="3" height="2" fill="#0f172a" opacity="0.45"/><rect x="5" y="6" width="3" height="1" fill="#e2e8f0"/><rect x="9" y="6" width="2" height="1" fill="#e2e8f0"/>`;
+  } else if (acc === 'scarf') {
+    accLayer = `<rect x="4" y="11" width="8" height="2" fill="${clubPrimary}"/><rect x="6" y="11" width="2" height="4" fill="${clubSecondary}"/><rect x="9" y="11" width="2" height="2" fill="${clubSecondary}"/>`;
+  } else if (acc === 'headset') {
+    accLayer = `<rect x="4" y="3" width="8" height="1" fill="#94a3b8"/><rect x="3" y="6" width="1" height="3" fill="#38bdf8"/><rect x="12" y="6" width="1" height="3" fill="#38bdf8"/><rect x="4" y="9" width="2" height="1" fill="#64748b"/>`;
+  } else if (acc === 'mustache') {
+    accLayer = `<rect x="6" y="9" width="4" height="1" fill="${hair}"/>`;
+  }
+
+  return `
+    <svg class="sns-avatar-svg" viewBox="0 0 16 16" width="36" height="36" shape-rendering="crispEdges" aria-hidden="true">
+      <rect width="16" height="16" fill="${bg}"/>
+      <rect x="3" y="12" width="10" height="4" fill="${shirtColor}"/>
+      <rect x="6" y="11" width="4" height="1" fill="${clubSecondary}"/>
+      <rect x="7" y="10" width="2" height="2" fill="${skin}"/>
+      <rect x="5" y="5" width="6" height="5" fill="${skin}"/>
+      <rect x="6" y="7" width="1" height="1" fill="#111827"/>
+      <rect x="9" y="7" width="1" height="1" fill="#111827"/>
+      ${hairLayer}
+      ${accLayer}
+    </svg>
+  `.trim();
+}
+
+function buildSnsMediaIconSvg(iconType) {
+  const paths = {
+    press: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    chart: '<path d="M4 19h16M7 16v-4M12 16V7M17 16v-7"/>',
+    transfer: '<path d="M5 9h13l-3-3M19 15H6l3 3"/>',
+    wire: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4a11 11 0 0 1 0 16M12 4a11 11 0 0 0 0 16"/>',
+    mic: '<rect x="9" y="4" width="6" height="9" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3M9 20h6"/>',
+    tactics: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="1.4"/><circle cx="12" cy="15" r="1.4"/><path d="M15 8l3 3M18 8l-3 3"/>',
+    camera: '<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.2"/>'
+  };
+  const d = paths[iconType] || paths.press;
+  return `<svg class="sns-media-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+
+function buildSnsAccountAvatarHtml(post, playerClub) {
+  const role = (post && post.authorType) || 'fan';
+  if (role === 'official' && playerClub && typeof getClubEmblemSvg === 'function') {
+    const emblem = getClubEmblemSvg(playerClub, 26, 'sns-official-emblem');
+    return `
+      <div class="sns-avatar-circle is-official">
+        <div class="sns-avatar-inner">${emblem}</div>
+        <span class="sns-verified-badge" aria-hidden="true">
+          <svg viewBox="0 0 12 12" width="12" height="12"><circle cx="6" cy="6" r="6" fill="#2ecc71"/><path d="M3.4 6.2l1.8 1.8 3.6-3.8" fill="none" stroke="#08120c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+    `.trim();
+  }
+
+  const pools = typeof SNS_ACCOUNT_POOLS !== 'undefined' ? SNS_ACCOUNT_POOLS : { fan: [], media: [] };
+  const handle = post && post.handle ? post.handle : '';
+  const nameKey = post && post.displayName ? post.displayName : '';
+  const hashVal = hashSnsString(handle || nameKey || 'club_user');
+
+  if (role === 'media') {
+    const mediaList = Array.isArray(pools.media) ? pools.media : [];
+    const matched = mediaList.find(m => m && (m.handle === handle || m.displayName === nameKey))
+      || (mediaList.length > 0 ? mediaList[hashVal % mediaList.length] : null);
+    const iconType = (matched && matched.iconType) || 'press';
+    const accent = (matched && matched.accent) || '#38bdf8';
+    return `
+      <div class="sns-avatar-circle is-role-media" style="--sns-media-accent:${escapeCommHtml(accent)};">
+        <div class="sns-avatar-inner">${buildSnsMediaIconSvg(iconType)}</div>
+      </div>
+    `.trim();
+  }
+
+  const fanList = Array.isArray(pools.fan) ? pools.fan : [];
+  const matchedFan = fanList.find(f => f && (f.handle === handle || f.displayName === nameKey))
+    || (fanList.length > 0 ? fanList[hashVal % fanList.length] : null);
+  const cPrim = (playerClub && playerClub.primaryColor) || '#2ecc71';
+  const cSec = (playerClub && playerClub.secondaryColor) || '#f1c40f';
+  const svgHtml = buildSnsFanPixelAvatarSvg(matchedFan ? matchedFan.avatar : null, cPrim, cSec);
+  return `
+    <div class="sns-avatar-circle is-role-fan">
+      <div class="sns-avatar-inner">${svgHtml}</div>
+    </div>
+  `.trim();
 }
 
 // ==========================================================================
