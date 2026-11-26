@@ -370,6 +370,35 @@ const SecretaryDialogue = (() => {
         };
       }
 
+      case 'special_match_eve': {
+        const matchLabel = ctx.matchLabel || '注目の一戦';
+        const oppName = ctx.oppName || '強敵';
+        const isHome = Boolean(ctx.isHome);
+        const dateLabel = ctx.displayDate || '明日';
+        const isDerby = Boolean(ctx.isDerby);
+        const bonusLabel = ctx.fanBonusLabel || '大歓声の後押し';
+        const venueNote = isHome
+          ? '本拠地での開催となり、サポーターの大動員による興行収入と士気の上昇が期待できます。'
+          : '敵地でのアウェイ戦となりますが、勝利すればファンの熱気とクラブの評価が一気に高まります。';
+
+        return {
+          pages: pickByTone(sec, {
+            active: [
+              `GM、明日（${dateLabel}）はいよいよ「${matchLabel}」（vs ${oppName}）です！街中やSNSでもすでに話題沸騰ですよ！`,
+              `${venueNote} ${isDerby ? '伝統のダービー勝利は' : '大一番での勝利は'}${bonusLabel}に直結します。スタメンと戦術を万全に整えて迎え撃ちましょう！`
+            ],
+            calm: [
+              `明日（${dateLabel}）は注目カード「${matchLabel}」（vs ${oppName}）が控えています。通常の公式戦以上にクラブの威信とファンの関心が集まる一戦です。`,
+              `${venueNote} 勝てば${bonusLabel}が見込める一方、疲労管理と戦術の噛み合わせが鍵を握ります。事前編成をご確認ください。`
+            ],
+            polite: [
+              `GM、明日（${dateLabel}）はいよいよ「${matchLabel}」（vs ${oppName}）でございます。ファンやメディアの注目も一段と高まっております。`,
+              `${venueNote} 勝利いたしますと${bonusLabel}につながりますので、作戦ボードにて先発や戦術をご確認のうえ大一番へ臨みましょう。`
+            ]
+          })
+        };
+      }
+
       case 'match_report': {
         const comp = ctx.compLabel || '公式戦';
         const opp = ctx.oppName || '対戦相手';

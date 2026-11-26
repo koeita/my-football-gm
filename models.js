@@ -3742,7 +3742,7 @@ function calculateProjectedMatchdayCommercial(club, options = {}) {
   const sponsorMult = typeof getClubSponsorMatchIncomeMultiplier === 'function'
     ? getClubSponsorMatchIncomeMultiplier(club)
     : 1.0;
-  const baseTurnoutRate = clamp(baseMatchTurnout + (stadium.turnoutBonus || 0) + oppTurnoutBonus, 0.40, 0.95);
+  const baseTurnoutRate = clamp(baseMatchTurnout + (stadium.turnoutBonus || 0) + oppTurnoutBonus + (Number(options.specialTurnoutBonus) || 0), 0.40, 0.98);
 
   // クラブ自身のディビジョン・格に基づく固有のファン層構成（大型スタジアムへ移ってもVIPファンが急に湧かない）
   const clubRep = Number((club && club.reputation) || 4000);

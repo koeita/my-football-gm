@@ -18869,15 +18869,60 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
   border-color: #2ecc71;
 }
 
-/* クラブ通信パネル（メッセージ受信箱 / ニュース） */
+/* クラブ通信パネル（GMモバイル風：メッセージ / ニュース / SNS） */
 .office-comm-panel {
   background: #14171c;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 16px;
+  padding: 8px 14px 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: hidden;
+}
+
+.comm-phone-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 10px;
+  color: #7d8590;
+}
+
+.comm-phone-carrier {
+  font-weight: 700;
+  color: #2ecc71;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.comm-phone-notch {
+  width: 46px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+
+.comm-phone-date {
+  white-space: nowrap;
+}
+
+.comm-phone-homebar {
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.comm-phone-homebar span {
+  display: block;
+  width: 84px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .office-comm-header {
@@ -23857,4 +23902,323 @@ button.hof-record-name {
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Phase 1: GMモバイルSNS ＆ ダービー・ビッグマッチ演出スタイル
+   ========================================================================== */
+.office-sns-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.office-comm-body {
+  max-height: 460px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.comm-sns-trends {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: #2ecc71;
+}
+
+.comm-sns-trend-item {
+  white-space: nowrap;
+}
+
+.sns-post-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sns-post-row:last-child {
+  border-bottom: none;
+}
+
+.sns-post-row.is-highlight {
+  border-left: 2px solid #2ecc71;
+  padding-left: 8px;
+}
+
+.sns-avatar-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #24282c;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.sns-avatar-circle.is-official {
+  background: rgba(46, 204, 113, 0.14);
+}
+
+.sns-avatar-circle.is-role-media {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+}
+
+.sns-official-emblem {
+  display: block;
+}
+
+.sns-post-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sns-post-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sns-author-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.sns-author-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.sns-author-role {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.sns-author-role.is-role-official {
+  color: #2ecc71;
+}
+
+.sns-author-role.is-role-media {
+  color: #38bdf8;
+}
+
+.sns-author-handle {
+  font-size: 10.5px;
+  color: #7d8590;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sns-post-body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #d1d5db;
+  word-break: break-word;
+}
+
+.sns-post-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #2ecc71;
+}
+
+.sns-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-top: 2px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.sns-action-metric,
+.sns-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sns-like-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  color: #8b949e;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sns-like-btn:hover,
+.sns-like-btn.is-liked {
+  color: #2ecc71;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .office-comm-panel {
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .comm-phone-homebar {
+    display: none;
+  }
+  .office-comm-tabs {
+    width: 100%;
+    gap: 4px;
+    justify-content: space-between;
+  }
+  .office-comm-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    font-size: 12px;
+    gap: 4px;
+    padding: 5px 2px 6px;
+  }
+  .office-comm-body {
+    max-height: 410px;
+  }
+}
+
+.matchday-special-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 0 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.matchday-special-title {
+  font-weight: 800;
+  color: #f1c40f;
+  white-space: nowrap;
+}
+
+.matchday-special-banner.is-kind-final .matchday-special-title {
+  color: #f1c40f;
+}
+
+.matchday-special-banner.is-kind-derby .matchday-special-title {
+  color: #2ecc71;
+}
+
+.matchday-special-sub {
+  color: #cbd5e1;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.cinematic-matchup-stage {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.cinematic-matchup-vs {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--cin-accent);
+  letter-spacing: 0.1em;
+}
+
+.cinematic-matchup-stars {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cinematic-matchup-star {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cinematic-matchup-star.is-away {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.cinematic-matchup-star-av canvas,
+.cinematic-matchup-star-av img {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.cinematic-matchup-star-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cinematic-matchup-star-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cinematic-matchup-star-ovr {
+  font-size: 11px;
+  color: var(--cin-accent);
+  font-weight: 700;
+}
+
+.cinematic-matchup-key {
+  font-size: 10px;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .cinematic-matchup-vs {
+    font-size: 22px;
+  }
+  .cinematic-matchup-key {
+    display: none;
+  }
+  .cinematic-matchup-stars {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
