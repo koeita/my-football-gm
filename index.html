@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3300">
+  <link rel="stylesheet" href="style.css?v=20261119_3400">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -364,6 +364,7 @@
             </span>
           </div>
         </div>
+        <div class="comm-phone-viewport">
         <div class="office-comm-header">
           <div class="office-comm-tabs" role="tablist">
             <button type="button" class="office-comm-tab active" data-comm-tab="messages" id="office-comm-tab-messages" role="tab" aria-selected="true">
@@ -417,6 +418,27 @@
           <div class="office-sns-list hidden" id="office-sns-list">
             <!-- JSでファンSNS・メディア投稿タイムラインを描画 -->
           </div>
+        </div>
+        <!-- メッセージ・ニュース スマホ内詳細ビュー -->
+        <div id="comm-detail-sheet-overlay" class="comm-sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="comm-sheet-title">
+          <div class="comm-sheet-panel" id="comm-detail-sheet-panel">
+            <div class="comm-sheet-swipe-header" id="comm-sheet-swipe-footer">
+              <span class="comm-sheet-handle" aria-hidden="true"></span>
+            </div>
+            <div class="comm-sheet-header">
+              <button type="button" class="btn-phone-back mono" id="btn-close-comm-sheet" aria-label="一覧へ戻る" title="一覧へ戻る (Esc)">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
+                <span>戻る</span>
+              </button>
+              <div class="comm-sheet-meta">
+                <span class="comm-sender-label" id="comm-sheet-sender"></span>
+                <span class="comm-date-text mono" id="comm-sheet-date"></span>
+              </div>
+            </div>
+            <h3 class="comm-sheet-title" id="comm-sheet-title"></h3>
+            <div class="comm-sheet-body" id="comm-sheet-body"></div>
+          </div>
+        </div>
         </div>
         <div class="comm-phone-homebar" id="comm-phone-homebar" aria-hidden="true"><span></span></div>
       </section>
@@ -1842,24 +1864,6 @@
     </div>
   </div>
 
-  <!-- メッセージ・ニュース 下部スライドアップ詳細シート -->
-  <div id="comm-detail-sheet-overlay" class="comm-sheet-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="comm-sheet-title">
-    <div class="comm-sheet-panel" id="comm-detail-sheet-panel">
-      <div class="comm-sheet-swipe-header" id="comm-sheet-swipe-footer">
-        <span class="comm-sheet-handle" aria-hidden="true"></span>
-      </div>
-      <div class="comm-sheet-header">
-        <div class="comm-sheet-meta">
-          <span class="comm-sender-label" id="comm-sheet-sender"></span>
-          <span class="comm-date-text mono" id="comm-sheet-date"></span>
-        </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-comm-sheet" aria-label="閉じる" title="閉じる (Esc)">✕</button>
-      </div>
-      <h3 class="comm-sheet-title" id="comm-sheet-title"></h3>
-      <div class="comm-sheet-body" id="comm-sheet-body"></div>
-    </div>
-  </div>
-
   <!-- 試合前 作戦最終確認モーダル -->
   <div id="match-precheck-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="precheck-modal-title">
     <div class="modal-card match-precheck-card">
@@ -2105,6 +2109,6 @@
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0010"></script>
-  <script src="main.js?v=20261119_3300"></script>
+  <script src="main.js?v=20261119_3400"></script>
 </body>
 </html>

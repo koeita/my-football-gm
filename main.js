@@ -8101,6 +8101,9 @@ function resetTabScrollPositions() {
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
   if (!tabName) return;
+  if (tabName !== 'office' && typeof closeCommDetailSheet === 'function') {
+    closeCommDetailSheet();
+  }
 
   // 1. 直前のタブのスクロール位置を保存
   const previousTab = gameState.activeTab;
@@ -23455,18 +23458,21 @@ function initOfficeCommAndSecretaryEvents() {
   const tabSns = document.getElementById('office-comm-tab-sns');
   if (tabMessages) {
     tabMessages.addEventListener('click', () => {
+      closeCommDetailSheet();
       gameState.officeCommTab = 'messages';
       renderOfficeCommPanel();
     });
   }
   if (tabNews) {
     tabNews.addEventListener('click', () => {
+      closeCommDetailSheet();
       gameState.officeCommTab = 'news';
       renderOfficeCommPanel();
     });
   }
   if (tabSns) {
     tabSns.addEventListener('click', () => {
+      closeCommDetailSheet();
       gameState.officeCommTab = 'sns';
       gameState.snsUnreadCount = 0;
       renderOfficeCommPanel();
@@ -23560,13 +23566,20 @@ function initOfficeCommAndSecretaryEvents() {
       handleCommDetailActionClick(e);
     });
   }
+  const phoneHomebar = document.getElementById('comm-phone-homebar');
+  if (phoneHomebar) {
+    phoneHomebar.addEventListener('click', () => {
+      if (sheetOverlay && !sheetOverlay.classList.contains('hidden')) {
+        closeCommDetailSheet();
+      }
+    });
+  }
   if (sheetPanel) {
     let swipeStartY = 0;
     let swipeStartX = 0;
     let swipeStartTime = 0;
-    let swipeDeltaY = 0;
+    let swipeDeltaX = 0;
     let isSwipingSheet = false;
-    let startedInScrollableBody = false;
 
     sheetPanel.addEventListener('touchstart', (e) => {
       if (!e.touches || e.touches.length !== 1) return;
@@ -23574,9 +23587,8 @@ function initOfficeCommAndSecretaryEvents() {
       swipeStartY = t.clientY;
       swipeStartX = t.clientX;
       swipeStartTime = Date.now();
-      swipeDeltaY = 0;
+      swipeDeltaX = 0;
       isSwipingSheet = false;
-      startedInScrollableBody = Boolean(sheetBody && sheetBody.contains(e.target));
     }, { passive: true });
 
     sheetPanel.addEventListener('touchmove', (e) => {
@@ -23586,18 +23598,15 @@ function initOfficeCommAndSecretaryEvents() {
       const dx = t.clientX - swipeStartX;
 
       if (!isSwipingSheet) {
-        if (dy <= 0 || Math.abs(dy) < 6 || Math.abs(dy) <= Math.abs(dx)) return;
-        if (startedInScrollableBody && sheetBody && sheetBody.scrollTop > 2) {
-          return;
-        }
+        if (dx <= 0 || Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return;
         isSwipingSheet = true;
       }
 
       if (isSwipingSheet) {
-        swipeDeltaY = Math.max(0, dy);
+        swipeDeltaX = Math.max(0, dx);
         if (e.cancelable) e.preventDefault();
         sheetPanel.style.transition = 'none';
-        sheetPanel.style.transform = `translateY(${swipeDeltaY}px)`;
+        sheetPanel.style.transform = `translateX(${swipeDeltaX}px)`;
       }
     }, { passive: false });
 
@@ -23605,14 +23614,14 @@ function initOfficeCommAndSecretaryEvents() {
       if (!isSwipingSheet) return;
       isSwipingSheet = false;
       const elapsed = Math.max(1, Date.now() - swipeStartTime);
-      const velocity = swipeDeltaY / elapsed;
-      if (swipeDeltaY >= 45 || (swipeDeltaY >= 18 && velocity > 0.35)) {
+      const velocity = swipeDeltaX / elapsed;
+      if (swipeDeltaX >= 52 || (swipeDeltaX >= 22 && velocity > 0.35)) {
         closeCommDetailSheet();
       } else {
         sheetPanel.style.transition = '';
         sheetPanel.style.transform = '';
       }
-      swipeDeltaY = 0;
+      swipeDeltaX = 0;
     };
     sheetPanel.addEventListener('touchend', finishSwipe, { passive: true });
     sheetPanel.addEventListener('touchcancel', finishSwipe, { passive: true });

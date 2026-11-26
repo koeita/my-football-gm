@@ -184,8 +184,14 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         self.assertIn('comm-phone-battery-pill', self.html)
         self.assertNotIn('.is-phone-fullscreen', self.css)
         self.assertNotIn('setCommPhoneFullscreen', self.main_js)
-        for cls in ['.comm-phone-island', '.comm-phone-battery-pill', '.office-comm-panel.gm-phone-shell', '.sns-avatar-svg', '.sns-media-icon-svg', '.sns-verified-badge']:
+        for cls in ['.comm-phone-island', '.comm-phone-battery-pill', '.office-comm-panel.gm-phone-shell', '.comm-phone-viewport', '.btn-phone-back', '.sns-avatar-svg', '.sns-media-icon-svg', '.sns-verified-badge']:
             self.assertIn(cls, self.css)
+        panel_start = self.html.index('id="office-comm-panel"')
+        panel_end = self.html.index('</section>', panel_start)
+        panel_block = self.html[panel_start:panel_end]
+        self.assertIn('comm-phone-viewport', panel_block)
+        self.assertIn('id="comm-detail-sheet-overlay"', panel_block)
+        self.assertIn('class="btn-phone-back mono"', panel_block)
         for fn in ['function buildSnsFanPixelAvatarSvg(', 'function buildSnsMediaIconSvg(', 'function buildSnsAccountAvatarHtml(']:
             self.assertIn(fn, self.main_js)
 
