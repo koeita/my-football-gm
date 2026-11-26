@@ -196,9 +196,15 @@ const CinematicOverlay = (() => {
     const awardIconHtml = (type === 'individual_award' && typeof buildAwardHonorIconSvg === 'function')
       ? `<div class="cinematic-award-icon-wrap">${buildAwardHonorIconSvg(cfg.awardCode || 'MVP', cfg.eyebrow || 'AWARD', 44)}</div>`
       : '';
+    const milestoneTagHtml = (type === 'player_milestone' && cfg.milestoneTag)
+      ? `<div class="cinematic-milestone-tag mono">${escapeHtml(cfg.milestoneTag)}</div>`
+      : '';
+    const retiredNumHtml = (type === 'legend_retirement' && cfg.retiredNum)
+      ? `<div class="cinematic-retired-num mono">#${escapeHtml(String(cfg.retiredNum))}</div>`
+      : '';
 
-    if (!avatarHtml && !emblemHtml && !awardIconHtml) return '';
-    return `<div class="cinematic-media-pair">${awardIconHtml}${avatarHtml}${emblemHtml}</div>`;
+    if (!avatarHtml && !emblemHtml && !awardIconHtml && !milestoneTagHtml && !retiredNumHtml) return '';
+    return `<div class="cinematic-media-pair">${awardIconHtml}${milestoneTagHtml}${retiredNumHtml}${avatarHtml}${emblemHtml}</div>`;
   }
 
   function buildConfettiHtml(enabled) {

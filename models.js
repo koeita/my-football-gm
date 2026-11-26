@@ -1439,6 +1439,12 @@ function pickAvailableSquadNumber(pos, usedNumbers) {
  */
 function ensureClubSquadNumbers(club) {
   const usedNumbers = new Set();
+  if (club && Array.isArray(club.retiredNumbers)) {
+    club.retiredNumbers.forEach(r => {
+      const n = Number(r && r.number);
+      if (n >= 1 && n <= 99) usedNumbers.add(n);
+    });
+  }
   for (const p of club.players) {
     if (p.squadNumber && p.squadNumber >= 1 && p.squadNumber <= 99 && !usedNumbers.has(p.squadNumber)) {
       usedNumbers.add(p.squadNumber);

@@ -98,6 +98,45 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         sns_section = self.main_js[self.main_js.index('function addSnsPost('):]
         self.assertIsNone(emoji_pattern.search(sns_section))
 
+    def test_5_phase2_milestones_retirement_ceremony_and_retired_numbers(self):
+        """Phase 2: 節目演出・レジェンド引退セレモニー・永久欠番の除外と表示を検証"""
+        for cin_type in ["type === 'player_milestone'", "type === 'legend_retirement'"]:
+            self.assertIn(cin_type, self.cinematic_js)
+
+        self.assertIn('retiredNumbers', self.models_js)
+        self.assertIn('retiredNumbers', self.storage_js)
+        self.assertIn('activeDramaPromises', self.storage_js)
+
+        for sym in [
+            'function isClubRetirementLegend(',
+            'function buildRetiredLegendsList(',
+            'function retireClubSquadNumber(',
+            'function triggerLegendRetirementCeremony(',
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        self.assertIn('hof-retired-list', self.main_js)
+        self.assertIn('.hof-retired-list', self.css)
+        self.assertIn('cinematic-milestone-tag', self.css)
+        self.assertIn('cinematic-retired-num', self.css)
+
+    def test_6_phase2_drama_consultations_and_promise_tracking(self):
+        """Phase 2: ドラマ系1on1面談(D1-D4)と約束履行フォローおよび既存相談保持を検証"""
+        for sym in [
+            'function buildManagerConsultation(',
+            'function buildCoachConsultation(',
+            'function buildPlayerConsultation(',
+            'function buildConflictArbitrationEvent(',
+            'function getPlayerRecentLossStreak(',
+            'function buildDramaConsultationEvent(',
+            'function resolveDramaConsultationDecision(',
+            'function evaluateDramaPromisesAfterMatch(',
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        for scen in ['D1_SLUMP_MEETING', 'D2_CAPTAIN_LOCKER', 'D3_STAR_TRANSFER_TALK', 'D4_YOUTH_AMBITION']:
+            self.assertIn(scen, self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()
