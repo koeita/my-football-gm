@@ -193,7 +193,7 @@ const CinematicOverlay = (() => {
     const emblemHtml = (cfg.club && type !== 'player_departure')
       ? `<div class="cinematic-emblem-wrap">${renderEmblem(cfg.club, avatarHtml ? 46 : 64)}</div>`
       : '';
-    const awardIconHtml = (type === 'individual_award' && typeof buildAwardHonorIconSvg === 'function')
+    const awardIconHtml = ((type === 'individual_award' || (type === 'season_digest' && cfg.awardCode)) && typeof buildAwardHonorIconSvg === 'function')
       ? `<div class="cinematic-award-icon-wrap">${buildAwardHonorIconSvg(cfg.awardCode || 'MVP', cfg.eyebrow || 'AWARD', 44)}</div>`
       : '';
     const milestoneTagHtml = (type === 'player_milestone' && cfg.milestoneTag)
@@ -202,9 +202,25 @@ const CinematicOverlay = (() => {
     const retiredNumHtml = (type === 'legend_retirement' && cfg.retiredNum)
       ? `<div class="cinematic-retired-num mono">#${escapeHtml(String(cfg.retiredNum))}</div>`
       : '';
+    const closedTagHtml = (type === 'deadline_closed')
+      ? `<div class="cinematic-milestone-tag mono">WINDOW CLOSED</div>`
+      : '';
+    const digestRankHtml = (type === 'season_digest' && cfg.digestRank)
+      ? `<div class="cinematic-digest-rank mono">${escapeHtml(String(cfg.digestRank))}</div>`
+      : '';
+    const digestBadgeHtml = (type === 'season_digest' && cfg.digestBadge)
+      ? `<div class="cinematic-milestone-tag mono">${escapeHtml(String(cfg.digestBadge))}</div>`
+      : '';
 
-    if (!avatarHtml && !emblemHtml && !awardIconHtml && !milestoneTagHtml && !retiredNumHtml) return '';
-    return `<div class="cinematic-media-pair">${awardIconHtml}${milestoneTagHtml}${retiredNumHtml}${avatarHtml}${emblemHtml}</div>`;
+    const pairHtml = `${awardIconHtml}${milestoneTagHtml}${retiredNumHtml}${closedTagHtml}${digestRankHtml}${digestBadgeHtml}${avatarHtml}${emblemHtml}`;
+    if (!pairHtml) return '';
+
+    if (type === 'season_digest' && cfg.digestStep) {
+      const stepHtml = `<div class="cinematic-digest-step mono">${escapeHtml(String(cfg.digestStep))}</div>`;
+      return `<div class="cinematic-digest-media-col">${stepHtml}<div class="cinematic-media-pair">${pairHtml}</div></div>`;
+    }
+
+    return `<div class="cinematic-media-pair">${pairHtml}</div>`;
   }
 
   function buildConfettiHtml(enabled) {

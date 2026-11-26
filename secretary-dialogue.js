@@ -120,6 +120,52 @@ const SecretaryDialogue = (() => {
         };
       }
 
+      case 'deadline_21h_warning': {
+        const agreedN = Number(ctx.pendingAgreedCount || 0);
+        const incomingN = Number(ctx.pendingIncomingCount || 0);
+        const taskNote = (agreedN > 0 || incomingN > 0)
+          ? `現在、締結待ちの合意案件が${agreedN}件、未回答の到着オファーが${incomingN}件残っています！`
+          : `締結漏れやスカウトからの駆け込み獲得がないか、最後のチェックを済ませておきましょう！`;
+        return {
+          pages: pickByTone(sec, {
+            active: [
+              `GM、21:00になりました！移籍市場の閉幕まで残りあと3時間です！ここからはラストスパートの駆け込み時間帯に入ります！`,
+              `${taskNote} 24:00を過ぎると未締結案件はすべて白紙になりますのでご注意ください！`
+            ],
+            calm: [
+              `時刻は21:00、移籍市場の閉幕まで残り3時間となりました。交渉テーブルの最終整理を行うべき時間帯です。`,
+              `${taskNote} 期限の24:00を過ぎると進行中オファーはすべて失効します。`
+            ],
+            polite: [
+              `GM、21:00を迎え、移籍市場の閉幕まで残すところあと3時間となりました。`,
+              `${taskNote} 24:00の締切を迎えますと未完了の交渉は失効いたしますので、最終確認をお願いいたします。`
+            ]
+          })
+        };
+      }
+
+      case 'deadline_closed': {
+        const wLabel = ctx.windowLabel || '移籍市場';
+        const inN = Number(ctx.signingsCount || 0);
+        const outN = Number(ctx.departuresCount || 0);
+        return {
+          pages: pickByTone(sec, {
+            active: [
+              `24:00を迎えました！これをもって今期の${wLabel}が正式に閉幕です！（加入 ${inN}名 / 放出・退団 ${outN}名）`,
+              `補強ウィンドウの戦いは終了です。ここからは現在のスカッドを信じてピッチの結果に全力を注ぎましょう！`
+            ],
+            calm: [
+              `24:00をもって今期の${wLabel}が閉幕しました。今ウィンドウの動静は加入 ${inN}名・放出退団 ${outN}名で確定となります。`,
+              `登録スカッドが固まりましたので、次の移籍市場までは現有戦力のコンディション管理と戦術運用に集中してまいります。`
+            ],
+            polite: [
+              `24:00を迎え、今期の${wLabel}が無事閉幕いたしました。今期間の収支移動は加入 ${inN}名・放出退団 ${outN}名でございます。`,
+              `このメンバーで今後の公式戦を戦い抜くこととなります。引き続きクラブ運営のほどよろしくお願いいたします。`
+            ]
+          })
+        };
+      }
+
       case 'incoming_offer': {
         const buyer = ctx.buyerClubName || '他クラブ';
         const playerText = ctx.playerText || '所属選手';

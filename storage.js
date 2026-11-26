@@ -288,6 +288,7 @@ function saveGameToStorage(force = false) {
         pendingBoardCrisis: Boolean(gameState.pendingBoardCrisis),
         pendingDeadlineOffer: Boolean(gameState.pendingDeadlineOffer),
         deadlineDayState: gameState.deadlineDayState || null,
+        windowTransferRecap: gameState.windowTransferRecap || { signings: [], departures: [] },
         secretaryId: gameState.secretaryId || 'sec_claire',
         inboxMessages: Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages.slice(0, 40) : [],
         newsFeed: Array.isArray(gameState.newsFeed) ? gameState.newsFeed.slice(0, 40) : [],
@@ -1078,6 +1079,12 @@ function loadGameFromStorage() {
     gameState.pendingBoardCrisis = Boolean(gameState.pendingBoardCrisis);
     gameState.pendingDeadlineOffer = Boolean(gameState.pendingDeadlineOffer);
     if (gameState.deadlineDayState === undefined) gameState.deadlineDayState = null;
+    if (!gameState.windowTransferRecap || typeof gameState.windowTransferRecap !== 'object') {
+      gameState.windowTransferRecap = { signings: [], departures: [] };
+    } else {
+      if (!Array.isArray(gameState.windowTransferRecap.signings)) gameState.windowTransferRecap.signings = [];
+      if (!Array.isArray(gameState.windowTransferRecap.departures)) gameState.windowTransferRecap.departures = [];
+    }
     if (!gameState.secretaryId) gameState.secretaryId = 'sec_claire';
     if (!Array.isArray(gameState.inboxMessages)) gameState.inboxMessages = [];
     if (!Array.isArray(gameState.newsFeed)) gameState.newsFeed = [];

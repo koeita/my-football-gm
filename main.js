@@ -236,6 +236,7 @@ const gameState = {
   pendingBoardCrisis: false,
   pendingDeadlineOffer: false,
   deadlineDayState: null,
+  windowTransferRecap: { signings: [], departures: [] },
   secretaryId: 'sec_claire',
   inboxMessages: [],
   newsFeed: [],
@@ -920,11 +921,27 @@ function renderDeadlineDayBanner() {
   const statusEl = document.getElementById('deadline-banner-status');
   const fillEl = document.getElementById('deadline-progress-fill');
   const btnEl = document.getElementById('btn-deadline-advance-hour');
+  const tickerLabelEl = document.getElementById('deadline-ticker-label');
+  const tickerTextEl = document.getElementById('deadline-ticker-text');
+  const tickerCountEl = document.getElementById('deadline-ticker-count');
 
   if (clockEl) clockEl.textContent = hrLabel;
   if (remEl) remEl.textContent = `閉幕まで残り ${remHours}時間`;
   if (statusEl) statusEl.textContent = ds.lastStatus || `${hrLabel} — 移籍最終日が進行中です`;
   if (fillEl) fillEl.style.width = `${progressPct}%`;
+  const tickerItems = Array.isArray(ds.tickerItems) ? ds.tickerItems : [];
+  if (tickerLabelEl) {
+    tickerLabelEl.textContent = remHours <= 3 ? 'URGENT 速報' : 'LIVE 速報';
+  }
+  if (tickerTextEl) {
+    const latest = tickerItems[0];
+    tickerTextEl.textContent = latest
+      ? `${latest.time || hrLabel} ${latest.text}`
+      : `${hrLabel} 各クラブの強化部が最終リストアップを進行中`;
+  }
+  if (tickerCountEl) {
+    tickerCountEl.textContent = `${tickerItems.length}件`;
+  }
   if (btnEl) {
     btnEl.disabled = Boolean(gameState.isSimulating || isTodayMatchDayPending() || gameState.isAdvancingCalendar);
     const spanEl = btnEl.querySelector('span');
@@ -949,8 +966,16 @@ function advanceDeadlineHour(skipRender = false) {
   ds.hour = (Number(ds.hour) || 10) + 1;
   const closeHour = Number(ds.closeHour) || 23;
   if (ds.hour > closeHour) {
+    const closedDeals = Array.isArray(ds.tickerItems) ? ds.tickerItems.slice(0, 6) : [];
     gameState.deadlineDayState = null;
     addDailyLog('【移籍市場閉幕】24:00を迎え、今ウィンドウの移籍市場が終了しました。');
+    if (typeof triggerDeadlineWindowClosedSummary === 'function') {
+      triggerDeadlineWindowClosedSummary(typeof getPlayerClub === 'function' ? getPlayerClub() : null, curDay, {
+        skipRender,
+        closedDeals
+      });
+    }
+    stopAdvancingCalendar();
     return false;
   }
 
@@ -976,24 +1001,72 @@ function advanceDeadlineHour(skipRender = false) {
     });
   }
   const outgoingResponded = typeof updateOutgoingOffersExpiry === 'function' ? updateOutgoingOffersExpiry() : false;
-  if (outgoingResponded) statusNotes.push('送信オファーの回答到着');
+  if (outgoingResponded) {
+    statusNotes.push('送信オファーの回答到着');
+    if (typeof pushDeadlineTickerItem === 'function') {
+      pushDeadlineTickerItem('送信済みオファーの回答がクラブ本部へ到着しました', hrLabel, ds.hour >= 20);
+    }
+  }
 
   let eventTriggered = Boolean(outgoingResponded);
+  const is21hWarningTick = Boolean(ds.hour === 21 && !ds.warned21);
   const noOfferYetLate = ds.hour >= 18 && !(ds.offersReceivedCount > 0);
   const incomingProb = noOfferYetLate ? 0.55 : (ds.hour >= 20 ? 0.35 : 0.22);
-  if (!gameState.pendingMegaOffer && !isFastForwardingSeason && Math.random() < incomingProb) {
+  if (!is21hWarningTick && !gameState.pendingMegaOffer && !isFastForwardingSeason && Math.random() < incomingProb) {
     const offerFired = typeof triggerIncomingTransferOffer === 'function' ? triggerIncomingTransferOffer(true) : false;
     const loanFired = !offerFired && typeof triggerLoanListingOffers === 'function' ? triggerLoanListingOffers(true) : false;
     if (offerFired || loanFired) {
       ds.offersReceivedCount = (ds.offersReceivedCount || 0) + 1;
       eventTriggered = true;
       statusNotes.push('駆け込みオファー到着');
+      if (typeof pushDeadlineTickerItem === 'function') {
+        pushDeadlineTickerItem('当クラブ所属選手に対し駆け込みの正式オファーが到着', hrLabel, true);
+      }
     }
   }
 
-  if (ds.hour % 2 === 0 && typeof simulateCpuTransferNewsDaily === 'function') {
-    simulateCpuTransferNewsDaily(curDay);
-    statusNotes.push('他クラブの移籍速報あり');
+  if (ds.hour % 2 === 0 || ds.hour >= 20) {
+    const cpuDeal = typeof simulateCpuTransferNewsDaily === 'function'
+      ? simulateCpuTransferNewsDaily(curDay, ds.hour >= 18)
+      : null;
+    if (cpuDeal && cpuDeal.headline) {
+      statusNotes.push('他クラブの移籍速報あり');
+      if (typeof pushDeadlineTickerItem === 'function') {
+        pushDeadlineTickerItem(cpuDeal.headline, hrLabel, (cpuDeal.ovr || 0) >= 79);
+      }
+    } else if (ds.hour % 2 === 0 && typeof pushDeadlineTickerItem === 'function') {
+      const pulseMsg = ds.hour >= 20
+        ? '複数クラブ間で大型トレードと期限付き移籍の最終文書交換が進行中'
+        : '国内上位クラブの強化部門が攻撃陣と守備陣の最終補強候補を比較検討中';
+      pushDeadlineTickerItem(pulseMsg, hrLabel, false);
+    }
+  }
+
+  if (ds.hour === 21 && !ds.warned21) {
+    ds.warned21 = true;
+    const pendingAgreedCount = Array.isArray(gameState.outgoingOffers)
+      ? gameState.outgoingOffers.filter(o => o && o.status === 'agreed').length
+      : 0;
+    const pendingIncomingCount = Array.isArray(gameState.incomingOffers)
+      ? gameState.incomingOffers.filter(o => o && (o.status === 'pending' || o.status === 'counter_agreed')).length
+      : 0;
+    if (typeof pushDeadlineTickerItem === 'function') {
+      pushDeadlineTickerItem('移籍市場閉幕まで残り3時間 — 駆け込み交渉が最終局面へ突入', '21:00', true);
+    }
+    addDailyLog('【デッドライン警告】21:00 — 移籍市場閉幕まで残り3時間となりました。合意済み契約の締結漏れや保留打診をご確認ください。');
+    if (typeof generateEventSnsReactions === 'function') {
+      generateEventSnsReactions('deadline_21h_warning', {
+        club: typeof getPlayerClub === 'function' ? getPlayerClub() : null,
+        displayDate: curDay.displayDate,
+        pendingAgreedCount,
+        pendingIncomingCount
+      });
+    }
+    statusNotes.push('閉幕まで残り3時間');
+    eventTriggered = true;
+    if (!skipRender && !isFastForwardingSeason && typeof openDeadline21hWarningModal === 'function') {
+      openDeadline21hWarningModal(curDay, pendingAgreedCount, pendingIncomingCount);
+    }
   }
 
   ds.lastStatus = statusNotes.length > 0
@@ -1323,7 +1396,17 @@ function advanceCalendarDay(skipRender = false) {
   if (nextDay.isTransferDeadline && !gameState.pendingDeadlineOffer) {
     gameState.pendingDeadlineOffer = true;
     if (!isFastForwardingSeason) {
-      gameState.deadlineDayState = { active: true, hour: 10, closeHour: 23 };
+      gameState.deadlineDayState = {
+        active: true,
+        hour: 10,
+        closeHour: 23,
+        warned21: false,
+        tickerItems: [{
+          time: '10:00',
+          text: `${nextDay.displayDate} 移籍市場最終日オープン — 各クラブの駆け込み交渉がスタート`,
+          isUrgent: false
+        }]
+      };
     }
     addDailyLog('【デッドラインデイ】本日は移籍市場最終日！10:00〜24:00まで1時間刻みで進行し、駆け込み交渉が活発化します。');
     if (typeof addInboxMessage === 'function') {
@@ -3484,19 +3567,21 @@ function processSeasonEnd(isSkipped = false) {
     ].filter(a => a.item && a.item.isPlayerClub);
     if (seasonAwardTargets.length > 0) {
       const topAw = seasonAwardTargets[0];
-      const foundPl = (typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(topAw.item.playerId)) || { player: { id: topAw.item.playerId, name: topAw.item.playerName, pos: topAw.item.pos, ...topAw.item.avatarSpec }, club: playerClub };
+      const awName = topAw.item.name || topAw.item.playerName || '選出選手';
+      const awApps = topAw.item.appearances ?? topAw.item.apps ?? 0;
+      const foundPl = (typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(topAw.item.playerId)) || { player: { id: topAw.item.playerId, name: awName, pos: topAw.item.pos, ...topAw.item.avatarSpec }, club: playerClub };
       CinematicOverlay.enqueue({
         type: 'individual_award',
         tier: 'major',
         theme: 'gold',
         awardCode: topAw.code,
         eyebrow: `${seasonDivLabel} シーズン個人賞`,
-        title: `${topAw.item.playerName} ${topAw.title}`,
+        title: `${awName} ${topAw.title}`,
         subtitle: `${playerClub.name} · ${gameState.season}年目シーズン`,
         player: foundPl.player,
         club: playerClub,
         metrics: [
-          { label: '出場', value: `${topAw.item.apps || 0}試合` },
+          { label: '出場', value: `${awApps}試合` },
           { label: '得点 / アシスト', value: `${topAw.item.goals || 0}G ${topAw.item.assists || 0}A`, tone: 'green' },
           { label: '平均評価', value: String(topAw.item.avgRating || '-'), tone: 'gold' }
         ],
@@ -3646,6 +3731,18 @@ function processSeasonEnd(isSkipped = false) {
 
   // シーズン終了時は移籍市場閉幕中のため未締結オファー・メガオファーを整理し、不要なオファータスクを残さない
   gameState.pendingMegaOffer = null;
+
+  if (!isSkipped && !gameState.isGameOver && typeof enqueueSeasonReviewDigest === 'function') {
+    enqueueSeasonReviewDigest(playerClub, gameState.lastSettlement, seasonAwardsObj, seasonDivLabel);
+  }
+  if (!isSkipped && !gameState.isGameOver && typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('season_review_digest', {
+      club: playerClub,
+      settlement: gameState.lastSettlement,
+      awards: seasonAwardsObj,
+      divLabel: seasonDivLabel
+    });
+  }
 
   const pendingLegends = Array.isArray(gameState._pendingRetiredLegends) ? gameState._pendingRetiredLegends : [];
   gameState._pendingRetiredLegends = [];
@@ -7708,6 +7805,8 @@ function startNextSeason() {
   gameState.pendingMegaOffer = null;
   gameState.pendingLineupConsultation = null;
   gameState.pendingBoardCrisis = false;
+  gameState.deadlineDayState = null;
+  gameState.windowTransferRecap = { signings: [], departures: [] };
   if (playerClub && typeof playerClub.boardConfidence === 'number') {
     playerClub.boardConfidence = clamp(Math.round((playerClub.boardConfidence + 70) / 2), 45, 85);
   }
@@ -14591,6 +14690,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.intlBreakState = null;
   gameState.pendingBoardCrisis = false;
   gameState.pendingDeadlineOffer = false;
+  gameState.deadlineDayState = null;
+  gameState.windowTransferRecap = { signings: [], departures: [] };
   if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
@@ -22576,9 +22677,9 @@ function generateCupMatchNews(compName, oppClub, isHome, myScore, oppScore, user
 /**
  * 移籍市場期間中の他クラブ間・欧州クラブ移籍ニュースを自動生成
  */
-function simulateCpuTransferNewsDaily(dayObj) {
-  if (!dayObj || !dayObj.windowOpen) return;
-  if (Math.random() > 0.16) return;
+function simulateCpuTransferNewsDaily(dayObj, forceDeadlineDeal = false) {
+  if (!dayObj || !dayObj.windowOpen) return null;
+  if (!forceDeadlineDeal && Math.random() > 0.16) return null;
 
   const managedClubs = (typeof getAllManagedLeagueClubs === 'function' ? getAllManagedLeagueClubs() : (gameState.clubs || []))
     .filter(c => c && !c.isPlayer && Array.isArray(c.players) && c.players.length > 20);
@@ -22620,16 +22721,17 @@ function simulateCpuTransferNewsDaily(dayObj) {
         ep.contractYears = 4;
         buyer.players.push(ep);
         ensureValidSquadAndStarters(buyer);
+        const euroHeadline = `大型補強：${buyer.name}が${ep.pos || 'MF'} ${ep.name}を${formatMoney(epFee)}で獲得`;
         addNewsItem({
           category: '移籍',
           clubId: buyer.id,
           playerId: ep.id,
-          headline: `大型補強：${buyer.name}が${ep.pos || 'MF'} ${ep.name}を${formatMoney(epFee)}で獲得`,
+          headline: euroHeadline,
           lead: `${buyer.name} · ${ep.age}歳 · 移籍成立`,
           body: `${buyer.name}は欧州市場から${ep.name}（${ep.age}歳 / OVR ${epOvr}）の獲得を完了。ライバルクラブの戦力増強に市場が沸いている。`,
           highlight: epOvr >= 80
         });
-        return;
+        return { headline: euroHeadline, fee: epFee, buyerName: buyer.name, sellerName: mega.name || '欧州クラブ', playerName: ep.name, ovr: epOvr };
       }
     }
   }
@@ -22651,16 +22753,19 @@ function simulateCpuTransferNewsDaily(dayObj) {
       autoSelectStarters(seller);
       autoSelectStarters(buyer);
     }
+    const domHeadline = `移籍成立：${buyer.name}が${seller.name}から${pos} ${target.name}を獲得`;
     addNewsItem({
       category: '移籍',
       clubId: buyer.id,
       playerId: target.id,
-      headline: `移籍成立：${buyer.name}が${seller.name}から${pos} ${target.name}を獲得`,
+      headline: domHeadline,
       lead: `${buyer.name} · ${target.age}歳 · 移籍金 ${formatMoney(fee)}`,
       body: `移籍金は${formatMoney(fee)}。${target.name}（${target.age}歳 / OVR ${ovr}）は4年契約で新天地へ合流する。`,
       highlight: ovr >= 79
     });
+    return { headline: domHeadline, fee, buyerName: buyer.name, sellerName: seller.name, playerName: target.name, ovr };
   }
+  return null;
 }
 
 /**
@@ -25753,6 +25858,15 @@ function generateEventSnsReactions(eventType, ctx = {}) {
   if (eventType === 'player_signing' && ctx.player) {
     const p = ctx.player;
     const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 70;
+    if (typeof recordWindowTransferRecap === 'function') {
+      recordWindowTransferRecap('signing', {
+        name: p.name,
+        pos: p.pos || 'MF',
+        ovr,
+        dealType: ctx.dealType || 'buy',
+        fee: ctx.fee || 0
+      });
+    }
     const fans = pickSnsAccounts('fan', 2);
     const media = pickSnsAccounts('media', 1)[0];
     const dealText = ctx.dealType === 'pre_contract'
@@ -25833,6 +25947,15 @@ function generateEventSnsReactions(eventType, ctx = {}) {
 
   if (eventType === 'player_departure' && ctx.player) {
     const p = ctx.player;
+    if (typeof recordWindowTransferRecap === 'function') {
+      recordWindowTransferRecap('departure', {
+        name: p.name,
+        pos: p.pos || 'MF',
+        fee: ctx.fee || 0,
+        reason: ctx.reason || 'sale',
+        clubName: ctx.buyerName || ''
+      });
+    }
     const fans = pickSnsAccounts('fan', 1);
     const bodyText = ctx.reason === 'release'
       ? `${p.name} が自由契約で退団か…。クラブへの貢献に感謝しつつ、今後の新天地での活躍を祈りたい。`
@@ -26017,6 +26140,127 @@ function generateEventSnsReactions(eventType, ctx = {}) {
       clubId: playerClub.id,
       playerId: p.id
     });
+    return;
+  }
+
+  if (eventType === 'season_review_digest' && ctx.settlement) {
+    const st = ctx.settlement;
+    const aw = ctx.awards || {};
+    const divLbl = ctx.divLabel || 'ENG-D1';
+    const fans = pickSnsAccounts('fan', 1);
+    const media = pickSnsAccounts('media', 1)[0];
+    const best11Count = Array.isArray(aw.bestEleven) ? aw.bestEleven.filter(b => b && b.isPlayerClub).length : 0;
+    const cmvpName = aw.clubMvp && (aw.clubMvp.name || aw.clubMvp.playerName);
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `Season ${st.season} 総括｜${divLbl} 最終順位 第${st.rank}位${st.targetAchieved ? '（クラブ目標達成）' : ''}。${cmvpName ? `クラブMVPには ${cmvpName} が選出され、` : ''}年間ベスト11にも ${best11Count}名が名を連ねました！`,
+      tags: [clubTag, '#SeasonReview'],
+      likes: 940 * fanPopScale,
+      reposts: 260 * fanPopScale,
+      replies: 72 * fanPopScale,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${st.season}年目シーズン本当にお疲れさま！${cmvpName ? `${cmvpName} の活躍はもちろん、` : ''}来季へ向けたオフの補強と契約更新が今から待ちきれない。`,
+      tags: [clubTag, '#年間アワード'],
+      likes: 310 * fanPopScale,
+      reposts: 58 * fanPopScale,
+      replies: 24,
+      clubId: playerClub.id
+    });
+    if (media && aw.mvp) {
+      addSnsPost({
+        authorType: 'media',
+        displayName: media.displayName,
+        handle: media.handle,
+        body: `【年間総括】${divLbl}の年間MVPは ${aw.mvp.name || aw.mvp.playerName}（${aw.mvp.clubName || ''}）が受賞。${playerClub.name}からも ${best11Count}名がベスト11入りを果たし、新シーズンへの期待が高まる。`,
+        tags: [clubTag, '#アワード発表'],
+        likes: 280 * fanPopScale,
+        reposts: 62 * fanPopScale,
+        replies: 18,
+        clubId: playerClub.id
+      });
+    }
+    return;
+  }
+
+  if (eventType === 'deadline_21h_warning') {
+    const media = pickSnsAccounts('media', 1)[0];
+    const fans = pickSnsAccounts('fan', 1);
+    addSnsPost({
+      authorType: 'media',
+      displayName: media.displayName,
+      handle: media.handle,
+      body: `【デッドライン速報】現地21:00を経過し、閉幕まで残り3時間。${playerClub.name}をはじめ各クラブの駆け込み交渉が最終コーナーを迎えている。`,
+      tags: [clubTag, '#DeadlineDay'],
+      likes: 420 * fanPopScale,
+      reposts: 135 * fanPopScale,
+      replies: 38,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `あと3時間で移籍市場閉まるぞ！最後の電撃加入はあるのか、それとも現有戦力で最後まで戦うのか、TLが騒がしくなってきた。`,
+      tags: [clubTag, '#移籍最終日'],
+      likes: 230 * fanPopScale,
+      reposts: 41,
+      replies: 26,
+      clubId: playerClub.id
+    });
+    return;
+  }
+
+  if (eventType === 'deadline_window_closed') {
+    const wLabel = ctx.windowLabel || '移籍市場';
+    const inN = Array.isArray(ctx.signings) ? ctx.signings.length : 0;
+    const outN = Array.isArray(ctx.departures) ? ctx.departures.length : 0;
+    const fans = pickSnsAccounts('fan', 1);
+    const media = pickSnsAccounts('media', 1)[0];
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `【ウィンドウ閉幕】${wLabel}が終了しました（加入 ${inN}名 / 放出・退団 ${outN}名）。確定した新スカッドで目標達成へ挑みます。`,
+      tags: [clubTag, '#WindowClosed'],
+      likes: 610 * fanPopScale,
+      reposts: 170 * fanPopScale,
+      replies: 54 * fanPopScale,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${wLabel}が閉幕！加入 ${inN}名・放出 ${outN}名でスカッド確定か。このメンバーを全力で応援してシーズン後半戦を駆け抜けよう！`,
+      tags: [clubTag],
+      likes: 245 * fanPopScale,
+      reposts: 37,
+      replies: 19,
+      clubId: playerClub.id
+    });
+    if (media && ctx.topDeal && ctx.topDeal.text) {
+      addSnsPost({
+        authorType: 'media',
+        displayName: media.displayName,
+        handle: media.handle,
+        body: `【移籍市場総括】${wLabel}の全手続きが完了。注目動向：${ctx.topDeal.text}`,
+        tags: [clubTag, '#移籍総括'],
+        likes: 190 * fanPopScale,
+        reposts: 42,
+        replies: 11,
+        clubId: playerClub.id
+      });
+    }
   }
 }
 
@@ -26508,4 +26752,320 @@ function evaluateDramaPromisesAfterMatch(playerClub, matchData) {
     }
   }
   playerClub.activeDramaPromises = nextPromises;
+}
+
+
+// ==========================================================================
+// Phase 3: 年間アワード振り返り3連続ダイジェスト ＆ デッドラインデイ演出強化
+// ==========================================================================
+function enqueueSeasonReviewDigest(playerClub, settlement, seasonAwardsObj, seasonDivLabel) {
+  if (!playerClub || !settlement || isFastForwardingSeason) return false;
+  if (typeof CinematicOverlay === 'undefined' || !CinematicOverlay) return false;
+
+  const divLabel = seasonDivLabel || 'ENG-D1';
+  const rank = Number(settlement.rank || 1);
+  const won = Number(playerClub.won || 0);
+  const drawn = Number(playerClub.drawn || 0);
+  const lost = Number(playerClub.lost || 0);
+  const pts = Number(playerClub.pts || 0);
+  const gd = Number(playerClub.gd || 0);
+  const targetAchieved = Boolean(settlement.targetAchieved);
+
+  // Slide 1: シーズン総括
+  CinematicOverlay.enqueue({
+    type: 'season_digest',
+    tier: 'major',
+    theme: (rank === 1 || targetAchieved) ? 'gold' : 'green',
+    digestStep: '1 / 3',
+    digestRank: `#${rank}`,
+    eyebrow: 'SEASON REVIEW 1/3 · SUMMARY',
+    title: `${settlement.season}年目シーズン 総括`,
+    subtitle: `${playerClub.name} · ${divLabel} 第${rank}位（${targetAchieved ? '目標達成' : '目標未達'}）`,
+    club: playerClub,
+    metrics: [
+      { label: 'リーグ戦績', value: `${won}勝${drawn}分${lost}敗` },
+      { label: '勝点 / 得失点差', value: `${pts}pt / ${gd >= 0 ? '+' : ''}${gd}`, tone: 'green' },
+      { label: '理事会目標', value: settlement.targetLabel || '-', tone: targetAchieved ? 'gold' : 'red' }
+    ],
+    sfx: 'ui_confirm',
+    durationMs: 2800
+  });
+
+  // Slide 2: クラブ年間MVP
+  const aw = seasonAwardsObj || {};
+  let cmvp = aw.clubMvp || null;
+  if (!cmvp && Array.isArray(playerClub.players) && playerClub.players.length > 0) {
+    const topP = [...playerClub.players].sort((a, b) => ((b.goals || 0) * 3 + (b.assists || 0) * 2 + (b.appearances || 0)) - ((a.goals || 0) * 3 + (a.assists || 0) * 2 + (a.appearances || 0)))[0];
+    if (topP) {
+      const apps = topP.appearances || 0;
+      cmvp = {
+        playerId: topP.id,
+        name: topP.name,
+        pos: topP.pos || 'CM',
+        appearances: apps,
+        goals: topP.goals || 0,
+        assists: topP.assists || 0,
+        avgRating: apps > 0 ? ((topP.totalRating || 0) / apps).toFixed(2) : '-',
+        avatarSpec: typeof buildAvatarSpecSnapshot === 'function' ? buildAvatarSpecSnapshot(topP) : null
+      };
+    }
+  }
+  if (cmvp) {
+    const cmvpName = cmvp.name || cmvp.playerName || 'クラブMVP';
+    const foundCmvp = (typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(cmvp.playerId))
+      || { player: { id: cmvp.playerId, name: cmvpName, pos: cmvp.pos || 'CM', ...(cmvp.avatarSpec || {}) }, club: playerClub };
+    const cApps = cmvp.appearances ?? cmvp.apps ?? 0;
+    CinematicOverlay.enqueue({
+      type: 'season_digest',
+      tier: 'major',
+      theme: 'gold',
+      digestStep: '2 / 3',
+      digestBadge: 'CLUB MVP',
+      eyebrow: 'SEASON REVIEW 2/3 · CLUB MVP',
+      title: `${cmvpName} クラブ年間MVP`,
+      subtitle: `${playerClub.name} · ${cmvp.pos || 'CM'}`,
+      player: foundCmvp.player,
+      club: playerClub,
+      metrics: [
+        { label: '公式戦出場', value: `${cApps}試合` },
+        { label: '得点 / アシスト', value: `${cmvp.goals || 0}G ${cmvp.assists || 0}A`, tone: 'green' },
+        { label: '平均評価点', value: String(cmvp.avgRating || '-'), tone: 'gold' }
+      ],
+      sfx: 'jingle_awaken',
+      durationMs: 2800
+    });
+  }
+
+  // Slide 3: 年間アワード・ベスト11発表
+  const mvp = aw.mvp || null;
+  const topScorer = aw.topScorer || null;
+  const clubBest11Count = Array.isArray(aw.bestEleven) ? aw.bestEleven.filter(b => b && b.isPlayerClub).length : 0;
+  CinematicOverlay.enqueue({
+    type: 'season_digest',
+    tier: 'major',
+    theme: 'gold',
+    digestStep: '3 / 3',
+    awardCode: 'MVP',
+    eyebrow: 'SEASON REVIEW 3/3 · ANNUAL AWARDS',
+    title: `${divLabel} 年間アワード`,
+    subtitle: clubBest11Count > 0 ? `自クラブから年間ベスト11に ${clubBest11Count}名選出` : `${divLabel} 年間主要タイトル確定`,
+    club: playerClub,
+    metrics: [
+      { label: '年間MVP', value: mvp ? `${mvp.name || mvp.playerName}` : '-', tone: 'gold' },
+      { label: '得点王', value: topScorer ? `${topScorer.name || topScorer.playerName} (${topScorer.goals || 0}G)` : '-' },
+      { label: '自クラブB11', value: `${clubBest11Count}名選出`, tone: clubBest11Count > 0 ? 'green' : '' }
+    ],
+    sfx: 'ui_confirm',
+    durationMs: 2800
+  });
+  return true;
+}
+
+function recordWindowTransferRecap(kind, entry) {
+  if (!entry || !entry.name) return;
+  if (!gameState.windowTransferRecap || typeof gameState.windowTransferRecap !== 'object') {
+    gameState.windowTransferRecap = { signings: [], departures: [] };
+  }
+  const bucket = kind === 'departure'
+    ? (gameState.windowTransferRecap.departures = Array.isArray(gameState.windowTransferRecap.departures) ? gameState.windowTransferRecap.departures : [])
+    : (gameState.windowTransferRecap.signings = Array.isArray(gameState.windowTransferRecap.signings) ? gameState.windowTransferRecap.signings : []);
+
+  bucket.unshift({
+    name: entry.name,
+    pos: entry.pos || 'MF',
+    ovr: entry.ovr || null,
+    dealType: entry.dealType || 'buy',
+    reason: entry.reason || 'sale',
+    fee: Number(entry.fee || 0),
+    clubName: entry.clubName || ''
+  });
+  if (bucket.length > 20) bucket.length = 20;
+
+  if (typeof isDeadlineDayHourlyActive === 'function' && isDeadlineDayHourlyActive() && typeof pushDeadlineTickerItem === 'function') {
+    const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    const clubName = pClub ? pClub.name : '自クラブ';
+    const msg = kind === 'departure'
+      ? `${clubName}が ${entry.pos || 'MF'} ${entry.name} の${entry.reason === 'release' ? '自由契約退団' : `売却（+${formatMoney(entry.fee || 0)}）`}を発表`
+      : `${clubName}が ${entry.pos || 'MF'} ${entry.name} の獲得を正式発表`;
+    pushDeadlineTickerItem(msg, null, true);
+  }
+}
+
+function pushDeadlineTickerItem(text, hourLabel = null, isUrgent = false) {
+  const ds = gameState.deadlineDayState;
+  if (!ds || !text) return;
+  if (!Array.isArray(ds.tickerItems)) ds.tickerItems = [];
+  const hr = hourLabel || `${String(Number(ds.hour) || 10).padStart(2, '0')}:00`;
+  ds.tickerItems.unshift({
+    time: hr,
+    text: String(text),
+    isUrgent: Boolean(isUrgent)
+  });
+  if (ds.tickerItems.length > 15) {
+    ds.tickerItems = ds.tickerItems.slice(0, 15);
+  }
+}
+
+function openDeadline21hWarningModal(dayObj, pendingAgreedCount, pendingIncomingCount) {
+  if (typeof showSecretaryModal !== 'function') return;
+  const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+  const dateLabel = (dayObj && dayObj.displayDate) || '最終日';
+  const dlg = (typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue)
+    ? SecretaryDialogue.getEventDialogue('deadline_21h_warning', {
+      displayDate: dateLabel,
+      pendingAgreedCount,
+      pendingIncomingCount
+    }, sec)
+    : { pages: [`時刻は21:00です。移籍市場閉幕（24:00）まで残り3時間となりました。締結漏れがないか最終確認してください。`] };
+
+  showSecretaryModal({
+    speaker: sec ? { kind: 'secretary', person: sec, name: sec.name, roleLabel: '秘書' } : null,
+    topic: 'デッドライン残り3時間',
+    title: '21:00 緊急チェック（閉幕まで残り3時間）',
+    speechPages: dlg.pages,
+    soundKey: 'sfx_alert',
+    detailHtml: `
+      <div class="gm-modal-flat-list">
+        <div class="gm-modal-flat-row">
+          <span class="gm-modal-flat-label">現在時刻 / 閉幕時刻</span>
+          <span class="gm-modal-flat-val mono text-danger">21:00 / 24:00</span>
+        </div>
+        <div class="gm-modal-flat-row">
+          <span class="gm-modal-flat-label">締結待ち合意案件</span>
+          <span class="gm-modal-flat-val mono ${pendingAgreedCount > 0 ? 'accent-gold' : ''}">${pendingAgreedCount}件</span>
+        </div>
+        <div class="gm-modal-flat-row">
+          <span class="gm-modal-flat-label">未回答の到着オファー</span>
+          <span class="gm-modal-flat-val mono ${pendingIncomingCount > 0 ? 'accent-gold' : ''}">${pendingIncomingCount}件</span>
+        </div>
+      </div>
+    `,
+    actions: [
+      {
+        label: 'オファー一覧を確認',
+        className: 'btn btn-primary',
+        onClick: () => {
+          if (typeof switchTab === 'function') switchTab('market');
+          if (typeof switchMarketSubtab === 'function') switchMarketSubtab('offers');
+          if (typeof renderAll === 'function') renderAll();
+        }
+      },
+      {
+        label: '交渉を続ける',
+        className: 'btn btn-secondary',
+        onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+      }
+    ]
+  });
+}
+
+function buildTransferWindowSummary(playerClub, curDay, closedDeals = []) {
+  const isWinter = Boolean(curDay && Number(curDay.month) === 1);
+  const windowLabel = isWinter ? '冬の移籍市場' : '夏の移籍市場';
+  const recap = gameState.windowTransferRecap && typeof gameState.windowTransferRecap === 'object'
+    ? gameState.windowTransferRecap
+    : { signings: [], departures: [] };
+  const allSignings = Array.isArray(recap.signings) ? recap.signings : [];
+  const immediateSignings = allSignings.filter(s => s && s.dealType !== 'pre_contract');
+  const departures = Array.isArray(recap.departures) ? recap.departures : [];
+  const totalSpent = immediateSignings.reduce((acc, s) => acc + Number(s.fee || 0), 0);
+  const totalSold = departures.reduce((acc, d) => acc + Number(d.fee || 0), 0);
+  const topDeal = (Array.isArray(closedDeals) ? closedDeals : []).find(item => item && item.text && (item.text.includes('移籍成立') || item.text.includes('大型補強'))) || (Array.isArray(closedDeals) ? closedDeals[0] : null);
+  return {
+    windowLabel,
+    clubName: playerClub ? playerClub.name : '自クラブ',
+    signings: immediateSignings,
+    departures,
+    totalSpent,
+    totalSold,
+    netSpend: totalSpent - totalSold,
+    topDeal
+  };
+}
+
+function triggerDeadlineWindowClosedSummary(playerClub, curDay, opts = {}) {
+  const summary = buildTransferWindowSummary(playerClub, curDay, opts.closedDeals || []);
+  const skipRender = Boolean(opts.skipRender);
+
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('deadline_window_closed', {
+      club: playerClub,
+      windowLabel: summary.windowLabel,
+      signings: summary.signings,
+      departures: summary.departures,
+      topDeal: summary.topDeal
+    });
+  }
+
+  const openClosingBriefing = () => {
+    if (typeof showSecretaryModal !== 'function') return;
+    const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const dlg = (typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue)
+      ? SecretaryDialogue.getEventDialogue('deadline_closed', {
+        windowLabel: summary.windowLabel,
+        signingsCount: summary.signings.length,
+        departuresCount: summary.departures.length
+      }, sec)
+      : { pages: [`${summary.windowLabel}が閉幕しました。`] };
+    const signNames = summary.signings.length > 0
+      ? summary.signings.slice(0, 4).map(s => `${s.pos} ${s.name}`).join('、')
+      : 'なし';
+    const depNames = summary.departures.length > 0
+      ? summary.departures.slice(0, 4).map(d => `${d.pos} ${d.name}`).join('、')
+      : 'なし';
+    showSecretaryModal({
+      speaker: sec ? { kind: 'secretary', person: sec, name: sec.name, roleLabel: '秘書' } : null,
+      topic: '移籍市場閉幕レポート',
+      title: `${summary.windowLabel} 閉幕サマリー`,
+      speechPages: dlg.pages,
+      detailHtml: `
+        <div class="gm-modal-flat-list">
+          <div class="gm-modal-flat-row">
+            <span class="gm-modal-flat-label">今期加入（${summary.signings.length}名）</span>
+            <span class="gm-modal-flat-val accent-green">${escapeCommHtml(signNames)}</span>
+          </div>
+          <div class="gm-modal-flat-row">
+            <span class="gm-modal-flat-label">放出・退団（${summary.departures.length}名）</span>
+            <span class="gm-modal-flat-val">${escapeCommHtml(depNames)}</span>
+          </div>
+          <div class="gm-modal-flat-row">
+            <span class="gm-modal-flat-label">移籍収支（支出 / 売却収入）</span>
+            <span class="gm-modal-flat-val mono">${formatMoney(summary.totalSpent)} / +${formatMoney(summary.totalSold)}</span>
+          </div>
+        </div>
+      `,
+      actions: [
+        {
+          label: '確認して通常進行へ',
+          className: 'btn btn-primary',
+          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+        }
+      ]
+    });
+  };
+
+  if (!skipRender && !isFastForwardingSeason) {
+    openClosingBriefing();
+    if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+      CinematicOverlay.enqueue({
+        type: 'deadline_closed',
+        tier: 'normal',
+        theme: 'gold',
+        eyebrow: 'TRANSFER WINDOW CLOSED',
+        title: `${summary.windowLabel} 閉幕`,
+        subtitle: `${summary.clubName} 補強ウィンドウ確定`,
+        club: playerClub,
+        metrics: [
+          { label: '加入選手', value: `${summary.signings.length}名`, tone: 'green' },
+          { label: '放出・退団', value: `${summary.departures.length}名` },
+          { label: '純支出', value: `${summary.netSpend >= 0 ? '-' : '+'}${formatMoney(Math.abs(summary.netSpend))}`, tone: 'gold' }
+        ],
+        sfx: 'ui_confirm',
+        durationMs: 2500
+      });
+    }
+  }
+
+  gameState.windowTransferRecap = { signings: [], departures: [] };
+  return summary;
 }

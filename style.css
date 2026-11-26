@@ -24312,3 +24312,86 @@ button.hof-record-name {
     gap: 6px;
   }
 }
+
+/* ==========================================================================
+   Phase 3: 年間振り返り3連続ダイジェスト ＆ デッドラインデイ演出強化
+   ========================================================================== */
+.deadline-ticker-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.deadline-ticker-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #f59e0b;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-deadline-section.is-urgent .deadline-ticker-label {
+  color: #f87171;
+}
+
+.deadline-ticker-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deadline-ticker-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .deadline-ticker-bar {
+    gap: 6px;
+    padding-top: 7px;
+  }
+  .deadline-ticker-label {
+    font-size: 9.5px;
+  }
+  .deadline-ticker-text {
+    font-size: 11px;
+  }
+  .deadline-ticker-count {
+    font-size: 10px;
+  }
+}
+
+.cinematic-digest-media-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cinematic-digest-step {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.cinematic-digest-rank {
+  font-size: clamp(26px, 4.5vw, 38px);
+  font-weight: 900;
+  color: var(--cin-accent);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
