@@ -89,36 +89,40 @@
       </div>
 
       <div class="status-metrics">
-        <div class="metric-box">
-          <span class="metric-label">シーズン</span>
-          <span class="metric-value mono" id="header-season">1年目</span>
-        </div>
-        <div class="metric-box calendar-date-box">
-          <span class="metric-label">日付</span>
-          <span class="metric-value mono accent-green" id="header-date">2026年 8月1日 (土)</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">日程</span>
-          <span class="metric-value mono" id="header-matchweek">第1節 / 全38節</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">資金</span>
-          <div class="metric-value-inline-row">
-            <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
-            <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全 £40.0M</span>
+        <div class="status-metrics-row status-metrics-row-primary">
+          <div class="metric-box metric-season">
+            <span class="metric-label">シーズン</span>
+            <span class="metric-value mono" id="header-season">1年目</span>
+          </div>
+          <div class="metric-box calendar-date-box metric-date">
+            <span class="metric-label">日付</span>
+            <span class="metric-value mono accent-green" id="header-date">2026年 8月1日 (土)</span>
+          </div>
+          <div class="metric-box metric-matchweek">
+            <span class="metric-label">日程</span>
+            <span class="metric-value mono" id="header-matchweek">第1節 / 全38節</span>
           </div>
         </div>
-        <div class="metric-box">
-          <span class="metric-label" id="header-payroll-label">週給総額</span>
-          <span class="metric-value mono" id="header-payroll">£0</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">登録選手</span>
-          <span class="metric-value mono" id="header-squad-size">20名</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">ファン総数</span>
-          <span class="metric-value mono" id="header-supporters">2,500万人</span>
+        <div class="status-metrics-row status-metrics-row-secondary">
+          <div class="metric-box metric-funds" data-mobile-label="資金">
+            <span class="metric-label">資金</span>
+            <div class="metric-value-inline-row">
+              <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
+              <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全 £40.0M</span>
+            </div>
+          </div>
+          <div class="metric-box metric-payroll" data-mobile-label="週給">
+            <span class="metric-label" id="header-payroll-label">週給総額</span>
+            <span class="metric-value mono" id="header-payroll">£0</span>
+          </div>
+          <div class="metric-box metric-squad" data-mobile-label="登録">
+            <span class="metric-label">登録選手</span>
+            <span class="metric-value mono" id="header-squad-size">20名</span>
+          </div>
+          <div class="metric-box metric-fans" data-mobile-label="ファン">
+            <span class="metric-label">ファン総数</span>
+            <span class="metric-value mono" id="header-supporters">2,500万人</span>
+          </div>
         </div>
       </div>
 
@@ -666,8 +670,9 @@
       <div class="roster-subview roster-subview-players hidden" id="roster-subview-players" role="tabpanel" aria-labelledby="subtab-btn-players">
         <div class="panel">
           <div class="panel-header">
-            <div>
+            <div class="roster-panel-title-wrap">
               <h2 class="panel-title">登録選手</h2>
+              <span class="roster-total-count mono accent-green" id="roster-total-count" title="トップチーム登録合計人数（上限50名）">合計 0/50名</span>
             </div>
             <div class="team-power-badges">
               <span class="power-badge">陣形 <strong class="mono" id="roster-formation-label">4-3-3</strong></span>

@@ -659,6 +659,23 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
         self.assertIn('.facility-lv-badge,', self.css)
         self.assertIn('#market-subnav-bar .roster-subtab-btn', self.css)
 
+    def test_23_roster_total_count_and_mobile_header_metrics(self):
+        """選手一覧の合計人数表示およびモバイルヘッダーのファン総数等マルチ情報表示を検証"""
+        self.assertIn('id="roster-total-count"', self.html)
+        self.assertIn('class="status-metrics-row status-metrics-row-primary"', self.html)
+        self.assertIn('class="status-metrics-row status-metrics-row-secondary"', self.html)
+        self.assertIn('data-mobile-label="ファン"', self.html)
+        self.assertIn('data-mobile-label="週給"', self.html)
+        self.assertIn('data-mobile-label="登録"', self.html)
+
+        render_roster_body = self.main_js[self.main_js.index('function renderRoster('):self.main_js.index('function renderRoster(') + 4800]
+        self.assertIn("getElementById('roster-total-count')", render_roster_body)
+        self.assertIn('合計 ${activeRosterCount}/${maxSquad}名', render_roster_body)
+
+        self.assertNotIn('.metric-box:nth-child(7)  /* SUPPORTERS */', self.css)
+        self.assertIn('.metric-box.metric-fans .metric-value', self.css)
+        self.assertIn('.roster-total-count', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()
