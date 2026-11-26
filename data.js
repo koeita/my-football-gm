@@ -2707,23 +2707,39 @@ const DERBY_MATCHUPS = [
 
 const SNS_ACCOUNT_POOLS = {
   fan: [
-    { displayName: 'ゴール裏の古参', handle: '@kop_veteran92' },
-    { displayName: '週末スタジアム通い', handle: '@weekend_terrace' },
-    { displayName: '戦術メモ帳', handle: '@tactics_memo_fc' },
-    { displayName: 'アカデミー箱推し', handle: '@youth_watcher' },
-    { displayName: 'アウェイ遠征組', handle: '@awaydays_ontour' },
-    { displayName: 'スタッツ好きサポ', handle: '@xg_supporter' },
-    { displayName: '南スタンド14列目', handle: '@south_stand_14' },
-    { displayName: '地元パブの常連', handle: '@matchday_pint' },
-    { displayName: '青空ユニフォーム収集家', handle: '@kit_collector_uk' },
-    { displayName: '移籍噂ウォッチャー', handle: '@window_insider_fan' }
+    { displayName: 'ゴール裏の古参', handle: '@kop_veteran92', avatar: { skin: '#f1c27d', hair: '#5a3825', hairStyle: 'beanie', accessory: 'scarf', shirtMode: 'club', bg: '#1e293b' } },
+    { displayName: '週末スタジアム通い', handle: '@weekend_terrace', avatar: { skin: '#ffdbac', hair: '#2c1b18', hairStyle: 'short', accessory: 'none', shirtMode: 'club', bg: '#172554' } },
+    { displayName: '戦術メモ帳', handle: '@tactics_memo_fc', avatar: { skin: '#f5cfa0', hair: '#1f2937', hairStyle: 'short', accessory: 'glasses', shirtMode: 'dark', bg: '#1e1b4b' } },
+    { displayName: 'アカデミー箱推し', handle: '@youth_watcher', avatar: { skin: '#ffdbac', hair: '#b45309', hairStyle: 'bob', accessory: 'none', shirtMode: 'away', bg: '#14532d' } },
+    { displayName: 'アウェイ遠征組', handle: '@awaydays_ontour', avatar: { skin: '#e0ac69', hair: '#1c1917', hairStyle: 'cap', accessory: 'scarf', shirtMode: 'away', bg: '#3f1d2b' } },
+    { displayName: 'スタッツ好きサポ', handle: '@xg_supporter', avatar: { skin: '#f1c27d', hair: '#4a3728', hairStyle: 'spiky', accessory: 'glasses', shirtMode: 'dark', bg: '#0f2942' } },
+    { displayName: '南スタンド14列目', handle: '@south_stand_14', avatar: { skin: '#c68642', hair: '#111827', hairStyle: 'short', accessory: 'scarf', shirtMode: 'club', bg: '#27272a' } },
+    { displayName: '地元パブの常連', handle: '@matchday_pint', avatar: { skin: '#ffdbac', hair: '#7c2d12', hairStyle: 'short', accessory: 'mustache', shirtMode: 'retro', bg: '#292524' } },
+    { displayName: '青空ユニフォーム収集家', handle: '@kit_collector_uk', avatar: { skin: '#f5cfa0', hair: '#d97706', hairStyle: 'long', accessory: 'none', shirtMode: 'retro', bg: '#164e63' } },
+    { displayName: '移籍噂ウォッチャー', handle: '@window_insider_fan', avatar: { skin: '#e0ac69', hair: '#0f172a', hairStyle: 'spiky', accessory: 'headset', shirtMode: 'dark', bg: '#1e293b' } },
+    { displayName: '北ゴール裏の応援団長', handle: '@north_end_chant', avatar: { skin: '#f1c27d', hair: '#18181b', hairStyle: 'cap', accessory: 'scarf', shirtMode: 'club', bg: '#14532d' } },
+    { displayName: 'GK愛が止まらない人', handle: '@gk_union_jp', avatar: { skin: '#ffdbac', hair: '#374151', hairStyle: 'short', accessory: 'headset', shirtMode: 'away', bg: '#365314' } },
+    { displayName: 'ボランチ観察日記', handle: '@pivot_watch_6', avatar: { skin: '#e0ac69', hair: '#292524', hairStyle: 'bob', accessory: 'glasses', shirtMode: 'club', bg: '#1e3a5f' } },
+    { displayName: '深夜のライブ観戦勢', handle: '@midnight_kickoff', avatar: { skin: '#f5cfa0', hair: '#1e293b', hairStyle: 'long', accessory: 'headset', shirtMode: 'dark', bg: '#171717' } },
+    { displayName: '親子でシーチケ勢', handle: '@family_stand_26', avatar: { skin: '#ffdbac', hair: '#92400e', hairStyle: 'short', accessory: 'scarf', shirtMode: 'club', bg: '#1c2d27' } },
+    { displayName: 'セットプレー研究班', handle: '@setpiece_nerd', avatar: { skin: '#c68642', hair: '#1f2937', hairStyle: 'spiky', accessory: 'glasses', shirtMode: 'dark', bg: '#312e81' } },
+    { displayName: '現地観戦フォトログ', handle: '@terrace_shutter', avatar: { skin: '#f1c27d', hair: '#78350f', hairStyle: 'long', accessory: 'none', shirtMode: 'retro', bg: '#3b1f2b' } },
+    { displayName: '背番号10に憧れて', handle: '@number10_dream', avatar: { skin: '#8d5524', hair: '#111827', hairStyle: 'spiky', accessory: 'none', shirtMode: 'club', bg: '#1f2937' } },
+    { displayName: 'カウンターサッカー信者', handle: '@fast_break_fan', avatar: { skin: '#ffdbac', hair: '#b91c1c', hairStyle: 'short', accessory: 'scarf', shirtMode: 'club', bg: '#3f1d1d' } },
+    { displayName: '雨のナイトゲーム好き', handle: '@floodlight_rain', avatar: { skin: '#e0ac69', hair: '#334155', hairStyle: 'beanie', accessory: 'none', shirtMode: 'dark', bg: '#0f172a' } },
+    { displayName: 'クラブ史アーカイブ', handle: '@club_history_1898', avatar: { skin: '#f5cfa0', hair: '#94a3b8', hairStyle: 'short', accessory: 'mustache', shirtMode: 'retro', bg: '#2c2520' } },
+    { displayName: '移籍市場の電卓マン', handle: '@psr_calc_fan', avatar: { skin: '#f1c27d', hair: '#1e293b', hairStyle: 'bob', accessory: 'glasses', shirtMode: 'dark', bg: '#14323f' } },
+    { displayName: '育成年代スカウト目線', handle: '@u21_prospect_log', avatar: { skin: '#c68642', hair: '#27272a', hairStyle: 'cap', accessory: 'none', shirtMode: 'away', bg: '#1a2e25' } },
+    { displayName: 'ハーフタイム解説民', handle: '@halftime_talker', avatar: { skin: '#8d5524', hair: '#09090b', hairStyle: 'beanie', accessory: 'glasses', shirtMode: 'club', bg: '#292038' } }
   ],
   media: [
-    { displayName: 'フットボール・タイムズ番記', handle: '@ft_club_beat' },
-    { displayName: 'PITCH ANALYTICS JP', handle: '@pitch_data_lab' },
-    { displayName: '移籍市場速報デスク', handle: '@transfer_desk_live' },
-    { displayName: '英国フットボール通信', handle: '@uk_football_wire' },
-    { displayName: 'マッチデイ・レビュー', handle: '@matchday_review' }
+    { displayName: 'フットボール・タイムズ番記', handle: '@ft_club_beat', iconType: 'press', accent: '#38bdf8' },
+    { displayName: 'PITCH ANALYTICS JP', handle: '@pitch_data_lab', iconType: 'chart', accent: '#2ecc71' },
+    { displayName: '移籍市場速報デスク', handle: '@transfer_desk_live', iconType: 'transfer', accent: '#f59e0b' },
+    { displayName: '英国フットボール通信', handle: '@uk_football_wire', iconType: 'wire', accent: '#a78bfa' },
+    { displayName: 'マッチデイ・レビュー', handle: '@matchday_review', iconType: 'mic', accent: '#fb7185' },
+    { displayName: '欧州フットボール戦術誌', handle: '@euro_tactics_mag', iconType: 'tactics', accent: '#2dd4bf' },
+    { displayName: 'スタジアム現場レポート', handle: '@touchline_press', iconType: 'camera', accent: '#fbbf24' }
   ]
 };
 

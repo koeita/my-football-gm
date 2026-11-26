@@ -173,6 +173,32 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         self.assertIn("'deadline_21h_warning'", self.main_js)
         self.assertIn("'deadline_window_closed'", self.main_js)
 
+    def test_9_iphone_fullscreen_and_sns_account_avatars(self):
+        """iPhone風筐体UI（最下部で全体収容）とSNS個別アカウントアイコン・サポーター増量を検証"""
+        self.assertGreaterEqual(self.data_js.count("handle: '@"), 28)
+        for id_name in ['comm-phone-statusbar', 'comm-phone-time', 'comm-phone-homebar']:
+            self.assertIn(f'id="{id_name}"', self.html)
+        for removed_id in ['btn-phone-fullscreen', 'comm-phone-backdrop']:
+            self.assertNotIn(f'id="{removed_id}"', self.html)
+        self.assertIn('comm-phone-island', self.html)
+        self.assertIn('comm-phone-battery-pill', self.html)
+        self.assertNotIn('.is-phone-fullscreen', self.css)
+        self.assertNotIn('setCommPhoneFullscreen', self.main_js)
+        for cls in ['.comm-phone-island', '.comm-phone-battery-pill', '.office-comm-panel.gm-phone-shell', '.comm-phone-viewport', '.btn-phone-back', '.sns-avatar-svg', '.sns-media-icon-svg', '.sns-verified-badge']:
+            self.assertIn(cls, self.css)
+        panel_start = self.html.index('id="office-comm-panel"')
+        panel_end = self.html.index('</section>', panel_start)
+        panel_block = self.html[panel_start:panel_end]
+        self.assertIn('comm-phone-viewport', panel_block)
+        self.assertIn('id="comm-detail-sheet-overlay"', panel_block)
+        self.assertIn('class="btn-phone-back mono"', panel_block)
+        for fn in ['function buildSnsFanPixelAvatarSvg(', 'function buildSnsMediaIconSvg(', 'function buildSnsAccountAvatarHtml(']:
+            self.assertIn(fn, self.main_js)
+
+        emoji_pattern = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+        self.assertIsNone(emoji_pattern.search(self.data_js[self.data_js.index('SNS_ACCOUNT_POOLS'):]))
+        self.assertIsNone(emoji_pattern.search(self.main_js[self.main_js.index('function addSnsPost('):]))
+
 
 if __name__ == '__main__':
     unittest.main()
