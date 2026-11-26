@@ -103,6 +103,50 @@ const CinematicOverlay = (() => {
 
   function buildMediaHtml(cfg) {
     const type = cfg.type || '';
+    if (type === 'big_match_kickoff') {
+      const hEmblem = renderEmblem(cfg.club, 56);
+      const aEmblem = renderEmblem(cfg.awayClub, 56);
+      const hName = cfg.club ? escapeHtml(cfg.club.name) : 'HOME';
+      const aName = cfg.awayClub ? escapeHtml(cfg.awayClub.name) : 'AWAY';
+      const buildStarHtml = (star, clubObj, sideCls) => {
+        if (!star) return '';
+        const starAv = typeof getPlayerAvatarHtml === 'function'
+          ? getPlayerAvatarHtml(star, clubObj, 'cinematic-matchup-star-avatar', 44)
+          : '';
+        const starOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(star) : (star.ovr || '-');
+        return `
+          <div class="cinematic-matchup-star ${sideCls}">
+            <div class="cinematic-matchup-star-av">${starAv}</div>
+            <div class="cinematic-matchup-star-meta">
+              <span class="cinematic-matchup-star-name">${escapeHtml(star.name || '')}</span>
+              <span class="cinematic-matchup-star-ovr mono">OVR ${escapeHtml(String(starOvr))}</span>
+            </div>
+          </div>
+        `;
+      };
+      const starsRow = (cfg.homeStar || cfg.awayStar)
+        ? `<div class="cinematic-matchup-stars">${buildStarHtml(cfg.homeStar, cfg.club, 'is-home')}<span class="cinematic-matchup-key mono">KEY MATCHUP</span>${buildStarHtml(cfg.awayStar, cfg.awayClub, 'is-away')}</div>`
+        : '';
+      return `
+        <div class="cinematic-matchup-stage">
+          <div class="cinematic-scoreboard">
+            <div class="cinematic-score-side ${cfg.club && cfg.club.isPlayer ? 'is-player' : ''}">
+              <div class="cinematic-emblem-wrap">${hEmblem}</div>
+              <div class="cinematic-score-team">${hName}</div>
+            </div>
+            <div class="cinematic-score-center">
+              <div class="cinematic-matchup-vs mono">VS</div>
+            </div>
+            <div class="cinematic-score-side ${cfg.awayClub && cfg.awayClub.isPlayer ? 'is-player' : ''}">
+              <div class="cinematic-emblem-wrap">${aEmblem}</div>
+              <div class="cinematic-score-team">${aName}</div>
+            </div>
+          </div>
+          ${starsRow}
+        </div>
+      `;
+    }
+
     if (type === 'match_fulltime' && cfg.score) {
       const hEmblem = renderEmblem(cfg.club, 52);
       const aEmblem = renderEmblem(cfg.awayClub, 52);

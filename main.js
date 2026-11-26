@@ -239,10 +239,14 @@ const gameState = {
   secretaryId: 'sec_claire',
   inboxMessages: [],
   newsFeed: [],
+  snsFeed: [],
+  snsUnreadCount: 0,
   managerWishes: null,
   officeCommTab: 'messages',
   inboxCategoryFilter: 'ALL',
   newsCategoryFilter: 'ALL',
+  snsCategoryFilter: 'ALL',
+  _notifiedSpecialMatchKey: null,
   expandedMessageId: null,
   expandedNewsId: null,
   monthlyLedger: null,
@@ -1371,6 +1375,12 @@ function advanceCalendarDay(skipRender = false) {
     stopAdvancingCalendar();
     if (typeof openBoardCrisisModal === 'function') openBoardCrisisModal();
     return true;
+  }
+  if (!isNextDayMatch && !isFastForwardingSeason && typeof maybeTriggerSpecialMatchEveBriefing === 'function') {
+    if (maybeTriggerSpecialMatchEveBriefing(nextDay)) {
+      eventTriggered = true;
+      stopAdvancingCalendar();
+    }
   }
 
   if (isNextDayMatch || eventTriggered) {
@@ -3421,6 +3431,9 @@ function processSeasonEnd(isSkipped = false) {
   switchTab('market');
   const seasonDivLabel = wasInD2 ? 'ENG-D2' : 'ENG-D1';
   let playedVictoryCin = false;
+  if (playerRank === 1 && typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('trophy_championship', { club: playerClub, season: gameState.season, rank: playerRank });
+  }
   if (!isSkipped && playerRank === 1 && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
     playedVictoryCin = CinematicOverlay.enqueue({
       type: 'trophy_championship',
@@ -5395,6 +5408,9 @@ function completeOutgoingTransferSigning(offerId) {
       durationMs: 2600
     });
     if (!playedPreCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+    if (typeof generateEventSnsReactions === 'function') {
+      generateEventSnsReactions('player_signing', { club: playerClub, player: target, dealType: 'pre_contract', fee: 0 });
+    }
     updateMarketBadges();
     renderAll();
     return;
@@ -5648,6 +5664,9 @@ function completeOutgoingTransferSigning(offerId) {
     durationMs: isStarSign ? 3000 : 2500
   });
   if (!playedSignCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('player_signing', { club: playerClub, player: target, dealType, fee: offer.offeredFee || 0 });
+  }
   updateMarketBadges();
   renderAll();
 }
@@ -6060,6 +6079,9 @@ function acceptIncomingOffer(offerId) {
 
   const playedSellCin = triggerPlayerDepartureCinematic(playerClub, target, 'TRANSFER DEPARTURE', `${offer.buyerClubName} へ完全移籍`, '売却益', `+${formatMoney(saleFee)}`, 'green');
   if (!playedSellCin && typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('sfx_deal');
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('player_departure', { club: playerClub, player: target, buyerName: offer.buyerClubName, fee: saleFee, reason: 'sale' });
+  }
   updateMarketBadges();
   renderAll();
 }
@@ -6437,6 +6459,9 @@ function acceptIncomingOfferModal() {
 
   closeIncomingOfferModal();
   triggerPlayerDepartureCinematic(playerClub, target, 'TRANSFER DEPARTURE', `${offer.buyerClubName} へ完全移籍`, '売却益', `+${formatMoney(offer.offerFee || 0)}`, 'green');
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('player_departure', { club: playerClub, player: target, buyerName: offer.buyerClubName, fee: offer.offerFee || 0, reason: 'sale' });
+  }
   updateMarketBadges();
   renderAll();
 }
@@ -6600,6 +6625,9 @@ function promoteYouthPlayer(youthId) {
 
   addDailyLog(`【U-21アカデミー昇格】${youth.pos} #${youth.squadNumber} ${youth.name} がプロ契約締結（初回契約金 £40k / 週給 ${formatWage(youth.wage)} / 3年契約）`);
   triggerYouthPromotionCinematic(playerClub, youth, 3, youth.wage);
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('youth_promotion', { club: playerClub, player: youth });
+  }
 
   renderAll();
   return true;
@@ -6710,6 +6738,9 @@ function releaseRosterPlayer(playerId) {
     addDailyLog(`【自由契約・退団】#${target.squadNumber || '-'} ${target.name} が自由契約となり、フリー市場へ移籍可能選手として登録されました。`);
   }
   triggerPlayerDepartureCinematic(playerClub, target, 'CONTRACT TERMINATED', `${playerClub.name} を自由契約で退団`, '状態', 'フリー移籍', '');
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('player_departure', { club: playerClub, player: target, fee: 0, reason: 'release' });
+  }
 
   ensureValidSquadAndStarters(playerClub);
   renderAll();
@@ -6817,6 +6848,9 @@ function promoteYouthCandidate(candidateId) {
   gameState.facilityFeedback = msg;
   addDailyLog(msg);
   triggerYouthPromotionCinematic(playerClub, prospect, 4, prospect.wage);
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('youth_promotion', { club: playerClub, player: prospect });
+  }
   renderAll();
 }
 
@@ -9217,6 +9251,15 @@ function renderMatchLog() {
 
     const homeOvr = calcClubOvr(home);
     const awayOvr = calcClubOvr(away);
+    const sfPreview = typeof evaluateSpecialFixtureContext === 'function'
+      ? evaluateSpecialFixtureContext(home, away, playerMatchInfo)
+      : null;
+    const sfBannerHtml = sfPreview
+      ? `<div class="matchday-special-banner is-kind-${sfPreview.kind || 'special'}">
+          <span class="matchday-special-title mono">${escapeCommHtml(sfPreview.label)}</span>
+          <span class="matchday-special-sub mono">${escapeCommHtml(sfPreview.h2hText)}${isHome && sfPreview.attendanceBoost > 0 ? ` · 動員+${Math.round(sfPreview.attendanceBoost * 100)}%` : ''} · 勝利ファン${sfPreview.fanWinMult.toFixed(1)}x</span>
+        </div>`
+      : '';
 
     const myMatchHtml = `
       <div class="matchday-card-preview">
@@ -9224,6 +9267,7 @@ function renderMatchLog() {
           <span class="matchday-badge-big">${playerMatchInfo.title}</span>
           <span class="mono accent-green">${currentDay.displayDate}</span>
         </div>
+        ${sfBannerHtml}
         <div class="matchday-vs-hero">
           <div class="matchday-club-side ${home.isPlayer ? 'is-player-side' : ''}">
             <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:3px;">
@@ -14611,9 +14655,14 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   ];
   gameState.inboxMessages = [];
   gameState.newsFeed = [];
+  gameState.snsFeed = [];
+  gameState.snsUnreadCount = 0;
   gameState.managerWishes = null;
   gameState.officeCommTab = 'messages';
   gameState.inboxCategoryFilter = 'ALL';
+  gameState.newsCategoryFilter = 'ALL';
+  gameState.snsCategoryFilter = 'ALL';
+  gameState._notifiedSpecialMatchKey = null;
   gameState.expandedMessageId = null;
   gameState.monthlyReports = [];
   gameState.pendingLineupConsultation = null;
@@ -17411,6 +17460,9 @@ function hireNewManager(managerId) {
       });
     }
   };
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('manager_appointed', { club, manager: newMgr, tacticLabel });
+  }
   if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
     CinematicOverlay.enqueue({
       type: 'manager_appointed',
@@ -20481,6 +20533,11 @@ function ensureInitialOfficeMessagesAndNews() {
       highlight: true
     });
   }
+
+  if (!Array.isArray(gameState.snsFeed)) gameState.snsFeed = [];
+  if (gameState.snsFeed.length === 0 && typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('career_start', { club: playerClub });
+  }
 }
 
 /**
@@ -22715,19 +22772,39 @@ function selectSecretary(secId) {
 function renderOfficeCommPanel() {
   const inboxListEl = document.getElementById('office-inbox-list');
   const newsListEl = document.getElementById('office-news-list');
+  const snsListEl = document.getElementById('office-sns-list');
   const controlsEl = document.getElementById('office-inbox-controls');
   const newsControlsEl = document.getElementById('office-news-controls');
+  const snsControlsEl = document.getElementById('office-sns-controls');
+  const snsTrendsEl = document.getElementById('office-sns-trends');
   const unreadBadgeEl = document.getElementById('office-unread-badge');
   const newsBadgeEl = document.getElementById('office-news-badge');
+  const snsBadgeEl = document.getElementById('office-sns-badge');
   const tabMessagesBtn = document.getElementById('office-comm-tab-messages');
   const tabNewsBtn = document.getElementById('office-comm-tab-news');
+  const tabSnsBtn = document.getElementById('office-comm-tab-sns');
+  const carrierEl = document.getElementById('comm-phone-carrier');
+  const phoneDateEl = document.getElementById('comm-phone-date');
   if (!inboxListEl || !newsListEl) return;
 
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   const msgs = Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages : [];
   const news = Array.isArray(gameState.newsFeed) ? gameState.newsFeed : [];
-  const activeTab = gameState.officeCommTab === 'news' ? 'news' : 'messages';
+  const snsPosts = Array.isArray(gameState.snsFeed) ? gameState.snsFeed : [];
+  const activeTab = (gameState.officeCommTab === 'news' || gameState.officeCommTab === 'sns') ? gameState.officeCommTab : 'messages';
+  if (activeTab === 'sns') {
+    gameState.snsUnreadCount = 0;
+  }
   const unreadCount = msgs.filter(m => m && !m.read).length;
+  const snsBadgeNum = activeTab === 'sns' ? snsPosts.length : (gameState.snsUnreadCount > 0 ? gameState.snsUnreadCount : snsPosts.length);
+
+  if (carrierEl) {
+    const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    carrierEl.textContent = pClub ? `${getClubShortCode(pClub)} MOBILE` : 'GM MOBILE';
+  }
+  if (phoneDateEl) {
+    phoneDateEl.textContent = getCurrentCommDateLabel();
+  }
 
   if (unreadBadgeEl) {
     unreadBadgeEl.textContent = `${unreadCount}`;
@@ -22735,6 +22812,10 @@ function renderOfficeCommPanel() {
   }
   if (newsBadgeEl) {
     newsBadgeEl.textContent = `${news.length}`;
+  }
+  if (snsBadgeEl) {
+    snsBadgeEl.textContent = `${snsBadgeNum}`;
+    snsBadgeEl.classList.toggle('has-unread', activeTab !== 'sns' && (gameState.snsUnreadCount || 0) > 0);
   }
   if (tabMessagesBtn) {
     tabMessagesBtn.classList.toggle('active', activeTab === 'messages');
@@ -22744,12 +22825,13 @@ function renderOfficeCommPanel() {
     tabNewsBtn.classList.toggle('active', activeTab === 'news');
     tabNewsBtn.setAttribute('aria-selected', activeTab === 'news' ? 'true' : 'false');
   }
-  if (controlsEl) {
-    controlsEl.classList.toggle('hidden', activeTab !== 'messages');
+  if (tabSnsBtn) {
+    tabSnsBtn.classList.toggle('active', activeTab === 'sns');
+    tabSnsBtn.setAttribute('aria-selected', activeTab === 'sns' ? 'true' : 'false');
   }
-  if (newsControlsEl) {
-    newsControlsEl.classList.toggle('hidden', activeTab !== 'news');
-  }
+  if (controlsEl) controlsEl.classList.toggle('hidden', activeTab !== 'messages');
+  if (newsControlsEl) newsControlsEl.classList.toggle('hidden', activeTab !== 'news');
+  if (snsControlsEl) snsControlsEl.classList.toggle('hidden', activeTab !== 'sns');
 
   document.querySelectorAll('#inbox-filter-bar .btn-inbox-filter').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.inboxFilter === (gameState.inboxCategoryFilter || 'ALL'));
@@ -22757,10 +22839,14 @@ function renderOfficeCommPanel() {
   document.querySelectorAll('#news-filter-bar .btn-inbox-filter').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.newsFilter === (gameState.newsCategoryFilter || 'ALL'));
   });
+  document.querySelectorAll('#sns-filter-bar .btn-inbox-filter').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.snsFilter === (gameState.snsCategoryFilter || 'ALL'));
+  });
 
   if (activeTab === 'messages') {
     inboxListEl.classList.remove('hidden');
     newsListEl.classList.add('hidden');
+    if (snsListEl) snsListEl.classList.add('hidden');
 
     const catFilter = gameState.inboxCategoryFilter || 'ALL';
     const filtered = msgs.filter(m => m && (catFilter === 'ALL' || m.senderType === catFilter));
@@ -22796,9 +22882,10 @@ function renderOfficeCommPanel() {
         </div>
       `;
     }).join('');
-  } else {
+  } else if (activeTab === 'news') {
     inboxListEl.classList.add('hidden');
     newsListEl.classList.remove('hidden');
+    if (snsListEl) snsListEl.classList.add('hidden');
 
     const newsCatFilter = gameState.newsCategoryFilter || 'ALL';
     const filteredNews = news.filter(n => {
@@ -22845,6 +22932,76 @@ function renderOfficeCommPanel() {
       `;
     }).join('');
     if (typeof renderAvatarCanvases === 'function') renderAvatarCanvases(newsListEl);
+  } else {
+    inboxListEl.classList.add('hidden');
+    newsListEl.classList.add('hidden');
+    if (!snsListEl) return;
+    snsListEl.classList.remove('hidden');
+
+    const tagCounts = new Map();
+    snsPosts.slice(0, 20).forEach(post => {
+      (post && Array.isArray(post.tags) ? post.tags : []).forEach(tag => {
+        if (!tag) return;
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      });
+    });
+    if (snsTrendsEl) {
+      const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
+      snsTrendsEl.innerHTML = topTags.length > 0
+        ? topTags.map(t => `<span class="comm-sns-trend-item">${escapeCommHtml(t)}</span>`).join('')
+        : '<span class="comm-sns-trend-item">#試合速報</span>';
+    }
+
+    const snsFilter = gameState.snsCategoryFilter || 'ALL';
+    const filteredSns = snsPosts.filter(p => p && (snsFilter === 'ALL' || p.authorType === snsFilter));
+    if (filteredSns.length === 0) {
+      snsListEl.innerHTML = '<div class="comm-empty-msg">該当するSNS投稿はまだありません。</div>';
+      return;
+    }
+
+    const roleLabelMap = { fan: 'ファン', media: 'メディア', official: '公式' };
+    const pClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+    snsListEl.innerHTML = filteredSns.slice(0, 30).map(post => {
+      const roleCls = `is-role-${post.authorType || 'fan'}`;
+      const avatarHtml = (post.authorType === 'official' && pClub && typeof getClubEmblemSvg === 'function')
+        ? `<div class="sns-avatar-circle is-official">${getClubEmblemSvg(pClub, 24, 'sns-official-emblem')}</div>`
+        : `<div class="sns-avatar-circle ${roleCls} mono">${escapeCommHtml((post.displayName || 'U').slice(0, 1))}</div>`;
+      const tagsLine = (Array.isArray(post.tags) && post.tags.length > 0)
+        ? `<div class="sns-post-tags mono">${post.tags.slice(0, 3).map(t => `<span>${escapeCommHtml(t)}</span>`).join('')}</div>`
+        : '';
+      const likedCls = post.likedByPlayer ? 'is-liked' : '';
+      return `
+        <article class="sns-post-row ${post.highlight ? 'is-highlight' : ''}">
+          ${avatarHtml}
+          <div class="sns-post-main">
+            <div class="sns-post-head">
+              <div class="sns-author-wrap">
+                <span class="sns-author-name">${escapeCommHtml(post.displayName)}</span>
+                <span class="sns-author-role ${roleCls}">${roleLabelMap[post.authorType] || 'ファン'}</span>
+                <span class="sns-author-handle mono">${escapeCommHtml(post.handle)}</span>
+              </div>
+              <span class="comm-date-text mono">${escapeCommHtml(post.date || '')}</span>
+            </div>
+            <p class="sns-post-body">${escapeCommHtml(post.body)}</p>
+            ${tagsLine}
+            <div class="sns-post-actions mono">
+              <span class="sns-action-metric" aria-label="返信">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2.5 3.5h11v7H7l-3 2.5v-2.5H2.5z"/></svg>
+                <span>${Number(post.replies || 0)}</span>
+              </span>
+              <span class="sns-action-metric" aria-label="リポスト">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 5.5h8l-2-2m2 2l-2 2M13 10.5H5l2-2m-2 2l2 2"/></svg>
+                <span>${Number(post.reposts || 0).toLocaleString()}</span>
+              </span>
+              <button type="button" class="sns-like-btn ${likedCls}" data-sns-like-id="${escapeCommHtml(post.id)}" aria-pressed="${post.likedByPlayer ? 'true' : 'false'}">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="${post.likedByPlayer ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 13.5S2.5 9.8 2.5 5.8A3 3 0 0 1 8 4.2a3 3 0 0 1 5.5 1.6c0 4-5.5 7.7-5.5 7.7z"/></svg>
+                <span>${Number(post.likes || 0).toLocaleString()}</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
   }
 }
 
@@ -23096,6 +23253,7 @@ function handleInboxMessageAction(actionType, payload) {
 function initOfficeCommAndSecretaryEvents() {
   const tabMessages = document.getElementById('office-comm-tab-messages');
   const tabNews = document.getElementById('office-comm-tab-news');
+  const tabSns = document.getElementById('office-comm-tab-sns');
   if (tabMessages) {
     tabMessages.addEventListener('click', () => {
       gameState.officeCommTab = 'messages';
@@ -23105,6 +23263,13 @@ function initOfficeCommAndSecretaryEvents() {
   if (tabNews) {
     tabNews.addEventListener('click', () => {
       gameState.officeCommTab = 'news';
+      renderOfficeCommPanel();
+    });
+  }
+  if (tabSns) {
+    tabSns.addEventListener('click', () => {
+      gameState.officeCommTab = 'sns';
+      gameState.snsUnreadCount = 0;
       renderOfficeCommPanel();
     });
   }
@@ -23126,6 +23291,26 @@ function initOfficeCommAndSecretaryEvents() {
       if (!btn || !btn.dataset.newsFilter) return;
       gameState.newsCategoryFilter = btn.dataset.newsFilter;
       renderOfficeCommPanel();
+    });
+  }
+
+  const snsFilterBar = document.getElementById('sns-filter-bar');
+  if (snsFilterBar) {
+    snsFilterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sns-filter]');
+      if (!btn || !btn.dataset.snsFilter) return;
+      gameState.snsCategoryFilter = btn.dataset.snsFilter;
+      renderOfficeCommPanel();
+    });
+  }
+
+  const snsListEl = document.getElementById('office-sns-list');
+  if (snsListEl) {
+    snsListEl.addEventListener('click', (e) => {
+      const likeBtn = e.target.closest('[data-sns-like-id]');
+      if (likeBtn && likeBtn.dataset.snsLikeId) {
+        toggleSnsPostLike(likeBtn.dataset.snsLikeId);
+      }
     });
   }
 
@@ -24621,6 +24806,9 @@ function confirmCommercialSetupTask() {
     const costNote = buildCostK > 0 ? `・建設費 -${formatMoney(buildCostK)}精算` : '';
     addDailyLog(`【興行計画確定】${proj.stadium.name}（${proj.totalCapacity.toLocaleString()}席 / 予想来場 ${proj.totalAttendance.toLocaleString()}人${costNote}）にて今季の興行設定を確定しました（1試合予想純収益 ${proj.netMatchdayIncomeK >= 0 ? '+' : ''}${formatMoney(proj.netMatchdayIncomeK)} · シーズン中変更不可）。`);
   }
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('commercial_confirmed', { club: playerClub, stadium: proj ? proj.stadium : null, proj, buildCostK });
+  }
   renderAll();
   if (buildCostK > 0 && proj && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
     CinematicOverlay.enqueue({
@@ -24987,4 +25175,609 @@ function renderCommercialManagementPanel() {
   `;
 }
 
+// ==========================================================================
+// Phase 1: ダービー・ビッグマッチ判定 ＆ GMモバイルSNSフィード生成エンジン
+// ==========================================================================
+function getClubTopPlayer(club) {
+  if (!club || !Array.isArray(club.players) || club.players.length === 0) return null;
+  const active = club.players.filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const pool = active.filter(p => p.isStarter);
+  const src = pool.length > 0 ? pool : active;
+  if (src.length === 0) return null;
+  return [...src].sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0];
+}
 
+function computeHeadToHeadText(clubAId, clubBId) {
+  const history = Array.isArray(gameState.matchHistory) ? gameState.matchHistory : [];
+  let wins = 0;
+  let draws = 0;
+  let losses = 0;
+  for (const m of history) {
+    if (!m || !m.homeClub || !m.awayClub) continue;
+    const hId = m.homeClub.id;
+    const aId = m.awayClub.id;
+    if ((hId === clubAId && aId === clubBId) || (hId === clubBId && aId === clubAId)) {
+      const aScore = hId === clubAId ? (m.homeScore || 0) : (m.awayScore || 0);
+      const bScore = hId === clubAId ? (m.awayScore || 0) : (m.homeScore || 0);
+      if (aScore > bScore) wins += 1;
+      else if (aScore < bScore) losses += 1;
+      else draws += 1;
+    }
+  }
+  const total = wins + draws + losses;
+  if (total === 0) return '今季初対戦';
+  return `今季対戦 ${wins}勝${draws}分${losses}敗`;
+}
+
+function evaluateSpecialFixtureContext(homeClub, awayClub, matchInfo = null) {
+  if (!homeClub || !awayClub) return null;
+  const idA = homeClub.id;
+  const idB = awayClub.id;
+  const titleStr = (matchInfo && matchInfo.title) ? String(matchInfo.title) : '';
+  const seasonNum = gameState.season || 1;
+  const weekNum = gameState.currentWeek || 0;
+  const homeStar = getClubTopPlayer(homeClub);
+  const awayStar = getClubTopPlayer(awayClub);
+  const h2hText = computeHeadToHeadText(homeClub.isPlayer ? idA : idB, homeClub.isPlayer ? idB : idA);
+
+  if (titleStr && /(決勝|準決勝)/.test(titleStr) && !titleStr.includes('プレーオフ')) {
+    const isFinal = titleStr.includes('決勝') && !titleStr.includes('準決勝');
+    return {
+      key: `s${seasonNum}_cup_${titleStr}_${idA}_${idB}`,
+      kind: 'final',
+      label: isFinal ? `${titleStr} (BIG MATCH)` : `${titleStr} 大一番`,
+      theme: 'gold',
+      attendanceBoost: isFinal ? 0.20 : 0.14,
+      fanWinMult: isFinal ? 2.0 : 1.6,
+      homeStar,
+      awayStar,
+      h2hText
+    };
+  }
+
+  const matchups = typeof DERBY_MATCHUPS !== 'undefined' && Array.isArray(DERBY_MATCHUPS) ? DERBY_MATCHUPS : [];
+  for (const d of matchups) {
+    if ((d.a === idA && d.b === idB) || (d.a === idB && d.b === idA)) {
+      return {
+        key: `s${seasonNum}_w${weekNum}_${d.key}_${idA}_${idB}`,
+        kind: d.kind || 'derby',
+        label: d.label,
+        theme: d.theme || 'gold',
+        attendanceBoost: d.attendanceBoost || 0.15,
+        fanWinMult: d.fanWinMult || 1.8,
+        homeStar,
+        awayStar,
+        h2hText
+      };
+    }
+  }
+
+  const londonIds = typeof LONDON_DERBY_CLUB_IDS !== 'undefined' && Array.isArray(LONDON_DERBY_CLUB_IDS) ? LONDON_DERBY_CLUB_IDS : [];
+  if (londonIds.includes(idA) && londonIds.includes(idB)) {
+    return {
+      key: `s${seasonNum}_w${weekNum}_london_${idA}_${idB}`,
+      kind: 'derby',
+      label: 'ロンドン・ダービー',
+      theme: 'green',
+      attendanceBoost: 0.12,
+      fanWinMult: 1.5,
+      homeStar,
+      awayStar,
+      h2hText
+    };
+  }
+
+  const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : [];
+  if (leagueClubs.length >= 16 && weekNum >= 10) {
+    const sorted = typeof sortLeagueStandings === 'function'
+      ? sortLeagueStandings(leagueClubs)
+      : [...leagueClubs].sort((a, b) => (b.pts || 0) - (a.pts || 0) || (b.gd || 0) - (a.gd || 0));
+    const idxA = sorted.findIndex(c => c.id === idA);
+    const idxB = sorted.findIndex(c => c.id === idB);
+    if (idxA !== -1 && idxB !== -1) {
+      const ptsDiff = Math.abs((sorted[idxA].pts || 0) - (sorted[idxB].pts || 0));
+      if (idxA < 4 && idxB < 4 && ptsDiff <= 6) {
+        return {
+          key: `s${seasonNum}_w${weekNum}_top_${idA}_${idB}`,
+          kind: 'clash',
+          label: '上位直接対決',
+          theme: 'gold',
+          attendanceBoost: 0.14,
+          fanWinMult: 1.6,
+          homeStar,
+          awayStar,
+          h2hText
+        };
+      }
+      if (weekNum >= 25 && idxA >= sorted.length - 6 && idxB >= sorted.length - 6) {
+        return {
+          key: `s${seasonNum}_w${weekNum}_relegation_${idA}_${idB}`,
+          kind: 'clash',
+          label: '残留争い直接対決',
+          theme: 'crimson',
+          attendanceBoost: 0.12,
+          fanWinMult: 1.5,
+          homeStar,
+          awayStar,
+          h2hText
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function maybeTriggerSpecialMatchEveBriefing(nextDay) {
+  if (!nextDay || !Array.isArray(gameState.calendar)) return false;
+  const afterDay = gameState.calendar[gameState.currentDayIndex + 1];
+  if (!afterDay || afterDay.played) return false;
+  if (!afterDay.isMatchDay && !afterDay.isCupMatchDay) return false;
+  const mInfo = typeof getCalendarDayPlayerMatch === 'function' ? getCalendarDayPlayerMatch(afterDay) : null;
+  if (!mInfo || !mInfo.oppClub) return false;
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!playerClub) return false;
+  const home = mInfo.isHome ? playerClub : mInfo.oppClub;
+  const away = mInfo.isHome ? mInfo.oppClub : playerClub;
+  const sf = evaluateSpecialFixtureContext(home, away, mInfo);
+  if (!sf) return false;
+
+  if (gameState._notifiedSpecialMatchKey === sf.key) return false;
+  gameState._notifiedSpecialMatchKey = sf.key;
+
+  const isDerby = sf.kind === 'derby' || sf.kind === 'classic';
+  const fanBonusLabel = `ファン総数 ${sf.fanWinMult.toFixed(1)}倍ボーナス`;
+  const oppName = mInfo.oppClub.name || '強敵';
+
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【注目カード前夜】明日（${afterDay.displayDate}）は ${sf.label} vs ${oppName}（${mInfo.isHome ? 'HOME' : 'AWAY'}）が開催されます！`);
+  }
+  if (typeof addInboxMessage === 'function') {
+    const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : { name: '秘書' };
+    addInboxMessage({
+      senderType: 'secretary',
+      senderName: sec.name,
+      title: `明日開催：${sf.label}（vs ${oppName}）の事前ご案内`,
+      body: `明日（${afterDay.displayDate}）は注目の一戦「${sf.label}」です。${mInfo.isHome ? `本拠地動員 +${Math.round(sf.attendanceBoost * 100)}% の後押しを受け、` : ''}勝利時は ${fanBonusLabel} が加算されます。スタメンと戦術をご確認ください。`,
+      actionType: 'goto-pitch',
+      actionLabel: '作戦ボードを確認'
+    });
+  }
+
+  if (typeof showSecretaryModal === 'function' && typeof document !== 'undefined') {
+    const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
+    const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
+      ? SecretaryDialogue.getEventDialogue('special_match_eve', {
+          matchLabel: sf.label,
+          oppName,
+          isHome: mInfo.isHome,
+          displayDate: afterDay.displayDate,
+          isDerby,
+          fanBonusLabel
+        }, sec)
+      : { pages: [`明日（${afterDay.displayDate}）は「${sf.label}」vs ${oppName} です。`] };
+    showSecretaryModal({
+      topic: '注目カード前夜案内',
+      title: `明日開催：${sf.label}`,
+      speechPages: dlg.pages,
+      detailHtml: `
+        <div class="gm-modal-flat-list">
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">対戦相手</span><span class="gm-modal-flat-val">${escapeCommHtml(oppName)} (${mInfo.isHome ? 'HOME' : 'AWAY'})</span></div>
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">注目データ</span><span class="gm-modal-flat-val mono">${escapeCommHtml(sf.h2hText)}</span></div>
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">勝利特典</span><span class="gm-modal-flat-val mono accent-green">${escapeCommHtml(fanBonusLabel)}</span></div>
+        </div>
+      `,
+      actions: [
+        {
+          label: '作戦ボードを確認',
+          className: 'btn btn-secondary',
+          onClick: () => { if (typeof switchTab === 'function') switchTab('roster'); }
+        },
+        {
+          label: '試合へ向かう準備OK',
+          className: 'btn btn-primary',
+          onClick: () => { if (typeof renderAll === 'function') renderAll(); }
+        }
+      ]
+    });
+  }
+  return true;
+}
+
+function addSnsPost({ authorType = 'fan', displayName = 'サポーター', handle = '@club_supporter', body = '', tags = [], likes = 120, reposts = 18, replies = 6, clubId = null, playerId = null, highlight = false }) {
+  if (!body) return null;
+  if (!Array.isArray(gameState.snsFeed)) gameState.snsFeed = [];
+  const item = {
+    id: `sns_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    date: typeof getCurrentCommDateLabel === 'function' ? getCurrentCommDateLabel() : '',
+    dayIndex: gameState.currentDayIndex || 0,
+    season: gameState.season || 1,
+    authorType,
+    displayName,
+    handle,
+    body,
+    tags: Array.isArray(tags) ? tags.slice(0, 3) : [],
+    likes: Math.max(0, Math.round(likes)),
+    reposts: Math.max(0, Math.round(reposts)),
+    replies: Math.max(0, Math.round(replies)),
+    likedByPlayer: false,
+    clubId: clubId || null,
+    playerId: playerId || null,
+    highlight: Boolean(highlight)
+  };
+  gameState.snsFeed.unshift(item);
+  if (gameState.snsFeed.length > 40) {
+    gameState.snsFeed = gameState.snsFeed.slice(0, 40);
+  }
+  if (gameState.officeCommTab !== 'sns') {
+    gameState.snsUnreadCount = (gameState.snsUnreadCount || 0) + 1;
+  }
+  return item;
+}
+
+function toggleSnsPostLike(postId) {
+  if (!Array.isArray(gameState.snsFeed)) return false;
+  const post = gameState.snsFeed.find(p => p && p.id === postId);
+  if (!post) return false;
+  post.likedByPlayer = !post.likedByPlayer;
+  post.likes = Math.max(0, (post.likes || 0) + (post.likedByPlayer ? 1 : -1));
+  if (typeof renderOfficeCommPanel === 'function') renderOfficeCommPanel();
+  if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+  return true;
+}
+
+function pickSnsAccounts(role, count = 1) {
+  const pools = typeof SNS_ACCOUNT_POOLS !== 'undefined' && SNS_ACCOUNT_POOLS ? SNS_ACCOUNT_POOLS : { fan: [], media: [] };
+  const list = Array.isArray(pools[role]) && pools[role].length > 0
+    ? pools[role]
+    : [{ displayName: role === 'media' ? 'FOOTBALL WIRE' : 'クラブサポ', handle: role === 'media' ? '@football_wire' : '@club_supporter' }];
+  const picked = [];
+  const baseIdx = Math.floor(Math.random() * list.length);
+  for (let i = 0; i < count; i++) {
+    picked.push(list[(baseIdx + i * 3) % list.length]);
+  }
+  return picked;
+}
+
+function generateEventSnsReactions(eventType, ctx = {}) {
+  const playerClub = ctx.club || (typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+  if (!playerClub) return;
+  const shortCode = typeof getClubShortCode === 'function' ? getClubShortCode(playerClub) : 'CLUB';
+  const clubTag = `#${shortCode}`;
+  const fanPopScale = Math.max(1, Math.round((playerClub.supporters || 20000) / 8000));
+  const officialName = `${playerClub.name} 公式`;
+  const officialHandle = `@${String(shortCode).toLowerCase()}_official`;
+
+  if (eventType === 'career_start') {
+    const fans = pickSnsAccounts('fan', 2);
+    const media = pickSnsAccounts('media', 1)[0];
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `新GMとして ${gameState.gmName || '新GM'} 氏が就任。目標「${playerClub.targetLabel || '上位進出'}」へ向け、新たなシーズンが始動します。ファン・サポーターの皆様、今季も熱い応援をよろしくお願いいたします。`,
+      tags: [clubTag, '#新体制始動'],
+      likes: 420 * fanPopScale,
+      reposts: 110 * fanPopScale,
+      replies: 42 * fanPopScale,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'media',
+      displayName: media.displayName,
+      handle: media.handle,
+      body: `${playerClub.name}は ${gameState.gmName || '新GM'} 体制で夏市場へ突入。指揮官・コーチ陣の選定と補強第1号のターゲットに大きな注目が集まる。`,
+      tags: [clubTag, '#移籍市場'],
+      likes: 260 * fanPopScale,
+      reposts: 68 * fanPopScale,
+      replies: 29,
+      clubId: playerClub.id
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `新GMの補強方針に期待。安全予算を守りつつ、手薄なポジションに即戦力を呼べるかどうかが今夏のカギになりそう。`,
+      tags: [clubTag],
+      likes: 94 * fanPopScale,
+      reposts: 19,
+      replies: 11,
+      clubId: playerClub.id
+    });
+    return;
+  }
+
+  if (eventType === 'match_result' && ctx.matchData) {
+    const md = ctx.matchData;
+    const isHome = Boolean(md.isPlayerHome);
+    const myScore = isHome ? (md.homeScore || 0) : (md.awayScore || 0);
+    const oppScore = isHome ? (md.awayScore || 0) : (md.homeScore || 0);
+    const oppClub = isHome ? md.awayClub : md.homeClub;
+    const oppName = oppClub ? oppClub.name : '相手クラブ';
+    const userWon = (md.pkHome != null && md.pkAway != null) ? Boolean(md.userWon) : (myScore > oppScore);
+    const userDraw = !userWon && (md.pkHome == null) && myScore === oppScore;
+    const compLabel = md.compTitle || (md.week ? `第${md.week}節` : '公式戦');
+    const sf = md.specialContext || (oppClub ? evaluateSpecialFixtureContext(md.homeClub, md.awayClub, { title: compLabel }) : null);
+    const momName = (md.momPlayer && md.momClub && md.momClub.id === playerClub.id) ? md.momPlayer.name : null;
+    const fans = pickSnsAccounts('fan', 2);
+    const media = pickSnsAccounts('media', 1)[0];
+
+    if (userWon) {
+      const diff = myScore - oppScore;
+      const winHeadline = sf ? `${sf.label}制覇！` : (diff >= 3 ? `${myScore}-${oppScore} の大勝！` : `${oppName}戦 ${myScore}-${oppScore} 勝利！`);
+      addSnsPost({
+        authorType: 'official',
+        displayName: officialName,
+        handle: officialHandle,
+        body: `FULL TIME｜${compLabel} ${playerClub.name} ${myScore}-${oppScore} ${oppName}。${isHome && md.commercialBreakdown ? `${md.commercialBreakdown.totalAttendance.toLocaleString()}人の大声援、誠にありがとうございました！` : 'アウェイまで駆けつけたファンの声援が勝利を後押ししました。'}`,
+        tags: [clubTag, sf ? `#${sf.label.replace(/[・\s()（）]/g, '')}` : '#勝利'],
+        likes: (sf ? 980 : 560) * fanPopScale,
+        reposts: (sf ? 310 : 145) * fanPopScale,
+        replies: 64 * fanPopScale,
+        clubId: playerClub.id,
+        highlight: Boolean(sf || diff >= 3)
+      });
+      addSnsPost({
+        authorType: 'fan',
+        displayName: fans[0].displayName,
+        handle: fans[0].handle,
+        body: momName
+          ? `${winHeadline} 今日の ${momName} は完全に別格だった。この調子なら目標順位どころか上も狙えるぞ！`
+          : `${winHeadline} 最後の笛が鳴るまで集中が切れなかったのが最高。今夜のビールが美味い。`,
+        tags: [clubTag, momName ? `#${momName.replace(/\s+/g, '')}` : '#ナイスゲーム'],
+        likes: (sf ? 430 : 210) * fanPopScale,
+        reposts: 44 * fanPopScale,
+        replies: 18,
+        clubId: playerClub.id
+      });
+      if (sf || diff >= 2) {
+        addSnsPost({
+          authorType: 'media',
+          displayName: media.displayName,
+          handle: media.handle,
+          body: `${playerClub.name}が${compLabel}で ${oppName} に ${myScore}-${oppScore} で勝利。戦術の噛み合いと攻守の切り替えが際立った90分だった。`,
+          tags: [clubTag, '#試合分析'],
+          likes: 310 * fanPopScale,
+          reposts: 82 * fanPopScale,
+          replies: 24,
+          clubId: playerClub.id
+        });
+      }
+    } else if (userDraw) {
+      addSnsPost({
+        authorType: 'fan',
+        displayName: fans[0].displayName,
+        handle: fans[0].handle,
+        body: `${compLabel} ${oppName}戦は ${myScore}-${oppScore} のドロー。あと一歩で勝ち切れそうだっただけに少し悔しいが、勝ち点1を拾えたのは悪くない。`,
+        tags: [clubTag, '#次戦必勝'],
+        likes: 140 * fanPopScale,
+        reposts: 22,
+        replies: 15,
+        clubId: playerClub.id
+      });
+      addSnsPost({
+        authorType: 'media',
+        displayName: media.displayName,
+        handle: media.handle,
+        body: `${playerClub.name}は ${oppName} と ${myScore}-${oppScore} で痛み分け。過密日程のなか疲労管理とベンチワークが次の焦点になる。`,
+        tags: [clubTag],
+        likes: 165 * fanPopScale,
+        reposts: 31,
+        replies: 12,
+        clubId: playerClub.id
+      });
+    } else {
+      addSnsPost({
+        authorType: 'fan',
+        displayName: fans[0].displayName,
+        handle: fans[0].handle,
+        body: `${oppName}戦 ${myScore}-${oppScore} 敗戦は厳しい…。だがシーズンは長い。監督と選手たちを信じて次節のホーム戦に切り替えよう。`,
+        tags: [clubTag, '#切り替えよう'],
+        likes: 115 * fanPopScale,
+        reposts: 16,
+        replies: 27,
+        clubId: playerClub.id
+      });
+      addSnsPost({
+        authorType: 'media',
+        displayName: media.displayName,
+        handle: media.handle,
+        body: `${playerClub.name}、${compLabel} で ${oppName} に ${myScore}-${oppScore} の黒星。失点場面の対応と先発ローテーションの再点検が急務か。`,
+        tags: [clubTag, '#戦術レビュー'],
+        likes: 205 * fanPopScale,
+        reposts: 46,
+        replies: 33,
+        clubId: playerClub.id
+      });
+    }
+    return;
+  }
+
+  if (eventType === 'player_signing' && ctx.player) {
+    const p = ctx.player;
+    const ovr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 70;
+    const fans = pickSnsAccounts('fan', 2);
+    const media = pickSnsAccounts('media', 1)[0];
+    const dealText = ctx.dealType === 'pre_contract'
+      ? `来季加入内定（事前合意）`
+      : (ctx.dealType === 'loan' ? `期限付き加入` : (ctx.dealType === 'free_agent' ? `フリー加入` : `完全移籍加入`));
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `【契約発表】${p.fullName || p.name} 選手（${p.pos} / ${p.age}歳）の${dealText}が決定しました。当クラブでの活躍にご期待ください！`,
+      tags: [clubTag, '#新加入'],
+      likes: (ovr >= 82 ? 1250 : 620) * fanPopScale,
+      reposts: (ovr >= 82 ? 410 : 180) * fanPopScale,
+      replies: 78 * fanPopScale,
+      clubId: playerClub.id,
+      playerId: p.id,
+      highlight: ovr >= 82
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${p.name}（OVR ${ovr}）獲得きたあああ！${ctx.dealType === 'pre_contract' ? '移籍金£0での来季内定はフロントのファインプレー。' : 'ユニフォーム即買い決定！週末の試合が楽しみすぎる。'}`,
+      tags: [clubTag, `#${p.pos}`],
+      likes: 290 * fanPopScale,
+      reposts: 54 * fanPopScale,
+      replies: 21,
+      clubId: playerClub.id,
+      playerId: p.id
+    });
+    if (ovr >= 80) {
+      addSnsPost({
+        authorType: 'media',
+        displayName: media.displayName,
+        handle: media.handle,
+        body: `【移籍評】${playerClub.name}が獲得した ${p.name} は現スカッドの質を一段引き上げる補強。GMの予算配分と交渉手腕が光った。`,
+        tags: [clubTag, '#移籍評価'],
+        likes: 340 * fanPopScale,
+        reposts: 72 * fanPopScale,
+        replies: 19,
+        clubId: playerClub.id,
+        playerId: p.id
+      });
+    }
+    return;
+  }
+
+  if (eventType === 'youth_promotion' && ctx.player) {
+    const p = ctx.player;
+    const fans = pickSnsAccounts('fan', 1);
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `アカデミー出身の ${p.name} 選手（${p.pos} / ${p.age}歳・背番号 #${p.squadNumber || '-'}）がトップチーム昇格およびプロ契約を締結しました。`,
+      tags: [clubTag, '#アカデミー昇格'],
+      likes: 690 * fanPopScale,
+      reposts: 195 * fanPopScale,
+      replies: 48 * fanPopScale,
+      clubId: playerClub.id,
+      playerId: p.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `生え抜きの ${p.name} がトップ昇格！ずっとU-21から見てきた選手がプロ契約を結ぶ瞬間が一番泣ける。背番号 #${p.squadNumber || '-'} 応援するぞ！`,
+      tags: [clubTag, '#生え抜き'],
+      likes: 260 * fanPopScale,
+      reposts: 49,
+      replies: 17,
+      clubId: playerClub.id,
+      playerId: p.id
+    });
+    return;
+  }
+
+  if (eventType === 'player_departure' && ctx.player) {
+    const p = ctx.player;
+    const fans = pickSnsAccounts('fan', 1);
+    const bodyText = ctx.reason === 'release'
+      ? `${p.name} が自由契約で退団か…。クラブへの貢献に感謝しつつ、今後の新天地での活躍を祈りたい。`
+      : `${p.name} が ${ctx.buyerName || '他クラブ'} へ移籍決定（+${formatMoney(ctx.fee || 0)}）。寂しさはあるが、この資金をどう次の補強へ回すかGMの腕の見せ所だな。`;
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: bodyText,
+      tags: [clubTag, '#感謝'],
+      likes: 185 * fanPopScale,
+      reposts: 28,
+      replies: 24,
+      clubId: playerClub.id,
+      playerId: p.id
+    });
+    return;
+  }
+
+  if (eventType === 'commercial_confirmed' && ctx.stadium) {
+    const fans = pickSnsAccounts('fan', 1);
+    const isNewBuild = (ctx.buildCostK || 0) > 0;
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `今季のホーム本拠地を「${ctx.stadium.name}」（収容 ${ctx.stadium.capacity.toLocaleString()}席）にて確定しました。チケット・グッズ展開もあわせて始動します！`,
+      tags: [clubTag, '#スタジアム'],
+      likes: (isNewBuild ? 920 : 410) * fanPopScale,
+      reposts: (isNewBuild ? 280 : 95) * fanPopScale,
+      replies: 41 * fanPopScale,
+      clubId: playerClub.id,
+      highlight: isNewBuild
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${ctx.stadium.name} での今シーズン興行プランが決定！チケット価格とスタジアム規模のバランスもいい感じだし、ホーム開幕が待ちきれない。`,
+      tags: [clubTag],
+      likes: 155 * fanPopScale,
+      reposts: 24,
+      replies: 14,
+      clubId: playerClub.id
+    });
+    return;
+  }
+
+  if (eventType === 'manager_appointed' && ctx.manager) {
+    const fans = pickSnsAccounts('fan', 1);
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `新監督に ${ctx.manager.name} 氏が就任しました（得意戦術：${ctx.tacticLabel || '攻撃的サッカー'} / 陣形：${ctx.manager.preferredFormation || '4-3-3'}）。`,
+      tags: [clubTag, '#新監督'],
+      likes: 580 * fanPopScale,
+      reposts: 160 * fanPopScale,
+      replies: 49,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${ctx.manager.name} 監督のサッカー楽しみすぎる！得意陣形 ${ctx.manager.preferredFormation || '4-3-3'} に合う補強が来るか注目。`,
+      tags: [clubTag],
+      likes: 195 * fanPopScale,
+      reposts: 35,
+      replies: 18,
+      clubId: playerClub.id
+    });
+    return;
+  }
+
+  if (eventType === 'trophy_championship') {
+    const fans = pickSnsAccounts('fan', 2);
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `CHAMPIONS｜${playerClub.name} が Season ${ctx.season || gameState.season} リーグ優勝を達成しました！選手・スタッフ・全サポーターで掴み取った最高の結果です！`,
+      tags: [clubTag, '#CHAMPIONS'],
+      likes: 2400 * fanPopScale,
+      reposts: 980 * fanPopScale,
+      replies: 310 * fanPopScale,
+      clubId: playerClub.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `優勝したああああ！！このクラブを応援し続けて本当に良かった。GMの補強も監督の采配も選手たちの走りもすべてが報われた瞬間！`,
+      tags: [clubTag, '#優勝パレード'],
+      likes: 880 * fanPopScale,
+      reposts: 210 * fanPopScale,
+      replies: 64,
+      clubId: playerClub.id
+    });
+  }
+}

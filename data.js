@@ -2682,5 +2682,51 @@ const SECRETARIES_DATABASE = [
   }
 ];
 
+// ==========================================================================
+// ダービーマッチ・因縁カード定義 & SNSアカウント辞書
+// ==========================================================================
+const LONDON_DERBY_CLUB_IDS = [
+  'northlondon_a', 'london_fc', 'northlondon_w', 'southlondon_p',
+  'westlondon_c', 'westlondon_b', 'c01', 'c15', 'c17', 'c22'
+];
+
+const DERBY_MATCHUPS = [
+  { a: 'manchester_b', b: 'manchester_r', key: 'manchester_derby', label: 'マンチェスター・ダービー', kind: 'derby', theme: 'gold', attendanceBoost: 0.16, fanWinMult: 1.8 },
+  { a: 'northlondon_a', b: 'northlondon_w', key: 'north_london_derby', label: 'ノースロンドン・ダービー', kind: 'derby', theme: 'crimson', attendanceBoost: 0.18, fanWinMult: 2.0 },
+  { a: 'liverpool_b', b: 'merseyside_b', key: 'merseyside_derby', label: 'マージーサイド・ダービー', kind: 'derby', theme: 'crimson', attendanceBoost: 0.16, fanWinMult: 1.8 },
+  { a: 'manchester_r', b: 'liverpool_b', key: 'northwest_classic', label: 'ノースウェスト・クラシック', kind: 'classic', theme: 'gold', attendanceBoost: 0.16, fanWinMult: 1.8 },
+  { a: 'newcastle_u', b: 'sunderland_a', key: 'tyne_wear_derby', label: 'タイン・ウェア・ダービー', kind: 'derby', theme: 'crimson', attendanceBoost: 0.16, fanWinMult: 1.8 },
+  { a: 'london_fc', b: 'westlondon_c', key: 'west_london_derby', label: 'ウェストロンドン・ダービー', kind: 'derby', theme: 'green', attendanceBoost: 0.14, fanWinMult: 1.6 },
+  { a: 'london_fc', b: 'westlondon_b', key: 'west_london_derby_b', label: 'ウェストロンドン・ダービー', kind: 'derby', theme: 'green', attendanceBoost: 0.14, fanWinMult: 1.6 },
+  { a: 'westlondon_c', b: 'westlondon_b', key: 'west_london_derby_c', label: 'ウェストロンドン・ダービー', kind: 'derby', theme: 'green', attendanceBoost: 0.14, fanWinMult: 1.6 },
+  { a: 'southcoast_c', b: 'c04', key: 'south_coast_derby', label: 'サウスコースト・ダービー', kind: 'derby', theme: 'green', attendanceBoost: 0.14, fanWinMult: 1.6 },
+  { a: 'southcoast_c', b: 'c20', key: 'south_coast_derby_b', label: 'サウスコースト・ダービー', kind: 'derby', theme: 'green', attendanceBoost: 0.14, fanWinMult: 1.6 },
+  { a: 'c04', b: 'c20', key: 'south_coast_derby_c', label: 'サウスコースト・ダービー', kind: 'derby', theme: 'crimson', attendanceBoost: 0.16, fanWinMult: 1.8 },
+  { a: 'aston_v', b: 'c18', key: 'second_city_derby', label: 'セカンドシティ・ダービー', kind: 'derby', theme: 'crimson', attendanceBoost: 0.15, fanWinMult: 1.7 }
+];
+
+const SNS_ACCOUNT_POOLS = {
+  fan: [
+    { displayName: 'ゴール裏の古参', handle: '@kop_veteran92' },
+    { displayName: '週末スタジアム通い', handle: '@weekend_terrace' },
+    { displayName: '戦術メモ帳', handle: '@tactics_memo_fc' },
+    { displayName: 'アカデミー箱推し', handle: '@youth_watcher' },
+    { displayName: 'アウェイ遠征組', handle: '@awaydays_ontour' },
+    { displayName: 'スタッツ好きサポ', handle: '@xg_supporter' },
+    { displayName: '南スタンド14列目', handle: '@south_stand_14' },
+    { displayName: '地元パブの常連', handle: '@matchday_pint' },
+    { displayName: '青空ユニフォーム収集家', handle: '@kit_collector_uk' },
+    { displayName: '移籍噂ウォッチャー', handle: '@window_insider_fan' }
+  ],
+  media: [
+    { displayName: 'フットボール・タイムズ番記', handle: '@ft_club_beat' },
+    { displayName: 'PITCH ANALYTICS JP', handle: '@pitch_data_lab' },
+    { displayName: '移籍市場速報デスク', handle: '@transfer_desk_live' },
+    { displayName: '英国フットボール通信', handle: '@uk_football_wire' },
+    { displayName: 'マッチデイ・レビュー', handle: '@matchday_review' }
+  ]
+};
+
+
 
 

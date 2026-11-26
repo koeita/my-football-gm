@@ -340,8 +340,13 @@
       </div>
     </section>
 
-      <!-- クラブ通信パネル（メッセージ受信箱 / ニュース） -->
-      <section class="office-comm-panel" id="office-comm-panel" aria-label="メッセージとニュース">
+      <!-- クラブ通信パネル（GMモバイル風：メッセージ / ニュース / SNS） -->
+      <section class="office-comm-panel gm-phone-shell" id="office-comm-panel" aria-label="メッセージとニュースとSNS">
+        <div class="comm-phone-statusbar mono" id="comm-phone-statusbar" aria-hidden="true">
+          <span class="comm-phone-carrier" id="comm-phone-carrier">GM MOBILE</span>
+          <span class="comm-phone-notch"></span>
+          <span class="comm-phone-date" id="comm-phone-date">7/1 (水)</span>
+        </div>
         <div class="office-comm-header">
           <div class="office-comm-tabs" role="tablist">
             <button type="button" class="office-comm-tab active" data-comm-tab="messages" id="office-comm-tab-messages" role="tab" aria-selected="true">
@@ -349,6 +354,9 @@
             </button>
             <button type="button" class="office-comm-tab" data-comm-tab="news" id="office-comm-tab-news" role="tab" aria-selected="false">
               ニュース <span class="comm-tab-count mono" id="office-news-badge">0</span>
+            </button>
+            <button type="button" class="office-comm-tab" data-comm-tab="sns" id="office-comm-tab-sns" role="tab" aria-selected="false">
+              SNS <span class="comm-tab-count mono" id="office-sns-badge">0</span>
             </button>
           </div>
           <div class="office-comm-controls" id="office-inbox-controls">
@@ -372,6 +380,15 @@
               <button type="button" class="btn-inbox-filter" data-news-filter="監督">監督</button>
             </div>
           </div>
+          <div class="office-comm-controls hidden" id="office-sns-controls">
+            <div class="inbox-filter-group" id="sns-filter-bar">
+              <button type="button" class="btn-inbox-filter active" data-sns-filter="ALL">すべて</button>
+              <button type="button" class="btn-inbox-filter" data-sns-filter="fan">ファン</button>
+              <button type="button" class="btn-inbox-filter" data-sns-filter="media">メディア</button>
+              <button type="button" class="btn-inbox-filter" data-sns-filter="official">公式</button>
+            </div>
+            <div class="comm-sns-trends mono" id="office-sns-trends"></div>
+          </div>
         </div>
         <div class="office-comm-body">
           <div class="office-inbox-list" id="office-inbox-list">
@@ -380,7 +397,11 @@
           <div class="office-news-list hidden" id="office-news-list">
             <!-- JSでリーグ・移籍ニュースフラットリストを描画 -->
           </div>
+          <div class="office-sns-list hidden" id="office-sns-list">
+            <!-- JSでファンSNS・メディア投稿タイムラインを描画 -->
+          </div>
         </div>
+        <div class="comm-phone-homebar" aria-hidden="true"><span></span></div>
       </section>
   </main>
 

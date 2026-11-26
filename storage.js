@@ -291,6 +291,10 @@ function saveGameToStorage(force = false) {
         secretaryId: gameState.secretaryId || 'sec_claire',
         inboxMessages: Array.isArray(gameState.inboxMessages) ? gameState.inboxMessages.slice(0, 40) : [],
         newsFeed: Array.isArray(gameState.newsFeed) ? gameState.newsFeed.slice(0, 40) : [],
+        snsFeed: Array.isArray(gameState.snsFeed) ? gameState.snsFeed.slice(0, 40) : [],
+        snsUnreadCount: Number(gameState.snsUnreadCount || 0),
+        snsCategoryFilter: gameState.snsCategoryFilter || 'ALL',
+        _notifiedSpecialMatchKey: gameState._notifiedSpecialMatchKey || null,
         managerWishes: gameState.managerWishes || null,
         officeCommTab: gameState.officeCommTab || 'messages',
         inboxCategoryFilter: gameState.inboxCategoryFilter || 'ALL',
@@ -489,6 +493,7 @@ function saveGameToStorage(force = false) {
       payload.state.dailyLogs = Array.isArray(payload.state.dailyLogs) ? payload.state.dailyLogs.slice(0, 20) : [];
       payload.state.inboxMessages = Array.isArray(payload.state.inboxMessages) ? payload.state.inboxMessages.slice(0, 20) : [];
       payload.state.newsFeed = Array.isArray(payload.state.newsFeed) ? payload.state.newsFeed.slice(0, 20) : [];
+      payload.state.snsFeed = Array.isArray(payload.state.snsFeed) ? payload.state.snsFeed.slice(0, 20) : [];
       if (Array.isArray(payload.state.calendar)) {
         payload.state.calendar = payload.state.calendar.map(d => {
           if (!d || !d.matchResult) return d;
@@ -567,6 +572,7 @@ function saveGameToStorage(force = false) {
           payload.state.dailyLogs = [];
           payload.state.inboxMessages = [];
           payload.state.newsFeed = [];
+          payload.state.snsFeed = [];
           payload.state.monthlyPlayerBaseline = {};
           payload.state.competitionStats = {};
           if (payload.state.competitions && payload.state.competitions._foreignClubPlayers) {
@@ -1073,6 +1079,10 @@ function loadGameFromStorage() {
     if (!gameState.secretaryId) gameState.secretaryId = 'sec_claire';
     if (!Array.isArray(gameState.inboxMessages)) gameState.inboxMessages = [];
     if (!Array.isArray(gameState.newsFeed)) gameState.newsFeed = [];
+    if (!Array.isArray(gameState.snsFeed)) gameState.snsFeed = [];
+    if (typeof gameState.snsUnreadCount !== 'number') gameState.snsUnreadCount = 0;
+    if (!gameState.snsCategoryFilter) gameState.snsCategoryFilter = 'ALL';
+    if (gameState._notifiedSpecialMatchKey === undefined) gameState._notifiedSpecialMatchKey = null;
     if (gameState.managerWishes === undefined) gameState.managerWishes = null;
     if (!gameState.officeCommTab) gameState.officeCommTab = 'messages';
     if (!gameState.inboxCategoryFilter) gameState.inboxCategoryFilter = 'ALL';
@@ -1106,7 +1116,7 @@ function loadGameFromStorage() {
     if (pClubLoaded && !gameState.managerWishes && typeof evaluateManagerReinforcementWishes === 'function') {
       gameState.managerWishes = evaluateManagerReinforcementWishes(pClubLoaded);
     }
-    if (gameState.inboxMessages.length === 0 && typeof ensureInitialOfficeMessagesAndNews === 'function') {
+    if ((gameState.inboxMessages.length === 0 || gameState.snsFeed.length === 0) && typeof ensureInitialOfficeMessagesAndNews === 'function') {
       ensureInitialOfficeMessagesAndNews();
     }
     return true;
