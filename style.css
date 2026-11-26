@@ -24397,30 +24397,27 @@ button.hof-record-name {
 }
 
 /* ==========================================================================
-   iPhone風スマホ筐体・全画面表示 ＆ SNS各アカウント個別アイコン
+   iPhone風スマホ筐体（スクロール最下部で画面内に全体収容） ＆ SNS各アカウント個別アイコン
    ========================================================================== */
-.comm-phone-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 840;
-  background: rgba(5, 7, 11, 0.84);
-  backdrop-filter: blur(5px);
-}
-
-.comm-phone-backdrop.hidden {
-  display: none !important;
-}
-
-body.phone-fullscreen-open {
-  overflow: hidden;
-}
-
 .office-comm-panel.gm-phone-shell {
   background: #0d1118;
-  border: 4px solid #05070a;
-  box-shadow: 0 0 0 1.5px rgba(148, 163, 184, 0.34);
-  border-radius: 30px;
-  padding: 8px 14px 10px;
+  border: 5px solid #05070a;
+  box-shadow: 0 0 0 2px #4c5563;
+  border-radius: 34px;
+  padding: 10px 16px 10px;
+  height: min(630px, calc(100dvh - 148px));
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+}
+
+.office-comm-panel.gm-phone-shell .office-comm-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .office-comm-panel.gm-phone-shell .comm-phone-statusbar {
@@ -24432,19 +24429,7 @@ body.phone-fullscreen-open {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 11px;
   color: #e2e8f0;
-  cursor: pointer;
   user-select: none;
-  border-radius: 14px 14px 0 0;
-  transition: background-color 0.14s ease;
-}
-
-.office-comm-panel.gm-phone-shell .comm-phone-statusbar:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.office-comm-panel.gm-phone-shell .comm-phone-statusbar:focus-visible {
-  outline: 2px solid #2ecc71;
-  outline-offset: -2px;
 }
 
 .comm-phone-status-left,
@@ -24557,57 +24542,22 @@ body.phone-fullscreen-open {
 }
 
 .office-comm-panel.gm-phone-shell .comm-phone-homebar span {
-  width: 106px;
+  width: 108px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
-}
-
-.office-comm-panel.is-phone-fullscreen {
-  position: fixed;
-  top: var(--phone-fs-top, 126px);
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(410px, 92vw);
-  height: auto;
-  max-height: 780px;
-  z-index: 850;
-  margin: 0 !important;
-  border-radius: 44px;
-  border: 6px solid #05070a;
-  box-shadow: 0 0 0 2px #4c5563, 0 24px 60px rgba(0, 0, 0, 0.78);
-  padding: 10px 16px 10px;
-  background: #0d1118;
-  display: flex;
-  flex-direction: column;
-}
-
-.office-comm-panel.is-phone-fullscreen .office-comm-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
-}
-
-.office-comm-panel.is-phone-fullscreen .comm-phone-date {
-  display: none;
-}
-
-.office-comm-panel.is-phone-fullscreen .comm-phone-homebar {
-  cursor: pointer;
-}
-
-.office-comm-panel.is-phone-fullscreen .comm-phone-homebar span {
-  width: 120px;
-  background: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 @media (max-width: 768px) {
   .office-comm-panel.gm-phone-shell {
-    border-radius: 26px;
-    border: 4px solid #05070a;
-    box-shadow: 0 0 0 1.5px rgba(148, 163, 184, 0.34);
-    padding: 8px 11px 9px;
+    width: calc(100% - 8px);
+    margin: 4px auto 0;
+    height: calc(100dvh - var(--header-total-h, 74px) - var(--tab-nav-total-h, 60px) - 36px);
+    min-height: 430px;
+    border-radius: 36px;
+    border: 5px solid #05070a;
+    box-shadow: 0 0 0 2px #4c5563;
+    padding: 10px 12px 10px;
   }
 
   .office-comm-panel.gm-phone-shell .comm-phone-statusbar {
@@ -24633,21 +24583,6 @@ body.phone-fullscreen-open {
 
   .office-comm-panel.gm-phone-shell .comm-phone-date {
     display: none;
-  }
-
-  .office-comm-panel.is-phone-fullscreen {
-    top: calc(var(--header-total-h, 74px) + 6px);
-    bottom: calc(var(--tab-nav-total-h, 60px) + 12px);
-    left: 10px;
-    right: 10px;
-    width: auto;
-    height: auto;
-    max-height: none;
-    transform: none;
-    border-radius: 38px;
-    border: 5px solid #05070a;
-    box-shadow: 0 0 0 2px #4c5563, 0 16px 40px rgba(0, 0, 0, 0.72);
-    padding: 10px 12px 10px;
   }
 }
 

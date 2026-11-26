@@ -8101,9 +8101,6 @@ function resetTabScrollPositions() {
 function switchTab(tabName) {
   if (tabName === 'standings') tabName = 'team';
   if (!tabName) return;
-  if (typeof setCommPhoneFullscreen === 'function' && typeof isCommPhoneFullscreen !== 'undefined' && isCommPhoneFullscreen) {
-    setCommPhoneFullscreen(false);
-  }
 
   // 1. 直前のタブのスクロール位置を保存
   const previousTab = gameState.activeTab;
@@ -23635,76 +23632,6 @@ function initOfficeCommAndSecretaryEvents() {
   if (closeGmBtn) {
     closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
-
-  const phoneStatusbar = document.getElementById('comm-phone-statusbar');
-  if (phoneStatusbar) {
-    phoneStatusbar.addEventListener('click', toggleCommPhoneFullscreen);
-    phoneStatusbar.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggleCommPhoneFullscreen();
-      }
-    });
-  }
-  const officeTabBtn = document.getElementById('tab-btn-office');
-  if (officeTabBtn) {
-    officeTabBtn.addEventListener('click', () => {
-      if (isCommPhoneFullscreen) setCommPhoneFullscreen(false);
-    });
-  }
-  const phoneBackdrop = document.getElementById('comm-phone-backdrop');
-  if (phoneBackdrop) {
-    phoneBackdrop.addEventListener('click', () => setCommPhoneFullscreen(false));
-  }
-  const phoneHomebar = document.getElementById('comm-phone-homebar');
-  if (phoneHomebar) {
-    phoneHomebar.addEventListener('click', () => {
-      if (isCommPhoneFullscreen) setCommPhoneFullscreen(false);
-    });
-  }
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !isCommPhoneFullscreen) return;
-    const blockingIds = ['comm-detail-sheet-overlay', 'gm-modal-overlay', 'player-profile-modal-overlay', 'cinematic-overlay', 'season-summary-box', 'match-event-modal'];
-    const anyModalOpen = blockingIds.some(id => {
-      const el = document.getElementById(id);
-      return el && !el.classList.contains('hidden');
-    });
-    if (!anyModalOpen) {
-      setCommPhoneFullscreen(false);
-    }
-  });
-}
-
-let isCommPhoneFullscreen = false;
-
-function setCommPhoneFullscreen(open) {
-  isCommPhoneFullscreen = Boolean(open);
-  const panel = document.getElementById('office-comm-panel');
-  const backdrop = document.getElementById('comm-phone-backdrop');
-  const statusbar = document.getElementById('comm-phone-statusbar');
-  if (panel) {
-    if (isCommPhoneFullscreen && typeof window !== 'undefined' && window.innerWidth > 768) {
-      const stickyHdr = document.querySelector('.header-nav-sticky-wrapper');
-      const hdrBottom = stickyHdr ? Math.round(stickyHdr.getBoundingClientRect().bottom) : 116;
-      panel.style.setProperty('--phone-fs-top', `${Math.max(108, hdrBottom + 10)}px`);
-    } else {
-      panel.style.removeProperty('--phone-fs-top');
-    }
-    panel.classList.toggle('is-phone-fullscreen', isCommPhoneFullscreen);
-  }
-  if (backdrop) backdrop.classList.toggle('hidden', !isCommPhoneFullscreen);
-  if (typeof document !== 'undefined' && document.body) {
-    document.body.classList.toggle('phone-fullscreen-open', isCommPhoneFullscreen);
-  }
-  if (statusbar) {
-    statusbar.setAttribute('aria-expanded', isCommPhoneFullscreen ? 'true' : 'false');
-    statusbar.setAttribute('aria-label', isCommPhoneFullscreen ? '全画面表示を閉じる' : 'スマホを全画面表示する');
-    statusbar.title = isCommPhoneFullscreen ? '上部タップまたは本部タブで戻る' : '上部をタップして全画面表示';
-  }
-}
-
-function toggleCommPhoneFullscreen() {
-  setCommPhoneFullscreen(!isCommPhoneFullscreen);
 }
 
 function hashSnsString(str) {
