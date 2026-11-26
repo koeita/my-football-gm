@@ -23510,7 +23510,7 @@ button.hof-record-name {
   left: -15%;
   right: -15%;
   top: 50%;
-  height: 240px;
+  height: clamp(340px, 54vh, 430px);
   background: linear-gradient(90deg, transparent 0%, var(--cin-band) 25%, var(--cin-band) 75%, transparent 100%);
   border-top: 2px solid var(--cin-accent);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
