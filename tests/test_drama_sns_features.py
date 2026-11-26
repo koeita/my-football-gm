@@ -152,9 +152,13 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         self.assertIn('enqueueSeasonReviewDigest(', proc_block)
 
     def test_8_phase3_deadline_day_ticker_21h_and_24h_summary(self):
-        """Phase 3: デッドラインデイ速報ティッカー・21:00警告・24:00閉幕総括を検証"""
+        """Phase 3: デッドラインデイ速報ティッカー＆一覧展開・21:00警告・24:00閉幕総括を検証"""
         self.assertIn('id="deadline-ticker-bar"', self.html)
+        self.assertIn('id="deadline-ticker-list"', self.html)
         self.assertIn('.deadline-ticker-bar', self.css)
+        self.assertIn('.deadline-ticker-list', self.css)
+        self.assertIn('.deadline-ticker-row', self.css)
+        self.assertIn('tickerExpanded', self.main_js)
         self.assertIn("type === 'deadline_closed'", self.cinematic_js)
         self.assertIn('windowTransferRecap', self.storage_js)
 

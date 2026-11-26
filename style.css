@@ -19722,27 +19722,43 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .gm-secretary-modal-card .modal-actions.is-single-prompt {
   padding-top: 2px;
+  justify-content: stretch;
+  width: 100%;
 }
 
 .gm-vn-next-prompt-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: transparent;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(46, 204, 113, 0.14);
   border: none;
+  border-radius: 6px;
   color: #2ecc71;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  padding: 4px 2px;
-  margin-left: auto;
+  padding: 10px 18px;
+  min-height: 46px;
+  flex: 1 1 auto;
+  width: 100%;
+  box-shadow: none;
   white-space: nowrap;
-  transition: color 0.15s ease, transform 0.12s ease;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .gm-vn-next-prompt-btn:hover {
   color: #4ade80;
-  transform: translateX(2px);
+  background: rgba(46, 204, 113, 0.24);
+}
+
+.gm-vn-next-prompt-btn:active {
+  background: rgba(46, 204, 113, 0.3);
+}
+
+.gm-vn-sticky-footer.is-tap-advance {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
@@ -23817,14 +23833,8 @@ button.hof-record-name {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-}
-
-.gm-vn-page-left {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .gm-vn-page-counter {
@@ -23832,21 +23842,15 @@ button.hof-record-name {
   font-weight: 700;
   color: #8b949e;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.gm-vn-skip-pages-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 2px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #8b949e;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.gm-vn-skip-pages-btn:hover {
-  color: var(--text-primary);
+@media (max-width: 768px) {
+  .gm-vn-next-prompt-btn {
+    min-height: 48px;
+    font-size: 14.5px;
+    padding: 12px 16px;
+  }
 }
 
 .secretary-office-advice {
@@ -24320,9 +24324,21 @@ button.hof-record-name {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-top: 8px;
+  width: 100%;
+  padding: 8px 0 2px;
+  background: transparent;
+  border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
   min-width: 0;
+  transition: opacity 0.15s ease;
+}
+
+.deadline-ticker-bar:hover .deadline-ticker-text {
+  color: #ffffff;
 }
 
 .deadline-ticker-label {
@@ -24356,6 +24372,76 @@ button.hof-record-name {
   flex-shrink: 0;
 }
 
+.deadline-ticker-toggle {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #2ecc71;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.deadline-ticker-chevron {
+  flex-shrink: 0;
+  color: #8b949e;
+  transition: transform 0.16s ease, color 0.16s ease;
+}
+
+.deadline-ticker-bar.is-open .deadline-ticker-chevron {
+  transform: rotate(180deg);
+  color: #2ecc71;
+}
+
+.deadline-ticker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 210px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.deadline-ticker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  line-height: 1.45;
+  min-width: 0;
+}
+
+.deadline-ticker-row:last-child {
+  border-bottom: none;
+}
+
+.deadline-ticker-row-time {
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.deadline-ticker-row-body {
+  flex: 1;
+  min-width: 0;
+  color: #d1d5db;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.deadline-ticker-row.is-latest .deadline-ticker-row-time,
+.deadline-ticker-row.is-latest .deadline-ticker-row-body {
+  color: #2ecc71;
+  font-weight: 700;
+}
+
+.deadline-ticker-row.is-urgent .deadline-ticker-row-time,
+.deadline-ticker-row.is-urgent .deadline-ticker-row-body {
+  color: #f87171;
+}
+
 @media (max-width: 768px) {
   .deadline-ticker-bar {
     gap: 6px;
@@ -24367,8 +24453,17 @@ button.hof-record-name {
   .deadline-ticker-text {
     font-size: 11px;
   }
-  .deadline-ticker-count {
+  .deadline-ticker-count,
+  .deadline-ticker-toggle {
     font-size: 10px;
+  }
+  .deadline-ticker-row {
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11px;
+  }
+  .deadline-ticker-row-time {
+    font-size: 10.5px;
   }
 }
 

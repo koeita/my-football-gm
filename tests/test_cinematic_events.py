@@ -71,8 +71,11 @@ class TestCinematicEvents(unittest.TestCase):
         for ev in event_types:
             self.assertIn(f"type: '{ev}'", main_and_match, f"Missing cinematic hook for {ev}")
 
-        # クイック試合時は通常試合終了カットインをスキップし、決勝や観戦時は再生する判定があること
-        self.assertIn('if (!isQuickResult || isFinalMatch)', self.match_js)
+        # クイック結果時も通常試合終了カットイン・大一番キックオフ演出を再生すること（シーズン一括スキップ時は抑止）
+        self.assertNotIn('if (!isQuickResult || isFinalMatch)', self.match_js)
+        self.assertIn('allowFulltimeCinematic', self.match_js)
+        self.assertIn('function playBigMatchKickoffCinematicIfNeeded(', self.match_js)
+        self.assertIn('transitionToMatchSummary(true)', self.match_js)
 
 
 if __name__ == '__main__':
