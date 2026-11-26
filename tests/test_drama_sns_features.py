@@ -137,6 +137,42 @@ class TestPhase1DramaAndSnsFeatures(unittest.TestCase):
         for scen in ['D1_SLUMP_MEETING', 'D2_CAPTAIN_LOCKER', 'D3_STAR_TRANSFER_TALK', 'D4_YOUTH_AMBITION']:
             self.assertIn(scen, self.main_js)
 
+    def test_7_phase3_season_review_digest(self):
+        """Phase 3: 年間アワード・シーズン振り返り3連続ダイジェスト演出とSNS連携を検証"""
+        self.assertIn("type === 'season_digest'", self.cinematic_js)
+        self.assertIn('cinematic-digest-step', self.cinematic_js)
+        self.assertIn('.cinematic-digest-media-col', self.css)
+        self.assertIn('.cinematic-digest-rank', self.css)
+        self.assertIn('function enqueueSeasonReviewDigest(', self.main_js)
+        self.assertIn("'season_review_digest'", self.main_js)
+
+        proc_start = self.main_js.index('function processSeasonEnd(')
+        proc_end = self.main_js.index('function calculatePlayerDemandSalary(', proc_start)
+        proc_block = self.main_js[proc_start:proc_end]
+        self.assertIn('enqueueSeasonReviewDigest(', proc_block)
+
+    def test_8_phase3_deadline_day_ticker_21h_and_24h_summary(self):
+        """Phase 3: デッドラインデイ速報ティッカー・21:00警告・24:00閉幕総括を検証"""
+        self.assertIn('id="deadline-ticker-bar"', self.html)
+        self.assertIn('.deadline-ticker-bar', self.css)
+        self.assertIn("type === 'deadline_closed'", self.cinematic_js)
+        self.assertIn('windowTransferRecap', self.storage_js)
+
+        self.assertIn("case 'deadline_21h_warning':", self.dialogue_js)
+        self.assertIn("case 'deadline_closed':", self.dialogue_js)
+
+        for sym in [
+            'function recordWindowTransferRecap(',
+            'function pushDeadlineTickerItem(',
+            'function openDeadline21hWarningModal(',
+            'function buildTransferWindowSummary(',
+            'function triggerDeadlineWindowClosedSummary(',
+        ]:
+            self.assertIn(sym, self.main_js)
+
+        self.assertIn("'deadline_21h_warning'", self.main_js)
+        self.assertIn("'deadline_window_closed'", self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()
