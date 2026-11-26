@@ -905,7 +905,19 @@ function renderDeadlineDayBanner() {
 
   const active = isDeadlineDayHourlyActive();
   sectionEl.classList.toggle('hidden', !active);
-  if (!active) return;
+  if (!active) {
+    const tl = document.getElementById('deadline-ticker-list');
+    if (tl) {
+      tl.classList.add('hidden');
+      tl.innerHTML = '';
+    }
+    const tb = document.getElementById('deadline-ticker-bar');
+    if (tb) {
+      tb.setAttribute('aria-expanded', 'false');
+      tb.classList.remove('is-open');
+    }
+    return;
+  }
 
   const ds = gameState.deadlineDayState;
   const hour = Number(ds.hour) || 10;
@@ -913,6 +925,7 @@ function renderDeadlineDayBanner() {
   const remHours = Math.max(1, (closeHour + 1) - hour);
   const progressPct = Math.max(0, Math.min(100, Math.round(((hour - 10) / ((closeHour + 1) - 10)) * 100)));
   const hrLabel = `${String(hour).padStart(2, '0')}:00`;
+  const isExpanded = Boolean(ds.tickerExpanded);
 
   sectionEl.classList.toggle('is-urgent', remHours <= 3);
 
@@ -921,9 +934,12 @@ function renderDeadlineDayBanner() {
   const statusEl = document.getElementById('deadline-banner-status');
   const fillEl = document.getElementById('deadline-progress-fill');
   const btnEl = document.getElementById('btn-deadline-advance-hour');
+  const tickerBarEl = document.getElementById('deadline-ticker-bar');
   const tickerLabelEl = document.getElementById('deadline-ticker-label');
   const tickerTextEl = document.getElementById('deadline-ticker-text');
   const tickerCountEl = document.getElementById('deadline-ticker-count');
+  const tickerToggleEl = document.getElementById('deadline-ticker-toggle');
+  const tickerListEl = document.getElementById('deadline-ticker-list');
 
   if (clockEl) clockEl.textContent = hrLabel;
   if (remEl) remEl.textContent = `閉幕まで残り ${remHours}時間`;
@@ -941,6 +957,38 @@ function renderDeadlineDayBanner() {
   }
   if (tickerCountEl) {
     tickerCountEl.textContent = `${tickerItems.length}件`;
+  }
+  if (tickerBarEl) {
+    tickerBarEl.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    tickerBarEl.classList.toggle('is-open', isExpanded);
+  }
+  if (tickerToggleEl) {
+    tickerToggleEl.textContent = isExpanded ? '閉じる' : '一覧';
+  }
+  if (tickerListEl) {
+    tickerListEl.classList.toggle('hidden', !isExpanded);
+    if (isExpanded) {
+      const itemsToShow = tickerItems.length > 0
+        ? tickerItems
+        : [{ time: hrLabel, text: '各クラブの強化部が最終リストアップを進行中', isUrgent: false }];
+      tickerListEl.innerHTML = itemsToShow.map((item, idx) => {
+        const rowCls = [
+          'deadline-ticker-row',
+          idx === 0 ? 'is-latest' : '',
+          item && item.isUrgent ? 'is-urgent' : ''
+        ].filter(Boolean).join(' ');
+        const rowTime = escapeCommHtml((item && item.time) || hrLabel);
+        const rowText = escapeCommHtml((item && item.text) || '');
+        return `
+          <div class="${rowCls}">
+            <span class="deadline-ticker-row-time mono">${rowTime}</span>
+            <span class="deadline-ticker-row-body">${rowText}</span>
+          </div>
+        `;
+      }).join('');
+    } else {
+      tickerListEl.innerHTML = '';
+    }
   }
   if (btnEl) {
     btnEl.disabled = Boolean(gameState.isSimulating || isTodayMatchDayPending() || gameState.isAdvancingCalendar);
@@ -1130,6 +1178,10 @@ function advanceCalendarDay(skipRender = false) {
     stopAdvancingCalendar();
     return true;
   }
+  if (!isFastForwardingSeason && typeof hasPendingDaySlideModals === 'function' && hasPendingDaySlideModals()) {
+    stopAdvancingCalendar();
+    return true;
+  }
   if (!skipRender && blockIfPendingInitialStaffSetup()) {
     return true;
   }
@@ -1169,6 +1221,12 @@ function advanceCalendarDay(skipRender = false) {
     return true;
   }
 
+  const shouldDeferDayModals = !isFastForwardingSeason;
+  if (shouldDeferDayModals) {
+    deferGmModalsUntilDaySlide = true;
+  }
+  let dayAdvanceResult = false;
+  try {
   // 1. 平日の選手状態更新（全治日数のカウントダウン ＆ 疲労度自然回復 ＆ 適応日数減 ＆ ポジション特訓進行）
   for (const club of getAllManagedLeagueClubs()) {
     for (const p of (club.players || [])) {
@@ -1454,12 +1512,19 @@ function advanceCalendarDay(skipRender = false) {
     gameState.pendingDeadlineOffer = false;
     gameState.deadlineDayState = null;
   }
-  if (gameState.pendingBoardCrisis && !gameState.isGameOver && !isFastForwardingSeason) {
+  const isCrisisTriggered = Boolean(gameState.pendingBoardCrisis && !gameState.isGameOver && !isFastForwardingSeason);
+  if (isCrisisTriggered) {
     stopAdvancingCalendar();
-    if (typeof openBoardCrisisModal === 'function') openBoardCrisisModal();
-    return true;
+    if (deferGmModalsUntilDaySlide) {
+      deferredDaySlideCallbacks.push(() => {
+        if (typeof openBoardCrisisModal === 'function') openBoardCrisisModal();
+      });
+    } else if (typeof openBoardCrisisModal === 'function') {
+      openBoardCrisisModal();
+    }
+    eventTriggered = true;
   }
-  if (!isNextDayMatch && !isFastForwardingSeason && typeof maybeTriggerSpecialMatchEveBriefing === 'function') {
+  if (!isCrisisTriggered && !isNextDayMatch && !isFastForwardingSeason && typeof maybeTriggerSpecialMatchEveBriefing === 'function') {
     if (maybeTriggerSpecialMatchEveBriefing(nextDay)) {
       eventTriggered = true;
       stopAdvancingCalendar();
@@ -1472,25 +1537,31 @@ function advanceCalendarDay(skipRender = false) {
       renderAll();
       if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
     }
-    return true;
-  }
-
-  // リーグ全節終了後に残っていた最後のカップ戦日（自クラブ不出場）を消化完了した場合
-  if (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches() && !gameState.isSeasonOver) {
+    dayAdvanceResult = true;
+  } else if (gameState.currentWeek >= gameState.totalWeeks && !hasRemainingCupMatches() && !gameState.isSeasonOver) {
+    // リーグ全節終了後に残っていた最後のカップ戦日（自クラブ不出場）を消化完了した場合
+    deferGmModalsUntilDaySlide = false;
     stopAdvancingCalendar();
     processSeasonEnd(Boolean(skipRender));
     if (!skipRender) {
       renderAll();
       if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(false);
     }
-    return true;
+    dayAdvanceResult = true;
+  } else {
+    if (gameState.hasStartedOnce) autoSaveDirty = true;
+    if (!skipRender) {
+      renderAll();
+    }
+    dayAdvanceResult = false;
   }
-
-  if (gameState.hasStartedOnce) autoSaveDirty = true;
-  if (!skipRender) {
-    renderAll();
+  } finally {
+    deferGmModalsUntilDaySlide = false;
+    if (!isFastForwardingSeason && (deferredDaySlideModals.length > 0 || deferredDaySlideCallbacks.length > 0)) {
+      scheduleDeferredDaySlideModalFlush();
+    }
   }
-  return false;
+  return dayAdvanceResult;
 }
 
 /**
@@ -1498,6 +1569,9 @@ function advanceCalendarDay(skipRender = false) {
  */
 function startAdvancingToNextMatch() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) {
+    return;
+  }
+  if (typeof hasPendingDaySlideModals === 'function' && hasPendingDaySlideModals()) {
     return;
   }
   if (blockIfPendingInitialStaffSetup()) {
@@ -1613,6 +1687,16 @@ function renderWeeklySchedule() {
     }
   }
 
+  const slideKey = `${currentIdx}:${daysToShow.map(d => `${d.played ? 1 : 0}${d.isTransferDeadline ? 1 : 0}`).join('')}`;
+  if (
+    prevIdx === currentIdx &&
+    weeklySlideCleanupTimer !== null &&
+    trackEl.dataset.renderedSlideKey === slideKey
+  ) {
+    return;
+  }
+  trackEl.dataset.renderedSlideKey = slideKey;
+
   trackEl.innerHTML = daysToShow.map((day, idx) => {
     const isToday = idx === 0;
     const matchInfo = getCalendarDayPlayerMatch(day);
@@ -1670,6 +1754,7 @@ function renderWeeklySchedule() {
 function skipToSeasonEnd() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
   stopAdvancingCalendar();
+  clearDeferredDaySlideModals();
   gmModalQueue.length = 0;
   const existingGmOverlay = document.getElementById('gm-modal-overlay');
   if (existingGmOverlay) existingGmOverlay.classList.add('hidden');
@@ -2433,6 +2518,62 @@ function triggerSupporterPetitionEvent() {
  */
 const gmModalQueue = [];
 let isFastForwardingSeason = false;
+let deferGmModalsUntilDaySlide = false;
+const deferredDaySlideModals = [];
+const deferredDaySlideCallbacks = [];
+let deferredDaySlideRafId = null;
+let deferredDaySlideModalTimer = null;
+
+function hasPendingDaySlideModals() {
+  return Boolean(
+    deferredDaySlideModals.length > 0 ||
+    deferredDaySlideCallbacks.length > 0 ||
+    deferredDaySlideRafId !== null ||
+    deferredDaySlideModalTimer !== null
+  );
+}
+
+function clearDeferredDaySlideModals() {
+  deferGmModalsUntilDaySlide = false;
+  deferredDaySlideModals.length = 0;
+  deferredDaySlideCallbacks.length = 0;
+  if (deferredDaySlideRafId !== null) {
+    cancelAnimationFrame(deferredDaySlideRafId);
+    deferredDaySlideRafId = null;
+  }
+  if (deferredDaySlideModalTimer !== null) {
+    clearTimeout(deferredDaySlideModalTimer);
+    deferredDaySlideModalTimer = null;
+  }
+}
+
+function scheduleDeferredDaySlideModalFlush() {
+  if (deferredDaySlideModals.length === 0 && deferredDaySlideCallbacks.length === 0) return;
+  if (deferredDaySlideRafId !== null) cancelAnimationFrame(deferredDaySlideRafId);
+  if (deferredDaySlideModalTimer !== null) {
+    clearTimeout(deferredDaySlideModalTimer);
+    deferredDaySlideModalTimer = null;
+  }
+  deferredDaySlideRafId = requestAnimationFrame(() => {
+    deferredDaySlideRafId = requestAnimationFrame(() => {
+      deferredDaySlideRafId = null;
+      deferredDaySlideModalTimer = setTimeout(() => {
+        deferredDaySlideModalTimer = null;
+        if (isFastForwardingSeason) {
+          deferredDaySlideModals.length = 0;
+          deferredDaySlideCallbacks.length = 0;
+          return;
+        }
+        const modalBatch = deferredDaySlideModals.splice(0, deferredDaySlideModals.length);
+        const callbackBatch = deferredDaySlideCallbacks.splice(0, deferredDaySlideCallbacks.length);
+        modalBatch.forEach((modalOpts) => showGmModal(modalOpts, false));
+        callbackBatch.forEach((fn) => {
+          if (typeof fn === 'function') fn();
+        });
+      }, 280);
+    });
+  });
+}
 
 function flushNextGmModalOrUnlock() {
   const overlay = document.getElementById('gm-modal-overlay');
@@ -2449,6 +2590,7 @@ function flushNextGmModalOrUnlock() {
 
 function closeGmModal(clearQueue = false) {
   if (clearQueue) {
+    clearDeferredDaySlideModals();
     gmModalQueue.length = 0;
   }
   const overlay = document.getElementById('gm-modal-overlay');
@@ -2497,6 +2639,12 @@ function buildModalSpeakerPillHtml(speakerObj) {
 function showGmModal(opts, fromQueue = false) {
   if (!opts || typeof opts !== 'object') return;
   if (isFastForwardingSeason && !(opts && opts.allowDuringSkip)) return;
+  if (deferGmModalsUntilDaySlide && !fromQueue && !(opts && opts.immediateDuringDaySlide)) {
+    if (deferredDaySlideModals.length < 8) {
+      deferredDaySlideModals.push(opts);
+    }
+    return;
+  }
   const overlay = document.getElementById('gm-modal-overlay');
   if (!overlay) return;
   const toastContainer = document.getElementById('toast-container');
@@ -2593,6 +2741,7 @@ function showGmModal(opts, fromQueue = false) {
   let currentPageIdx = 0;
 
   const actionsContainer = document.getElementById('modal-actions');
+  const stickyFooter = overlay.querySelector('.gm-vn-sticky-footer');
   const renderDialoguePage = () => {
     if (descEl) {
       descEl.textContent = pages[currentPageIdx] || '';
@@ -2609,32 +2758,15 @@ function showGmModal(opts, fromQueue = false) {
         const navWrap = document.createElement('div');
         navWrap.className = 'gm-vn-page-nav';
 
-        const leftGroup = document.createElement('div');
-        leftGroup.className = 'gm-vn-page-left';
-
         const counterEl = document.createElement('span');
         counterEl.className = 'gm-vn-page-counter mono';
         counterEl.textContent = `${currentPageIdx + 1} / ${pages.length}`;
-        leftGroup.appendChild(counterEl);
-
-        const skipBtn = document.createElement('button');
-        skipBtn.type = 'button';
-        skipBtn.className = 'gm-vn-skip-pages-btn';
-        skipBtn.dataset.vnPageSkip = '1';
-        skipBtn.textContent = 'スキップ';
-        skipBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
-          currentPageIdx = pages.length - 1;
-          renderDialoguePage();
-        });
-        leftGroup.appendChild(skipBtn);
 
         const nextBtn = document.createElement('button');
         nextBtn.type = 'button';
-        nextBtn.className = 'gm-vn-next-prompt-btn';
+        nextBtn.className = 'gm-vn-next-prompt-btn is-wide';
         nextBtn.dataset.vnPageNext = '1';
-        nextBtn.innerHTML = '<span>次へ</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        nextBtn.innerHTML = '<span>次へ</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
         nextBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
@@ -2643,7 +2775,7 @@ function showGmModal(opts, fromQueue = false) {
         });
         singleTapNextBtn = nextBtn;
 
-        navWrap.appendChild(leftGroup);
+        navWrap.appendChild(counterEl);
         navWrap.appendChild(nextBtn);
         actionsContainer.appendChild(navWrap);
       } else {
@@ -2655,8 +2787,8 @@ function showGmModal(opts, fromQueue = false) {
           const btn = document.createElement('button');
           btn.type = 'button';
           if (isSingleNextPrompt) {
-            btn.className = 'gm-vn-next-prompt-btn';
-            btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+            btn.className = 'gm-vn-next-prompt-btn is-wide';
+            btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
             singleTapNextBtn = btn;
           } else {
             btn.className = act.className || 'btn btn-primary';
@@ -2679,6 +2811,15 @@ function showGmModal(opts, fromQueue = false) {
       dialogueCard.onclick = singleTapNextBtn
         ? (e) => {
             if (e.target.closest('button, a, #modal-detail-box, [data-consult-player-id]')) return;
+            singleTapNextBtn.click();
+          }
+        : null;
+    }
+    if (stickyFooter) {
+      stickyFooter.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
+      stickyFooter.onclick = singleTapNextBtn
+        ? (e) => {
+            if (e.target.closest('button')) return;
             singleTapNextBtn.click();
           }
         : null;
@@ -8040,6 +8181,8 @@ function startNextSeason() {
   gameState.currentDayIndex = 0;
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   gameState.isAdvancingCalendar = false;
+  if (typeof clearDeferredDaySlideModals === 'function') clearDeferredDaySlideModals();
+  lastRenderedWeeklyDayIndex = null;
   if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
   gameState.dailyLogs = [
     { date: '8/1 (土)', message: `Season ${gameState.season} (${inD2 ? 'ENG-D2' : 'ENG-D1'}) が開幕しました！目標順位達成に向けてチームを指揮しましょう。` }
@@ -14695,6 +14838,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.pendingDeadlineOffer = false;
   gameState.deadlineDayState = null;
   gameState.windowTransferRecap = { signings: [], departures: [] };
+  if (typeof clearDeferredDaySlideModals === 'function') clearDeferredDaySlideModals();
+  lastRenderedWeeklyDayIndex = null;
   if (typeof gmModalQueue !== 'undefined') gmModalQueue.length = 0;
 
   // 監督カタログから各クラブへの初期監督配属とフリー監督プール構築
@@ -15420,6 +15565,14 @@ function initGame() {
   const btnDeadlineAdvanceHour = document.getElementById('btn-deadline-advance-hour');
   if (btnDeadlineAdvanceHour) {
     btnDeadlineAdvanceHour.addEventListener('click', () => advanceCalendarDay(false));
+  }
+  const deadlineTickerBar = document.getElementById('deadline-ticker-bar');
+  if (deadlineTickerBar) {
+    deadlineTickerBar.addEventListener('click', () => {
+      if (!isDeadlineDayHourlyActive()) return;
+      gameState.deadlineDayState.tickerExpanded = !gameState.deadlineDayState.tickerExpanded;
+      renderDeadlineDayBanner();
+    });
   }
   const btnAdvanceToMatch = document.getElementById('btn-advance-to-match');
   if (btnAdvanceToMatch) {
@@ -22506,7 +22659,11 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
       ]
     });
     if (monthlyMvp && typeof showMonthlyMvpAwardModal === 'function') {
-      showMonthlyMvpAwardModal(monthlyMvp);
+      if (deferGmModalsUntilDaySlide && typeof deferredDaySlideCallbacks !== 'undefined') {
+        deferredDaySlideCallbacks.push(() => showMonthlyMvpAwardModal(monthlyMvp));
+      } else {
+        showMonthlyMvpAwardModal(monthlyMvp);
+      }
     }
     return true;
   }
@@ -27045,8 +27202,8 @@ function pushDeadlineTickerItem(text, hourLabel = null, isUrgent = false) {
     text: String(text),
     isUrgent: Boolean(isUrgent)
   });
-  if (ds.tickerItems.length > 15) {
-    ds.tickerItems = ds.tickerItems.slice(0, 15);
+  if (ds.tickerItems.length > 30) {
+    ds.tickerItems = ds.tickerItems.slice(0, 30);
   }
 }
 

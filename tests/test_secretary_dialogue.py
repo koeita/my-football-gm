@@ -56,11 +56,13 @@ class TestSecretaryDialogue(unittest.TestCase):
         self.assertIn('function getOfficeBriefingAdvice(', self.dialogue_js)
 
     def test_3_novel_multipage_modal_and_compliance(self):
-        """showGmModal の複数ページ送り（speechPages）と GEMINI.md 規約準拠を検証"""
-        for sym in ['speechPages', 'dataset.vnPageNext', 'dataset.vnPageSkip', 'gm-vn-page-counter']:
+        """showGmModal の複数ページ送り（speechPages）・スキップ廃止・拡大次へボタン・GEMINI.md 規約準拠を検証"""
+        for sym in ['speechPages', 'dataset.vnPageNext', 'gm-vn-page-counter']:
             self.assertIn(sym, self.main_js, f"Missing VN multipage symbol: {sym}")
+        self.assertNotIn('dataset.vnPageSkip', self.main_js)
+        self.assertNotIn('.gm-vn-skip-pages-btn', self.css)
 
-        for css_cls in ['.gm-vn-page-nav', '.gm-vn-page-counter', '.secretary-office-advice']:
+        for css_cls in ['.gm-vn-page-nav', '.gm-vn-page-counter', '.gm-vn-next-prompt-btn', '.secretary-office-advice']:
             self.assertIn(css_cls, self.css)
 
         # 絵文字・実在リーグ名・角括弧メタラベル禁止

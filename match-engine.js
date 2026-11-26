@@ -4094,7 +4094,8 @@ function transitionToMatchSummary(isQuickResult = false) {
       && !String(md.compTitle).includes('プレーオフ')
     );
 
-    if (!isQuickResult || isFinalMatch) {
+    const allowFulltimeCinematic = typeof isFastForwardingSeason === 'undefined' || !isFastForwardingSeason;
+    if (allowFulltimeCinematic) {
       const outcomeWin = md.isKnockout ? Boolean(md.userWon) : (myScore > oppScore);
       const outcomeDraw = !md.isKnockout && myScore === oppScore;
       const ftTheme = outcomeWin ? 'green' : (outcomeDraw ? 'slate' : 'crimson');
@@ -4119,7 +4120,7 @@ function transitionToMatchSummary(isQuickResult = false) {
         score: { home: md.homeScore, away: md.awayScore, pkHome: md.pkHome, pkAway: md.pkAway },
         metrics: ftMetrics,
         sfx: null,
-        durationMs: 1700
+        durationMs: isQuickResult ? 1900 : 1700
       });
     }
 
@@ -4442,6 +4443,44 @@ function openMatchPrecheckModal() {
 }
 
 /**
+ * ダービー・大一番試合のキックオフ前フルスクリーン演出を共通処理として再生する
+ */
+function playBigMatchKickoffCinematicIfNeeded(matchData, homeClub, awayClub, onDone) {
+  const finish = typeof onDone === 'function' ? onDone : () => {};
+  const allowCin = typeof isFastForwardingSeason === 'undefined' || !isFastForwardingSeason;
+  const sfKick = (allowCin && matchData && matchData.isPlayerMatch && typeof evaluateSpecialFixtureContext === 'function')
+    ? (matchData.specialContext || evaluateSpecialFixtureContext(homeClub, awayClub, { title: matchData.compTitle }))
+    : null;
+  if (sfKick && typeof CinematicOverlay !== 'undefined' && CinematicOverlay && CinematicOverlay.canPlay('major')) {
+    const mMetrics = [
+      { label: '注目対決', value: sfKick.h2hText || 'BIG MATCH', tone: 'gold' }
+    ];
+    if (homeClub && homeClub.isPlayer && sfKick.attendanceBoost > 0) {
+      mMetrics.push({ label: 'ホーム動員熱気', value: `+${Math.round(sfKick.attendanceBoost * 100)}%`, tone: 'green' });
+    }
+    mMetrics.push({ label: '勝利ファン補正', value: `${sfKick.fanWinMult.toFixed(1)}x`, tone: 'gold' });
+    const playedKickCin = CinematicOverlay.enqueue({
+      type: 'big_match_kickoff',
+      tier: 'major',
+      theme: sfKick.theme || 'gold',
+      eyebrow: sfKick.label,
+      title: `${homeClub.name} vs ${awayClub.name}`,
+      subtitle: `${matchData.compTitle || '公式戦'} キックオフ直前`,
+      club: homeClub,
+      awayClub,
+      homeStar: sfKick.homeStar || null,
+      awayStar: sfKick.awayStar || null,
+      metrics: mMetrics,
+      sfx: 'sfx_applause',
+      durationMs: 2500
+    }, finish);
+    if (!playedKickCin) finish();
+    return;
+  }
+  finish();
+}
+
+/**
  * 試合モーダル（Phase 1: サッカーコート試合経過 ➔ Phase 2: マッチサマリー）を開く
  */
 function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, options = {}) {
@@ -4602,7 +4641,9 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, op
 
   modal.classList.remove('hidden');
   if (options && options.quickSummary) {
-    transitionToMatchSummary(true);
+    playBigMatchKickoffCinematicIfNeeded(matchData, homeClub, awayClub, () => {
+      transitionToMatchSummary(true);
+    });
   } else {
     const startLiveTimerAndAudio = () => {
       if (typeof SoundEngine !== 'undefined' && SoundEngine) {
@@ -4611,36 +4652,7 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, op
       }
       startMatchLiveTimer();
     };
-    const sfKick = (matchData && matchData.isPlayerMatch && typeof evaluateSpecialFixtureContext === 'function')
-      ? (matchData.specialContext || evaluateSpecialFixtureContext(homeClub, awayClub, { title: matchData.compTitle }))
-      : null;
-    if (sfKick && typeof CinematicOverlay !== 'undefined' && CinematicOverlay && CinematicOverlay.canPlay('major')) {
-      const mMetrics = [
-        { label: '注目対決', value: sfKick.h2hText || 'BIG MATCH', tone: 'gold' }
-      ];
-      if (homeClub.isPlayer && sfKick.attendanceBoost > 0) {
-        mMetrics.push({ label: 'ホーム動員熱気', value: `+${Math.round(sfKick.attendanceBoost * 100)}%`, tone: 'green' });
-      }
-      mMetrics.push({ label: '勝利ファン補正', value: `${sfKick.fanWinMult.toFixed(1)}x`, tone: 'gold' });
-      const playedKickCin = CinematicOverlay.enqueue({
-        type: 'big_match_kickoff',
-        tier: 'major',
-        theme: sfKick.theme || 'gold',
-        eyebrow: sfKick.label,
-        title: `${homeClub.name} vs ${awayClub.name}`,
-        subtitle: `${matchData.compTitle || '公式戦'} キックオフ直前`,
-        club: homeClub,
-        awayClub,
-        homeStar: sfKick.homeStar || null,
-        awayStar: sfKick.awayStar || null,
-        metrics: mMetrics,
-        sfx: 'sfx_applause',
-        durationMs: 2500
-      }, startLiveTimerAndAudio);
-      if (!playedKickCin) startLiveTimerAndAudio();
-    } else {
-      startLiveTimerAndAudio();
-    }
+    playBigMatchKickoffCinematicIfNeeded(matchData, homeClub, awayClub, startLiveTimerAndAudio);
   }
 }
 
