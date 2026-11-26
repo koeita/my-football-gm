@@ -2738,58 +2738,151 @@ function showGmModal(opts, fromQueue = false) {
     ? opts.speechPages.filter(p => p !== undefined && p !== null).map(p => String(p))
     : [description || ''];
   if (pages.length === 0) pages.push('');
-  let currentPageIdx = 0;
+
+  const hasDetail = Boolean(detailHtml && String(detailHtml).trim().length > 0);
+  const isCharacterVnMode = Boolean(!hideSecretary && activeSpeaker);
+  const useDetailStep = isCharacterVnMode && hasDetail;
+  const totalSteps = useDetailStep ? (pages.length + 1) : pages.length;
+  let currentStepIdx = 0;
 
   const actionsContainer = document.getElementById('modal-actions');
   const stickyFooter = overlay.querySelector('.gm-vn-sticky-footer');
+  const inlinePromptEl = document.getElementById('gm-vn-inline-prompt');
+  const nameplateRow = dialogueCard ? dialogueCard.querySelector('.gm-vn-nameplate-row') : null;
+
   const renderDialoguePage = () => {
+    const isDetailStep = useDetailStep && currentStepIdx >= pages.length;
+
+    if (modalCard) {
+      modalCard.classList.toggle('is-detail-step', isDetailStep);
+    }
+    if (secBox) {
+      secBox.classList.toggle('hidden', Boolean(hideSecretary || !activeSpeaker || isDetailStep));
+    }
     if (descEl) {
-      descEl.textContent = pages[currentPageIdx] || '';
-      descEl.classList.remove('gm-vn-speech-anim');
-      void descEl.offsetWidth;
-      descEl.classList.add('gm-vn-speech-anim');
+      descEl.classList.toggle('hidden', isDetailStep);
+      if (!isDetailStep) {
+        descEl.textContent = pages[currentStepIdx] || '';
+        descEl.classList.remove('gm-vn-speech-anim');
+        void descEl.offsetWidth;
+        descEl.classList.add('gm-vn-speech-anim');
+      }
+    }
+    if (detailEl) {
+      if (useDetailStep) {
+        detailEl.classList.toggle('hidden', !isDetailStep);
+      } else {
+        detailEl.classList.toggle('hidden', !hasDetail);
+      }
+    }
+    if (nameplateRow) {
+      const prevBackBtn = nameplateRow.querySelector('.gm-vn-back-speech-btn');
+      if (prevBackBtn) prevBackBtn.remove();
+      if (isDetailStep && pages.length > 0) {
+        const backBtn = document.createElement('button');
+        backBtn.type = 'button';
+        backBtn.className = 'gm-vn-back-speech-btn';
+        backBtn.dataset.vnBackSpeech = '1';
+        backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg><span>セリフへ戻る</span>';
+        backBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
+          currentStepIdx = Math.max(0, pages.length - 1);
+          renderDialoguePage();
+        });
+        nameplateRow.appendChild(backBtn);
+      }
     }
 
     let singleTapNextBtn = null;
-    if (actionsContainer) {
-      actionsContainer.innerHTML = '';
-      if (currentPageIdx < pages.length - 1) {
-        actionsContainer.classList.add('is-single-prompt');
-        const navWrap = document.createElement('div');
-        navWrap.className = 'gm-vn-page-nav';
+    const actList = actions || [];
+    const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
+    const hasMoreSteps = currentStepIdx < totalSteps - 1;
+    const useInlineTapAdvance = !isDetailStep && (hasMoreSteps || isSingleNextPrompt);
 
+    if (useInlineTapAdvance && inlinePromptEl) {
+      inlinePromptEl.innerHTML = '';
+      inlinePromptEl.classList.remove('hidden');
+
+      const navWrap = document.createElement('div');
+      navWrap.className = 'gm-vn-page-nav';
+
+      if (totalSteps > 1) {
         const counterEl = document.createElement('span');
         counterEl.className = 'gm-vn-page-counter mono';
-        counterEl.textContent = `${currentPageIdx + 1} / ${pages.length}`;
+        counterEl.textContent = `${currentStepIdx + 1} / ${totalSteps}`;
+        navWrap.appendChild(counterEl);
+      }
 
-        const nextBtn = document.createElement('button');
-        nextBtn.type = 'button';
-        nextBtn.className = 'gm-vn-next-prompt-btn is-wide';
-        nextBtn.dataset.vnPageNext = '1';
-        nextBtn.innerHTML = '<span>次へ</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'gm-vn-next-prompt-btn';
+      nextBtn.dataset.vnPageNext = '1';
+
+      if (hasMoreSteps) {
+        const promptText = (useDetailStep && currentStepIdx === pages.length - 1) ? '詳細・確認へ' : 'タップで次へ';
+        nextBtn.innerHTML = `<span>${promptText}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
         nextBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (typeof SoundEngine !== 'undefined' && SoundEngine) SoundEngine.playSfx('ui_page');
-          currentPageIdx = Math.min(pages.length - 1, currentPageIdx + 1);
+          currentStepIdx = Math.min(totalSteps - 1, currentStepIdx + 1);
           renderDialoguePage();
         });
-        singleTapNextBtn = nextBtn;
-
-        navWrap.appendChild(counterEl);
-        navWrap.appendChild(nextBtn);
-        actionsContainer.appendChild(navWrap);
       } else {
-        const actList = actions || [];
-        const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
-        actionsContainer.classList.toggle('is-single-prompt', isSingleNextPrompt);
+        const finalAct = actList[0];
+        nextBtn.innerHTML = `<span>${escapeCommHtml(finalAct.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+        if (finalAct.disabled) nextBtn.disabled = true;
+        nextBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          overlay.classList.add('hidden');
+          if (finalAct.onClick) finalAct.onClick();
+          flushNextGmModalOrUnlock();
+        });
+      }
+
+      singleTapNextBtn = nextBtn;
+      navWrap.appendChild(nextBtn);
+      inlinePromptEl.appendChild(navWrap);
+
+      if (actionsContainer) {
+        actionsContainer.innerHTML = '';
+        actionsContainer.classList.remove('is-single-prompt');
+      }
+      if (stickyFooter) {
+        stickyFooter.classList.add('hidden');
+        stickyFooter.classList.remove('is-card-attached', 'is-tap-advance');
+        stickyFooter.onclick = null;
+      }
+      if (dialogueCard) {
+        dialogueCard.classList.remove('has-footer-actions');
+      }
+    } else {
+      if (inlinePromptEl) {
+        inlinePromptEl.innerHTML = '';
+        inlinePromptEl.classList.add('hidden');
+      }
+      if (actionsContainer) {
+        actionsContainer.innerHTML = '';
+        const shouldAttachToCard = isCharacterVnMode && !hasMoreSteps && actList.length > 0;
+        actionsContainer.classList.toggle('is-single-prompt', Boolean(isSingleNextPrompt && !shouldAttachToCard));
+
+        if (shouldAttachToCard && actList.length >= 2) {
+          const headingEl = document.createElement('div');
+          headingEl.className = 'gm-vn-choice-heading';
+          headingEl.textContent = 'GM としてご判断ください';
+          actionsContainer.appendChild(headingEl);
+        }
 
         actList.forEach(act => {
           const btn = document.createElement('button');
           btn.type = 'button';
-          if (isSingleNextPrompt) {
-            btn.className = 'gm-vn-next-prompt-btn is-wide';
-            btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+          if (isSingleNextPrompt && !isDetailStep && !isCharacterVnMode) {
+            btn.className = 'gm-vn-next-prompt-btn';
+            btn.innerHTML = `<span>${escapeCommHtml(act.label || 'タップで次へ')}</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
             singleTapNextBtn = btn;
+          } else if (isSingleNextPrompt && isDetailStep) {
+            btn.className = 'btn btn-primary';
+            btn.textContent = (!act.label || act.label === 'タップで次へ') ? '確認して閉じる' : act.label;
           } else {
             btn.className = act.className || 'btn btn-primary';
             btn.textContent = act.label;
@@ -2803,6 +2896,21 @@ function showGmModal(opts, fromQueue = false) {
           });
           actionsContainer.appendChild(btn);
         });
+
+        if (stickyFooter) {
+          stickyFooter.classList.toggle('hidden', actList.length === 0);
+          stickyFooter.classList.toggle('is-card-attached', shouldAttachToCard);
+          stickyFooter.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
+          stickyFooter.onclick = singleTapNextBtn
+            ? (e) => {
+                if (e.target.closest('button')) return;
+                singleTapNextBtn.click();
+              }
+            : null;
+        }
+        if (dialogueCard) {
+          dialogueCard.classList.toggle('has-footer-actions', shouldAttachToCard);
+        }
       }
     }
 
@@ -2810,16 +2918,7 @@ function showGmModal(opts, fromQueue = false) {
       dialogueCard.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
       dialogueCard.onclick = singleTapNextBtn
         ? (e) => {
-            if (e.target.closest('button, a, #modal-detail-box, [data-consult-player-id]')) return;
-            singleTapNextBtn.click();
-          }
-        : null;
-    }
-    if (stickyFooter) {
-      stickyFooter.classList.toggle('is-tap-advance', Boolean(singleTapNextBtn));
-      stickyFooter.onclick = singleTapNextBtn
-        ? (e) => {
-            if (e.target.closest('button')) return;
+            if (e.target.closest('button, a, [data-consult-player-id]')) return;
             singleTapNextBtn.click();
           }
         : null;
