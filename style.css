@@ -23458,7 +23458,7 @@ button.hof-record-name {
 .cinematic-overlay {
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: 34000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24220,5 +24220,95 @@ button.hof-record-name {
   }
   .cinematic-matchup-stars {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ==========================================================================
+   Phase 2: 節目演出・引退欠番セレモニー ＆ 記録タブ永久欠番スタイル
+   ========================================================================== */
+#gm-modal-overlay {
+  z-index: 33000 !important;
+}
+
+.cinematic-milestone-tag,
+.cinematic-retired-num {
+  font-size: clamp(22px, 4vw, 34px);
+  font-weight: 900;
+  color: var(--cin-accent);
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hof-retired-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.hof-retired-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.hof-retired-row:last-child {
+  border-bottom: none;
+}
+
+.hof-retired-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hof-retired-num {
+  font-size: 16px;
+  font-weight: 900;
+  color: #f1c40f;
+  min-width: 34px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hof-retired-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hof-retired-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .hof-retired-row {
+    gap: 6px;
+    padding: 7px 2px;
+  }
+  .hof-retired-num {
+    font-size: 14px;
+    min-width: 28px;
+  }
+  .hof-retired-name {
+    font-size: 12px;
+  }
+  .hof-retired-meta {
+    font-size: 10.5px;
+    gap: 6px;
   }
 }

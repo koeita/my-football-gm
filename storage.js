@@ -1064,6 +1064,8 @@ function loadGameFromStorage() {
           if (typeof ensurePlayerInjuryProneness === 'function') ensurePlayerInjuryProneness(yp);
         });
       }
+      if (!Array.isArray(c.retiredNumbers)) c.retiredNumbers = [];
+      if (!Array.isArray(c.activeDramaPromises)) c.activeDramaPromises = [];
     });
     if (!gameState.scoutingIntel || typeof gameState.scoutingIntel !== 'object') gameState.scoutingIntel = {};
     if (!Array.isArray(gameState.activeScoutAssignments)) gameState.activeScoutAssignments = [];

@@ -3193,6 +3193,7 @@ function processSeasonEnd(isSkipped = false) {
   const playerAgingLogs = [];
   const playerRetirementLogs = [];
   const retiredPlayerClubIds = [];
+  const retiredPlayerSnapshots = [];
   const preContractIds = new Set((gameState.preContractPlayers || []).map(x => x.id));
   const processedAgedIds = new Set();
   gameState.expiredMarketPool = [];
@@ -3228,6 +3229,19 @@ function processSeasonEnd(isSkipped = false) {
         remainingPoolCount = Math.max(0, remainingPoolCount - 1);
         if (club.isPlayer) {
           retiredPlayerClubIds.push(p.id);
+          const snapOvr = typeof getPlayerOverallRating === 'function' ? getPlayerOverallRating(p) : 70;
+          retiredPlayerSnapshots.push({
+            id: p.id,
+            name: p.name,
+            fullName: p.fullName || p.name,
+            pos: p.primaryPosition || p.pos || 'CM',
+            age: p.age,
+            squadNumber: p.squadNumber || null,
+            ovr: snapOvr,
+            isYouthGraduate: Boolean(p.isYouthGraduate),
+            avatarSpec: typeof buildAvatarSpecSnapshot === 'function' ? buildAvatarSpecSnapshot(p) : null,
+            playerRef: { ...p, avatarData: p.avatarData ? { ...p.avatarData } : null, traits: Array.isArray(p.traits) ? [...p.traits] : [] }
+          });
           playerRetirementLogs.push(
             `現役引退：${p.pos} ${p.name} (${p.age}歳) が現役を引退しました`
           );
@@ -3346,6 +3360,11 @@ function processSeasonEnd(isSkipped = false) {
     ensureValidSquadAndStarters(club, playerRetirementLogs);
     if (club.isPlayer && typeof syncPlayerClubStatsToHallOfFame === 'function') {
       syncPlayerClubStatsToHallOfFame(club, { retiredIds: retiredPlayerClubIds });
+      if (retiredPlayerSnapshots.length > 0 && typeof buildRetiredLegendsList === 'function') {
+        gameState._pendingRetiredLegends = buildRetiredLegendsList(club, retiredPlayerSnapshots, finishedSeasonNum, finishedYearStr);
+      } else {
+        gameState._pendingRetiredLegends = [];
+      }
     }
 
     // 常設ユースチーム（U-21 Squad）の加齢およびポテンシャル急成長
@@ -3628,6 +3647,12 @@ function processSeasonEnd(isSkipped = false) {
   // シーズン終了時は移籍市場閉幕中のため未締結オファー・メガオファーを整理し、不要なオファータスクを残さない
   gameState.pendingMegaOffer = null;
 
+  const pendingLegends = Array.isArray(gameState._pendingRetiredLegends) ? gameState._pendingRetiredLegends : [];
+  gameState._pendingRetiredLegends = [];
+  if (!isSkipped && !gameState.isGameOver && pendingLegends.length > 0 && typeof triggerLegendRetirementCeremony === 'function') {
+    pendingLegends.forEach(leg => triggerLegendRetirementCeremony(playerClub, leg));
+  }
+
   if (!isSkipped && !gameState.isGameOver && typeof showSecretaryModal === 'function') {
     const secOff = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
     const offDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
@@ -3665,7 +3690,7 @@ function calculatePlayerDemandSalary(player) {
   const avgRat = player.appearances > 0 ? player.totalRating / player.appearances : 6.4;
   const ratingBonus = player.appearances >= 3 ? Math.max(0, Math.round((avgRat - 6.4) * 400)) : 0;
   const baseDemand = Math.max(assessed, Math.round(player.salary * 1.05)) + goalBonus + ratingBonus;
-  const prideFactor = player.megaOfferRejected ? 1.12 : 1.0;
+  const prideFactor = (player.megaOfferRejected ? 1.12 : 1.0) * (player.dramaLoyaltyBoost ? 0.90 : 1.0);
   const demanded = Math.max(800, Math.round((baseDemand * prideFactor) / 50) * 50);
   player.demandedSalary = demanded;
   return demanded;
@@ -4864,6 +4889,7 @@ function submitNegotiationOffer() {
       target.demandedSalary = null;
       target.demandedYears = null;
       target.megaOfferRejected = false;
+      target.dramaLoyaltyBoost = false;
       target.contractRefused = false;
 
       session.completed = true;
@@ -6613,6 +6639,9 @@ function promoteYouthPlayer(youthId) {
 
   ensureClubSquadNumbers(playerClub);
   const usedNumbers = new Set(playerClub.players.map(p => p.squadNumber).filter(Boolean));
+  if (Array.isArray(playerClub.retiredNumbers)) {
+    playerClub.retiredNumbers.forEach(r => { if (r && r.number) usedNumbers.add(Number(r.number)); });
+  }
   let num = 18;
   while (usedNumbers.has(num) && num < 99) {
     num++;
@@ -21390,7 +21419,9 @@ function buildConflictArbitrationEvent(club) {
 function buildLineupConsultationCandidate(club, forceType = null) {
   if (!club) return null;
   let result = null;
-  if (forceType === 'player') {
+  if (forceType === 'drama') {
+    result = typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null;
+  } else if (forceType === 'player') {
     result = buildPlayerConsultation(club);
   } else if (forceType === 'manager') {
     result = buildManagerConsultation(club);
@@ -21399,15 +21430,23 @@ function buildLineupConsultationCandidate(club, forceType = null) {
   } else if (forceType === 'conflict') {
     result = buildConflictArbitrationEvent(club);
   } else {
-    const seqMod = (gameState.consultationSeq || 0) % 4;
-    if (seqMod === 1) {
-      result = buildPlayerConsultation(club) || buildCoachConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
-    } else if (seqMod === 2) {
-      result = buildCoachConsultation(club) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
-    } else if (seqMod === 3) {
-      result = buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club);
-    } else {
-      result = buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club) || buildConflictArbitrationEvent(club);
+    const lossStreak = typeof getPlayerRecentLossStreak === 'function' ? getPlayerRecentLossStreak(club) : 0;
+    const seqMod = (gameState.consultationSeq || 0) % 5;
+    if (lossStreak >= 2 && typeof buildDramaConsultationEvent === 'function' && (gameState.consultationSeq || 0) % 2 === 0) {
+      result = buildDramaConsultationEvent(club, 'D1_SLUMP_MEETING');
+    }
+    if (!result) {
+      if (seqMod === 1) {
+        result = buildPlayerConsultation(club) || buildCoachConsultation(club) || (typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club);
+      } else if (seqMod === 2) {
+        result = buildCoachConsultation(club) || (typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club);
+      } else if (seqMod === 3) {
+        result = (typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null) || buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club);
+      } else if (seqMod === 4) {
+        result = buildConflictArbitrationEvent(club) || buildManagerConsultation(club) || buildPlayerConsultation(club) || buildCoachConsultation(club) || (typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null);
+      } else {
+        result = buildManagerConsultation(club) || (typeof buildDramaConsultationEvent === 'function' ? buildDramaConsultationEvent(club) : null) || buildPlayerConsultation(club) || buildCoachConsultation(club) || buildConflictArbitrationEvent(club);
+      }
     }
   }
   if (result) {
@@ -21441,7 +21480,7 @@ function resolveLineupConsultationDecision(consultation, decision) {
 
   if (decision === 'defer') {
     gameState.pendingLineupConsultation = consultation;
-    if (consultation.kind !== 'conflict') {
+    if (consultation.kind !== 'conflict' && consultation.kind !== 'drama') {
       if (typeof switchTab === 'function') switchTab('roster');
       if (typeof switchRosterSubtab === 'function') switchRosterSubtab('board');
     }
@@ -21453,6 +21492,11 @@ function resolveLineupConsultationDecision(consultation, decision) {
   const mgr = club.manager;
   const activePlayers = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
   let replyPayload = null;
+
+  if (consultation.kind === 'drama' && typeof resolveDramaConsultationDecision === 'function') {
+    resolveDramaConsultationDecision(consultation, decision);
+    return;
+  }
 
   if (consultation.kind === 'conflict') {
     const coachObj = findClubCoachById(club, consultation.coachId) || (getClubCoachEntries(club)[0] || {}).coach || null;
@@ -21809,7 +21853,7 @@ function openLineupConsultationModal(consultation) {
         club
       };
     }
-  } else if (consultation.kind === 'player' && club) {
+  } else if ((consultation.kind === 'player' || (consultation.kind === 'drama' && consultation.speakerKind === 'player')) && club) {
     const targetPlayerId = consultation.playerId || consultation.inPlayerId;
     const playerObj = (club.players || []).find(p => p && p.id === targetPlayerId);
     if (playerObj) {
@@ -21817,10 +21861,46 @@ function openLineupConsultationModal(consultation) {
         kind: 'player',
         person: playerObj,
         name: playerObj.fullName || playerObj.name,
-        roleLabel: `${playerObj.pos} #${playerObj.squadNumber || '-'}`,
+        roleLabel: consultation.speakerRoleLabel || `${playerObj.pos} #${playerObj.squadNumber || '-'}`,
         club
       };
     }
+  } else if (consultation.kind === 'drama' && consultation.speakerKind === 'manager' && club && club.manager) {
+    modalSpeaker = { kind: 'manager', person: club.manager, name: club.manager.name, roleLabel: '監督', club };
+  }
+
+  if (consultation.kind === 'drama' && Array.isArray(consultation.choices)) {
+    const dramaPlayer = consultation.playerId && club
+      ? (club.players || []).find(p => p && p.id === consultation.playerId)
+      : null;
+    const dRowsHtml = [
+      dramaPlayer ? buildConsultationPlayerRowHtml('面談相手', dramaPlayer) : '',
+      ...(consultation.detailRows || []).map(([k, v]) => `
+        <div class="gm-modal-flat-row">
+          <span class="gm-modal-flat-label">${escapeCommHtml(k)}</span>
+          <span class="gm-modal-flat-val">${escapeCommHtml(v)}</span>
+        </div>
+      `)
+    ].filter(Boolean).join('');
+    const dramaActions = consultation.choices.map(ch => ({
+      label: ch.label,
+      className: ch.className || 'btn btn-secondary',
+      onClick: () => resolveLineupConsultationDecision(consultation, ch.key)
+    }));
+    dramaActions.push({
+      label: 'あとで判断（保留）',
+      className: 'btn btn-secondary',
+      onClick: () => resolveLineupConsultationDecision(consultation, 'defer')
+    });
+    showSecretaryModal({
+      speaker: modalSpeaker,
+      topic: consultation.topic || 'クラブ面談',
+      title: consultation.title,
+      speech: consultation.speech,
+      detailHtml: dRowsHtml ? `<div class="gm-modal-flat-list">${dRowsHtml}</div>` : '',
+      actions: dramaActions
+    });
+    return;
   }
 
   let rowsHtml = '';
@@ -22101,6 +22181,9 @@ function handlePlayerMatchCompleted(matchData, { suppressModal = false, isSeason
   });
 
   if (!matchData.isPreseason) {
+    if (typeof evaluateDramaPromisesAfterMatch === 'function') {
+      evaluateDramaPromisesAfterMatch(playerClub, matchData);
+    }
     if (typeof checkPlayerMatchMilestonesAndStreaks === 'function') {
       checkPlayerMatchMilestonesAndStreaks(playerClub, matchData);
     }
@@ -23700,7 +23783,7 @@ function syncPlayerClubStatsToHallOfFame(playerClub, { retiredIds = null } = {})
   });
 }
 
-function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD', title, headline, desc }) {
+function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD', title, headline, desc, cinematicTag = null, isMajor = false }) {
   const hof = ensureClubHallOfFame();
   if (hof.milestonesIssued[key]) return;
   hof.milestonesIssued[key] = true;
@@ -23721,6 +23804,29 @@ function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD',
       lead: `${playerClub.name} · ${player.pos}`,
       body: desc,
       highlight: true
+    });
+  }
+  if (!isFastForwardingSeason && typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('player_milestone', { club: playerClub, player, title, desc });
+  }
+  if (!isFastForwardingSeason && typeof CinematicOverlay !== 'undefined' && CinematicOverlay) {
+    CinematicOverlay.enqueue({
+      type: 'player_milestone',
+      tier: isMajor ? 'major' : 'normal',
+      theme: 'gold',
+      eyebrow: 'CLUB MILESTONE',
+      milestoneTag: cinematicTag || badge,
+      title: `${player.name} ${title}`,
+      subtitle: `${playerClub.name} · #${player.squadNumber || '-'} ${player.pos || ''}`,
+      player,
+      club: playerClub,
+      metrics: [
+        { label: '背番号', value: `#${player.squadNumber || '-'}` },
+        { label: 'ポジション', value: player.pos || 'MF' },
+        { label: 'シーズン', value: seasonYear, tone: 'gold' }
+      ],
+      sfx: 'jingle_awaken',
+      durationMs: 2500
     });
   }
 }
@@ -23755,6 +23861,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       const hatKey = `hat_${seasonNum}_${gameState.currentDayIndex || 0}_${p.id}`;
       recordPlayerMilestoneEvent(p, playerClub, hatKey, {
         badge: 'RECORD',
+        cinematicTag: 'HAT-TRICK',
+        isMajor: true,
         title: `公式戦ハットトリック（1試合${matchG}得点）`,
         headline: `${playerClub.name}・${p.name}が圧巻の${matchG}ゴール！ハットトリック達成`,
         desc: `${matchData.compTitle || '公式戦'}で${p.name}が1試合${matchG}得点の爆発。勝利を大きく引き寄せた。`
@@ -23765,6 +23873,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       const streakKey = `streak_${seasonNum}_${p.id}_${p.goalStreak}`;
       recordPlayerMilestoneEvent(p, playerClub, streakKey, {
         badge: 'RECORD',
+        cinematicTag: `${p.goalStreak}G STREAK`,
+        isMajor: p.goalStreak >= 5,
         title: `公式戦 ${p.goalStreak}試合連続ゴール`,
         headline: `絶好調の${p.name}、公式戦${p.goalStreak}試合連続ゴールを記録`,
         desc: `${playerClub.name}の攻撃を牽引する${p.name}が公式戦${p.goalStreak}試合連続でネットを揺らしている。`
@@ -23774,10 +23884,23 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
     const entry = hof.players[p.id];
     if (!entry) continue;
 
+    if (p.isYouthGraduate && matchG >= 1 && (entry.goals || 0) === matchG) {
+      recordPlayerMilestoneEvent(p, playerClub, `youth_first_goal_${p.id}`, {
+        badge: 'DEBUT',
+        cinematicTag: 'DEBUT GOAL',
+        isMajor: true,
+        title: `トップチーム公式戦 初ゴール`,
+        headline: `生え抜き${p.name}が待望のトップチーム初ゴール！`,
+        desc: `アカデミー出身の${p.name}が${matchData.compTitle || '公式戦'}で記念すべきトップ初得点を挙げた。`
+      });
+    }
+
     for (const mApps of [50, 100, 150, 200, 300]) {
       if ((entry.apps || 0) >= mApps) {
         recordPlayerMilestoneEvent(p, playerClub, `apps_${p.id}_${mApps}`, {
           badge: 'RECORD',
+          cinematicTag: `${mApps} APPS`,
+          isMajor: mApps >= 100,
           title: `クラブ公式戦 通算${mApps}試合出場達成`,
           headline: `${playerClub.name}・${p.name}がクラブ通算${mApps}試合出場を達成`,
           desc: `長期にわたりチームを支える${p.name}がクラブ公式戦通算${mApps}試合の節目に到達した。`
@@ -23788,6 +23911,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       if ((entry.goals || 0) >= mGoals) {
         recordPlayerMilestoneEvent(p, playerClub, `goals_${p.id}_${mGoals}`, {
           badge: 'RECORD',
+          cinematicTag: `${mGoals} GOALS`,
+          isMajor: mGoals >= 50,
           title: `クラブ通算 ${mGoals}ゴール達成`,
           headline: `${playerClub.name}の点取り屋・${p.name}がクラブ通算${mGoals}ゴールに到達`,
           desc: `エース級の決定力を示す${p.name}がクラブ通算${mGoals}得点目を叩き込んだ。`
@@ -23798,6 +23923,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       if ((entry.assists || 0) >= mAst) {
         recordPlayerMilestoneEvent(p, playerClub, `assists_${p.id}_${mAst}`, {
           badge: 'RECORD',
+          cinematicTag: `${mAst} ASSISTS`,
+          isMajor: mAst >= 50,
           title: `クラブ通算 ${mAst}アシスト達成`,
           headline: `${playerClub.name}の司令塔・${p.name}がクラブ通算${mAst}アシストを記録`,
           desc: `決定的なパスを供給し続ける${p.name}がクラブ通算${mAst}アシストの節目を迎えた。`
@@ -24497,7 +24624,35 @@ function renderClubRecordsView() {
       `;
     }).join('');
 
+    const retiredNumbersList = (playerClub && Array.isArray(playerClub.retiredNumbers)) ? playerClub.retiredNumbers : [];
+    const retiredNumbersHtml = retiredNumbersList.length > 0
+      ? `
+        <div class="flat-section-label mono">永久欠番 (${retiredNumbersList.length}名)</div>
+        <div class="hof-retired-list">
+          ${retiredNumbersList.map(r => {
+            const rSpec = r.avatarSpec || { id: r.playerId, name: r.playerName, pos: r.pos || 'CM' };
+            const rAvatar = renderAwardPlayerAvatarHtml(r.playerId, rSpec, playerClub, 28, 'awards-row-avatar');
+            return `
+              <div class="hof-retired-row">
+                <div class="hof-retired-main">
+                  <span class="hof-retired-num mono">#${escapeCommHtml(String(r.number))}</span>
+                  ${rAvatar}
+                  <span class="pos-tag pos-${escapeCommHtml(r.pos || 'CM')}">${escapeCommHtml(r.pos || 'CM')}</span>
+                  <span class="hof-retired-name">${escapeCommHtml(r.playerName || '')}</span>
+                </div>
+                <div class="hof-retired-meta mono">
+                  <span>${Number(r.apps || 0)}試合 · ${Number(r.goals || 0)}G</span>
+                  <span class="text-muted">${escapeCommHtml(r.seasonYear || `S${r.season || 1}`)}引退</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `
+      : '';
+
     contentHtml = `
+      ${retiredNumbersHtml}
       <div class="flat-section-label mono">クラブ単年レコード</div>
       <div class="hof-records-grid">${ssrHtml}</div>
       <div class="hof-metric-bar">
@@ -25779,5 +25934,578 @@ function generateEventSnsReactions(eventType, ctx = {}) {
       replies: 64,
       clubId: playerClub.id
     });
+    return;
   }
+
+  if (eventType === 'player_milestone' && ctx.player) {
+    const p = ctx.player;
+    const fans = pickSnsAccounts('fan', 1);
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `【クラブ記録】#${p.squadNumber || '-'} ${p.name} 選手が「${ctx.title || '記録達成'}」を達成しました！今後のさらなる活躍にご期待ください。`,
+      tags: [clubTag, '#偉業達成'],
+      likes: 640 * fanPopScale,
+      reposts: 185 * fanPopScale,
+      replies: 42 * fanPopScale,
+      clubId: playerClub.id,
+      playerId: p.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${p.name} の ${ctx.title || '記録達成'} 本当におめでとう！このクラブのユニフォームを着て積み上げた歴史に感謝しかない。`,
+      tags: [clubTag, `#${(p.name || 'PLAYER').replace(/\s+/g, '')}`],
+      likes: 270 * fanPopScale,
+      reposts: 44,
+      replies: 19,
+      clubId: playerClub.id,
+      playerId: p.id
+    });
+    return;
+  }
+
+  if (eventType === 'legend_retirement' && ctx.legend) {
+    const leg = ctx.legend;
+    const fans = pickSnsAccounts('fan', 1);
+    const retiredNote = ctx.retiredNumber && leg.squadNumber
+      ? `クラブは長年の功績を称え、背番号 #${leg.squadNumber} を永久欠番とすることを決定しました。`
+      : 'クラブのレジェンドとして殿堂へ刻まれます。';
+    addSnsPost({
+      authorType: 'official',
+      displayName: officialName,
+      handle: officialHandle,
+      body: `【功労者引退】通算${leg.apps || 0}試合出場・${leg.goals || 0}得点の ${leg.fullName || leg.name} が今季限りで現役を引退します。${retiredNote}`,
+      tags: [clubTag, ctx.retiredNumber ? '#永久欠番' : '#レジェンド引退'],
+      likes: 1850 * fanPopScale,
+      reposts: 720 * fanPopScale,
+      replies: 210 * fanPopScale,
+      clubId: playerClub.id,
+      playerId: leg.id,
+      highlight: true
+    });
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `${leg.name} 本当にお疲れさまでした！${ctx.retiredNumber && leg.squadNumber ? `#${leg.squadNumber} の永久欠番は最高の敬意だと思う。` : '次の世代にもあなたの魂は受け継がれていくはず。'}これまでありがとう！`,
+      tags: [clubTag, '#感謝'],
+      likes: 560 * fanPopScale,
+      reposts: 120 * fanPopScale,
+      replies: 48,
+      clubId: playerClub.id,
+      playerId: leg.id
+    });
+    return;
+  }
+
+  if (eventType === 'drama_promise_kept' && ctx.player) {
+    const p = ctx.player;
+    const fans = pickSnsAccounts('fan', 1);
+    addSnsPost({
+      authorType: 'fan',
+      displayName: fans[0].displayName,
+      handle: fans[0].handle,
+      body: `若手 ${p.name} にチャンスが回ってきた！ピッチ上での気迫がすごかったし、ここから一気にレギュラー争いへ絡んでほしい！`,
+      tags: [clubTag, '#期待の若手'],
+      likes: 220 * fanPopScale,
+      reposts: 32,
+      replies: 14,
+      clubId: playerClub.id,
+      playerId: p.id
+    });
+  }
+}
+
+// ==========================================================================
+// Phase 2: レジェンド引退セレモニー・永久欠番 ＆ ドラマ系1on1面談・約束フォロー
+// ==========================================================================
+function isClubRetirementLegend(playerSnap, hofEntry) {
+  if (!playerSnap) return false;
+  const apps = hofEntry ? (hofEntry.apps || 0) : 0;
+  const goals = hofEntry ? (hofEntry.goals || 0) : 0;
+  const awardsCount = hofEntry && Array.isArray(hofEntry.awards) ? hofEntry.awards.length : 0;
+  if (apps >= 50 || goals >= 20 || awardsCount > 0) return true;
+  if (playerSnap.isYouthGraduate && apps >= 25) return true;
+  if ((playerSnap.ovr || 0) >= 75 && (playerSnap.age || 0) >= 33) return true;
+  return false;
+}
+
+function buildRetiredLegendsList(playerClub, snapshots, seasonNum, seasonYear) {
+  if (!playerClub || !Array.isArray(snapshots) || snapshots.length === 0) return [];
+  const hof = typeof ensureClubHallOfFame === 'function' ? ensureClubHallOfFame() : { players: {} };
+  const legends = [];
+  for (const snap of snapshots) {
+    if (!snap || !snap.id) continue;
+    const hofEntry = (hof.players && hof.players[snap.id]) || null;
+    if (!isClubRetirementLegend(snap, hofEntry)) continue;
+    legends.push({
+      id: snap.id,
+      name: snap.name,
+      fullName: snap.fullName || snap.name,
+      pos: snap.pos || 'CM',
+      age: snap.age || 34,
+      squadNumber: snap.squadNumber || (hofEntry && hofEntry.squadNumber) || null,
+      ovr: snap.ovr || 75,
+      apps: hofEntry ? (hofEntry.apps || 0) : 0,
+      goals: hofEntry ? (hofEntry.goals || 0) : 0,
+      assists: hofEntry ? (hofEntry.assists || 0) : 0,
+      awardsCount: (hofEntry && Array.isArray(hofEntry.awards)) ? hofEntry.awards.length : 0,
+      season: seasonNum,
+      seasonYear,
+      avatarSpec: snap.avatarSpec || (hofEntry && hofEntry.avatarSpec) || null,
+      playerRef: snap.playerRef || snap
+    });
+  }
+  legends.sort((a, b) => (b.apps * 2 + b.goals * 4 + b.ovr) - (a.apps * 2 + a.goals * 4 + a.ovr));
+  return legends.slice(0, 2);
+}
+
+function retireClubSquadNumber(club, legendInfo) {
+  if (!club || !legendInfo || !legendInfo.squadNumber) return false;
+  const num = Number(legendInfo.squadNumber);
+  if (!(num >= 1 && num <= 99)) return false;
+  if (!Array.isArray(club.retiredNumbers)) club.retiredNumbers = [];
+  if (club.retiredNumbers.some(r => r && Number(r.number) === num)) return false;
+
+  club.retiredNumbers.push({
+    number: num,
+    playerId: legendInfo.id,
+    playerName: legendInfo.fullName || legendInfo.name,
+    pos: legendInfo.pos || 'CM',
+    season: legendInfo.season || gameState.season || 1,
+    seasonYear: legendInfo.seasonYear || getCurrentSeasonYearStr(),
+    apps: Number(legendInfo.apps || 0),
+    goals: Number(legendInfo.goals || 0),
+    avatarSpec: legendInfo.avatarSpec || null
+  });
+
+  if (typeof ensureClubHallOfFame === 'function') {
+    const hof = ensureClubHallOfFame();
+    if (hof.players && hof.players[legendInfo.id]) {
+      hof.players[legendInfo.id].numberRetired = true;
+    }
+  }
+  if (typeof ensureClubSquadNumbers === 'function') {
+    ensureClubSquadNumbers(club);
+  }
+  if (typeof adjustClubSupporters === 'function') {
+    adjustClubSupporters(club, 180);
+  }
+  if (typeof addDailyLog === 'function') {
+    addDailyLog(`【永久欠番認定】功労者 ${legendInfo.fullName || legendInfo.name} の背番号 #${num} を ${club.name} の永久欠番として登録しました。`);
+  }
+  if (typeof generateEventSnsReactions === 'function') {
+    generateEventSnsReactions('legend_retirement', { club, legend: legendInfo, retiredNumber: true });
+  }
+  if (typeof showToast === 'function') {
+    showToast(`背番号 #${num} を永久欠番に登録しました`, 'success');
+  }
+  if (typeof renderAll === 'function') renderAll();
+  if (gameState.hasStartedOnce && typeof saveGameToStorage === 'function') saveGameToStorage(true);
+  return true;
+}
+
+function triggerLegendRetirementCeremony(playerClub, legendInfo) {
+  if (!playerClub || !legendInfo) return false;
+  const pName = legendInfo.fullName || legendInfo.name || '功労選手';
+  const num = legendInfo.squadNumber ? Number(legendInfo.squadNumber) : null;
+  const alreadyRetiredNum = num && Array.isArray(playerClub.retiredNumbers) && playerClub.retiredNumbers.some(r => r && Number(r.number) === num);
+
+  const openFarewellModal = () => {
+    if (typeof showSecretaryModal !== 'function' || typeof document === 'undefined') return;
+    const actions = [];
+    if (num && !alreadyRetiredNum) {
+      actions.push({
+        label: `背番号 #${num} を永久欠番にする`,
+        className: 'btn btn-primary',
+        onClick: () => retireClubSquadNumber(playerClub, legendInfo)
+      });
+    }
+    actions.push({
+      label: num && !alreadyRetiredNum ? '次世代へ継承する（殿堂表彰）' : '殿堂入りを称えて見送る',
+      className: num && !alreadyRetiredNum ? 'btn btn-secondary' : 'btn btn-primary',
+      onClick: () => {
+        if (typeof adjustClubSupporters === 'function') adjustClubSupporters(playerClub, 80);
+        if (typeof addDailyLog === 'function') {
+          addDailyLog(`【殿堂引退セレモニー】${pName} の貢献を讃え、クラブの誇りとして送り出しました。`);
+        }
+        if (typeof generateEventSnsReactions === 'function') {
+          generateEventSnsReactions('legend_retirement', { club: playerClub, legend: legendInfo, retiredNumber: false });
+        }
+        if (typeof renderAll === 'function') renderAll();
+      }
+    });
+
+    showSecretaryModal({
+      allowDuringSkip: true,
+      speaker: {
+        kind: 'player',
+        person: legendInfo.playerRef || legendInfo,
+        name: pName,
+        roleLabel: `現役引退 · #${num || '-'} ${legendInfo.pos || ''}`,
+        club: playerClub
+      },
+      topic: 'レジェンド引退セレモニー',
+      title: `${legendInfo.name} からのラストメッセージ`,
+      speechPages: [
+        `GM、これまで ${playerClub.name} で戦わせていただき本当にありがとうございました。スタジアムで聴いたサポーターの声援は生涯の宝物です。`,
+        `今シーズン限りでスパイクを脱ぐ決断をしましたが、これからのクラブのさらなる飛躍を心から応援しています。本当にありがとうございました！`
+      ],
+      detailHtml: `
+        <div class="gm-modal-flat-list">
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">クラブ通算出場</span><span class="gm-modal-flat-val mono">${Number(legendInfo.apps || 0)}試合</span></div>
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">クラブ通算得点</span><span class="gm-modal-flat-val mono accent-gold">${Number(legendInfo.goals || 0)}ゴール</span></div>
+          <div class="gm-modal-flat-row"><span class="gm-modal-flat-label">着用背番号</span><span class="gm-modal-flat-val mono">${num ? `#${num}` : '-'}</span></div>
+        </div>
+      `,
+      actions
+    });
+  };
+
+  if (typeof CinematicOverlay !== 'undefined' && CinematicOverlay && !isFastForwardingSeason) {
+    return CinematicOverlay.enqueue({
+      type: 'legend_retirement',
+      tier: 'major',
+      theme: 'gold',
+      eyebrow: 'LEGEND RETIREMENT',
+      retiredNum: num,
+      title: `${legendInfo.name} 現役引退`,
+      subtitle: `${playerClub.name} での栄光に感謝を込めて`,
+      player: legendInfo.playerRef || legendInfo,
+      club: playerClub,
+      metrics: [
+        { label: '通算出場', value: `${Number(legendInfo.apps || 0)}試合` },
+        { label: '通算得点', value: `${Number(legendInfo.goals || 0)}G`, tone: 'gold' },
+        { label: '背番号', value: num ? `#${num}` : '-', tone: 'green' }
+      ],
+      sfx: 'sfx_applause',
+      durationMs: 3000
+    }, openFarewellModal);
+  }
+  openFarewellModal();
+  return true;
+}
+
+function getPlayerRecentLossStreak(club) {
+  const history = Array.isArray(gameState.matchHistory) ? gameState.matchHistory : [];
+  if (!club || history.length === 0) return 0;
+  let streak = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
+    if (!m || !m.homeClub || !m.awayClub) continue;
+    const isH = m.homeClub.id === club.id;
+    const isA = m.awayClub.id === club.id;
+    if (!isH && !isA) continue;
+    const myS = isH ? (m.homeScore || 0) : (m.awayScore || 0);
+    const oppS = isH ? (m.awayScore || 0) : (m.homeScore || 0);
+    if (myS < oppS) streak += 1;
+    else break;
+  }
+  return streak;
+}
+
+function buildDramaConsultationEvent(club, preferredScenario = null) {
+  if (!club) return null;
+  const mgr = club.manager || null;
+  const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut) && (p.injuryWeeks || 0) === 0);
+  if (active.length === 0) return null;
+
+  const lossStreak = getPlayerRecentLossStreak(club);
+  const capId = club.roles && club.roles.captainId;
+  const captain = (capId && active.find(p => p.id === capId))
+    || [...active].filter(p => p.isStarter).sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0]
+    || active[0];
+  const starTarget = [...active]
+    .filter(p => (p.age || 25) <= 29)
+    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0] || captain;
+  const activePromiseIds = new Set((club.activeDramaPromises || []).map(pr => pr.playerId));
+  const youngHopeful = [...active]
+    .filter(p => !p.isStarter && (p.age || 25) <= 22 && p.pos !== 'GK' && !activePromiseIds.has(p.id))
+    .sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))[0] || null;
+
+  const scenarios = [];
+  if (mgr && lossStreak >= 2) scenarios.push('D1_SLUMP_MEETING');
+  if (captain) scenarios.push('D2_CAPTAIN_LOCKER');
+  if (starTarget) scenarios.push('D3_STAR_TRANSFER_TALK');
+  if (youngHopeful) scenarios.push('D4_YOUTH_AMBITION');
+  if (mgr && !scenarios.includes('D1_SLUMP_MEETING')) scenarios.push('D1_SLUMP_MEETING');
+
+  if (scenarios.length === 0) return null;
+  const chosen = (preferredScenario && scenarios.includes(preferredScenario))
+    ? preferredScenario
+    : scenarios[(gameState.consultationSeq || 0) % scenarios.length];
+
+  if (chosen === 'D1_SLUMP_MEETING' && mgr) {
+    const slumpIntro = lossStreak >= 2
+      ? `GM、公式戦${lossStreak}連敗と厳しい結果が続き、選手たちの間にも少し焦りが見え始めています。フロントとして今、現場へどのようなメッセージを送りますか？`
+      : `GM、これからの勝負どころを前に改めて現場の意思統一を図っておきたいと考えています。チームへのアプローチ方針をご指示ください。`;
+    return {
+      id: `consult_drama_d1_${Date.now()}`,
+      kind: 'drama',
+      scenario: 'D1_SLUMP_MEETING',
+      speakerKind: 'manager',
+      senderName: `${mgr.name} 監督`,
+      topic: '1on1 緊急ミーティング',
+      title: `${mgr.name}監督との現状打開ミーティング`,
+      speech: slumpIntro,
+      dutyTitle: `${mgr.name}監督との面談`,
+      dutyDesc: 'チームの雰囲気・方向性について回答待ち',
+      detailRows: [
+        ['指導方針', `${mgr.preferredFormation || '4-3-3'} / 信頼度 ${mgr.trust ?? 75}%`],
+        ['直近状態', lossStreak >= 2 ? `${lossStreak}連敗中（立て直し局面）` : '次戦に向けた結束確認']
+      ],
+      choices: [
+        { key: 'choiceA', label: '戦術を信じて継続支援する', className: 'btn btn-primary' },
+        { key: 'choiceB', label: '選手を鼓舞して空気を変える', className: 'btn btn-secondary' },
+        { key: 'choiceC', label: '次戦の結果を厳命する', className: 'btn btn-secondary' }
+      ]
+    };
+  }
+
+  if (chosen === 'D2_CAPTAIN_LOCKER' && captain) {
+    return {
+      id: `consult_drama_d2_${Date.now()}`,
+      kind: 'drama',
+      scenario: 'D2_CAPTAIN_LOCKER',
+      speakerKind: 'player',
+      playerId: captain.id,
+      speakerRoleLabel: `チームリーダー · #${captain.squadNumber || '-'} ${captain.pos}`,
+      senderName: `${captain.fullName || captain.name}`,
+      topic: 'ロッカールーム報告',
+      title: `${captain.name}：ロッカールーム結束の確認`,
+      speech: `GM、少しお時間よろしいでしょうか。選手たちは次の試合へ向けてよくまとまっていますが、ここでクラブ首脳陣からの言葉をいただければさらに一体感が増すと思います。`,
+      dutyTitle: `${captain.name} との面談`,
+      dutyDesc: 'チーム全体の士気・方針に対するメッセージ確認',
+      detailRows: [
+        ['役職・番号', `#${captain.squadNumber || '-'} ${captain.pos} (OVR ${getPlayerOverallRating(captain)})`],
+        ['現在士気', `${captain.morale || 75}`]
+      ],
+      choices: [
+        { key: 'choiceA', label: '結束を称えチーム士気を高める', className: 'btn btn-primary' },
+        { key: 'choiceB', label: '慢心を戒め規律を引き締める', className: 'btn btn-secondary' },
+        { key: 'choiceC', label: '若手への牽引役を託す', className: 'btn btn-secondary' }
+      ]
+    };
+  }
+
+  if (chosen === 'D3_STAR_TRANSFER_TALK' && starTarget) {
+    return {
+      id: `consult_drama_d3_${Date.now()}`,
+      kind: 'drama',
+      scenario: 'D3_STAR_TRANSFER_TALK',
+      speakerKind: 'player',
+      playerId: starTarget.id,
+      speakerRoleLabel: `主力 · #${starTarget.squadNumber || '-'} ${starTarget.pos}`,
+      senderName: `${starTarget.fullName || starTarget.name}`,
+      topic: '1on1 本音面談',
+      title: `${starTarget.name}：今後のクラブ野心と去就面談`,
+      speech: `GM、最近他クラブからの関心を報じる記事が出て周囲が少し騒がしいですよね。僕自身はこのクラブでタイトルを獲りたいと思っていますが、今後のクラブの野心を聞かせてください。`,
+      dutyTitle: `${starTarget.name} との1on1面談`,
+      dutyDesc: '主力選手へのクラブビジョン伝達',
+      detailRows: [
+        ['契約残年数', `${starTarget.contractYears || 1}年`],
+        ['OVR', `${getPlayerOverallRating(starTarget)}`]
+      ],
+      choices: [
+        { key: 'choiceA', label: 'タイトル獲得への野心と補強を約束', className: 'btn btn-primary' },
+        { key: 'choiceB', label: 'クラブの顔として全力慰留する', className: 'btn btn-secondary' },
+        { key: 'choiceC', label: 'プロとしてピッチで示すよう求める', className: 'btn btn-secondary' }
+      ]
+    };
+  }
+
+  if (youngHopeful) {
+    return {
+      id: `consult_drama_d4_${Date.now()}`,
+      kind: 'drama',
+      scenario: 'D4_YOUTH_AMBITION',
+      speakerKind: 'player',
+      playerId: youngHopeful.id,
+      speakerRoleLabel: `期待の若手 · #${youngHopeful.squadNumber || '-'} ${youngHopeful.pos}`,
+      senderName: `${youngHopeful.fullName || youngHopeful.name}`,
+      topic: '若手1on1アピール',
+      title: `${youngHopeful.name}：出場チャンス直訴面談`,
+      speech: `GM、最近の練習でかなり手応えを掴んでいます！先輩方も素晴らしい選手ばかりですが、近い公式戦でピッチに立って自分の成長を証明させていただけないでしょうか？`,
+      dutyTitle: `${youngHopeful.name} との面談`,
+      dutyDesc: '若手選手からの出場チャンス直訴に対応',
+      detailRows: [
+        ['年齢 / OVR', `${youngHopeful.age}歳 / OVR ${getPlayerOverallRating(youngHopeful)}`],
+        ['希望事項', '公式戦での出場機会（2試合以内）']
+      ],
+      choices: [
+        { key: 'choiceA', label: '2試合以内の出場を約束する', className: 'btn btn-primary' },
+        { key: 'choiceB', label: '練習での継続アピールを求める', className: 'btn btn-secondary' },
+        { key: 'choiceC', label: '激しい競争を勝ち抜くよう伝える', className: 'btn btn-secondary' }
+      ]
+    };
+  }
+  return null;
+}
+
+function resolveDramaConsultationDecision(consultation, choiceKey) {
+  const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!consultation || !club) return;
+
+  const mgr = club.manager || null;
+  const active = (club.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const scenario = consultation.scenario;
+  let replyPayload = null;
+
+  if (scenario === 'D1_SLUMP_MEETING' && mgr) {
+    const mgrSpeaker = { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club };
+    if (choiceKey === 'choiceA') {
+      mgr.trust = Math.min(100, (mgr.trust ?? 75) + 6);
+      active.forEach(p => { p.morale = Math.min(100, (p.morale || 75) + 3); });
+      addDailyLog(`【1on1面談】${mgr.name}監督の戦術継続への信頼を伝え、現場の安心感を高めました。`);
+      replyPayload = { speaker: mgrSpeaker, topic: '面談の返答', title: `${mgr.name}監督の返答`, speech: 'GMのご信頼に感謝します。自分たちのサッカーをぶらさず、細部を突き詰めて結果を取り戻します。' };
+    } else if (choiceKey === 'choiceB') {
+      active.forEach(p => { p.morale = Math.min(100, (p.morale || 75) + 6); });
+      addDailyLog(`【1on1面談】${mgr.name}監督を通じ選手全員へ激励を届け、士気を大きく回復しました。`);
+      replyPayload = { speaker: mgrSpeaker, topic: '面談の返答', title: `${mgr.name}監督の返答`, speech: 'さっそくロッカーへGMの激励を伝えました。選手たちの目の色が変わっていますよ！' };
+    } else {
+      mgr.trust = Math.max(10, (mgr.trust ?? 75) - 3);
+      active.filter(p => p.isStarter).forEach(p => { p.morale = Math.min(100, (p.morale || 75) + 4); });
+      addDailyLog(`【1on1面談】${mgr.name}監督に次戦必勝のプレッシャーを伝え、緊張感を引き締めました。`);
+      replyPayload = { speaker: mgrSpeaker, topic: '面談の返答', title: `${mgr.name}監督の返答`, speech: '厳しい要求ですが当然のことです。プロの世界は結果がすべて、次の試合で証明します。' };
+    }
+  } else if (scenario === 'D2_CAPTAIN_LOCKER') {
+    const cap = active.find(p => p.id === consultation.playerId) || active[0];
+    const capSpeaker = cap ? { kind: 'player', person: cap, name: cap.fullName || cap.name, roleLabel: consultation.speakerRoleLabel || 'リーダー', club } : null;
+    if (choiceKey === 'choiceA') {
+      active.forEach(p => { p.morale = Math.min(100, (p.morale || 75) + 5); });
+      addDailyLog(`【ロッカー結束】${cap ? cap.name : 'リーダー'}を通じて選手全体の士気を高めました。`);
+      replyPayload = { speaker: capSpeaker, topic: '面談の返答', title: `${cap ? cap.name : 'リーダー'}の返答`, speech: 'ありがとうございます！GMが自分たちの姿勢を見てくれているのが一番の力になります。皆で勝ちにいきましょう！' };
+    } else if (choiceKey === 'choiceB') {
+      active.filter(p => p.isStarter).forEach(p => { p.fatigue = Math.max(0, (p.fatigue || 0) - 2); p.morale = Math.min(100, (p.morale || 75) + 2); });
+      addDailyLog(`【規律引き締め】${cap ? cap.name : 'リーダー'}とともにロッカーの緊張感を整えました。`);
+      replyPayload = { speaker: capSpeaker, topic: '面談の返答', title: `${cap ? cap.name : 'リーダー'}の返答`, speech: 'おっしゃる通りです。良い時ほど足元を固めるのが大事ですね。ロッカーでも私から声を掛けておきます。' };
+    } else {
+      active.filter(p => (p.age || 25) <= 22).forEach(p => { p.morale = Math.min(100, (p.morale || 75) + 8); });
+      if (cap) cap.morale = Math.min(100, (cap.morale || 75) + 4);
+      addDailyLog(`【世代継承】${cap ? cap.name : 'リーダー'}に若手選手たちのサポート役を託しました。`);
+      replyPayload = { speaker: capSpeaker, topic: '面談の返答', title: `${cap ? cap.name : 'リーダー'}の返答`, speech: '任せてください！若い連中が伸び伸び戦えるよう、ピッチ内外で引っ張っていきます。' };
+    }
+  } else if (scenario === 'D3_STAR_TRANSFER_TALK') {
+    const star = active.find(p => p.id === consultation.playerId) || active[0];
+    const starSpeaker = star ? { kind: 'player', person: star, name: star.fullName || star.name, roleLabel: consultation.speakerRoleLabel || '主力', club } : null;
+    if (star) {
+      if (choiceKey === 'choiceA' || choiceKey === 'choiceB') {
+        star.morale = Math.min(100, (star.morale || 75) + 10);
+        star.megaOfferRejected = false;
+        star.dramaLoyaltyBoost = true;
+        star.demandedSalary = null;
+        if (choiceKey === 'choiceA' && typeof adjustClubSupporters === 'function') adjustClubSupporters(club, 60);
+        addDailyLog(`【1on1本音面談】${star.name} へクラブの野心と信頼を伝え、残留への意欲を引き出しました。`);
+        replyPayload = {
+          speaker: starSpeaker,
+          topic: '面談の返答',
+          title: `${star.name} の返答`,
+          speech: choiceKey === 'choiceA'
+            ? 'その言葉を聞いて安心しました！このチームならもっと上を目指せる。雑音に惑わされずタイトルのために全力を尽くします！'
+            : 'そこまで必要とされているなら迷う理由はありません。これからもこのクラブのエンブレムを背負って戦います！'
+        };
+      } else {
+        star.morale = Math.max(30, (star.morale || 75) - 2);
+        addDailyLog(`【1on1本音面談】${star.name} に対し、プロとしてピッチ上の結果で示すよう求めました。`);
+        replyPayload = { speaker: starSpeaker, topic: '面談の返答', title: `${star.name} の返答`, speech: 'わかりました。余計な噂を吹き飛ばすくらい、次の90分で結果を出してみせます。' };
+      }
+    }
+  } else if (scenario === 'D4_YOUTH_AMBITION') {
+    const young = active.find(p => p.id === consultation.playerId) || active[0];
+    const ySpeaker = young ? { kind: 'player', person: young, name: young.fullName || young.name, roleLabel: consultation.speakerRoleLabel || '若手', club } : null;
+    if (young) {
+      if (choiceKey === 'choiceA') {
+        if (!Array.isArray(club.activeDramaPromises)) club.activeDramaPromises = [];
+        if (!club.activeDramaPromises.some(pr => pr && pr.playerId === young.id)) {
+          club.activeDramaPromises.push({
+            id: `promise_${Date.now()}_${young.id}`,
+            type: 'play_within_2',
+            playerId: young.id,
+            playerName: young.fullName || young.name,
+            remainingMatches: 2
+          });
+        }
+        young.morale = Math.min(100, (young.morale || 75) + 10);
+        addDailyLog(`【出場約束】${young.name} に対し「公式戦2試合以内の出場機会」を約束しました。`);
+        replyPayload = { speaker: ySpeaker, topic: '約束の成立', title: `${young.name} の返答`, speech: '本当ですか！？ありがとうございます！！絶対にチャンスを掴み取ってみせます！' };
+      } else if (choiceKey === 'choiceB') {
+        young.morale = Math.min(100, (young.morale || 75) + 4);
+        addDailyLog(`【若手面談】${young.name} に日々の練習でのさらなるアピールを促しました。`);
+        replyPayload = { speaker: ySpeaker, topic: '面談の返答', title: `${young.name} の返答`, speech: '分かりました！監督の目にも留まるよう、毎日の練習から誰よりも走り抜きます。' };
+      } else {
+        young.morale = Math.max(25, (young.morale || 75) - 4);
+        addDailyLog(`【若手面談】${young.name} に厳しいポジション競争を勝ち抜くよう伝えました。`);
+        replyPayload = { speaker: ySpeaker, topic: '面談の返答', title: `${young.name} の返答`, speech: '厳しいのは承知の上です。実力で枠を奪い取って見せます。' };
+      }
+    }
+  }
+
+  if (typeof renderAll === 'function') renderAll();
+  if (gameState.hasStartedOnce && typeof scheduleAutoSave === 'function') scheduleAutoSave(120);
+  if (replyPayload && typeof showConsultationReplyModal === 'function') {
+    showConsultationReplyModal(replyPayload);
+  }
+}
+
+function evaluateDramaPromisesAfterMatch(playerClub, matchData) {
+  if (!playerClub || !Array.isArray(playerClub.activeDramaPromises) || playerClub.activeDramaPromises.length === 0 || !matchData) return;
+  const appearedIds = new Set();
+  (playerClub.players || []).forEach(p => {
+    if (p && p.isStarter && !p.isRetired) appearedIds.add(p.id);
+  });
+  const subEvents = matchData.isPlayerHome ? (matchData.homeSubEvents || []) : (matchData.awaySubEvents || []);
+  subEvents.forEach(ev => {
+    if (ev && ev.inPlayer && ev.inPlayer.id) appearedIds.add(ev.inPlayer.id);
+  });
+
+  const nextPromises = [];
+  for (const pr of playerClub.activeDramaPromises) {
+    if (!pr || !pr.playerId) continue;
+    const target = (playerClub.players || []).find(p => p && p.id === pr.playerId && !p.isRetired);
+    if (!target) continue;
+
+    if (appearedIds.has(pr.playerId)) {
+      target.morale = Math.min(100, (target.morale || 75) + 12);
+      const isDef = ['GK', 'CB', 'LB', 'RB', 'DM'].includes(target.pos);
+      if (isDef) target.def = Math.min(99, (target.def || 60) + 1);
+      else target.atk = Math.min(99, (target.atk || 60) + 1);
+      target.sta = Math.min(99, (target.sta || 70) + 1);
+      target.attributes = null;
+      if (typeof getPlayerFiveAttributes === 'function') getPlayerFiveAttributes(target);
+
+      addDailyLog(`【面談約束履行】#${target.squadNumber || '-'} ${target.name} が公式戦に出場！約束を果たしたことで士気と能力（+1）が大きく向上しました。`);
+      if (typeof addInboxMessage === 'function') {
+        addInboxMessage({
+          senderType: 'player',
+          senderName: target.fullName || target.name,
+          title: `出場機会への感謝（#${target.squadNumber || '-'} ${target.name}）`,
+          body: `GM、約束通りピッチへ送り出していただき本当にありがとうございました！実戦の感触も抜群で、これまで以上に自信が湧いています！`
+        });
+      }
+      if (!isFastForwardingSeason && typeof generateEventSnsReactions === 'function') {
+        generateEventSnsReactions('drama_promise_kept', { club: playerClub, player: target });
+      }
+    } else {
+      pr.remainingMatches = Number(pr.remainingMatches || 1) - 1;
+      if (pr.remainingMatches > 0) {
+        nextPromises.push(pr);
+      } else {
+        target.morale = Math.max(20, (target.morale || 75) - 10);
+        addDailyLog(`【約束未履行】#${target.squadNumber || '-'} ${target.name} との「2試合以内の出場約束」が果たせず、本人の士気が低下しました。`);
+        if (typeof addInboxMessage === 'function') {
+          addInboxMessage({
+            senderType: 'player',
+            senderName: target.fullName || target.name,
+            title: `出場機会についての懸念（#${target.squadNumber || '-'} ${target.name}）`,
+            body: `GM、2試合以内の出場を約束していただきましたが出番が回ってきませんでした……。練習で準備は続けていますが、正直なところ少し落胆しています。`
+          });
+        }
+      }
+    }
+  }
+  playerClub.activeDramaPromises = nextPromises;
 }
