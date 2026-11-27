@@ -217,6 +217,37 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('b.mvpScore - a.mvpScore', awards_eval_block)
         self.assertIn("slot.slotPos === 'GK' && bestGkItem", awards_eval_block)
 
+    def test_7_cup_bracket_round_tabs_and_flat_grid(self):
+        """トーナメント表のラウンド切替タブ・最新ラウンド自動選択・フラットグリッドCSSを検証"""
+        self.assertIn('function getCupRoundMatches(', self.competitions_js)
+        bracket_fn = re.search(r'function renderCupBracketHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(bracket_fn)
+        body = bracket_fn.group(0)
+        for token in [
+            'cup-round-tabs',
+            'cup-round-tab-btn',
+            'cup-round-meta',
+            'cup-round-matches-grid',
+            'cup-champion-bar',
+            'data-latest-round',
+            'selectedCupRounds',
+        ]:
+            self.assertIn(token, body)
+
+        self.assertIn('function bindCupBracketRoundTabs(', self.main_js)
+        self.assertIn('bindCupBracketRoundTabs(bracketWrapper, curDom);', self.main_js)
+        self.assertIn('bindCupBracketRoundTabs(bracketWrapper, curEuro);', self.main_js)
+        self.assertGreaterEqual(self.main_js.count('gameState.selectedCupRounds = {};'), 2)
+
+        for css_sel in [
+            '.cup-round-tabs',
+            '.cup-round-tab-btn',
+            '.cup-round-matches-grid',
+            '.cup-champion-bar',
+        ]:
+            self.assertIn(css_sel, self.css)
+        self.assertNotIn('.bracket-rounds-wrapper', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()

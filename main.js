@@ -8401,6 +8401,7 @@ function startNextSeason() {
   if (typeof initSeasonCompetitions === 'function') {
     initSeasonCompetitions();
   }
+  gameState.selectedCupRounds = {};
   gameState.currentDayIndex = 0;
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   gameState.isAdvancingCalendar = false;
@@ -9255,6 +9256,7 @@ function renderStandings() {
     if (bracketWrapper) {
       bracketWrapper.classList.remove('standings-view');
       bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
+      bindCupBracketRoundTabs(bracketWrapper, curDom);
     }
     if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE TROPHY (L-CUP)' : 'NATIONAL CUP (N-CUP)';
   } else if (compView === 'europe') {
@@ -9329,10 +9331,29 @@ function renderStandings() {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
+        bindCupBracketRoundTabs(bracketWrapper, curEuro);
       }
       if (statusText) statusText.textContent = compName;
     }
   }
+}
+
+/**
+ * カップ戦・欧州決勝Tのラウンド切替タブにクリックイベントを設定する
+ */
+function bindCupBracketRoundTabs(wrapper, compKey) {
+  if (!wrapper || !compKey) return;
+  const container = wrapper.querySelector('.cup-bracket-container');
+  const latestAtSelection = container ? (container.dataset.latestRound || '') : '';
+  wrapper.querySelectorAll('.cup-round-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const roundKey = btn.dataset.cupRound;
+      if (!roundKey) return;
+      gameState.selectedCupRounds = gameState.selectedCupRounds || {};
+      gameState.selectedCupRounds[compKey] = { roundKey, latestAtSelection };
+      renderStandings();
+    });
+  });
 }
 
 /**
@@ -15065,6 +15086,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.consecutiveDeficitSeasons = 0;
   gameState.paidPayrollWeeks = 0;
   gameState.competitions = null;
+  gameState.selectedCupRounds = {};
   gameState.d1BackgroundSchedule = null;
   gameState.lastSeasonStandingsOrder = null;
   gameState.lastSeasonCupWinners = null;

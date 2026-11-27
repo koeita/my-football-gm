@@ -15574,11 +15574,11 @@ button.hidden,
   font-weight: 600;
 }
 
-/* トーナメント表（ブラケット）スタイル */
+/* トーナメント表（ラウンド切替タブ＋フラットグリッド） */
 .comp-bracket-wrapper {
-  padding: 16px;
-  overflow-x: auto;
-  min-height: 400px;
+  padding: 0;
+  overflow-x: hidden;
+  min-height: 240px;
 }
 
 .comp-bracket-wrapper.standings-view,
@@ -15591,99 +15591,194 @@ button.hidden,
 .cup-bracket-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 720px;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .cup-header-banner {
   display: none !important;
 }
 
-.cup-title {
-  margin: 0;
-  font-size: 16px;
-  color: #F8FAFC;
+.cup-round-tabs {
+  display: flex;
+  width: 100%;
+  background: #14171c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cup-round-tab-btn {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cup-round-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+}
+
+.cup-round-tab-btn.is-upcoming {
+  color: #55606d;
+}
+
+.cup-round-tab-btn.active {
+  color: #2ecc71;
+  border-bottom-color: #2ecc71;
   font-weight: 700;
 }
 
-.cup-prize {
-  font-size: 13px;
-  color: #38BDF8;
-  font-weight: 600;
+.cup-round-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2ecc71;
+  flex-shrink: 0;
 }
 
-.cup-winner-badge {
-  background: linear-gradient(135deg, #F59E0B, #D97706);
-  color: #000;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.bracket-rounds-wrapper {
+.cup-champion-bar {
   display: flex;
-  gap: 16px;
-  align-items: stretch;
-}
-
-.bracket-round-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  min-width: 170px;
+  padding: 12px 16px;
+  background: #1f252b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 3px 0 0 #2ecc71;
 }
 
-.bracket-round-title {
-  margin: 0;
-  font-size: 12px;
-  color: #94A3B8;
-  text-align: center;
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+.cup-champion-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.bracket-matches-list {
+.cup-champion-bar.is-player-champion .cup-champion-label {
+  color: #2ecc71;
+}
+
+.cup-champion-club {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cup-champion-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cup-champion-bar.is-player-champion .cup-champion-name {
+  color: #2ecc71;
+}
+
+.cup-round-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  flex: 1;
-  justify-content: space-around;
+  padding: 10px 14px;
+  background: #181b1f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+}
+
+.cup-round-meta-title {
+  color: #e6edf3;
+  font-weight: 700;
+}
+
+.cup-round-meta-status {
+  color: #8b949e;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cup-round-meta-status.is-live {
+  color: #2ecc71;
+}
+
+.cup-round-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: #1a1d20;
+}
+
+.cup-round-matches-grid.is-final-round {
+  grid-template-columns: 1fr;
+  max-width: 560px;
+  width: 100%;
+  margin: 16px auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cup-round-matches-grid.is-final-round .bracket-match-card {
+  border-right: none;
+}
+
+.cup-round-matches-grid.is-final-round .bracket-team-row {
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.cup-round-matches-grid.is-final-round .bracket-team-score {
+  font-size: 16px;
 }
 
 .bracket-match-card {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  background: #1a1d20;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
 }
 
-.bracket-match-card:hover {
-  border-color: rgba(0, 240, 255, 0.4);
+.cup-round-matches-grid:not(.is-final-round) .bracket-match-card:nth-child(odd) {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bracket-match-placeholder {
-  padding: 16px 8px;
+  padding: 36px 16px;
   text-align: center;
-  color: #64748B;
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  color: #8b949e;
+  font-size: 12px;
+  background: #1a1d20;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bracket-team-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 11px;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 12px;
 }
 
 .bracket-team-row:last-child {
@@ -15693,13 +15788,14 @@ button.hidden,
 .bracket-team-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .bracket-team-name {
-  color: #CBD5E1;
+  color: #cfd8e3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -15707,32 +15803,35 @@ button.hidden,
 }
 
 .bracket-team-score {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: #94A3B8;
+  color: #8b949e;
   padding-left: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bracket-team-row.match-winner {
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.bracket-team-row.match-winner .bracket-team-name {
-  color: #00F0FF;
+.bracket-team-row.match-winner .bracket-team-name,
+.bracket-team-row.match-winner .bracket-team-score {
+  color: #f1f5f9;
   font-weight: 700;
 }
 
-.bracket-team-row.match-winner .bracket-team-score {
-  color: #00F0FF;
+.bracket-team-row.match-loser .bracket-team-name,
+.bracket-team-row.match-loser .bracket-team-score {
+  color: #7d8590;
 }
 
 .bracket-match-card.is-player-match {
-  border-color: rgba(46, 204, 113, 0.55);
   box-shadow: inset 3px 0 0 #2ecc71;
 }
 
 .bracket-team-row.is-player-team {
-  background: rgba(46, 204, 113, 0.16);
+  background: rgba(46, 204, 113, 0.14);
 }
 
 .bracket-team-row.is-player-team .bracket-team-name,
@@ -15744,7 +15843,34 @@ button.hidden,
 }
 
 .bracket-team-row.is-player-team.match-winner {
-  background: rgba(46, 204, 113, 0.22);
+  background: rgba(46, 204, 113, 0.2);
+}
+
+@media (max-width: 768px) {
+  .cup-round-tab-btn {
+    font-size: 11px;
+    padding: 0 2px;
+    gap: 3px;
+    height: 34px;
+  }
+
+  .cup-round-matches-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cup-round-matches-grid:not(.is-final-round) .bracket-match-card:nth-child(odd) {
+    border-right: none;
+  }
+
+  .cup-round-matches-grid.is-final-round {
+    margin: 0;
+    max-width: none;
+    border-top: none;
+  }
+
+  .bracket-team-row {
+    padding: 8px 12px;
+  }
 }
 
 /* ==========================================================================

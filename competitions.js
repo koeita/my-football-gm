@@ -2156,98 +2156,134 @@ function renderEuroScheduleListHtml(compKey) {
   return html;
 }
 
-// トーナメントブラケット描画（国内カップ or 欧州決勝トーナメント）
+function getCupRoundMatches(comp, rk) {
+  if (!comp) return [];
+  if (rk === 'PO') return Array.isArray(comp.playoffs) ? comp.playoffs : [];
+  return (comp.rounds && Array.isArray(comp.rounds[rk])) ? comp.rounds[rk] : [];
+}
+
+// トーナメント表描画（国内カップ or 欧州決勝トーナメント：ラウンド切替タブ方式）
 function renderCupBracketHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.rounds) return '<p class="empty-state">大会データがありません</p>';
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
-  const roundNames = isEuroComp
-    ? {
-        PO: 'プレーオフ',
-        R16: 'ベスト16',
-        QF: '準々決勝',
-        SF: '準決勝',
-        FINAL: '決勝'
-      }
-    : {
-        R32: '1回戦 / ベスト32',
-        R16: '2回戦 / ベスト16',
-        QF: '準々決勝',
-        SF: '準決勝',
-        FINAL: '決勝'
-      };
-
-  let html = `<div class="cup-bracket-container">
-    <div class="bracket-rounds-wrapper">
-  `;
+  const roundShortLabels = isEuroComp
+    ? { PO: 'PO', R16: 'ベスト16', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' }
+    : { R32: '1回戦', R16: '2回戦', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' };
+  const roundFullLabels = isEuroComp
+    ? { PO: '決勝Tプレーオフ', R16: 'ベスト16', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' }
+    : { R32: '1回戦 / ベスト32', R16: '2回戦 / ベスト16', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' };
 
   const keys = isEuroComp ? ['PO', 'R16', 'QF', 'SF', 'FINAL'] : ['R32', 'R16', 'QF', 'SF', 'FINAL'];
+  let latestRoundKey = keys[0];
+  for (let i = keys.length - 1; i >= 0; i--) {
+    if (getCupRoundMatches(comp, keys[i]).length > 0) {
+      latestRoundKey = keys[i];
+      break;
+    }
+  }
+
+  const selState = gameState.selectedCupRounds && gameState.selectedCupRounds[compKey];
+  let activeRoundKey = latestRoundKey;
+  if (selState && keys.includes(selState.roundKey) && selState.latestAtSelection === latestRoundKey) {
+    activeRoundKey = selState.roundKey;
+  }
+
+  let html = `<div class="cup-bracket-container" data-comp-key="${compKey}" data-latest-round="${latestRoundKey}">`;
+
+  html += `<div class="cup-round-tabs" role="tablist" aria-label="ラウンド切替">`;
   keys.forEach(rk => {
-    const matches = rk === 'PO'
-      ? (Array.isArray(comp.playoffs) ? comp.playoffs : [])
-      : (comp.rounds[rk] || []);
-    const prevKey = keys.indexOf(rk) > 0 ? keys[keys.indexOf(rk) - 1] : null;
-    const prevMatches = prevKey
-      ? (prevKey === 'PO' ? (comp.playoffs || []) : (comp.rounds[prevKey] || []))
-      : [];
-    if (matches.length === 0 && rk !== keys[0] && prevMatches.length === 0) {
-      return;
-    }
+    const rMatches = getCupRoundMatches(comp, rk);
+    const hasMatches = rMatches.length > 0;
+    const isAllPlayed = hasMatches && rMatches.every(m => m.played);
+    const isCurrent = hasMatches && !isAllPlayed;
+    const isActive = rk === activeRoundKey;
+    const stateClass = !hasMatches ? 'is-upcoming' : (isAllPlayed ? 'is-done' : 'is-current');
+    const dotHtml = isCurrent ? `<span class="cup-round-dot" aria-hidden="true"></span>` : '';
+    html += `<button type="button" class="cup-round-tab-btn mono ${stateClass} ${isActive ? 'active' : ''}" data-cup-round="${rk}" data-comp-key="${compKey}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">${dotHtml}<span>${roundShortLabels[rk] || rk}</span></button>`;
+  });
+  html += `</div>`;
 
+  if (comp.winner && activeRoundKey === 'FINAL') {
+    const winnerClub = comp.winner;
+    const isWinnerPlayer = Boolean(
+      (playerClub && winnerClub.id === playerClub.id) || winnerClub.isPlayer
+    );
+    const winnerEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(winnerClub, 24) : '';
     html += `
-      <div class="bracket-round-column">
-        <h4 class="bracket-round-title mono">${roundNames[rk] || rk}</h4>
-        <div class="bracket-matches-list">
-    `;
-
-    if (matches.length === 0) {
-      html += `<div class="bracket-match-placeholder mono">対戦決定前</div>`;
-    } else {
-      matches.forEach(m => {
-        const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 18) : '';
-        const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 18) : '';
-        const homeScoreText = m.played ? `${m.homeScore}${m.pkHome != null ? `(${m.pkHome})` : ''}` : '-';
-        const awayScoreText = m.played ? `${m.awayScore}${m.pkAway != null ? `(${m.pkAway})` : ''}` : '-';
-        const homeWinner = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
-        const awayWinner = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
-        const isHomePlayer = Boolean(
-          playerClub && (m.homeId === playerClub.id || (m.homeClub && m.homeClub.id === playerClub.id))
-        ) || Boolean(m.homeClub && m.homeClub.isPlayer);
-        const isAwayPlayer = Boolean(
-          playerClub && (m.awayId === playerClub.id || (m.awayClub && m.awayClub.id === playerClub.id))
-        ) || Boolean(m.awayClub && m.awayClub.isPlayer);
-        const isMyMatch = isHomePlayer || isAwayPlayer;
-
-        html += `
-          <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${isMyMatch ? 'is-player-match' : ''}">
-            <div class="bracket-team-row ${homeWinner} ${isHomePlayer ? 'is-player-team' : ''}">
-              <div class="bracket-team-info">
-                ${homeEmblem}
-                <span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span>
-              </div>
-              <span class="bracket-team-score mono">${homeScoreText}</span>
-            </div>
-            <div class="bracket-team-row ${awayWinner} ${isAwayPlayer ? 'is-player-team' : ''}">
-              <div class="bracket-team-info">
-                ${awayEmblem}
-                <span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span>
-              </div>
-              <span class="bracket-team-score mono">${awayScoreText}</span>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    html += `
+      <div class="cup-champion-bar ${isWinnerPlayer ? 'is-player-champion' : ''}">
+        <span class="cup-champion-label mono">優勝</span>
+        <div class="cup-champion-club">
+          ${winnerEmblem}
+          <span class="cup-champion-name">${winnerClub.name || ''}</span>
         </div>
       </div>
     `;
-  });
+  }
 
-  html += `</div></div>`;
+  const activeMatches = getCupRoundMatches(comp, activeRoundKey);
+  const activeAllPlayed = activeMatches.length > 0 && activeMatches.every(m => m.played);
+  const roundStatusText = activeMatches.length === 0
+    ? '対戦決定前'
+    : `${activeMatches.length}試合 · ${activeAllPlayed ? '完了' : '進行中'}`;
+
+  html += `
+    <div class="cup-round-meta">
+      <span class="cup-round-meta-title mono">${roundFullLabels[activeRoundKey] || activeRoundKey}</span>
+      <span class="cup-round-meta-status mono ${activeMatches.length > 0 && !activeAllPlayed ? 'is-live' : ''}">${roundStatusText}</span>
+    </div>
+  `;
+
+  if (activeMatches.length === 0) {
+    html += `<div class="bracket-match-placeholder mono">対戦決定前</div>`;
+  } else {
+    const gridMod = activeRoundKey === 'FINAL' ? 'is-final-round' : (activeRoundKey === 'SF' ? 'is-sf-round' : '');
+    const emblemSize = activeRoundKey === 'FINAL' ? 24 : 18;
+    html += `<div class="cup-round-matches-grid ${gridMod}">`;
+    activeMatches.forEach(m => {
+      const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, emblemSize) : '';
+      const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, emblemSize) : '';
+      const homePk = m.pkHome != null ? ` (${m.pkHome})` : '';
+      const awayPk = m.pkAway != null ? ` (${m.pkAway})` : '';
+      const homeScoreText = m.played ? `${m.homeScore}${homePk}` : '-';
+      const awayScoreText = m.played ? `${m.awayScore}${awayPk}` : '-';
+      const homeWinner = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
+      const awayWinner = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
+      const homeLoser = m.played && m.winnerId && m.winnerId !== m.homeId ? 'match-loser' : '';
+      const awayLoser = m.played && m.winnerId && m.winnerId !== m.awayId ? 'match-loser' : '';
+      const isHomePlayer = Boolean(
+        playerClub && (m.homeId === playerClub.id || (m.homeClub && m.homeClub.id === playerClub.id))
+      ) || Boolean(m.homeClub && m.homeClub.isPlayer);
+      const isAwayPlayer = Boolean(
+        playerClub && (m.awayId === playerClub.id || (m.awayClub && m.awayClub.id === playerClub.id))
+      ) || Boolean(m.awayClub && m.awayClub.isPlayer);
+      const isMyMatch = isHomePlayer || isAwayPlayer;
+
+      html += `
+        <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${isMyMatch ? 'is-player-match' : ''}">
+          <div class="bracket-team-row ${homeWinner} ${homeLoser} ${isHomePlayer ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">
+              ${homeEmblem}
+              <span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span>
+            </div>
+            <span class="bracket-team-score mono">${homeScoreText}</span>
+          </div>
+          <div class="bracket-team-row ${awayWinner} ${awayLoser} ${isAwayPlayer ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">
+              ${awayEmblem}
+              <span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span>
+            </div>
+            <span class="bracket-team-score mono">${awayScoreText}</span>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
   return html;
 }
 
