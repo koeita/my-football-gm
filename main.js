@@ -3874,7 +3874,7 @@ function processSeasonEnd(isSkipped = false) {
     awards: seasonAwardsObj
   };
 
-  switchTab('market');
+  switchTab('office');
   const seasonDivLabel = wasInD2 ? 'ENG-D2' : 'ENG-D1';
   let playedVictoryCin = false;
   if (playerRank === 1 && typeof generateEventSnsReactions === 'function') {
@@ -24962,9 +24962,10 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
   const topAssisterItem = [...pool].sort((a, b) => b.assists - a.assists || b.goals - a.goals || b.avgRatingNum - a.avgRatingNum)[0] || null;
 
   const gkPoolAll = pool.filter(x => x.pos === 'GK');
-  const gkPoolMin = gkPoolAll.filter(x => x.apps >= 5);
-  const gkPool = gkPoolMin.length > 0 ? gkPoolMin : gkPoolAll;
-  const bestGkItem = [...gkPool].sort((a, b) => (b.cs * 3 + b.avgRatingNum * 5 + b.apps * 0.2) - (a.cs * 3 + a.avgRatingNum * 5 + a.apps * 0.2))[0] || null;
+  const gkPoolMin10 = gkPoolAll.filter(x => x.apps >= 10);
+  const gkPoolMin5 = gkPoolAll.filter(x => x.apps >= 5);
+  const gkPool = gkPoolMin10.length > 0 ? gkPoolMin10 : (gkPoolMin5.length > 0 ? gkPoolMin5 : gkPoolAll);
+  const bestGkItem = [...gkPool].sort((a, b) => b.mvpScore - a.mvpScore || b.cs - a.cs || b.avgRatingNum - a.avgRatingNum)[0] || null;
 
   const youngPoolAll = pool.filter(x => (x.p.age || 25) <= 21);
   const youngPoolMin = youngPoolAll.filter(x => x.apps >= 5);
@@ -25024,10 +25025,15 @@ function evaluateAndRecordSeasonAwards(leagueClubs, divisionLabel, playerClub, s
   const bestEleven = [];
 
   for (const slot of best11Slots) {
-    let picked = sortedByMvp.find(x => !usedIds.has(x.p.id) && matchesTargets(x.p, slot.targets))
-      || sortedByMvp.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
-      || fallbackPool.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
-      || fallbackPool.find(x => !usedIds.has(x.p.id));
+    let picked = (slot.slotPos === 'GK' && bestGkItem && !usedIds.has(bestGkItem.p.id))
+      ? bestGkItem
+      : null;
+    if (!picked) {
+      picked = sortedByMvp.find(x => !usedIds.has(x.p.id) && matchesTargets(x.p, slot.targets))
+        || sortedByMvp.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
+        || fallbackPool.find(x => !usedIds.has(x.p.id) && (typeof POS_ROLE_GROUP !== 'undefined' ? POS_ROLE_GROUP[x.pos] : 'MF') === slot.role)
+        || fallbackPool.find(x => !usedIds.has(x.p.id));
+    }
     if (picked) {
       usedIds.add(picked.p.id);
       bestEleven.push({

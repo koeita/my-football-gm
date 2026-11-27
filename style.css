@@ -15726,6 +15726,27 @@ button.hidden,
   color: #00F0FF;
 }
 
+.bracket-match-card.is-player-match {
+  border-color: rgba(46, 204, 113, 0.55);
+  box-shadow: inset 3px 0 0 #2ecc71;
+}
+
+.bracket-team-row.is-player-team {
+  background: rgba(46, 204, 113, 0.16);
+}
+
+.bracket-team-row.is-player-team .bracket-team-name,
+.bracket-team-row.is-player-team .bracket-team-score,
+.bracket-team-row.is-player-team.match-winner .bracket-team-name,
+.bracket-team-row.is-player-team.match-winner .bracket-team-score {
+  color: #2ecc71;
+  font-weight: 700;
+}
+
+.bracket-team-row.is-player-team.match-winner {
+  background: rgba(46, 204, 113, 0.22);
+}
+
 /* ==========================================================================
    順位表ゾーンバッジ（PC表示）：CL圏、EL圏、降格圏
    ========================================================================== */
@@ -15905,8 +15926,9 @@ button.hidden,
 }
 
 .euro-match-tile.my-match {
-  border-color: #00F0FF;
-  background: rgba(0, 240, 255, 0.08);
+  border-color: rgba(46, 204, 113, 0.55);
+  background: rgba(46, 204, 113, 0.12);
+  box-shadow: inset 3px 0 0 #2ecc71;
 }
 
 .euro-tile-team {
@@ -15915,6 +15937,11 @@ button.hidden,
   gap: 4px;
   font-weight: 600;
   color: #CBD5E1;
+}
+
+.euro-tile-team.is-player-team {
+  color: #2ecc71;
+  font-weight: 800;
 }
 
 .euro-tile-team.home {
@@ -16151,6 +16178,19 @@ body {
 
 .standings-table tbody tr.row-player-club:hover {
   background: rgba(34, 197, 94, 0.09) !important;
+}
+
+.standings-table.euro-standings-table tbody tr.row-player-club {
+  background: rgba(46, 204, 113, 0.14) !important;
+}
+
+.standings-table.euro-standings-table tbody tr.row-player-club:hover {
+  background: rgba(46, 204, 113, 0.2) !important;
+}
+
+.standings-table.euro-standings-table tbody tr.row-player-club td.col-team .team-name-text {
+  color: #2ecc71;
+  font-weight: 700;
 }
 
 /* 6. カレンダービューのグリッド＆バッジのUnslop */
