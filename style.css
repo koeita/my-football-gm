@@ -24487,12 +24487,12 @@ button.hof-record-name {
 }
 
 .commercial-section-body {
-  padding: 0 14px 12px;
+  padding: 2px 16px 14px;
 }
 
 .commercial-stadium-hero {
   display: grid;
-  grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(210px, 340px) minmax(0, 1fr);
   gap: 14px;
   align-items: center;
   padding: 10px 0 12px;
@@ -24662,7 +24662,7 @@ button.hof-record-name {
 
 .commercial-seatmap-svg {
   width: 100%;
-  max-width: 320px;
+  max-width: 280px;
   height: auto;
   display: block;
 }
@@ -26527,12 +26527,64 @@ button.hof-record-name {
 
 .finance-rebalance-slider-box {
   min-width: 0;
+  padding: 4px 0 2px;
 }
 
 .finance-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: #2ecc71;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    #2ecc71 0%,
+    #2ecc71 var(--slider-pct, 50%),
+    #475569 var(--slider-pct, 50%),
+    #475569 100%
+  );
+  outline: none;
   cursor: pointer;
+  margin: 6px 0 4px;
+  display: block;
+}
+
+.finance-range-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.finance-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #2ecc71;
+  border: 2px solid #1a1d20;
+  cursor: pointer;
+}
+
+.finance-range-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.finance-range-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2ecc71;
+  border: 2px solid #1a1d20;
+  cursor: pointer;
+}
+
+.finance-range-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .finance-slider-bounds {
@@ -26977,15 +27029,117 @@ button.hof-record-name {
 .commercial-setup-modal-card {
   max-width: 780px;
   width: calc(100% - 20px);
-  max-height: 90vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  background-color: #1a1d20;
+  overflow: hidden;
+}
+
+.commercial-modal-header {
+  padding: 11px 16px;
+  background: #1a1d20;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.commercial-modal-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.commercial-modal-close-btn {
+  width: 30px;
+  height: 28px;
+  padding: 0 !important;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.commercial-fit-tag {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.commercial-modal-status {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .commercial-modal-body {
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0;
   flex: 1 1 auto;
+  min-height: 0;
+}
+
+.commercial-modal-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #1a1d20;
+}
+
+.commercial-modal-sticky-top .commercial-summary-strip {
+  padding: 8px 16px;
+  background: #24282c;
+}
+
+.commercial-modal-sticky-top .commercial-subnav {
+  background: #1a1d20;
+}
+
+.commercial-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #1a1d20;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.commercial-footer-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.commercial-footer-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-footer-cost,
+.commercial-footer-note {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commercial-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* 施設改修カードをPC・モバイル共通で3列横並びに統一 */
@@ -27064,5 +27218,47 @@ button.hof-record-name {
   }
   .comm-ov-stadium-row {
     flex-wrap: wrap;
+  }
+  .commercial-setup-modal-card {
+    width: calc(100% - 12px);
+    max-height: 92vh;
+  }
+  .commercial-modal-header {
+    padding: 10px 12px;
+  }
+  .commercial-modal-sticky-top .commercial-summary-strip {
+    padding: 7px 12px;
+  }
+  .commercial-section-body {
+    padding: 2px 12px 12px;
+  }
+  .commercial-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .commercial-footer-info {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .commercial-footer-name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .commercial-footer-actions {
+    width: 100%;
+  }
+  .commercial-footer-actions > button {
+    flex: 1 1 0;
+  }
+  .commercial-row-metrics {
+    gap: 6px;
+  }
+  .commercial-price-range {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 60px;
   }
 }

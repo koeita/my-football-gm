@@ -47,8 +47,13 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('snapToPoolRatio(0.75)', self.main_js)
         self.assertIn('snapToPoolRatio(0.55)', self.main_js)
         self.assertIn('snapToPoolRatio(0.30)', self.main_js)
+        self.assertIn('calcSliderTrackPct', self.main_js)
+        self.assertIn('--slider-pct', self.main_js)
+        self.assertNotIn('id="finance-ratio-bar-transfer"', self.main_js)
         self.assertIn('function openCommercialSetupModal()', self.main_js)
         self.assertIn('function renderCommercialSummaryCard()', self.main_js)
+        self.assertNotIn('commercial-section-banner-head', self.main_js)
+        self.assertNotIn('commercial-setup-bar', self.main_js)
         self.assertIn("if (subtabKey === 'investment')", self.main_js)
 
     def test_3_html_and_storage_4tab_structure(self):
@@ -62,6 +67,8 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('id="commercial-facilities-section"', self.html)
         self.assertIn('id="commercial-summary-root"', self.html)
         self.assertIn('id="commercial-setup-modal"', self.html)
+        self.assertIn('id="commercial-modal-status"', self.html)
+        self.assertIn('id="commercial-modal-footer"', self.html)
         self.assertIn('id="facilities-grid"', self.html)
         self.assertIn('id="finance-budget-dashboard-root"', self.html)
         self.assertIn('id="board-psr-sponsor-panel"', self.html)
@@ -72,14 +79,17 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn("else if (gameState.facilitiesSubtab === 'investment')", self.storage_js)
 
     def test_4_css_braces_and_dashboard_rules(self):
-        """style.css に4タブ・施設3列横並び・影除去・財務緑統一ルールがあり波括弧が一致すること"""
+        """style.css に4タブ・施設3列横並び・影除去・財務緑統一・1本スライダー・興行フッターがあり波括弧が一致すること"""
         self.assertIn('.finance-summary-strip', self.css)
         self.assertIn('.finance-inner-tabs', self.css)
         self.assertIn('.finance-ratio-bar', self.css)
         self.assertIn('.finance-ratio-meta', self.css)
         self.assertIn('.commercial-setup-modal-card', self.css)
+        self.assertIn('.commercial-modal-footer', self.css)
+        self.assertIn('.commercial-modal-sticky-top', self.css)
         self.assertIn('.tactical-side-column:not(.sheet-open)', self.css)
         self.assertIn('.finance-range-slider', self.css)
+        self.assertIn('--slider-pct', self.css)
         self.assertIn('#facilities-subnav-bar', self.css)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 

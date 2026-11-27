@@ -12759,8 +12759,14 @@ function renderFinanceBudgetPanel() {
     if (pool <= 0) return 50;
     return Math.max(0, Math.min(100, Math.round(((tVal - summary.minTransferBudget) / pool) * 100)));
   };
+  const calcSliderTrackPct = (tVal) => {
+    if (pool <= 0) return 50;
+    const pct = ((tVal - summary.minTransferBudget) / pool) * 100;
+    return Math.max(0, Math.min(100, Number(pct.toFixed(1))));
+  };
   const initTSharePct = calcPoolSharePct(summary.transferBudget);
   const initWSharePct = 100 - initTSharePct;
+  const initSliderPct = calcSliderTrackPct(summary.transferBudget);
 
   // 給与内訳（選手 / 監督 / 指導陣）
   const activePlayers = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
@@ -12853,16 +12859,12 @@ function renderFinanceBudgetPanel() {
             <span class="text-muted">給与枠 <strong id="finance-share-wage">${initWSharePct}%</strong></span>
           </div>
 
-          <div class="finance-ratio-bar" aria-label="配分バランス">
-            <span class="finance-ratio-seg is-transfer" id="finance-ratio-bar-transfer" style="width:${initTSharePct}%"></span>
-            <span class="finance-ratio-seg is-wage" id="finance-ratio-bar-wage" style="width:${initWSharePct}%"></span>
-          </div>
-
           <div class="finance-rebalance-slider-box">
             <input
               type="range"
               id="finance-budget-slider"
               class="finance-range-slider"
+              style="--slider-pct:${initSliderPct}%"
               min="${summary.minTransferBudget}"
               max="${summary.maxTransferBudget}"
               step="${step}"
@@ -13168,8 +13170,6 @@ function renderFinanceBudgetPanel() {
   const prevWageRemEl = document.getElementById('finance-preview-wage-rem');
   const deltaTransferEl = document.getElementById('finance-delta-transfer');
   const deltaWageEl = document.getElementById('finance-delta-wage');
-  const barTransferEl = document.getElementById('finance-ratio-bar-transfer');
-  const barWageEl = document.getElementById('finance-ratio-bar-wage');
   const shareTransferEl = document.getElementById('finance-share-transfer');
   const shareWageEl = document.getElementById('finance-share-wage');
 
@@ -13184,6 +13184,7 @@ function renderFinanceBudgetPanel() {
     const dWage = nextWage - summary.wageBudgetWeekly;
     const nextTShare = calcPoolSharePct(nextTransfer);
     const nextWShare = 100 - nextTShare;
+    const nextSliderPct = calcSliderTrackPct(nextTransfer);
 
     if (prevTransferEl) prevTransferEl.textContent = formatMoney(nextTransfer);
     if (prevWageEl) prevWageEl.textContent = formatWage(nextWage);
@@ -13211,8 +13212,7 @@ function renderFinanceBudgetPanel() {
         deltaWageEl.textContent = `${dWage > 0 ? '+' : ''}£${dWage}k`;
       }
     }
-    if (barTransferEl) barTransferEl.style.width = `${nextTShare}%`;
-    if (barWageEl) barWageEl.style.width = `${nextWShare}%`;
+    if (sliderEl) sliderEl.style.setProperty('--slider-pct', `${nextSliderPct}%`);
     if (shareTransferEl) shareTransferEl.textContent = `${nextTShare}%`;
     if (shareWageEl) shareWageEl.textContent = `${nextWShare}%`;
 
@@ -17669,6 +17669,10 @@ function initGame() {
       const actionBtn = e.target.closest('[data-commercial-action]');
       if (actionBtn && actionBtn.dataset.commercialAction) {
         const act = actionBtn.dataset.commercialAction;
+        if (act === 'close-modal') {
+          if (typeof closeCommercialSetupModal === 'function') closeCommercialSetupModal();
+          return;
+        }
         if (act === 'confirm-setup') {
           confirmCommercialSetupTask();
           return;
@@ -26728,7 +26732,7 @@ function buildCommercialStadiumHeroInnerHtml(playerClub, comm, proj, previewPres
       <div class="commercial-inline-kv-list">
         <div class="commercial-inline-kv-row">
           <span class="commercial-kv-label">収容 / 予想来場</span>
-          <span class="commercial-kv-val mono">${previewCap.toLocaleString()}席 · ${previewProj.totalAttendance.toLocaleString()}人 (${previewProj.fillRatePct}%) <span class="${fitInfo.cls}">${fitInfo.label}</span></span>
+          <span class="commercial-kv-val mono">${previewCap.toLocaleString()}席 · ${previewProj.totalAttendance.toLocaleString()}人 (${previewProj.fillRatePct}%) <span class="commercial-fit-tag ${fitInfo.cls}">${fitInfo.label}</span></span>
         </div>
         <div class="commercial-inline-kv-row">
           <span class="commercial-kv-label">建設費 / 維持費</span>
@@ -26902,23 +26906,40 @@ function renderCommercialManagementPanel() {
   const pendingBuildCostK = (!locked && !proj.isOwned) ? (proj.buildCostK || 0) : 0;
   const canConfirm = !locked && ((playerClub.funds || 0) >= pendingBuildCostK);
 
-  const setupPromptText = pendingBuildCostK > 0
-    ? `計画中: ${escapeCommHtml(proj.stadium.name)} (建設費 -${formatMoney(pendingBuildCostK)})`
-    : `今季興行計画 · ${escapeCommHtml(proj.stadium.name)}`;
+  const modalStatusEl = document.getElementById('commercial-modal-status');
+  if (modalStatusEl) {
+    modalStatusEl.textContent = locked ? '今季確定済' : '開幕前設定';
+    modalStatusEl.className = `commercial-modal-status mono ${locked ? 'text-muted' : 'accent-green'}`;
+  }
 
-  const setupBannerHtml = gameState.pendingCommercialSetup
-    ? `
-      <div class="commercial-setup-bar">
-        <span class="commercial-setup-text">${setupPromptText}</span>
-        <button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup" ${canConfirm ? '' : 'disabled'}>${canConfirm ? '興行計画を確定' : '資金不足'}</button>
-      </div>
-    `
-    : `
-      <div class="commercial-locked-bar">
-        <span class="commercial-locked-text">今季確定済（来季まで変更不可）</span>
-        <span class="commercial-row-sub mono accent-green">確定ロック中</span>
+  const modalFooterEl = document.getElementById('commercial-modal-footer');
+  if (modalFooterEl) {
+    let footerInfoHtml = '';
+    if (locked) {
+      footerInfoHtml = `<span class="commercial-footer-note">今季確定済（来季まで変更不可）</span>`;
+    } else if (pendingBuildCostK > 0) {
+      const costCls = canConfirm ? 'accent-gold' : 'accent-red';
+      footerInfoHtml = `
+        <span class="commercial-footer-name">${escapeCommHtml(proj.stadium.name)}</span>
+        <span class="commercial-footer-cost mono ${costCls}">建設費 -${formatMoney(pendingBuildCostK)}</span>
+      `;
+    } else {
+      footerInfoHtml = `
+        <span class="commercial-footer-name">${escapeCommHtml(proj.stadium.name)}</span>
+        <span class="commercial-footer-cost mono text-muted">維持費 -${formatMoney(proj.maintenanceK || 0)}/試合</span>
+      `;
+    }
+    const confirmBtnHtml = locked
+      ? ''
+      : `<button type="button" class="btn btn-primary btn-sm" data-commercial-action="confirm-setup" ${canConfirm ? '' : 'disabled'}>${canConfirm ? '興行計画を確定' : '資金不足'}</button>`;
+    modalFooterEl.innerHTML = `
+      <div class="commercial-footer-info">${footerInfoHtml}</div>
+      <div class="commercial-footer-actions">
+        <button type="button" class="btn btn-secondary btn-sm" data-commercial-action="close-modal">閉じる</button>
+        ${confirmBtnHtml}
       </div>
     `;
+  }
 
   const summaryHtml = `
     <div class="commercial-summary-strip">
@@ -26938,10 +26959,6 @@ function renderCommercialManagementPanel() {
   `;
 
   const navHtml = `
-    <div class="commercial-section-banner-head">
-      <span class="commercial-section-banner-title">興行計画</span>
-      <span class="commercial-section-banner-note">${locked ? '今季確定ロック中' : 'シーズン開幕前に確定'}</span>
-    </div>
     <div class="commercial-subnav" role="tablist" aria-label="興行設定セクション">
       <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム</button>
       <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット</button>
@@ -26998,9 +27015,9 @@ function renderCommercialManagementPanel() {
 
     bodyHtml = `
       <div class="commercial-hero-nav">
-        <button type="button" class="commercial-hero-nav-btn" data-commercial-action="preview-step" data-dir="-1">◀ 前へ</button>
+        <button type="button" class="commercial-hero-nav-btn" data-commercial-action="preview-step" data-dir="-1">前へ</button>
         <span class="commercial-hero-nav-title mono" data-commercial-hero-title>${previewIdx + 1} / ${presets.length} · ${escapeCommHtml(previewPreset.name)}</span>
-        <button type="button" class="commercial-hero-nav-btn" data-commercial-action="preview-step" data-dir="1">次へ ▶</button>
+        <button type="button" class="commercial-hero-nav-btn" data-commercial-action="preview-step" data-dir="1">次へ</button>
       </div>
       <div class="commercial-stadium-hero" data-commercial-stadium-hero>${heroInnerHtml}</div>
       <div class="commercial-flat-list">${listRowsHtml}</div>
@@ -27091,9 +27108,10 @@ function renderCommercialManagementPanel() {
 
   root.innerHTML = `
     <div class="commercial-root">
-      ${setupBannerHtml}
-      ${summaryHtml}
-      ${navHtml}
+      <div class="commercial-modal-sticky-top">
+        ${summaryHtml}
+        ${navHtml}
+      </div>
       <div class="commercial-section-body">${bodyHtml}</div>
     </div>
   `;

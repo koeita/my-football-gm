@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3950">
+  <link rel="stylesheet" href="style.css?v=20261119_3960">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1826,14 +1826,18 @@
   <!-- 興行計画設定モーダル（スタジアム・チケット・グッズ） -->
   <div id="commercial-setup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="commercial-modal-title">
     <div class="modal-card commercial-setup-modal-card">
-      <div class="info-popup-header">
-        <div class="info-popup-title-wrap">
-          <h2 class="info-popup-title" id="commercial-modal-title">興行計画（スタジアム・チケット・グッズ）</h2>
+      <div class="info-popup-header commercial-modal-header">
+        <div class="info-popup-title-wrap commercial-modal-title-wrap">
+          <h2 class="info-popup-title" id="commercial-modal-title">興行計画</h2>
+          <span class="commercial-modal-status mono accent-green" id="commercial-modal-status">開幕前設定</span>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-close-commercial-modal">閉じる</button>
+        <button type="button" class="btn btn-secondary btn-sm commercial-modal-close-btn" id="btn-close-commercial-modal" aria-label="閉じる">×</button>
       </div>
       <div class="commercial-modal-body" id="commercial-management-root">
         <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+      </div>
+      <div class="commercial-modal-footer" id="commercial-modal-footer">
+        <!-- JSで選択サマリーと確定・閉じるボタンを描画 -->
       </div>
     </div>
   </div>
@@ -2157,6 +2161,6 @@
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3951"></script>
+  <script src="main.js?v=20261119_3960"></script>
 </body>
 </html>
