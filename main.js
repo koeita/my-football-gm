@@ -3546,31 +3546,21 @@ const GM_GLOSSARY_DEFINITIONS = [
     key: 'tactical_penetration',
     group: '監督・戦術',
     title: '戦術浸透度',
-    summary: '陣形と戦術が監督の哲学と噛み合う度合い',
+    summary: '監督の得意方針と積み上げた試合数で決まる組織力',
     rows: [
-      { label: '決まり方', text: '現在の陣形と戦術が監督の得意方針と何項目合うかで高・中・低が決まる。信頼度40%未満では停滞になる' },
-      { label: '影響', text: '一致が多いほど監督の指導力がピッチで機能し攻守が底上げされる。停滞になると効果がなくなりチーム力が落ちる' }
-    ]
-  },
-  {
-    key: 'tactical_familiarity',
-    group: '監督・戦術',
-    title: '戦術習熟',
-    summary: '得意方針を貫くほど試合運びと決定力が安定',
-    rows: [
-      { label: '上がる', text: '監督の得意陣形と得意戦術の両方に合わせて試合を重ねる' },
-      { label: '影響', text: 'チーム連携と合わせて、攻撃の再現性と得点の生まれやすさを高める' }
+      { label: '決まり方', text: '現在の陣形と戦術が監督の得意方針と一致した状態で試合を重ねるほど浸透度が上がり、一致しない試合や信頼度40%未満では下がって停滞する' },
+      { label: '影響', text: '一致と浸透度が高いほど監督の指導力がピッチ全体に行き渡り、攻守両面の組織力が底上げされる。停滞時は監督効果がなくなりチーム力が落ちる' }
     ]
   },
   {
     key: 'team_chemistry',
     group: '監督・戦術',
     title: 'チーム連携',
-    summary: '高い士気と馴染んだメンバーで攻撃が噛み合う',
+    summary: '高い士気と主将の存在、馴染んだ選手で攻撃が噛み合う',
     rows: [
-      { label: '上がる', text: '先発メンバーの士気を高く保ち、チームに馴染んだ選手を中心に起用する' },
+      { label: '上がる', text: '先発メンバーの士気を高く保ち、主将に指名した選手を先発させる。チームに馴染んだメンバーを中心に組む' },
       { label: '下がる', text: '加入直後で適応途中の選手を同時に多く先発させると下がる' },
-      { label: '影響', text: '戦術習熟と合わせて、攻撃の連動性と得点力に直結する' }
+      { label: '影響', text: '選手同士の連係と攻撃の噛み合わせに直結し、得点力と決定力を高める' }
     ]
   },
   {
@@ -3620,20 +3610,16 @@ function getGlossaryCurrentStatus(key, club) {
   if (key === 'tactical_penetration') {
     if (!mgr) return { label: '監督不在', cls: 'text-danger' };
     const t = mgr.trust ?? 80;
+    const fam = Math.round(club.tacticalFamiliarity ?? 75);
     const isForm = club.formation === mgr.preferredFormation;
     const isTac = typeof normalizeTacticKey === 'function'
       ? normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic)
       : club.tactic === mgr.preferredTactic;
     const matches = (isForm ? 1 : 0) + (isTac ? 1 : 0);
-    if (t < 40) return { label: '停滞', cls: 'text-danger' };
-    if (matches === 2) return { label: '高（2一致）', cls: 'accent-green' };
-    if (matches === 1) return { label: '中（1一致）', cls: 'accent-gold' };
-    return { label: '低（不一致）', cls: 'text-muted' };
-  }
-  if (key === 'tactical_familiarity') {
-    const fam = club.tacticalFamiliarity ?? 75;
-    const cls = fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger');
-    return { label: `${fam}%`, cls };
+    if (t < 40) return { label: `停滞・${fam}%`, cls: 'text-danger' };
+    if (matches === 2) return { label: `高・${fam}%`, cls: 'accent-green' };
+    if (matches === 1) return { label: `中・${fam}%`, cls: 'accent-gold' };
+    return { label: `低・${fam}%`, cls: 'text-muted' };
   }
   if (key === 'team_chemistry') {
     const chem = club.teamChemistry ?? 75;
@@ -18597,7 +18583,7 @@ function renderTacticalManagerBanner() {
 }
 
 /**
- * 作戦ボードの役割指定・自動交代方針・ケミストリー＆戦術習熟度バーを描画
+ * 戦術タブの役割指定・自動交代方針・チーム連携＆戦術浸透度バーを描画
  */
 function renderTacticalRolesAndChemBar(club) {
   const bar = document.getElementById('tactical-roles-chem-bar');
@@ -18621,6 +18607,8 @@ function renderTacticalRolesAndChemBar(club) {
 
   const chem = club.teamChemistry ?? 75;
   const fam = club.tacticalFamiliarity ?? 75;
+  const mgrTrust = (club.manager && typeof club.manager.trust === 'number') ? club.manager.trust : 80;
+  const penCls = mgrTrust < 40 || !club.manager ? 'text-danger' : (fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger'));
 
   bar.innerHTML = `
     <div class="roles-chem-metrics mono">
@@ -18628,9 +18616,9 @@ function renderTacticalRolesAndChemBar(club) {
         <span>チーム連携:</span>
         <strong class="${chem >= 80 ? 'accent-green' : (chem >= 60 ? 'accent-gold' : 'text-danger')}">${chem}%</strong>
       </div>
-      <div class="chem-pill" data-glossary-key="tactical_familiarity" role="button" tabindex="0">
-        <span>戦術習熟:</span>
-        <strong class="${fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger')}">${fam}%</strong>
+      <div class="chem-pill" data-glossary-key="tactical_penetration" role="button" tabindex="0">
+        <span>戦術浸透度:</span>
+        <strong class="${penCls}">${fam}%</strong>
       </div>
     </div>
     <div class="roles-chem-selectors">
@@ -19183,9 +19171,10 @@ function hireNewManager(managerId) {
   newMgr.contractYears = 3;
   club.manager = newMgr;
 
-  // 新監督の得意陣形・戦術に初期同期
+  // 新監督の得意陣形・戦術に初期同期（新体制の戦術浸透度は最大65%から再定着）
   club.formation = newMgr.preferredFormation;
   club.tactic = normalizeTacticKey(newMgr.preferredTactic);
+  club.tacticalFamiliarity = Math.min(club.tacticalFamiliarity || 65, 65);
   if (typeof assignStartersToFormationSlots === 'function') {
     assignStartersToFormationSlots(club, true);
   }

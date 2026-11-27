@@ -1558,7 +1558,9 @@ function getTeamStarterStats(club) {
     } else if (managerBonusOvr > 0) {
       const mgrEff = typeof getManagerRankEffects === 'function' ? getManagerRankEffects(club.manager) : { buffPerMatch: 0.02, highTrustBonus: 0.01 };
       const highTrustExtra = (mgrTrust >= 80 && managerBonusOvr === 2) ? mgrEff.highTrustBonus : 0;
-      const buff = 1.0 + (managerBonusOvr * mgrEff.buffPerMatch) + highTrustExtra;
+      const fam = clamp(typeof club.tacticalFamiliarity === 'number' ? club.tacticalFamiliarity : 75, 40, 99);
+      const famScale = clamp(0.65 + ((fam - 40) / 59) * 0.45, 0.65, 1.10);
+      const buff = 1.0 + ((managerBonusOvr * mgrEff.buffPerMatch) + highTrustExtra) * famScale;
       totalAtk *= buff;
       totalDef *= buff;
     }
@@ -1737,13 +1739,11 @@ function simulateMatch(homeClub, awayClub) {
   applyTacticAndMatchup(hTactic, aTactic, homeStats, awayStats, aForm, true);
   applyTacticAndMatchup(aTactic, hTactic, awayStats, homeStats, hForm, false);
 
-  // --- チームケミストリー・戦術習熟度・役割（キャプテン・セットプレー）補正 ---
+  // --- チーム連携・役割（キャプテン・セットプレー）補正 ---
   const hChem = typeof homeClub.teamChemistry === 'number' ? homeClub.teamChemistry : 75;
   const aChem = typeof awayClub.teamChemistry === 'number' ? awayClub.teamChemistry : 75;
-  const hFam = typeof homeClub.tacticalFamiliarity === 'number' ? homeClub.tacticalFamiliarity : 75;
-  const aFam = typeof awayClub.tacticalFamiliarity === 'number' ? awayClub.tacticalFamiliarity : 75;
-  rawHomeLambda *= clamp(0.92 + ((hChem + hFam) / 200) * 0.14, 0.90, 1.08);
-  rawAwayLambda *= clamp(0.92 + ((aChem + aFam) / 200) * 0.14, 0.90, 1.08);
+  rawHomeLambda *= clamp(0.92 + (hChem / 100) * 0.14, 0.92, 1.07);
+  rawAwayLambda *= clamp(0.92 + (aChem / 100) * 0.14, 0.92, 1.07);
 
   if (homeClub.roles && homeClub.roles.setPieceKickerId) {
     const sp = (homeClub.players || []).find(p => p.id === homeClub.roles.setPieceKickerId);
@@ -2268,8 +2268,8 @@ function processMatchScorersAndRatings(match, homeClub, awayClub, homeScore, awa
     updateBoardConfidenceAfterMatch(awayClub, compCat, isAwayWin, isDraw);
   }
   if (typeof calculateClubChemistryAndFamiliarity === 'function') {
-    calculateClubChemistryAndFamiliarity(homeClub);
-    calculateClubChemistryAndFamiliarity(awayClub);
+    calculateClubChemistryAndFamiliarity(homeClub, { isPostMatch: true });
+    calculateClubChemistryAndFamiliarity(awayClub, { isPostMatch: true });
   }
 
   // 試合出場に伴う疲労度（0〜100数値）蓄積（戦術・コーチング効果連動）

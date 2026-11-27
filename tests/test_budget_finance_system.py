@@ -109,16 +109,18 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertEqual(emoji_re.findall(snippet), [])
 
     def test_6_glossary_system_implemented(self):
-        """信頼度・戦術浸透度・理事会評価などのタップ式用語解説とメタ表現排除を検証"""
+        """信頼度・戦術浸透度・チーム連携・理事会評価など6用語のタップ解説と役割統合を検証"""
         self.assertIn('const GM_GLOSSARY_DEFINITIONS', self.main_js)
         self.assertIn('function showGlossaryInfoPopup(key)', self.main_js)
         self.assertIn('function showGlossaryListPopup()', self.main_js)
         self.assertIn('id="btn-open-glossary-modal"', self.html)
         self.assertNotIn('btn-glossary-inline', self.html)
         self.assertNotIn('btn-glossary-inline', self.main_js)
-        for key in ['manager_trust', 'tactical_penetration', 'tactical_familiarity', 'team_chemistry', 'board_confidence', 'club_reputation', 'psr']:
+        for key in ['manager_trust', 'tactical_penetration', 'team_chemistry', 'board_confidence', 'club_reputation', 'psr']:
             self.assertIn(f"'{key}'", self.main_js)
             self.assertIn(f'data-glossary-key="{key}"', self.main_js)
+        self.assertNotIn("'tactical_familiarity'", self.main_js)
+        self.assertNotIn('戦術習熟', self.main_js)
         g_start = self.main_js.find('const GM_GLOSSARY_DEFINITIONS')
         g_end = self.main_js.find('function processSeasonEnd(', g_start)
         g_block = self.main_js[g_start:g_end]
@@ -126,6 +128,14 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertEqual(emoji_re.findall(g_block), [])
         for meta in ['システムガイド', 'ゲーム内への効果', 'バフ', 'ペナルティ', 'ゴール生成倍率', 'キャリア終了', 'S級']:
             self.assertNotIn(meta, g_block)
+
+    def test_7_tactical_penetration_and_chemistry_roles_distinct(self):
+        """戦術浸透度（試合後のみ更新・監督戦術連動）とチーム連携（主将・モラル・適応）の役割分離を検証"""
+        match_js = read_text('match-engine.js')
+        self.assertIn('options.isPostMatch', self.models_js)
+        self.assertIn('captainInXI', self.models_js)
+        self.assertIn('famScale', match_js)
+        self.assertIn('calculateClubChemistryAndFamiliarity(homeClub, { isPostMatch: true })', match_js)
 
 
 if __name__ == '__main__':
