@@ -9492,8 +9492,9 @@ function renderSeasonSettlement() {
       let ovrHtml;
       if (typeof item.ovrDiff === 'number' && typeof item.oldOvr === 'number' && typeof item.newOvr === 'number') {
         const ovrClass = item.ovrDiff > 0 ? 'diff-up' : (item.ovrDiff < 0 ? 'diff-down' : 'aging-diff-flat');
+        const ovrValClass = typeof getOvrTextClass === 'function' ? getOvrTextClass(item.newOvr) : '';
         const ovrSign = item.ovrDiff > 0 ? `+${item.ovrDiff}` : `${item.ovrDiff}`;
-        ovrHtml = `<span class="aging-log-ovr mono"><span class="aging-ovr-label">OVR</span> ${item.oldOvr}→<strong class="${ovrClass}">${item.newOvr}</strong> <span class="${ovrClass}">(${ovrSign})</span></span>`;
+        ovrHtml = `<span class="aging-log-ovr mono"><span class="aging-ovr-label">OVR</span> <strong class="${ovrValClass}">${item.newOvr}</strong><span class="${ovrClass}">(${ovrSign})</span></span>`;
       } else {
         const legacyClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : 'aging-diff-flat');
         ovrHtml = `<span class="aging-log-ovr mono ${legacyClass}">総合 ${escapeCommHtml(item.sign || '0')}</span>`;
