@@ -8401,6 +8401,8 @@ function startNextSeason() {
   if (typeof initSeasonCompetitions === 'function') {
     initSeasonCompetitions();
   }
+  gameState.selectedCupRounds = {};
+  gameState.selectedEuroScheduleRound = {};
   gameState.currentDayIndex = 0;
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   gameState.isAdvancingCalendar = false;
@@ -9255,6 +9257,7 @@ function renderStandings() {
     if (bracketWrapper) {
       bracketWrapper.classList.remove('standings-view');
       bracketWrapper.innerHTML = renderCupBracketHtml(curDom);
+      bindCupBracketRoundTabs(bracketWrapper, curDom);
     }
     if (statusText) statusText.textContent = curDom === 'leagueCup' ? 'LEAGUE TROPHY (L-CUP)' : 'NATIONAL CUP (N-CUP)';
   } else if (compView === 'europe') {
@@ -9323,15 +9326,95 @@ function renderStandings() {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
+        bindEuroScheduleTabs(bracketWrapper, curEuro);
       }
       if (statusText) statusText.textContent = compName;
     } else {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
+        bindEuroTreeControls(bracketWrapper);
       }
       if (statusText) statusText.textContent = compName;
     }
+  }
+}
+
+/**
+ * 欧州コンペ「日程・結果」のMD1〜MD8・POタブにクリックイベントを設定する
+ */
+function bindEuroScheduleTabs(wrapper, compKey) {
+  if (!wrapper || !compKey) return;
+  const container = wrapper.querySelector('.euro-schedule-list-wrapper');
+  const latestAtSelection = container ? (container.dataset.latestRound || '') : '';
+  wrapper.querySelectorAll('.euro-schedule-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const roundKey = btn.dataset.euroSchedRound;
+      if (!roundKey) return;
+      gameState.selectedEuroScheduleRound = gameState.selectedEuroScheduleRound || {};
+      gameState.selectedEuroScheduleRound[compKey] = { roundKey, latestAtSelection };
+      renderStandings();
+    });
+  });
+}
+
+/**
+ * カップ戦のラウンド切替タブにクリックイベントを設定する
+ */
+function bindCupBracketRoundTabs(wrapper, compKey) {
+  if (!wrapper || !compKey) return;
+  const container = wrapper.querySelector('.cup-bracket-container');
+  const latestAtSelection = container ? (container.dataset.latestRound || '') : '';
+  wrapper.querySelectorAll('.cup-round-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const roundKey = btn.dataset.cupRound;
+      if (!roundKey) return;
+      gameState.selectedCupRounds = gameState.selectedCupRounds || {};
+      gameState.selectedCupRounds[compKey] = { roundKey, latestAtSelection };
+      renderStandings();
+    });
+  });
+}
+
+/**
+ * 欧州コンペ左右対称トーナメント表の初期フォーカス（自チームまたは中央決勝へ自動スクロール）を設定する
+ */
+function bindEuroTreeControls(wrapper) {
+  if (!wrapper) return;
+  const viewport = wrapper.querySelector('.euro-tree-viewport');
+  const canvas = wrapper.querySelector('.euro-tree-canvas');
+  if (!viewport || !canvas) return;
+
+  const findBestPlayerNode = () => {
+    const nodes = Array.from(canvas.querySelectorAll('[data-tree-player="1"]'));
+    if (nodes.length === 0) return null;
+    nodes.sort((a, b) => Number(b.dataset.roundOrder || 0) - Number(a.dataset.roundOrder || 0));
+    return nodes[0];
+  };
+
+  const focusViewport = () => {
+    const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    if (maxScroll <= 0) return;
+    let targetLeft = maxScroll / 2;
+    const targetNode = findBestPlayerNode();
+    if (targetNode) {
+      const vpRect = viewport.getBoundingClientRect();
+      const nodeRect = targetNode.getBoundingClientRect();
+      const nodeCenterInVp = viewport.scrollLeft + (nodeRect.left - vpRect.left) + nodeRect.width / 2;
+      targetLeft = nodeCenterInVp - viewport.clientWidth / 2;
+    }
+    const clamped = Math.max(0, Math.min(maxScroll, Math.round(targetLeft)));
+    if (typeof viewport.scrollTo === 'function') {
+      viewport.scrollTo({ left: clamped, behavior: 'auto' });
+    } else {
+      viewport.scrollLeft = clamped;
+    }
+  };
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(focusViewport);
+  } else {
+    focusViewport();
   }
 }
 
@@ -15065,6 +15148,8 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.consecutiveDeficitSeasons = 0;
   gameState.paidPayrollWeeks = 0;
   gameState.competitions = null;
+  gameState.selectedCupRounds = {};
+  gameState.selectedEuroScheduleRound = {};
   gameState.d1BackgroundSchedule = null;
   gameState.lastSeasonStandingsOrder = null;
   gameState.lastSeasonCupWinners = null;

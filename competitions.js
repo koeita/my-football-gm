@@ -647,12 +647,14 @@ function createKnockoutPairMatch(homeClub, awayClub) {
   };
 }
 
-// 国内2大カップ（一発勝負トーナメント）
-function generateKnockoutRound(clubs) {
+// 国内2大カップ・決勝トーナメント対戦ペア生成（preserveOrder=true時はシャッフルせず順番通り固定）
+function generateKnockoutRound(clubs, preserveOrder = false) {
   const pool = [...clubs];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  if (!preserveOrder) {
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
   }
 
   const matches = [];
@@ -662,6 +664,10 @@ function generateKnockoutRound(clubs) {
     }
   }
   return matches;
+}
+
+function isFixedBracketCompetition(comp) {
+  return Boolean(comp && (['ECT', 'EPC', 'ECS'].includes(comp.shortCode) || comp.isFixedBracket));
 }
 
 function initDomesticCups() {
@@ -1340,13 +1346,21 @@ function finalizeEuroPlayoffToR16(comp) {
     const top8Resolved = comp.top8Direct.map(resolveCanonicalClubForKnockout);
     const r16Matches = [];
     if (top8Resolved.length === 8 && poWinners.length === 8) {
-      // Top8 (1-8位) がホームで PO勝者と対戦（1-2位 vs 15-18位勝者枠 等）
-      for (let g = 0; g < 8; g += 2) {
-        const oppPairBase = 6 - g; // g=0->6, g=2->4, g=4->2, g=6->0
-        const swap = Math.random() < 0.5;
-        r16Matches.push(createKnockoutPairMatch(top8Resolved[g], poWinners[oppPairBase + (swap ? 1 : 0)]));
-        r16Matches.push(createKnockoutPairMatch(top8Resolved[g + 1], poWinners[oppPairBase + (swap ? 0 : 1)]));
-      }
+      // 左右対称固定ツリー配置（1位と2位・3位と4位が決勝まで当たらない別山へ配置）
+      const s0 = Math.random() < 0.5 ? 1 : 0;
+      const s1 = Math.random() < 0.5 ? 1 : 0;
+      const s2 = Math.random() < 0.5 ? 1 : 0;
+      const s3 = Math.random() < 0.5 ? 1 : 0;
+      // 左山 (R16[0..3]): 1位, 8位, 4位, 5位
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[0], poWinners[6 + s0]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[7], poWinners[0 + s1]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[3], poWinners[4 + s2]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[4], poWinners[2 + s3]));
+      // 右山 (R16[4..7]): 2位, 7位, 3位, 6位
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[1], poWinners[6 + (1 - s0)]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[6], poWinners[0 + (1 - s1)]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[2], poWinners[4 + (1 - s2)]));
+      r16Matches.push(createKnockoutPairMatch(top8Resolved[5], poWinners[2 + (1 - s3)]));
     } else {
       const count = Math.min(top8Resolved.length, poWinners.length);
       for (let i = 0; i < count; i++) {
@@ -1413,7 +1427,7 @@ function advanceCupBracketIfRoundComplete(comp, roundKey) {
   const nextKey = ROUND_NEXT_KEYS[roundKey];
   if (nextKey) {
     if (!comp.rounds[nextKey] || comp.rounds[nextKey].length === 0) {
-      comp.rounds[nextKey] = generateKnockoutRound(winners);
+      comp.rounds[nextKey] = generateKnockoutRound(winners, isFixedBracketCompetition(comp));
       comp.currentRoundKey = nextKey;
     }
   } else if (roundKey === 'FINAL' && winners[0]) {
@@ -2107,31 +2121,109 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   return html;
 }
 
-// 欧州コンペ：対戦日程・結果リストの描画
+// 欧州コンペ：対戦日程・結果リストの描画（MD1〜MD8・POタブ切替で選択ラウンドのみ表示）
 function renderEuroScheduleListHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.leagueSchedule) return '<p class="empty-state">対戦日程データがありません</p>';
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  const schedule = Array.isArray(comp.leagueSchedule) ? comp.leagueSchedule : [];
+  const poList = Array.isArray(comp.playoffs) ? comp.playoffs : [];
+  const keys = ['MD1', 'MD2', 'MD3', 'MD4', 'MD5', 'MD6', 'MD7', 'MD8', 'PO'];
 
-  let html = `<div class="euro-schedule-list-wrapper">`;
-  comp.leagueSchedule.forEach((roundMatches, idx) => {
-    const md = idx + 1;
-    html += `
-      <div class="euro-schedule-md-block">
-        <h4 class="euro-schedule-md-title mono">MATCHDAY ${md}</h4>
-        <div class="euro-schedule-matches-grid">
-    `;
+  const getMatchesForKey = (rk) => {
+    if (rk === 'PO') return poList;
+    const mdIdx = Number(String(rk).replace('MD', '')) - 1;
+    return Array.isArray(schedule[mdIdx]) ? schedule[mdIdx] : [];
+  };
 
-    roundMatches.forEach(m => {
+  const allMdPlayed = schedule.length > 0 && schedule.every(arr => Array.isArray(arr) && arr.length > 0 && arr.every(m => m.played));
+  let latestKey = 'MD8';
+  if (comp.phase === 'PLAYOFF' || (allMdPlayed && poList.length > 0)) {
+    latestKey = 'PO';
+  } else {
+    const firstPendingIdx = schedule.findIndex(arr => !Array.isArray(arr) || arr.length === 0 || !arr.every(m => m.played));
+    if (firstPendingIdx >= 0) {
+      latestKey = `MD${firstPendingIdx + 1}`;
+    } else if (poList.length > 0) {
+      latestKey = 'PO';
+    }
+  }
+
+  const selState = gameState.selectedEuroScheduleRound && gameState.selectedEuroScheduleRound[compKey];
+  let activeKey = latestKey;
+  if (selState && keys.includes(selState.roundKey) && selState.latestAtSelection === latestKey) {
+    activeKey = selState.roundKey;
+  }
+
+  let html = `<div class="euro-schedule-list-wrapper" data-comp-key="${compKey}" data-latest-round="${latestKey}">`;
+
+  html += `<div class="euro-schedule-tabs" role="tablist" aria-label="欧州日程切替">`;
+  keys.forEach(rk => {
+    const rMatches = getMatchesForKey(rk);
+    const hasMatches = rMatches.length > 0;
+    const isAllPlayed = hasMatches && rMatches.every(m => m.played);
+    const isCurrent = hasMatches && !isAllPlayed;
+    const isActive = rk === activeKey;
+    const stateClass = !hasMatches ? 'is-upcoming' : (isAllPlayed ? 'is-done' : 'is-current');
+    const dotHtml = isCurrent ? `<span class="cup-round-dot" aria-hidden="true"></span>` : '';
+    html += `<button type="button" class="euro-schedule-tab-btn mono ${stateClass} ${isActive ? 'active' : ''}" data-euro-sched-round="${rk}" data-comp-key="${compKey}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">${dotHtml}<span>${rk}</span></button>`;
+  });
+  html += `</div>`;
+
+  const activeMatches = getMatchesForKey(activeKey);
+  const activeAllPlayed = activeMatches.length > 0 && activeMatches.every(m => m.played);
+  const isPo = activeKey === 'PO';
+  const metaTitle = isPo ? '決勝トーナメント進出プレーオフ（9-24位）' : `MATCHDAY ${activeKey.replace('MD', '')}`;
+  const metaStatus = activeMatches.length === 0
+    ? (isPo ? 'リーグフェーズ終了後に決定' : '日程未定')
+    : `${activeMatches.length}試合 · ${activeAllPlayed ? '完了' : '進行中'}`;
+
+  html += `
+    <div class="cup-round-meta">
+      <span class="cup-round-meta-title mono">${metaTitle}</span>
+      <span class="cup-round-meta-status mono ${activeMatches.length > 0 && !activeAllPlayed ? 'is-live' : ''}">${metaStatus}</span>
+    </div>
+  `;
+
+  if (activeMatches.length === 0) {
+    html += `<div class="bracket-match-placeholder mono">${isPo ? 'リーグフェーズ終了後に決定' : '対戦日程データがありません'}</div>`;
+  } else if (isPo) {
+    html += `<div class="cup-round-matches-grid">`;
+    activeMatches.forEach(m => {
+      const hEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 18) : '';
+      const aEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 18) : '';
+      const isHP = isEuroTreePlayerClub(m.homeClub, playerClub, m.homeId);
+      const isAP = isEuroTreePlayerClub(m.awayClub, playerClub, m.awayId);
+      const hWin = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
+      const aWin = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
+      const hLose = m.played && m.winnerId && m.winnerId !== m.homeId ? 'match-loser' : '';
+      const aLose = m.played && m.winnerId && m.winnerId !== m.awayId ? 'match-loser' : '';
+      const hScore = m.played ? formatEuroTreeScore(m.homeScore, m.pkHome) : '-';
+      const aScore = m.played ? formatEuroTreeScore(m.awayScore, m.pkAway) : '-';
+      html += `
+        <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${(isHP || isAP) ? 'is-player-match' : ''}">
+          <div class="bracket-team-row ${hWin} ${hLose} ${isHP ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">${hEmb}<span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span></div>
+            <span class="bracket-team-score mono">${hScore}</span>
+          </div>
+          <div class="bracket-team-row ${aWin} ${aLose} ${isAP ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">${aEmb}<span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span></div>
+            <span class="bracket-team-score mono">${aScore}</span>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div class="euro-schedule-matches-grid">`;
+    activeMatches.forEach(m => {
       const isHomePlayer = Boolean(playerClub && m.homeId === playerClub.id) || Boolean(m.homeClub && m.homeClub.isPlayer);
       const isAwayPlayer = Boolean(playerClub && m.awayId === playerClub.id) || Boolean(m.awayClub && m.awayClub.isPlayer);
       const isMyMatch = isHomePlayer || isAwayPlayer;
       const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 16) : '';
       const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 16) : '';
       const scoreText = m.played ? `${m.homeScore} - ${m.awayScore}` : 'VS';
-
-      // プレミアリーグのクラブも確実に3文字コードを取得
       const homeCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.homeClub) : ((m.homeClub && m.homeClub.shortName) || 'HOM');
       const awayCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.awayClub) : ((m.awayClub && m.awayClub.shortName) || 'AWY');
 
@@ -2149,105 +2241,557 @@ function renderEuroScheduleListHtml(compKey) {
         </div>
       `;
     });
+    html += `</div>`;
+  }
 
-    html += `</div></div>`;
-  });
   html += `</div>`;
   return html;
 }
 
-// トーナメントブラケット描画（国内カップ or 欧州決勝トーナメント）
-function renderCupBracketHtml(compKey) {
+function getCupRoundMatches(comp, rk) {
+  if (!comp) return [];
+  if (rk === 'PO') return Array.isArray(comp.playoffs) ? comp.playoffs : [];
+  return (comp.rounds && Array.isArray(comp.rounds[rk])) ? comp.rounds[rk] : [];
+}
+
+function isEuroTreePlayerClub(club, playerClub, idOverride = null) {
+  const targetId = idOverride || (club && club.id);
+  return Boolean(
+    (playerClub && targetId && targetId === playerClub.id) ||
+    (club && club.isPlayer)
+  );
+}
+
+function formatEuroTreeScore(score, pk) {
+  if (score == null) return '-';
+  return pk != null ? `${score}(${pk})` : `${score}`;
+}
+
+// 欧州コンペ：左右対称・組み合わせ固定トーナメント表描画
+function renderEuroSymmetricalBracketHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.rounds) return '<p class="empty-state">大会データがありません</p>';
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
-  const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
-  const roundNames = isEuroComp
-    ? {
-        PO: 'プレーオフ',
-        R16: 'ベスト16',
-        QF: '準々決勝',
-        SF: '準決勝',
-        FINAL: '決勝'
-      }
-    : {
-        R32: '1回戦 / ベスト32',
-        R16: '2回戦 / ベスト16',
-        QF: '準々決勝',
-        SF: '準決勝',
-        FINAL: '決勝'
+  const r16List = Array.isArray(comp.rounds.R16) ? comp.rounds.R16 : [];
+  const qfList = Array.isArray(comp.rounds.QF) ? comp.rounds.QF : [];
+  const sfList = Array.isArray(comp.rounds.SF) ? comp.rounds.SF : [];
+  const finalList = Array.isArray(comp.rounds.FINAL) ? comp.rounds.FINAL : [];
+  const poList = Array.isArray(comp.playoffs) ? comp.playoffs : [];
+  const top8 = Array.isArray(comp.top8Direct) ? comp.top8Direct : [];
+
+  const getMatchWinner = (m) => {
+    if (!m || !m.played) return null;
+    return m.winnerClub || (m.winnerId === m.homeId ? m.homeClub : m.awayClub) || null;
+  };
+  const findPlayerMatchSide = (m, idx, arr) => {
+    if (!m) return null;
+    if (m.played) {
+      const w = getMatchWinner(m);
+      return {
+        home: m.homeClub || null,
+        away: m.awayClub || null,
+        homeScore: formatEuroTreeScore(m.homeScore, m.pkHome),
+        awayScore: formatEuroTreeScore(m.awayScore, m.pkAway),
+        winnerSide: m.winnerId === m.homeId ? 'home' : (m.winnerId === m.awayId ? 'away' : null),
+        winnerClub: w,
+        played: true
       };
-
-  let html = `<div class="cup-bracket-container">
-    <div class="bracket-rounds-wrapper">
-  `;
-
-  const keys = isEuroComp ? ['PO', 'R16', 'QF', 'SF', 'FINAL'] : ['R32', 'R16', 'QF', 'SF', 'FINAL'];
-  keys.forEach(rk => {
-    const matches = rk === 'PO'
-      ? (Array.isArray(comp.playoffs) ? comp.playoffs : [])
-      : (comp.rounds[rk] || []);
-    const prevKey = keys.indexOf(rk) > 0 ? keys[keys.indexOf(rk) - 1] : null;
-    const prevMatches = prevKey
-      ? (prevKey === 'PO' ? (comp.playoffs || []) : (comp.rounds[prevKey] || []))
-      : [];
-    if (matches.length === 0 && rk !== keys[0] && prevMatches.length === 0) {
-      return;
     }
+    return {
+      home: m.homeClub || null,
+      away: m.awayClub || null,
+      homeScore: null,
+      awayScore: null,
+      winnerSide: null,
+      winnerClub: null,
+      played: false
+    };
+  };
 
-    html += `
-      <div class="bracket-round-column">
-        <h4 class="bracket-round-title mono">${roundNames[rk] || rk}</h4>
-        <div class="bracket-matches-list">
-    `;
-
-    if (matches.length === 0) {
-      html += `<div class="bracket-match-placeholder mono">対戦決定前</div>`;
+  // 左右4試合分のR16スロット解決（R16未生成時はtop8シード枠をプレビュー）
+  const r16SeedIdx = [0, 7, 3, 4, 1, 6, 2, 5];
+  const r16Slots = [];
+  for (let i = 0; i < 8; i++) {
+    if (r16List[i]) {
+      r16Slots.push(findPlayerMatchSide(r16List[i], i, r16List));
+    } else if (top8.length === 8) {
+      r16Slots.push({
+        home: top8[r16SeedIdx[i]] || null,
+        away: null,
+        awayPlaceholder: 'PO勝者',
+        homeScore: null,
+        awayScore: null,
+        winnerSide: null,
+        winnerClub: null,
+        played: false
+      });
     } else {
-      matches.forEach(m => {
-        const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 18) : '';
-        const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 18) : '';
-        const homeScoreText = m.played ? `${m.homeScore}${m.pkHome != null ? `(${m.pkHome})` : ''}` : '-';
-        const awayScoreText = m.played ? `${m.awayScore}${m.pkAway != null ? `(${m.pkAway})` : ''}` : '-';
-        const homeWinner = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
-        const awayWinner = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
-        const isHomePlayer = Boolean(
-          playerClub && (m.homeId === playerClub.id || (m.homeClub && m.homeClub.id === playerClub.id))
-        ) || Boolean(m.homeClub && m.homeClub.isPlayer);
-        const isAwayPlayer = Boolean(
-          playerClub && (m.awayId === playerClub.id || (m.awayClub && m.awayClub.id === playerClub.id))
-        ) || Boolean(m.awayClub && m.awayClub.isPlayer);
-        const isMyMatch = isHomePlayer || isAwayPlayer;
-
-        html += `
-          <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${isMyMatch ? 'is-player-match' : ''}">
-            <div class="bracket-team-row ${homeWinner} ${isHomePlayer ? 'is-player-team' : ''}">
-              <div class="bracket-team-info">
-                ${homeEmblem}
-                <span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span>
-              </div>
-              <span class="bracket-team-score mono">${homeScoreText}</span>
-            </div>
-            <div class="bracket-team-row ${awayWinner} ${isAwayPlayer ? 'is-player-team' : ''}">
-              <div class="bracket-team-info">
-                ${awayEmblem}
-                <span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span>
-              </div>
-              <span class="bracket-team-score mono">${awayScoreText}</span>
-            </div>
-          </div>
-        `;
+      r16Slots.push({
+        home: null,
+        away: null,
+        homePlaceholder: '未定',
+        awayPlaceholder: '未定',
+        homeScore: null,
+        awayScore: null,
+        winnerSide: null,
+        winnerClub: null,
+        played: false
       });
     }
+  }
 
+  // QF 4試合分（未生成時はR16勝者をプレビュー）
+  const qfSlots = [];
+  for (let i = 0; i < 4; i++) {
+    if (qfList[i]) {
+      qfSlots.push(findPlayerMatchSide(qfList[i], i, qfList));
+    } else {
+      qfSlots.push({
+        home: r16Slots[i * 2].winnerClub || null,
+        away: r16Slots[i * 2 + 1].winnerClub || null,
+        homePlaceholder: '未定',
+        awayPlaceholder: '未定',
+        homeScore: null,
+        awayScore: null,
+        winnerSide: null,
+        winnerClub: null,
+        played: false
+      });
+    }
+  }
+
+  // SF 2試合分（未生成時はQF勝者をプレビュー）
+  const sfSlots = [];
+  for (let i = 0; i < 2; i++) {
+    if (sfList[i]) {
+      sfSlots.push(findPlayerMatchSide(sfList[i], i, sfList));
+    } else {
+      sfSlots.push({
+        home: qfSlots[i * 2].winnerClub || null,
+        away: qfSlots[i * 2 + 1].winnerClub || null,
+        homePlaceholder: '未定',
+        awayPlaceholder: '未定',
+        homeScore: null,
+        awayScore: null,
+        winnerSide: null,
+        winnerClub: null,
+        played: false
+      });
+    }
+  }
+
+  // FINAL 1試合分（未生成時はSF勝者をプレビュー）
+  const finalSlot = finalList[0]
+    ? findPlayerMatchSide(finalList[0], 0, finalList)
+    : {
+        home: sfSlots[0].winnerClub || null,
+        away: sfSlots[1].winnerClub || null,
+        homePlaceholder: '左山勝者',
+        awayPlaceholder: '右山勝者',
+        homeScore: null,
+        awayScore: null,
+        winnerSide: null,
+        winnerClub: null,
+        played: false
+      };
+
+  const championClub = comp.winner || finalSlot.winnerClub || null;
+  const isChampionPlayer = championClub ? isEuroTreePlayerClub(championClub, playerClub) : false;
+
+  // 各座標定数（1280 x 496）
+  const NODE_H = 34;
+  const halfH = NODE_H / 2;
+  const R16_Y = [
+    [61, 103],
+    [173, 215],
+    [285, 327],
+    [397, 439]
+  ];
+  const QF_Y = [82, 194, 306, 418];
+  const SF_Y = [138, 362];
+
+  const COL = {
+    L_R16: { x: 6, w: 152 },
+    L_QF:  { x: 194, w: 148 },
+    L_SF:  { x: 378, w: 144 },
+    FINAL: { x: 550, w: 180 },
+    R_SF:  { x: 758, w: 144 },
+    R_QF:  { x: 938, w: 148 },
+    R_R16: { x: 1122, w: 152 }
+  };
+
+  let nodesHtml = '';
+  let svgLines = '';
+  let svgTexts = '';
+  let hasPlayerInTree = false;
+
+  const escName = (str) => String(str || '').replace(/"/g, '&quot;');
+
+  const renderNode = (x, yCenter, w, club, placeholder, opts = {}) => {
+    const isPlayer = club ? isEuroTreePlayerClub(club, playerClub) : false;
+    if (isPlayer) hasPlayerInTree = true;
+    const cls = [
+      'euro-tree-node',
+      isPlayer ? 'is-player-team' : '',
+      opts.isWinner ? 'is-winner' : '',
+      opts.isLoser ? 'is-loser' : '',
+      !club ? 'is-tbd' : ''
+    ].filter(Boolean).join(' ');
+    const emblem = club && typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(club, 16) : '';
+    const labelText = club ? club.name : (placeholder || '未定');
+    const topPx = Math.round(yCenter - halfH);
+    const playerAttr = isPlayer ? ` data-tree-player="1" data-round-order="${opts.roundOrder || 1}"` : '';
+    return `<div class="${cls}" style="left:${x}px;top:${topPx}px;width:${w}px;" title="${escName(labelText)}"${playerAttr}>${emblem}<span class="euro-tree-node-name">${labelText}</span></div>`;
+  };
+
+  const addBranchConnector = (xFrom, xTo, xMid, yTop, yBot, yOut, slot, isRightSide) => {
+    const homeWon = slot.played && slot.winnerSide === 'home';
+    const awayWon = slot.played && slot.winnerSide === 'away';
+    const homePlayer = isEuroTreePlayerClub(slot.home, playerClub);
+    const awayPlayer = isEuroTreePlayerClub(slot.away, playerClub);
+
+    const strokeTop = homeWon ? (homePlayer ? '#2ecc71' : '#cbd5e1') : 'rgba(255,255,255,0.16)';
+    const strokeBot = awayWon ? (awayPlayer ? '#2ecc71' : '#cbd5e1') : 'rgba(255,255,255,0.16)';
+    const strokeOut = slot.played
+      ? ((homeWon && homePlayer) || (awayWon && awayPlayer) ? '#2ecc71' : '#cbd5e1')
+      : 'rgba(255,255,255,0.16)';
+    const wTop = homeWon ? (homePlayer ? 2.5 : 2.1) : 1.4;
+    const wBot = awayWon ? (awayPlayer ? 2.5 : 2.1) : 1.4;
+    const wOut = slot.played ? (((homeWon && homePlayer) || (awayWon && awayPlayer)) ? 2.5 : 2.1) : 1.4;
+
+    // 敗者パスを先に描き、勝者・自チームパスを上書き描画して交点でも視認性を保つ
+    const drawTop = `<path d="M${xFrom},${yTop} L${xMid},${yTop} L${xMid},${yOut}" fill="none" stroke="${strokeTop}" stroke-width="${wTop}" stroke-linejoin="miter"/>`;
+    const drawBot = `<path d="M${xFrom},${yBot} L${xMid},${yBot} L${xMid},${yOut}" fill="none" stroke="${strokeBot}" stroke-width="${wBot}" stroke-linejoin="miter"/>`;
+    const drawOut = `<path d="M${xMid},${yOut} L${xTo},${yOut}" fill="none" stroke="${strokeOut}" stroke-width="${wOut}"/>`;
+
+    if (awayWon) {
+      svgLines += drawTop + drawBot + drawOut;
+    } else {
+      svgLines += drawBot + drawTop + drawOut;
+    }
+
+    if (slot.played) {
+      const labelX = Math.round((xFrom + xMid) / 2);
+      const topColor = homeWon ? (homePlayer ? '#2ecc71' : '#f1f5f9') : '#7d8590';
+      const botColor = awayWon ? (awayPlayer ? '#2ecc71' : '#f1f5f9') : '#7d8590';
+      svgTexts += `<text x="${labelX}" y="${yTop - 6}" text-anchor="middle" fill="${topColor}" font-size="10.5" font-weight="${homeWon ? '700' : '600'}" font-family="var(--font-mono, monospace)">${slot.homeScore}</text>`;
+      svgTexts += `<text x="${labelX}" y="${yBot + 13}" text-anchor="middle" fill="${botColor}" font-size="10.5" font-weight="${awayWon ? '700' : '600'}" font-family="var(--font-mono, monospace)">${slot.awayScore}</text>`;
+    }
+  };
+
+  // 左山 R16 (4試合)
+  for (let i = 0; i < 4; i++) {
+    const sl = r16Slots[i];
+    const [y1, y2] = R16_Y[i];
+    nodesHtml += renderNode(COL.L_R16.x, y1, COL.L_R16.w, sl.home, sl.homePlaceholder, {
+      isWinner: sl.winnerSide === 'home',
+      isLoser: sl.winnerSide === 'away',
+      roundOrder: 1
+    });
+    nodesHtml += renderNode(COL.L_R16.x, y2, COL.L_R16.w, sl.away, sl.awayPlaceholder, {
+      isWinner: sl.winnerSide === 'away',
+      isLoser: sl.winnerSide === 'home',
+      roundOrder: 1
+    });
+    addBranchConnector(COL.L_R16.x + COL.L_R16.w, COL.L_QF.x, 184, y1, y2, QF_Y[i], sl, false);
+  }
+
+  // 右山 R16 (4試合)
+  for (let i = 0; i < 4; i++) {
+    const sl = r16Slots[4 + i];
+    const [y1, y2] = R16_Y[i];
+    nodesHtml += renderNode(COL.R_R16.x, y1, COL.R_R16.w, sl.home, sl.homePlaceholder, {
+      isWinner: sl.winnerSide === 'home',
+      isLoser: sl.winnerSide === 'away',
+      roundOrder: 1
+    });
+    nodesHtml += renderNode(COL.R_R16.x, y2, COL.R_R16.w, sl.away, sl.awayPlaceholder, {
+      isWinner: sl.winnerSide === 'away',
+      isLoser: sl.winnerSide === 'home',
+      roundOrder: 1
+    });
+    addBranchConnector(COL.R_R16.x, COL.R_QF.x + COL.R_QF.w, 1096, y1, y2, QF_Y[i], sl, true);
+  }
+
+  // 左山 QF (2試合)
+  for (let i = 0; i < 2; i++) {
+    const sl = qfSlots[i];
+    const y1 = QF_Y[i * 2];
+    const y2 = QF_Y[i * 2 + 1];
+    nodesHtml += renderNode(COL.L_QF.x, y1, COL.L_QF.w, sl.home, sl.homePlaceholder, {
+      isWinner: sl.winnerSide === 'home',
+      isLoser: sl.winnerSide === 'away',
+      roundOrder: 2
+    });
+    nodesHtml += renderNode(COL.L_QF.x, y2, COL.L_QF.w, sl.away, sl.awayPlaceholder, {
+      isWinner: sl.winnerSide === 'away',
+      isLoser: sl.winnerSide === 'home',
+      roundOrder: 2
+    });
+    addBranchConnector(COL.L_QF.x + COL.L_QF.w, COL.L_SF.x, 368, y1, y2, SF_Y[i], sl, false);
+  }
+
+  // 右山 QF (2試合)
+  for (let i = 0; i < 2; i++) {
+    const sl = qfSlots[2 + i];
+    const y1 = QF_Y[i * 2];
+    const y2 = QF_Y[i * 2 + 1];
+    nodesHtml += renderNode(COL.R_QF.x, y1, COL.R_QF.w, sl.home, sl.homePlaceholder, {
+      isWinner: sl.winnerSide === 'home',
+      isLoser: sl.winnerSide === 'away',
+      roundOrder: 2
+    });
+    nodesHtml += renderNode(COL.R_QF.x, y2, COL.R_QF.w, sl.away, sl.awayPlaceholder, {
+      isWinner: sl.winnerSide === 'away',
+      isLoser: sl.winnerSide === 'home',
+      roundOrder: 2
+    });
+    addBranchConnector(COL.R_QF.x, COL.R_SF.x + COL.R_SF.w, 912, y1, y2, SF_Y[i], sl, true);
+  }
+
+  // 左山 SF (1試合)
+  nodesHtml += renderNode(COL.L_SF.x, SF_Y[0], COL.L_SF.w, sfSlots[0].home, sfSlots[0].homePlaceholder, {
+    isWinner: sfSlots[0].winnerSide === 'home',
+    isLoser: sfSlots[0].winnerSide === 'away',
+    roundOrder: 3
+  });
+  nodesHtml += renderNode(COL.L_SF.x, SF_Y[1], COL.L_SF.w, sfSlots[0].away, sfSlots[0].awayPlaceholder, {
+    isWinner: sfSlots[0].winnerSide === 'away',
+    isLoser: sfSlots[0].winnerSide === 'home',
+    roundOrder: 3
+  });
+  addBranchConnector(COL.L_SF.x + COL.L_SF.w, COL.FINAL.x, 542, SF_Y[0], SF_Y[1], 250, sfSlots[0], false);
+
+  // 右山 SF (1試合)
+  nodesHtml += renderNode(COL.R_SF.x, SF_Y[0], COL.R_SF.w, sfSlots[1].home, sfSlots[1].homePlaceholder, {
+    isWinner: sfSlots[1].winnerSide === 'home',
+    isLoser: sfSlots[1].winnerSide === 'away',
+    roundOrder: 3
+  });
+  nodesHtml += renderNode(COL.R_SF.x, SF_Y[1], COL.R_SF.w, sfSlots[1].away, sfSlots[1].awayPlaceholder, {
+    isWinner: sfSlots[1].winnerSide === 'away',
+    isLoser: sfSlots[1].winnerSide === 'home',
+    roundOrder: 3
+  });
+  addBranchConnector(COL.R_SF.x, COL.FINAL.x + COL.FINAL.w, 738, SF_Y[0], SF_Y[1], 250, sfSlots[1], true);
+
+  // 優勝接続ライン（中央 y=176 -> y=204）
+  const champLineColor = championClub ? (isChampionPlayer ? '#2ecc71' : '#f1f5f9') : 'rgba(255,255,255,0.16)';
+  const champLineWidth = championClub ? 2.4 : 1.4;
+  svgLines += `<line x1="640" y1="176" x2="640" y2="204" stroke="${champLineColor}" stroke-width="${champLineWidth}"/>`;
+
+  // 中央決勝カード
+  const fHome = finalSlot.home;
+  const fAway = finalSlot.away;
+  const fHomeIsPlayer = isEuroTreePlayerClub(fHome, playerClub);
+  const fAwayIsPlayer = isEuroTreePlayerClub(fAway, playerClub);
+  if (fHomeIsPlayer || fAwayIsPlayer) hasPlayerInTree = true;
+  const fHomeEmblem = fHome && typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(fHome, 18) : '';
+  const fAwayEmblem = fAway && typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(fAway, 18) : '';
+  const fHomeRowCls = [
+    'euro-tree-final-row',
+    fHomeIsPlayer ? 'is-player-team' : '',
+    finalSlot.winnerSide === 'home' ? 'is-winner' : '',
+    finalSlot.winnerSide === 'away' ? 'is-loser' : '',
+    !fHome ? 'is-tbd' : ''
+  ].filter(Boolean).join(' ');
+  const fAwayRowCls = [
+    'euro-tree-final-row',
+    fAwayIsPlayer ? 'is-player-team' : '',
+    finalSlot.winnerSide === 'away' ? 'is-winner' : '',
+    finalSlot.winnerSide === 'home' ? 'is-loser' : '',
+    !fAway ? 'is-tbd' : ''
+  ].filter(Boolean).join(' ');
+  const fHasPlayer = fHomeIsPlayer || fAwayIsPlayer;
+
+  const finalCardHtml = `
+    <div class="euro-tree-final-card ${fHasPlayer ? 'is-player-match' : ''}"${fHasPlayer ? ' data-tree-player="1" data-round-order="4"' : ''}>
+      <div class="euro-tree-final-head mono">FINAL</div>
+      <div class="${fHomeRowCls}" title="${escName(fHome ? fHome.name : '左山勝者')}">
+        <span class="euro-tree-final-team">${fHomeEmblem}<span class="euro-tree-node-name">${fHome ? fHome.name : '左山勝者'}</span></span>
+        <span class="euro-tree-final-score mono">${finalSlot.played ? finalSlot.homeScore : '-'}</span>
+      </div>
+      <div class="${fAwayRowCls}" title="${escName(fAway ? fAway.name : '右山勝者')}">
+        <span class="euro-tree-final-team">${fAwayEmblem}<span class="euro-tree-node-name">${fAway ? fAway.name : '右山勝者'}</span></span>
+        <span class="euro-tree-final-score mono">${finalSlot.played ? finalSlot.awayScore : '-'}</span>
+      </div>
+    </div>
+  `;
+
+  // 中央上部優勝エリア（SVGトロフィーアイコン使用・絵文字禁止）
+  const trophyColor = championClub ? (isChampionPlayer ? '#2ecc71' : '#eab308') : '#64748b';
+  const trophySvg = `<svg class="euro-tree-trophy-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="${trophyColor}" d="M7 4h10v2h3v3c0 2.2-1.6 4-3.7 4.4A5.5 5.5 0 0 1 13 16.9V19h3v2H8v-2h3v-2.1A5.5 5.5 0 0 1 7.7 13.4C5.6 13 4 11.2 4 9V6h3V4zm-1 4v1c0 1.2.8 2.2 1.9 2.4-.5-.8-.9-1.8-.9-2.9V8H6zm12 0h-1v.5c0 1.1-.4 2.1-.9 2.9 1.1-.2 1.9-1.2 1.9-2.4V8z"/></svg>`;
+  const champEmblem = championClub && typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(championClub, 34) : '';
+  const championHtml = championClub
+    ? `
+      <div class="euro-tree-champion ${isChampionPlayer ? 'is-player-champion' : ''}">
+        <div class="euro-tree-champion-top">${trophySvg}<span class="euro-tree-champion-tag mono">優勝</span></div>
+        <div class="euro-tree-champion-club">
+          ${champEmblem}
+          <span class="euro-tree-champion-name" title="${escName(championClub.name)}">${championClub.name}</span>
+        </div>
+      </div>
+    `
+    : `
+      <div class="euro-tree-champion is-empty">
+        ${trophySvg}
+        <span class="euro-tree-champion-empty mono">優勝未定</span>
+      </div>
+    `;
+
+  const roundHeadersHtml = `
+    <span class="euro-tree-round-label mono" style="left:${COL.L_R16.x}px;width:${COL.L_R16.w}px;">ベスト16</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.L_QF.x}px;width:${COL.L_QF.w}px;">準々決勝</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.L_SF.x}px;width:${COL.L_SF.w}px;">準決勝</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.FINAL.x}px;width:${COL.FINAL.w}px;">決勝</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.R_SF.x}px;width:${COL.R_SF.w}px;">準決勝</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.R_QF.x}px;width:${COL.R_QF.w}px;">準々決勝</span>
+    <span class="euro-tree-round-label mono" style="left:${COL.R_R16.x}px;width:${COL.R_R16.w}px;">ベスト16</span>
+  `;
+
+  // プレーオフ表示は日程・結果タブ（PO）へ統合、トーナメント表は純粋なR16〜FINALツリーのみ描画
+  return `
+    <div class="euro-bracket-wrap">
+      <div class="euro-tree-shell" data-comp-key="${compKey}">
+        <div class="euro-tree-viewport">
+          <div class="euro-tree-canvas">
+            <svg class="euro-tree-svg" viewBox="0 0 1280 496" width="1280" height="496" aria-hidden="true">
+              ${svgLines}
+              ${svgTexts}
+            </svg>
+            ${roundHeadersHtml}
+            ${championHtml}
+            ${finalCardHtml}
+            ${nodesHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// トーナメント表描画（国内カップはラウンド切替タブ、欧州コンペは固定左右対称ツリー）
+function renderCupBracketHtml(compKey) {
+  const comp = gameState.competitions && gameState.competitions[compKey];
+  if (!comp || !comp.rounds) return '<p class="empty-state">大会データがありません</p>';
+
+  const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
+  if (isEuroComp) {
+    return renderEuroSymmetricalBracketHtml(compKey);
+  }
+
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  const roundShortLabels = { R32: '1回戦', R16: '2回戦', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' };
+  const roundFullLabels = { R32: '1回戦 / ベスト32', R16: '2回戦 / ベスト16', QF: '準々決勝', SF: '準決勝', FINAL: '決勝' };
+  const keys = ['R32', 'R16', 'QF', 'SF', 'FINAL'];
+  let latestRoundKey = keys[0];
+  for (let i = keys.length - 1; i >= 0; i--) {
+    if (getCupRoundMatches(comp, keys[i]).length > 0) {
+      latestRoundKey = keys[i];
+      break;
+    }
+  }
+
+  const selState = gameState.selectedCupRounds && gameState.selectedCupRounds[compKey];
+  let activeRoundKey = latestRoundKey;
+  if (selState && keys.includes(selState.roundKey) && selState.latestAtSelection === latestRoundKey) {
+    activeRoundKey = selState.roundKey;
+  }
+
+  let html = `<div class="cup-bracket-container" data-comp-key="${compKey}" data-latest-round="${latestRoundKey}">`;
+
+  html += `<div class="cup-round-tabs" role="tablist" aria-label="ラウンド切替">`;
+  keys.forEach(rk => {
+    const rMatches = getCupRoundMatches(comp, rk);
+    const hasMatches = rMatches.length > 0;
+    const isAllPlayed = hasMatches && rMatches.every(m => m.played);
+    const isCurrent = hasMatches && !isAllPlayed;
+    const isActive = rk === activeRoundKey;
+    const stateClass = !hasMatches ? 'is-upcoming' : (isAllPlayed ? 'is-done' : 'is-current');
+    const dotHtml = isCurrent ? `<span class="cup-round-dot" aria-hidden="true"></span>` : '';
+    html += `<button type="button" class="cup-round-tab-btn mono ${stateClass} ${isActive ? 'active' : ''}" data-cup-round="${rk}" data-comp-key="${compKey}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">${dotHtml}<span>${roundShortLabels[rk] || rk}</span></button>`;
+  });
+  html += `</div>`;
+
+  if (comp.winner && activeRoundKey === 'FINAL') {
+    const winnerClub = comp.winner;
+    const isWinnerPlayer = Boolean(
+      (playerClub && winnerClub.id === playerClub.id) || winnerClub.isPlayer
+    );
+    const winnerEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(winnerClub, 24) : '';
     html += `
+      <div class="cup-champion-bar ${isWinnerPlayer ? 'is-player-champion' : ''}">
+        <span class="cup-champion-label mono">優勝</span>
+        <div class="cup-champion-club">
+          ${winnerEmblem}
+          <span class="cup-champion-name">${winnerClub.name || ''}</span>
         </div>
       </div>
     `;
-  });
+  }
 
-  html += `</div></div>`;
+  const activeMatches = getCupRoundMatches(comp, activeRoundKey);
+  const activeAllPlayed = activeMatches.length > 0 && activeMatches.every(m => m.played);
+  const roundStatusText = activeMatches.length === 0
+    ? '対戦決定前'
+    : `${activeMatches.length}試合 · ${activeAllPlayed ? '完了' : '進行中'}`;
+
+  html += `
+    <div class="cup-round-meta">
+      <span class="cup-round-meta-title mono">${roundFullLabels[activeRoundKey] || activeRoundKey}</span>
+      <span class="cup-round-meta-status mono ${activeMatches.length > 0 && !activeAllPlayed ? 'is-live' : ''}">${roundStatusText}</span>
+    </div>
+  `;
+
+  if (activeMatches.length === 0) {
+    html += `<div class="bracket-match-placeholder mono">対戦決定前</div>`;
+  } else {
+    const gridMod = activeRoundKey === 'FINAL' ? 'is-final-round' : (activeRoundKey === 'SF' ? 'is-sf-round' : '');
+    const emblemSize = activeRoundKey === 'FINAL' ? 24 : 18;
+    html += `<div class="cup-round-matches-grid ${gridMod}">`;
+    activeMatches.forEach(m => {
+      const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, emblemSize) : '';
+      const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, emblemSize) : '';
+      const homePk = m.pkHome != null ? ` (${m.pkHome})` : '';
+      const awayPk = m.pkAway != null ? ` (${m.pkAway})` : '';
+      const homeScoreText = m.played ? `${m.homeScore}${homePk}` : '-';
+      const awayScoreText = m.played ? `${m.awayScore}${awayPk}` : '-';
+      const homeWinner = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
+      const awayWinner = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
+      const homeLoser = m.played && m.winnerId && m.winnerId !== m.homeId ? 'match-loser' : '';
+      const awayLoser = m.played && m.winnerId && m.winnerId !== m.awayId ? 'match-loser' : '';
+      const isHomePlayer = Boolean(
+        playerClub && (m.homeId === playerClub.id || (m.homeClub && m.homeClub.id === playerClub.id))
+      ) || Boolean(m.homeClub && m.homeClub.isPlayer);
+      const isAwayPlayer = Boolean(
+        playerClub && (m.awayId === playerClub.id || (m.awayClub && m.awayClub.id === playerClub.id))
+      ) || Boolean(m.awayClub && m.awayClub.isPlayer);
+      const isMyMatch = isHomePlayer || isAwayPlayer;
+
+      html += `
+        <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${isMyMatch ? 'is-player-match' : ''}">
+          <div class="bracket-team-row ${homeWinner} ${homeLoser} ${isHomePlayer ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">
+              ${homeEmblem}
+              <span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span>
+            </div>
+            <span class="bracket-team-score mono">${homeScoreText}</span>
+          </div>
+          <div class="bracket-team-row ${awayWinner} ${awayLoser} ${isAwayPlayer ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">
+              ${awayEmblem}
+              <span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span>
+            </div>
+            <span class="bracket-team-score mono">${awayScoreText}</span>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
   return html;
 }
 
@@ -2278,4 +2822,5 @@ window.checkScheduleCongestion = checkScheduleCongestion;
 window.renderChampionshipStandingsHtml = renderChampionshipStandingsHtml;
 window.renderEuroLeaguePhaseStandingsHtml = renderEuroLeaguePhaseStandingsHtml;
 window.renderEuroScheduleListHtml = renderEuroScheduleListHtml;
+window.renderEuroSymmetricalBracketHtml = renderEuroSymmetricalBracketHtml;
 window.renderCupBracketHtml = renderCupBracketHtml;

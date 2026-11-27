@@ -15574,11 +15574,11 @@ button.hidden,
   font-weight: 600;
 }
 
-/* トーナメント表（ブラケット）スタイル */
+/* トーナメント表（ラウンド切替タブ＋フラットグリッド） */
 .comp-bracket-wrapper {
-  padding: 16px;
-  overflow-x: auto;
-  min-height: 400px;
+  padding: 0;
+  overflow-x: hidden;
+  min-height: 240px;
 }
 
 .comp-bracket-wrapper.standings-view,
@@ -15591,99 +15591,188 @@ button.hidden,
 .cup-bracket-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 720px;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .cup-header-banner {
   display: none !important;
 }
 
-.cup-title {
-  margin: 0;
-  font-size: 16px;
-  color: #F8FAFC;
+.cup-round-tabs {
+  display: flex;
+  width: 100%;
+  background: #14171c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cup-round-tab-btn {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cup-round-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+}
+
+.cup-round-tab-btn.is-upcoming {
+  color: #55606d;
+}
+
+.cup-round-tab-btn.active {
+  color: #2ecc71;
+  border-bottom-color: #2ecc71;
   font-weight: 700;
 }
 
-.cup-prize {
-  font-size: 13px;
-  color: #38BDF8;
-  font-weight: 600;
+.cup-round-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2ecc71;
+  flex-shrink: 0;
 }
 
-.cup-winner-badge {
-  background: linear-gradient(135deg, #F59E0B, #D97706);
-  color: #000;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.bracket-rounds-wrapper {
+.cup-champion-bar {
   display: flex;
-  gap: 16px;
-  align-items: stretch;
-}
-
-.bracket-round-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  min-width: 170px;
+  padding: 12px 16px;
+  background: #1f252b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 3px 0 0 #2ecc71;
 }
 
-.bracket-round-title {
-  margin: 0;
-  font-size: 12px;
-  color: #94A3B8;
-  text-align: center;
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+.cup-champion-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.bracket-matches-list {
+.cup-champion-bar.is-player-champion .cup-champion-label {
+  color: #2ecc71;
+}
+
+.cup-champion-club {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cup-champion-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cup-champion-bar.is-player-champion .cup-champion-name {
+  color: #2ecc71;
+}
+
+.cup-round-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  flex: 1;
-  justify-content: space-around;
+  padding: 10px 14px;
+  background: #181b1f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+}
+
+.cup-round-meta-title {
+  color: #e6edf3;
+  font-weight: 700;
+}
+
+.cup-round-meta-status {
+  color: #8b949e;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cup-round-meta-status.is-live {
+  color: #2ecc71;
+}
+
+.cup-round-matches-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  padding: 12px;
+  background: #14171c;
+}
+
+.cup-round-matches-grid.is-final-round {
+  grid-template-columns: 1fr;
+  max-width: 560px;
+  width: 100%;
+  margin: 16px auto;
+  padding: 0;
+  background: transparent;
+}
+
+.cup-round-matches-grid.is-final-round .bracket-team-row {
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.cup-round-matches-grid.is-final-round .bracket-team-score {
+  font-size: 16px;
 }
 
 .bracket-match-card {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  background: #20242a;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.14);
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.bracket-match-card:hover {
-  border-color: rgba(0, 240, 255, 0.4);
+  min-width: 0;
 }
 
 .bracket-match-placeholder {
-  padding: 16px 8px;
+  padding: 36px 16px;
   text-align: center;
-  color: #64748B;
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  color: #8b949e;
+  font-size: 12px;
+  background: #1a1d20;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bracket-team-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 11px;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
 }
 
 .bracket-team-row:last-child {
@@ -15693,13 +15782,14 @@ button.hidden,
 .bracket-team-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .bracket-team-name {
-  color: #CBD5E1;
+  color: #cfd8e3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -15707,32 +15797,36 @@ button.hidden,
 }
 
 .bracket-team-score {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  color: #94A3B8;
+  color: #8b949e;
   padding-left: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bracket-team-row.match-winner {
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.bracket-team-row.match-winner .bracket-team-name {
-  color: #00F0FF;
+.bracket-team-row.match-winner .bracket-team-name,
+.bracket-team-row.match-winner .bracket-team-score {
+  color: #f1f5f9;
   font-weight: 700;
 }
 
-.bracket-team-row.match-winner .bracket-team-score {
-  color: #00F0FF;
+.bracket-team-row.match-loser .bracket-team-name,
+.bracket-team-row.match-loser .bracket-team-score {
+  color: #7d8590;
 }
 
 .bracket-match-card.is-player-match {
-  border-color: rgba(46, 204, 113, 0.55);
+  background: #1e2a24;
   box-shadow: inset 3px 0 0 #2ecc71;
 }
 
 .bracket-team-row.is-player-team {
-  background: rgba(46, 204, 113, 0.16);
+  background: rgba(46, 204, 113, 0.14);
 }
 
 .bracket-team-row.is-player-team .bracket-team-name,
@@ -15744,7 +15838,304 @@ button.hidden,
 }
 
 .bracket-team-row.is-player-team.match-winner {
-  background: rgba(46, 204, 113, 0.22);
+  background: rgba(46, 204, 113, 0.2);
+}
+
+@media (max-width: 768px) {
+  .cup-round-tab-btn {
+    font-size: 11px;
+    padding: 0 2px;
+    gap: 3px;
+    height: 34px;
+  }
+
+  .cup-round-matches-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .cup-round-matches-grid.is-final-round {
+    margin: 0;
+    max-width: none;
+    padding: 10px;
+  }
+
+  .bracket-team-row {
+    padding: 8px 12px;
+  }
+}
+
+/* 欧州コンペ：左右対称・固定トーナメント表 */
+.euro-bracket-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.euro-tree-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.euro-tree-viewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  background: #16191d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.euro-tree-canvas {
+  position: relative;
+  width: 1280px;
+  height: 496px;
+  margin: 0 auto;
+}
+
+.euro-tree-svg {
+  position: absolute;
+  inset: 0;
+  width: 1280px;
+  height: 496px;
+  pointer-events: none;
+}
+
+.euro-tree-round-label {
+  position: absolute;
+  top: 12px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.euro-tree-node {
+  position: absolute;
+  height: 34px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  background: #202429;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: #cfd8e3;
+}
+
+.euro-tree-node svg,
+.euro-tree-final-team svg,
+.euro-tree-champion-club svg {
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+.euro-tree-node-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.euro-tree-node.is-winner {
+  color: #f1f5f9;
+}
+
+.euro-tree-node.is-winner .euro-tree-node-name {
+  font-weight: 700;
+}
+
+.euro-tree-node.is-loser {
+  color: #7d8590;
+  background: #1a1d21;
+}
+
+.euro-tree-node.is-tbd {
+  color: #64748b;
+  background: #181b1f;
+}
+
+.euro-tree-node.is-player-team {
+  background: rgba(46, 204, 113, 0.16);
+  border-color: rgba(46, 204, 113, 0.45);
+  box-shadow: inset 3px 0 0 #2ecc71;
+  color: #2ecc71;
+}
+
+.euro-tree-node.is-player-team .euro-tree-node-name {
+  font-weight: 700;
+  color: #2ecc71;
+}
+
+.euro-tree-champion {
+  position: absolute;
+  left: 550px;
+  width: 180px;
+  top: 54px;
+  height: 122px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: #1d2228;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.euro-tree-champion.is-player-champion {
+  background: rgba(46, 204, 113, 0.14);
+  border-color: rgba(46, 204, 113, 0.5);
+  box-shadow: inset 3px 0 0 #2ecc71;
+}
+
+.euro-tree-champion.is-empty {
+  background: #181b1f;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.euro-tree-champion-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.euro-tree-champion-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #eab308;
+  letter-spacing: 0.5px;
+}
+
+.euro-tree-champion.is-player-champion .euro-tree-champion-tag {
+  color: #2ecc71;
+}
+
+.euro-tree-champion-club {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+}
+
+.euro-tree-champion-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 164px;
+}
+
+.euro-tree-champion.is-player-champion .euro-tree-champion-name {
+  color: #2ecc71;
+}
+
+.euro-tree-champion-empty {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.euro-tree-final-card {
+  position: absolute;
+  left: 550px;
+  width: 180px;
+  top: 204px;
+  min-height: 92px;
+  box-sizing: border-box;
+  background: #202429;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.euro-tree-final-card.is-player-match {
+  border-color: rgba(46, 204, 113, 0.55);
+  box-shadow: inset 3px 0 0 #2ecc71;
+}
+
+.euro-tree-final-head {
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8b949e;
+  background: #14171c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  letter-spacing: 0.6px;
+}
+
+.euro-tree-final-row {
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  color: #cfd8e3;
+}
+
+.euro-tree-final-row:last-child {
+  border-bottom: none;
+}
+
+.euro-tree-final-row.is-winner {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.euro-tree-final-row.is-loser {
+  color: #7d8590;
+}
+
+.euro-tree-final-row.is-tbd {
+  color: #64748b;
+}
+
+.euro-tree-final-row.is-player-team {
+  background: rgba(46, 204, 113, 0.16);
+  color: #2ecc71;
+}
+
+.euro-tree-final-row.is-player-team .euro-tree-node-name,
+.euro-tree-final-row.is-player-team .euro-tree-final-score {
+  color: #2ecc71;
+  font-weight: 700;
+}
+
+.euro-tree-final-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.euro-tree-final-score {
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -15885,33 +16276,78 @@ button.hidden,
   box-shadow: inset 4px 0 0 #EF4444 !important;
 }
 
-/* 欧州日程リスト（対戦カードグリッド） */
+/* 欧州日程リスト（MD1〜MD8・POタブ切替 + フラットカードグリッド） */
 .euro-schedule-list-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 10px 4px;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  background: #14171c;
 }
 
-.euro-schedule-md-block {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 12px;
+.euro-schedule-tabs {
+  display: flex;
+  width: 100%;
+  background: #14171c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.euro-schedule-md-title {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #38BDF8;
+.euro-schedule-tab-btn {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 3px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.euro-schedule-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+}
+
+.euro-schedule-tab-btn.is-upcoming {
+  color: #55606d;
+}
+
+.euro-schedule-tab-btn.active {
+  color: #2ecc71;
+  border-bottom-color: #2ecc71;
   font-weight: 700;
-  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .euro-schedule-tab-btn {
+    font-size: 10px;
+    padding: 0 1px;
+    gap: 2px;
+    height: 34px;
+  }
+
+  .euro-schedule-tab-btn .cup-round-dot {
+    width: 4px;
+    height: 4px;
+  }
 }
 
 .euro-schedule-matches-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 8px;
+  padding: 12px;
 }
 
 .euro-match-tile {

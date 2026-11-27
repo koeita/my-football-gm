@@ -217,6 +217,86 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('b.mvpScore - a.mvpScore', awards_eval_block)
         self.assertIn("slot.slotPos === 'GK' && bestGkItem", awards_eval_block)
 
+    def test_7_cup_bracket_round_tabs_and_flat_grid(self):
+        """トーナメント表のラウンド切替タブ・最新ラウンド自動選択・フラットグリッドCSSを検証"""
+        self.assertIn('function getCupRoundMatches(', self.competitions_js)
+        bracket_fn = re.search(r'function renderCupBracketHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(bracket_fn)
+        body = bracket_fn.group(0)
+        for token in [
+            'cup-round-tabs',
+            'cup-round-tab-btn',
+            'cup-round-meta',
+            'cup-round-matches-grid',
+            'cup-champion-bar',
+            'data-latest-round',
+            'selectedCupRounds',
+        ]:
+            self.assertIn(token, body)
+
+        self.assertIn('function bindCupBracketRoundTabs(', self.main_js)
+        self.assertIn('bindCupBracketRoundTabs(bracketWrapper, curDom);', self.main_js)
+        self.assertIn('bindEuroTreeControls(bracketWrapper);', self.main_js)
+        self.assertGreaterEqual(self.main_js.count('gameState.selectedCupRounds = {};'), 2)
+
+        for css_sel in [
+            '.cup-round-tabs',
+            '.cup-round-tab-btn',
+            '.cup-round-matches-grid',
+            '.cup-champion-bar',
+        ]:
+            self.assertIn(css_sel, self.css)
+        self.assertNotIn('.bracket-rounds-wrapper', self.css)
+
+    def test_8_euro_fixed_symmetrical_bracket(self):
+        """欧州コンペの組み合わせ固定・左右対称トーナメント表・日程MD/POタブ・CSSを検証"""
+        self.assertIn('function generateKnockoutRound(clubs, preserveOrder = false)', self.competitions_js)
+        self.assertIn('function isFixedBracketCompetition(comp)', self.competitions_js)
+        self.assertIn('generateKnockoutRound(winners, isFixedBracketCompetition(comp))', self.competitions_js)
+        self.assertIn('function renderEuroSymmetricalBracketHtml(compKey)', self.competitions_js)
+
+        fn_match = re.search(r'function renderEuroSymmetricalBracketHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(fn_match)
+        body = fn_match.group(0)
+        for token in [
+            'euro-tree-viewport',
+            'euro-tree-canvas',
+            'euro-tree-svg',
+            'euro-tree-node',
+            'euro-tree-final-card',
+            'euro-tree-champion',
+        ]:
+            self.assertIn(token, body)
+        self.assertNotIn('euro-tree-jump-bar', body)
+        self.assertNotIn('euro-po-section', body)
+
+        sched_fn = re.search(r'function renderEuroScheduleListHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(sched_fn)
+        sched_body = sched_fn.group(0)
+        for token in [
+            'euro-schedule-tabs',
+            'euro-schedule-tab-btn',
+            'selectedEuroScheduleRound',
+            "'PO'",
+        ]:
+            self.assertIn(token, sched_body)
+
+        self.assertIn('function bindEuroTreeControls(', self.main_js)
+        self.assertIn('function bindEuroScheduleTabs(', self.main_js)
+        self.assertIn('bindEuroScheduleTabs(bracketWrapper, curEuro);', self.main_js)
+        for css_sel in [
+            '.euro-tree-viewport',
+            '.euro-tree-canvas',
+            '.euro-tree-node',
+            '.euro-tree-final-card',
+            '.euro-tree-champion',
+            '.euro-schedule-tabs',
+            '.euro-schedule-tab-btn',
+        ]:
+            self.assertIn(css_sel, self.css)
+        self.assertNotIn('.euro-tree-jump-bar', self.css)
+        self.assertNotIn('.euro-po-section', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()
