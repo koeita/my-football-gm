@@ -93,11 +93,12 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('.finance-range-slider', self.css)
         self.assertIn('touch-action: none !important;', self.css)
         self.assertIn('--slider-pct', self.css)
+        self.assertIn('.btn-glossary-inline', self.css)
         self.assertIn('#facilities-subnav-bar', self.css)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 
     def test_5_no_emojis_in_render_finance_budget_panel(self):
-        """財務ダッシュボードに絵文字が含まれていないこと"""
+        """財務ダッシュボードおよび用語ガイドに絵文字が含まれていないこと"""
         start = self.main_js.find('function renderFinanceBudgetPanel()')
         self.assertNotEqual(start, -1)
         end = self.main_js.find('function renderFacilitiesAndYouth()', start)
@@ -105,6 +106,20 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         snippet = self.main_js[start:end]
         emoji_re = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
         self.assertEqual(emoji_re.findall(snippet), [])
+
+    def test_6_glossary_system_implemented(self):
+        """信頼度・戦術浸透度・理事会評価などの用語ガイドが実装されていること"""
+        self.assertIn('const GM_GLOSSARY_DEFINITIONS', self.main_js)
+        self.assertIn('function showGlossaryInfoPopup(key)', self.main_js)
+        self.assertIn('function showGlossaryListPopup()', self.main_js)
+        self.assertIn('id="btn-open-glossary-modal"', self.html)
+        for key in ['manager_trust', 'tactical_penetration', 'tactical_familiarity', 'team_chemistry', 'board_confidence', 'club_reputation', 'psr']:
+            self.assertIn(f"'{key}'", self.main_js)
+            self.assertIn(f'data-glossary-key="{key}"', self.main_js)
+        g_start = self.main_js.find('const GM_GLOSSARY_DEFINITIONS')
+        g_end = self.main_js.find('function processSeasonEnd(', g_start)
+        emoji_re = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+        self.assertEqual(emoji_re.findall(self.main_js[g_start:g_end]), [])
 
 
 if __name__ == '__main__':
