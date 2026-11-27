@@ -26770,7 +26770,8 @@ function renderCommercialManagementPanel() {
   }
   const comm = playerClub.commercial || {};
   const locked = isCommercialPlanLocked();
-  const subtab = gameState.commercialSubtab || 'stadium';
+  const rawSubtab = gameState.commercialSubtab || 'stadium';
+  const subtab = ['stadium', 'tickets', 'merch'].includes(rawSubtab) ? rawSubtab : 'stadium';
   const proj = typeof calculateProjectedMatchdayCommercial === 'function'
     ? calculateProjectedMatchdayCommercial(playerClub, { useDraft: !locked })
     : null;
@@ -26819,11 +26820,14 @@ function renderCommercialManagementPanel() {
   `;
 
   const navHtml = `
-    <div class="commercial-subnav" role="tablist" aria-label="施設・興行セクション">
+    <div class="commercial-section-banner-head">
+      <span class="commercial-section-banner-title">興行計画</span>
+      <span class="commercial-section-banner-note">${locked ? '今季確定ロック中' : 'シーズン開幕前に確定'}</span>
+    </div>
+    <div class="commercial-subnav" role="tablist" aria-label="興行設定セクション">
       <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム</button>
       <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット</button>
       <button type="button" class="commercial-subtab-btn ${subtab === 'merch' ? 'active' : ''}" data-commercial-tab="merch" role="tab" aria-selected="${subtab === 'merch' ? 'true' : 'false'}">グッズ</button>
-      <button type="button" class="commercial-subtab-btn ${subtab === 'facilities' ? 'active' : ''}" data-commercial-tab="facilities" role="tab" aria-selected="${subtab === 'facilities' ? 'true' : 'false'}">施設改修</button>
     </div>
   `;
 
@@ -26967,20 +26971,14 @@ function renderCommercialManagementPanel() {
     `;
   }
 
-  const isFacilitiesTab = subtab === 'facilities';
   root.innerHTML = `
     <div class="commercial-root">
       ${setupBannerHtml}
       ${summaryHtml}
       ${navHtml}
-      ${isFacilitiesTab ? '' : `<div class="commercial-section-body">${bodyHtml}</div>`}
+      <div class="commercial-section-body">${bodyHtml}</div>
     </div>
   `;
-
-  const facilitiesSec = document.getElementById('commercial-facilities-section');
-  if (facilitiesSec) {
-    facilitiesSec.classList.toggle('hidden', !isFacilitiesTab);
-  }
 }
 
 // ==========================================================================

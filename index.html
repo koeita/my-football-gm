@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3930">
+  <link rel="stylesheet" href="style.css?v=20261119_3940">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1240,23 +1240,29 @@
         </div>
       </div>
 
-      <!-- サブタブ2：施設改修・スタジアム・興行管理 -->
+      <!-- サブタブ2：施設改修・興行管理（独立2パネル：施設改修＋興行計画） -->
       <div class="facilities-subview hidden" id="facilities-subview-commercial" role="tabpanel">
-        <div class="panel">
-          <div id="commercial-management-root">
-            <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
-          </div>
-          <div id="commercial-facilities-section" class="commercial-facilities-section hidden">
-            <div class="commercial-facilities-head">
-              <span class="commercial-facilities-title">クラブ設備投資</span>
-              <div class="commercial-facilities-meta">
-                <span class="commercial-facilities-stat">総資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
-                <span class="commercial-facilities-stat">規模効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
-              </div>
+        <div id="commercial-facilities-section" class="panel commercial-facilities-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">施設改修</h2>
             </div>
+            <div class="commercial-facilities-meta">
+              <span class="commercial-facilities-stat">通年で改修可能</span>
+              <span class="commercial-facilities-stat">総資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
+              <span class="commercial-facilities-stat">規模効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
+            </div>
+          </div>
+          <div class="panel-body">
             <div class="facilities-grid" id="facilities-grid">
               <!-- JSで3つの施設カードを描画 -->
             </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top: 14px;">
+          <div id="commercial-management-root">
+            <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
           </div>
         </div>
       </div>
@@ -2136,6 +2142,6 @@
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3930"></script>
+  <script src="main.js?v=20261119_3940"></script>
 </body>
 </html>

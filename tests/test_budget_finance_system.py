@@ -47,7 +47,7 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('snapToPoolRatio(0.75)', self.main_js)
         self.assertIn('snapToPoolRatio(0.55)', self.main_js)
         self.assertIn('snapToPoolRatio(0.30)', self.main_js)
-        self.assertIn("data-commercial-tab=\"facilities\"", self.main_js)
+        self.assertIn('興行計画', self.main_js)
         self.assertIn("if (subtabKey === 'investment')", self.main_js)
 
     def test_3_html_and_storage_4tab_structure(self):
