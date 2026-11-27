@@ -92,6 +92,21 @@ class TestSecretaryDialogue(unittest.TestCase):
         ]:
             self.assertIn(needle, self.main_js, f"Missing SecretaryDialogue hook in main.js: {needle}")
 
+    def test_5_choice_events_show_followup_reply(self):
+        """設備投資や危機会談・メガオファー・負傷報告などの選択後に追加返答モーダルを出すこと"""
+        for needle in [
+            "topic: '設備投資 実施報告'",
+            "topic: '設備投資 見送り報告'",
+            "topic: '緊急会談 結果'",
+            "topic: '監督退任 報告'",
+            "acceptPendingMegaOffer({ showReply: true })",
+            "rejectPendingMegaOffer({ showReply: true })",
+            "topic: '移籍成立 報告'",
+            "topic: 'オファー拒否 報告'",
+            "topic: fastTrack ? '特別治療 手配完了' : 'リハビリ方針 確定'",
+        ]:
+            self.assertIn(needle, self.main_js, f"Missing follow-up reply modal in main.js: {needle}")
+
 
 if __name__ == '__main__':
     unittest.main()
