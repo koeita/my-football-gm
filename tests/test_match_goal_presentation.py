@@ -93,6 +93,25 @@ class TestMatchGoalPresentation(unittest.TestCase):
         self.assertIn('#f8fafc', precheck_quick_match.group(0))
         self.assertIn('#252c35', precheck_quick_match.group(0))
 
+        # おまかせ最適編成がホバー・押下で浮かないことと監督一任のトグルUI化を検証
+        opt_base_blocks = re.findall(r'\.btn-auto-optimal[^{]*\{[^}]+\}', self.style_css)
+        opt_combined = '\n'.join(opt_base_blocks)
+        self.assertNotIn('translateY(-1px)', opt_combined)
+        self.assertIn('transform: none !important;', opt_combined)
+
+        self.assertIn('id="btn-toggle-manager-delegation"', self.index_html)
+        self.assertRegex(self.index_html, r'id="btn-toggle-manager-delegation"[^>]*role="switch"')
+        self.assertIn('delegation-toggle-track', self.index_html)
+        self.assertIn('delegation-toggle-thumb', self.index_html)
+        self.assertIn('id="btn-precheck-toggle-delegation"', self.match_js)
+        self.assertIn('role="switch"', self.match_js)
+        self.assertIn('delegation-toggle-track', self.match_js)
+
+        with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as mf:
+            main_js = mf.read()
+        self.assertIn("btn.setAttribute('aria-checked'", main_js)
+        self.assertIn('btn.blur()', main_js)
+
     def test_match_engine_goal_functions_and_competition_meta(self):
         for symbol in [
             'COMPETITION_SHORT_LABELS',

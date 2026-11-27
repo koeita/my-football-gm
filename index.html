@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3830">
+  <link rel="stylesheet" href="style.css?v=20261119_3840">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -626,7 +626,10 @@
             <div class="tactical-header-titles">
               <h2 class="panel-title">作戦ボード</h2>
               <button type="button" class="btn btn-auto-optimal mono" id="btn-auto-optimal-lineup" title="現在の陣形で疲労・適性を考慮したベストメンバーを1回自動選出">おまかせ最適編成</button>
-              <button type="button" class="btn btn-manager-delegation mono" id="btn-toggle-manager-delegation" title="ONにすると監督の得意陣形・戦術へ同期し、毎試合の疲労ローテーションも監督に一任します">監督一任: OFF</button>
+              <button type="button" class="btn-manager-delegation is-toggle-switch mono" id="btn-toggle-manager-delegation" role="switch" aria-checked="false" title="ONにすると監督の得意陣形・戦術へ同期し、毎試合の疲労ローテーションも監督に一任します">
+                <span class="delegation-toggle-label">監督一任</span>
+                <span class="delegation-toggle-track" aria-hidden="true"><span class="delegation-toggle-thumb"></span></span>
+              </button>
             </div>
             <div class="formation-selector-wrap">
               <span class="formation-selector-label mono">陣形:</span>
@@ -2115,13 +2118,13 @@
   <script src="avatar.js?v=20261112_0400"></script>
   <script src="models.js?v=20261119_3700"></script>
   <script src="competitions.js?v=20261119_2000"></script>
-  <script src="match-engine.js?v=20261119_3800"></script>
+  <script src="match-engine.js?v=20261119_3810"></script>
   <script src="storage.js?v=20261119_3300"></script>
   <div id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
 
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0010"></script>
-  <script src="main.js?v=20261119_3840"></script>
+  <script src="main.js?v=20261119_3850"></script>
 </body>
 </html>

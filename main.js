@@ -34,11 +34,12 @@ function toggleManagerDelegation(forceValue = null) {
 
 function syncManagerDelegationButtonUI() {
   const isOn = Boolean(gameState.managerDelegationEnabled);
-  const btn = document.getElementById('btn-toggle-manager-delegation');
-  if (btn) {
-    btn.textContent = isOn ? '監督一任: ON' : '監督一任: OFF';
+  ['btn-toggle-manager-delegation', 'btn-precheck-toggle-delegation'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
     btn.classList.toggle('is-active', isOn);
-  }
+    btn.setAttribute('aria-checked', isOn ? 'true' : 'false');
+  });
 }
 
 
@@ -438,6 +439,10 @@ function applyAutoOptimalLineup() {
 
   optimizeClubStarters(playerClub);
   renderRoster();
+  const btn = document.getElementById('btn-auto-optimal-lineup');
+  if (btn && typeof btn.blur === 'function') {
+    btn.blur();
+  }
 }
 
 /**
