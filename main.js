@@ -150,7 +150,7 @@ function setBodyModalLock(locked) {
     }
   } else {
     const openModals = document.querySelectorAll('.modal-overlay:not(.hidden), #gm-modal-overlay:not(.hidden)');
-    if (openModals.length === 0) {
+    if (openModals.length === 0 && (document.body.classList.contains('modal-open') || document.documentElement.classList.contains('modal-open'))) {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
       const restore = () => {
@@ -9397,12 +9397,16 @@ function renderFinancialAlert() {
 
 function openSeasonSettlementModal() {
   const modal = document.getElementById('season-summary-box');
-  if (modal) modal.classList.remove('hidden');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 function closeSeasonSettlementModal() {
   const modal = document.getElementById('season-summary-box');
+  const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
   if (modal) modal.classList.add('hidden');
+  if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -18322,11 +18326,6 @@ function initGame() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const seasonSummaryModal = document.getElementById('season-summary-box');
-      if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
-        closeSeasonSettlementModal();
-        return;
-      }
       const scoutModal = document.getElementById('fixture-preview-modal');
       if (scoutModal && !scoutModal.classList.contains('hidden')) {
         closePendingMatchPreviewModal();
@@ -18369,6 +18368,9 @@ function initGame() {
       }
       const recordsOverlay = document.getElementById('records-modal-overlay');
       const settingsOverlay = document.getElementById('settings-modal-overlay');
+      const profileModalTop = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+      const seasonSummaryModal = document.getElementById('season-summary-box');
+      const gmOverlay = document.getElementById('gm-modal-overlay');
       if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
         closeRecordsModal();
       } else if (settingsOverlay && !settingsOverlay.classList.contains('hidden')) {
@@ -18378,17 +18380,17 @@ function initGame() {
         closeIncomingOfferModal();
       } else if (gameState.negotiationSession) {
         closeNegotiationModal();
-      } else if (gameState.profileModalPlayerId) {
-        closePlayerProfileModal();
-      } else {
-        const gmOverlay = document.getElementById('gm-modal-overlay');
-        if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
-          if (typeof closeGmModal === 'function') {
-            closeGmModal(false);
-          } else {
-            gmOverlay.classList.add('hidden');
-          }
+      } else if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
+        if (typeof closeGmModal === 'function') {
+          closeGmModal(false);
+        } else {
+          gmOverlay.classList.add('hidden');
+          if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
         }
+      } else if ((profileModalTop && !profileModalTop.classList.contains('hidden')) || gameState.profileModalPlayerId) {
+        closePlayerProfileModal();
+      } else if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
+        closeSeasonSettlementModal();
       }
     }
   });
