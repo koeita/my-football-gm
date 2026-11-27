@@ -137,6 +137,19 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('famScale', match_js)
         self.assertIn('calculateClubChemistryAndFamiliarity(homeClub, { isPostMatch: true })', match_js)
 
+    def test_8_board_metrics_tactic_select_and_settings_toggles(self):
+        """作戦ボードから哲学一致表記を廃し浸透度/連携%＋戦術切替を追加し設定トグルを統一したことを検証"""
+        self.assertIn('id="tactic-select-board"', self.html)
+        self.assertIn('settings-switch-label', self.html)
+        self.assertEqual(self.html.count('settings-switch-label'), 3)
+        self.assertNotIn('布陣: 哲学合致', self.main_js)
+        self.assertNotIn('戦術: 哲学合致', self.main_js)
+        self.assertIn('戦術浸透度: ${fam}%', self.main_js)
+        self.assertIn('チーム連携: ${chem}%', self.main_js)
+        self.assertIn("getElementById('tactic-select-board')", self.main_js)
+        self.assertIn('.board-tactic-select', self.css)
+        self.assertIn('.settings-switch-input:checked ~ .delegation-toggle-track', self.css)
+
 
 if __name__ == '__main__':
     unittest.main()

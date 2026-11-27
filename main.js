@@ -7846,6 +7846,10 @@ function setTeamTactic(tacticKey) {
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tactic === normalizedKey);
   });
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    tacticSelectBoard.value = normalizedKey;
+  }
 
   document.querySelectorAll('.tactics-guide-item[data-tactic-card]').forEach(card => {
     card.classList.toggle('active-guide', card.dataset.tacticCard === normalizedKey);
@@ -10465,6 +10469,13 @@ function renderTacticalBoard() {
   const formationSelectMobile = document.getElementById('formation-select-mobile');
   if (formationSelectMobile) {
     formationSelectMobile.value = formationKey;
+  }
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    const tacKey = typeof normalizeTacticKey === 'function'
+      ? normalizeTacticKey(playerClub.tactic || 'possession')
+      : (playerClub.tactic || 'possession');
+    tacticSelectBoard.value = tacKey;
   }
 
   const formationLabelEl = document.getElementById('roster-formation-label');
@@ -17129,12 +17140,20 @@ function initGame() {
     });
   }
 
-  // モバイル用フォーメーション変更セレクト
+  // モバイル用フォーメーション変更セレクト ＆ ボード戦術切替セレクト
   const formationSelectMobile = document.getElementById('formation-select-mobile');
   if (formationSelectMobile) {
     formationSelectMobile.addEventListener('change', (e) => {
       if (e.target.value) {
         setClubFormation(e.target.value);
+      }
+    });
+  }
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    tacticSelectBoard.addEventListener('change', (e) => {
+      if (e.target.value) {
+        setTeamTactic(e.target.value);
       }
     });
   }
@@ -18526,32 +18545,18 @@ function renderTacticalManagerBanner() {
     return;
   }
 
-  const mgr = club.manager;
-  const isFormMatch = club.formation === mgr.preferredFormation;
-  const isTacticMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
-  const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
-
-  const formTag = isFormMatch
-    ? `<span class="mgr-tag match">布陣: 哲学合致</span>`
-    : `<span class="mgr-tag unmatch">布陣: GM指定</span>`;
-  const tacticTag = isTacticMatch
-    ? `<span class="mgr-tag match">戦術: 哲学合致</span>`
-    : `<span class="mgr-tag unmatch">戦術: GM指定</span>`;
-
-  let totalBonus = 0;
-  if (isFormMatch) totalBonus += 1;
-  if (isTacticMatch) totalBonus += 1;
-  const mgrTrust = mgr.trust ?? 80;
-  let bonusTag = '';
-  if (mgrTrust < 40) {
-    bonusTag = `<span class="mgr-tag unmatch" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 停滞</span>`;
-  } else if (totalBonus === 2) {
-    bonusTag = `<span class="mgr-tag bonus" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 高</span>`;
-  } else if (totalBonus === 1) {
-    bonusTag = `<span class="mgr-tag warn" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 中</span>`;
-  } else {
-    bonusTag = `<span class="mgr-tag none" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 低</span>`;
+  if (typeof calculateClubChemistryAndFamiliarity === 'function') {
+    calculateClubChemistryAndFamiliarity(club);
   }
+  const mgr = club.manager;
+  const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
+  const mgrTrust = mgr.trust ?? 80;
+  const fam = Math.round(club.tacticalFamiliarity ?? 75);
+  const chem = Math.round(club.teamChemistry ?? 75);
+  const penCls = mgrTrust < 40 ? 'unmatch' : (fam >= 80 ? 'bonus' : (fam >= 60 ? 'warn' : 'unmatch'));
+  const chemCls = chem >= 80 ? 'bonus' : (chem >= 60 ? 'warn' : 'unmatch');
+  const penTag = `<span class="mgr-tag ${penCls}" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: ${fam}%</span>`;
+  const chemTag = `<span class="mgr-tag ${chemCls}" data-glossary-key="team_chemistry" role="button" tabindex="0">チーム連携: ${chem}%</span>`;
 
   const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 32) : '';
 
@@ -18574,9 +18579,8 @@ function renderTacticalManagerBanner() {
         </div>
       </div>
       <div class="manager-banner-tags mono">
-        ${formTag}
-        ${tacticTag}
-        ${bonusTag}
+        ${penTag}
+        ${chemTag}
       </div>
     </div>
   `;

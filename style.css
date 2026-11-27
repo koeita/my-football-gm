@@ -27418,3 +27418,121 @@ button.hof-record-name {
   color: #8b949e;
   line-height: 1;
 }
+
+/* ==========================================================================
+   作戦ボード 戦術切替セレクト ＆ 環境設定トグルスイッチ統一
+   ========================================================================== */
+.tactical-panel-header {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.board-tactic-select-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.board-tactic-select {
+  height: 28px;
+  padding: 0 24px 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #e6edf3;
+  background-color: #1a1d20;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232ecc71' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.board-tactic-select:focus {
+  border-color: #2ecc71;
+  outline: none;
+}
+
+.settings-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.settings-switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.settings-switch-text {
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 52px;
+  text-align: right;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.settings-switch-input:checked + .settings-switch-text {
+  color: #2ecc71;
+}
+
+.settings-switch-input:checked ~ .delegation-toggle-track {
+  background: #2ecc71;
+}
+
+.settings-switch-input:checked ~ .delegation-toggle-track .delegation-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.settings-switch-input:focus-visible ~ .delegation-toggle-track {
+  outline: 2px solid #2ecc71;
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .tactical-header-titles {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  .formation-selector-wrap {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .formation-select-wrap-mobile,
+  .board-tactic-select-wrap {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .formation-select-mobile,
+  .board-tactic-select {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 30px !important;
+    padding: 0 22px 0 8px !important;
+    font-size: 11px !important;
+    background-color: #161b22 !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232ecc71' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+    border: 1px solid var(--border-color, #30363d) !important;
+    color: #e6edf3 !important;
+  }
+  .settings-switch-input:checked ~ .delegation-toggle-track .delegation-toggle-thumb {
+    transform: translateX(16px);
+  }
+}

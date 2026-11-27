@@ -64,7 +64,7 @@ class TestPriorityBDelegationPerfUnslop(unittest.TestCase):
         self.assertNotIn('薄適性（96%発揮）', self.all_js)
         self.assertNotIn('薄適性（92%発揮）', self.all_js)
         # 新しい世界観表現とサブ適性係数 0.92 の整合確認
-        self.assertIn('戦術浸透度: 高', self.main_js)
+        self.assertIn('戦術浸透度: ${fam}%', self.main_js)
         self.assertIn('終盤の消耗が激しい', self.html)
         self.assertIn('終盤の消耗が激し', self.data_js)
         self.assertIn("return { type: 'sub', factor: 0.92, label: 'サブ適性' };", self.main_js)
