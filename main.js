@@ -225,7 +225,8 @@ const gameState = {
   offersSubtab: 'incoming',      // オファータブ内の表示 ('incoming' | 'outgoing')
   targetShortlist: [],
   preContractPlayers: [],        // 来季事前合意（内定）選手リスト           // 獲得ターゲットリスト（SHORTLIST）
-  facilitiesSubtab: 'finance',   // 経営タブ内サブタブ ('finance' | 'investment' | 'commercial' | 'staff' | 'youth')
+  facilitiesSubtab: 'finance',   // 経営タブ内サブタブ ('finance' | 'commercial' | 'staff' | 'youth')
+  financeSubtab: 'overview',     // 財務・予算サブタブ ('overview' | 'cashflow' | 'payroll')
   teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
   competitionStats: {},          // 大会別個人スタッツ集計マップ (d1, d2, leagueCup, nationalCup, championsCup, europaCup, conferenceCup, preseasonCup)
   statsCompView: 'league',       // 個人スタッツ大会グループ ('league' | 'domestic' | 'europe' | 'preseason')
@@ -11055,6 +11056,10 @@ function switchMarketSubtab(subtabKey, shouldRender = true) {
  */
 function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   if (!subtabKey) subtabKey = 'finance';
+  if (subtabKey === 'investment') {
+    gameState.commercialSubtab = 'facilities';
+    subtabKey = 'commercial';
+  }
   gameState.facilitiesSubtab = subtabKey;
   const viewFacilities = document.getElementById('view-facilities');
   if (viewFacilities) {
@@ -11069,10 +11074,9 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
     btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
   });
 
-  // サブビューの表示切り替え
+  // サブビューの表示切り替え（4タブ構成）
   const subviews = {
     finance: document.getElementById('facilities-subview-finance'),
-    investment: document.getElementById('facilities-subview-investment'),
     commercial: document.getElementById('facilities-subview-commercial'),
     staff: document.getElementById('facilities-subview-staff'),
     youth: document.getElementById('facilities-subview-youth')
@@ -11086,10 +11090,8 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   });
 
   if (!shouldRender) return;
-  if (subtabKey === 'finance' || subtabKey === 'investment') {
+  if (subtabKey === 'finance' || subtabKey === 'commercial') {
     renderFacilitiesAndYouth();
-  } else if (subtabKey === 'commercial') {
-    renderCommercialManagementPanel();
   } else if (subtabKey === 'staff') {
     renderManagerManagementPanel();
     renderCoachingStaffPanel();
@@ -12716,6 +12718,16 @@ function renderFinanceBudgetPanel() {
         canReallocate: false
       };
 
+  const fTab = ['overview', 'cashflow', 'payroll'].includes(gameState.financeSubtab)
+    ? gameState.financeSubtab
+    : 'overview';
+  gameState.financeSubtab = fTab;
+
+  const boardPsrPanel = document.getElementById('board-psr-sponsor-panel');
+  if (boardPsrPanel) {
+    boardPsrPanel.classList.toggle('hidden', fTab !== 'overview');
+  }
+
   const remPayrollWeeks = Math.max(0, 52 - (gameState.paidPayrollWeeks || 0));
   const transferRatioPct = summary.initialTransferBudget > 0
     ? Math.max(0, Math.min(100, Math.round((summary.transferBudget / summary.initialTransferBudget) * 100)))
@@ -12727,7 +12739,27 @@ function renderFinanceBudgetPanel() {
   const fundsCls = summary.funds < 0 ? 'text-danger' : 'accent-gold';
   const transferCls = summary.transferBudget <= 0 ? 'text-danger' : 'accent-green';
   const wageRemCls = summary.remainingWageWeekly < 0 ? 'text-danger' : (summary.remainingWageWeekly < 15 ? 'accent-gold' : 'accent-green');
-  const safeCls = summary.safeBudget < 0 ? 'text-danger' : 'accent-green';
+  const safeCls = summary.safeBudget < 0 ? 'text-danger' : 'text-muted';
+
+  // 予算配分スライダー計算（極端な0振りを防ぐプリセット比率: 移籍重視75% / バランス55% / 給与重視30%）
+  const step = summary.stepTransfer || 52;
+  const pool = Math.max(0, summary.maxTransferBudget - summary.minTransferBudget);
+  const snapToPoolRatio = (ratio) => {
+    if (!summary.canReallocate || pool <= 0) return summary.transferBudget;
+    const raw = summary.minTransferBudget + pool * ratio;
+    const stepDiff = Math.round((raw - summary.transferBudget) / step);
+    return Math.max(summary.minTransferBudget, Math.min(summary.maxTransferBudget, summary.transferBudget + stepDiff * step));
+  };
+  const presetTransferTarget = snapToPoolRatio(0.75);
+  const presetBalancedTarget = snapToPoolRatio(0.55);
+  const presetWageTarget = snapToPoolRatio(0.30);
+
+  const calcPoolSharePct = (tVal) => {
+    if (pool <= 0) return 50;
+    return Math.max(0, Math.min(100, Math.round(((tVal - summary.minTransferBudget) / pool) * 100)));
+  };
+  const initTSharePct = calcPoolSharePct(summary.transferBudget);
+  const initWSharePct = 100 - initTSharePct;
 
   // 給与内訳（選手 / 監督 / 指導陣）
   const activePlayers = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
@@ -12743,7 +12775,7 @@ function renderFinanceBudgetPanel() {
   const expiringWeeklySum = Math.round(expiringPlayers.reduce((sum, p) => sum + (p.wage || ((p.salary || 0) / 52) || 0), 0));
   const topEarners = [...activePlayers]
     .sort((a, b) => (b.wage || ((b.salary || 0) / 52) || 0) - (a.wage || ((a.salary || 0) / 52) || 0))
-    .slice(0, 5);
+    .slice(0, 10);
 
   // 今月収支実績（Monthly Ledger）
   const ledger = typeof ensureMonthlyLedger === 'function' ? ensureMonthlyLedger(false) : null;
@@ -12790,8 +12822,12 @@ function renderFinanceBudgetPanel() {
   const instAnnualNet = (Array.isArray(gameState.installments) ? gameState.installments : [])
     .filter(inst => inst && inst.remainingSeasons > 0)
     .reduce((sum, inst) => sum + (inst.direction === 'out' ? -(inst.amountPerSeason || 0) : (inst.amountPerSeason || 0)), 0);
-  const estNetAnnual = estGrossRev - summary.annualPayroll - estOpCost + instAnnualNet;
+  const estGrossExp = summary.annualPayroll + estOpCost + (instAnnualNet < 0 ? Math.abs(instAnnualNet) : 0);
+  const estAdjRev = estGrossRev + (instAnnualNet > 0 ? instAnnualNet : 0);
+  const estNetAnnual = estAdjRev - estGrossExp;
   const estNetSign = estNetAnnual >= 0 ? '+' : '';
+  const cashflowRatioSum = Math.max(1, estAdjRev + estGrossExp);
+  const revBarPct = Math.round((estAdjRev / cashflowRatioSum) * 100);
 
   const installmentsList = Array.isArray(gameState.installments)
     ? gameState.installments.filter(inst => inst && inst.remainingSeasons > 0)
@@ -12801,45 +12837,40 @@ function renderFinanceBudgetPanel() {
     : [];
   const reports = Array.isArray(gameState.monthlyReports) ? gameState.monthlyReports.slice(0, 6) : [];
 
-  const presetMidTarget = summary.canReallocate
-    ? summary.transferBudget + Math.round((((summary.minTransferBudget + summary.maxTransferBudget) / 2) - summary.transferBudget) / summary.stepTransfer) * summary.stepTransfer
-    : summary.transferBudget;
-
-  root.innerHTML = `
-    <div class="finance-dash-wrap">
-      <!-- 1. 資金・予算サマリーストリップ -->
-      <div class="finance-summary-strip">
-        <div class="finance-kpi-cell">
-          <span class="finance-kpi-label">クラブ総資金</span>
-          <span class="finance-kpi-val mono ${fundsCls}">${formatMoney(summary.funds)}</span>
-          <span class="finance-kpi-sub mono">施設・運営・給与決済口座</span>
-        </div>
-        <div class="finance-kpi-cell">
-          <span class="finance-kpi-label">移籍予算</span>
-          <span class="finance-kpi-val mono ${transferCls}">${formatMoney(summary.transferBudget)}</span>
-          <div class="finance-bar-track"><span class="finance-bar-fill is-green" style="width:${transferRatioPct}%"></span></div>
-          <span class="finance-kpi-sub mono">売却還元 ${retentionPct}%（${escapeCommHtml(summary.retentionLabel)}）</span>
-        </div>
-        <div class="finance-kpi-cell">
-          <span class="finance-kpi-label">給与予算（週給）</span>
-          <span class="finance-kpi-val mono">${formatWage(summary.weeklyPayroll)} <span class="finance-kpi-cap">/ ${formatWage(summary.wageBudgetWeekly)}</span></span>
-          <div class="finance-bar-track"><span class="finance-bar-fill ${summary.remainingWageWeekly < 0 ? 'is-danger' : 'is-gold'}" style="width:${wageUsageBarPct}%"></span></div>
-          <span class="finance-kpi-sub mono ${wageRemCls}">残枠 ${wageRemSign}${formatWage(summary.remainingWageWeekly)}（消化率 ${summary.wageUsagePct}%）</span>
-        </div>
-        <div class="finance-kpi-cell">
-          <span class="finance-kpi-label">実質運転余力</span>
-          <span class="finance-kpi-val mono ${safeCls}">${formatMoney(summary.safeBudget)}</span>
-          <span class="finance-kpi-sub mono">今季週給決済 残${remPayrollWeeks}/52週</span>
-        </div>
-      </div>
-
-      <!-- 2. 予算配分調整（移籍予算 ⇔ 給与予算） -->
+  let activeBodyHtml = '';
+  if (fTab === 'overview') {
+    activeBodyHtml = `
       <section class="finance-section">
         <div class="finance-section-head">
-          <h3 class="finance-section-title">予算配分調整（移籍予算 ⇔ 給与予算）</h3>
-          <span class="finance-section-note mono">£52K 移籍予算 ＝ £1K/週 給与枠</span>
+          <h3 class="finance-section-title">予算配分調整</h3>
+          <span class="finance-section-note mono">£52K ＝ £1K/週</span>
         </div>
-        <div class="finance-rebalance-grid">
+
+        <div class="finance-rebalance-grid finance-rebalance-stack">
+          <div class="finance-compare-grid">
+            <div class="finance-compare-col">
+              <span class="finance-compare-label">移籍予算</span>
+              <div class="finance-compare-val-row mono">
+                <strong class="accent-green" id="finance-preview-transfer">${formatMoney(summary.transferBudget)}</strong>
+                <span class="finance-delta-text hidden" id="finance-delta-transfer"></span>
+              </div>
+              <span class="finance-compare-sub mono">配分比率 <span id="finance-share-transfer">${initTSharePct}%</span></span>
+            </div>
+            <div class="finance-compare-col">
+              <span class="finance-compare-label">給与残枠（週給）</span>
+              <div class="finance-compare-val-row mono">
+                <strong class="${wageRemCls}" id="finance-preview-wage-rem">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</strong>
+                <span class="finance-delta-text hidden" id="finance-delta-wage"></span>
+              </div>
+              <span class="finance-compare-sub mono">上限 <span id="finance-preview-wage">${formatWage(summary.wageBudgetWeekly)}</span> · <span id="finance-share-wage">${initWSharePct}%</span></span>
+            </div>
+          </div>
+
+          <div class="finance-ratio-bar" aria-label="配分バランス">
+            <span class="finance-ratio-seg is-transfer" id="finance-ratio-bar-transfer" style="width:${initTSharePct}%"></span>
+            <span class="finance-ratio-seg is-wage" id="finance-ratio-bar-wage" style="width:${initWSharePct}%"></span>
+          </div>
+
           <div class="finance-rebalance-slider-box">
             <input
               type="range"
@@ -12847,95 +12878,94 @@ function renderFinanceBudgetPanel() {
               class="finance-range-slider"
               min="${summary.minTransferBudget}"
               max="${summary.maxTransferBudget}"
-              step="${summary.stepTransfer}"
+              step="${step}"
               value="${summary.transferBudget}"
               ${summary.canReallocate ? '' : 'disabled'}
             >
             <div class="finance-slider-bounds mono">
-              <span>移籍下限 ${formatMoney(summary.minTransferBudget)}</span>
-              <span>移籍上限 ${formatMoney(summary.maxTransferBudget)}</span>
-            </div>
-            <div class="finance-preset-row">
-              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${summary.maxTransferBudget}" ${summary.canReallocate ? '' : 'disabled'}>移籍重視</button>
-              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${presetMidTarget}" ${summary.canReallocate ? '' : 'disabled'}>バランス</button>
-              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${summary.minTransferBudget}" ${summary.canReallocate ? '' : 'disabled'}>給与重視</button>
-              <button type="button" class="btn btn-primary btn-xs" id="btn-apply-budget-reallocation" disabled>配分を確定</button>
+              <span>下限 ${formatMoney(summary.minTransferBudget)}</span>
+              <span>上限 ${formatMoney(summary.maxTransferBudget)}</span>
             </div>
           </div>
-          <div class="finance-preview-list">
+
+          <div class="finance-preset-row finance-preset-grid">
+            <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${presetTransferTarget}" ${summary.canReallocate ? '' : 'disabled'}>移籍重視</button>
+            <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${presetBalancedTarget}" ${summary.canReallocate ? '' : 'disabled'}>バランス</button>
+            <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${presetWageTarget}" ${summary.canReallocate ? '' : 'disabled'}>給与重視</button>
+          </div>
+
+          <div class="finance-apply-row">
+            <button type="button" class="btn btn-secondary btn-xs" id="btn-reset-budget-reallocation" disabled>元に戻す</button>
+            <button type="button" class="btn btn-primary btn-xs" id="btn-apply-budget-reallocation" disabled>配分を確定</button>
+          </div>
+        </div>
+      </section>
+    `;
+  } else if (fTab === 'cashflow') {
+    activeBodyHtml = `
+      <section class="finance-section">
+        <div class="finance-section-head">
+          <h3 class="finance-section-title">今季年間収支予測（賞金除く）</h3>
+          <span class="finance-section-note mono">現行体制ベース</span>
+        </div>
+        <div class="finance-cashflow-strip">
+          <div class="finance-cf-cell">
+            <span class="finance-kpi-label">予測収入</span>
+            <span class="finance-cf-val mono accent-green">+${formatMoney(estAdjRev)}</span>
+          </div>
+          <div class="finance-cf-cell">
+            <span class="finance-kpi-label">予測支出</span>
+            <span class="finance-cf-val mono text-danger">-${formatMoney(estGrossExp)}</span>
+          </div>
+          <div class="finance-cf-cell">
+            <span class="finance-kpi-label">予測純収支</span>
+            <span class="finance-cf-val mono ${estNetAnnual >= 0 ? 'accent-green' : 'text-danger'}">${estNetSign}${formatMoney(estNetAnnual)}</span>
+          </div>
+        </div>
+        <div class="finance-ratio-bar">
+          <span class="finance-ratio-seg is-transfer" style="width:${revBarPct}%"></span>
+          <span class="finance-ratio-seg is-danger" style="width:${100 - revBarPct}%"></span>
+        </div>
+        <div class="finance-two-col" style="margin-top: 10px;">
+          <div class="finance-flat-list">
+            <div class="finance-group-caption">収入内訳</div>
             <div class="finance-flat-row">
-              <span class="finance-row-label">調整後の移籍予算</span>
-              <span class="finance-row-val mono accent-green" id="finance-preview-transfer">${formatMoney(summary.transferBudget)}</span>
+              <span class="finance-row-label">ホーム興行見込（${homeMatches}試合）</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(estHomeAnnual)}</span>
             </div>
             <div class="finance-flat-row">
-              <span class="finance-row-label">調整後の週給予算枠</span>
-              <span class="finance-row-val mono accent-gold" id="finance-preview-wage">${formatWage(summary.wageBudgetWeekly)}</span>
+              <span class="finance-row-label">アウェイ放映権（${awayMatches}試合）</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(estAwayTvAnnual)}</span>
             </div>
             <div class="finance-flat-row">
-              <span class="finance-row-label">調整後の給与残枠</span>
-              <span class="finance-row-val mono ${wageRemCls}" id="finance-preview-wage-rem">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</span>
+              <span class="finance-row-label">スポンサー年額</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(sponsorAnnual)}</span>
             </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">リーグ・欧州分配見込</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(tvSolidarity)}</span>
+            </div>
+          </div>
+          <div class="finance-flat-list">
+            <div class="finance-group-caption">支出内訳</div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">年間人件費（52週換算）</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(summary.annualPayroll)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">施設・クラブ運営費</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(estOpCost)}</span>
+            </div>
+            ${instAnnualNet !== 0 ? `
+              <div class="finance-flat-row">
+                <span class="finance-row-label">分割払い精算予定</span>
+                <span class="finance-row-val mono ${instAnnualNet >= 0 ? 'accent-green' : 'text-danger'}">${instAnnualNet >= 0 ? '+' : ''}${formatMoney(instAnnualNet)}</span>
+              </div>
+            ` : ''}
           </div>
         </div>
       </section>
 
-      <!-- 3. 人件費内訳 ＆ 高給選手トップ5 -->
-      <div class="finance-two-col">
-        <section class="finance-section">
-          <div class="finance-section-head">
-            <h3 class="finance-section-title">人件費構成</h3>
-            <span class="finance-section-note mono">年間換算 ${formatMoney(summary.annualPayroll)}</span>
-          </div>
-          <div class="finance-stack-bar" aria-label="人件費比率">
-            <span class="finance-stack-seg seg-players" style="width:${pSharePct}%"></span>
-            <span class="finance-stack-seg seg-manager" style="width:${mSharePct}%"></span>
-            <span class="finance-stack-seg seg-coaches" style="width:${cSharePct}%"></span>
-          </div>
-          <div class="finance-flat-list">
-            <div class="finance-flat-row">
-              <span class="finance-row-label"><i class="finance-dot seg-players"></i>選手週給（${activePlayers.length}名）</span>
-              <span class="finance-row-val mono">${formatWage(playerWeekly)} · ${pSharePct}%</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label"><i class="finance-dot seg-manager"></i>監督給与</span>
-              <span class="finance-row-val mono">${formatWage(managerWeekly)} · ${mSharePct}%</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label"><i class="finance-dot seg-coaches"></i>指導陣給与</span>
-              <span class="finance-row-val mono">${formatWage(coachWeekly)} · ${cSharePct}%</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">今季末満了予定（残1年以下）</span>
-              <span class="finance-row-val mono ${expiringPlayers.length > 0 ? 'accent-gold' : 'text-muted'}">${expiringPlayers.length}名 · 解放見込 ${formatWage(expiringWeeklySum)}</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="finance-section">
-          <div class="finance-section-head">
-            <h3 class="finance-section-title">高給選手トップ5</h3>
-            <span class="finance-section-note mono">週給構成比</span>
-          </div>
-          <div class="finance-flat-list">
-            ${topEarners.length > 0 ? topEarners.map(p => {
-              const pw = p.wage || Math.round((p.salary || 0) / 52) || 0;
-              const pct = summary.weeklyPayroll > 0 ? Math.round((pw / summary.weeklyPayroll) * 100) : 0;
-              return `
-                <div class="finance-flat-row finance-earner-row" data-finance-player-id="${p.id}">
-                  <span class="finance-row-label">
-                    <span class="pos-inline pos-${escapeCommHtml(p.pos || 'CM')}">${escapeCommHtml(p.pos || 'CM')}</span>
-                    <span class="finance-earner-name">${escapeCommHtml(p.name)}</span>
-                    <span class="finance-earner-meta mono">残${p.contractYears || 0}年</span>
-                  </span>
-                  <span class="finance-row-val mono accent-gold">${formatWage(pw)} · ${pct}%</span>
-                </div>
-              `;
-            }).join('') : '<div class="finance-empty-row">対象選手なし</div>'}
-          </div>
-        </section>
-      </div>
-
-      <!-- 4. 今月収支実績 ＆ 年間収支予測 -->
       <div class="finance-two-col">
         <section class="finance-section">
           <div class="finance-section-head">
@@ -12972,52 +13002,6 @@ function renderFinanceBudgetPanel() {
 
         <section class="finance-section">
           <div class="finance-section-head">
-            <h3 class="finance-section-title">今季年間収支予測</h3>
-            <span class="finance-section-note mono">現行体制ベース</span>
-          </div>
-          <div class="finance-flat-list">
-            <div class="finance-flat-row">
-              <span class="finance-row-label">ホーム興行見込（${homeMatches}試合）</span>
-              <span class="finance-row-val mono accent-green">+${formatMoney(estHomeAnnual)}</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">アウェイ放映権見込（${awayMatches}試合）</span>
-              <span class="finance-row-val mono accent-green">+${formatMoney(estAwayTvAnnual)}</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">スポンサー年額合計</span>
-              <span class="finance-row-val mono accent-green">+${formatMoney(sponsorAnnual)}</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">リーグ・欧州配分見込</span>
-              <span class="finance-row-val mono accent-green">+${formatMoney(tvSolidarity)}</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">年間人件費（52週換算）</span>
-              <span class="finance-row-val mono text-danger">-${formatMoney(summary.annualPayroll)}</span>
-            </div>
-            <div class="finance-flat-row">
-              <span class="finance-row-label">施設・クラブ運営費</span>
-              <span class="finance-row-val mono text-danger">-${formatMoney(estOpCost)}</span>
-            </div>
-            ${instAnnualNet !== 0 ? `
-              <div class="finance-flat-row">
-                <span class="finance-row-label">分割払い精算予定</span>
-                <span class="finance-row-val mono ${instAnnualNet >= 0 ? 'accent-green' : 'text-danger'}">${instAnnualNet >= 0 ? '+' : ''}${formatMoney(instAnnualNet)}</span>
-              </div>
-            ` : ''}
-            <div class="finance-flat-row is-total">
-              <span class="finance-row-label">予測年間純収支（賞金除く）</span>
-              <span class="finance-row-val mono ${estNetAnnual >= 0 ? 'accent-green' : 'text-danger'}">${estNetSign}${formatMoney(estNetAnnual)}</span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- 5. 分割払い・セルオン条項 ＆ 月次履歴 -->
-      <div class="finance-two-col">
-        <section class="finance-section">
-          <div class="finance-section-head">
             <h3 class="finance-section-title">分割払い・セルオン条項</h3>
             <span class="finance-section-note mono">${installmentsList.length + sellOnList.length}件</span>
           </div>
@@ -13040,73 +13024,208 @@ function renderFinanceBudgetPanel() {
             ${(installmentsList.length === 0 && sellOnList.length === 0) ? '<div class="finance-empty-row">進行中の分割払い・売却歩合条項はありません</div>' : ''}
           </div>
         </section>
-
-        <section class="finance-section">
-          <div class="finance-section-head">
-            <h3 class="finance-section-title">月次収支履歴</h3>
-            <span class="finance-section-note mono">直近${reports.length}ヶ月</span>
-          </div>
-          ${reports.length > 0 ? `
-            <div class="finance-history-table-wrap">
-              <table class="data-table finance-history-table">
-                <thead>
-                  <tr>
-                    <th>年月</th>
-                    <th class="col-num">収入</th>
-                    <th class="col-num">人件費</th>
-                    <th class="col-num">純収支</th>
-                    <th class="col-num">月末残高</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${reports.map(r => {
-                    const totIn = (r.matchIncome || 0) + (r.transferIn || 0);
-                    const netVal = r.netBalance || 0;
-                    const nSign = netVal >= 0 ? '+' : '';
-                    return `
-                      <tr>
-                        <td class="mono">${r.year}/${String(r.month).padStart(2, '0')}</td>
-                        <td class="col-num mono accent-green">+${formatMoney(totIn)}</td>
-                        <td class="col-num mono text-danger">-${formatMoney(r.payrollPaid || 0)}</td>
-                        <td class="col-num mono ${netVal >= 0 ? 'accent-green' : 'text-danger'}">${nSign}${formatMoney(netVal)}</td>
-                        <td class="col-num mono accent-gold">${formatMoney(r.endFunds || 0)}</td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          ` : '<div class="finance-empty-row">月末締め後の収支履歴がここに記録されます</div>'}
-        </section>
       </div>
+
+      <section class="finance-section">
+        <div class="finance-section-head">
+          <h3 class="finance-section-title">月次収支履歴</h3>
+          <span class="finance-section-note mono">直近${reports.length}ヶ月</span>
+        </div>
+        ${reports.length > 0 ? `
+          <div class="finance-history-table-wrap">
+            <table class="data-table finance-history-table">
+              <thead>
+                <tr>
+                  <th>年月</th>
+                  <th class="col-num">収入</th>
+                  <th class="col-num">人件費</th>
+                  <th class="col-num">純収支</th>
+                  <th class="col-num">月末残高</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reports.map(r => {
+                  const totIn = (r.matchIncome || 0) + (r.transferIn || 0);
+                  const netVal = r.netBalance || 0;
+                  const nSign = netVal >= 0 ? '+' : '';
+                  return `
+                    <tr>
+                      <td class="mono">${r.year}/${String(r.month).padStart(2, '0')}</td>
+                      <td class="col-num mono accent-green">+${formatMoney(totIn)}</td>
+                      <td class="col-num mono text-danger">-${formatMoney(r.payrollPaid || 0)}</td>
+                      <td class="col-num mono ${netVal >= 0 ? 'accent-green' : 'text-danger'}">${nSign}${formatMoney(netVal)}</td>
+                      <td class="col-num mono accent-gold">${formatMoney(r.endFunds || 0)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : '<div class="finance-empty-row">月末締め後の収支履歴がここに記録されます</div>'}
+      </section>
+    `;
+  } else {
+    activeBodyHtml = `
+      <section class="finance-section">
+        <div class="finance-section-head">
+          <h3 class="finance-section-title">人件費構成</h3>
+          <span class="finance-section-note mono">年額換算 ${formatMoney(summary.annualPayroll)}</span>
+        </div>
+        <div class="finance-stack-bar" aria-label="人件費比率">
+          <span class="finance-stack-seg seg-players" style="width:${pSharePct}%"></span>
+          <span class="finance-stack-seg seg-manager" style="width:${mSharePct}%"></span>
+          <span class="finance-stack-seg seg-coaches" style="width:${cSharePct}%"></span>
+        </div>
+        <div class="finance-flat-list">
+          <div class="finance-flat-row">
+            <span class="finance-row-label"><i class="finance-dot seg-players"></i>選手週給（${activePlayers.length}名）</span>
+            <span class="finance-row-val mono">${formatWage(playerWeekly)} · ${pSharePct}%</span>
+          </div>
+          <div class="finance-flat-row">
+            <span class="finance-row-label"><i class="finance-dot seg-manager"></i>監督給与</span>
+            <span class="finance-row-val mono">${formatWage(managerWeekly)} · ${mSharePct}%</span>
+          </div>
+          <div class="finance-flat-row">
+            <span class="finance-row-label"><i class="finance-dot seg-coaches"></i>指導陣給与</span>
+            <span class="finance-row-val mono">${formatWage(coachWeekly)} · ${cSharePct}%</span>
+          </div>
+          <div class="finance-flat-row">
+            <span class="finance-row-label">今季末満了予定（残1年以下）</span>
+            <span class="finance-row-val mono ${expiringPlayers.length > 0 ? 'accent-gold' : 'text-muted'}">${expiringPlayers.length}名 · 解放見込 ${formatWage(expiringWeeklySum)}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="finance-section">
+        <div class="finance-section-head">
+          <h3 class="finance-section-title">高給選手トップ10</h3>
+          <span class="finance-section-note mono">タップで詳細表示</span>
+        </div>
+        <div class="finance-flat-list">
+          ${topEarners.length > 0 ? topEarners.map((p, idx) => {
+            const pw = p.wage || Math.round((p.salary || 0) / 52) || 0;
+            const pct = summary.weeklyPayroll > 0 ? Math.round((pw / summary.weeklyPayroll) * 100) : 0;
+            return `
+              <div class="finance-flat-row finance-earner-row" data-finance-player-id="${p.id}">
+                <span class="finance-row-label">
+                  <span class="finance-earner-rank mono">${idx + 1}</span>
+                  <span class="pos-inline pos-${escapeCommHtml(p.pos || 'CM')}">${escapeCommHtml(p.pos || 'CM')}</span>
+                  <span class="finance-earner-name">${escapeCommHtml(p.name)}</span>
+                  <span class="finance-earner-meta mono">残${p.contractYears || 0}年</span>
+                </span>
+                <span class="finance-row-val mono accent-gold">${formatWage(pw)} · ${pct}%</span>
+              </div>
+            `;
+          }).join('') : '<div class="finance-empty-row">対象選手なし</div>'}
+        </div>
+      </section>
+    `;
+  }
+
+  root.innerHTML = `
+    <div class="finance-dash-wrap">
+      <!-- 1. 3指標サマリーストリップ -->
+      <div class="finance-summary-strip">
+        <div class="finance-kpi-cell is-funds">
+          <span class="finance-kpi-label">クラブ総資金</span>
+          <span class="finance-kpi-val mono ${fundsCls}">${formatMoney(summary.funds)}</span>
+          <span class="finance-kpi-sub mono ${safeCls}">運転余力 ${formatMoney(summary.safeBudget)} · 残${remPayrollWeeks}/52週</span>
+        </div>
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">移籍予算</span>
+          <span class="finance-kpi-val mono ${transferCls}">${formatMoney(summary.transferBudget)}</span>
+          <div class="finance-bar-track"><span class="finance-bar-fill is-green" style="width:${transferRatioPct}%"></span></div>
+          <span class="finance-kpi-sub mono">売却還元 ${retentionPct}%（${escapeCommHtml(summary.retentionLabel)}）</span>
+        </div>
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">給与残枠（週給）</span>
+          <span class="finance-kpi-val mono ${wageRemCls}">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</span>
+          <div class="finance-bar-track"><span class="finance-bar-fill ${summary.remainingWageWeekly < 0 ? 'is-danger' : 'is-gold'}" style="width:${wageUsageBarPct}%"></span></div>
+          <span class="finance-kpi-sub mono">使用 ${formatWage(summary.weeklyPayroll).replace('/週', '')} / ${formatWage(summary.wageBudgetWeekly)}（${summary.wageUsagePct}%）</span>
+        </div>
+      </div>
+
+      <!-- 2. 財務内セクション切替タブ -->
+      <div class="finance-inner-tabs" role="tablist" aria-label="財務詳細メニュー">
+        <button type="button" class="finance-inner-tab-btn ${fTab === 'overview' ? 'active' : ''}" data-finance-subtab="overview" role="tab" aria-selected="${fTab === 'overview' ? 'true' : 'false'}">配分・経営</button>
+        <button type="button" class="finance-inner-tab-btn ${fTab === 'cashflow' ? 'active' : ''}" data-finance-subtab="cashflow" role="tab" aria-selected="${fTab === 'cashflow' ? 'true' : 'false'}">収支・予測</button>
+        <button type="button" class="finance-inner-tab-btn ${fTab === 'payroll' ? 'active' : ''}" data-finance-subtab="payroll" role="tab" aria-selected="${fTab === 'payroll' ? 'true' : 'false'}">人件費</button>
+      </div>
+
+      ${activeBodyHtml}
     </div>
   `;
 
-  // スライダー・プリセット・確定イベント
+  // 財務内タブ切替イベント
+  root.querySelectorAll('[data-finance-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nextKey = btn.dataset.financeSubtab;
+      if (!nextKey || gameState.financeSubtab === nextKey) return;
+      gameState.financeSubtab = nextKey;
+      renderFinanceBudgetPanel();
+    });
+  });
+
+  // スライダー・プリセット・リセット・確定イベント
   const sliderEl = document.getElementById('finance-budget-slider');
   const applyBtn = document.getElementById('btn-apply-budget-reallocation');
+  const resetBtn = document.getElementById('btn-reset-budget-reallocation');
   const prevTransferEl = document.getElementById('finance-preview-transfer');
   const prevWageEl = document.getElementById('finance-preview-wage');
   const prevWageRemEl = document.getElementById('finance-preview-wage-rem');
+  const deltaTransferEl = document.getElementById('finance-delta-transfer');
+  const deltaWageEl = document.getElementById('finance-delta-wage');
+  const barTransferEl = document.getElementById('finance-ratio-bar-transfer');
+  const barWageEl = document.getElementById('finance-ratio-bar-wage');
+  const shareTransferEl = document.getElementById('finance-share-transfer');
+  const shareWageEl = document.getElementById('finance-share-wage');
 
   const updatePreview = (rawVal) => {
-    const step = summary.stepTransfer || 52;
     const clamped = Math.max(summary.minTransferBudget, Math.min(summary.maxTransferBudget, Number(rawVal) || 0));
     const stepDiff = Math.round((clamped - summary.transferBudget) / step);
     const nextTransfer = summary.transferBudget + stepDiff * step;
     const nextWage = summary.wageBudgetWeekly - stepDiff;
     const nextRem = nextWage - summary.weeklyPayroll;
     const remSignNext = nextRem >= 0 ? '+' : '';
+    const dTransfer = nextTransfer - summary.transferBudget;
+    const dWage = nextWage - summary.wageBudgetWeekly;
+    const nextTShare = calcPoolSharePct(nextTransfer);
+    const nextWShare = 100 - nextTShare;
 
     if (prevTransferEl) prevTransferEl.textContent = formatMoney(nextTransfer);
     if (prevWageEl) prevWageEl.textContent = formatWage(nextWage);
     if (prevWageRemEl) {
       prevWageRemEl.textContent = `${remSignNext}${formatWage(nextRem)}`;
-      prevWageRemEl.className = `finance-row-val mono ${nextRem < 0 ? 'text-danger' : (nextRem < 15 ? 'accent-gold' : 'accent-green')}`;
+      prevWageRemEl.className = nextRem < 0 ? 'text-danger' : (nextRem < 15 ? 'accent-gold' : 'accent-green');
     }
-    if (applyBtn) {
-      applyBtn.disabled = stepDiff === 0 || !summary.canReallocate;
+    if (deltaTransferEl) {
+      if (dTransfer === 0) {
+        deltaTransferEl.classList.add('hidden');
+        deltaTransferEl.textContent = '';
+      } else {
+        deltaTransferEl.classList.remove('hidden', 'is-pos', 'is-neg');
+        deltaTransferEl.classList.add(dTransfer > 0 ? 'is-pos' : 'is-neg');
+        deltaTransferEl.textContent = `${dTransfer > 0 ? '+' : ''}${formatMoney(dTransfer)}`;
+      }
     }
+    if (deltaWageEl) {
+      if (dWage === 0) {
+        deltaWageEl.classList.add('hidden');
+        deltaWageEl.textContent = '';
+      } else {
+        deltaWageEl.classList.remove('hidden', 'is-pos', 'is-neg');
+        deltaWageEl.classList.add(dWage > 0 ? 'is-pos' : 'is-neg');
+        deltaWageEl.textContent = `${dWage > 0 ? '+' : ''}£${dWage}k`;
+      }
+    }
+    if (barTransferEl) barTransferEl.style.width = `${nextTShare}%`;
+    if (barWageEl) barWageEl.style.width = `${nextWShare}%`;
+    if (shareTransferEl) shareTransferEl.textContent = `${nextTShare}%`;
+    if (shareWageEl) shareWageEl.textContent = `${nextWShare}%`;
+
+    const hasChange = stepDiff !== 0 && summary.canReallocate;
+    if (applyBtn) applyBtn.disabled = !hasChange;
+    if (resetBtn) resetBtn.disabled = !hasChange;
   };
 
   if (sliderEl) {
@@ -13119,6 +13238,12 @@ function renderFinanceBudgetPanel() {
       updatePreview(sliderEl.value);
     });
   });
+  if (resetBtn && sliderEl) {
+    resetBtn.addEventListener('click', () => {
+      sliderEl.value = summary.transferBudget;
+      updatePreview(sliderEl.value);
+    });
+  }
   if (applyBtn && sliderEl) {
     applyBtn.addEventListener('click', () => {
       if (typeof reallocateClubBudget !== 'function') return;
@@ -15845,6 +15970,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.teamSubtab = 'standings';
   gameState.rosterSubtab = 'board';
   gameState.facilitiesSubtab = 'finance';
+  gameState.financeSubtab = 'overview';
   gameState.marketSubtab = 'market';
   gameState.offersSubtab = 'incoming';
   gameState.lastWeekResults = [];
@@ -26693,10 +26819,11 @@ function renderCommercialManagementPanel() {
   `;
 
   const navHtml = `
-    <div class="commercial-subnav" role="tablist" aria-label="興行設定セクション">
+    <div class="commercial-subnav" role="tablist" aria-label="施設・興行セクション">
       <button type="button" class="commercial-subtab-btn ${subtab === 'stadium' ? 'active' : ''}" data-commercial-tab="stadium" role="tab" aria-selected="${subtab === 'stadium' ? 'true' : 'false'}">スタジアム</button>
       <button type="button" class="commercial-subtab-btn ${subtab === 'tickets' ? 'active' : ''}" data-commercial-tab="tickets" role="tab" aria-selected="${subtab === 'tickets' ? 'true' : 'false'}">チケット</button>
       <button type="button" class="commercial-subtab-btn ${subtab === 'merch' ? 'active' : ''}" data-commercial-tab="merch" role="tab" aria-selected="${subtab === 'merch' ? 'true' : 'false'}">グッズ</button>
+      <button type="button" class="commercial-subtab-btn ${subtab === 'facilities' ? 'active' : ''}" data-commercial-tab="facilities" role="tab" aria-selected="${subtab === 'facilities' ? 'true' : 'false'}">施設改修</button>
     </div>
   `;
 
@@ -26840,16 +26967,20 @@ function renderCommercialManagementPanel() {
     `;
   }
 
+  const isFacilitiesTab = subtab === 'facilities';
   root.innerHTML = `
     <div class="commercial-root">
       ${setupBannerHtml}
       ${summaryHtml}
       ${navHtml}
-      <div class="commercial-section-body">
-        ${bodyHtml}
-      </div>
+      ${isFacilitiesTab ? '' : `<div class="commercial-section-body">${bodyHtml}</div>`}
     </div>
   `;
+
+  const facilitiesSec = document.getElementById('commercial-facilities-section');
+  if (facilitiesSec) {
+    facilitiesSec.classList.toggle('hidden', !isFacilitiesTab);
+  }
 }
 
 // ==========================================================================

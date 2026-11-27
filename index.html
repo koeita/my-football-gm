@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3920">
+  <link rel="stylesheet" href="style.css?v=20261119_3930">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1208,21 +1208,20 @@
       </div>
     </main>
 
-    <!-- タブ4：経営・施設・人事（5分割：財務予算・施設投資・スタジアム興行・監督指導陣・ユース） -->
+    <!-- タブ4：経営・施設・人事（4分割：財務予算・施設興行・監督指導陣・ユース） -->
     <main id="view-facilities" class="tab-view hidden" data-facilities-subtab="finance">
       <!-- 経営サブタブ切り替えナビゲーションバー -->
       <div class="roster-subnav-bar facilities-subnav-bar" id="facilities-subnav-bar" role="tablist" aria-label="経営メニュー">
         <button type="button" class="roster-subtab-btn active" data-facilities-subtab="finance" id="facilities-subtab-btn-finance" role="tab" aria-selected="true">財務・予算</button>
-        <button type="button" class="roster-subtab-btn" data-facilities-subtab="investment" id="facilities-subtab-btn-investment" role="tab" aria-selected="false">施設投資</button>
-        <button type="button" class="roster-subtab-btn" data-facilities-subtab="commercial" id="facilities-subtab-btn-commercial" role="tab" aria-selected="false">スタジアム・興行</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="commercial" id="facilities-subtab-btn-commercial" role="tab" aria-selected="false">施設・興行</button>
         <button type="button" class="roster-subtab-btn" data-facilities-subtab="staff" id="facilities-subtab-btn-staff" role="tab" aria-selected="false">監督・指導陣</button>
-        <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユースチーム</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユース</button>
       </div>
 
       <!-- 投資・昇格アクションの通知フィードバックバー -->
       <div id="facility-feedback-banner" class="facility-feedback-banner hidden"></div>
 
-      <!-- サブタブ0：財務・予算ダッシュボード -->
+      <!-- サブタブ1：財務・予算ダッシュボード -->
       <div class="facilities-subview" id="facilities-subview-finance" role="tabpanel">
         <div class="panel">
           <div class="panel-header">
@@ -1241,31 +1240,23 @@
         </div>
       </div>
 
-      <!-- サブタブ1：施設投資 -->
-      <div class="facilities-subview hidden" id="facilities-subview-investment" role="tabpanel">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <h2 class="panel-title">施設投資</h2>
-            </div>
-            <div class="team-power-badges">
-              <span class="power-badge">資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
-              <span class="power-badge">ホーム増収効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="facilities-grid" id="facilities-grid">
-              <!-- JSで3つの施設カードを描画 -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- サブタブ1.5：スタジアム・チケット・グッズ興行管理 -->
+      <!-- サブタブ2：施設改修・スタジアム・興行管理 -->
       <div class="facilities-subview hidden" id="facilities-subview-commercial" role="tabpanel">
         <div class="panel">
           <div id="commercial-management-root">
             <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+          </div>
+          <div id="commercial-facilities-section" class="commercial-facilities-section hidden">
+            <div class="commercial-facilities-head">
+              <span class="commercial-facilities-title">クラブ設備投資</span>
+              <div class="commercial-facilities-meta">
+                <span class="commercial-facilities-stat">総資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
+                <span class="commercial-facilities-stat">規模効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
+              </div>
+            </div>
+            <div class="facilities-grid" id="facilities-grid">
+              <!-- JSで3つの施設カードを描画 -->
+            </div>
           </div>
         </div>
       </div>
@@ -2139,12 +2130,12 @@
   <script src="models.js?v=20261119_3910"></script>
   <script src="competitions.js?v=20261119_3890"></script>
   <script src="match-engine.js?v=20261119_3810"></script>
-  <script src="storage.js?v=20261119_3910"></script>
+  <script src="storage.js?v=20261119_3930"></script>
   <div id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
 
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3910"></script>
+  <script src="main.js?v=20261119_3930"></script>
 </body>
 </html>

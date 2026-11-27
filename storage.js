@@ -278,6 +278,7 @@ function saveGameToStorage(force = false) {
         pendingCommercialSetup: Boolean(gameState.pendingCommercialSetup),
         commercialSubtab: gameState.commercialSubtab || 'stadium',
         facilitiesSubtab: gameState.facilitiesSubtab || 'finance',
+        financeSubtab: gameState.financeSubtab || 'overview',
         marketSubtab: gameState.marketSubtab || 'market',
         marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' },
         scoutingIntel: gameState.scoutingIntel || {},
@@ -849,7 +850,13 @@ function loadGameFromStorage() {
     if (!gameState.teamSubtab) gameState.teamSubtab = 'standings';
     if (!gameState.rosterSubtab) gameState.rosterSubtab = 'board';
     if (!gameState.marketSubtab) gameState.marketSubtab = 'market';
-    if (!gameState.facilitiesSubtab) gameState.facilitiesSubtab = 'investment';
+    if (!gameState.facilitiesSubtab) {
+      gameState.facilitiesSubtab = 'finance';
+    } else if (gameState.facilitiesSubtab === 'investment') {
+      gameState.facilitiesSubtab = 'commercial';
+      gameState.commercialSubtab = 'facilities';
+    }
+    if (!gameState.financeSubtab) gameState.financeSubtab = 'overview';
     if (!Array.isArray(gameState.incomingOffers)) gameState.incomingOffers = [];
     if (!Array.isArray(gameState.outgoingOffers)) gameState.outgoingOffers = [];
     if (!gameState.offersSubtab) gameState.offersSubtab = 'incoming';
