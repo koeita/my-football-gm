@@ -63,11 +63,12 @@ function checkAndShowManagerTrustCrisis() {
 
   const mgr = club.manager;
   const tacName = getManagerTacticLabel(mgr.preferredTactic);
+  const mgrSpeaker = { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club };
   showGmModal({
-    category: 'TECHNICAL STAFF / EMERGENCY MEETING',
-    title: `【緊急会談】${mgr.name}監督からの進退伺い`,
+    category: '緊急会談',
+    title: `${mgr.name}監督からの進退伺い`,
     description: `フロントによる継続的な戦術・起用への現場介入と成績不振を受け、${mgr.name}監督との信頼関係が限界に達しています。「自身の哲学（${mgr.preferredFormation} / ${tacName}）で現場を任せてもらえないなら、双方合意のもと退任したい」と申し出ています。`,
-    detailHtml: `現在の監督信頼度: <strong class="text-danger">${mgr.trust}%</strong> ／ 得意哲学: <strong>${mgr.preferredFormation}・${tacName}</strong>`,
+    detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">現在の監督信頼度</span><span class="gm-modal-flat-val text-danger font-bold">${mgr.trust}%</span></div><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">得意哲学</span><span class="gm-modal-flat-val">${escapeCommHtml(mgr.preferredFormation)} · ${escapeCommHtml(tacName)}</span></div></div>`,
     actions: [
       {
         label: '現場の裁量を尊重し、采配一任で和解する',
@@ -79,6 +80,14 @@ function checkAndShowManagerTrustCrisis() {
           applyManagerPreMatchDelegation(club, true);
           addDailyLog(`【緊急会談・和解】${mgr.name}監督に現場采配を一任することで合意し、信頼関係が修復に向かいました。`);
           renderAll();
+          if (typeof showConsultationReplyModal === 'function') {
+            showConsultationReplyModal({
+              speaker: mgrSpeaker,
+              topic: '緊急会談 結果',
+              title: `${mgr.name}監督の返答`,
+              speech: `現場の全権を再び任せていただき感謝します。${mgr.preferredFormation}（${tacName}）の軸を徹底し、次の試合から結果で信頼に応えてみせます。`
+            });
+          }
         }
       },
       {
@@ -95,6 +104,14 @@ function checkAndShowManagerTrustCrisis() {
           gameState.managerDelegationEnabled = false;
           addDailyLog(`【双方合意退任】戦術方針の相違により、${oldName}監督が違約金なしで退任しました（経営 > 監督・指導陣）。`);
           renderAll();
+          if (typeof showConsultationReplyModal === 'function') {
+            showConsultationReplyModal({
+              topic: '監督退任 報告',
+              title: `${oldName}監督の退任手続きを完了しました`,
+              soundKey: 'ui_confirm',
+              speech: `双方合意のもと、${oldName}監督の契約解除を違約金£0で完了しました。現在は監督不在のため、経営タブの「監督・指導陣」から後任候補の招聘をご検討ください。`
+            });
+          }
         }
       }
     ]
@@ -2003,14 +2020,14 @@ function openMegaOfferModal() {
         label: `承諾して売却 (+${formatMoney(offer.offerAmount)})`,
         className: 'btn btn-accent',
         onClick: () => {
-          acceptPendingMegaOffer();
+          acceptPendingMegaOffer({ showReply: true });
         }
       },
       {
         label: '拒否して残留させる',
         className: 'btn btn-primary',
         onClick: () => {
-          rejectPendingMegaOffer();
+          rejectPendingMegaOffer({ showReply: true });
         }
       },
       {
@@ -2027,12 +2044,13 @@ function openMegaOfferModal() {
 /**
  * メガクラブからの強奪オファーを受諾（選手離脱＋移籍金即時加算）
  */
-function acceptPendingMegaOffer() {
+function acceptPendingMegaOffer(options = {}) {
   const offer = gameState.pendingMegaOffer;
   if (!offer) return;
 
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === offer.playerId);
+  let replyPayload = null;
   if (target) {
     const { netFee } = applySellOnRightsOnSale(playerClub, target, offer.offerAmount);
     playerClub.funds += netFee;
@@ -2052,22 +2070,34 @@ function acceptPendingMegaOffer() {
     }
     ensureValidSquadAndStarters(playerClub);
     gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(netFee)} が即時加算されました。`;
+    if (options && options.showReply) {
+      replyPayload = {
+        topic: '移籍成立 報告',
+        title: `${offer.playerName} の完全移籍が成立しました`,
+        soundKey: 'sfx_deal',
+        speech: `#${offer.squadNumber} ${offer.playerName} の ${offer.megaClubName} への売却手続きが完了し、移籍金 +${formatMoney(netFee)} をクラブ資金へ即時入金しました。あわせて先発・登録メンバーも自動再調整しています。`
+      };
+    }
   }
 
   gameState.pendingMegaOffer = null;
   updateMarketBadges();
   renderAll();
+  if (replyPayload && typeof showConsultationReplyModal === 'function') {
+    showConsultationReplyModal(replyPayload);
+  }
 }
 
 /**
  * メガクラブからの強奪オファーを拒否（戦力維持・モチベーションおよび契約状況に影響）
  */
-function rejectPendingMegaOffer() {
+function rejectPendingMegaOffer(options = {}) {
   const offer = gameState.pendingMegaOffer;
   if (!offer) return;
 
   const playerClub = getPlayerClub();
   const target = playerClub.players.find(p => p.id === offer.playerId);
+  let replyPayload = null;
   if (target) {
     if (typeof adjustClubSupporters === 'function') {
       adjustClubSupporters(playerClub, 250);
@@ -2079,7 +2109,18 @@ function rejectPendingMegaOffer() {
     const baseDemand = calculatePlayerDemandSalary(target);
     target.demandedSalary = Math.round((baseDemand * 1.12) / 50) * 50;
     const reqWage = Math.max(5, Math.round(target.demandedSalary / 52));
+    const fanDeltaText = typeof formatGlobalFansDelta === 'function'
+      ? formatGlobalFansDelta(playerClub.supporters || 18000, 250)
+      : '+250人';
     gameState.facilityFeedback = `【メガオファー拒否】「${offer.megaClubName}」からの ${formatMoney(offer.offerAmount)} オファーを拒否し #${target.squadNumber} ${target.name} を引き止めました（要求週給が £${reqWage}k/週 に上昇・契約延長交渉が可能）。`;
+    if (options && options.showReply) {
+      replyPayload = {
+        topic: 'オファー拒否 報告',
+        title: `${target.name} の残留が決定しました`,
+        soundKey: 'ui_confirm',
+        speech: `${offer.megaClubName} からのオファー（${formatMoney(offer.offerAmount)}）を正式に辞退し、主力の残留にサポーターからも好感の声が集まっています（支持 ${fanDeltaText}）。なお本人側の次回契約要求週給は £${reqWage}k/週 に引き上がっております。`
+      };
+    }
   }
 
   if (Array.isArray(gameState.incomingOffers)) {
@@ -2092,6 +2133,9 @@ function rejectPendingMegaOffer() {
   gameState.pendingMegaOffer = null;
   updateMarketBadges();
   renderAll();
+  if (replyPayload && typeof showConsultationReplyModal === 'function') {
+    showConsultationReplyModal(replyPayload);
+  }
 }
 
 /**
@@ -2145,21 +2189,32 @@ function triggerInjuryEvent() {
     </div>
   `;
 
-  const notifyManagerReplacement = (swapInfo, fastTrack) => {
-    if (!swapInfo || !swapInfo.replacement || typeof showConsultationReplyModal !== 'function') return;
-    const mgr = playerClub.manager;
-    const repName = swapInfo.replacement.fullName || swapInfo.replacement.name;
-    const mgrSpeaker = mgr
-      ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club: playerClub }
-      : null;
-    const mgrTitleName = mgr ? `${mgr.name}監督` : '監督代行';
+  const notifyInjuryDecisionOutcome = (swapInfo, fastTrack) => {
+    if (typeof showConsultationReplyModal !== 'function') return;
+    if (swapInfo && swapInfo.replacement) {
+      const mgr = playerClub.manager;
+      const repName = swapInfo.replacement.fullName || swapInfo.replacement.name;
+      const mgrSpeaker = mgr
+        ? { kind: 'manager', person: mgr, name: mgr.name, roleLabel: '監督', club: playerClub }
+        : null;
+      const mgrTitleName = mgr ? `${mgr.name}監督` : '監督代行';
+      showConsultationReplyModal({
+        speaker: mgrSpeaker,
+        topic: '離脱に伴う起用調整',
+        title: `${mgrTitleName}：代役の先発起用`,
+        speech: fastTrack
+          ? `${victim.name} の早期復帰を優先する方針ですね。離脱中は ${swapInfo.slotPos} に ${repName} を先発へ繰り上げて対応します。`
+          : `承知しました。${victim.name} はリハビリに専念させ、復帰するまで ${swapInfo.slotPos} の先発には ${repName} を起用します。`
+      });
+      return;
+    }
     showConsultationReplyModal({
-      speaker: mgrSpeaker,
-      topic: '離脱に伴う起用調整',
-      title: `${mgrTitleName}：代役の先発起用`,
+      topic: fastTrack ? '特別治療 手配完了' : 'リハビリ方針 確定',
+      title: fastTrack ? `${victimDisplayName} の専門治療を手配しました` : `${victimDisplayName} のリハビリ計画を確定しました`,
+      soundKey: 'ui_confirm',
       speech: fastTrack
-        ? `${victim.name} の早期復帰を優先する方針ですね。離脱中は ${swapInfo.slotPos} に ${repName} を先発へ繰り上げて対応します。`
-        : `承知しました。${victim.name} はリハビリに専念させ、復帰するまで ${swapInfo.slotPos} の先発には ${repName} を起用します。`
+        ? `欧州専門医との調整が完了し、特別治療（-${formatMoney(medicalCost)}）を開始しました。${fastLabel}の見通しです。`
+        : `クラブ医療チームのもとで通常リハビリに入りました。復帰までは全治約${weeks}週間の見込みです。`
     });
   };
 
@@ -2193,7 +2248,7 @@ function triggerInjuryEvent() {
             });
           }
           renderAll();
-          if (swapInfo) notifyManagerReplacement(swapInfo, true);
+          notifyInjuryDecisionOutcome(swapInfo, true);
         }
       },
       {
@@ -2217,7 +2272,7 @@ function triggerInjuryEvent() {
             });
           }
           renderAll();
-          if (swapInfo) notifyManagerReplacement(swapInfo, false);
+          notifyInjuryDecisionOutcome(swapInfo, false);
         }
       }
     ]
@@ -2480,15 +2535,35 @@ function triggerYouthAwakeningEvent() {
 function triggerSupporterPetitionEvent() {
   const playerClub = getPlayerClub();
   const investCost = 1200; // £1.2M
+  const curFans = playerClub.supporters || 18000;
+  const gainDeltaText = typeof formatGlobalFansDelta === 'function'
+    ? formatGlobalFansDelta(curFans + 600, 600)
+    : '+600人';
+  const dropDeltaText = typeof formatGlobalFansDelta === 'function'
+    ? formatGlobalFansDelta(Math.max(5000, curFans - 150), -150)
+    : '-150人';
+
+  const detailHtml = `
+    <div class="gm-modal-flat-list">
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">投資費用</span>
+        <span class="gm-modal-flat-val accent-gold mono">${formatMoney(investCost)}</span>
+      </div>
+      <div class="gm-modal-flat-row">
+        <span class="gm-modal-flat-label">期待効果</span>
+        <span class="gm-modal-flat-val accent-green">ファン総数 ${escapeCommHtml(gainDeltaText)}（ホーム戦来場・収入向上）</span>
+      </div>
+    </div>
+  `;
 
   showGmModal({
-    category: 'SUPPORTERS UNION PETITION',
+    category: 'サポーター嘆願',
     title: 'サポーター連合によるスタジアム設備拡張嘆願',
     description: `熱狂的なサポーター連合から、ホームスタジアムの観客席改修およびホスピタリティ拡充を求める要望書が提出されました。投資を行えばサポーター数が大幅に増加し、今後のホーム戦チケット収入が向上します。`,
-    detailHtml: `投資費用：${formatMoney(investCost)}<br>期待効果：ファン総数 ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}（ホーム開催時の来場増・収入増）`,
+    detailHtml,
     actions: [
       {
-        label: `設備投資を実施する（-${formatMoney(investCost)} / ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta((playerClub.supporters || 18000) + 600, 600) : '+600人'}）`,
+        label: `設備投資を実施する（-${formatMoney(investCost)} / ファン ${gainDeltaText}）`,
         className: 'btn btn-primary',
         disabled: playerClub.funds < investCost,
         onClick: () => {
@@ -2498,15 +2573,37 @@ function triggerSupporterPetitionEvent() {
           } else {
             playerClub.supporters = Math.min(75000, (playerClub.supporters || 18000) + 600);
           }
+          if (typeof addDailyLog === 'function') {
+            addDailyLog(`【スタジアム設備拡張】${formatMoney(investCost)} を投資し、ファン層が拡大しました（${gainDeltaText}）。`);
+          }
           renderAll();
+          if (typeof showConsultationReplyModal === 'function') {
+            showConsultationReplyModal({
+              topic: '設備投資 実施報告',
+              title: 'スタジアム設備拡張を手配しました',
+              soundKey: 'sfx_deal',
+              speech: `ご決断を受け、投資費用 ${formatMoney(investCost)} でスタンド改修およびホスピタリティ拡充を手配しました。サポーター連合からも歓迎の声が届き、クラブの支持基盤が広がっています（ファン ${gainDeltaText}）。`
+            });
+          }
         }
       },
       {
-        label: `予算温存のため見送る（ファン ${typeof formatGlobalFansDelta === 'function' ? formatGlobalFansDelta(Math.max(5000, (playerClub.supporters || 18000) - 150), -150) : '-150人'}）`,
+        label: `予算温存のため見送る（ファン ${dropDeltaText}）`,
         className: 'btn btn-secondary',
         onClick: () => {
           playerClub.supporters = Math.max(5000, playerClub.supporters - 150);
+          if (typeof addDailyLog === 'function') {
+            addDailyLog(`【スタジアム設備拡張見送り】予算温存のため改修を見送りました（ファン ${dropDeltaText}）。`);
+          }
           renderAll();
+          if (typeof showConsultationReplyModal === 'function') {
+            showConsultationReplyModal({
+              topic: '設備投資 見送り報告',
+              title: 'スタジアム設備拡張を見送りました',
+              soundKey: 'ui_confirm',
+              speech: `クラブ財務の安定を優先し、今回のスタジアム設備拡張は見送る旨をサポーター連合へ伝達しました。一時的にファンの反応は控えめとなりますが（ファン ${dropDeltaText}）、資金の目処が立ち次第いつでも施設画面から整備を進められます。`
+            });
+          }
         }
       }
     ]
@@ -21909,13 +22006,16 @@ function showConsultationReplyModal(reply) {
     topic: reply.topic || '面談の返答',
     title: reply.title || '返答',
     speech: reply.speech || '',
+    speechPages: Array.isArray(reply.speechPages) ? reply.speechPages : null,
     detailHtml: reply.detailHtml || '',
     soundKey: reply.soundKey || null,
     actions: [
       {
         label: reply.buttonLabel || '確認',
         className: 'btn btn-primary',
-        onClick: () => {}
+        onClick: () => {
+          if (typeof renderAll === 'function') renderAll();
+        }
       }
     ]
   });
