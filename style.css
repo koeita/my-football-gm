@@ -1713,10 +1713,10 @@ body {
 }
 
 .modal-card {
-  background-color: var(--bg-panel);
+  background-color: #1a1d20;
   border: 1px solid var(--border-color);
-  border-top: 3px solid var(--accent-gold);
-  border-radius: 4px;
+  border-radius: 6px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
   width: 100%;
   max-width: 540px;
   overflow: hidden;
@@ -1728,7 +1728,6 @@ body {
   height: 88vh;
   max-height: 680px;
   min-height: 460px;
-  border-top-color: var(--accent-green);
   display: flex;
   flex-direction: column;
 }
@@ -2860,10 +2859,9 @@ body {
   width: 95vw;
   height: 640px;
   max-height: 88vh;
-  border: 1px solid #3a3f45;
-  border-top: 3px solid var(--accent-green);
-  background-color: #24282c;
-  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: #1a1d20;
+  border-radius: 6px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
   overflow: hidden;
   display: flex;
@@ -4995,9 +4993,8 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 .negotiation-modal-card {
   width: 100%;
   max-width: 720px;
-  background-color: #24282c;
-  border: 1px solid #3a3f45;
-  border-top: 3px solid var(--accent-green);
+  background-color: #1a1d20;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
   overflow: hidden;
@@ -5769,7 +5766,6 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
 /* 買取オファーモーダル */
 .incoming-offer-card {
   max-width: 580px;
-  border-color: var(--accent-gold);
 }
 
 .incoming-offer-body {
@@ -12228,29 +12224,40 @@ button.hidden,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(46, 204, 113, 0.12);
-  border: 1px solid rgba(46, 204, 113, 0.4);
-  color: #2ecc71;
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
+  color: #111417;
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   user-select: none;
   white-space: nowrap;
+  transform: none !important;
 }
 
-.btn-auto-optimal:hover {
-  background: #2ecc71;
-  color: #111;
-  border-color: #2ecc71;
-  box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
-  transform: translateY(-1px);
+.btn-auto-optimal:hover,
+.btn-auto-optimal:focus,
+.btn-auto-optimal:focus-visible,
+.btn-auto-optimal:active {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) {
+  .btn-auto-optimal:hover {
+    background: #27ae60;
+    color: #111417;
+    border-color: #27ae60;
+  }
 }
 
 .btn-auto-optimal:active {
-  transform: translateY(0);
+  background: #219653;
+  border-color: #219653;
+  color: #111417;
 }
 
 .btn-optimal-icon {
@@ -12558,9 +12565,9 @@ button.hidden,
 }
 
 .btn-hire-manager {
-  background: rgba(46, 204, 113, 0.15);
-  border: 1px solid var(--accent-green);
-  color: var(--accent-green);
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
+  color: #111417;
   font-size: 11px;
   font-weight: 700;
   padding: 5px 12px;
@@ -12570,8 +12577,9 @@ button.hidden,
 }
 
 .btn-hire-manager:hover {
-  background: var(--accent-green);
-  color: #111;
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #111417;
 }
 
 
@@ -12750,9 +12758,9 @@ button.hidden,
 }
 
 .btn-hire-coach-slot {
-  background: transparent;
-  border: 1px solid rgba(46, 204, 113, 0.6);
-  color: var(--accent-green);
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
+  color: #111417;
   font-size: 12px;
   font-weight: 700;
   padding: 6px 14px;
@@ -12762,25 +12770,33 @@ button.hidden,
 }
 
 .btn-hire-coach-slot:hover {
-  background: var(--accent-green);
-  color: #111;
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #111417;
 }
 
 /* 監督交代・招聘モーダル */
 .manager-modal-card {
   max-width: 600px;
   width: 90%;
-  background: #1e2227;
+  max-height: 88vh;
+  max-height: 88dvh;
+  background: #1a1d20;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 16px;
+  padding: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .manager-modal-body {
-  max-height: 70vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  margin-top: 12px;
+  padding: 12px 16px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -12792,17 +12808,24 @@ button.hidden,
 .coach-modal-card {
   max-width: 560px;
   width: 90%;
-  background: #1e2227;
+  max-height: 88vh;
+  max-height: 88dvh;
+  background: #1a1d20;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 16px;
+  padding: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .coach-modal-body {
-  max-height: 65vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  margin-top: 12px;
+  padding: 12px 16px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -12852,9 +12875,9 @@ button.hidden,
 }
 
 .btn-sign-coach {
-  background: rgba(46, 204, 113, 0.15);
-  border: 1px solid var(--accent-green);
-  color: var(--accent-green);
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
+  color: #111417;
   font-size: 11.5px;
   font-weight: 700;
   padding: 6px 14px;
@@ -12866,8 +12889,9 @@ button.hidden,
 }
 
 .btn-sign-coach:hover {
-  background: var(--accent-green);
-  color: #111;
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #111417;
 }
 
 .btn-danger-outline {
@@ -14101,10 +14125,10 @@ button.hidden,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(46, 204, 113, 0.12);
-  border: 1px solid rgba(46, 204, 113, 0.35);
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
   border-radius: 4px;
-  color: var(--accent-green);
+  color: #111417;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -14112,8 +14136,9 @@ button.hidden,
 }
 
 .btn-cal-today:hover {
-  background: rgba(46, 204, 113, 0.25);
-  border-color: var(--accent-green);
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #111417;
 }
 
 .schedule-view-toggle {
@@ -17603,29 +17628,60 @@ body {
 .btn-manager-delegation {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 104px;
-  padding: 5px 10px;
+  gap: 7px;
+  padding: 3px 4px;
   font-size: 11.5px;
   font-weight: 700;
-  border-radius: 5px;
-  background: rgba(148, 163, 184, 0.12);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  color: #cbd5e1;
+  background: transparent;
+  border: none;
+  color: #8b949e;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  user-select: none;
+  transition: color 0.16s ease;
+  transform: none !important;
 }
 .btn-manager-delegation:hover {
-  border-color: rgba(56, 189, 248, 0.55);
-  color: #f8fafc;
+  color: #e2e8f0;
+  transform: none !important;
 }
 .btn-manager-delegation.is-active {
-  background: rgba(46, 204, 113, 0.2) !important;
-  border-color: rgba(46, 204, 113, 0.65) !important;
-  color: #2ecc71 !important;
-  box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+  background: transparent !important;
+  border: none !important;
+  color: #f8fafc !important;
+  box-shadow: none !important;
+}
+.delegation-toggle-label {
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.delegation-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  border-radius: 999px;
+  background: #333a42;
+  transition: background-color 0.18s ease;
+  flex-shrink: 0;
+}
+.btn-manager-delegation.is-active .delegation-toggle-track {
+  background: #2ecc71;
+}
+.delegation-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f8fafc;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-manager-delegation.is-active .delegation-toggle-thumb {
+  transform: translateX(18px);
 }
 
 .mgr-tag.warn {
@@ -17668,15 +17724,35 @@ body {
   .tactical-header-titles {
     gap: 5px !important;
   }
-  #btn-auto-optimal-lineup,
-  .btn-manager-delegation {
+  #btn-auto-optimal-lineup {
     padding: 4px 8px !important;
     font-size: 10.5px !important;
-    min-height: 32px !important;
-    height: 32px !important;
+    min-height: 30px !important;
+    height: 30px !important;
     line-height: 1 !important;
     display: inline-flex !important;
     align-items: center !important;
+  }
+  .btn-manager-delegation {
+    padding: 2px 2px !important;
+    gap: 5px !important;
+    font-size: 10.5px !important;
+    min-height: 30px !important;
+    height: 30px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  .delegation-toggle-track {
+    width: 34px;
+    height: 18px;
+  }
+  .delegation-toggle-thumb {
+    width: 14px;
+    height: 14px;
+  }
+  .btn-manager-delegation.is-active .delegation-toggle-thumb {
+    transform: translateX(16px);
   }
 }
 
@@ -18315,20 +18391,23 @@ body {
 }
 
 .btn-sponsor-manage {
-  background: rgba(46, 204, 113, 0.14);
-  border: 1px solid rgba(46, 204, 113, 0.45);
-  color: #4ade80;
-  border-radius: 999px;
-  padding: 3px 10px;
+  background: #2ecc71;
+  border: 1px solid #2ecc71;
+  color: #111417;
+  border-radius: 4px;
+  padding: 4px 10px;
   font-size: 10.5px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
 .btn-sponsor-manage:hover {
-  background: rgba(46, 204, 113, 0.24);
+  background: #27ae60;
+  border-color: #27ae60;
+  color: #111417;
 }
 
 /* スポンサー選定モーダル（固定枠＋枠タブ常時固定＋リスト個別スクロール） */
@@ -18341,6 +18420,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #1a1d20;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
 }
 
 .sponsor-modal-body {
@@ -18572,6 +18655,17 @@ body {
   justify-content: flex-end;
   gap: 8px;
   background: rgba(0, 0, 0, 0.22);
+}
+
+.modal-footer-bar {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -20825,7 +20919,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 }
 
 .gm-secretary-modal-card.is-monthly-ceremony {
-  border-top: 3px solid #f59e0b;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .gm-secretary-modal-card.is-monthly-ceremony .gm-vn-stage-body {
@@ -23039,7 +23133,7 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 /* 月間MVP 専用表彰モーダル */
 .gm-secretary-modal-card.is-monthly-mvp-ceremony {
-  border-top: 3px solid #f59e0b !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
   min-height: auto !important;
 }
 

@@ -105,9 +105,9 @@ class TestSecretaryInboxNewsAndWishes(unittest.TestCase):
             self.assertIsNone(re.search(r'[⚽💰✨🎮📋📰💬🏆]', txt))
 
     def test_5_secretary_modal_on_start_and_events(self):
-        """秘書モーダル（開始時・各イベント連動・キュー制御・閉じるボタン）が実装されていること"""
-        for dom_id in ['gm-modal-secretary-box', 'btn-close-gm-modal']:
-            self.assertIn(f'id="{dom_id}"', self.html)
+        """秘書モーダル（開始時・各イベント連動・キュー制御・閉じる導線統一）が実装されていること"""
+        self.assertIn('id="gm-modal-secretary-box"', self.html)
+        self.assertNotIn('id="btn-close-gm-modal"', self.html)
         self.assertIn('class="modal-card gm-secretary-modal-card"', self.html)
         for css_sel in ['.gm-secretary-modal-card', '.gm-modal-sec-avatar-wrap', '.gm-vn-dialogue-card', '.gm-modal-flat-list', '.gm-modal-flat-row']:
             self.assertIn(css_sel, self.css)

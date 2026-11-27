@@ -4924,8 +4924,9 @@ function openMatchPrecheckModal() {
               <div class="ui-kv-label accent-gold-bar">采配委任</div>
               <div class="ui-kv-content" style="display:flex; align-items:center; justify-content:space-between; gap:4px 8px; flex-wrap:wrap;">
                 <span class="mono" style="font-size:11.5px; color:#cbd5e1; white-space:nowrap; flex-shrink:0;">${gameState.managerDelegationEnabled ? '監督一任モード' : 'GM手動編成'}</span>
-                <button type="button" class="btn btn-manager-delegation mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" style="padding: 3px 8px; font-size: 10.5px; min-width: 92px; flex-shrink: 0; justify-content: center;">
-                  ${gameState.managerDelegationEnabled ? '監督一任: ON' : '監督一任: OFF'}
+                <button type="button" class="btn-manager-delegation is-toggle-switch mono ${gameState.managerDelegationEnabled ? 'is-active' : ''}" id="btn-precheck-toggle-delegation" role="switch" aria-checked="${gameState.managerDelegationEnabled ? 'true' : 'false'}">
+                  <span class="delegation-toggle-label">監督一任</span>
+                  <span class="delegation-toggle-track" aria-hidden="true"><span class="delegation-toggle-thumb"></span></span>
                 </button>
               </div>
             </div>

@@ -25,9 +25,59 @@ class TestMatchGoalPresentation(unittest.TestCase):
         self.assertGreater(bc_pos, pitch_pos)
         self.assertGreater(fs_pos, modal_pos)
 
-        self.assertRegex(self.index_html, r'style\.css\?v=20261119_3810')
+        self.assertRegex(self.index_html, r'style\.css\?v=20261119_\d+')
         for asset in ['match-engine.js', 'main.js']:
             self.assertRegex(self.index_html, rf'{re.escape(asset)}\?v=20261119_\d+')
+
+        # スポンサー契約モーダルに上部黄色ラインと×ボタンがなく、スタッフ選任モーダルと統一されていること
+        sponsor_modal_match = re.search(
+            r'<div id="sponsor-selection-modal"[\s\S]*?id="btn-confirm-sponsor-modal"[\s\S]*?</div>\s*</div>\s*</div>',
+            self.index_html,
+        )
+        self.assertIsNotNone(sponsor_modal_match)
+        self.assertNotIn('btn-close-sponsor-modal', sponsor_modal_match.group(0))
+        self.assertNotIn('btn-modal-close', sponsor_modal_match.group(0))
+        sponsor_card_match = re.search(r'\.sponsor-select-card\s*\{[^}]+\}', self.style_css)
+        self.assertIsNotNone(sponsor_card_match)
+        self.assertIn('border: 1px solid var(--border-color);', sponsor_card_match.group(0))
+        self.assertIn('border-radius: 6px;', sponsor_card_match.group(0))
+
+        # 黄色ライン一掃・重複×ボタン削除・薄緑ボタン廃止の統一ルール検証
+        modal_card_match = re.search(r'\.modal-card\s*\{[^}]+\}', self.style_css)
+        self.assertIsNotNone(modal_card_match)
+        self.assertNotIn('accent-gold', modal_card_match.group(0))
+        self.assertIn('background-color: #1a1d20;', modal_card_match.group(0))
+        self.assertIn('border-radius: 6px;', modal_card_match.group(0))
+
+        for hidden_close_id in [
+            'btn-close-gm-modal',
+            'btn-close-season-summary',
+        ]:
+            self.assertNotIn(f'id="{hidden_close_id}"', self.index_html)
+
+        for footer_close_id in [
+            'btn-close-secretary-modal',
+            'btn-close-manager-modal',
+            'btn-close-coach-modal',
+        ]:
+            self.assertIn(f'<div class="modal-footer-bar">', self.index_html)
+            self.assertIn(f'id="{footer_close_id}"', self.index_html)
+            # ヘッダーの btn-modal-close としては使われていないこと
+            self.assertNotRegex(self.index_html, rf'class="btn-modal-close[^"]*"[^>]*id="{re.escape(footer_close_id)}"')
+
+        for solid_btn_cls in [
+            '.btn-auto-optimal',
+            '.btn-hire-manager',
+            '.btn-hire-coach-slot',
+            '.btn-sign-coach',
+            '.btn-cal-today',
+            '.btn-sponsor-manage',
+        ]:
+            blocks = re.findall(rf'{re.escape(solid_btn_cls)}\s*\{{[^}}]+\}}', self.style_css)
+            self.assertTrue(blocks, f'{solid_btn_cls} が見つかりません')
+            combined = '\n'.join(blocks)
+            self.assertIn('#2ecc71', combined, f'{solid_btn_cls} が緑背景でありません')
+            self.assertIn('#111417', combined, f'{solid_btn_cls} が黒文字でありません')
 
         # 秘書モーダル主要選択肢は緑背景に黒文字、作戦確認クイック結果は本部同配色であること
         sec_block_match = re.search(
@@ -42,6 +92,25 @@ class TestMatchGoalPresentation(unittest.TestCase):
         self.assertIsNotNone(precheck_quick_match)
         self.assertIn('#f8fafc', precheck_quick_match.group(0))
         self.assertIn('#252c35', precheck_quick_match.group(0))
+
+        # おまかせ最適編成がホバー・押下で浮かないことと監督一任のトグルUI化を検証
+        opt_base_blocks = re.findall(r'\.btn-auto-optimal[^{]*\{[^}]+\}', self.style_css)
+        opt_combined = '\n'.join(opt_base_blocks)
+        self.assertNotIn('translateY(-1px)', opt_combined)
+        self.assertIn('transform: none !important;', opt_combined)
+
+        self.assertIn('id="btn-toggle-manager-delegation"', self.index_html)
+        self.assertRegex(self.index_html, r'id="btn-toggle-manager-delegation"[^>]*role="switch"')
+        self.assertIn('delegation-toggle-track', self.index_html)
+        self.assertIn('delegation-toggle-thumb', self.index_html)
+        self.assertIn('id="btn-precheck-toggle-delegation"', self.match_js)
+        self.assertIn('role="switch"', self.match_js)
+        self.assertIn('delegation-toggle-track', self.match_js)
+
+        with open(os.path.join(ROOT_DIR, 'main.js'), 'r', encoding='utf-8') as mf:
+            main_js = mf.read()
+        self.assertIn("btn.setAttribute('aria-checked'", main_js)
+        self.assertIn('btn.blur()', main_js)
 
     def test_match_engine_goal_functions_and_competition_meta(self):
         for symbol in [
