@@ -15724,7 +15724,9 @@ button.hidden,
 .cup-round-matches-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: #1a1d20;
+  gap: 10px 14px;
+  padding: 12px;
+  background: #14171c;
 }
 
 .cup-round-matches-grid.is-final-round {
@@ -15732,11 +15734,8 @@ button.hidden,
   max-width: 560px;
   width: 100%;
   margin: 16px auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.cup-round-matches-grid.is-final-round .bracket-match-card {
-  border-right: none;
+  padding: 0;
+  background: transparent;
 }
 
 .cup-round-matches-grid.is-final-round .bracket-team-row {
@@ -15749,17 +15748,12 @@ button.hidden,
 }
 
 .bracket-match-card {
-  background: #1a1d20;
+  background: #20242a;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0;
-  box-shadow: none;
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.14);
   overflow: hidden;
   min-width: 0;
-}
-
-.cup-round-matches-grid:not(.is-final-round) .bracket-match-card:nth-child(odd) {
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .bracket-match-placeholder {
@@ -15777,7 +15771,7 @@ button.hidden,
   justify-content: space-between;
   gap: 8px;
   padding: 8px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 12px;
 }
 
@@ -15827,6 +15821,7 @@ button.hidden,
 }
 
 .bracket-match-card.is-player-match {
+  background: #1e2a24;
   box-shadow: inset 3px 0 0 #2ecc71;
 }
 
@@ -15856,16 +15851,14 @@ button.hidden,
 
   .cup-round-matches-grid {
     grid-template-columns: 1fr;
-  }
-
-  .cup-round-matches-grid:not(.is-final-round) .bracket-match-card:nth-child(odd) {
-    border-right: none;
+    padding: 10px;
+    gap: 10px;
   }
 
   .cup-round-matches-grid.is-final-round {
     margin: 0;
     max-width: none;
-    border-top: none;
+    padding: 10px;
   }
 
   .bracket-team-row {
@@ -15886,43 +15879,6 @@ button.hidden,
   flex-direction: column;
   width: 100%;
   min-width: 0;
-}
-
-.euro-tree-jump-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #14171c;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  overflow-x: auto;
-}
-
-.euro-tree-jump-btn {
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  padding: 0 10px;
-  background: #1f242a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  color: #cfd8e3;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-.euro-tree-jump-btn:hover {
-  background: #282e36;
-  color: #ffffff;
-}
-
-.euro-tree-jump-btn.is-player-jump {
-  color: #2ecc71;
-  border-color: rgba(46, 204, 113, 0.45);
-  background: rgba(46, 204, 113, 0.1);
 }
 
 .euro-tree-viewport {
@@ -16182,12 +16138,6 @@ button.hidden,
   flex-shrink: 0;
 }
 
-.euro-po-section {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
 /* ==========================================================================
    順位表ゾーンバッジ（PC表示）：CL圏、EL圏、降格圏
    ========================================================================== */
@@ -16326,33 +16276,78 @@ button.hidden,
   box-shadow: inset 4px 0 0 #EF4444 !important;
 }
 
-/* 欧州日程リスト（対戦カードグリッド） */
+/* 欧州日程リスト（MD1〜MD8・POタブ切替 + フラットカードグリッド） */
 .euro-schedule-list-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 10px 4px;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  background: #14171c;
 }
 
-.euro-schedule-md-block {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 12px;
+.euro-schedule-tabs {
+  display: flex;
+  width: 100%;
+  background: #14171c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.euro-schedule-md-title {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #38BDF8;
+.euro-schedule-tab-btn {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 3px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.euro-schedule-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+}
+
+.euro-schedule-tab-btn.is-upcoming {
+  color: #55606d;
+}
+
+.euro-schedule-tab-btn.active {
+  color: #2ecc71;
+  border-bottom-color: #2ecc71;
   font-weight: 700;
-  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .euro-schedule-tab-btn {
+    font-size: 10px;
+    padding: 0 1px;
+    gap: 2px;
+    height: 34px;
+  }
+
+  .euro-schedule-tab-btn .cup-round-dot {
+    width: 4px;
+    height: 4px;
+  }
 }
 
 .euro-schedule-matches-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 8px;
+  padding: 12px;
 }
 
 .euro-match-tile {

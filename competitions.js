@@ -2121,31 +2121,109 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
   return html;
 }
 
-// 欧州コンペ：対戦日程・結果リストの描画
+// 欧州コンペ：対戦日程・結果リストの描画（MD1〜MD8・POタブ切替で選択ラウンドのみ表示）
 function renderEuroScheduleListHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.leagueSchedule) return '<p class="empty-state">対戦日程データがありません</p>';
 
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
+  const schedule = Array.isArray(comp.leagueSchedule) ? comp.leagueSchedule : [];
+  const poList = Array.isArray(comp.playoffs) ? comp.playoffs : [];
+  const keys = ['MD1', 'MD2', 'MD3', 'MD4', 'MD5', 'MD6', 'MD7', 'MD8', 'PO'];
 
-  let html = `<div class="euro-schedule-list-wrapper">`;
-  comp.leagueSchedule.forEach((roundMatches, idx) => {
-    const md = idx + 1;
-    html += `
-      <div class="euro-schedule-md-block">
-        <h4 class="euro-schedule-md-title mono">MATCHDAY ${md}</h4>
-        <div class="euro-schedule-matches-grid">
-    `;
+  const getMatchesForKey = (rk) => {
+    if (rk === 'PO') return poList;
+    const mdIdx = Number(String(rk).replace('MD', '')) - 1;
+    return Array.isArray(schedule[mdIdx]) ? schedule[mdIdx] : [];
+  };
 
-    roundMatches.forEach(m => {
+  const allMdPlayed = schedule.length > 0 && schedule.every(arr => Array.isArray(arr) && arr.length > 0 && arr.every(m => m.played));
+  let latestKey = 'MD8';
+  if (comp.phase === 'PLAYOFF' || (allMdPlayed && poList.length > 0)) {
+    latestKey = 'PO';
+  } else {
+    const firstPendingIdx = schedule.findIndex(arr => !Array.isArray(arr) || arr.length === 0 || !arr.every(m => m.played));
+    if (firstPendingIdx >= 0) {
+      latestKey = `MD${firstPendingIdx + 1}`;
+    } else if (poList.length > 0) {
+      latestKey = 'PO';
+    }
+  }
+
+  const selState = gameState.selectedEuroScheduleRound && gameState.selectedEuroScheduleRound[compKey];
+  let activeKey = latestKey;
+  if (selState && keys.includes(selState.roundKey) && selState.latestAtSelection === latestKey) {
+    activeKey = selState.roundKey;
+  }
+
+  let html = `<div class="euro-schedule-list-wrapper" data-comp-key="${compKey}" data-latest-round="${latestKey}">`;
+
+  html += `<div class="euro-schedule-tabs" role="tablist" aria-label="欧州日程切替">`;
+  keys.forEach(rk => {
+    const rMatches = getMatchesForKey(rk);
+    const hasMatches = rMatches.length > 0;
+    const isAllPlayed = hasMatches && rMatches.every(m => m.played);
+    const isCurrent = hasMatches && !isAllPlayed;
+    const isActive = rk === activeKey;
+    const stateClass = !hasMatches ? 'is-upcoming' : (isAllPlayed ? 'is-done' : 'is-current');
+    const dotHtml = isCurrent ? `<span class="cup-round-dot" aria-hidden="true"></span>` : '';
+    html += `<button type="button" class="euro-schedule-tab-btn mono ${stateClass} ${isActive ? 'active' : ''}" data-euro-sched-round="${rk}" data-comp-key="${compKey}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">${dotHtml}<span>${rk}</span></button>`;
+  });
+  html += `</div>`;
+
+  const activeMatches = getMatchesForKey(activeKey);
+  const activeAllPlayed = activeMatches.length > 0 && activeMatches.every(m => m.played);
+  const isPo = activeKey === 'PO';
+  const metaTitle = isPo ? '決勝トーナメント進出プレーオフ（9-24位）' : `MATCHDAY ${activeKey.replace('MD', '')}`;
+  const metaStatus = activeMatches.length === 0
+    ? (isPo ? 'リーグフェーズ終了後に決定' : '日程未定')
+    : `${activeMatches.length}試合 · ${activeAllPlayed ? '完了' : '進行中'}`;
+
+  html += `
+    <div class="cup-round-meta">
+      <span class="cup-round-meta-title mono">${metaTitle}</span>
+      <span class="cup-round-meta-status mono ${activeMatches.length > 0 && !activeAllPlayed ? 'is-live' : ''}">${metaStatus}</span>
+    </div>
+  `;
+
+  if (activeMatches.length === 0) {
+    html += `<div class="bracket-match-placeholder mono">${isPo ? 'リーグフェーズ終了後に決定' : '対戦日程データがありません'}</div>`;
+  } else if (isPo) {
+    html += `<div class="cup-round-matches-grid">`;
+    activeMatches.forEach(m => {
+      const hEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 18) : '';
+      const aEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 18) : '';
+      const isHP = isEuroTreePlayerClub(m.homeClub, playerClub, m.homeId);
+      const isAP = isEuroTreePlayerClub(m.awayClub, playerClub, m.awayId);
+      const hWin = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
+      const aWin = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
+      const hLose = m.played && m.winnerId && m.winnerId !== m.homeId ? 'match-loser' : '';
+      const aLose = m.played && m.winnerId && m.winnerId !== m.awayId ? 'match-loser' : '';
+      const hScore = m.played ? formatEuroTreeScore(m.homeScore, m.pkHome) : '-';
+      const aScore = m.played ? formatEuroTreeScore(m.awayScore, m.pkAway) : '-';
+      html += `
+        <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${(isHP || isAP) ? 'is-player-match' : ''}">
+          <div class="bracket-team-row ${hWin} ${hLose} ${isHP ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">${hEmb}<span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span></div>
+            <span class="bracket-team-score mono">${hScore}</span>
+          </div>
+          <div class="bracket-team-row ${aWin} ${aLose} ${isAP ? 'is-player-team' : ''}">
+            <div class="bracket-team-info">${aEmb}<span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span></div>
+            <span class="bracket-team-score mono">${aScore}</span>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div class="euro-schedule-matches-grid">`;
+    activeMatches.forEach(m => {
       const isHomePlayer = Boolean(playerClub && m.homeId === playerClub.id) || Boolean(m.homeClub && m.homeClub.isPlayer);
       const isAwayPlayer = Boolean(playerClub && m.awayId === playerClub.id) || Boolean(m.awayClub && m.awayClub.isPlayer);
       const isMyMatch = isHomePlayer || isAwayPlayer;
       const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 16) : '';
       const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 16) : '';
       const scoreText = m.played ? `${m.homeScore} - ${m.awayScore}` : 'VS';
-
-      // プレミアリーグのクラブも確実に3文字コードを取得
       const homeCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.homeClub) : ((m.homeClub && m.homeClub.shortName) || 'HOM');
       const awayCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.awayClub) : ((m.awayClub && m.awayClub.shortName) || 'AWY');
 
@@ -2163,9 +2241,9 @@ function renderEuroScheduleListHtml(compKey) {
         </div>
       `;
     });
+    html += `</div>`;
+  }
 
-    html += `</div></div>`;
-  });
   html += `</div>`;
   return html;
 }
@@ -2572,77 +2650,25 @@ function renderEuroSymmetricalBracketHtml(compKey) {
     <span class="euro-tree-round-label mono" style="left:${COL.R_R16.x}px;width:${COL.R_R16.w}px;">ベスト16</span>
   `;
 
-  // プレーオフ（PO）セクション生成
-  let poHtml = '';
-  if (poList.length > 0) {
-    const poPlayedAll = poList.every(m => m.played);
-    poHtml = `
-      <div class="euro-po-section">
-        <div class="cup-round-meta">
-          <span class="cup-round-meta-title mono">決勝トーナメント進出プレーオフ（9-24位）</span>
-          <span class="cup-round-meta-status mono ${!poPlayedAll ? 'is-live' : ''}">${poList.length}試合 · ${poPlayedAll ? '完了' : '進行中'}</span>
-        </div>
-        <div class="cup-round-matches-grid">
-          ${poList.map(m => {
-            const hEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 18) : '';
-            const aEmb = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 18) : '';
-            const isHP = isEuroTreePlayerClub(m.homeClub, playerClub, m.homeId);
-            const isAP = isEuroTreePlayerClub(m.awayClub, playerClub, m.awayId);
-            const hWin = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
-            const aWin = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
-            const hLose = m.played && m.winnerId && m.winnerId !== m.homeId ? 'match-loser' : '';
-            const aLose = m.played && m.winnerId && m.winnerId !== m.awayId ? 'match-loser' : '';
-            const hScore = m.played ? formatEuroTreeScore(m.homeScore, m.pkHome) : '-';
-            const aScore = m.played ? formatEuroTreeScore(m.awayScore, m.pkAway) : '-';
-            return `
-              <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${(isHP || isAP) ? 'is-player-match' : ''}">
-                <div class="bracket-team-row ${hWin} ${hLose} ${isHP ? 'is-player-team' : ''}">
-                  <div class="bracket-team-info">${hEmb}<span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span></div>
-                  <span class="bracket-team-score mono">${hScore}</span>
-                </div>
-                <div class="bracket-team-row ${aWin} ${aLose} ${isAP ? 'is-player-team' : ''}">
-                  <div class="bracket-team-info">${aEmb}<span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span></div>
-                  <span class="bracket-team-score mono">${aScore}</span>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  const jumpBarHtml = `
-    <div class="euro-tree-jump-bar" role="toolbar" aria-label="表示位置移動">
-      <button type="button" class="euro-tree-jump-btn mono" data-tree-jump="left">左山</button>
-      <button type="button" class="euro-tree-jump-btn mono" data-tree-jump="center">決勝</button>
-      <button type="button" class="euro-tree-jump-btn mono" data-tree-jump="right">右山</button>
-      ${hasPlayerInTree ? `<button type="button" class="euro-tree-jump-btn is-player-jump mono" data-tree-jump="player">自チーム</button>` : ''}
-    </div>
-  `;
-
-  const treeSectionHtml = `
-    <div class="euro-tree-shell" data-comp-key="${compKey}">
-      ${jumpBarHtml}
-      <div class="euro-tree-viewport">
-        <div class="euro-tree-canvas">
-          <svg class="euro-tree-svg" viewBox="0 0 1280 496" width="1280" height="496" aria-hidden="true">
-            ${svgLines}
-            ${svgTexts}
-          </svg>
-          ${roundHeadersHtml}
-          ${championHtml}
-          ${finalCardHtml}
-          ${nodesHtml}
+  // プレーオフ表示は日程・結果タブ（PO）へ統合、トーナメント表は純粋なR16〜FINALツリーのみ描画
+  return `
+    <div class="euro-bracket-wrap">
+      <div class="euro-tree-shell" data-comp-key="${compKey}">
+        <div class="euro-tree-viewport">
+          <div class="euro-tree-canvas">
+            <svg class="euro-tree-svg" viewBox="0 0 1280 496" width="1280" height="496" aria-hidden="true">
+              ${svgLines}
+              ${svgTexts}
+            </svg>
+            ${roundHeadersHtml}
+            ${championHtml}
+            ${finalCardHtml}
+            ${nodesHtml}
+          </div>
         </div>
       </div>
     </div>
   `;
-
-  if (comp.phase === 'PLAYOFF' && poHtml) {
-    return `<div class="euro-bracket-wrap">${poHtml}${treeSectionHtml}</div>`;
-  }
-  return `<div class="euro-bracket-wrap">${treeSectionHtml}${poHtml}</div>`;
 }
 
 // トーナメント表描画（国内カップはラウンド切替タブ、欧州コンペは固定左右対称ツリー）

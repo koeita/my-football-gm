@@ -8402,6 +8402,7 @@ function startNextSeason() {
     initSeasonCompetitions();
   }
   gameState.selectedCupRounds = {};
+  gameState.selectedEuroScheduleRound = {};
   gameState.currentDayIndex = 0;
   if (typeof pruneExpiredNewsItems === 'function') pruneExpiredNewsItems(7);
   gameState.isAdvancingCalendar = false;
@@ -9325,6 +9326,7 @@ function renderStandings() {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderEuroScheduleListHtml(curEuro);
+        bindEuroScheduleTabs(bracketWrapper, curEuro);
       }
       if (statusText) statusText.textContent = compName;
     } else {
@@ -9336,6 +9338,24 @@ function renderStandings() {
       if (statusText) statusText.textContent = compName;
     }
   }
+}
+
+/**
+ * 欧州コンペ「日程・結果」のMD1〜MD8・POタブにクリックイベントを設定する
+ */
+function bindEuroScheduleTabs(wrapper, compKey) {
+  if (!wrapper || !compKey) return;
+  const container = wrapper.querySelector('.euro-schedule-list-wrapper');
+  const latestAtSelection = container ? (container.dataset.latestRound || '') : '';
+  wrapper.querySelectorAll('.euro-schedule-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const roundKey = btn.dataset.euroSchedRound;
+      if (!roundKey) return;
+      gameState.selectedEuroScheduleRound = gameState.selectedEuroScheduleRound || {};
+      gameState.selectedEuroScheduleRound[compKey] = { roundKey, latestAtSelection };
+      renderStandings();
+    });
+  });
 }
 
 /**
@@ -9357,7 +9377,7 @@ function bindCupBracketRoundTabs(wrapper, compKey) {
 }
 
 /**
- * 欧州コンペ左右対称トーナメント表のジャンプ操作と初期フォーカスを設定する
+ * 欧州コンペ左右対称トーナメント表の初期フォーカス（自チームまたは中央決勝へ自動スクロール）を設定する
  */
 function bindEuroTreeControls(wrapper) {
   if (!wrapper) return;
@@ -9372,44 +9392,29 @@ function bindEuroTreeControls(wrapper) {
     return nodes[0];
   };
 
-  const scrollToTarget = (mode, smooth) => {
+  const focusViewport = () => {
     const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
     if (maxScroll <= 0) return;
     let targetLeft = maxScroll / 2;
-    if (mode === 'left') {
-      targetLeft = 0;
-    } else if (mode === 'right') {
-      targetLeft = maxScroll;
-    } else if (mode === 'player') {
-      const targetNode = findBestPlayerNode();
-      if (targetNode) {
-        const vpRect = viewport.getBoundingClientRect();
-        const nodeRect = targetNode.getBoundingClientRect();
-        const nodeCenterInVp = viewport.scrollLeft + (nodeRect.left - vpRect.left) + nodeRect.width / 2;
-        targetLeft = nodeCenterInVp - viewport.clientWidth / 2;
-      }
+    const targetNode = findBestPlayerNode();
+    if (targetNode) {
+      const vpRect = viewport.getBoundingClientRect();
+      const nodeRect = targetNode.getBoundingClientRect();
+      const nodeCenterInVp = viewport.scrollLeft + (nodeRect.left - vpRect.left) + nodeRect.width / 2;
+      targetLeft = nodeCenterInVp - viewport.clientWidth / 2;
     }
     const clamped = Math.max(0, Math.min(maxScroll, Math.round(targetLeft)));
     if (typeof viewport.scrollTo === 'function') {
-      viewport.scrollTo({ left: clamped, behavior: smooth ? 'smooth' : 'auto' });
+      viewport.scrollTo({ left: clamped, behavior: 'auto' });
     } else {
       viewport.scrollLeft = clamped;
     }
   };
 
-  wrapper.querySelectorAll('.euro-tree-jump-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.treeJump || 'center';
-      scrollToTarget(mode, true);
-    });
-  });
-
   if (typeof requestAnimationFrame === 'function') {
-    requestAnimationFrame(() => {
-      scrollToTarget(findBestPlayerNode() ? 'player' : 'center', false);
-    });
+    requestAnimationFrame(focusViewport);
   } else {
-    scrollToTarget(findBestPlayerNode() ? 'player' : 'center', false);
+    focusViewport();
   }
 }
 
@@ -15144,6 +15149,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   gameState.paidPayrollWeeks = 0;
   gameState.competitions = null;
   gameState.selectedCupRounds = {};
+  gameState.selectedEuroScheduleRound = {};
   gameState.d1BackgroundSchedule = null;
   gameState.lastSeasonStandingsOrder = null;
   gameState.lastSeasonCupWinners = null;
