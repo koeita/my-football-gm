@@ -149,6 +149,8 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn("getElementById('tactic-select-board')", self.main_js)
         self.assertIn('.board-tactic-select', self.css)
         self.assertIn('.settings-switch-input:checked ~ .delegation-toggle-track', self.css)
+        self.assertIn('flex: 1 1 0 !important;', self.css)
+        self.assertIn('body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container', self.css)
 
 
 if __name__ == '__main__':

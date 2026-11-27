@@ -27535,4 +27535,60 @@ button.hof-record-name {
   .settings-switch-input:checked ~ .delegation-toggle-track .delegation-toggle-thumb {
     transform: translateX(16px);
   }
+  /* モバイル作戦ボード：通常・PWA共通でヘッダー下〜ボトムナビ上の残り高さ100%に自動フィット（底切れ防止） */
+  body[data-active-tab="roster"][data-roster-subtab="board"] .app-container {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding-bottom: calc(74px + var(--safe-bottom, env(safe-area-inset-bottom, 0px))) !important;
+    box-sizing: border-box !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] #view-roster {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding-top: 44px !important;
+    padding-bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] #roster-subview-board,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-body,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-grid {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-board-panel {
+    overflow: hidden !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-panel-header {
+    flex-shrink: 0 !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] #btn-auto-optimal-lineup,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .btn-manager-delegation,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .formation-select-mobile,
+  body[data-active-tab="roster"][data-roster-subtab="board"] .board-tactic-select {
+    height: 28px !important;
+    min-height: 28px !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-manager-banner {
+    flex-shrink: 0 !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
 }
