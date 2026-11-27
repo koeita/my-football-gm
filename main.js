@@ -150,7 +150,7 @@ function setBodyModalLock(locked) {
     }
   } else {
     const openModals = document.querySelectorAll('.modal-overlay:not(.hidden), #gm-modal-overlay:not(.hidden)');
-    if (openModals.length === 0) {
+    if (openModals.length === 0 && (document.body.classList.contains('modal-open') || document.documentElement.classList.contains('modal-open'))) {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
       const restore = () => {
@@ -3875,6 +3875,9 @@ function processSeasonEnd(isSkipped = false) {
         continue;
       }
 
+      const oldOvr = typeof getPlayerOverallRating === 'function'
+        ? getPlayerOverallRating(p)
+        : Math.round(((p.atk || 70) + (p.def || 70) + (p.sta || 70)) / 3);
       const { dAtk, dDef, dSta } = computeStatGrowth(p, club.isPlayer, club);
       const oldAtk = p.atk;
       const oldDef = p.def;
@@ -3885,6 +3888,10 @@ function processSeasonEnd(isSkipped = false) {
       p.sta = clamp(p.sta + dSta, 1, 99);
       p.attributes = null;
       getPlayerFiveAttributes(p);
+      const newOvr = typeof getPlayerOverallRating === 'function'
+        ? getPlayerOverallRating(p)
+        : Math.round(((p.atk || 70) + (p.def || 70) + (p.sta || 70)) / 3);
+      const ovrDiff = newOvr - oldOvr;
 
       p.lastDiff = {
         atk: p.atk - oldAtk,
@@ -3968,11 +3975,19 @@ function processSeasonEnd(isSkipped = false) {
       if (club.isPlayer) {
         const totalDiff = p.lastDiff.atk + p.lastDiff.def + p.lastDiff.sta;
         const sign = totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`;
+        const displayPos = p.primaryPosition || p.pos || 'CM';
         playerAgingLogs.push({
+          id: p.id,
           name: p.name,
-          pos: p.pos,
+          pos: displayPos,
           age: p.age,
           growthLabel: getGrowthCurveLabel(p.growthCurve),
+          oldOvr,
+          newOvr,
+          ovrDiff,
+          dAtk: p.lastDiff.atk,
+          dDef: p.lastDiff.def,
+          dSta: p.lastDiff.sta,
           totalDiff,
           sign
         });
@@ -9382,12 +9397,16 @@ function renderFinancialAlert() {
 
 function openSeasonSettlementModal() {
   const modal = document.getElementById('season-summary-box');
-  if (modal) modal.classList.remove('hidden');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
 }
 
 function closeSeasonSettlementModal() {
   const modal = document.getElementById('season-summary-box');
+  const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
   if (modal) modal.classList.add('hidden');
+  if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -9467,9 +9486,26 @@ function renderSeasonSettlement() {
   const agingEl = document.getElementById('summary-aging-log');
   if (agingEl) {
     agingEl.innerHTML = s.agingLogs.map(item => {
-      const diffClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : '');
-      return `<div><span class="mono">${item.pos}</span> ${item.name} (<span class="mono">${item.age}歳</span>) <span class="mono ${diffClass}">総合 ${item.sign}</span></div>`;
+      const safePos = escapeCommHtml(item.pos || 'CM');
+      const safeName = escapeCommHtml(item.name || '');
+      const pid = item.id || ((playerClub && playerClub.players || []).find(pl => pl && pl.name === item.name) || {}).id || '';
+      const canOpenProfile = Boolean(pid && typeof findPlayerWithContextById === 'function' && findPlayerWithContextById(pid));
+      const nameHtml = canOpenProfile
+        ? `<button type="button" class="player-name-link clickable-player-name aging-log-name" data-award-profile-id="${escapeCommHtml(pid)}">${safeName}</button>`
+        : `<span class="aging-log-name">${safeName}</span>`;
+      let ovrHtml;
+      if (typeof item.ovrDiff === 'number' && typeof item.oldOvr === 'number' && typeof item.newOvr === 'number') {
+        const ovrClass = item.ovrDiff > 0 ? 'diff-up' : (item.ovrDiff < 0 ? 'diff-down' : 'aging-diff-flat');
+        const ovrValClass = typeof getOvrTextClass === 'function' ? getOvrTextClass(item.newOvr) : '';
+        const ovrSign = item.ovrDiff > 0 ? `+${item.ovrDiff}` : `${item.ovrDiff}`;
+        ovrHtml = `<span class="aging-log-ovr mono"><span class="aging-ovr-label">OVR</span> <strong class="${ovrValClass}">${item.newOvr}</strong><span class="${ovrClass}">(${ovrSign})</span></span>`;
+      } else {
+        const legacyClass = item.totalDiff > 0 ? 'diff-up' : (item.totalDiff < 0 ? 'diff-down' : 'aging-diff-flat');
+        ovrHtml = `<span class="aging-log-ovr mono ${legacyClass}">総合 ${escapeCommHtml(item.sign || '0')}</span>`;
+      }
+      return `<div class="aging-log-row"><span class="aging-log-identity"><span class="aging-log-pos pos-inline pos-${safePos} mono">${safePos}</span>${nameHtml}<span class="aging-log-age mono">${item.age}歳</span></span>${ovrHtml}</div>`;
     }).join('');
+    if (typeof bindAwardProfileClicks === 'function') bindAwardProfileClicks(agingEl);
   }
 
   const awardsPaneEl = document.getElementById('summary-awards-pane');
@@ -18290,11 +18326,6 @@ function initGame() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      const seasonSummaryModal = document.getElementById('season-summary-box');
-      if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
-        closeSeasonSettlementModal();
-        return;
-      }
       const scoutModal = document.getElementById('fixture-preview-modal');
       if (scoutModal && !scoutModal.classList.contains('hidden')) {
         closePendingMatchPreviewModal();
@@ -18337,6 +18368,9 @@ function initGame() {
       }
       const recordsOverlay = document.getElementById('records-modal-overlay');
       const settingsOverlay = document.getElementById('settings-modal-overlay');
+      const profileModalTop = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+      const seasonSummaryModal = document.getElementById('season-summary-box');
+      const gmOverlay = document.getElementById('gm-modal-overlay');
       if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
         closeRecordsModal();
       } else if (settingsOverlay && !settingsOverlay.classList.contains('hidden')) {
@@ -18346,17 +18380,17 @@ function initGame() {
         closeIncomingOfferModal();
       } else if (gameState.negotiationSession) {
         closeNegotiationModal();
-      } else if (gameState.profileModalPlayerId) {
-        closePlayerProfileModal();
-      } else {
-        const gmOverlay = document.getElementById('gm-modal-overlay');
-        if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
-          if (typeof closeGmModal === 'function') {
-            closeGmModal(false);
-          } else {
-            gmOverlay.classList.add('hidden');
-          }
+      } else if (gmOverlay && !gmOverlay.classList.contains('hidden')) {
+        if (typeof closeGmModal === 'function') {
+          closeGmModal(false);
+        } else {
+          gmOverlay.classList.add('hidden');
+          if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
         }
+      } else if ((profileModalTop && !profileModalTop.classList.contains('hidden')) || gameState.profileModalPlayerId) {
+        closePlayerProfileModal();
+      } else if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
+        closeSeasonSettlementModal();
       }
     }
   });
