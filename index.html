@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3970">
+  <link rel="stylesheet" href="style.css?v=20261119_4020">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -658,6 +658,16 @@
                   <option value="4-3-1-2">陣形 4-3-1-2</option>
                 </select>
               </div>
+              <div class="board-tactic-select-wrap" id="board-tactic-select-wrap">
+                <span class="formation-selector-label mono">戦術:</span>
+                <select class="board-tactic-select mono" id="tactic-select-board" aria-label="戦術変更">
+                  <option value="possession">戦術 ポゼッション</option>
+                  <option value="gegenpress">戦術 ゲーゲンプレス</option>
+                  <option value="counter">戦術 カウンター</option>
+                  <option value="wingplay">戦術 ワイドアタック</option>
+                  <option value="parkthebus">戦術 ウルトラディフェンス</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1276,7 +1286,7 @@
               <h2 class="panel-title">監督人事</h2>
             </div>
             <div class="team-power-badges" id="manager-header-badges">
-              <span class="power-badge">現場信頼度 <strong class="mono accent-green" id="manager-panel-trust">80%</strong></span>
+              <span class="power-badge" data-glossary-key="manager_trust" role="button" tabindex="0">現場信頼度 <strong class="mono accent-green" id="manager-panel-trust">80%</strong></span>
               <span class="power-badge">監督週給 <strong class="mono accent-gold" id="manager-panel-wage">£80k</strong></span>
             </div>
           </div>
@@ -1675,9 +1685,10 @@
             <span class="settings-desc">BGM・効果音・スタジアム環境音のON/OFF</span>
           </div>
           <div class="settings-control-col">
-            <label class="settings-toggle-label mono">
-              <input type="checkbox" id="setting-sound-enabled" checked>
-              <span id="setting-sound-enabled-label">ON</span>
+            <label class="settings-toggle-label settings-switch-label mono">
+              <input type="checkbox" id="setting-sound-enabled" class="settings-switch-input" checked>
+              <span class="settings-switch-text" id="setting-sound-enabled-label">ON</span>
+              <span class="delegation-toggle-track" aria-hidden="true"><span class="delegation-toggle-thumb"></span></span>
             </label>
           </div>
         </div>
@@ -1718,9 +1729,10 @@
             <span class="settings-desc">日程進行・編成変更時に進行データを自動保存します</span>
           </div>
           <div class="settings-control-col">
-            <label class="settings-toggle-label mono">
-              <input type="checkbox" id="setting-autosave-enabled" checked>
-              <span id="setting-autosave-label">ENABLED</span>
+            <label class="settings-toggle-label settings-switch-label mono">
+              <input type="checkbox" id="setting-autosave-enabled" class="settings-switch-input" checked>
+              <span class="settings-switch-text" id="setting-autosave-label">ENABLED</span>
+              <span class="delegation-toggle-track" aria-hidden="true"><span class="delegation-toggle-thumb"></span></span>
             </label>
           </div>
         </div>
@@ -1743,9 +1755,10 @@
             <span class="settings-desc">ONにすると前半45分終了時に一時停止せず自動で後半を開始します</span>
           </div>
           <div class="settings-control-col">
-            <label class="settings-toggle-label mono">
-              <input type="checkbox" id="setting-auto-halftime">
-              <span id="setting-auto-halftime-label">OFF</span>
+            <label class="settings-toggle-label settings-switch-label mono">
+              <input type="checkbox" id="setting-auto-halftime" class="settings-switch-input">
+              <span class="settings-switch-text" id="setting-auto-halftime-label">OFF</span>
+              <span class="delegation-toggle-track" aria-hidden="true"><span class="delegation-toggle-thumb"></span></span>
             </label>
           </div>
         </div>
@@ -1760,6 +1773,15 @@
               <option value="major">重要イベントのみ</option>
               <option value="off">オフ</option>
             </select>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-label-col">
+            <span class="settings-label">クラブ経営用語</span>
+            <span class="settings-desc">信頼度・戦術浸透度・理事会評価の見方</span>
+          </div>
+          <div class="settings-control-col">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-open-glossary-modal">開く</button>
           </div>
         </div>
         <div class="settings-row settings-title-return-row">
@@ -2151,15 +2173,15 @@
 
   <script src="data.js?v=20261119_3300"></script>
   <script src="avatar.js?v=20261112_0400"></script>
-  <script src="models.js?v=20261119_3910"></script>
+  <script src="models.js?v=20261119_3920"></script>
   <script src="competitions.js?v=20261119_3890"></script>
-  <script src="match-engine.js?v=20261119_3810"></script>
+  <script src="match-engine.js?v=20261119_3820"></script>
   <script src="storage.js?v=20261119_3930"></script>
   <div id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
 
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3970"></script>
+  <script src="main.js?v=20261119_4010"></script>
 </body>
 </html>

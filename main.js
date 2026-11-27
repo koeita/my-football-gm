@@ -3530,6 +3530,192 @@ function showTacticInfoPopup(tacticKey) {
   });
 }
 
+const GM_GLOSSARY_DEFINITIONS = [
+  {
+    key: 'manager_trust',
+    group: '監督・戦術',
+    title: '監督信頼度（現場信頼度）',
+    summary: '采配と補強への信頼がチームの力を引き出す',
+    rows: [
+      { label: '上がる', text: '監督の得意陣形・得意戦術で勝つ。監督要望の補強、起用相談の承認、契約延長、面談での支持でも高まる' },
+      { label: '下がる', text: '得意と異なる陣形・戦術を強いて負ける。希望に沿わない補強・売却や意見の対立が続くと下がる' },
+      { label: '影響', text: '80%以上で得意方針と一致した試合で攻守が噛み合う。40%未満で戦術が浸透せず不安定になり、10%以下で進退問題に発展' }
+    ]
+  },
+  {
+    key: 'tactical_penetration',
+    group: '監督・戦術',
+    title: '戦術浸透度',
+    summary: '監督の得意方針と積み上げた試合数で決まる組織力',
+    rows: [
+      { label: '決まり方', text: '現在の陣形と戦術が監督の得意方針と一致した状態で試合を重ねるほど浸透度が上がり、一致しない試合や信頼度40%未満では下がって停滞する' },
+      { label: '影響', text: '一致と浸透度が高いほど監督の指導力がピッチ全体に行き渡り、攻守両面の組織力が底上げされる。停滞時は監督効果がなくなりチーム力が落ちる' }
+    ]
+  },
+  {
+    key: 'team_chemistry',
+    group: '監督・戦術',
+    title: 'チーム連携',
+    summary: '高い士気と主将の存在、馴染んだ選手で攻撃が噛み合う',
+    rows: [
+      { label: '上がる', text: '先発メンバーの士気を高く保ち、主将に指名した選手を先発させる。チームに馴染んだメンバーを中心に組む' },
+      { label: '下がる', text: '加入直後で適応途中の選手を同時に多く先発させると下がる' },
+      { label: '影響', text: '選手同士の連係と攻撃の噛み合わせに直結し、得点力と決定力を高める' }
+    ]
+  },
+  {
+    key: 'board_confidence',
+    group: '経営・財務',
+    title: '理事会評価',
+    summary: '戦績と目標順位に対する理事会の信任度',
+    rows: [
+      { label: '上がる', text: '公式戦で勝ち点を重ね、目標順位以内を維持する' },
+      { label: '下がる', text: '目標順位を大きく下回る状況での敗戦や低迷が続く' },
+      { label: '影響', text: '10%以下で解任。2部降格後に1年復帰を逃しても、6位以内かつ評価50%以上なら1度だけ続投の猶予が残る' }
+    ]
+  },
+  {
+    key: 'club_reputation',
+    group: '経営・財務',
+    title: 'クラブ格（Rep）',
+    summary: '戦力と実績に応じたクラブの格付け',
+    rows: [
+      { label: '決まり方', text: 'クラブの戦力規模と所属ディビジョンに応じた評価値' },
+      { label: '影響', text: '名将（目安6200以上・4500以上）の招聘可否、選手の移籍関心度、スポンサー額やファン層の基盤に関わる' }
+    ]
+  },
+  {
+    key: 'psr',
+    group: '経営・財務',
+    title: 'PSR財務規律（3年累積）',
+    summary: '直近3年の累積収支。上限-£35.0Mを超えると処分対象',
+    rows: [
+      { label: '基準', text: '直近3シーズンのクラブ純損益の合計。累積赤字の上限は -£35.0M' },
+      { label: '影響', text: '上限を超えると勝ち点剥奪（6点・大幅超過時は10点）や補強禁止処分の対象となり、選手売却時に移籍予算へ回せる割合も下がる' }
+    ]
+  }
+];
+
+function getGlossaryCurrentStatus(key, club) {
+  if (!club) return { label: '---', cls: 'text-muted' };
+  const mgr = club.manager || null;
+  if (key === 'manager_trust') {
+    if (!mgr) return { label: '監督不在', cls: 'text-danger' };
+    const t = mgr.trust ?? 80;
+    if (t >= 80) return { label: `${t}%（良好）`, cls: 'accent-green' };
+    if (t >= 40) return { label: `${t}%（安定）`, cls: 'accent-gold' };
+    if (t > 10) return { label: `${t}%（低下）`, cls: 'text-danger' };
+    return { label: `${t}%（危機）`, cls: 'text-danger' };
+  }
+  if (key === 'tactical_penetration') {
+    if (!mgr) return { label: '監督不在', cls: 'text-danger' };
+    const t = mgr.trust ?? 80;
+    const fam = Math.round(club.tacticalFamiliarity ?? 75);
+    const isForm = club.formation === mgr.preferredFormation;
+    const isTac = typeof normalizeTacticKey === 'function'
+      ? normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic)
+      : club.tactic === mgr.preferredTactic;
+    const matches = (isForm ? 1 : 0) + (isTac ? 1 : 0);
+    if (t < 40) return { label: `停滞・${fam}%`, cls: 'text-danger' };
+    if (matches === 2) return { label: `高・${fam}%`, cls: 'accent-green' };
+    if (matches === 1) return { label: `中・${fam}%`, cls: 'accent-gold' };
+    return { label: `低・${fam}%`, cls: 'text-muted' };
+  }
+  if (key === 'team_chemistry') {
+    const chem = club.teamChemistry ?? 75;
+    const cls = chem >= 80 ? 'accent-green' : (chem >= 60 ? 'accent-gold' : 'text-danger');
+    return { label: `${chem}%`, cls };
+  }
+  if (key === 'board_confidence') {
+    const conf = club.boardConfidence ?? 75;
+    const target = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
+    const cls = conf >= 60 ? 'accent-green' : (conf >= 35 ? 'accent-gold' : 'text-danger');
+    return { label: `${conf}%（目標 ${target}位以内）`, cls };
+  }
+  if (key === 'club_reputation') {
+    const rep = club.reputation || 4000;
+    const tierTxt = rep >= 6200 ? '名将招聘可' : (rep >= 4500 ? '上位監督可' : '標準');
+    return { label: `${rep}（${tierTxt}）`, cls: rep >= 6200 ? 'accent-green' : 'accent-gold' };
+  }
+  if (key === 'psr') {
+    const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { total3YrNet: 0, isBreach: false };
+    const netText = typeof formatMoney === 'function' ? formatMoney(psr.total3YrNet) : `${psr.total3YrNet}`;
+    return {
+      label: `${netText}（${psr.isBreach ? '規律違反' : '健全'}）`,
+      cls: psr.isBreach ? 'text-danger' : 'accent-green'
+    };
+  }
+  return { label: '---', cls: 'text-muted' };
+}
+
+function showGlossaryInfoPopup(key) {
+  const def = GM_GLOSSARY_DEFINITIONS.find(d => d.key === key);
+  if (!def) return;
+  const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const cur = getGlossaryCurrentStatus(key, club);
+
+  const rowsHtml = (def.rows || []).map(item => `
+    <div class="glossary-kv-row">
+      <span class="glossary-kv-label">${item.label}</span>
+      <span class="glossary-kv-text">${item.text}</span>
+    </div>
+  `).join('');
+
+  const bodyHtml = `
+    <div class="glossary-status-banner">
+      <span class="glossary-status-label">現在</span>
+      <strong class="mono glossary-status-val ${cur.cls}">${cur.label}</strong>
+    </div>
+    <div class="glossary-section-list">${rowsHtml}</div>
+    <div class="glossary-footer-action">
+      <button type="button" class="btn btn-secondary btn-sm" data-open-glossary-list="true">一覧へ戻る</button>
+    </div>
+  `;
+
+  showInfoPopup({
+    title: def.title,
+    tag: def.group,
+    bodyHtml
+  });
+}
+
+function showGlossaryListPopup() {
+  const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  const groups = ['監督・戦術', '経営・財務'];
+  const groupsHtml = groups.map(groupName => {
+    const items = GM_GLOSSARY_DEFINITIONS.filter(d => d.group === groupName);
+    const rowsHtml = items.map(def => {
+      const cur = getGlossaryCurrentStatus(def.key, club);
+      return `
+        <div class="glossary-index-row" data-glossary-key="${def.key}" role="button" tabindex="0">
+          <div class="glossary-index-main">
+            <strong class="glossary-index-title">${def.title}</strong>
+            <span class="glossary-index-summary">${def.summary}</span>
+          </div>
+          <div class="glossary-index-right">
+            <span class="glossary-index-val mono ${cur.cls}">${cur.label}</span>
+            <span class="glossary-index-chevron" aria-hidden="true">›</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="glossary-group-block">
+        <div class="glossary-section-heading">${groupName}</div>
+        <div class="glossary-index-list">${rowsHtml}</div>
+      </div>
+    `;
+  }).join('');
+
+  showInfoPopup({
+    title: 'クラブ経営用語',
+    tag: '',
+    bodyHtml: groupsHtml
+  });
+  const tagEl = document.getElementById('info-popup-tag');
+  if (tagEl) tagEl.textContent = '';
+}
+
 
 /**
  * シーズン終了時の処理（賞金・スポンサー収入加算・目標順位評価・加齢・成長・契約年数-1・引退・移籍市場）
@@ -7660,6 +7846,10 @@ function setTeamTactic(tacticKey) {
   document.querySelectorAll('#tactics-btn-group .btn-tactic').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tactic === normalizedKey);
   });
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    tacticSelectBoard.value = normalizedKey;
+  }
 
   document.querySelectorAll('.tactics-guide-item[data-tactic-card]').forEach(card => {
     card.classList.toggle('active-guide', card.dataset.tacticCard === normalizedKey);
@@ -10279,6 +10469,13 @@ function renderTacticalBoard() {
   const formationSelectMobile = document.getElementById('formation-select-mobile');
   if (formationSelectMobile) {
     formationSelectMobile.value = formationKey;
+  }
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    const tacKey = typeof normalizeTacticKey === 'function'
+      ? normalizeTacticKey(playerClub.tactic || 'possession')
+      : (playerClub.tactic || 'possession');
+    tacticSelectBoard.value = tacKey;
   }
 
   const formationLabelEl = document.getElementById('roster-formation-label');
@@ -16943,12 +17140,20 @@ function initGame() {
     });
   }
 
-  // モバイル用フォーメーション変更セレクト
+  // モバイル用フォーメーション変更セレクト ＆ ボード戦術切替セレクト
   const formationSelectMobile = document.getElementById('formation-select-mobile');
   if (formationSelectMobile) {
     formationSelectMobile.addEventListener('change', (e) => {
       if (e.target.value) {
         setClubFormation(e.target.value);
+      }
+    });
+  }
+  const tacticSelectBoard = document.getElementById('tactic-select-board');
+  if (tacticSelectBoard) {
+    tacticSelectBoard.addEventListener('change', (e) => {
+      if (e.target.value) {
+        setTeamTactic(e.target.value);
       }
     });
   }
@@ -18022,7 +18227,7 @@ function initGame() {
     });
   }
 
-  // 共通インフォポップアップ（施設・戦術）の閉じるイベント
+  // 共通インフォポップアップ（施設・戦術・用語ガイド）のイベント
   const btnCloseInfoPopup = document.getElementById('btn-close-info-popup');
   if (btnCloseInfoPopup) btnCloseInfoPopup.addEventListener('click', closeInfoPopup);
   const infoPopupModal = document.getElementById('info-popup-modal');
@@ -18031,6 +18236,37 @@ function initGame() {
       if (e.target === infoPopupModal) closeInfoPopup();
     });
   }
+  const btnOpenGlossaryModal = document.getElementById('btn-open-glossary-modal');
+  if (btnOpenGlossaryModal) {
+    btnOpenGlossaryModal.addEventListener('click', () => {
+      if (typeof saveSettingsToStorage === 'function') saveSettingsToStorage();
+      if (typeof closeSettingsModal === 'function') closeSettingsModal();
+      showGlossaryListPopup();
+    });
+  }
+  document.addEventListener('click', (e) => {
+    const glossaryListBtn = e.target.closest('[data-open-glossary-list]');
+    if (glossaryListBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      showGlossaryListPopup();
+      return;
+    }
+    const glossaryBtn = e.target.closest('[data-glossary-key]');
+    if (glossaryBtn && glossaryBtn.dataset.glossaryKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      showGlossaryInfoPopup(glossaryBtn.dataset.glossaryKey);
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const glossaryEl = document.activeElement && document.activeElement.closest('[data-glossary-key]');
+    if (glossaryEl && glossaryEl.dataset.glossaryKey) {
+      e.preventDefault();
+      showGlossaryInfoPopup(glossaryEl.dataset.glossaryKey);
+    }
+  });
 
   // 監督交代モーダル 閉じるイベント
   const btnCloseManagerModal = document.getElementById('btn-close-manager-modal');
@@ -18309,32 +18545,18 @@ function renderTacticalManagerBanner() {
     return;
   }
 
-  const mgr = club.manager;
-  const isFormMatch = club.formation === mgr.preferredFormation;
-  const isTacticMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
-  const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
-
-  const formTag = isFormMatch
-    ? `<span class="mgr-tag match">布陣: 哲学合致</span>`
-    : `<span class="mgr-tag unmatch">布陣: GM指定</span>`;
-  const tacticTag = isTacticMatch
-    ? `<span class="mgr-tag match">戦術: 哲学合致</span>`
-    : `<span class="mgr-tag unmatch">戦術: GM指定</span>`;
-
-  let totalBonus = 0;
-  if (isFormMatch) totalBonus += 1;
-  if (isTacticMatch) totalBonus += 1;
-  const mgrTrust = mgr.trust ?? 80;
-  let bonusTag = '';
-  if (mgrTrust < 40) {
-    bonusTag = `<span class="mgr-tag unmatch">戦術浸透度: 停滞</span>`;
-  } else if (totalBonus === 2) {
-    bonusTag = `<span class="mgr-tag bonus">戦術浸透度: 高</span>`;
-  } else if (totalBonus === 1) {
-    bonusTag = `<span class="mgr-tag warn">戦術浸透度: 中</span>`;
-  } else {
-    bonusTag = `<span class="mgr-tag none">戦術浸透度: 低</span>`;
+  if (typeof calculateClubChemistryAndFamiliarity === 'function') {
+    calculateClubChemistryAndFamiliarity(club);
   }
+  const mgr = club.manager;
+  const tacticLabel = getManagerTacticLabel(mgr.preferredTactic);
+  const mgrTrust = mgr.trust ?? 80;
+  const fam = Math.round(club.tacticalFamiliarity ?? 75);
+  const chem = Math.round(club.teamChemistry ?? 75);
+  const penCls = mgrTrust < 40 ? 'unmatch' : (fam >= 80 ? 'bonus' : (fam >= 60 ? 'warn' : 'unmatch'));
+  const chemCls = chem >= 80 ? 'bonus' : (chem >= 60 ? 'warn' : 'unmatch');
+  const penTag = `<span class="mgr-tag ${penCls}" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: ${fam}%</span>`;
+  const chemTag = `<span class="mgr-tag ${chemCls}" data-glossary-key="team_chemistry" role="button" tabindex="0">チーム連携: ${chem}%</span>`;
 
   const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 32) : '';
 
@@ -18349,7 +18571,7 @@ function renderTacticalManagerBanner() {
             <span class="text-muted">監督:</span>
             <strong class="manager-name">${mgr.name}</strong>
             <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
-            <span class="manager-trust-label mono">信頼度 ${mgr.trust}%</span>
+            <span class="manager-trust-label mono" data-glossary-key="manager_trust" role="button" tabindex="0">信頼度 ${mgr.trust}%</span>
           </div>
           <div class="manager-banner-style mono">
             得意: ${mgr.preferredFormation} / ${tacticLabel}
@@ -18357,16 +18579,15 @@ function renderTacticalManagerBanner() {
         </div>
       </div>
       <div class="manager-banner-tags mono">
-        ${formTag}
-        ${tacticTag}
-        ${bonusTag}
+        ${penTag}
+        ${chemTag}
       </div>
     </div>
   `;
 }
 
 /**
- * 作戦ボードの役割指定・自動交代方針・ケミストリー＆戦術習熟度バーを描画
+ * 戦術タブの役割指定・自動交代方針・チーム連携＆戦術浸透度バーを描画
  */
 function renderTacticalRolesAndChemBar(club) {
   const bar = document.getElementById('tactical-roles-chem-bar');
@@ -18390,16 +18611,18 @@ function renderTacticalRolesAndChemBar(club) {
 
   const chem = club.teamChemistry ?? 75;
   const fam = club.tacticalFamiliarity ?? 75;
+  const mgrTrust = (club.manager && typeof club.manager.trust === 'number') ? club.manager.trust : 80;
+  const penCls = mgrTrust < 40 || !club.manager ? 'text-danger' : (fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger'));
 
   bar.innerHTML = `
     <div class="roles-chem-metrics mono">
-      <div class="chem-pill" title="選手モラルと新加入適応度から算出されるチーム連携度">
+      <div class="chem-pill" data-glossary-key="team_chemistry" role="button" tabindex="0">
         <span>チーム連携:</span>
         <strong class="${chem >= 80 ? 'accent-green' : (chem >= 60 ? 'accent-gold' : 'text-danger')}">${chem}%</strong>
       </div>
-      <div class="chem-pill" title="現在の陣形・戦術への習熟度">
-        <span>戦術習熟:</span>
-        <strong class="${fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger')}">${fam}%</strong>
+      <div class="chem-pill" data-glossary-key="tactical_penetration" role="button" tabindex="0">
+        <span>戦術浸透度:</span>
+        <strong class="${penCls}">${fam}%</strong>
       </div>
     </div>
     <div class="roles-chem-selectors">
@@ -18498,7 +18721,7 @@ function renderManagerManagementPanel() {
             <div class="ui-kv-label accent-gold-bar">契約・信頼</div>
             <div class="ui-kv-content">
               <div class="ui-plate-grid">
-                <div class="ui-stat-plate is-highlight">
+                <div class="ui-stat-plate is-highlight" data-glossary-key="manager_trust" role="button" tabindex="0">
                   <span class="ui-plate-label">現場信頼度</span>
                   <span class="ui-plate-val accent-green">${mgr.trust}%</span>
                 </div>
@@ -18952,9 +19175,10 @@ function hireNewManager(managerId) {
   newMgr.contractYears = 3;
   club.manager = newMgr;
 
-  // 新監督の得意陣形・戦術に初期同期
+  // 新監督の得意陣形・戦術に初期同期（新体制の戦術浸透度は最大65%から再定着）
   club.formation = newMgr.preferredFormation;
   club.tactic = normalizeTacticKey(newMgr.preferredTactic);
+  club.tacticalFamiliarity = Math.min(club.tacticalFamiliarity || 65, 65);
   if (typeof assignStartersToFormationSlots === 'function') {
     assignStartersToFormationSlots(club, true);
   }
@@ -21439,17 +21663,17 @@ function renderBoardPsrSponsorPanel(club) {
         </div>
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono">PSR財務規律（3年累積）</div>
+        <div class="board-psr-title mono" data-glossary-key="psr" role="button" tabindex="0">PSR財務規律（3年累積）</div>
         <div class="board-psr-main mono ${psr.isBreach ? 'text-danger' : 'accent-green'}">${formatMoney(psr.total3YrNet)}</div>
         <div class="board-psr-sub mono">許容赤字上限: ${formatMoney(typeof PSR_MAX_3YR_DEFICIT !== 'undefined' ? PSR_MAX_3YR_DEFICIT : -35000)}</div>
         <div class="board-psr-sub">状態: ${sanctionText}</div>
         ${psrHistHtml}
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono">理事会評価・クラブ格</div>
+        <div class="board-psr-title mono" data-glossary-key="board_confidence" role="button" tabindex="0">理事会評価・クラブ格</div>
         <div class="board-psr-main mono ${conf >= 60 ? 'accent-green' : (conf >= 35 ? 'accent-gold' : 'text-danger')}">${conf}%</div>
         <div class="board-psr-sub mono">今季目標順位: ${targetRank}位以内</div>
-        <div class="board-psr-sub mono">クラブ格(Rep): ${club.reputation || 4000}</div>
+        <div class="board-psr-sub mono" data-glossary-key="club_reputation" role="button" tabindex="0">クラブ格(Rep): ${club.reputation || 4000}</div>
       </div>
     </div>
   `;

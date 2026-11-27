@@ -93,11 +93,13 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('.finance-range-slider', self.css)
         self.assertIn('touch-action: none !important;', self.css)
         self.assertIn('--slider-pct', self.css)
+        self.assertNotIn('btn-glossary-inline', self.css)
+        self.assertIn('[data-glossary-key]', self.css)
         self.assertIn('#facilities-subnav-bar', self.css)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 
     def test_5_no_emojis_in_render_finance_budget_panel(self):
-        """財務ダッシュボードに絵文字が含まれていないこと"""
+        """財務ダッシュボードおよび用語ガイドに絵文字が含まれていないこと"""
         start = self.main_js.find('function renderFinanceBudgetPanel()')
         self.assertNotEqual(start, -1)
         end = self.main_js.find('function renderFacilitiesAndYouth()', start)
@@ -105,6 +107,50 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         snippet = self.main_js[start:end]
         emoji_re = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
         self.assertEqual(emoji_re.findall(snippet), [])
+
+    def test_6_glossary_system_implemented(self):
+        """信頼度・戦術浸透度・チーム連携・理事会評価など6用語のタップ解説と役割統合を検証"""
+        self.assertIn('const GM_GLOSSARY_DEFINITIONS', self.main_js)
+        self.assertIn('function showGlossaryInfoPopup(key)', self.main_js)
+        self.assertIn('function showGlossaryListPopup()', self.main_js)
+        self.assertIn('id="btn-open-glossary-modal"', self.html)
+        self.assertNotIn('btn-glossary-inline', self.html)
+        self.assertNotIn('btn-glossary-inline', self.main_js)
+        for key in ['manager_trust', 'tactical_penetration', 'team_chemistry', 'board_confidence', 'club_reputation', 'psr']:
+            self.assertIn(f"'{key}'", self.main_js)
+            self.assertIn(f'data-glossary-key="{key}"', self.main_js)
+        self.assertNotIn("'tactical_familiarity'", self.main_js)
+        self.assertNotIn('戦術習熟', self.main_js)
+        g_start = self.main_js.find('const GM_GLOSSARY_DEFINITIONS')
+        g_end = self.main_js.find('function processSeasonEnd(', g_start)
+        g_block = self.main_js[g_start:g_end]
+        emoji_re = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+        self.assertEqual(emoji_re.findall(g_block), [])
+        for meta in ['システムガイド', 'ゲーム内への効果', 'バフ', 'ペナルティ', 'ゴール生成倍率', 'キャリア終了', 'S級']:
+            self.assertNotIn(meta, g_block)
+
+    def test_7_tactical_penetration_and_chemistry_roles_distinct(self):
+        """戦術浸透度（試合後のみ更新・監督戦術連動）とチーム連携（主将・モラル・適応）の役割分離を検証"""
+        match_js = read_text('match-engine.js')
+        self.assertIn('options.isPostMatch', self.models_js)
+        self.assertIn('captainInXI', self.models_js)
+        self.assertIn('famScale', match_js)
+        self.assertIn('calculateClubChemistryAndFamiliarity(homeClub, { isPostMatch: true })', match_js)
+
+    def test_8_board_metrics_tactic_select_and_settings_toggles(self):
+        """作戦ボードから哲学一致表記を廃し浸透度/連携%＋戦術切替を追加し設定トグルを統一したことを検証"""
+        self.assertIn('id="tactic-select-board"', self.html)
+        self.assertIn('settings-switch-label', self.html)
+        self.assertEqual(self.html.count('settings-switch-label'), 3)
+        self.assertNotIn('布陣: 哲学合致', self.main_js)
+        self.assertNotIn('戦術: 哲学合致', self.main_js)
+        self.assertIn('戦術浸透度: ${fam}%', self.main_js)
+        self.assertIn('チーム連携: ${chem}%', self.main_js)
+        self.assertIn("getElementById('tactic-select-board')", self.main_js)
+        self.assertIn('.board-tactic-select', self.css)
+        self.assertIn('.settings-switch-input:checked ~ .delegation-toggle-track', self.css)
+        self.assertIn('flex: 1 1 0 !important;', self.css)
+        self.assertIn('body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-container', self.css)
 
 
 if __name__ == '__main__':

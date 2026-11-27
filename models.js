@@ -4570,20 +4570,37 @@ function advanceScoutingProgressDaily() {
 }
 
 /**
- * クラブのチームケミストリー＆戦術習熟度を算出・同期する
+ * クラブのチーム連携＆戦術浸透度(%)を算出・同期する（浸透度は試合終了時のみ増減）
  */
-function calculateClubChemistryAndFamiliarity(club) {
+function calculateClubChemistryAndFamiliarity(club, options = {}) {
   if (!club) return { chemistry: 75, familiarity: 75 };
   const starters = (club.players || []).filter(p => p && p.isStarter && !p.isRetired);
   if (starters.length === 0) return { chemistry: 75, familiarity: 75 };
 
   const avgMorale = starters.reduce((acc, p) => acc + (typeof p.morale === 'number' ? p.morale : 75), 0) / starters.length;
   const adaptingCount = starters.filter(p => (p.adaptationDays || 0) > 0).length;
-  const mgr = club.manager;
-  const isPhilMatch = mgr && club.formation === mgr.preferredFormation && normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic);
+  const captainInXI = Boolean(club.roles && club.roles.captainId && starters.some(p => p.id === club.roles.captainId));
+  const chem = clamp(Math.round(68 + (avgMorale - 70) * 0.35 - adaptingCount * 4 + (captainInXI ? 3 : 0)), 35, 99);
 
-  const chem = clamp(Math.round(68 + (avgMorale - 70) * 0.35 - adaptingCount * 4), 35, 99);
-  const fam = clamp(Math.round((club.tacticalFamiliarity || 72) + (isPhilMatch ? 2 : 0)), 40, 99);
+  const curFam = typeof club.tacticalFamiliarity === 'number' ? club.tacticalFamiliarity : 75;
+  let fam = clamp(Math.round(curFam), 40, 99);
+  if (options && options.isPostMatch) {
+    const mgr = club.manager;
+    const mgrTrust = mgr && typeof mgr.trust === 'number' ? mgr.trust : 80;
+    if (!mgr || mgrTrust < 40) {
+      fam = clamp(Math.round(curFam - 4), 40, 99);
+    } else {
+      const formMatch = club.formation === mgr.preferredFormation ? 1 : 0;
+      const tacMatch = normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic) ? 1 : 0;
+      const matches = formMatch + tacMatch;
+      let delta = 0;
+      if (matches === 2) delta = 3;
+      else if (matches === 1) delta = curFam < 78 ? 1 : (curFam > 82 ? -1 : 0);
+      else delta = -4;
+      fam = clamp(Math.round(curFam + delta), 40, 99);
+    }
+  }
+
   club.teamChemistry = chem;
   club.tacticalFamiliarity = fam;
   return { chemistry: chem, familiarity: fam };
