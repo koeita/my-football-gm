@@ -3533,89 +3533,75 @@ function showTacticInfoPopup(tacticKey) {
 const GM_GLOSSARY_DEFINITIONS = [
   {
     key: 'manager_trust',
-    category: '監督・現場',
+    group: '監督・戦術',
     title: '監督信頼度（現場信頼度）',
-    triggers: [
-      { label: '戦術の一致と試合結果', text: '監督の得意陣形・得意戦術で勝つと大きく上昇します（一任モード: 勝+4 / 分+2 / 負-1、手動一致: 勝+3 / 分+1 / 負-1）。得意と異なるGM指定では勝利でも+1に留まり、引き分け(-1〜-2)・敗戦(-3〜-5)で低下し連続介入で悪化します。' },
-      { label: '補強・相談への対応', text: '監督の補強要望達成（推薦選手+10 / 希望ポジション+6）、起用相談の承認(+5)、契約延長(+5)、面談での信頼表明(+6)で上昇します。売却交渉や提案不採用が続くと低下します。' }
-    ],
-    effects: [
-      { label: '80%以上（高信頼ボーナス）', text: '得意陣形・得意戦術の両方と一致した試合で、監督の人心掌握ランクに応じた追加攻守ボーナス（+0.7〜+1.6%）が発動します。' },
-      { label: '40%未満（現場との軋轢）', text: '戦術浸透ボーナスが消失して「停滞」状態となり、ロッカールームの動揺で試合時のチーム攻撃・守備力が一律 -3% 低下します。' },
-      { label: '35%未満 / 10%以下', text: '35%未満では選手の本職配置変更相談を監督が承認しにくくなります。10%以下に達すると監督の進退伺い（緊急会談）が発生します。' }
+    summary: '采配と補強への信頼がチームの力を引き出す',
+    rows: [
+      { label: '上がる', text: '監督の得意陣形・得意戦術で勝つ。監督要望の補強、起用相談の承認、契約延長、面談での支持でも高まる' },
+      { label: '下がる', text: '得意と異なる陣形・戦術を強いて負ける。希望に沿わない補強・売却や意見の対立が続くと下がる' },
+      { label: '影響', text: '80%以上で得意方針と一致した試合で攻守が噛み合う。40%未満で戦術が浸透せず不安定になり、10%以下で進退問題に発展' }
     ]
   },
   {
     key: 'tactical_penetration',
-    category: '戦術・試合',
+    group: '監督・戦術',
     title: '戦術浸透度',
-    triggers: [
-      { label: '判定基準（哲学一致数）', text: '作戦ボードで設定中の「陣形」と「戦術」が、監督の得意陣形・得意戦術と何項目一致しているかで決まります（2一致＝高 / 1一致＝中 / 0一致＝低）。' },
-      { label: '例外条件（停滞）', text: '監督信頼度が40%未満に下がると、陣形や戦術を一致させていても強制的に「停滞」となります。' }
-    ],
-    effects: [
-      { label: '高（2一致） / 中（1一致）', text: '一致1項目につきチーム実効OVRが +1（最大+2）上昇し、さらに監督の戦術眼ランクに応じた攻守バフ（1項目あたり +1.1〜+3.6%、最大+7.2%）が乗ります。' },
-      { label: '低（0一致）', text: '実効OVR補正・戦術バフともに +0 となり、監督の戦術指導を試合で活かせません。' },
-      { label: '停滞（信頼度40%未満）', text: '戦術補正がすべて無効化され、ロッカーの動揺により試合時の攻守が -3% 低下します。' }
+    summary: '陣形と戦術が監督の哲学と噛み合う度合い',
+    rows: [
+      { label: '決まり方', text: '現在の陣形と戦術が監督の得意方針と何項目合うかで高・中・低が決まる。信頼度40%未満では停滞になる' },
+      { label: '影響', text: '一致が多いほど監督の指導力がピッチで機能し攻守が底上げされる。停滞になると効果がなくなりチーム力が落ちる' }
     ]
   },
   {
     key: 'tactical_familiarity',
-    category: '戦術・試合',
-    title: '戦術習熟（%）',
-    triggers: [
-      { label: '上昇・維持条件', text: '現在の陣形と戦術を監督の得意陣形・得意戦術の両方に一致させると +2% ずつ習熟が高まります（範囲 40〜99%）。' }
-    ],
-    effects: [
-      { label: '試合への影響', text: 'チーム連携（%）と合算され、試合中の得点期待値（ゴール生成倍率 0.90〜1.08倍）に直接影響します。習熟が高いほど攻撃の再現性が安定します。' }
+    group: '監督・戦術',
+    title: '戦術習熟',
+    summary: '得意方針を貫くほど試合運びと決定力が安定',
+    rows: [
+      { label: '上がる', text: '監督の得意陣形と得意戦術の両方に合わせて試合を重ねる' },
+      { label: '影響', text: 'チーム連携と合わせて、攻撃の再現性と得点の生まれやすさを高める' }
     ]
   },
   {
     key: 'team_chemistry',
-    category: '戦術・試合',
-    title: 'チーム連携（%）',
-    triggers: [
-      { label: '上昇・低下要因', text: '先発11人の平均モラル（士気）が高いほど上昇します。一方、新加入でクラブ適応期間中の選手をスタメン起用すると1人あたり -4% 低下します（範囲 35〜99%）。' }
-    ],
-    effects: [
-      { label: '試合への影響', text: '戦術習熟（%）と合算され、試合中の得点期待値（ゴール生成倍率 0.90〜1.08倍）に直接影響します。主力モラルを高く保つことで得点力が高まります。' }
+    group: '監督・戦術',
+    title: 'チーム連携',
+    summary: '高い士気と馴染んだメンバーで攻撃が噛み合う',
+    rows: [
+      { label: '上がる', text: '先発メンバーの士気を高く保ち、チームに馴染んだ選手を中心に起用する' },
+      { label: '下がる', text: '加入直後で適応途中の選手を同時に多く先発させると下がる' },
+      { label: '影響', text: '戦術習熟と合わせて、攻撃の連動性と得点力に直結する' }
     ]
   },
   {
     key: 'board_confidence',
-    category: '経営・理事会',
-    title: '理事会評価（%）',
-    triggers: [
-      { label: '試合結果と順位', text: '公式戦ごとに勝敗で変動（勝+2 / 分0 / 負-2、目標+3位以内なら敗戦は-1）。リーグ戦では現在順位が目標以内なら +1、目標+5位以下で -1、17位以下または目標+8位以下で -2 されます。' },
-      { label: 'シーズン切替', text: '新シーズン開幕時に、前期評価と基準値70%の中間（45〜85%）へ緩やかに再設定されます。' }
-    ],
-    effects: [
-      { label: '10%以下（解任ライン）', text: '10%以下まで低下すると理事会によるGM解任通知が発生し、2部再建クラブへの転籍またはキャリア終了となります。' },
-      { label: '降格からの最終猶予', text: '2部降格後に1年での即時復帰を逃した場合でも、最終順位6位以内かつ理事会評価50%以上であれば1回限り来季への最終猶予が与えられます。' }
+    group: '経営・財務',
+    title: '理事会評価',
+    summary: '戦績と目標順位に対する理事会の信任度',
+    rows: [
+      { label: '上がる', text: '公式戦で勝ち点を重ね、目標順位以内を維持する' },
+      { label: '下がる', text: '目標順位を大きく下回る状況での敗戦や低迷が続く' },
+      { label: '影響', text: '10%以下で解任。2部降格後に1年復帰を逃しても、6位以内かつ評価50%以上なら1度だけ続投の猶予が残る' }
     ]
   },
   {
     key: 'club_reputation',
-    category: '経営・クラブ',
+    group: '経営・財務',
     title: 'クラブ格（Rep）',
-    triggers: [
-      { label: '決まり方', text: 'クラブの総合戦力と所属ディビジョンに応じて設定されるクラブの格付け指標です（範囲 1200〜9500）。' }
-    ],
-    effects: [
-      { label: '監督・指導陣の招聘', text: '優秀な監督ほど高いクラブ格を要求します（平均能力85以上のS級監督は Rep 6200以上、77以上のA級は Rep 4500以上が目安）。' },
-      { label: '移籍・商業規模', text: '移籍交渉における選手の関心度や、スポンサー提示額・サポーター規模の基盤に影響します。' }
+    summary: '戦力と実績に応じたクラブの格付け',
+    rows: [
+      { label: '決まり方', text: 'クラブの戦力規模と所属ディビジョンに応じた評価値' },
+      { label: '影響', text: '名将（目安6200以上・4500以上）の招聘可否、選手の移籍関心度、スポンサー額やファン層の基盤に関わる' }
     ]
   },
   {
     key: 'psr',
-    category: '経営・財務',
+    group: '経営・財務',
     title: 'PSR財務規律（3年累積）',
-    triggers: [
-      { label: '集計方法と上限', text: '直近3シーズンのクラブ年間純損益の累積額で判定されます。許容される累積赤字の上限は -£35.0M です。' }
-    ],
-    effects: [
-      { label: '超過時のペナルティ', text: '累積赤字が -£35.0M を下回ると財務規律違反となり、勝ち点剥奪（-6点、-£50.0M未満の大幅超過は-10点）や補強禁止処分の対象となります。' },
-      { label: '売却予算の還元率', text: '経営が健全黒字であるほど選手売却代金の移籍予算への還元率が高く（最大85%）、PSR赤字警戒・違反時は還元率が段階的に制限（65%〜50%）されます。' }
+    summary: '直近3年の累積収支。上限-£35.0Mを超えると処分対象',
+    rows: [
+      { label: '基準', text: '直近3シーズンのクラブ純損益の合計。累積赤字の上限は -£35.0M' },
+      { label: '影響', text: '上限を超えると勝ち点剥奪（6点・大幅超過時は10点）や補強禁止処分の対象となり、選手売却時に移籍予算へ回せる割合も下がる' }
     ]
   }
 ];
@@ -3626,10 +3612,10 @@ function getGlossaryCurrentStatus(key, club) {
   if (key === 'manager_trust') {
     if (!mgr) return { label: '監督不在', cls: 'text-danger' };
     const t = mgr.trust ?? 80;
-    if (t >= 80) return { label: `${t}%（高信頼ボーナス圏）`, cls: 'accent-green' };
-    if (t >= 40) return { label: `${t}%（通常）`, cls: 'accent-gold' };
-    if (t > 10) return { label: `${t}%（軋轢・攻守-3%）`, cls: 'text-danger' };
-    return { label: `${t}%（進退危機）`, cls: 'text-danger' };
+    if (t >= 80) return { label: `${t}%（良好）`, cls: 'accent-green' };
+    if (t >= 40) return { label: `${t}%（安定）`, cls: 'accent-gold' };
+    if (t > 10) return { label: `${t}%（低下）`, cls: 'text-danger' };
+    return { label: `${t}%（危機）`, cls: 'text-danger' };
   }
   if (key === 'tactical_penetration') {
     if (!mgr) return { label: '監督不在', cls: 'text-danger' };
@@ -3639,10 +3625,10 @@ function getGlossaryCurrentStatus(key, club) {
       ? normalizeTacticKey(club.tactic) === normalizeTacticKey(mgr.preferredTactic)
       : club.tactic === mgr.preferredTactic;
     const matches = (isForm ? 1 : 0) + (isTac ? 1 : 0);
-    if (t < 40) return { label: '停滞（効果消失・攻守-3%）', cls: 'text-danger' };
-    if (matches === 2) return { label: '高（2項目一致 / 実効OVR+2）', cls: 'accent-green' };
-    if (matches === 1) return { label: '中（1項目一致 / 実効OVR+1）', cls: 'accent-gold' };
-    return { label: '低（不一致 / 補正なし）', cls: 'text-muted' };
+    if (t < 40) return { label: '停滞', cls: 'text-danger' };
+    if (matches === 2) return { label: '高（2一致）', cls: 'accent-green' };
+    if (matches === 1) return { label: '中（1一致）', cls: 'accent-gold' };
+    return { label: '低（不一致）', cls: 'text-muted' };
   }
   if (key === 'tactical_familiarity') {
     const fam = club.tacticalFamiliarity ?? 75;
@@ -3662,7 +3648,7 @@ function getGlossaryCurrentStatus(key, club) {
   }
   if (key === 'club_reputation') {
     const rep = club.reputation || 4000;
-    const tierTxt = rep >= 6200 ? 'S級監督招聘可' : (rep >= 4500 ? 'A級監督招聘可' : '標準規模');
+    const tierTxt = rep >= 6200 ? '名将招聘可' : (rep >= 4500 ? '上位監督可' : '標準');
     return { label: `${rep}（${tierTxt}）`, cls: rep >= 6200 ? 'accent-green' : 'accent-gold' };
   }
   if (key === 'psr') {
@@ -3682,62 +3668,66 @@ function showGlossaryInfoPopup(key) {
   const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   const cur = getGlossaryCurrentStatus(key, club);
 
-  const buildRows = (items) => items.map(item => `
-    <div class="glossary-list-row">
-      <div class="glossary-row-head">${item.label}</div>
-      <div class="glossary-row-desc">${item.text}</div>
+  const rowsHtml = (def.rows || []).map(item => `
+    <div class="glossary-kv-row">
+      <span class="glossary-kv-label">${item.label}</span>
+      <span class="glossary-kv-text">${item.text}</span>
     </div>
   `).join('');
 
   const bodyHtml = `
     <div class="glossary-status-banner">
-      <span class="glossary-status-label">現在の状態</span>
+      <span class="glossary-status-label">現在</span>
       <strong class="mono glossary-status-val ${cur.cls}">${cur.label}</strong>
     </div>
-    <div class="glossary-section-block">
-      <div class="glossary-section-heading">変化する要因・条件</div>
-      <div class="glossary-section-list">${buildRows(def.triggers)}</div>
-    </div>
-    <div class="glossary-section-block">
-      <div class="glossary-section-heading">ゲーム内への効果</div>
-      <div class="glossary-section-list">${buildRows(def.effects)}</div>
-    </div>
+    <div class="glossary-section-list">${rowsHtml}</div>
     <div class="glossary-footer-action">
-      <button type="button" class="btn btn-secondary btn-sm" data-open-glossary-list="true">全用語一覧を見る</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-open-glossary-list="true">一覧へ戻る</button>
     </div>
   `;
 
   showInfoPopup({
     title: def.title,
-    tag: def.category || '用語解説',
+    tag: def.group,
     bodyHtml
   });
 }
 
 function showGlossaryListPopup() {
   const club = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
-  const rowsHtml = GM_GLOSSARY_DEFINITIONS.map(def => {
-    const cur = getGlossaryCurrentStatus(def.key, club);
-    const shortDesc = (def.effects && def.effects[0]) ? def.effects[0].text : '';
-    return `
-      <div class="glossary-index-row" data-glossary-key="${def.key}" role="button" tabindex="0">
-        <div class="glossary-index-top">
-          <div class="glossary-index-title-wrap">
-            <span class="glossary-index-cat mono">${def.category}</span>
+  const groups = ['監督・戦術', '経営・財務'];
+  const groupsHtml = groups.map(groupName => {
+    const items = GM_GLOSSARY_DEFINITIONS.filter(d => d.group === groupName);
+    const rowsHtml = items.map(def => {
+      const cur = getGlossaryCurrentStatus(def.key, club);
+      return `
+        <div class="glossary-index-row" data-glossary-key="${def.key}" role="button" tabindex="0">
+          <div class="glossary-index-main">
             <strong class="glossary-index-title">${def.title}</strong>
+            <span class="glossary-index-summary">${def.summary}</span>
           </div>
-          <span class="glossary-index-val mono ${cur.cls}">${cur.label}</span>
+          <div class="glossary-index-right">
+            <span class="glossary-index-val mono ${cur.cls}">${cur.label}</span>
+            <span class="glossary-index-chevron" aria-hidden="true">›</span>
+          </div>
         </div>
-        <div class="glossary-index-preview">${shortDesc}</div>
+      `;
+    }).join('');
+    return `
+      <div class="glossary-group-block">
+        <div class="glossary-section-heading">${groupName}</div>
+        <div class="glossary-index-list">${rowsHtml}</div>
       </div>
     `;
   }).join('');
 
   showInfoPopup({
-    title: '用語・システムガイド',
-    tag: 'ガイド',
-    bodyHtml: `<div class="glossary-index-list">${rowsHtml}</div>`
+    title: 'クラブ経営用語',
+    tag: '',
+    bodyHtml: groupsHtml
   });
+  const tagEl = document.getElementById('info-popup-tag');
+  if (tagEl) tagEl.textContent = '';
 }
 
 
@@ -18264,6 +18254,14 @@ function initGame() {
       showGlossaryInfoPopup(glossaryBtn.dataset.glossaryKey);
     }
   });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const glossaryEl = document.activeElement && document.activeElement.closest('[data-glossary-key]');
+    if (glossaryEl && glossaryEl.dataset.glossaryKey) {
+      e.preventDefault();
+      showGlossaryInfoPopup(glossaryEl.dataset.glossaryKey);
+    }
+  });
 
   // 監督交代モーダル 閉じるイベント
   const btnCloseManagerModal = document.getElementById('btn-close-manager-modal');
@@ -18560,13 +18558,13 @@ function renderTacticalManagerBanner() {
   const mgrTrust = mgr.trust ?? 80;
   let bonusTag = '';
   if (mgrTrust < 40) {
-    bonusTag = `<span class="mgr-tag unmatch">戦術浸透度: 停滞</span>`;
+    bonusTag = `<span class="mgr-tag unmatch" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 停滞</span>`;
   } else if (totalBonus === 2) {
-    bonusTag = `<span class="mgr-tag bonus">戦術浸透度: 高</span>`;
+    bonusTag = `<span class="mgr-tag bonus" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 高</span>`;
   } else if (totalBonus === 1) {
-    bonusTag = `<span class="mgr-tag warn">戦術浸透度: 中</span>`;
+    bonusTag = `<span class="mgr-tag warn" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 中</span>`;
   } else {
-    bonusTag = `<span class="mgr-tag none">戦術浸透度: 低</span>`;
+    bonusTag = `<span class="mgr-tag none" data-glossary-key="tactical_penetration" role="button" tabindex="0">戦術浸透度: 低</span>`;
   }
 
   const avatarHtml = typeof getManagerAvatarHtml === 'function' ? getManagerAvatarHtml(mgr, 'avatar-sm', 32) : '';
@@ -18582,7 +18580,7 @@ function renderTacticalManagerBanner() {
             <span class="text-muted">監督:</span>
             <strong class="manager-name">${mgr.name}</strong>
             <span class="staff-specialty-tag">${mgr.specialty || 'バランス型'}</span>
-            <span class="glossary-inline-wrap"><span class="manager-trust-label mono">信頼度 ${mgr.trust}%</span><button type="button" class="btn-glossary-inline mono" data-glossary-key="manager_trust" aria-label="監督信頼度の解説">?</button></span>
+            <span class="manager-trust-label mono" data-glossary-key="manager_trust" role="button" tabindex="0">信頼度 ${mgr.trust}%</span>
           </div>
           <div class="manager-banner-style mono">
             得意: ${mgr.preferredFormation} / ${tacticLabel}
@@ -18592,7 +18590,7 @@ function renderTacticalManagerBanner() {
       <div class="manager-banner-tags mono">
         ${formTag}
         ${tacticTag}
-        <span class="glossary-inline-wrap">${bonusTag}<button type="button" class="btn-glossary-inline mono" data-glossary-key="tactical_penetration" aria-label="戦術浸透度の解説">?</button></span>
+        ${bonusTag}
       </div>
     </div>
   `;
@@ -18626,15 +18624,13 @@ function renderTacticalRolesAndChemBar(club) {
 
   bar.innerHTML = `
     <div class="roles-chem-metrics mono">
-      <div class="chem-pill" title="選手モラルと新加入適応度から算出されるチーム連携度">
+      <div class="chem-pill" data-glossary-key="team_chemistry" role="button" tabindex="0">
         <span>チーム連携:</span>
         <strong class="${chem >= 80 ? 'accent-green' : (chem >= 60 ? 'accent-gold' : 'text-danger')}">${chem}%</strong>
-        <button type="button" class="btn-glossary-inline mono" data-glossary-key="team_chemistry" aria-label="チーム連携の解説">?</button>
       </div>
-      <div class="chem-pill" title="現在の陣形・戦術への習熟度">
+      <div class="chem-pill" data-glossary-key="tactical_familiarity" role="button" tabindex="0">
         <span>戦術習熟:</span>
         <strong class="${fam >= 80 ? 'accent-green' : (fam >= 60 ? 'accent-gold' : 'text-danger')}">${fam}%</strong>
-        <button type="button" class="btn-glossary-inline mono" data-glossary-key="tactical_familiarity" aria-label="戦術習熟の解説">?</button>
       </div>
     </div>
     <div class="roles-chem-selectors">
@@ -18733,8 +18729,8 @@ function renderManagerManagementPanel() {
             <div class="ui-kv-label accent-gold-bar">契約・信頼</div>
             <div class="ui-kv-content">
               <div class="ui-plate-grid">
-                <div class="ui-stat-plate is-highlight">
-                  <span class="ui-plate-label">現場信頼度 <button type="button" class="btn-glossary-inline mono" data-glossary-key="manager_trust" aria-label="監督信頼度の解説">?</button></span>
+                <div class="ui-stat-plate is-highlight" data-glossary-key="manager_trust" role="button" tabindex="0">
+                  <span class="ui-plate-label">現場信頼度</span>
                   <span class="ui-plate-val accent-green">${mgr.trust}%</span>
                 </div>
                 <div class="ui-stat-plate is-gold">
@@ -21674,17 +21670,17 @@ function renderBoardPsrSponsorPanel(club) {
         </div>
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono glossary-inline-wrap">PSR財務規律（3年累積）<button type="button" class="btn-glossary-inline mono" data-glossary-key="psr" aria-label="PSR財務規律の解説">?</button></div>
+        <div class="board-psr-title mono" data-glossary-key="psr" role="button" tabindex="0">PSR財務規律（3年累積）</div>
         <div class="board-psr-main mono ${psr.isBreach ? 'text-danger' : 'accent-green'}">${formatMoney(psr.total3YrNet)}</div>
         <div class="board-psr-sub mono">許容赤字上限: ${formatMoney(typeof PSR_MAX_3YR_DEFICIT !== 'undefined' ? PSR_MAX_3YR_DEFICIT : -35000)}</div>
         <div class="board-psr-sub">状態: ${sanctionText}</div>
         ${psrHistHtml}
       </div>
       <div class="board-psr-card">
-        <div class="board-psr-title mono glossary-inline-wrap">理事会評価<button type="button" class="btn-glossary-inline mono" data-glossary-key="board_confidence" aria-label="理事会評価の解説">?</button></div>
+        <div class="board-psr-title mono" data-glossary-key="board_confidence" role="button" tabindex="0">理事会評価・クラブ格</div>
         <div class="board-psr-main mono ${conf >= 60 ? 'accent-green' : (conf >= 35 ? 'accent-gold' : 'text-danger')}">${conf}%</div>
         <div class="board-psr-sub mono">今季目標順位: ${targetRank}位以内</div>
-        <div class="board-psr-sub mono glossary-inline-wrap">クラブ格(Rep): ${club.reputation || 4000}<button type="button" class="btn-glossary-inline mono" data-glossary-key="club_reputation" aria-label="クラブ格の解説">?</button></div>
+        <div class="board-psr-sub mono" data-glossary-key="club_reputation" role="button" tabindex="0">クラブ格(Rep): ${club.reputation || 4000}</div>
       </div>
     </div>
   `;

@@ -93,7 +93,8 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertIn('.finance-range-slider', self.css)
         self.assertIn('touch-action: none !important;', self.css)
         self.assertIn('--slider-pct', self.css)
-        self.assertIn('.btn-glossary-inline', self.css)
+        self.assertNotIn('btn-glossary-inline', self.css)
+        self.assertIn('[data-glossary-key]', self.css)
         self.assertIn('#facilities-subnav-bar', self.css)
         self.assertEqual(self.css.count('{'), self.css.count('}'))
 
@@ -108,18 +109,23 @@ class TestBudgetFinanceSystem(unittest.TestCase):
         self.assertEqual(emoji_re.findall(snippet), [])
 
     def test_6_glossary_system_implemented(self):
-        """信頼度・戦術浸透度・理事会評価などの用語ガイドが実装されていること"""
+        """信頼度・戦術浸透度・理事会評価などのタップ式用語解説とメタ表現排除を検証"""
         self.assertIn('const GM_GLOSSARY_DEFINITIONS', self.main_js)
         self.assertIn('function showGlossaryInfoPopup(key)', self.main_js)
         self.assertIn('function showGlossaryListPopup()', self.main_js)
         self.assertIn('id="btn-open-glossary-modal"', self.html)
+        self.assertNotIn('btn-glossary-inline', self.html)
+        self.assertNotIn('btn-glossary-inline', self.main_js)
         for key in ['manager_trust', 'tactical_penetration', 'tactical_familiarity', 'team_chemistry', 'board_confidence', 'club_reputation', 'psr']:
             self.assertIn(f"'{key}'", self.main_js)
             self.assertIn(f'data-glossary-key="{key}"', self.main_js)
         g_start = self.main_js.find('const GM_GLOSSARY_DEFINITIONS')
         g_end = self.main_js.find('function processSeasonEnd(', g_start)
+        g_block = self.main_js[g_start:g_end]
         emoji_re = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
-        self.assertEqual(emoji_re.findall(self.main_js[g_start:g_end]), [])
+        self.assertEqual(emoji_re.findall(g_block), [])
+        for meta in ['システムガイド', 'ゲーム内への効果', 'バフ', 'ペナルティ', 'ゴール生成倍率', 'キャリア終了', 'S級']:
+            self.assertNotIn(meta, g_block)
 
 
 if __name__ == '__main__':
