@@ -7576,6 +7576,7 @@ function handleGmDutyAction(actionKey) {
   if (actionKey === 'open-commercial-setup') {
     switchTab('facilities');
     switchFacilitiesSubtab('commercial');
+    if (typeof openCommercialSetupModal === 'function') openCommercialSetupModal();
     return;
   }
 
@@ -12847,23 +12848,9 @@ function renderFinanceBudgetPanel() {
         </div>
 
         <div class="finance-rebalance-grid finance-rebalance-stack">
-          <div class="finance-compare-grid">
-            <div class="finance-compare-col">
-              <span class="finance-compare-label">移籍予算</span>
-              <div class="finance-compare-val-row mono">
-                <strong class="accent-green" id="finance-preview-transfer">${formatMoney(summary.transferBudget)}</strong>
-                <span class="finance-delta-text hidden" id="finance-delta-transfer"></span>
-              </div>
-              <span class="finance-compare-sub mono">配分比率 <span id="finance-share-transfer">${initTSharePct}%</span></span>
-            </div>
-            <div class="finance-compare-col">
-              <span class="finance-compare-label">給与残枠（週給）</span>
-              <div class="finance-compare-val-row mono">
-                <strong class="${wageRemCls}" id="finance-preview-wage-rem">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</strong>
-                <span class="finance-delta-text hidden" id="finance-delta-wage"></span>
-              </div>
-              <span class="finance-compare-sub mono">上限 <span id="finance-preview-wage">${formatWage(summary.wageBudgetWeekly)}</span> · <span id="finance-share-wage">${initWSharePct}%</span></span>
-            </div>
+          <div class="finance-ratio-meta mono">
+            <span class="accent-green">移籍枠 <strong id="finance-share-transfer">${initTSharePct}%</strong></span>
+            <span class="text-muted">給与枠 <strong id="finance-share-wage">${initWSharePct}%</strong></span>
           </div>
 
           <div class="finance-ratio-bar" aria-label="配分バランス">
@@ -13133,15 +13120,21 @@ function renderFinanceBudgetPanel() {
         </div>
         <div class="finance-kpi-cell">
           <span class="finance-kpi-label">移籍予算</span>
-          <span class="finance-kpi-val mono ${transferCls}">${formatMoney(summary.transferBudget)}</span>
+          <div class="finance-kpi-val-row">
+            <span class="finance-kpi-val mono ${transferCls}" id="finance-preview-transfer">${formatMoney(summary.transferBudget)}</span>
+            <span class="finance-delta-text mono hidden" id="finance-delta-transfer"></span>
+          </div>
           <div class="finance-bar-track"><span class="finance-bar-fill is-green" style="width:${transferRatioPct}%"></span></div>
           <span class="finance-kpi-sub mono">売却還元 ${retentionPct}%（${escapeCommHtml(summary.retentionLabel)}）</span>
         </div>
         <div class="finance-kpi-cell">
           <span class="finance-kpi-label">給与残枠（週給）</span>
-          <span class="finance-kpi-val mono ${wageRemCls}">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</span>
-          <div class="finance-bar-track"><span class="finance-bar-fill ${summary.remainingWageWeekly < 0 ? 'is-danger' : 'is-gold'}" style="width:${wageUsageBarPct}%"></span></div>
-          <span class="finance-kpi-sub mono">使用 ${formatWage(summary.weeklyPayroll).replace('/週', '')} / ${formatWage(summary.wageBudgetWeekly)}（${summary.wageUsagePct}%）</span>
+          <div class="finance-kpi-val-row">
+            <span class="finance-kpi-val mono ${wageRemCls}" id="finance-preview-wage-rem">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</span>
+            <span class="finance-delta-text mono hidden" id="finance-delta-wage"></span>
+          </div>
+          <div class="finance-bar-track"><span class="finance-bar-fill ${summary.remainingWageWeekly < 0 ? 'is-danger' : 'is-green'}" style="width:${wageUsageBarPct}%"></span></div>
+          <span class="finance-kpi-sub mono">使用 ${formatWage(summary.weeklyPayroll).replace('/週', '')} / <span id="finance-preview-wage">${formatWage(summary.wageBudgetWeekly)}</span>（${summary.wageUsagePct}%）</span>
         </div>
       </div>
 
@@ -13196,7 +13189,7 @@ function renderFinanceBudgetPanel() {
     if (prevWageEl) prevWageEl.textContent = formatWage(nextWage);
     if (prevWageRemEl) {
       prevWageRemEl.textContent = `${remSignNext}${formatWage(nextRem)}`;
-      prevWageRemEl.className = nextRem < 0 ? 'text-danger' : (nextRem < 15 ? 'accent-gold' : 'accent-green');
+      prevWageRemEl.className = `finance-kpi-val mono ${nextRem < 0 ? 'text-danger' : (nextRem < 15 ? 'accent-gold' : 'accent-green')}`;
     }
     if (deltaTransferEl) {
       if (dTransfer === 0) {
@@ -17641,8 +17634,31 @@ function initGame() {
     });
   }
 
-  const commercialView = document.getElementById('facilities-subview-commercial');
+  const commercialSummaryTab = document.getElementById('facilities-subview-commercial');
+  if (commercialSummaryTab) {
+    commercialSummaryTab.addEventListener('click', (e) => {
+      const openBtn = e.target.closest('[data-open-commercial-modal]');
+      if (openBtn && typeof openCommercialSetupModal === 'function') {
+        openCommercialSetupModal();
+      }
+    });
+  }
+
+  const closeCommModalBtn = document.getElementById('btn-close-commercial-modal');
+  if (closeCommModalBtn) {
+    closeCommModalBtn.addEventListener('click', () => {
+      if (typeof closeCommercialSetupModal === 'function') closeCommercialSetupModal();
+    });
+  }
+
+  const commercialView = document.getElementById('commercial-setup-modal');
   if (commercialView) {
+    commercialView.addEventListener('click', (e) => {
+      if (e.target === commercialView && typeof closeCommercialSetupModal === 'function') {
+        closeCommercialSetupModal();
+        return;
+      }
+    });
     commercialView.addEventListener('click', (e) => {
       const subBtn = e.target.closest('[data-commercial-tab]');
       if (subBtn && subBtn.dataset.commercialTab) {
@@ -26600,6 +26616,9 @@ function confirmCommercialSetupTask() {
   }
   gameState.selectedStadiumPreviewId = targetStadiumId;
   gameState.pendingCommercialSetup = false;
+  if (typeof closeCommercialSetupModal === 'function') {
+    closeCommercialSetupModal();
+  }
   markAllViewsDirty();
 
   const proj = typeof calculateProjectedMatchdayCommercial === 'function'
@@ -26759,7 +26778,106 @@ function updateCommercialStadiumPreviewDom(stadiumId) {
   return true;
 }
 
+function openCommercialSetupModal() {
+  const modal = document.getElementById('commercial-setup-modal');
+  if (!modal) return;
+  renderCommercialManagementPanel();
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+}
+
+function closeCommercialSetupModal() {
+  const modal = document.getElementById('commercial-setup-modal');
+  if (modal) modal.classList.add('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(false);
+}
+
+function renderCommercialSummaryCard() {
+  const sumRoot = document.getElementById('commercial-summary-root');
+  if (!sumRoot) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (typeof ensureClubCommercialState === 'function') {
+    ensureClubCommercialState(playerClub);
+  }
+  const locked = isCommercialPlanLocked();
+  const proj = typeof calculateProjectedMatchdayCommercial === 'function'
+    ? calculateProjectedMatchdayCommercial(playerClub, { useDraft: !locked })
+    : null;
+  if (!proj) return;
+
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const thumbSvg = typeof getStadiumIllustrationSvg === 'function'
+    ? getStadiumIllustrationSvg(proj.stadium.id, playerClub, stadiumLv, true)
+    : '';
+  const netSign = proj.netMatchdayIncomeK >= 0 ? '+' : '';
+  const netCls = proj.netMatchdayIncomeK >= 0 ? 'accent-green' : 'text-danger';
+  const merchSign = proj.merchNetK >= 0 ? '+' : '';
+  const merchCls = proj.merchNetK >= 0 ? 'accent-green' : 'text-danger';
+
+  const zoneRowsHtml = (Array.isArray(proj.zoneResults) ? proj.zoneResults : []).map(z => `
+    <div class="comm-ov-zone-item">
+      <span class="comm-ov-zone-name">${escapeCommHtml(z.name || z.label || '')}</span>
+      <span class="comm-ov-zone-price mono">£${z.price}</span>
+    </div>
+  `).join('');
+
+  const enabledMerchNames = (Array.isArray(proj.merchResults) ? proj.merchResults : [])
+    .filter(m => m && m.enabled)
+    .map(m => m.name || m.label || '')
+    .filter(Boolean);
+  const merchNamesText = enabledMerchNames.length > 0 ? enabledMerchNames.join(' / ') : '展開品目なし';
+
+  const btnLabel = locked ? '設定内容を確認' : '興行計画を設定';
+  const btnCls = locked ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm';
+  const statusNote = locked ? '今季確定済' : 'シーズン開幕前に確定';
+
+  sumRoot.innerHTML = `
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">興行計画</h2>
+      </div>
+      <div class="comm-ov-head-actions">
+        <span class="comm-ov-status mono ${locked ? 'accent-green' : 'text-muted'}">${statusNote}</span>
+        <button type="button" class="${btnCls}" data-open-commercial-modal="true" id="btn-open-commercial-modal">${btnLabel}</button>
+      </div>
+    </div>
+    <div class="panel-body comm-ov-body">
+      <div class="comm-ov-stadium-row">
+        <div class="comm-ov-stadium-thumb">${thumbSvg}</div>
+        <div class="comm-ov-stadium-info">
+          <div class="comm-ov-stadium-name">${escapeCommHtml(proj.stadium.name)}</div>
+          <div class="comm-ov-stadium-meta mono">${proj.totalCapacity.toLocaleString()}席 · 予想来場 ${proj.totalAttendance.toLocaleString()}人（${proj.fillRatePct}%）</div>
+        </div>
+        <div class="comm-ov-stadium-net">
+          <span class="comm-ov-mini-label">1試合純収益</span>
+          <strong class="mono ${netCls}">${netSign}${formatMoney(proj.netMatchdayIncomeK)}</strong>
+        </div>
+      </div>
+
+      <div class="comm-ov-detail-grid">
+        <div class="comm-ov-detail-block">
+          <div class="comm-ov-block-head">
+            <span>チケット価格</span>
+            <span class="mono accent-green">+${formatMoney(proj.ticketRevenueK || 0)}/試合</span>
+          </div>
+          <div class="comm-ov-zones-grid">${zoneRowsHtml}</div>
+        </div>
+        <div class="comm-ov-detail-block">
+          <div class="comm-ov-block-head">
+            <span>グッズ展開（${proj.enabledMerchCount}品目）</span>
+            <span class="mono ${merchCls}">${merchSign}${formatMoney(proj.merchNetK)}/試合</span>
+          </div>
+          <div class="comm-ov-merch-list">${escapeCommHtml(merchNamesText)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderCommercialManagementPanel() {
+  renderCommercialSummaryCard();
   const root = document.getElementById('commercial-management-root');
   if (!root) return;
   const playerClub = getPlayerClub();

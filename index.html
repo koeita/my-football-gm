@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3940">
+  <link rel="stylesheet" href="style.css?v=20261119_3950">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1240,7 +1240,7 @@
         </div>
       </div>
 
-      <!-- サブタブ2：施設改修・興行管理（独立2パネル：施設改修＋興行計画） -->
+      <!-- サブタブ2：施設改修・興行管理（上段：施設改修3列横並び / 下段：興行計画サマリー＋設定モーダル） -->
       <div class="facilities-subview hidden" id="facilities-subview-commercial" role="tabpanel">
         <div id="commercial-facilities-section" class="panel commercial-facilities-panel">
           <div class="panel-header">
@@ -1255,14 +1255,14 @@
           </div>
           <div class="panel-body">
             <div class="facilities-grid" id="facilities-grid">
-              <!-- JSで3つの施設カードを描画 -->
+              <!-- JSで3つの施設カードを3列横並び描画 -->
             </div>
           </div>
         </div>
 
         <div class="panel" style="margin-top: 14px;">
-          <div id="commercial-management-root">
-            <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+          <div id="commercial-summary-root">
+            <!-- JSで確定済み/設定中のスタジアム・チケット・グッズ一覧と設定モーダル起動ボタンを描画 -->
           </div>
         </div>
       </div>
@@ -1823,6 +1823,21 @@
     </div>
   </div>
 
+  <!-- 興行計画設定モーダル（スタジアム・チケット・グッズ） -->
+  <div id="commercial-setup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="commercial-modal-title">
+    <div class="modal-card commercial-setup-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <h2 class="info-popup-title" id="commercial-modal-title">興行計画（スタジアム・チケット・グッズ）</h2>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-close-commercial-modal">閉じる</button>
+      </div>
+      <div class="commercial-modal-body" id="commercial-management-root">
+        <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+      </div>
+    </div>
+  </div>
+
   <!-- 担当秘書変更モーダル -->
   <div id="secretary-select-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="secretary-modal-title">
     <div class="modal-card" style="max-width: 560px;">
@@ -2142,6 +2157,6 @@
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3940"></script>
+  <script src="main.js?v=20261119_3951"></script>
 </body>
 </html>

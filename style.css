@@ -26522,7 +26522,7 @@ button.hof-record-name {
 }
 
 .finance-ratio-seg.is-transfer { background: #2ecc71; }
-.finance-ratio-seg.is-wage { background: #f1c40f; }
+.finance-ratio-seg.is-wage { background: #5c6f82; }
 .finance-ratio-seg.is-danger { background: #e74c3c; }
 
 .finance-rebalance-slider-box {
@@ -26837,23 +26837,232 @@ button.hof-record-name {
   }
 }
 
-.commercial-section-banner-head {
+.finance-kpi-val-row {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 14px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.commercial-section-banner-title {
-  font-size: 13px;
+.finance-ratio-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+}
+
+.comm-ov-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comm-ov-status {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.comm-ov-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comm-ov-stadium-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.comm-ov-stadium-thumb {
+  width: 64px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.comm-ov-stadium-thumb svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.comm-ov-stadium-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comm-ov-stadium-name {
+  font-size: 13.5px;
   font-weight: 700;
   color: #f1f5f9;
 }
 
-.commercial-section-banner-note {
+.comm-ov-stadium-meta {
   font-size: 11px;
   color: #8b949e;
+  margin-top: 2px;
+}
+
+.comm-ov-stadium-net {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.comm-ov-mini-label {
+  font-size: 10px;
+  color: #8b949e;
   white-space: nowrap;
+}
+
+.comm-ov-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.comm-ov-detail-block {
+  min-width: 0;
+}
+
+.comm-ov-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11.5px;
+  color: #8b949e;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 6px;
+}
+
+.comm-ov-zones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
+.comm-ov-zone-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11.5px;
+  gap: 4px;
+}
+
+.comm-ov-zone-name {
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comm-ov-zone-price {
+  color: #f1f5f9;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.comm-ov-merch-list {
+  font-size: 11.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.commercial-setup-modal-card {
+  max-width: 780px;
+  width: calc(100% - 20px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.commercial-modal-body {
+  overflow-y: auto;
+  padding: 0;
+  flex: 1 1 auto;
+}
+
+/* 施設改修カードをPC・モバイル共通で3列横並びに統一 */
+.facilities-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+@media (max-width: 768px) {
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column:not(.sheet-open) {
+    box-shadow: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column.sheet-open {
+    visibility: visible !important;
+    pointer-events: auto !important;
+    box-shadow: -6px 0 18px rgba(0, 0, 0, 0.55) !important;
+  }
+  .facilities-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .facilities-grid .facility-card {
+    padding: 8px 4px !important;
+    gap: 8px !important;
+    min-width: 0;
+  }
+  .facilities-grid .facility-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .facilities-grid .facility-name {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+    margin-top: 0;
+  }
+  .facilities-grid .btn-facility-info {
+    display: none;
+  }
+  .facilities-grid .facility-lv-badge {
+    font-size: 10px !important;
+  }
+  .facilities-grid .facility-pips-row {
+    gap: 2px !important;
+  }
+  .facilities-grid .facility-pip {
+    height: 3px !important;
+  }
+  .facilities-grid .facility-metric-row {
+    flex-direction: column;
+    gap: 4px !important;
+  }
+  .facilities-grid .metric-caption {
+    font-size: 9px !important;
+  }
+  .facilities-grid .facility-effect-badge,
+  .facilities-grid .facility-cost-badge {
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+  }
+  .facilities-grid .btn-upgrade-facility {
+    width: 100%;
+    padding: 5px 3px !important;
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .comm-ov-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .comm-ov-stadium-row {
+    flex-wrap: wrap;
+  }
 }
