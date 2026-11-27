@@ -2075,7 +2075,7 @@ function renderEuroLeaguePhaseStandingsHtml(compKey) {
       zoneClass = 'zone-rel zone-eliminated';
     }
 
-    const isPlayer = playerClub && c.id === playerClub.id;
+    const isPlayer = Boolean((playerClub && c.id === playerClub.id) || c.isPlayer);
     const rowClass = [isPlayer ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
 
     html += `
@@ -2124,7 +2124,9 @@ function renderEuroScheduleListHtml(compKey) {
     `;
 
     roundMatches.forEach(m => {
-      const isMyMatch = playerClub && (m.homeId === playerClub.id || m.awayId === playerClub.id);
+      const isHomePlayer = Boolean(playerClub && m.homeId === playerClub.id) || Boolean(m.homeClub && m.homeClub.isPlayer);
+      const isAwayPlayer = Boolean(playerClub && m.awayId === playerClub.id) || Boolean(m.awayClub && m.awayClub.isPlayer);
+      const isMyMatch = isHomePlayer || isAwayPlayer;
       const homeEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.homeClub, 16) : '';
       const awayEmblem = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(m.awayClub, 16) : '';
       const scoreText = m.played ? `${m.homeScore} - ${m.awayScore}` : 'VS';
@@ -2134,13 +2136,13 @@ function renderEuroScheduleListHtml(compKey) {
       const awayCode = typeof getClubShortCode === 'function' ? getClubShortCode(m.awayClub) : ((m.awayClub && m.awayClub.shortName) || 'AWY');
 
       html += `
-        <div class="euro-match-tile ${isMyMatch ? 'my-match' : ''} ${m.played ? 'played' : ''}">
-          <div class="euro-tile-team home">
+        <div class="euro-match-tile ${isMyMatch ? 'my-match is-player-match' : ''} ${m.played ? 'played' : ''}">
+          <div class="euro-tile-team home ${isHomePlayer ? 'is-player-team' : ''}">
             ${homeEmblem}
             <span class="mono">${homeCode}</span>
           </div>
           <span class="euro-tile-score mono ${m.played ? 'score-played' : ''}">${scoreText}</span>
-          <div class="euro-tile-team away">
+          <div class="euro-tile-team away ${isAwayPlayer ? 'is-player-team' : ''}">
             ${awayEmblem}
             <span class="mono">${awayCode}</span>
           </div>
@@ -2159,6 +2161,7 @@ function renderCupBracketHtml(compKey) {
   const comp = gameState.competitions && gameState.competitions[compKey];
   if (!comp || !comp.rounds) return '<p class="empty-state">大会データがありません</p>';
 
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : (gameState.clubs && gameState.clubs.find(c => c.isPlayer));
   const isEuroComp = (compKey === 'championsCup' || compKey === 'europaCup' || compKey === 'conferenceCup');
   const roundNames = isEuroComp
     ? {
@@ -2209,17 +2212,24 @@ function renderCupBracketHtml(compKey) {
         const awayScoreText = m.played ? `${m.awayScore}${m.pkAway != null ? `(${m.pkAway})` : ''}` : '-';
         const homeWinner = m.played && m.winnerId === m.homeId ? 'match-winner' : '';
         const awayWinner = m.played && m.winnerId === m.awayId ? 'match-winner' : '';
+        const isHomePlayer = Boolean(
+          playerClub && (m.homeId === playerClub.id || (m.homeClub && m.homeClub.id === playerClub.id))
+        ) || Boolean(m.homeClub && m.homeClub.isPlayer);
+        const isAwayPlayer = Boolean(
+          playerClub && (m.awayId === playerClub.id || (m.awayClub && m.awayClub.id === playerClub.id))
+        ) || Boolean(m.awayClub && m.awayClub.isPlayer);
+        const isMyMatch = isHomePlayer || isAwayPlayer;
 
         html += `
-          <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'}">
-            <div class="bracket-team-row ${homeWinner}">
+          <div class="bracket-match-card ${m.played ? 'played' : 'upcoming'} ${isMyMatch ? 'is-player-match' : ''}">
+            <div class="bracket-team-row ${homeWinner} ${isHomePlayer ? 'is-player-team' : ''}">
               <div class="bracket-team-info">
                 ${homeEmblem}
                 <span class="bracket-team-name">${m.homeClub ? m.homeClub.name : 'TBD'}</span>
               </div>
               <span class="bracket-team-score mono">${homeScoreText}</span>
             </div>
-            <div class="bracket-team-row ${awayWinner}">
+            <div class="bracket-team-row ${awayWinner} ${isAwayPlayer ? 'is-player-team' : ''}">
               <div class="bracket-team-info">
                 ${awayEmblem}
                 <span class="bracket-team-name">${m.awayClub ? m.awayClub.name : 'TBD'}</span>

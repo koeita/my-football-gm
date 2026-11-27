@@ -171,6 +171,52 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         self.assertIn('--radius-md:', root_match.group(0))
         self.assertIn('--radius-sm:', root_match.group(0))
 
+    def test_6_cup_highlight_offseason_tab_and_best_gk_consistency(self):
+        """カップ戦自チームハイライト・新シーズン本部タブ遷移・最優秀GKとベスト11GKの一致を検証"""
+        # 1. カップ戦ブラケット・欧州順位表・欧州日程の自チームハイライト
+        bracket_fn = re.search(r'function renderCupBracketHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(bracket_fn)
+        self.assertIn('is-player-match', bracket_fn.group(0))
+        self.assertIn('is-player-team', bracket_fn.group(0))
+
+        euro_standings_fn = re.search(r'function renderEuroLeaguePhaseStandingsHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(euro_standings_fn)
+        self.assertIn('row-player-club', euro_standings_fn.group(0))
+        self.assertIn('c.isPlayer', euro_standings_fn.group(0))
+
+        euro_sched_fn = re.search(r'function renderEuroScheduleListHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(euro_sched_fn)
+        self.assertIn('is-player-match', euro_sched_fn.group(0))
+        self.assertIn('is-player-team', euro_sched_fn.group(0))
+
+        for css_sel in [
+            '.bracket-match-card.is-player-match',
+            '.bracket-team-row.is-player-team',
+            '.euro-tile-team.is-player-team',
+        ]:
+            self.assertIn(css_sel, self.css)
+
+        # 2. シーズン終了・新シーズン移行時に移籍タブではなく本部タブへ遷移すること
+        proc_start = self.main_js.index('function processSeasonEnd(')
+        proc_end = self.main_js.index('function calculatePlayerDemandSalary(', proc_start)
+        proc_block = self.main_js[proc_start:proc_end]
+        self.assertIn("switchTab('office')", proc_block)
+        self.assertNotIn("switchTab('market')", proc_block)
+
+        next_start = self.main_js.index('function startNextSeason(')
+        next_end = self.main_js.index('function switchTab(', next_start)
+        next_block = self.main_js[next_start:next_end]
+        self.assertIn("switchTab('office')", next_block)
+        self.assertNotIn("switchTab('market')", next_block)
+
+        # 3. 最優秀GKと年間ベストイレブンGKの選出基準一致
+        awards_eval_start = self.main_js.index('function evaluateAndRecordSeasonAwards(')
+        awards_eval_end = self.main_js.index('function buildBestElevenPitchHtml(', awards_eval_start)
+        awards_eval_block = self.main_js[awards_eval_start:awards_eval_end]
+        self.assertIn('gkPoolMin10', awards_eval_block)
+        self.assertIn('b.mvpScore - a.mvpScore', awards_eval_block)
+        self.assertIn("slot.slotPos === 'GK' && bestGkItem", awards_eval_block)
+
 
 if __name__ == '__main__':
     unittest.main()
