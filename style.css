@@ -12186,12 +12186,12 @@ button.hidden,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
-  max-height: 280px;
+  max-height: 360px;
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  padding: 4px 2px;
+  padding: 4px 2px 12px;
 }
 
 .empty-reserve-slot {
@@ -12431,14 +12431,17 @@ button.hidden,
     box-sizing: border-box !important;
   }
 
-  /* 控え・ベンチ外右スライドサイドドロワー（前面 z-index: 1300 に右からスライドイン） */
+  /* 控え・ベンチ外右スライドサイドドロワー（前面 z-index: 1300 に右から画面縦いっぱいでスライドイン） */
   body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column {
     position: fixed !important;
     top: 0 !important;
     right: 0 !important;
-    bottom: var(--tab-nav-total-h) !important;
+    bottom: 0 !important;
     width: 275px !important;
     max-width: 76vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
     z-index: 1300 !important;
     background: #161b22 !important;
     background-color: #161b22 !important;
@@ -12448,7 +12451,7 @@ button.hidden,
     border-right: none !important;
     border-radius: 0 !important;
     box-shadow: -8px 0 30px rgba(0, 0, 0, 0.85) !important;
-    padding: calc(var(--safe-top) + 8px) 8px 8px 8px !important;
+    padding: calc(var(--safe-top) + 8px) 8px calc(var(--safe-bottom) + 10px) 8px !important;
     margin: 0 !important;
     display: flex !important;
     flex-direction: column !important;
@@ -12548,7 +12551,7 @@ button.hidden,
     overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-y !important;
-    padding: 4px 2px 12px 2px !important;
+    padding: 4px 2px 20px 2px !important;
     box-sizing: border-box !important;
     align-content: start !important;
   }
@@ -12692,7 +12695,7 @@ button.hidden,
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 5px !important;
-    padding: 4px 2px 12px 2px !important;
+    padding: 4px 2px 20px 2px !important;
     flex: 1 1 0% !important;
     min-height: 0 !important;
     max-height: 100% !important;

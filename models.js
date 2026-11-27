@@ -1773,12 +1773,14 @@ function createYouthPlayer(pos, usedNames, forcedNationality = null) {
     nationality,
     isHomegrown: true,
     isYouthGraduate: true,
+    promotedFromYouth: false,
     avatarData: typeof generateAvatarData === 'function' ? generateAvatarData(nationality, age) : null,
     preferredFoot,
     height,
     squadNumber: null,
     traits,
-    careerStats: { appearances: 0, goals: 0 },
+    careerStats: { appearances: 0, goals: 0, assists: 0 },
+    seasonHistory: [],
     attributes: getPlayerFiveAttributes({ primaryPosition: pos, atk, def, sta, traits }),
     assignedPos: null,
     slotIndex: null,
@@ -2353,6 +2355,12 @@ function generateYouthAcademyCandidates() {
     const curve = youthCurves[randInt(0, youthCurves.length - 1)];
     const basePower = clamp(randInt(60, 68) + facilityBonus, 59, 73);
     const prospect = createPlayer(pos, basePower, false, usedNames, [16, 18], curve);
+    prospect.isYouth = true;
+    prospect.isYouthGraduate = true;
+    prospect.isHomegrown = true;
+    prospect.promotedFromYouth = false;
+    prospect.seasonHistory = [];
+    prospect.careerStats = { appearances: 0, goals: 0, assists: 0 };
     prospect.salary = 800; // 最低年俸 £800K
     prospect.wage = Math.max(10, Math.round(prospect.salary / 52));
     prospect.contractYears = 4;
@@ -2598,6 +2606,36 @@ function ensureValidSquadAndStarters(club, noticeLogs = null) {
 }
 
 /**
+ * ユース昇格選手のキャリア経歴・スタッツ基準値を初期化（前年以前の架空トップ実績を付与しない）
+ */
+function initPromotedYouthCareerFields(player, clubName, seasonOffset = null) {
+  if (!player) return player;
+  const baseSeason = (typeof gameState !== 'undefined' && gameState.season) ? gameState.season : 1;
+  const resolvedOffset = (typeof seasonOffset === 'number')
+    ? seasonOffset
+    : ((typeof gameState !== 'undefined' && gameState.isSeasonOver) ? 1 : 0);
+  const promoSeason = Math.max(1, baseSeason + resolvedOffset);
+  player.isYouth = false;
+  player.isYouthGraduate = true;
+  player.isHomegrown = true;
+  player.promotedFromYouth = true;
+  player.youthPromotedSeason = promoSeason;
+  player.youthPromotedYear = 2025 + promoSeason;
+  player.youthPromotedAge = player.age || 18;
+  if (clubName) {
+    player.lastClubName = clubName;
+  }
+  player.seasonHistory = [];
+  player.valueHistory = null;
+  player.appearances = 0;
+  player.goals = 0;
+  player.assists = 0;
+  player.totalRating = 0;
+  player.careerStats = { appearances: 0, goals: 0, assists: 0 };
+  return player;
+}
+
+/**
  * オフシーズンにCPUクラブのスカッド人数・GK最低枠・U-21世代交代を自前アカデミー昇格で維持する
  */
 function replenishCpuSquadOffseason(club, usedNames = null) {
@@ -2623,13 +2661,13 @@ function replenishCpuSquadOffseason(club, usedNames = null) {
     const targetOvr = clamp(baseTierOvr + randInt(-4, 4), isD2 ? 53 : 58, isD2 ? 68 : 77);
     const p = createPlayer(pos, targetOvr + 2, false, nameSet, ageRange);
     p.clubId = club.id;
-    p.isYouthGraduate = true;
     p.isFreeAgent = false;
     p.contractYears = randInt(3, 5);
     p.wage = calculatePlayerWage(p.pos, p.atk, p.def, p.sta, p.age);
     p.salary = p.wage * 52;
     p.isStarter = false;
     p.isBench = false;
+    initPromotedYouthCareerFields(p, club.name, 1);
     if (typeof ensurePlayerHistoryAndCareer === 'function') {
       ensurePlayerHistoryAndCareer(p, club.name);
     }
@@ -4559,6 +4597,9 @@ function createYouthScoutProspect(regionDef, targetRole = 'ANY') {
   prospect.age = randInt(15, 18);
   prospect.isHomegrown = (nat === 'England');
   prospect.isYouthGraduate = true;
+  prospect.promotedFromYouth = false;
+  prospect.seasonHistory = [];
+  prospect.careerStats = { appearances: 0, goals: 0, assists: 0 };
 
   // スカウト網・練習施設Lvと地域ボーナスを反映した能力＆ポテンシャル再評価
   const boost = Math.floor((sLv - 1) * 1.1 + (tLv - 1) * 0.6 + (regionDef.potentialBonus || 0) * 0.6);
@@ -4751,15 +4792,14 @@ function promoteYouthScoutReportDirectly(playerId) {
 
   const [prospect] = gameState.youthScoutReports.splice(idx, 1);
   const usedNums = new Set((playerClub.players || []).map(p => p.squadNumber).filter(n => typeof n === 'number'));
-  prospect.isYouth = false;
-  prospect.isYouthGraduate = true;
-  prospect.isHomegrown = true;
+  initPromotedYouthCareerFields(prospect, playerClub.name);
   prospect.wage = 15;
   prospect.salary = 780;
   prospect.contractYears = 4;
   prospect.squadNumber = typeof pickAvailableSquadNumber === 'function' ? pickAvailableSquadNumber(prospect.pos, usedNums) : 45;
   prospect.squadStatus = 'prospect';
   prospect.transferFee = calculateTransferFee(prospect);
+  if (typeof initPlayerClubHofBaseline === 'function') initPlayerClubHofBaseline(prospect, true);
   playerClub.players.push(prospect);
   if (typeof ensureValidSquadAndStarters === 'function') ensureValidSquadAndStarters(playerClub);
   if (typeof addDailyLog === 'function') {

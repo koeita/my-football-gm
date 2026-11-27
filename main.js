@@ -6960,9 +6960,16 @@ function promoteYouthPlayer(youthId) {
 
   playerClub.funds -= SIGN_FEE;
   const youth = playerClub.youthSquad.splice(idx, 1)[0];
-  youth.isYouth = false;
-  youth.isYouthGraduate = true;
-  youth.isHomegrown = true;
+  if (typeof initPromotedYouthCareerFields === 'function') {
+    initPromotedYouthCareerFields(youth, playerClub.name);
+  } else {
+    youth.isYouth = false;
+    youth.isYouthGraduate = true;
+    youth.isHomegrown = true;
+    youth.promotedFromYouth = true;
+    youth.seasonHistory = [];
+    youth.careerStats = { appearances: 0, goals: 0, assists: 0 };
+  }
   youth.isStarter = false;
   youth.assignedPos = null;
   youth.slotIndex = null;
@@ -7192,9 +7199,16 @@ function promoteYouthCandidate(candidateId) {
   if (idx === -1) return;
 
   const prospect = gameState.youthCandidates[idx];
-  prospect.isYouth = false;
-  prospect.isYouthGraduate = true;
-  prospect.isHomegrown = true;
+  if (typeof initPromotedYouthCareerFields === 'function') {
+    initPromotedYouthCareerFields(prospect, playerClub.name);
+  } else {
+    prospect.isYouth = false;
+    prospect.isYouthGraduate = true;
+    prospect.isHomegrown = true;
+    prospect.promotedFromYouth = true;
+    prospect.seasonHistory = [];
+    prospect.careerStats = { appearances: 0, goals: 0, assists: 0 };
+  }
   prospect.isStarter = false;
   prospect.isBench = false;
   prospect.assignedPos = null;
@@ -8114,7 +8128,13 @@ function startNextSeason() {
         gameState.season = savedSeason;
         p.age = savedAge;
       }
-      if (!p.seasonHistory.some(r => r && r.seasonYear === prevYearStr)) {
+      const promotedAfterPrevSeason = Boolean(
+        (p.promotedFromYouth || p.isYouthGraduate) &&
+        typeof p.youthPromotedSeason === 'number' &&
+        p.youthPromotedSeason > prevSeasonNum &&
+        (p.appearances || 0) === 0
+      );
+      if (!promotedAfterPrevSeason && !p.seasonHistory.some(r => r && r.seasonYear === prevYearStr)) {
         const joinedOffseason = p._joinedInOffseasonOfSeason === prevSeasonNum;
         const histClubName = joinedOffseason ? (p.lastClubName || club.name) : club.name;
         const prevAvg = p.appearances > 0 ? (p.totalRating / p.appearances).toFixed(2) : '-';
@@ -12850,6 +12870,8 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
 
   const isFreeAgentClubStr = (str) => !str || str.includes('無所属') || str.includes('Free Agent') || str === '現所属クラブ' || str === 'クラブ';
   const isCurrentlyFreeAgent = Boolean(p.isFreeAgent || isFreeAgentClubStr(currentClubName));
+  const isYouthSquadMember = Boolean(p.isYouth);
+  const isYouthOrigin = Boolean(isYouthSquadMember || p.promotedFromYouth || p.isYouthGraduate);
 
   // 選手IDおよび名前から決定論的ハッシュ値を算出
   const seedStr = `${p.id || 'p'}_${p.name || 'player'}`;
@@ -12868,21 +12890,58 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
   const baseOvr = getPlayerOverallRating(p);
   const primaryPos = p.primaryPosition || p.preferredPosition || p.pos || 'CM';
 
-  // 無所属または前所属情報が欠損・不正な場合は実在風の架空前所属クラブを決定論的に割り当てる
+  // ユース在籍中・ユース昇格選手の前年以前（捏造）トップチーム実績を排除・修復
+  if (isYouthSquadMember) {
+    p.seasonHistory = [];
+    p.careerStats = { appearances: 0, goals: 0, assists: 0 };
+    if (!isFreeAgentClubStr(currentClubName)) {
+      p.lastClubName = currentClubName;
+    }
+  } else if (isYouthOrigin && Array.isArray(p.seasonHistory) && p.seasonHistory.length > 0) {
+    const minValidYear = typeof p.youthPromotedYear === 'number' ? p.youthPromotedYear : 2026;
+    const cleanedHist = p.seasonHistory.filter(r => {
+      if (!r || isFreeAgentClubStr(r.clubName)) return false;
+      const yrNum = parseInt(String(r.seasonYear || '').slice(0, 4), 10);
+      if (Number.isNaN(yrNum) || yrNum < minValidYear) return false;
+      // 昇格年記録がない旧データ等で自動捏造された行（momCount/cleanSheets欠落）が残っていた場合は除外
+      if (typeof p.youthPromotedYear !== 'number' && typeof r.momCount !== 'number' && typeof r.cleanSheets !== 'number') {
+        return false;
+      }
+      return true;
+    });
+    if (cleanedHist.length !== p.seasonHistory.length) {
+      p.seasonHistory = cleanedHist;
+      p.valueHistory = null;
+      const validPastApps = cleanedHist.reduce((sum, r) => sum + (r.appearances || 0), 0);
+      const validPastGoals = cleanedHist.reduce((sum, r) => sum + (r.goals || 0), 0);
+      const validPastAssists = cleanedHist.reduce((sum, r) => sum + (r.assists || 0), 0);
+      p.careerStats = {
+        appearances: validPastApps + (p.appearances || 0),
+        goals: validPastGoals + (p.goals || 0),
+        assists: validPastAssists + (p.assists || 0)
+      };
+    }
+  }
+
+  // 無所属または前所属情報が欠損・不正な場合は実在風の架空前所属クラブを決定論的に割り当てる（ユース出身は現所属を優先）
   if (isFreeAgentClubStr(p.lastClubName)) {
-    p.lastClubName = typeof pickFormerClubForPlayer === 'function'
-      ? pickFormerClubForPlayer(p, 0, isCurrentlyFreeAgent ? null : currentClubName)
-      : 'ノース・ロンドンFC';
+    if (isYouthOrigin && !isCurrentlyFreeAgent && !isFreeAgentClubStr(currentClubName)) {
+      p.lastClubName = currentClubName;
+    } else {
+      p.lastClubName = typeof pickFormerClubForPlayer === 'function'
+        ? pickFormerClubForPlayer(p, 0, isCurrentlyFreeAgent ? null : currentClubName)
+        : 'ノース・ロンドンFC';
+    }
   }
 
   const pastMainClubName = (isCurrentlyFreeAgent || p.signedFromFreeAgent)
     ? p.lastClubName
     : currentClubName;
 
-  // 過去シーズン数の算出（原則18歳デビューだが、18-19歳の高OVR早熟スターは16-17歳デビュー扱い）
+  // 過去シーズン数の算出（ユース在籍・ユース出身新規昇格はトップチーム前年実績を作らない）
   const curPWeightAge = p.age || 18;
   const debutBaseAge = (curPWeightAge <= 19 && baseOvr >= 80) ? (baseOvr >= 84 ? 16 : 17) : 18;
-  const pastSeasonsCount = Math.max(0, curPWeightAge - debutBaseAge);
+  const pastSeasonsCount = isYouthOrigin ? 0 : Math.max(0, curPWeightAge - debutBaseAge);
 
   const needsHistoryRebuild = !Array.isArray(p.seasonHistory) || p.seasonHistory.some(r => !r || isFreeAgentClubStr(r.clubName));
   if (needsHistoryRebuild) {
@@ -12890,7 +12949,16 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     if (Array.isArray(p.seasonHistory)) {
       p.valueHistory = null;
     }
-
+    if (isYouthOrigin) {
+      p.seasonHistory = [];
+      p.careerStats = {
+        appearances: p.appearances || 0,
+        goals: p.goals || 0,
+        assists: p.assists || 0
+      };
+      p._formerClubName = null;
+      p._transferYear = null;
+    } else {
     const history = [];
     const hadCareerStats = Boolean(p.careerStats && typeof p.careerStats.goals === 'number');
     const careerApps = p.careerStats ? Math.max(p.appearances || 0, p.careerStats.appearances || 0) : (p.appearances || 0);
@@ -13230,20 +13298,27 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     p._transferYear = hasTransferred
       ? (effectiveBaseYear - Math.max(1, Math.floor(pastSeasonsCount / clubTimeline.length)))
       : null;
+    }
   }
 
   // 経歴タイムラインイベントの生成（p.seasonHistory の所属クラブ変遷と完全一致させる）
   const histArr = Array.isArray(p.seasonHistory) ? p.seasonHistory : [];
   const firstHist = histArr.length > 0 ? histArr[0] : null;
   const firstHistYear = (firstHist && firstHist.seasonYear) ? parseInt(String(firstHist.seasonYear).slice(0, 4), 10) : null;
-  const firstHistAge = (firstHist && typeof firstHist.age === 'number') ? firstHist.age : 18;
-  const debutAgeForEvent = Math.min(18, firstHistAge);
-  const debutYear = !Number.isNaN(firstHistYear) && firstHistYear ? firstHistYear : (birthYear + debutAgeForEvent);
+  const firstHistAge = (firstHist && typeof firstHist.age === 'number') ? firstHist.age : (p.age || 18);
+  const debutAgeForEvent = isYouthOrigin
+    ? (typeof p.youthPromotedAge === 'number' ? p.youthPromotedAge : (firstHist ? firstHistAge : (p.age || 18)))
+    : Math.min(18, firstHistAge);
+  const debutYear = isYouthOrigin
+    ? (typeof p.youthPromotedYear === 'number' ? p.youthPromotedYear : (firstHistYear && !Number.isNaN(firstHistYear) ? firstHistYear : curBaseYear))
+    : (!Number.isNaN(firstHistYear) && firstHistYear ? firstHistYear : (birthYear + debutAgeForEvent));
   const youthYear = Math.min(birthYear + 15, debutYear - 1);
 
   const validFirstHistClub = (firstHist && !isFreeAgentClubStr(firstHist.clubName)) ? firstHist.clubName : null;
   const validFormerClub = !isFreeAgentClubStr(p._formerClubName) ? p._formerClubName : null;
-  const originClub = validFirstHistClub || validFormerClub || pastMainClubName;
+  const originClub = (isYouthOrigin && !isCurrentlyFreeAgent && !isFreeAgentClubStr(currentClubName))
+    ? (validFirstHistClub || currentClubName)
+    : (validFirstHistClub || validFormerClub || pastMainClubName);
 
   const careerEvents = [
     {
@@ -13254,7 +13329,23 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
     }
   ];
 
-  if ((p.age || 18) >= debutAgeForEvent) {
+  const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
+  if (isYouthSquadMember) {
+    careerEvents.push({
+      year: `${curSeasonStr} (現在)`,
+      badge: 'CURRENT',
+      title: `${originClub} U-21 ユース所属（OVR ${baseOvr}）`,
+      desc: '育成組織（U-21）でトップチーム昇格を目指してトレーニングを積んでいる。'
+    });
+    return {
+      seasonHistory: p.seasonHistory,
+      careerEvents,
+      birthYear,
+      curSeasonStr
+    };
+  }
+
+  if ((p.age || 18) >= debutAgeForEvent || isYouthOrigin) {
     careerEvents.push({
       year: `${debutYear}年`,
       badge: 'DEBUT',
@@ -13299,7 +13390,7 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
         desc: descText
       });
     });
-  } else if ((p.age || 18) >= 21) {
+  } else if ((p.age || 18) >= 21 && (!isYouthOrigin || histArr.length >= 2)) {
     careerEvents.push({
       year: `${debutYear + 2}年`,
       badge: 'SQUAD',
@@ -13331,7 +13422,6 @@ function ensurePlayerHistoryAndCareer(p, currentClubName) {
   }
 
   // 現在のステータス
-  const curSeasonStr = `${curBaseYear}-${String((curBaseYear + 1) % 100).padStart(2, '0')}`;
   const curAssists = typeof p.assists === 'number' ? p.assists : 0;
   if (isCurrentlyFreeAgent) {
     careerEvents.push({
@@ -13416,9 +13506,10 @@ function ensurePlayerValueHistory(p, currentClubName) {
     });
   }
 
-  // 2. 若手選手（過去シーズンが少ない場合）でも現在年齢より若い範囲で推移を自然に補完
+  // 2. 若手選手・ユース昇格直後選手でも不自然な過去トップ実績を持たせず推移を自然に補完
+  const isYouthOriginVal = Boolean(p.isYouth || p.promotedFromYouth || p.isYouthGraduate);
   if (vHistory.length === 0) {
-    if (currentAge >= 18) {
+    if (!isYouthOriginVal && currentAge >= 18) {
       const debutAge = currentAge - 2;
       const debutOvr = Math.max(50, currentOvr - 4);
       const debutVal = calculateMarketValueFromOvrAndAge(debutOvr, debutAge, 3, { careerApps: 8, pos: posVal });
