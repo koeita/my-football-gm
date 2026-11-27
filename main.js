@@ -13222,7 +13222,49 @@ function renderFinanceBudgetPanel() {
   };
 
   if (sliderEl) {
+    let activePointerId = null;
+    const applySliderFromClientX = (clientX) => {
+      if (sliderEl.disabled) return;
+      const rect = sliderEl.getBoundingClientRect();
+      if (!rect || rect.width <= 0) return;
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const rawTarget = summary.minTransferBudget + (summary.maxTransferBudget - summary.minTransferBudget) * ratio;
+      const stepDiff = Math.round((rawTarget - summary.transferBudget) / step);
+      const snapped = Math.max(summary.minTransferBudget, Math.min(summary.maxTransferBudget, summary.transferBudget + stepDiff * step));
+      sliderEl.value = snapped;
+      updatePreview(snapped);
+    };
+    const onWinPointerMove = (ev) => {
+      if (activePointerId === null || ev.pointerId !== activePointerId) return;
+      if (ev.cancelable) ev.preventDefault();
+      applySliderFromClientX(ev.clientX);
+    };
+    const onWinPointerEnd = (ev) => {
+      if (activePointerId === null || ev.pointerId !== activePointerId) return;
+      activePointerId = null;
+      window.removeEventListener('pointermove', onWinPointerMove);
+      window.removeEventListener('pointerup', onWinPointerEnd);
+      window.removeEventListener('pointercancel', onWinPointerEnd);
+      try {
+        if (sliderEl.hasPointerCapture && sliderEl.hasPointerCapture(ev.pointerId)) {
+          sliderEl.releasePointerCapture(ev.pointerId);
+        }
+      } catch (_) {}
+    };
+    sliderEl.addEventListener('pointerdown', (e) => {
+      if (sliderEl.disabled) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.cancelable) e.preventDefault();
+      activePointerId = e.pointerId;
+      try { sliderEl.focus({ preventScroll: true }); } catch (_) {}
+      try { sliderEl.setPointerCapture(e.pointerId); } catch (_) {}
+      window.addEventListener('pointermove', onWinPointerMove, { passive: false });
+      window.addEventListener('pointerup', onWinPointerEnd);
+      window.addEventListener('pointercancel', onWinPointerEnd);
+      applySliderFromClientX(e.clientX);
+    });
     sliderEl.addEventListener('input', (e) => updatePreview(e.target.value));
+    sliderEl.addEventListener('change', (e) => updatePreview(e.target.value));
   }
   root.querySelectorAll('[data-budget-preset]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -16976,15 +17018,21 @@ function initGame() {
 
   document.addEventListener('touchstart', (e) => {
     if (!tacticalSideColumn) return;
+    if (e.target && e.target.closest && e.target.closest('input, select, textarea')) {
+      isEdgeSwipePotential = false;
+      isDrawerSwipePotential = false;
+      return;
+    }
     const touch = e.touches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
     const winWidth = window.innerWidth;
     const isOpen = tacticalSideColumn.classList.contains('sheet-open');
+    const isRosterBoard = document.body.dataset.activeTab === 'roster' && document.body.dataset.rosterSubtab === 'board';
 
     if (!isOpen) {
-      // 閉じてる時：画面右端付近（右から70px以内）またはタブ上でのタッチでエッジスワイプスタンバイ
-      if (touchStartX > winWidth - 70 || e.target.closest('#btn-open-bench-sheet')) {
+      // 閉じてる時：編成ボード画面かつ画面右端付近またはタブ上でのタッチでエッジスワイプスタンバイ
+      if (isRosterBoard && (touchStartX > winWidth - 70 || e.target.closest('#btn-open-bench-sheet'))) {
         isEdgeSwipePotential = true;
       } else {
         isEdgeSwipePotential = false;
@@ -17641,13 +17689,6 @@ function initGame() {
       if (openBtn && typeof openCommercialSetupModal === 'function') {
         openCommercialSetupModal();
       }
-    });
-  }
-
-  const closeCommModalBtn = document.getElementById('btn-close-commercial-modal');
-  if (closeCommModalBtn) {
-    closeCommModalBtn.addEventListener('click', () => {
-      if (typeof closeCommercialSetupModal === 'function') closeCommercialSetupModal();
     });
   }
 

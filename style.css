@@ -26527,13 +26527,26 @@ button.hof-record-name {
 
 .finance-rebalance-slider-box {
   min-width: 0;
-  padding: 4px 0 2px;
+  padding: 2px 0;
+  touch-action: none;
 }
 
 .finance-range-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  height: 36px;
+  border-radius: 4px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+  display: block;
+  touch-action: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.finance-range-slider::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 4px;
   background: linear-gradient(
@@ -26543,24 +26556,14 @@ button.hof-record-name {
     #475569 var(--slider-pct, 50%),
     #475569 100%
   );
-  outline: none;
-  cursor: pointer;
-  margin: 6px 0 4px;
-  display: block;
-}
-
-.finance-range-slider::-webkit-slider-runnable-track {
-  height: 8px;
-  border-radius: 4px;
-  background: transparent;
 }
 
 .finance-range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -5px;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
   border-radius: 50%;
   background: #2ecc71;
   border: 2px solid #1a1d20;
@@ -26570,12 +26573,18 @@ button.hof-record-name {
 .finance-range-slider::-moz-range-track {
   height: 8px;
   border-radius: 4px;
-  background: transparent;
+  background: linear-gradient(
+    90deg,
+    #2ecc71 0%,
+    #2ecc71 var(--slider-pct, 50%),
+    #475569 var(--slider-pct, 50%),
+    #475569 100%
+  );
 }
 
 .finance-range-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #2ecc71;
   border: 2px solid #1a1d20;
@@ -27048,18 +27057,6 @@ button.hof-record-name {
   align-items: baseline;
   gap: 10px;
   min-width: 0;
-}
-
-.commercial-modal-close-btn {
-  width: 30px;
-  height: 28px;
-  padding: 0 !important;
-  font-size: 16px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .commercial-fit-tag {
