@@ -3112,6 +3112,262 @@ function getSafeTransferBudget(club) {
   return Math.round(funds - requiredReserve);
 }
 
+/**
+ * 選手売却益のうち移籍予算へ還元される割合（健全度に応じた還元率）を返す
+ */
+function getTransferRetentionInfo(club) {
+  if (!club) return { rate: 0.75, label: '標準' };
+  const funds = typeof club.funds === 'number' ? club.funds : 0;
+  const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { total3YrNet: 0 };
+  const psrNet = typeof psr.total3YrNet === 'number' ? psr.total3YrNet : 0;
+  if (funds < 0 || psrNet < -25000) {
+    return { rate: 0.50, label: '財政再建' };
+  }
+  if (funds < 10000 || psrNet < -10000) {
+    return { rate: 0.65, label: '慎重運用' };
+  }
+  if (funds >= 40000 && psrNet >= 0) {
+    return { rate: 0.85, label: '健全黒字' };
+  }
+  return { rate: 0.75, label: '標準' };
+}
+
+function getTransferRetentionRate(club) {
+  return getTransferRetentionInfo(club).rate;
+}
+
+/**
+ * シーズン開始・新設クラブの移籍予算と週給予算枠を算出して設定する
+ */
+function allocateSeasonBudgets(club, options = {}) {
+  if (!club) return { transferBudget: 0, wageBudgetWeekly: 0 };
+  const weeklyPayroll = getClubWeeklyPayroll(club);
+  const funds = typeof club.funds === 'number' ? club.funds : 0;
+  const safeDisposable = Math.max(0, getSafeTransferBudget(club));
+
+  let transferBudget = 0;
+  let wageBudgetWeekly = weeklyPayroll;
+
+  if (funds <= 0) {
+    transferBudget = 0;
+    wageBudgetWeekly = weeklyPayroll;
+  } else if (safeDisposable > 0) {
+    let extraWage = Math.max(15, Math.round(Math.min(weeklyPayroll * 0.22, (safeDisposable * 0.25) / 52)));
+    if (extraWage * 52 > safeDisposable * 0.6) {
+      extraWage = Math.max(5, Math.floor((safeDisposable * 0.25) / 52));
+    }
+    if (safeDisposable < 5 * 52) {
+      extraWage = Math.max(0, Math.floor(safeDisposable / 52));
+    }
+    const extraWageCostAnnual = extraWage * 52;
+    transferBudget = Math.max(0, Math.round(Math.min(funds, Math.max(0, safeDisposable - extraWageCostAnnual))));
+    wageBudgetWeekly = weeklyPayroll + extraWage;
+  } else {
+    transferBudget = Math.max(0, Math.round(funds * 0.2));
+    wageBudgetWeekly = Math.max(weeklyPayroll, Math.round(weeklyPayroll * 1.03));
+  }
+
+  club.transferBudget = Math.max(0, Math.round(transferBudget));
+  club.wageBudgetWeekly = Math.max(0, Math.round(wageBudgetWeekly));
+  club.initialTransferBudget = club.transferBudget;
+  club.initialWageBudgetWeekly = club.wageBudgetWeekly;
+  club.budgetInitializedSeason = (typeof gameState !== 'undefined' && gameState && gameState.season) ? gameState.season : 1;
+  return {
+    transferBudget: club.transferBudget,
+    wageBudgetWeekly: club.wageBudgetWeekly
+  };
+}
+
+/**
+ * 旧セーブデータを含むクラブの分割予算フィールドを後方互換補完する
+ */
+function ensureClubBudgetFields(club) {
+  if (!club) return null;
+  const missingTransfer = typeof club.transferBudget !== 'number' || Number.isNaN(club.transferBudget);
+  const missingWage = typeof club.wageBudgetWeekly !== 'number' || Number.isNaN(club.wageBudgetWeekly);
+  if (missingTransfer || missingWage) {
+    allocateSeasonBudgets(club);
+  } else {
+    if (typeof club.initialTransferBudget !== 'number' || Number.isNaN(club.initialTransferBudget)) {
+      club.initialTransferBudget = Math.max(0, Math.round(club.transferBudget));
+    }
+    if (typeof club.initialWageBudgetWeekly !== 'number' || Number.isNaN(club.initialWageBudgetWeekly)) {
+      club.initialWageBudgetWeekly = Math.max(0, Math.round(club.wageBudgetWeekly));
+    }
+  }
+  return {
+    transferBudget: Math.max(0, Math.round(club.transferBudget || 0)),
+    wageBudgetWeekly: Math.max(0, Math.round(club.wageBudgetWeekly || 0))
+  };
+}
+
+/**
+ * 施設費や週次給与等でクラブ資金が減少した際、移籍予算が総資金を超えないよう同期する
+ */
+function syncTransferBudgetWithFunds(club) {
+  if (!club) return;
+  ensureClubBudgetFields(club);
+  const cashCap = Math.max(0, Math.round(club.funds || 0));
+  if ((club.transferBudget || 0) > cashCap) {
+    club.transferBudget = cashCap;
+  }
+}
+
+/**
+ * クラブの予算・給与・スライダー可動範囲サマリーを一括算出する
+ */
+function getClubBudgetSummary(club) {
+  ensureClubBudgetFields(club);
+  const stepTransfer = 52;
+  const funds = club && typeof club.funds === 'number' ? Math.round(club.funds) : 0;
+  const transferBudget = club ? Math.max(0, Math.round(club.transferBudget || 0)) : 0;
+  const wageBudgetWeekly = club ? Math.max(0, Math.round(club.wageBudgetWeekly || 0)) : 0;
+  const initialTransferBudget = club ? Math.max(0, Math.round(club.initialTransferBudget ?? transferBudget)) : 0;
+  const initialWageBudgetWeekly = club ? Math.max(0, Math.round(club.initialWageBudgetWeekly ?? wageBudgetWeekly)) : 0;
+  const weeklyPayroll = getClubWeeklyPayroll(club);
+  const annualPayroll = getClubTotalPayroll(club);
+  const remainingWageWeekly = wageBudgetWeekly - weeklyPayroll;
+  const wageUsagePct = wageBudgetWeekly > 0
+    ? Math.round((weeklyPayroll / wageBudgetWeekly) * 100)
+    : (weeklyPayroll > 0 ? 100 : 0);
+  const effectiveTransferBudget = Math.max(0, Math.min(transferBudget, Math.max(0, funds)));
+  const safeBudget = getSafeTransferBudget(club);
+  const retInfo = getTransferRetentionInfo(club);
+
+  const maxShiftToWageSteps = Math.floor(transferBudget / stepTransfer);
+  const maxShiftToTransferByWage = Math.max(0, wageBudgetWeekly - weeklyPayroll);
+  const cashHeadroomForTransfer = Math.max(0, funds - transferBudget);
+  const maxShiftToTransferByCash = Math.floor(cashHeadroomForTransfer / stepTransfer);
+  const maxShiftToTransferSteps = Math.max(0, Math.min(maxShiftToTransferByWage, maxShiftToTransferByCash));
+
+  const minTransferBudget = transferBudget - maxShiftToWageSteps * stepTransfer;
+  const maxTransferBudget = transferBudget + maxShiftToTransferSteps * stepTransfer;
+
+  return {
+    funds,
+    transferBudget,
+    initialTransferBudget,
+    wageBudgetWeekly,
+    initialWageBudgetWeekly,
+    weeklyPayroll,
+    annualPayroll,
+    remainingWageWeekly,
+    wageUsagePct,
+    effectiveTransferBudget,
+    safeBudget,
+    retentionRate: retInfo.rate,
+    retentionLabel: retInfo.label,
+    stepTransfer,
+    minTransferBudget,
+    maxTransferBudget,
+    canReallocate: maxTransferBudget > minTransferBudget
+  };
+}
+
+/**
+ * 移籍予算と給与予算枠を指定移籍予算値（£52K = £1K/週の整数刻み）へ再配分する
+ */
+function reallocateClubBudget(club, targetTransferBudget) {
+  if (!club) return null;
+  const summary = getClubBudgetSummary(club);
+  const step = summary.stepTransfer || 52;
+  const rawNum = Number(targetTransferBudget);
+  if (Number.isNaN(rawNum)) return summary;
+
+  const clamped = Math.max(summary.minTransferBudget, Math.min(summary.maxTransferBudget, rawNum));
+  const stepDiff = Math.round((clamped - summary.transferBudget) / step);
+  const newTransfer = summary.transferBudget + stepDiff * step;
+  const newWage = summary.wageBudgetWeekly - stepDiff;
+
+  if (newTransfer < 0 || newWage < summary.weeklyPayroll) {
+    return summary;
+  }
+
+  club.transferBudget = newTransfer;
+  club.wageBudgetWeekly = newWage;
+  return getClubBudgetSummary(club);
+}
+
+/**
+ * 完全移籍などの移籍金頭金が移籍予算とクラブ総資金の範囲内か厳格検証する
+ */
+function checkTransferBudgetAvailability(club, upfrontFee) {
+  if (!club) {
+    return { ok: false, type: 'club', shortfall: upfrontFee || 0, reason: 'クラブ情報が見つかりません。' };
+  }
+  ensureClubBudgetFields(club);
+  const fmtMoney = typeof formatMoney === 'function' ? formatMoney : (v) => `£${Math.round(v)}K`;
+  const need = Math.max(0, Math.round(upfrontFee || 0));
+  if (need <= 0) return { ok: true, shortfall: 0 };
+
+  const tBudget = Math.max(0, Math.round(club.transferBudget || 0));
+  const funds = Math.round(club.funds || 0);
+  if (tBudget < need) {
+    return {
+      ok: false,
+      type: 'transfer_budget',
+      shortfall: need - tBudget,
+      reason: `移籍予算が不足しています（必要頭金 ${fmtMoney(need)} / 移籍予算残高 ${fmtMoney(tBudget)}）。経営タブの財務・予算で配分を調整するか選手売却で枠を確保してください。`
+    };
+  }
+  if (funds < need) {
+    return {
+      ok: false,
+      type: 'funds',
+      shortfall: need - funds,
+      reason: `クラブ総資金が不足しています（必要頭金 ${fmtMoney(need)} / 総資金 ${fmtMoney(funds)}）。`
+    };
+  }
+  return { ok: true, shortfall: 0 };
+}
+
+/**
+ * 新規加入・契約延長・スタッフ招聘による追加週給が給与予算枠以内か厳格検証する
+ */
+function checkWageBudgetAvailability(club, deltaWeeklyWage) {
+  if (!club) {
+    return { ok: false, type: 'club', shortfall: deltaWeeklyWage || 0, remaining: 0, reason: 'クラブ情報が見つかりません。' };
+  }
+  ensureClubBudgetFields(club);
+  const fmtWage = typeof formatWage === 'function' ? formatWage : (v) => `£${Math.round(v)}k/週`;
+  const delta = Math.round(deltaWeeklyWage || 0);
+  const remaining = Math.round((club.wageBudgetWeekly || 0) - getClubWeeklyPayroll(club));
+  if (delta <= 0) return { ok: true, shortfall: 0, remaining };
+  if (delta > remaining) {
+    return {
+      ok: false,
+      type: 'wage_budget',
+      shortfall: delta - remaining,
+      remaining,
+      reason: `給与予算の残枠を超過します（必要追加週給 +${fmtWage(delta)} / 給与残枠 ${fmtWage(Math.max(0, remaining))}）。経営タブの財務・予算で配分を調整するか人件費を整理してください。`
+    };
+  }
+  return { ok: true, shortfall: 0, remaining };
+}
+
+/**
+ * 選手売却益をクラブ総資金へ100%入金し、健全度に応じた還元率分を移籍予算へ加算する
+ */
+function applyPlayerSaleBudgetProceeds(club, netFee) {
+  const fee = Math.max(0, Math.round(netFee || 0));
+  if (!club) {
+    return { netFee: fee, addedTransferBudget: 0, retainedReserve: fee, retentionRate: 0, retentionLabel: '' };
+  }
+  ensureClubBudgetFields(club);
+  const info = getTransferRetentionInfo(club);
+  club.funds = (club.funds || 0) + fee;
+  const addedTransferBudget = Math.round(fee * info.rate);
+  club.transferBudget = Math.max(0, Math.round((club.transferBudget || 0) + addedTransferBudget));
+  syncTransferBudgetWithFunds(club);
+  return {
+    netFee: fee,
+    addedTransferBudget,
+    retainedReserve: fee - addedTransferBudget,
+    retentionRate: info.rate,
+    retentionLabel: info.label
+  };
+}
+
 // ==========================================================================
 // 7. シーズン末の選手成長・加齢変動・現役引退判定
 // ==========================================================================

@@ -225,7 +225,7 @@ const gameState = {
   offersSubtab: 'incoming',      // オファータブ内の表示 ('incoming' | 'outgoing')
   targetShortlist: [],
   preContractPlayers: [],        // 来季事前合意（内定）選手リスト           // 獲得ターゲットリスト（SHORTLIST）
-  facilitiesSubtab: 'investment', // 経営タブ内サブタブ ('investment' | 'staff' | 'youth')
+  facilitiesSubtab: 'finance',   // 経営タブ内サブタブ ('finance' | 'investment' | 'commercial' | 'staff' | 'youth')
   teamSubtab: 'standings',       // チームタブ内サブタブ ('standings' | 'schedule' | 'stats')
   competitionStats: {},          // 大会別個人スタッツ集計マップ (d1, d2, leagueCup, nationalCup, championsCup, europaCup, conferenceCup, preseasonCup)
   statsCompView: 'league',       // 個人スタッツ大会グループ ('league' | 'domestic' | 'europe' | 'preseason')
@@ -1316,6 +1316,9 @@ function advanceCalendarDay(skipRender = false) {
     for (const club of getAllManagedLeagueClubs()) {
       const weeklyCost = getClubWeeklyPayroll(club);
       club.funds = (club.funds || 0) - weeklyCost;
+      if (typeof syncTransferBudgetWithFunds === 'function') {
+        syncTransferBudgetWithFunds(club);
+      }
       if (pClub && club.id === pClub.id) {
         playerPaidWeekly = weeklyCost;
       }
@@ -2058,7 +2061,12 @@ function acceptPendingMegaOffer(options = {}) {
   let replyPayload = null;
   if (target) {
     const { netFee } = applySellOnRightsOnSale(playerClub, target, offer.offerAmount);
-    playerClub.funds += netFee;
+    const saleProceeds = typeof applyPlayerSaleBudgetProceeds === 'function'
+      ? applyPlayerSaleBudgetProceeds(playerClub, netFee)
+      : { netFee, addedTransferBudget: netFee, retainedReserve: 0, retentionRate: 1 };
+    if (typeof applyPlayerSaleBudgetProceeds !== 'function') {
+      playerClub.funds += netFee;
+    }
     if (typeof ensureMonthlyLedger === 'function') {
       ensureMonthlyLedger().transferInFee += netFee;
     }
@@ -2074,13 +2082,14 @@ function acceptPendingMegaOffer(options = {}) {
       cancelOtherIncomingOffersForPlayer(target.id, linkedInc ? linkedInc.id : null, { clearModalOffers: false });
     }
     ensureValidSquadAndStarters(playerClub);
-    gameState.facilityFeedback = `【メガオファー受諾】#${offer.squadNumber} ${offer.playerName} の「${offer.megaClubName}」への完全移籍が成立し、クラブ資金に +${formatMoney(netFee)} が即時加算されました。`;
+    const retPctText = `${Math.round((saleProceeds.retentionRate || 0) * 100)}%`;
+    gameState.facilityFeedback = `移籍成立：#${offer.squadNumber} ${offer.playerName} の ${offer.megaClubName} への完全移籍により、クラブ総資金 +${formatMoney(netFee)}、移籍予算 +${formatMoney(saleProceeds.addedTransferBudget)}（還元率 ${retPctText}）が反映されました。`;
     if (options && options.showReply) {
       replyPayload = {
         topic: '移籍成立 報告',
         title: `${offer.playerName} の完全移籍が成立しました`,
         soundKey: 'sfx_deal',
-        speech: `#${offer.squadNumber} ${offer.playerName} の ${offer.megaClubName} への売却手続きが完了し、移籍金 +${formatMoney(netFee)} をクラブ資金へ即時入金しました。あわせて先発・登録メンバーも自動再調整しています。`
+        speech: `#${offer.squadNumber} ${offer.playerName} の ${offer.megaClubName} への売却手続きが完了し、総資金 +${formatMoney(netFee)} を入金しました。売却益のうち還元率 ${retPctText}（+${formatMoney(saleProceeds.addedTransferBudget)}）を移籍予算へ組み入れています。あわせてメンバー編成も再調整しました。`
       };
     }
   }
@@ -2236,6 +2245,7 @@ function triggerInjuryEvent() {
         disabled: playerClub.funds < medicalCost,
         onClick: () => {
           playerClub.funds -= medicalCost;
+          if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
           victim.injuryDays = fastDays;
           victim.injuryWeeks = Math.ceil(fastDays / 7);
           const swapInfo = typeof autoReplaceInjuredStarterByManager === 'function'
@@ -2414,6 +2424,7 @@ function triggerYouthAwakeningEvent() {
   const handleAwakeningResult = (intensive) => {
     if (intensive) {
       playerClub.funds -= specialCost;
+      if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
     }
     const res = applyYouthAwakening(intensive);
     const potText = res.afterPot !== res.beforePot ? ` / POT ${res.beforePot}→${res.afterPot}` : '';
@@ -2573,6 +2584,7 @@ function triggerSupporterPetitionEvent() {
         disabled: playerClub.funds < investCost,
         onClick: () => {
           playerClub.funds -= investCost;
+          if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
           if (typeof adjustClubSupporters === 'function') {
             adjustClubSupporters(playerClub, 600);
           } else {
@@ -3857,6 +3869,14 @@ function processSeasonEnd(isSkipped = false) {
     ageAndRenewCoachingStaffAtSeasonEnd(playerRetirementLogs);
   }
 
+  if (typeof allocateSeasonBudgets === 'function') {
+    for (const c of getAllManagedLeagueClubs()) {
+      if (!c) continue;
+      allocateSeasonBudgets(c);
+      c.budgetAllocatedForSeason = (gameState.season || 1) + 1;
+    }
+  }
+
   gameState.lastSettlement = {
     season: gameState.season,
     rank: playerRank,
@@ -3869,6 +3889,8 @@ function processSeasonEnd(isSkipped = false) {
     totalIncome: playerPrize + playerSponsorIncome + targetBonus,
     offseasonPayrollSettled: playerResidualPayroll,
     remPayrollWeeks,
+    nextTransferBudget: playerClub.transferBudget || 0,
+    nextWageBudgetWeekly: playerClub.wageBudgetWeekly || 0,
     retirementLogs: playerRetirementLogs,
     agingLogs: playerAgingLogs,
     awards: seasonAwardsObj
@@ -4487,14 +4509,25 @@ function computeNegotiationCashflowWarning(session, playerClubOverride = null, t
 
   const safeBgt = getSafeTransferBudget(playerClub);
   if (isRenewal) {
-    const curAnnual = target.salary || ((target.wage || 15) * 52);
-    const addWeekly = Math.max(0, Math.round(((session.offeredSalary || curAnnual) - curAnnual) / 52));
-    const estReserveImpact = addWeekly * 20;
+    const curWage = target.wage || Math.max(5, Math.round((target.salary || 0) / 52));
+    const newWage = Math.max(5, Math.round((session.offeredSalary || curWage * 52) / 52));
+    const addWeekly = newWage - curWage;
+    if (addWeekly > 0 && typeof checkWageBudgetAvailability === 'function') {
+      const wCheck = checkWageBudgetAvailability(playerClub, addWeekly);
+      if (!wCheck.ok) {
+        return {
+          visible: true,
+          isCritical: true,
+          text: wCheck.reason
+        };
+      }
+    }
+    const estReserveImpact = Math.max(0, addWeekly) * 20;
     if (estReserveImpact > 0 && (safeBgt - estReserveImpact) < 0) {
       return {
         visible: true,
         isCritical: false,
-        text: `キャッシュフロー注意：昇給分（+${formatWage(addWeekly)}/週）により実質安全予算（${formatMoney(safeBgt)}）を超過し、週次引き落としで資金繰りが悪化する恐れがあります。`
+        text: `運転資金注意：昇給分（+${formatWage(addWeekly)}）により週次決済の運転余力（${formatMoney(safeBgt)}）を圧迫する見込みです。`
       };
     }
     return { visible: false, isCritical: false, text: '' };
@@ -4507,13 +4540,31 @@ function computeNegotiationCashflowWarning(session, playerClubOverride = null, t
     : 0;
   let weeklyAdd = 0;
   if (dType === 'loan') {
-    weeklyAdd = Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100));
-  } else if (dType === 'pre_contract') {
-    weeklyAdd = 0;
+    weeklyAdd = Math.max(5, Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100)));
   } else {
     weeklyAdd = session.offeredWage || Math.round((session.offeredSalary || 0) / 52) || 20;
   }
-  const totalImpact = feeCost + (weeklyAdd * 12);
+
+  if (dType === 'buy' && typeof checkTransferBudgetAvailability === 'function') {
+    const tCheck = checkTransferBudgetAvailability(playerClub, feeCost);
+    if (!tCheck.ok) {
+      return {
+        visible: true,
+        isCritical: true,
+        text: tCheck.reason
+      };
+    }
+  }
+  if (typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, weeklyAdd);
+    if (!wCheck.ok) {
+      return {
+        visible: true,
+        isCritical: true,
+        text: wCheck.reason
+      };
+    }
+  }
   if (dType === 'buy' && feeCost > playerClub.funds) {
     const feeLabel = instYears > 1
       ? `必要頭金（${formatMoney(feeCost)} / ${instYears}年分割）`
@@ -4521,14 +4572,15 @@ function computeNegotiationCashflowWarning(session, playerClubOverride = null, t
     return {
       visible: true,
       isCritical: true,
-      text: `資金不足：${feeLabel} が現在資金（${formatMoney(playerClub.funds)}）を超えています。`
+      text: `資金不足：${feeLabel} がクラブ総資金（${formatMoney(playerClub.funds)}）を超えています。`
     };
   }
+  const totalImpact = feeCost + (weeklyAdd * 12);
   if (dType !== 'pre_contract' && totalImpact > safeBgt) {
     return {
       visible: true,
       isCritical: false,
-      text: `破産予防アラート：移籍金頭金＋週給負担（+${formatWage(weeklyAdd)}/週）が実質移籍予算（安全枠 ${formatMoney(safeBgt)}）を上回っています。シーズン中の週次給与決済で赤字転落するリスクがあります。`
+      text: `運転資金注意：頭金と週給負担（+${formatWage(weeklyAdd)}）により将来の運転余力（${formatMoney(safeBgt)}）が圧迫される恐れがあります。`
     };
   }
   return { visible: false, isCritical: false, text: '' };
@@ -5010,19 +5062,32 @@ function renderNegotiationModal() {
     `;
   }
 
-  const safeBudgetVal = getSafeTransferBudget(playerClub);
+  const bSummary = typeof getClubBudgetSummary === 'function'
+    ? getClubBudgetSummary(playerClub)
+    : {
+        funds: playerClub.funds || 0,
+        transferBudget: Math.max(0, playerClub.funds || 0),
+        remainingWageWeekly: 0
+      };
+  const wageRemSign = bSummary.remainingWageWeekly >= 0 ? '+' : '';
   const budgetKvRowsHtml = `
     <div class="ui-kv-row">
-      <div class="ui-kv-label" style="color:#ffffff;">クラブ資金</div>
+      <div class="ui-kv-label" style="color:#ffffff;">クラブ総資金</div>
       <div class="ui-kv-content mono" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; font-size:12px;">
-        <strong style="color:#ffffff;">${formatMoney(playerClub.funds)}</strong>
-        <span style="color:#cbd5e1;">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
+        <strong style="color:#ffffff; white-space:nowrap;">${formatMoney(bSummary.funds)}</strong>
+        <span style="color:#cbd5e1; white-space:nowrap;">登録 ${playerClub.players.length}/${MAX_SQUAD_SIZE}名</span>
       </div>
     </div>
     <div class="ui-kv-row">
-      <div class="ui-kv-label accent-cyan-bar">安全予算枠</div>
-      <div class="ui-kv-content mono" style="font-size:13px;">
-        <strong class="${safeBudgetVal < 0 ? 'text-danger' : 'accent-green'}">${formatMoney(safeBudgetVal)}</strong>
+      <div class="ui-kv-label accent-cyan-bar">移籍予算</div>
+      <div class="ui-kv-content mono" style="font-size:12.5px;">
+        <strong class="${bSummary.transferBudget <= 0 ? 'text-danger' : 'accent-green'}" style="white-space:nowrap;">${formatMoney(bSummary.transferBudget)}</strong>
+      </div>
+    </div>
+    <div class="ui-kv-row">
+      <div class="ui-kv-label accent-gold-bar">給与残枠</div>
+      <div class="ui-kv-content mono" style="font-size:12.5px;">
+        <strong class="${bSummary.remainingWageWeekly < 0 ? 'text-danger' : 'accent-gold'}" style="white-space:nowrap;">${wageRemSign}${formatWage(bSummary.remainingWageWeekly)}</strong>
       </div>
     </div>
   `;
@@ -5316,6 +5381,19 @@ function submitNegotiationOffer() {
     const target = playerClub.players.find(p => p.id === session.playerId);
     if (!target) return;
 
+    const nextWeeklyWage = Math.max(5, Math.round((session.offeredSalary || 0) / 52));
+    const prevWeeklyWage = target.wage || Math.max(5, Math.round((target.salary || 0) / 52));
+    const wageDelta = nextWeeklyWage - prevWeeklyWage;
+    if (wageDelta > 0 && typeof checkWageBudgetAvailability === 'function') {
+      const wageCheck = checkWageBudgetAvailability(playerClub, wageDelta);
+      if (!wageCheck.ok) {
+        session.statusType = 'error';
+        session.statusMessage = wageCheck.reason;
+        renderNegotiationModal();
+        return;
+      }
+    }
+
     const yearDiff = session.offeredYears - session.demandedYears;
     const yearAdjustment = yearDiff >= 0 ? 0.97 : (1 + Math.abs(yearDiff) * 0.04);
     const requiredSalary = Math.round(session.demandedSalary * yearAdjustment);
@@ -5426,14 +5504,36 @@ function submitNegotiationOffer() {
 
   const instYearsReq = session.installmentYears || 1;
   const upfrontRequired = getTransferUpfrontAmount(session.offeredFee, instYearsReq);
-  if (dealType === 'buy' && playerClub.funds < upfrontRequired) {
-    session.statusType = 'error';
-    const feeLabel = instYearsReq > 1
-      ? `必要頭金（${formatMoney(upfrontRequired)} / ${instYearsReq}年分割）`
-      : `提示移籍金（${formatMoney(session.offeredFee)}）`;
-    session.statusMessage = `【資金不足】${feeLabel} が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。移籍金または支払方法を調整してください。`;
-    renderNegotiationModal();
-    return;
+  if (dealType === 'buy') {
+    if (typeof checkTransferBudgetAvailability === 'function') {
+      const tCheck = checkTransferBudgetAvailability(playerClub, upfrontRequired);
+      if (!tCheck.ok) {
+        session.statusType = 'error';
+        session.statusMessage = tCheck.reason;
+        renderNegotiationModal();
+        return;
+      }
+    } else if (playerClub.funds < upfrontRequired) {
+      const feeLabel = instYearsReq > 1
+        ? `必要頭金（${formatMoney(upfrontRequired)} / ${instYearsReq}年分割）`
+        : `提示移籍金（${formatMoney(session.offeredFee)}）`;
+      session.statusType = 'error';
+      session.statusMessage = `${feeLabel} が現在のクラブ資金（${formatMoney(playerClub.funds)}）を超えています。`;
+      renderNegotiationModal();
+      return;
+    }
+  }
+  const offeredWageReq = dealType === 'loan'
+    ? Math.max(5, Math.round((target.wage || 20) * ((session.loanCoveragePercent || 100) / 100)))
+    : (session.offeredWage || Math.round((session.offeredSalary || 0) / 52) || 20);
+  if (typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, offeredWageReq);
+    if (!wCheck.ok) {
+      session.statusType = 'error';
+      session.statusMessage = wCheck.reason;
+      renderNegotiationModal();
+      return;
+    }
   }
 
   let willAgree = false;
@@ -5712,9 +5812,24 @@ function acceptCpuCounterOffer(offerId) {
 
   const playerClub = getPlayerClub();
   const upfrontCounter = getTransferUpfrontAmount(offer.counterFee, offer.installmentYears || 1);
-  if (playerClub && playerClub.funds < upfrontCounter) {
-    alert(`資金が不足しています（必要頭金: ${formatMoney(upfrontCounter)} / クラブ資金: ${formatMoney(playerClub.funds)}）`);
-    return;
+  if (playerClub && dealType === 'buy') {
+    if (typeof checkTransferBudgetAvailability === 'function') {
+      const tCheck = checkTransferBudgetAvailability(playerClub, upfrontCounter);
+      if (!tCheck.ok) {
+        alert(tCheck.reason);
+        return;
+      }
+    } else if (playerClub.funds < upfrontCounter) {
+      alert(`資金が不足しています（必要頭金: ${formatMoney(upfrontCounter)} / クラブ資金: ${formatMoney(playerClub.funds)}）`);
+      return;
+    }
+  }
+  if (playerClub && typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, offer.offeredWage || 0);
+    if (!wCheck.ok) {
+      alert(wCheck.reason);
+      return;
+    }
   }
 
   offer.offeredFee = offer.counterFee;
@@ -5801,9 +5916,17 @@ function completeOutgoingTransferSigning(offerId) {
   }
 
   const upfrontFeeRequired = getTransferUpfrontAmount(offer.offeredFee, offer.installmentYears || 1);
-  if (dealType === 'buy' && playerClub.funds < upfrontFeeRequired) {
-    alert(`頭金（${formatMoney(upfrontFeeRequired)}）に対して資金が不足しています（現在資金: ${formatMoney(playerClub.funds)}）。`);
-    return;
+  if (dealType === 'buy') {
+    if (typeof checkTransferBudgetAvailability === 'function') {
+      const tCheck = checkTransferBudgetAvailability(playerClub, upfrontFeeRequired);
+      if (!tCheck.ok) {
+        alert(tCheck.reason);
+        return;
+      }
+    } else if (playerClub.funds < upfrontFeeRequired) {
+      alert(`頭金（${formatMoney(upfrontFeeRequired)}）に対して資金が不足しています（現在資金: ${formatMoney(playerClub.funds)}）。`);
+      return;
+    }
   }
 
   // 対象選手を相手クラブ・欧州リスト・無所属市場から一元取得
@@ -5819,6 +5942,17 @@ function completeOutgoingTransferSigning(offerId) {
     offer.status = 'cancelled';
     renderAll();
     return;
+  }
+
+  const reqWageOnSign = dealType === 'loan'
+    ? Math.max(5, Math.round((target.wage || 20) * ((offer.loanCoveragePercent || 100) / 100)))
+    : (offer.offeredWage || target.wage || 20);
+  if (typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, reqWageOnSign);
+    if (!wCheck.ok) {
+      alert(wCheck.reason);
+      return;
+    }
   }
 
   if (dealType === 'buy' || dealType === 'loan') {
@@ -5903,6 +6037,10 @@ function completeOutgoingTransferSigning(offerId) {
     const instYears = offer.installmentYears || 1;
     const upfrontFee = instYears > 1 ? Math.round(offer.offeredFee / instYears) : offer.offeredFee;
     playerClub.funds -= upfrontFee;
+    playerClub.transferBudget = Math.max(0, Math.round((playerClub.transferBudget || 0) - upfrontFee));
+    if (typeof syncTransferBudgetWithFunds === 'function') {
+      syncTransferBudgetWithFunds(playerClub);
+    }
     if (typeof ensureMonthlyLedger === 'function') {
       ensureMonthlyLedger().transferOutFee += upfrontFee;
     }
@@ -6430,7 +6568,12 @@ function cancelOtherIncomingOffersForPlayer(playerId, exceptOfferId = null, { cl
 function completeIncomingSaleToBuyer(playerClub, target, buyerClubId, fee, wageMultiplier = 1.3) {
   const numericFee = Math.max(0, Number(fee) || 0);
   const { netFee } = applySellOnRightsOnSale(playerClub, target, numericFee);
-  playerClub.funds += netFee;
+  const saleProceeds = typeof applyPlayerSaleBudgetProceeds === 'function'
+    ? applyPlayerSaleBudgetProceeds(playerClub, netFee)
+    : { netFee, addedTransferBudget: netFee, retainedReserve: 0, retentionRate: 1 };
+  if (typeof applyPlayerSaleBudgetProceeds !== 'function') {
+    playerClub.funds += netFee;
+  }
   if (typeof ensureMonthlyLedger === 'function') {
     ensureMonthlyLedger().transferInFee += netFee;
   }
@@ -6463,6 +6606,7 @@ function completeIncomingSaleToBuyer(playerClub, target, buyerClubId, fee, wageM
     }
   }
   ensureValidSquadAndStarters(playerClub);
+  return saleProceeds;
 }
 
 function acceptIncomingOffer(offerId) {
@@ -6522,7 +6666,7 @@ function acceptIncomingOffer(offerId) {
 
   // 通常売却確定処理
   const saleFee = offer.offerFee || offer.counterFee || 0;
-  completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, saleFee, 1.3);
+  const saleRes = completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, saleFee, 1.3) || { addedTransferBudget: saleFee, retentionRate: 1 };
 
   // 履歴としてステータス更新・他オファー取り消し
   offer.status = 'accepted';
@@ -6531,7 +6675,7 @@ function acceptIncomingOffer(offerId) {
   }
   cancelOtherIncomingOffersForPlayer(target.id, offer.id);
 
-  addDailyLog(`【移籍成立】${target.name} を ${offer.buyerClubName} へ売却しました（移籍金: ${formatMoney(saleFee)}）。`);
+  addDailyLog(`移籍成立：${target.name} を ${offer.buyerClubName} へ売却（移籍金 ${formatMoney(saleFee)} / 移籍予算 +${formatMoney(saleRes.addedTransferBudget)}）。`);
   if (typeof addNewsItem === 'function') {
     addNewsItem({
       category: '移籍',
@@ -6911,10 +7055,10 @@ function acceptIncomingOfferModal() {
     return;
   }
 
-  completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, offer.offerFee, 1.3);
+  const modalSaleRes = completeIncomingSaleToBuyer(playerClub, target, offer.buyerClubId, offer.offerFee, 1.3) || { addedTransferBudget: offer.offerFee, retentionRate: 1 };
   cancelOtherIncomingOffersForPlayer(target.id, null);
 
-  addDailyLog(`【移籍成立】${target.pos} #${offer.squadNumber} ${target.name} が ${offer.buyerClubName} へ完全移籍（売却益: ${formatMoney(offer.offerFee)}）`);
+  addDailyLog(`移籍成立：${target.pos} #${offer.squadNumber} ${target.name} が ${offer.buyerClubName} へ完全移籍（売却額 ${formatMoney(offer.offerFee)} / 移籍予算 +${formatMoney(modalSaleRes.addedTransferBudget)}）`);
   if (typeof addNewsItem === 'function') {
     addNewsItem({
       category: '移籍',
@@ -7062,7 +7206,21 @@ function promoteYouthPlayer(youthId) {
   const idx = playerClub.youthSquad.findIndex(y => y.id === youthId);
   if (idx === -1) return false;
 
+  const candidateYouth = playerClub.youthSquad[idx];
+  const potBaseMapPre = { S: 86, A: 80, B: 74, C: 68 };
+  const potRatingPre = candidateYouth.potentialRating || potBaseMapPre[candidateYouth.potential || candidateYouth.potentialGrade] || 70;
+  const projectedWage = Math.max(3, Math.min(6, Math.round(potRatingPre / 15)));
+  if (typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, projectedWage);
+    if (!wCheck.ok) {
+      if (typeof showToast === 'function') showToast(wCheck.reason, 'warning');
+      alert(wCheck.reason);
+      return false;
+    }
+  }
+
   playerClub.funds -= SIGN_FEE;
+  if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
   const youth = playerClub.youthSquad.splice(idx, 1)[0];
   if (typeof initPromotedYouthCareerFields === 'function') {
     initPromotedYouthCareerFields(youth, playerClub.name);
@@ -7246,6 +7404,7 @@ function upgradeFacility(facilityKey) {
   if (playerClub.funds < cost) return;
 
   playerClub.funds -= cost;
+  if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
   const nextLv = currentLv + 1;
   gameState.facilities[facilityKey] = nextLv;
 
@@ -7301,6 +7460,16 @@ function promoteYouthCandidate(candidateId) {
 
   const idx = (gameState.youthCandidates || []).findIndex(y => y.id === candidateId);
   if (idx === -1) return;
+
+  const projectedCandidateWage = Math.max(10, Math.round(800 / 52));
+  if (typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(playerClub, projectedCandidateWage);
+    if (!wCheck.ok) {
+      if (typeof showToast === 'function') showToast(wCheck.reason, 'warning');
+      alert(wCheck.reason);
+      return;
+    }
+  }
 
   const prospect = gameState.youthCandidates[idx];
   if (typeof initPromotedYouthCareerFields === 'function') {
@@ -8195,6 +8364,17 @@ function startNextSeason() {
     processPromotionAndRelegation();
   }
 
+  for (const c of getAllManagedLeagueClubs()) {
+    if (!c) continue;
+    if (c.budgetAllocatedForSeason !== gameState.season) {
+      if (typeof allocateSeasonBudgets === 'function') allocateSeasonBudgets(c);
+      c.budgetAllocatedForSeason = gameState.season;
+    } else {
+      if (typeof ensureClubBudgetFields === 'function') ensureClubBudgetFields(c);
+      if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(c);
+    }
+  }
+
   // 契約満了のまま新シーズンを迎えた自クラブ監督の単年自動更新／高齢勇退処理
   if (playerClub && playerClub.manager) {
     const pMgr = playerClub.manager;
@@ -8511,7 +8691,7 @@ function switchTab(tabName) {
     switchMarketSubtab(gameState.marketSubtab || 'market', dirtyViews.market);
     dirtyViews.market = false;
   } else if (tabName === 'facilities') {
-    switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment', dirtyViews.facilities);
+    switchFacilitiesSubtab(gameState.facilitiesSubtab || 'finance', dirtyViews.facilities);
     dirtyViews.facilities = false;
   } else if (tabName === 'team') {
     switchTeamSubtab(gameState.teamSubtab || 'standings', dirtyViews.team);
@@ -8733,7 +8913,7 @@ function renderActiveTabView(force = false) {
       renderMarket();
     }
   } else if (active === 'facilities') {
-    const fSub = gameState.facilitiesSubtab || 'investment';
+    const fSub = gameState.facilitiesSubtab || 'finance';
     if (fSub === 'staff') {
       renderManagerManagementPanel();
       renderCoachingStaffPanel();
@@ -8829,13 +9009,22 @@ function renderHeader() {
 
   const weeklyPayroll = getClubWeeklyPayroll(playerClub);
   const safeBudget = getSafeTransferBudget(playerClub);
+  const budgetSummary = typeof getClubBudgetSummary === 'function'
+    ? getClubBudgetSummary(playerClub)
+    : {
+        funds: playerClub.funds || 0,
+        transferBudget: Math.max(0, safeBudget),
+        wageBudgetWeekly: weeklyPayroll,
+        remainingWageWeekly: 0
+      };
   const safeBudgetEl = document.getElementById('header-safe-budget');
   if (safeBudgetEl) {
-    safeBudgetEl.textContent = `安全 ${formatMoney(safeBudget)}`;
+    safeBudgetEl.textContent = `移籍 ${formatMoney(budgetSummary.transferBudget)}`;
+    safeBudgetEl.title = `移籍予算残高: ${formatMoney(budgetSummary.transferBudget)} ／ 実質運転余力: ${formatMoney(safeBudget)}`;
     safeBudgetEl.classList.remove('is-tight', 'is-danger');
-    if (safeBudget < 0) {
+    if (budgetSummary.transferBudget <= 0 || playerClub.funds < 0) {
       safeBudgetEl.classList.add('is-danger');
-    } else if (safeBudget < 5000) {
+    } else if (budgetSummary.transferBudget < 3000 || safeBudget < 0) {
       safeBudgetEl.classList.add('is-tight');
     }
   }
@@ -8844,6 +9033,19 @@ function renderHeader() {
   if (payrollEl) {
     payrollEl.textContent = `${formatWage(weeklyPayroll)}`;
     payrollEl.title = `週次決済: ${formatWage(weeklyPayroll)} ／ 年間換算: ${formatMoney(payroll)}`;
+  }
+  const wageBudgetEl = document.getElementById('header-wage-budget');
+  if (wageBudgetEl) {
+    const remW = Math.round(budgetSummary.remainingWageWeekly || 0);
+    const remSign = remW >= 0 ? '+' : '';
+    wageBudgetEl.textContent = `残${remSign}£${remW}k`;
+    wageBudgetEl.title = `週給予算枠: ${formatWage(budgetSummary.wageBudgetWeekly)}（残枠 ${remSign}${formatWage(remW)}）`;
+    wageBudgetEl.classList.remove('is-tight', 'is-danger');
+    if (remW < 0) {
+      wageBudgetEl.classList.add('is-danger');
+    } else if (remW < 15) {
+      wageBudgetEl.classList.add('is-tight');
+    }
   }
   setHeaderText('header-squad-size', `${squadCount}名`);
   setHeaderText('header-supporters', typeof formatGlobalFans === 'function' && typeof getClubGlobalFans === 'function' ? formatGlobalFans(getClubGlobalFans(playerClub)) : `${playerClub.supporters.toLocaleString()}人`);
@@ -9037,8 +9239,14 @@ function renderSeasonSettlement() {
     ? ' · 債務超過中（収支改善が必要）'
     : (safeBudget < 0 ? ' · 週給規模過多（収支超過注意）' : '');
   if (projEl) {
+    const nextTransferBgt = typeof s.nextTransferBudget === 'number'
+      ? s.nextTransferBudget
+      : (typeof playerClub.transferBudget === 'number' ? playerClub.transferBudget : safeBudget);
+    const nextWageBgt = typeof s.nextWageBudgetWeekly === 'number'
+      ? s.nextWageBudgetWeekly
+      : (typeof playerClub.wageBudgetWeekly === 'number' ? playerClub.wageBudgetWeekly : weeklyPayroll);
     projEl.textContent =
-      `現在資金：${formatMoney(playerClub.funds)} ／ 来季週給支払い（毎週日曜決済）：${formatWage(weeklyPayroll)}（年間換算 ${formatMoney(currentPayroll)}） / 実質補強予算：${formatMoney(safeBudget)}${deficitWarning}`;
+      `総資金：${formatMoney(playerClub.funds)} ／ 来季移籍予算：${formatMoney(nextTransferBgt)} ／ 来季週給枠：${formatWage(nextWageBgt)}（現週給 ${formatWage(weeklyPayroll)}）${deficitWarning}`;
     projEl.className = (playerClub.funds < 0 || safeBudget < 0) ? 'mono text-danger' : 'mono accent-green';
   }
 
@@ -10846,7 +11054,7 @@ function switchMarketSubtab(subtabKey, shouldRender = true) {
  * 経営画面内のサブタブ切り替え（施設投資 / 監督・指導陣 / ユースチーム）
  */
 function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
-  if (!subtabKey) subtabKey = 'investment';
+  if (!subtabKey) subtabKey = 'finance';
   gameState.facilitiesSubtab = subtabKey;
   const viewFacilities = document.getElementById('view-facilities');
   if (viewFacilities) {
@@ -10863,6 +11071,7 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
 
   // サブビューの表示切り替え
   const subviews = {
+    finance: document.getElementById('facilities-subview-finance'),
     investment: document.getElementById('facilities-subview-investment'),
     commercial: document.getElementById('facilities-subview-commercial'),
     staff: document.getElementById('facilities-subview-staff'),
@@ -10877,7 +11086,7 @@ function switchFacilitiesSubtab(subtabKey, shouldRender = true) {
   });
 
   if (!shouldRender) return;
-  if (subtabKey === 'investment') {
+  if (subtabKey === 'finance' || subtabKey === 'investment') {
     renderFacilitiesAndYouth();
   } else if (subtabKey === 'commercial') {
     renderCommercialManagementPanel();
@@ -10939,10 +11148,12 @@ function updateMarketBadges() {
   if (summaryFunds && playerClub) summaryFunds.textContent = formatMoney(playerClub.funds);
   const summarySafeBudget = document.getElementById('shortlist-summary-safe-budget');
   if (summarySafeBudget && playerClub) {
-    const safeVal = getSafeTransferBudget(playerClub);
-    summarySafeBudget.textContent = formatMoney(safeVal);
-    summarySafeBudget.classList.toggle('text-danger', safeVal < 0);
-    summarySafeBudget.classList.toggle('accent-green', safeVal >= 0);
+    const bgt = typeof getClubBudgetSummary === 'function'
+      ? getClubBudgetSummary(playerClub).transferBudget
+      : getSafeTransferBudget(playerClub);
+    summarySafeBudget.textContent = formatMoney(bgt);
+    summarySafeBudget.classList.toggle('text-danger', bgt <= 0);
+    summarySafeBudget.classList.toggle('accent-green', bgt > 0);
   }
 
   const offersSummaryCount = document.getElementById('offers-summary-count');
@@ -11075,7 +11286,7 @@ function syncAllSubtabsDOM() {
   if (typeof switchTeamSubtab === 'function') switchTeamSubtab(gameState.teamSubtab || 'standings', false);
   if (typeof switchRosterSubtab === 'function') switchRosterSubtab(gameState.rosterSubtab || 'board', false);
   if (typeof switchMarketSubtab === 'function') switchMarketSubtab(gameState.marketSubtab || 'market', false);
-  if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab(gameState.facilitiesSubtab || 'investment', false);
+  if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab(gameState.facilitiesSubtab || 'finance', false);
   if (typeof switchOffersTab === 'function') switchOffersTab(gameState.offersSubtab || 'incoming', false);
 }
 
@@ -11555,6 +11766,13 @@ function renderMarket() {
   }
 
   const safeBudget = getSafeTransferBudget(playerClub);
+  const marketBudgetSummary = typeof getClubBudgetSummary === 'function'
+    ? getClubBudgetSummary(playerClub)
+    : {
+        funds: playerClub.funds || 0,
+        transferBudget: Math.max(0, safeBudget),
+        remainingWageWeekly: 0
+      };
   let filtered = allEntries.filter(entry => {
     const p = entry.player;
     const c = entry.club;
@@ -11591,7 +11809,7 @@ function renderMarket() {
       }
       if (mf.statusFilter === 'AFFORDABLE') {
         const askFee = p.isFreeAgent ? 0 : (typeof calculateTransferFee === 'function' ? calculateTransferFee(p) : 0);
-        if (askFee > safeBudget) return false;
+        if (askFee > marketBudgetSummary.transferBudget || askFee > Math.max(0, playerClub.funds || 0)) return false;
       }
     }
     if (mf.searchQuery && mf.searchQuery.trim().length > 0) {
@@ -11674,15 +11892,19 @@ function renderMarket() {
   });
   updateMarketSortHeaderIndicators(sortKey);
 
-  // サマリーバーの更新（現在資金 ＋ 実質移籍予算を併記）
-  const safeColorCls = safeBudget < 0 ? 'text-danger' : 'accent-green';
+  // サマリーバーの更新（総資金 ＋ 移籍予算 ＋ 給与残枠）
+  const tBgtCls = marketBudgetSummary.transferBudget <= 0 ? 'text-danger' : 'accent-green';
+  const wRemVal = Math.round(marketBudgetSummary.remainingWageWeekly || 0);
+  const wRemCls = wRemVal < 0 ? 'text-danger' : 'accent-gold';
+  const wRemSign = wRemVal >= 0 ? '+' : '';
   const summaryEl = document.getElementById('market-pos-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <span class="power-badge">対象選手 <strong class="mono">${filtered.length}名</strong></span>
       <span class="power-badge">登録枠 <strong class="mono">${squadCount}/${MAX_SQUAD_SIZE}名</strong></span>
-      <span class="power-badge">現在資金 <strong class="mono accent-gold">${formatMoney(playerClub.funds)}</strong></span>
-      <span class="power-badge" title="今後の週給運転資金を確保した上で安全に使える実質移籍予算">実質移籍予算 <strong class="mono ${safeColorCls}">${formatMoney(safeBudget)}</strong></span>
+      <span class="power-badge">総資金 <strong class="mono">${formatMoney(playerClub.funds)}</strong></span>
+      <span class="power-badge">移籍予算 <strong class="mono ${tBgtCls}">${formatMoney(marketBudgetSummary.transferBudget)}</strong></span>
+      <span class="power-badge">給与残枠 <strong class="mono ${wRemCls}">${wRemSign}${formatWage(wRemVal)}</strong></span>
     `;
   }
 
@@ -12464,6 +12686,462 @@ function renderGmDuties() {
 }
 
 /**
+ * 経営画面内の財務・予算ダッシュボードを描画する
+ */
+function renderFinanceBudgetPanel() {
+  const root = document.getElementById('finance-budget-dashboard-root');
+  if (!root) return;
+  const playerClub = getPlayerClub();
+  if (!playerClub) return;
+
+  if (typeof ensureClubRealismFields === 'function') ensureClubRealismFields(playerClub);
+  const summary = typeof getClubBudgetSummary === 'function'
+    ? getClubBudgetSummary(playerClub)
+    : {
+        funds: playerClub.funds || 0,
+        transferBudget: Math.max(0, playerClub.funds || 0),
+        initialTransferBudget: Math.max(0, playerClub.funds || 0),
+        wageBudgetWeekly: getClubWeeklyPayroll(playerClub),
+        initialWageBudgetWeekly: getClubWeeklyPayroll(playerClub),
+        weeklyPayroll: getClubWeeklyPayroll(playerClub),
+        annualPayroll: getClubTotalPayroll(playerClub),
+        remainingWageWeekly: 0,
+        wageUsagePct: 100,
+        safeBudget: getSafeTransferBudget(playerClub),
+        retentionRate: 0.75,
+        retentionLabel: '標準',
+        stepTransfer: 52,
+        minTransferBudget: 0,
+        maxTransferBudget: Math.max(0, playerClub.funds || 0),
+        canReallocate: false
+      };
+
+  const remPayrollWeeks = Math.max(0, 52 - (gameState.paidPayrollWeeks || 0));
+  const transferRatioPct = summary.initialTransferBudget > 0
+    ? Math.max(0, Math.min(100, Math.round((summary.transferBudget / summary.initialTransferBudget) * 100)))
+    : (summary.transferBudget > 0 ? 100 : 0);
+  const wageUsageBarPct = Math.max(0, Math.min(100, summary.wageUsagePct));
+  const wageRemSign = summary.remainingWageWeekly >= 0 ? '+' : '';
+  const retentionPct = Math.round((summary.retentionRate || 0.75) * 100);
+
+  const fundsCls = summary.funds < 0 ? 'text-danger' : 'accent-gold';
+  const transferCls = summary.transferBudget <= 0 ? 'text-danger' : 'accent-green';
+  const wageRemCls = summary.remainingWageWeekly < 0 ? 'text-danger' : (summary.remainingWageWeekly < 15 ? 'accent-gold' : 'accent-green');
+  const safeCls = summary.safeBudget < 0 ? 'text-danger' : 'accent-green';
+
+  // 給与内訳（選手 / 監督 / 指導陣）
+  const activePlayers = (playerClub.players || []).filter(p => p && !p.isRetired && !(p.loanStatus && p.loanStatus.isLoanOut));
+  const playerWeekly = Math.round(activePlayers.reduce((sum, p) => sum + (p.salary || 0), 0) / 52);
+  const managerWeekly = (playerClub.manager && playerClub.manager.weeklyWage) ? Math.round(playerClub.manager.weeklyWage) : 0;
+  const coachWeekly = typeof getClubCoachingStaffWeeklyWage === 'function' ? Math.round(getClubCoachingStaffWeeklyWage(playerClub)) : 0;
+  const staffSumWeekly = Math.max(1, playerWeekly + managerWeekly + coachWeekly);
+  const pSharePct = Math.round((playerWeekly / staffSumWeekly) * 100);
+  const mSharePct = Math.round((managerWeekly / staffSumWeekly) * 100);
+  const cSharePct = Math.max(0, 100 - pSharePct - mSharePct);
+
+  const expiringPlayers = activePlayers.filter(p => (p.contractYears || 0) <= 1);
+  const expiringWeeklySum = Math.round(expiringPlayers.reduce((sum, p) => sum + (p.wage || ((p.salary || 0) / 52) || 0), 0));
+  const topEarners = [...activePlayers]
+    .sort((a, b) => (b.wage || ((b.salary || 0) / 52) || 0) - (a.wage || ((a.salary || 0) / 52) || 0))
+    .slice(0, 5);
+
+  // 今月収支実績（Monthly Ledger）
+  const ledger = typeof ensureMonthlyLedger === 'function' ? ensureMonthlyLedger(false) : null;
+  const mMatch = ledger ? (ledger.matchIncome || 0) : 0;
+  const mSell = ledger ? (ledger.transferInFee || 0) : 0;
+  const mWage = ledger ? (ledger.payrollPaid || 0) : 0;
+  const mBuy = ledger ? (ledger.transferOutFee || 0) : 0;
+  const mNet = ledger ? ((playerClub.funds || 0) - (ledger.startFunds || 0)) : 0;
+  const mOther = mNet - (mMatch + mSell - mWage - mBuy);
+  const mNetSign = mNet >= 0 ? '+' : '';
+  const mOtherSign = mOther >= 0 ? '+' : '';
+
+  // 今季年間収支見込
+  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const homeMatches = isD2 ? 23 : 19;
+  const awayMatches = isD2 ? 23 : 19;
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+  const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  let avgHomeGate = Math.round((playerClub.supporters || 14000) * (isD2 ? 0.055 : 0.085) * (1 + (stadiumLv - 1) * 0.15));
+  if (typeof calculateProjectedMatchdayCommercial === 'function') {
+    const commProj = calculateProjectedMatchdayCommercial(playerClub, { matchType: isD2 ? 'league_d2' : 'league_d1' });
+    if (commProj && typeof commProj.netMatchdayIncomeK === 'number') {
+      avgHomeGate = commProj.netMatchdayIncomeK;
+    }
+  }
+  const estHomeAnnual = Math.round(avgHomeGate * homeMatches);
+  const estAwayTvAnnual = Math.round((isD2 ? 450 : 1600) * awayMatches);
+  const sponsorAnnual = typeof getClubTotalBaseSponsorIncome === 'function'
+    ? getClubTotalBaseSponsorIncome(playerClub, isD2)
+    : ((playerClub.sponsor && playerClub.sponsor.baseAnnual) || 0);
+  const centralTv = isD2 ? 2000 : 18000;
+  let euroTv = 0;
+  if (!isD2 && typeof collectEuroCompetitionTvParticipantSets === 'function') {
+    const sets = collectEuroCompetitionTvParticipantSets([]);
+    if (sets.uclIds.has(playerClub.id)) euroTv = 10000;
+    else if (sets.uelIds.has(playerClub.id)) euroTv = 6000;
+    else if (sets.ueclIds.has(playerClub.id)) euroTv = 3000;
+  }
+  const tvSolidarity = centralTv + euroTv;
+  const estGrossRev = estHomeAnnual + estAwayTvAnnual + sponsorAnnual + tvSolidarity;
+  const rawOpCost = 4000 + stadiumLv * 2500 + trainingLv * 2000 + scoutingLv * 1500;
+  const estOpCost = isD2 ? Math.round(rawOpCost * 0.55) : rawOpCost;
+  const instAnnualNet = (Array.isArray(gameState.installments) ? gameState.installments : [])
+    .filter(inst => inst && inst.remainingSeasons > 0)
+    .reduce((sum, inst) => sum + (inst.direction === 'out' ? -(inst.amountPerSeason || 0) : (inst.amountPerSeason || 0)), 0);
+  const estNetAnnual = estGrossRev - summary.annualPayroll - estOpCost + instAnnualNet;
+  const estNetSign = estNetAnnual >= 0 ? '+' : '';
+
+  const installmentsList = Array.isArray(gameState.installments)
+    ? gameState.installments.filter(inst => inst && inst.remainingSeasons > 0)
+    : [];
+  const sellOnList = Array.isArray(gameState.sellOnRights)
+    ? gameState.sellOnRights.filter(r => r && (r.pct || 0) > 0)
+    : [];
+  const reports = Array.isArray(gameState.monthlyReports) ? gameState.monthlyReports.slice(0, 6) : [];
+
+  const presetMidTarget = summary.canReallocate
+    ? summary.transferBudget + Math.round((((summary.minTransferBudget + summary.maxTransferBudget) / 2) - summary.transferBudget) / summary.stepTransfer) * summary.stepTransfer
+    : summary.transferBudget;
+
+  root.innerHTML = `
+    <div class="finance-dash-wrap">
+      <!-- 1. 資金・予算サマリーストリップ -->
+      <div class="finance-summary-strip">
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">クラブ総資金</span>
+          <span class="finance-kpi-val mono ${fundsCls}">${formatMoney(summary.funds)}</span>
+          <span class="finance-kpi-sub mono">施設・運営・給与決済口座</span>
+        </div>
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">移籍予算</span>
+          <span class="finance-kpi-val mono ${transferCls}">${formatMoney(summary.transferBudget)}</span>
+          <div class="finance-bar-track"><span class="finance-bar-fill is-green" style="width:${transferRatioPct}%"></span></div>
+          <span class="finance-kpi-sub mono">売却還元 ${retentionPct}%（${escapeCommHtml(summary.retentionLabel)}）</span>
+        </div>
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">給与予算（週給）</span>
+          <span class="finance-kpi-val mono">${formatWage(summary.weeklyPayroll)} <span class="finance-kpi-cap">/ ${formatWage(summary.wageBudgetWeekly)}</span></span>
+          <div class="finance-bar-track"><span class="finance-bar-fill ${summary.remainingWageWeekly < 0 ? 'is-danger' : 'is-gold'}" style="width:${wageUsageBarPct}%"></span></div>
+          <span class="finance-kpi-sub mono ${wageRemCls}">残枠 ${wageRemSign}${formatWage(summary.remainingWageWeekly)}（消化率 ${summary.wageUsagePct}%）</span>
+        </div>
+        <div class="finance-kpi-cell">
+          <span class="finance-kpi-label">実質運転余力</span>
+          <span class="finance-kpi-val mono ${safeCls}">${formatMoney(summary.safeBudget)}</span>
+          <span class="finance-kpi-sub mono">今季週給決済 残${remPayrollWeeks}/52週</span>
+        </div>
+      </div>
+
+      <!-- 2. 予算配分調整（移籍予算 ⇔ 給与予算） -->
+      <section class="finance-section">
+        <div class="finance-section-head">
+          <h3 class="finance-section-title">予算配分調整（移籍予算 ⇔ 給与予算）</h3>
+          <span class="finance-section-note mono">£52K 移籍予算 ＝ £1K/週 給与枠</span>
+        </div>
+        <div class="finance-rebalance-grid">
+          <div class="finance-rebalance-slider-box">
+            <input
+              type="range"
+              id="finance-budget-slider"
+              class="finance-range-slider"
+              min="${summary.minTransferBudget}"
+              max="${summary.maxTransferBudget}"
+              step="${summary.stepTransfer}"
+              value="${summary.transferBudget}"
+              ${summary.canReallocate ? '' : 'disabled'}
+            >
+            <div class="finance-slider-bounds mono">
+              <span>移籍下限 ${formatMoney(summary.minTransferBudget)}</span>
+              <span>移籍上限 ${formatMoney(summary.maxTransferBudget)}</span>
+            </div>
+            <div class="finance-preset-row">
+              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${summary.maxTransferBudget}" ${summary.canReallocate ? '' : 'disabled'}>移籍重視</button>
+              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${presetMidTarget}" ${summary.canReallocate ? '' : 'disabled'}>バランス</button>
+              <button type="button" class="btn btn-secondary btn-xs" data-budget-preset="${summary.minTransferBudget}" ${summary.canReallocate ? '' : 'disabled'}>給与重視</button>
+              <button type="button" class="btn btn-primary btn-xs" id="btn-apply-budget-reallocation" disabled>配分を確定</button>
+            </div>
+          </div>
+          <div class="finance-preview-list">
+            <div class="finance-flat-row">
+              <span class="finance-row-label">調整後の移籍予算</span>
+              <span class="finance-row-val mono accent-green" id="finance-preview-transfer">${formatMoney(summary.transferBudget)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">調整後の週給予算枠</span>
+              <span class="finance-row-val mono accent-gold" id="finance-preview-wage">${formatWage(summary.wageBudgetWeekly)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">調整後の給与残枠</span>
+              <span class="finance-row-val mono ${wageRemCls}" id="finance-preview-wage-rem">${wageRemSign}${formatWage(summary.remainingWageWeekly)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 人件費内訳 ＆ 高給選手トップ5 -->
+      <div class="finance-two-col">
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">人件費構成</h3>
+            <span class="finance-section-note mono">年間換算 ${formatMoney(summary.annualPayroll)}</span>
+          </div>
+          <div class="finance-stack-bar" aria-label="人件費比率">
+            <span class="finance-stack-seg seg-players" style="width:${pSharePct}%"></span>
+            <span class="finance-stack-seg seg-manager" style="width:${mSharePct}%"></span>
+            <span class="finance-stack-seg seg-coaches" style="width:${cSharePct}%"></span>
+          </div>
+          <div class="finance-flat-list">
+            <div class="finance-flat-row">
+              <span class="finance-row-label"><i class="finance-dot seg-players"></i>選手週給（${activePlayers.length}名）</span>
+              <span class="finance-row-val mono">${formatWage(playerWeekly)} · ${pSharePct}%</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label"><i class="finance-dot seg-manager"></i>監督給与</span>
+              <span class="finance-row-val mono">${formatWage(managerWeekly)} · ${mSharePct}%</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label"><i class="finance-dot seg-coaches"></i>指導陣給与</span>
+              <span class="finance-row-val mono">${formatWage(coachWeekly)} · ${cSharePct}%</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">今季末満了予定（残1年以下）</span>
+              <span class="finance-row-val mono ${expiringPlayers.length > 0 ? 'accent-gold' : 'text-muted'}">${expiringPlayers.length}名 · 解放見込 ${formatWage(expiringWeeklySum)}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">高給選手トップ5</h3>
+            <span class="finance-section-note mono">週給構成比</span>
+          </div>
+          <div class="finance-flat-list">
+            ${topEarners.length > 0 ? topEarners.map(p => {
+              const pw = p.wage || Math.round((p.salary || 0) / 52) || 0;
+              const pct = summary.weeklyPayroll > 0 ? Math.round((pw / summary.weeklyPayroll) * 100) : 0;
+              return `
+                <div class="finance-flat-row finance-earner-row" data-finance-player-id="${p.id}">
+                  <span class="finance-row-label">
+                    <span class="pos-inline pos-${escapeCommHtml(p.pos || 'CM')}">${escapeCommHtml(p.pos || 'CM')}</span>
+                    <span class="finance-earner-name">${escapeCommHtml(p.name)}</span>
+                    <span class="finance-earner-meta mono">残${p.contractYears || 0}年</span>
+                  </span>
+                  <span class="finance-row-val mono accent-gold">${formatWage(pw)} · ${pct}%</span>
+                </div>
+              `;
+            }).join('') : '<div class="finance-empty-row">対象選手なし</div>'}
+          </div>
+        </section>
+      </div>
+
+      <!-- 4. 今月収支実績 ＆ 年間収支予測 -->
+      <div class="finance-two-col">
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">今月収支実績</h3>
+            <span class="finance-section-note mono">${ledger ? `${ledger.year}年${ledger.month}月` : '当月'}</span>
+          </div>
+          <div class="finance-flat-list">
+            <div class="finance-flat-row">
+              <span class="finance-row-label">試合・賞金・物販収入</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(mMatch)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">選手売却収入</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(mSell)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">給与・スタッフ支払</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(mWage)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">移籍獲得支出</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(mBuy)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">その他（施設・決算等）</span>
+              <span class="finance-row-val mono ${mOther >= 0 ? 'accent-green' : 'text-danger'}">${mOtherSign}${formatMoney(mOther)}</span>
+            </div>
+            <div class="finance-flat-row is-total">
+              <span class="finance-row-label">今月純収支</span>
+              <span class="finance-row-val mono ${mNet >= 0 ? 'accent-green' : 'text-danger'}">${mNetSign}${formatMoney(mNet)}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">今季年間収支予測</h3>
+            <span class="finance-section-note mono">現行体制ベース</span>
+          </div>
+          <div class="finance-flat-list">
+            <div class="finance-flat-row">
+              <span class="finance-row-label">ホーム興行見込（${homeMatches}試合）</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(estHomeAnnual)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">アウェイ放映権見込（${awayMatches}試合）</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(estAwayTvAnnual)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">スポンサー年額合計</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(sponsorAnnual)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">リーグ・欧州配分見込</span>
+              <span class="finance-row-val mono accent-green">+${formatMoney(tvSolidarity)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">年間人件費（52週換算）</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(summary.annualPayroll)}</span>
+            </div>
+            <div class="finance-flat-row">
+              <span class="finance-row-label">施設・クラブ運営費</span>
+              <span class="finance-row-val mono text-danger">-${formatMoney(estOpCost)}</span>
+            </div>
+            ${instAnnualNet !== 0 ? `
+              <div class="finance-flat-row">
+                <span class="finance-row-label">分割払い精算予定</span>
+                <span class="finance-row-val mono ${instAnnualNet >= 0 ? 'accent-green' : 'text-danger'}">${instAnnualNet >= 0 ? '+' : ''}${formatMoney(instAnnualNet)}</span>
+              </div>
+            ` : ''}
+            <div class="finance-flat-row is-total">
+              <span class="finance-row-label">予測年間純収支（賞金除く）</span>
+              <span class="finance-row-val mono ${estNetAnnual >= 0 ? 'accent-green' : 'text-danger'}">${estNetSign}${formatMoney(estNetAnnual)}</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 5. 分割払い・セルオン条項 ＆ 月次履歴 -->
+      <div class="finance-two-col">
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">分割払い・セルオン条項</h3>
+            <span class="finance-section-note mono">${installmentsList.length + sellOnList.length}件</span>
+          </div>
+          <div class="finance-flat-list">
+            ${installmentsList.map(inst => {
+              const isOut = inst.direction === 'out';
+              return `
+                <div class="finance-flat-row">
+                  <span class="finance-row-label">${escapeCommHtml(inst.playerName || '移籍分割')} · 残${inst.remainingSeasons}季</span>
+                  <span class="finance-row-val mono ${isOut ? 'text-danger' : 'accent-green'}">${isOut ? '-' : '+'}${formatMoney(inst.amountPerSeason || 0)}/季</span>
+                </div>
+              `;
+            }).join('')}
+            ${sellOnList.map(r => `
+              <div class="finance-flat-row">
+                <span class="finance-row-label">売却歩合：${escapeCommHtml(r.playerName || '対象選手')}</span>
+                <span class="finance-row-val mono accent-gold">${r.pct}% 分配契約</span>
+              </div>
+            `).join('')}
+            ${(installmentsList.length === 0 && sellOnList.length === 0) ? '<div class="finance-empty-row">進行中の分割払い・売却歩合条項はありません</div>' : ''}
+          </div>
+        </section>
+
+        <section class="finance-section">
+          <div class="finance-section-head">
+            <h3 class="finance-section-title">月次収支履歴</h3>
+            <span class="finance-section-note mono">直近${reports.length}ヶ月</span>
+          </div>
+          ${reports.length > 0 ? `
+            <div class="finance-history-table-wrap">
+              <table class="data-table finance-history-table">
+                <thead>
+                  <tr>
+                    <th>年月</th>
+                    <th class="col-num">収入</th>
+                    <th class="col-num">人件費</th>
+                    <th class="col-num">純収支</th>
+                    <th class="col-num">月末残高</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${reports.map(r => {
+                    const totIn = (r.matchIncome || 0) + (r.transferIn || 0);
+                    const netVal = r.netBalance || 0;
+                    const nSign = netVal >= 0 ? '+' : '';
+                    return `
+                      <tr>
+                        <td class="mono">${r.year}/${String(r.month).padStart(2, '0')}</td>
+                        <td class="col-num mono accent-green">+${formatMoney(totIn)}</td>
+                        <td class="col-num mono text-danger">-${formatMoney(r.payrollPaid || 0)}</td>
+                        <td class="col-num mono ${netVal >= 0 ? 'accent-green' : 'text-danger'}">${nSign}${formatMoney(netVal)}</td>
+                        <td class="col-num mono accent-gold">${formatMoney(r.endFunds || 0)}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<div class="finance-empty-row">月末締め後の収支履歴がここに記録されます</div>'}
+        </section>
+      </div>
+    </div>
+  `;
+
+  // スライダー・プリセット・確定イベント
+  const sliderEl = document.getElementById('finance-budget-slider');
+  const applyBtn = document.getElementById('btn-apply-budget-reallocation');
+  const prevTransferEl = document.getElementById('finance-preview-transfer');
+  const prevWageEl = document.getElementById('finance-preview-wage');
+  const prevWageRemEl = document.getElementById('finance-preview-wage-rem');
+
+  const updatePreview = (rawVal) => {
+    const step = summary.stepTransfer || 52;
+    const clamped = Math.max(summary.minTransferBudget, Math.min(summary.maxTransferBudget, Number(rawVal) || 0));
+    const stepDiff = Math.round((clamped - summary.transferBudget) / step);
+    const nextTransfer = summary.transferBudget + stepDiff * step;
+    const nextWage = summary.wageBudgetWeekly - stepDiff;
+    const nextRem = nextWage - summary.weeklyPayroll;
+    const remSignNext = nextRem >= 0 ? '+' : '';
+
+    if (prevTransferEl) prevTransferEl.textContent = formatMoney(nextTransfer);
+    if (prevWageEl) prevWageEl.textContent = formatWage(nextWage);
+    if (prevWageRemEl) {
+      prevWageRemEl.textContent = `${remSignNext}${formatWage(nextRem)}`;
+      prevWageRemEl.className = `finance-row-val mono ${nextRem < 0 ? 'text-danger' : (nextRem < 15 ? 'accent-gold' : 'accent-green')}`;
+    }
+    if (applyBtn) {
+      applyBtn.disabled = stepDiff === 0 || !summary.canReallocate;
+    }
+  };
+
+  if (sliderEl) {
+    sliderEl.addEventListener('input', (e) => updatePreview(e.target.value));
+  }
+  root.querySelectorAll('[data-budget-preset]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (!sliderEl || sliderEl.disabled) return;
+      sliderEl.value = e.currentTarget.dataset.budgetPreset;
+      updatePreview(sliderEl.value);
+    });
+  });
+  if (applyBtn && sliderEl) {
+    applyBtn.addEventListener('click', () => {
+      if (typeof reallocateClubBudget !== 'function') return;
+      const updated = reallocateClubBudget(playerClub, Number(sliderEl.value));
+      renderHeader();
+      renderFinanceBudgetPanel();
+      if (typeof scheduleAutoSave === 'function') scheduleAutoSave(300);
+      if (typeof showToast === 'function' && updated) {
+        showToast(`予算配分を確定しました（移籍 ${formatMoney(updated.transferBudget)} / 週給枠 ${formatWage(updated.wageBudgetWeekly)}）`, 'success');
+      }
+    });
+  }
+  root.querySelectorAll('[data-finance-player-id]').forEach(row => {
+    row.addEventListener('click', () => {
+      const pid = row.dataset.financePlayerId;
+      if (pid && typeof openPlayerProfileModal === 'function') {
+        openPlayerProfileModal(pid);
+      }
+    });
+  });
+}
+
+/**
  * クラブ経営・施設投資（スタジアム / 練習施設 / スカウト網）およびユースアカデミー画面を描画する
  */
 function renderFacilitiesAndYouth() {
@@ -12483,6 +13161,9 @@ function renderFacilitiesAndYouth() {
     stadiumBonusEl.textContent = stInfo
       ? `商業設備 Lv.${sLv} (物販+${(sLv - 1) * 6}%)・${(stInfo.capacity || 0).toLocaleString()}席`
       : `商業設備 Lv.${sLv} (${FACILITY_DEFINITIONS.stadium.getEffectText(sLv)})`;
+  }
+  if (gameState.facilitiesSubtab === 'finance' && typeof renderFinanceBudgetPanel === 'function') {
+    renderFinanceBudgetPanel();
   }
   if (gameState.facilitiesSubtab === 'commercial' && typeof renderCommercialManagementPanel === 'function') {
     renderCommercialManagementPanel();
@@ -15163,7 +15844,7 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   document.body.dataset.activeTab = 'office';
   gameState.teamSubtab = 'standings';
   gameState.rosterSubtab = 'board';
-  gameState.facilitiesSubtab = 'investment';
+  gameState.facilitiesSubtab = 'finance';
   gameState.marketSubtab = 'market';
   gameState.offersSubtab = 'incoming';
   gameState.lastWeekResults = [];
@@ -15304,6 +15985,13 @@ function setupNewGame(playerClubId = gameState.selectedClubId) {
   }
   if (typeof ensureClubRealismFields === 'function') {
     getAllManagedLeagueClubs().forEach(c => ensureClubRealismFields(c));
+  }
+  if (typeof allocateSeasonBudgets === 'function') {
+    getAllManagedLeagueClubs().forEach(c => {
+      if (!c) return;
+      allocateSeasonBudgets(c);
+      c.budgetAllocatedForSeason = gameState.season || 1;
+    });
   }
   gameState.currentDayIndex = 0;
   gameState.isAdvancingCalendar = false;
@@ -18018,6 +18706,7 @@ function sackCurrentManager() {
     return false;
   }
   club.funds -= fee;
+  if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(club);
   const sacked = club.manager;
   club.manager = null;
   sacked.trust = 70;
@@ -18042,6 +18731,15 @@ function hireNewManager(managerId) {
   const oldMgr = club.manager;
   let buyoutMsg = '';
 
+  const mgrWageDelta = (newMgr.weeklyWage || 0) - (oldMgr ? (oldMgr.weeklyWage || 0) : 0);
+  if (!gameState.pendingInitialStaffSetup && typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(club, mgrWageDelta);
+    if (!wCheck.ok) {
+      alert(wCheck.reason);
+      return false;
+    }
+  }
+
   if (oldMgr) {
     const fee = getManagerBuyoutFee(oldMgr);
     if (club.funds < fee) {
@@ -18053,6 +18751,7 @@ function hireNewManager(managerId) {
 
     gameState.freeManagers.splice(idx, 1);
     club.funds -= fee;
+    if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(club);
     oldMgr.trust = 70;
     gameState.freeManagers.push(oldMgr);
     buyoutMsg = `（前任違約金 £${fee.toLocaleString()}k 支払）`;
@@ -18381,6 +19080,19 @@ function hireCoach(category, slotIndex, coachId) {
   if (!gameState.freeCoaches || !Array.isArray(gameState.freeCoaches[category])) return;
   const cIdx = gameState.freeCoaches[category].findIndex(c => c.id === coachId);
   if (cIdx === -1) return;
+
+  const previewNewCoach = gameState.freeCoaches[category][cIdx];
+  const previewOldCoach = (category === 'attacking' || category === 'defending')
+    ? (club.coaches[category] && club.coaches[category][slotIndex] ? club.coaches[category][slotIndex] : null)
+    : (club.coaches[category] || null);
+  const coachWageDelta = (previewNewCoach.weeklyWage || 0) - (previewOldCoach ? (previewOldCoach.weeklyWage || 0) : 0);
+  if (!gameState.pendingInitialStaffSetup && typeof checkWageBudgetAvailability === 'function') {
+    const wCheck = checkWageBudgetAvailability(club, coachWageDelta);
+    if (!wCheck.ok) {
+      alert(wCheck.reason);
+      return;
+    }
+  }
 
   const newCoach = gameState.freeCoaches[category].splice(cIdx, 1)[0];
 
@@ -18802,6 +19514,19 @@ function openInitialStaffSetupModal(club, options = {}) {
         playerClub.tactic = selectedMgr.preferredTactic;
         playerClub.coaches = selCoaches;
         gameState.pendingInitialStaffSetup = false;
+        if (typeof ensureClubBudgetFields === 'function') {
+          ensureClubBudgetFields(playerClub);
+          const curWeekly = typeof getClubWeeklyPayroll === 'function' ? getClubWeeklyPayroll(playerClub) : 0;
+          const minBufferWage = curWeekly + 15;
+          if ((playerClub.wageBudgetWeekly || 0) < minBufferWage) {
+            const addWeekly = minBufferWage - (playerClub.wageBudgetWeekly || 0);
+            playerClub.wageBudgetWeekly = minBufferWage;
+            playerClub.initialWageBudgetWeekly = minBufferWage;
+            playerClub.transferBudget = Math.max(0, (playerClub.transferBudget || 0) - addWeekly * 52);
+            playerClub.initialTransferBudget = playerClub.transferBudget;
+          }
+          if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
+        }
         window._preseasonStaffCandidatesCache = null;
         if (gameState.managerDelegationEnabled && typeof applyManagerPreMatchDelegation === 'function') {
           applyManagerPreMatchDelegation(playerClub, true);
@@ -20500,6 +21225,13 @@ function renderBoardPsrSponsorPanel(club) {
   const matchBoostText = matchMult > 1.0 ? `（ホーム収入+${Math.round((matchMult - 1) * 100)}%）` : '';
 
   const psr = typeof evaluateClubPSR === 'function' ? evaluateClubPSR(club) : { total3YrNet: 0, isBreach: false, pointsDeduction: 0 };
+  const psrHistHtml = Array.isArray(club.psrHistory) && club.psrHistory.length > 0
+    ? `<div class="board-psr-hist">${club.psrHistory.slice(-3).map(h => {
+        const np = h.netProfit || 0;
+        const npSign = np >= 0 ? '+' : '';
+        return `<div class="board-psr-hist-row mono"><span>Season ${h.season}</span><span class="${np >= 0 ? 'accent-green' : 'text-danger'}">${npSign}${formatMoney(np)}</span></div>`;
+      }).join('')}</div>`
+    : '<div class="board-psr-sub text-muted">初年度集計中</div>';
   const conf = club.boardConfidence ?? 75;
   const targetRank = (club.boardExpectations && club.boardExpectations.targetRank) || club.targetRank || 8;
   const sanctionText = (club.psrSanction && club.psrSanction.transferBanWindows > 0)
@@ -20524,6 +21256,7 @@ function renderBoardPsrSponsorPanel(club) {
         <div class="board-psr-main mono ${psr.isBreach ? 'text-danger' : 'accent-green'}">${formatMoney(psr.total3YrNet)}</div>
         <div class="board-psr-sub mono">許容赤字上限: ${formatMoney(typeof PSR_MAX_3YR_DEFICIT !== 'undefined' ? PSR_MAX_3YR_DEFICIT : -35000)}</div>
         <div class="board-psr-sub">状態: ${sanctionText}</div>
+        ${psrHistHtml}
       </div>
       <div class="board-psr-card">
         <div class="board-psr-title mono">理事会評価・クラブ格</div>
@@ -25730,6 +26463,7 @@ function confirmCommercialSetupTask() {
   if (comm) {
     if (buildCostK > 0) {
       playerClub.funds -= buildCostK;
+      if (typeof syncTransferBudgetWithFunds === 'function') syncTransferBudgetWithFunds(playerClub);
     }
     if (!Array.isArray(comm.ownedStadiumIds)) comm.ownedStadiumIds = [];
     if (!comm.ownedStadiumIds.includes(targetStadiumId)) {

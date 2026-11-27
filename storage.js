@@ -277,7 +277,7 @@ function saveGameToStorage(force = false) {
         pendingInitialStaffSetup: Boolean(gameState.pendingInitialStaffSetup),
         pendingCommercialSetup: Boolean(gameState.pendingCommercialSetup),
         commercialSubtab: gameState.commercialSubtab || 'stadium',
-        facilitiesSubtab: gameState.facilitiesSubtab || 'investment',
+        facilitiesSubtab: gameState.facilitiesSubtab || 'finance',
         marketSubtab: gameState.marketSubtab || 'market',
         marketFilter: gameState.marketFilter || { category: 'ALL', clubId: 'ALL', position: 'ALL', sortKey: 'ovr-desc', searchQuery: '' },
         scoutingIntel: gameState.scoutingIntel || {},
@@ -1038,10 +1038,13 @@ function loadGameFromStorage() {
       });
     }
 
-    // 全所属選手およびユースの疲労度・評価点・リアリティデータ互換性補完（1部・2部両方）
+    // 全所属選手およびユースの疲労度・評価点・リアリティ・分割予算データ互換性補完（1部・2部両方）
     getAllManagedLeagueClubs().forEach(c => {
       if (typeof ensureClubRealismFields === 'function') {
         ensureClubRealismFields(c);
+      }
+      if (typeof ensureClubBudgetFields === 'function') {
+        ensureClubBudgetFields(c);
       }
       if (c.manager && typeof ensureManagerRankAndStats === 'function') {
         ensureManagerRankAndStats(c.manager);
