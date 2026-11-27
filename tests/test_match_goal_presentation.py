@@ -25,8 +25,23 @@ class TestMatchGoalPresentation(unittest.TestCase):
         self.assertGreater(bc_pos, pitch_pos)
         self.assertGreater(fs_pos, modal_pos)
 
-        for asset in ['style.css', 'match-engine.js', 'main.js']:
-            self.assertRegex(self.index_html, rf'{re.escape(asset)}\?v=20261119_3800')
+        self.assertRegex(self.index_html, r'style\.css\?v=20261119_3810')
+        for asset in ['match-engine.js', 'main.js']:
+            self.assertRegex(self.index_html, rf'{re.escape(asset)}\?v=20261119_\d+')
+
+        # 秘書モーダル主要選択肢は緑背景に黒文字、作戦確認クイック結果は本部同配色であること
+        sec_block_match = re.search(
+            r'\.gm-vn-sticky-footer\.is-card-attached\s+\.modal-actions\s+\.btn-primary,\s*\.gm-vn-sticky-footer\.is-card-attached\s+\.modal-actions\s+\.btn-accent\s*\{[^}]+\}',
+            self.style_css,
+        )
+        self.assertIsNotNone(sec_block_match)
+        self.assertIn('#2ecc71', sec_block_match.group(0))
+        self.assertIn('#111417', sec_block_match.group(0))
+
+        precheck_quick_match = re.search(r'\.btn-precheck-quick\s*\{[^}]+\}', self.style_css)
+        self.assertIsNotNone(precheck_quick_match)
+        self.assertIn('#f8fafc', precheck_quick_match.group(0))
+        self.assertIn('#252c35', precheck_quick_match.group(0))
 
     def test_match_engine_goal_functions_and_competition_meta(self):
         for symbol in [

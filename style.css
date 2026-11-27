@@ -17369,14 +17369,18 @@ body {
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 800;
-  color: #38bdf8 !important;
+  color: #f8fafc !important;
   border: 1px solid rgba(56, 189, 248, 0.45) !important;
-  background: rgba(56, 189, 248, 0.1) !important;
+  background: linear-gradient(180deg, #252c35 0%, #1a2027 100%) !important;
   white-space: nowrap;
 }
 .btn-precheck-quick:hover {
-  background: rgba(56, 189, 248, 0.2) !important;
+  background: linear-gradient(180deg, #2c3540 0%, #202730 100%) !important;
   border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+.btn-precheck-quick:active {
+  transform: translateY(1px);
 }
 
 /* 移籍市場フィルターバー（PC伸縮最適化）＆ ダイレクト交渉ボタン */
@@ -20608,15 +20612,16 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
 .gm-vn-sticky-footer.is-card-attached .modal-actions .btn-primary,
 .gm-vn-sticky-footer.is-card-attached .modal-actions .btn-accent {
-  background: rgba(46, 204, 113, 0.14) !important;
-  border: 1px solid rgba(46, 204, 113, 0.45) !important;
-  color: #4ade80 !important;
+  background: #2ecc71 !important;
+  border: 1px solid #2ecc71 !important;
+  color: #111417 !important;
 }
 
 .gm-vn-sticky-footer.is-card-attached .modal-actions .btn-primary:hover:not(:disabled),
 .gm-vn-sticky-footer.is-card-attached .modal-actions .btn-accent:hover:not(:disabled) {
-  background: rgba(46, 204, 113, 0.22) !important;
-  border-color: rgba(46, 204, 113, 0.65) !important;
+  background: #27ae60 !important;
+  border-color: #27ae60 !important;
+  color: #111417 !important;
 }
 
 .gm-vn-sticky-footer.is-card-attached .modal-actions .btn-danger {
@@ -20751,9 +20756,9 @@ body[data-active-tab="roster"][data-roster-subtab="board"] .pitch-node.bench-sub
 
   .gm-secretary-modal-card .modal-actions:not(.is-single-prompt) .btn-primary,
   .gm-secretary-modal-card .modal-actions:not(.is-single-prompt) .btn-accent {
-    background: rgba(46, 204, 113, 0.14);
-    border: 1px solid rgba(46, 204, 113, 0.55);
-    color: #4ade80;
+    background: #2ecc71;
+    border: 1px solid #2ecc71;
+    color: #111417;
   }
 
   .gm-secretary-modal-card .modal-actions:not(.is-single-prompt) .btn-danger {
