@@ -45,6 +45,65 @@ function ensureCompetitionStatsBucket(compKey) {
   return gameState.competitionStats[compKey];
 }
 
+const COMPETITION_SHORT_LABELS = {
+  d1: 'ENG-D1',
+  d2: 'ENG-D2',
+  leagueCup: 'L-CUP',
+  nationalCup: 'N-CUP',
+  championsCup: 'ECT',
+  europaCup: 'EPC',
+  conferenceCup: 'ECS',
+  preseasonCup: 'WCT'
+};
+
+/**
+ * 大会キーまたは大会オブジェクトから略称ラベル（ENG-D1 / WCT / ECT 等）を解決する
+ */
+function resolveCompetitionShortLabel(compKey, compObj = null) {
+  if (compKey && COMPETITION_SHORT_LABELS[compKey]) {
+    return COMPETITION_SHORT_LABELS[compKey];
+  }
+  if (compObj && compObj.code) return String(compObj.code);
+  if (compObj && compObj.name) return String(compObj.name);
+  return 'ENG-D1';
+}
+
+/**
+ * matchData から大会統計キー（compKey）と表示用略称（compLabel）を解決する
+ */
+function resolveMatchCompetitionMeta(matchData) {
+  if (matchData && matchData.compKey) {
+    return {
+      compKey: matchData.compKey,
+      compLabel: matchData.compLabel || resolveCompetitionShortLabel(matchData.compKey)
+    };
+  }
+  const title = String((matchData && matchData.compTitle) || '');
+  const code = String((matchData && matchData.compCode) || '').toUpperCase();
+  if ((matchData && matchData.isPreseason) || code === 'WCT' || title.includes('WCT')) {
+    return { compKey: 'preseasonCup', compLabel: 'WCT' };
+  }
+  if (code === 'ECT' || title.includes('ECT') || title.includes('チャンピオンズ')) {
+    return { compKey: 'championsCup', compLabel: 'ECT' };
+  }
+  if (code === 'EPC' || title.includes('EPC') || title.includes('プレステージ')) {
+    return { compKey: 'europaCup', compLabel: 'EPC' };
+  }
+  if (code === 'ECS' || title.includes('ECS') || title.includes('カンファレンス')) {
+    return { compKey: 'conferenceCup', compLabel: 'ECS' };
+  }
+  if (code === 'L-CUP' || title.includes('L-CUP') || title.includes('リーグ・トロフィー')) {
+    return { compKey: 'leagueCup', compLabel: 'L-CUP' };
+  }
+  if (code === 'N-CUP' || title.includes('N-CUP') || title.includes('ナショナル・カップ')) {
+    return { compKey: 'nationalCup', compLabel: 'N-CUP' };
+  }
+  if (title.includes('ENG-D2') || (typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision())) {
+    return { compKey: 'd2', compLabel: 'ENG-D2' };
+  }
+  return { compKey: 'd1', compLabel: 'ENG-D1' };
+}
+
 /**
  * 公式戦出場数（+1）および自クラブ選手のポジション特訓進捗（+15%・習得判定）を一括反映
  */
@@ -658,6 +717,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const shotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: roundNum,
+      compKey: 'preseasonCup',
+      compLabel: 'WCT',
       compTitle: `WCT ${myMatch.roundName}`,
       compCode: 'WCT',
       isPreseason: true,
@@ -794,6 +855,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const euroShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: euroMd,
+      compKey: euroCompKey,
+      compLabel: resolveCompetitionShortLabel(euroCompKey, comp),
       compTitle: `${comp.name} リーグフェーズ第${euroMd}節`,
       isEuroLeague: true,
       isKnockout: false,
@@ -914,6 +977,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
     const poShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
     const matchData = {
       week: 'PO',
+      compKey: poEuroCompKey,
+      compLabel: resolveCompetitionShortLabel(poEuroCompKey, comp),
       compTitle: `${comp.name} 決勝T進出プレーオフ`,
       isEuroLeague: false,
       isKnockout: true,
@@ -1067,6 +1132,8 @@ function playCurrentCupMatchday(skipAnimation = false, quickSummary = false) {
   const koShotStats = buildQuickMatchShotStats(homeScore, awayScore, simRes);
   const matchData = {
     week: roundKey,
+    compKey: compType,
+    compLabel: resolveCompetitionShortLabel(compType, comp),
     compTitle: `${comp.name} ${cupRoundTitle}`,
     isEuroLeague: false,
     isKnockout: true,
@@ -2494,6 +2561,8 @@ function playNextMatchweek(skipAnimation = false, quickSummary = false) {
 
     const matchObj = {
       week: weekIndex + 1,
+      compKey: leagueCompKey,
+      compLabel: resolveCompetitionShortLabel(leagueCompKey),
       homeClub,
       awayClub,
       homeScore,
@@ -2602,6 +2671,10 @@ const matchLiveState = {
   timerId: null,
   popupTimeoutId: null,
   autoSummaryTimeoutId: null,
+  goalFreezeActive: false,
+  goalResumeTimeoutId: null,
+  goalFxResetTimeoutId: null,
+  goalKeyListener: null,
   minute: 0,
   speed: 1,
   status: 'IDLE', // 'FIRST_HALF' | 'HALFTIME' | 'SECOND_HALF' | 'FULLTIME' | 'SUMMARY'
@@ -2632,6 +2705,48 @@ function clearMatchLiveTimers() {
   if (matchLiveState.autoSummaryTimeoutId) {
     clearTimeout(matchLiveState.autoSummaryTimeoutId);
     matchLiveState.autoSummaryTimeoutId = null;
+  }
+  if (matchLiveState.goalResumeTimeoutId) {
+    clearTimeout(matchLiveState.goalResumeTimeoutId);
+    matchLiveState.goalResumeTimeoutId = null;
+  }
+  if (matchLiveState.goalFxResetTimeoutId) {
+    clearTimeout(matchLiveState.goalFxResetTimeoutId);
+    matchLiveState.goalFxResetTimeoutId = null;
+  }
+  matchLiveState.goalFreezeActive = false;
+  if (typeof document !== 'undefined') {
+    if (matchLiveState.goalKeyListener) {
+      document.removeEventListener('keydown', matchLiveState.goalKeyListener, true);
+      matchLiveState.goalKeyListener = null;
+    }
+    const bcEl = document.getElementById('match-pitch-goal-broadcast');
+    if (bcEl) {
+      bcEl.classList.add('hidden');
+      bcEl.classList.remove('is-leaving');
+      bcEl.removeAttribute('data-venue-side');
+      bcEl.removeAttribute('data-player-goal');
+      bcEl.onclick = null;
+      bcEl.innerHTML = '';
+    }
+    const fsEl = document.getElementById('match-goal-fullscreen');
+    if (fsEl) {
+      fsEl.classList.add('hidden');
+      fsEl.classList.remove('is-leaving');
+      fsEl.removeAttribute('data-venue-side');
+      fsEl.removeAttribute('data-player-goal');
+      fsEl.onclick = null;
+      fsEl.innerHTML = '';
+    }
+    const pitchEl = document.getElementById('match-2d-pitch');
+    if (pitchEl) {
+      pitchEl.classList.remove('is-goal-flash-home', 'is-goal-flash-away');
+      pitchEl.querySelectorAll('.pitch-goal-net.is-net-hit').forEach(el => el.classList.remove('is-net-hit'));
+    }
+    const shEl = document.getElementById('match-live-score-home');
+    const saEl = document.getElementById('match-live-score-away');
+    if (shEl) shEl.classList.remove('is-score-bump');
+    if (saEl) saEl.classList.remove('is-score-bump');
   }
 }
 
@@ -2856,9 +2971,28 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
   };
 
   const fmtNum = (p) => (p && p.squadNumber ? `#${p.squadNumber} ` : '');
+  const { compKey, compLabel } = resolveMatchCompetitionMeta(matchData);
+  const statsBucket = (typeof gameState !== 'undefined' && gameState && gameState.competitionStats && compKey)
+    ? gameState.competitionStats[compKey]
+    : null;
+
+  const getPlayerKey = (p) => (p && p.id) ? String(p.id) : ((p && p.name) ? `name:${p.name}` : '');
+  const matchTotalByPlayer = {};
+  [...(homeScorers || []), ...(awayScorers || [])].forEach(g => {
+    const pid = getPlayerKey(g && g.scorer);
+    if (!pid) return;
+    matchTotalByPlayer[pid] = (matchTotalByPlayer[pid] || 0) + 1;
+  });
+  const preMatchByPlayer = {};
+  Object.keys(matchTotalByPlayer).forEach(pid => {
+    const entry = statsBucket && statsBucket[pid];
+    const postGoals = Math.max(matchTotalByPlayer[pid], (entry && typeof entry.goals === 'number') ? entry.goals : 0);
+    preMatchByPlayer[pid] = Math.max(0, postGoals - matchTotalByPlayer[pid]);
+  });
 
   // 1. ゴールイベントを配置
-  homeScorers.forEach(g => {
+  const goalEventsList = [];
+  (homeScorers || []).forEach(g => {
     const isFH = g.minute <= 45;
     const min = getFreeMinute(g.minute, isFH);
     g.minute = min;
@@ -2870,13 +3004,16 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       club: homeClub,
       actor: g.scorer,
       assister: g.assister || null,
+      compKey,
+      compLabel,
       text: `GOAL!! ${homeClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がネットを揺らす！${assistText}`
     };
     byMinute[min] = ev;
     highlights.push(ev);
+    goalEventsList.push(ev);
   });
 
-  awayScorers.forEach(g => {
+  (awayScorers || []).forEach(g => {
     const isFH = g.minute <= 45;
     const min = getFreeMinute(g.minute, isFH);
     g.minute = min;
@@ -2888,10 +3025,105 @@ function buildLiveMatchTimeline(matchData, homeScorers, awayScorers) {
       club: awayClub,
       actor: g.scorer,
       assister: g.assister || null,
+      compKey,
+      compLabel,
       text: `GOAL!! ${awayClub.name} ${fmtNum(g.scorer)}${g.scorer.name} がゴールを決めた！${assistText}`
     };
     byMinute[min] = ev;
     highlights.push(ev);
+    goalEventsList.push(ev);
+  });
+
+  // 時系列順にスコア推移・大会通算ゴール数・ドラマ文脈を算出
+  goalEventsList.sort((a, b) => a.minute - b.minute);
+  let simHome = 0;
+  let simAway = 0;
+  let homeHadTrailed = false;
+  let awayHadTrailed = false;
+  const matchGoalSoFar = {};
+  const isFinalMatch = Boolean(matchData && matchData.isTournamentFinal) || Boolean(
+    matchData && matchData.compTitle
+    && /決勝$/.test(String(matchData.compTitle).trim())
+    && !String(matchData.compTitle).includes('プレーオフ')
+  );
+  const specialCtx = (matchData && matchData.specialContext) ? matchData.specialContext : null;
+
+  goalEventsList.forEach(ev => {
+    const prevHome = simHome;
+    const prevAway = simAway;
+    const isHomeGoal = ev.side === 'home';
+    const afterHome = isHomeGoal ? prevHome + 1 : prevHome;
+    const afterAway = isHomeGoal ? prevAway : prevAway + 1;
+    const prevDiff = isHomeGoal ? (prevHome - prevAway) : (prevAway - prevHome);
+    const afterDiff = isHomeGoal ? (afterHome - afterAway) : (afterAway - afterHome);
+    const scorerHadTrailed = isHomeGoal ? homeHadTrailed : awayHadTrailed;
+
+    if (afterHome < afterAway) homeHadTrailed = true;
+    if (afterAway < afterHome) awayHadTrailed = true;
+    simHome = afterHome;
+    simAway = afterAway;
+
+    const pid = getPlayerKey(ev.actor);
+    if (pid) {
+      matchGoalSoFar[pid] = (matchGoalSoFar[pid] || 0) + 1;
+    }
+    const matchOrdinal = pid ? matchGoalSoFar[pid] : 1;
+    const preGoals = pid ? (preMatchByPlayer[pid] || 0) : 0;
+    const compGoalNumber = preGoals + matchOrdinal;
+
+    let dramaTag = '';
+    let dramaSub = '';
+    let isDramaticFullscreen = false;
+    const isScoringPlayerClub = Boolean(ev.club && ev.club.isPlayer);
+
+    if (matchOrdinal >= 3) {
+      dramaTag = 'HAT-TRICK';
+      dramaSub = 'ハットトリック達成';
+      isDramaticFullscreen = true;
+    } else if (ev.minute >= 80 && prevDiff <= 0 && afterDiff > 0) {
+      dramaTag = 'LATE WINNER';
+      dramaSub = '終盤の勝ち越し弾';
+      isDramaticFullscreen = true;
+    } else if (ev.minute >= 80 && afterHome === afterAway) {
+      dramaTag = 'LATE EQUALIZER';
+      dramaSub = '終盤の劇的同点弾';
+      isDramaticFullscreen = true;
+    } else if (scorerHadTrailed && prevDiff === 0 && afterDiff > 0) {
+      dramaTag = 'COMEBACK GOAL';
+      dramaSub = '逆転ゴール';
+      isDramaticFullscreen = true;
+    } else if (isFinalMatch) {
+      dramaTag = 'FINAL GOAL';
+      dramaSub = '決勝戦ゴール';
+      isDramaticFullscreen = true;
+    } else if (specialCtx && (isScoringPlayerClub || afterDiff >= 0)) {
+      dramaTag = specialCtx.kind === 'derby' ? 'DERBY GOAL' : 'BIG MATCH GOAL';
+      dramaSub = specialCtx.label || '大一番のゴール';
+      isDramaticFullscreen = true;
+    } else if (matchOrdinal === 2) {
+      dramaTag = 'BRACE';
+      dramaSub = '本日2点目';
+    } else if (afterHome === afterAway) {
+      dramaTag = 'EQUALIZER';
+      dramaSub = '同点ゴール';
+    } else if (prevHome === prevAway && prevHome > 0) {
+      dramaTag = 'GO-AHEAD GOAL';
+      dramaSub = '勝ち越しゴール';
+    } else if (prevHome === 0 && prevAway === 0) {
+      dramaTag = 'OPENING GOAL';
+      dramaSub = '先制ゴール';
+    }
+
+    ev.prevHomeScore = prevHome;
+    ev.prevAwayScore = prevAway;
+    ev.afterHomeScore = afterHome;
+    ev.afterAwayScore = afterAway;
+    ev.matchGoalOrdinal = matchOrdinal;
+    ev.compGoalNumber = compGoalNumber;
+    ev.dramaTag = dramaTag;
+    ev.dramaSub = dramaSub;
+    ev.isDramaticFullscreen = isDramaticFullscreen;
+    ev.text = `${ev.text}（${compLabel} 今季${compGoalNumber}点目）`;
   });
 
   // 2. 決定機・セーブ・シュートイベントを前後半にバランス良く配置
@@ -3159,7 +3391,12 @@ function animatePitchStep(minute, ev) {
   let targetY = 50;
   let lineColor = '#f1c40f';
 
-  if (ev.type === 'save') {
+  if (ev.type === 'goal') {
+    const mdGoal = matchLiveState.matchData;
+    const { homeTheme, awayTheme } = resolveSummaryKitThemes(mdGoal && mdGoal.homeClub, mdGoal && mdGoal.awayClub);
+    const goalTheme = isHome ? homeTheme : awayTheme;
+    lineColor = goalTheme.accentColor || '#2ecc71';
+  } else if (ev.type === 'save') {
     targetX = isHome ? 93.5 : 6.5;
     targetY = randInt(43, 57);
     lineColor = '#60a5fa';
@@ -3170,9 +3407,13 @@ function animatePitchStep(minute, ev) {
   }
 
   if (svgEl) {
+    const impactRing = ev.type === 'goal'
+      ? `<circle class="pitch-goal-impact-ring" cx="${targetX}" cy="${targetY}" r="3.6" fill="none" stroke="${lineColor}" stroke-width="1.4" />`
+      : '';
     svgEl.innerHTML = `
       <line x1="${shootX}" y1="${shootY}" x2="${targetX}" y2="${targetY}"
-        stroke="${lineColor}" stroke-width="1.2" stroke-dasharray="${ev.type === 'goal' ? 'none' : '2,2'}" />
+        stroke="${lineColor}" stroke-width="${ev.type === 'goal' ? '2.1' : '1.2'}" stroke-dasharray="${ev.type === 'goal' ? 'none' : '2,2'}" />
+      ${impactRing}
     `;
   }
 
@@ -3181,7 +3422,7 @@ function animatePitchStep(minute, ev) {
     ballEl.style.top = `${targetY}%`;
   }
 
-  if (ev.type === 'goal' || ev.type === 'save') {
+  if (ev.type === 'save') {
     showMatchPitchPopup(ev);
   }
 }
@@ -3258,6 +3499,305 @@ function showMatchPitchPopup(ev) {
   }, popupDurationMs);
 }
 
+function escapeGoalHtml(text) {
+  if (typeof escapeCommHtml === 'function') {
+    return escapeCommHtml(text);
+  }
+  return String(text ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
+/**
+ * 再生速度・演出規模・ホーム/アウェイ・自/相手チームに応じたゴール一時停止時間(ms)を算出
+ */
+function computeGoalPresentationDurationMs(speed, isFullscreen, isHomeGoal, isPlayerGoal) {
+  const sp = Number(speed) === 4 ? 4 : (Number(speed) === 1 ? 1 : 2);
+  let table;
+  if (isFullscreen) {
+    table = isHomeGoal ? { 1: 2600, 2: 1750, 4: 1000 } : { 1: 2200, 2: 1500, 4: 880 };
+  } else {
+    table = isHomeGoal ? { 1: 1850, 2: 1250, 4: 720 } : { 1: 1450, 2: 1000, 4: 580 };
+  }
+  const base = table[sp] || 1250;
+  return isPlayerGoal ? base : Math.max(480, Math.round(base * 0.85));
+}
+
+/**
+ * ゴール一時停止演出を終了し、試合時計を再開する
+ */
+function finishMatchGoalPresentation() {
+  if (matchLiveState.goalResumeTimeoutId) {
+    clearTimeout(matchLiveState.goalResumeTimeoutId);
+    matchLiveState.goalResumeTimeoutId = null;
+  }
+  if (matchLiveState.goalFxResetTimeoutId) {
+    clearTimeout(matchLiveState.goalFxResetTimeoutId);
+    matchLiveState.goalFxResetTimeoutId = null;
+  }
+  if (!matchLiveState.goalFreezeActive) return;
+  matchLiveState.goalFreezeActive = false;
+
+  if (typeof document !== 'undefined') {
+    if (matchLiveState.goalKeyListener) {
+      document.removeEventListener('keydown', matchLiveState.goalKeyListener, true);
+      matchLiveState.goalKeyListener = null;
+    }
+    const bcEl = document.getElementById('match-pitch-goal-broadcast');
+    if (bcEl) {
+      bcEl.classList.add('hidden');
+      bcEl.classList.remove('is-leaving');
+      bcEl.removeAttribute('data-venue-side');
+      bcEl.removeAttribute('data-player-goal');
+      bcEl.onclick = null;
+      bcEl.innerHTML = '';
+    }
+    const fsEl = document.getElementById('match-goal-fullscreen');
+    if (fsEl) {
+      fsEl.classList.add('hidden');
+      fsEl.classList.remove('is-leaving');
+      fsEl.removeAttribute('data-venue-side');
+      fsEl.removeAttribute('data-player-goal');
+      fsEl.onclick = null;
+      fsEl.innerHTML = '';
+    }
+    const pitchEl = document.getElementById('match-2d-pitch');
+    if (pitchEl) {
+      pitchEl.classList.remove('is-goal-flash-home', 'is-goal-flash-away');
+      pitchEl.querySelectorAll('.pitch-goal-net.is-net-hit').forEach(el => el.classList.remove('is-net-hit'));
+    }
+    const shEl = document.getElementById('match-live-score-home');
+    const saEl = document.getElementById('match-live-score-away');
+    if (shEl) shEl.classList.remove('is-score-bump');
+    if (saEl) saEl.classList.remove('is-score-bump');
+
+    const ballEl = document.getElementById('match-pitch-ball');
+    if (ballEl) {
+      ballEl.style.left = '50%';
+      ballEl.style.top = '50%';
+    }
+    const svgEl = document.getElementById('match-pitch-svg');
+    if (svgEl) svgEl.innerHTML = '';
+  }
+
+  if (matchLiveState.status === 'FIRST_HALF' || matchLiveState.status === 'SECOND_HALF') {
+    startMatchLiveTimer();
+  }
+}
+
+/**
+ * ゴール時の専用演出（通常ブロードキャスト / 劇的フルスクリーン）を再生して時計を一時停止する
+ */
+function presentMatchGoalSequence(ev) {
+  if (!ev || typeof document === 'undefined') return;
+  const md = matchLiveState.matchData;
+  const homeClub = md ? md.homeClub : null;
+  const awayClub = md ? md.awayClub : null;
+  const isHomeGoal = ev.side === 'home';
+  const venueSide = isHomeGoal ? 'home' : 'away';
+  const isPlayerGoal = Boolean(ev.club && ev.club.isPlayer);
+  const isFullscreen = Boolean(ev.isDramaticFullscreen);
+
+  const popupEl = document.getElementById('match-pitch-event-popup');
+  if (popupEl) popupEl.classList.add('hidden');
+
+  if (matchLiveState.goalResumeTimeoutId) {
+    clearTimeout(matchLiveState.goalResumeTimeoutId);
+    matchLiveState.goalResumeTimeoutId = null;
+  }
+  if (matchLiveState.goalFxResetTimeoutId) {
+    clearTimeout(matchLiveState.goalFxResetTimeoutId);
+    matchLiveState.goalFxResetTimeoutId = null;
+  }
+  if (matchLiveState.goalKeyListener) {
+    document.removeEventListener('keydown', matchLiveState.goalKeyListener, true);
+    matchLiveState.goalKeyListener = null;
+  }
+
+  const { homeTheme, awayTheme } = resolveSummaryKitThemes(homeClub, awayClub);
+  const targetTheme = isHomeGoal ? homeTheme : awayTheme;
+  const durationMs = computeGoalPresentationDurationMs(matchLiveState.speed, isFullscreen, isHomeGoal, isPlayerGoal);
+
+  // ピッチ＆スコアボード連動エフェクト
+  const pitchEl = document.getElementById('match-2d-pitch');
+  if (pitchEl) {
+    pitchEl.classList.remove('is-goal-flash-home', 'is-goal-flash-away');
+    void pitchEl.offsetWidth;
+    pitchEl.classList.add(isHomeGoal ? 'is-goal-flash-home' : 'is-goal-flash-away');
+    const netSelector = isHomeGoal ? '.pitch-goal-net.right' : '.pitch-goal-net.left';
+    const netEl = pitchEl.querySelector(netSelector);
+    if (netEl) {
+      netEl.classList.remove('is-net-hit');
+      void netEl.offsetWidth;
+      netEl.classList.add('is-net-hit');
+    }
+  }
+  const scoreTargetEl = document.getElementById(isHomeGoal ? 'match-live-score-home' : 'match-live-score-away');
+  if (scoreTargetEl) {
+    scoreTargetEl.classList.remove('is-score-bump');
+    void scoreTargetEl.offsetWidth;
+    scoreTargetEl.classList.add('is-score-bump');
+  }
+
+  const targetPlayer = ev.actor || null;
+  const targetClub = ev.club || (isHomeGoal ? homeClub : awayClub);
+  const numLabel = targetPlayer && targetPlayer.squadNumber ? `#${targetPlayer.squadNumber}` : '';
+  const playerName = targetPlayer && targetPlayer.name ? targetPlayer.name : '選手';
+  const clubNameEsc = escapeGoalHtml((targetClub && targetClub.name) ? targetClub.name : '');
+  const scorerDisplayHtml = `${numLabel ? `<span class="goal-fx-num mono">${escapeGoalHtml(numLabel)}</span>` : ''}<span class="goal-fx-player-name">${escapeGoalHtml(playerName)}</span>`;
+  const venueLabel = isHomeGoal ? 'HOME GOAL' : 'AWAY GOAL';
+  const minuteStr = `${ev.minute}'`;
+  const compMeta = resolveMatchCompetitionMeta(md);
+  const compLabelEsc = escapeGoalHtml(ev.compLabel || compMeta.compLabel || 'ENG-D1');
+  const compGoalNum = Math.max(1, Number(ev.compGoalNumber) || 1);
+  const dramaTagEsc = escapeGoalHtml(ev.dramaTag || '');
+  const dramaSubEsc = escapeGoalHtml(ev.dramaSub || '');
+  const assistName = (ev.assister && ev.assister.name) ? `${ev.assister.squadNumber ? `#${ev.assister.squadNumber} ` : ''}${ev.assister.name}` : '';
+  const assistInlineHtml = assistName ? `<span class="goal-fx-assist">アシスト ${escapeGoalHtml(assistName)}</span>` : '';
+
+  const homeCode = escapeGoalHtml(typeof getClubShortCode === 'function' ? getClubShortCode(homeClub) : ((homeClub && homeClub.shortCode) || 'HOM'));
+  const awayCode = escapeGoalHtml(typeof getClubShortCode === 'function' ? getClubShortCode(awayClub) : ((awayClub && awayClub.shortCode) || 'AWY'));
+  const homeNameEsc = escapeGoalHtml((homeClub && homeClub.name) || 'HOME');
+  const awayNameEsc = escapeGoalHtml((awayClub && awayClub.name) || 'AWAY');
+  const afterH = typeof ev.afterHomeScore === 'number' ? ev.afterHomeScore : matchLiveState.liveHomeScore;
+  const afterA = typeof ev.afterAwayScore === 'number' ? ev.afterAwayScore : matchLiveState.liveAwayScore;
+
+  const bcEl = document.getElementById('match-pitch-goal-broadcast');
+  const fsEl = document.getElementById('match-goal-fullscreen');
+  if (bcEl) { bcEl.classList.add('hidden'); bcEl.innerHTML = ''; bcEl.onclick = null; }
+  if (fsEl) { fsEl.classList.add('hidden'); fsEl.innerHTML = ''; fsEl.onclick = null; }
+
+  const targetContainer = isFullscreen ? fsEl : bcEl;
+  if (!targetContainer) return;
+
+  matchLiveState.goalFreezeActive = true;
+  targetContainer.style.setProperty('--goal-primary', targetTheme.primaryHex || '#2ecc71');
+  targetContainer.style.setProperty('--goal-accent', targetTheme.accentColor || '#2ecc71');
+  targetContainer.style.setProperty('--goal-border', targetTheme.tintBorder || 'rgba(46, 204, 113, 0.65)');
+  targetContainer.style.setProperty('--goal-bg', targetTheme.tintBg || 'rgba(46, 204, 113, 0.20)');
+  targetContainer.setAttribute('data-venue-side', venueSide);
+  targetContainer.setAttribute('data-player-goal', isPlayerGoal ? '1' : '0');
+
+  if (isFullscreen) {
+    const fsAvatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
+      ? getPlayerAvatarHtml(targetPlayer, targetClub, 'goal-fs-avatar', 96)
+      : '';
+    const fsEmblemHtml = (targetClub && typeof getClubEmblemSvg === 'function')
+      ? getClubEmblemSvg(targetClub, 46, 'goal-fs-emblem')
+      : '';
+    const showConfetti = isHomeGoal && isPlayerGoal;
+    let confettiHtml = '';
+    if (showConfetti) {
+      const pieces = [];
+      for (let i = 0; i < 16; i++) {
+        const left = ((i * 19 + 5) % 92) + 4;
+        const delay = ((i % 6) * 0.08).toFixed(2);
+        const dur = (1.5 + (i % 4) * 0.22).toFixed(2);
+        const tone = i % 2 === 0 ? 'is-club' : 'is-light';
+        pieces.push(`<span class="goal-fs-confetti-piece ${tone}" style="left:${left}%; animation-delay:${delay}s; animation-duration:${dur}s;"></span>`);
+      }
+      confettiHtml = `<div class="goal-fs-confetti-layer" aria-hidden="true">${pieces.join('')}</div>`;
+    }
+
+    targetContainer.innerHTML = `
+      ${confettiHtml}
+      <div class="goal-fs-backdrop" aria-hidden="true"></div>
+      <div class="goal-fs-watermark mono" aria-hidden="true">GOAL</div>
+      <div class="goal-fs-band" aria-hidden="true"></div>
+      <div class="goal-fs-stage">
+        <div class="goal-fs-eyebrow-row mono">
+          <span class="goal-fs-venue">${venueLabel}</span>
+          <span class="goal-fs-sep">/</span>
+          <span class="goal-fs-minute">${minuteStr}</span>
+          ${dramaTagEsc ? `<span class="goal-fs-sep">/</span><span class="goal-fs-drama-tag">${dramaTagEsc}</span>` : ''}
+        </div>
+        <div class="goal-fs-hero-media">
+          ${fsAvatarHtml ? `<div class="goal-fs-avatar-wrap">${fsAvatarHtml}</div>` : ''}
+          ${fsEmblemHtml ? `<div class="goal-fs-emblem-wrap">${fsEmblemHtml}</div>` : ''}
+        </div>
+        <div class="goal-fs-drama-title">${dramaSubEsc || (isHomeGoal ? 'ホームの歓喜を揺らす一撃' : 'アウェイで決めた価値ある一撃')}</div>
+        <div class="goal-fs-scorer">${scorerDisplayHtml}</div>
+        <div class="goal-fs-club-line">${clubNameEsc}</div>
+        <div class="goal-fs-stat-row">
+          <span class="goal-fx-comp-name mono">${compLabelEsc}</span>
+          <span class="goal-fx-comp-val">今季 ${compGoalNum}点目</span>
+          ${assistInlineHtml}
+        </div>
+        <div class="goal-fs-scoreline mono">
+          <span class="goal-fs-team ${isHomeGoal ? 'is-scorer-side' : ''}">${homeNameEsc}</span>
+          <span class="goal-fs-score-nums">
+            <span class="goal-score-num ${isHomeGoal ? 'is-updated' : ''}">${afterH}</span>
+            <span class="goal-score-sep">-</span>
+            <span class="goal-score-num ${!isHomeGoal ? 'is-updated' : ''}">${afterA}</span>
+          </span>
+          <span class="goal-fs-team ${!isHomeGoal ? 'is-scorer-side' : ''}">${awayNameEsc}</span>
+        </div>
+        <div class="goal-fs-hint">タップまたはキーで試合再開</div>
+      </div>
+    `;
+  } else {
+    const bcAvatarHtml = (targetPlayer && targetClub && typeof getPlayerAvatarHtml === 'function')
+      ? getPlayerAvatarHtml(targetPlayer, targetClub, 'goal-bc-avatar', 60)
+      : '';
+    const bcEmblemHtml = (targetClub && typeof getClubEmblemSvg === 'function')
+      ? getClubEmblemSvg(targetClub, 24, 'goal-bc-emblem')
+      : '';
+    const dramaInlineHtml = dramaTagEsc ? `<span class="goal-bc-drama mono">${dramaTagEsc}</span>` : '';
+
+    targetContainer.innerHTML = `
+      <div class="goal-bc-band" aria-hidden="true"></div>
+      <div class="goal-bc-card ${venueSide === 'away' ? 'is-away' : 'is-home'} ${isPlayerGoal ? 'is-player-goal' : 'is-opponent-goal'}">
+        <div class="goal-bc-media">
+          ${bcAvatarHtml ? `<div class="goal-bc-avatar-wrap">${bcAvatarHtml}</div>` : ''}
+          ${bcEmblemHtml ? `<div class="goal-bc-emblem-wrap">${bcEmblemHtml}</div>` : ''}
+        </div>
+        <div class="goal-bc-body">
+          <div class="goal-bc-kicker-row">
+            <span class="goal-bc-venue mono">${venueLabel}</span>
+            <span class="goal-bc-minute mono">${minuteStr}</span>
+            ${dramaInlineHtml}
+          </div>
+          <div class="goal-bc-scorer">${scorerDisplayHtml}</div>
+          <div class="goal-bc-club">${clubNameEsc}</div>
+          <div class="goal-bc-meta-row">
+            <span class="goal-fx-comp-name mono">${compLabelEsc}</span>
+            <span class="goal-fx-comp-val">今季 ${compGoalNum}点目</span>
+            ${assistInlineHtml}
+          </div>
+          <div class="goal-bc-score-row mono">
+            <span class="goal-score-team ${isHomeGoal ? 'is-scorer-side' : ''}">${homeCode}</span>
+            <span class="goal-score-num ${isHomeGoal ? 'is-updated' : ''}">${afterH}</span>
+            <span class="goal-score-sep">-</span>
+            <span class="goal-score-num ${!isHomeGoal ? 'is-updated' : ''}">${afterA}</span>
+            <span class="goal-score-team ${!isHomeGoal ? 'is-scorer-side' : ''}">${awayCode}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  targetContainer.classList.remove('hidden', 'is-leaving');
+  if (typeof renderAvatarCanvases === 'function') {
+    renderAvatarCanvases(targetContainer);
+  }
+
+  targetContainer.onclick = (e) => {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    finishMatchGoalPresentation();
+  };
+  matchLiveState.goalKeyListener = (e) => {
+    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      finishMatchGoalPresentation();
+    }
+  };
+  document.addEventListener('keydown', matchLiveState.goalKeyListener, true);
+  matchLiveState.goalResumeTimeoutId = setTimeout(() => {
+    finishMatchGoalPresentation();
+  }, durationMs);
+}
+
 /**
  * 実況ティッカーに1行追加
  */
@@ -3332,12 +3872,27 @@ function startMatchLiveTimer() {
         if (shEl) shEl.textContent = matchLiveState.liveHomeScore;
         if (saEl) saEl.textContent = matchLiveState.liveAwayScore;
         appendLiveCommentary(`${min}'`, ev.text, 'ev-goal');
+        const isHomeGoal = ev.side === 'home';
         const isPlayerGoal = Boolean(
-          (ev.side === 'home' && mdNow?.homeClub?.isPlayer)
-          || (ev.side === 'away' && mdNow?.awayClub?.isPlayer)
+          (isHomeGoal && mdNow?.homeClub?.isPlayer)
+          || (!isHomeGoal && mdNow?.awayClub?.isPlayer)
         );
         playMatchSfx('sfx_kick');
-        playMatchSfx(isPlayerGoal ? 'sfx_goal_cheer' : 'sfx_crowd_groan', { delayMs: 70 });
+        if (isPlayerGoal) {
+          playMatchSfx('sfx_goal_cheer', { delayMs: isHomeGoal ? 60 : 75, volumeScale: isHomeGoal ? 1.0 : 0.78 });
+          if (ev.isDramaticFullscreen && isHomeGoal) {
+            playMatchSfx('sfx_applause', { delayMs: 360, volumeScale: 0.72 });
+          }
+        } else {
+          playMatchSfx('sfx_crowd_groan', { delayMs: 70, volumeScale: isHomeGoal ? 0.85 : 1.0 });
+          if (isHomeGoal) {
+            playMatchSfx('sfx_applause', { delayMs: 160, volumeScale: 0.35 });
+          }
+        }
+        clearInterval(matchLiveState.timerId);
+        matchLiveState.timerId = null;
+        presentMatchGoalSequence(ev);
+        return;
       } else if (ev.type === 'save') {
         if (ev.side === 'home') matchLiveState.liveHomeShots += 1;
         else matchLiveState.liveAwayShots += 1;
@@ -4628,7 +5183,7 @@ function openMatchEventModal(matchData, homeScorers, awayScorers, onComplete, op
         document.querySelectorAll('#match-event-modal .btn-speed').forEach(b => {
           b.classList.toggle('active', Number(b.dataset.speed) === sp);
         });
-        if (matchLiveState.status === 'FIRST_HALF' || matchLiveState.status === 'SECOND_HALF') {
+        if ((matchLiveState.status === 'FIRST_HALF' || matchLiveState.status === 'SECOND_HALF') && !matchLiveState.goalFreezeActive) {
           startMatchLiveTimer();
         }
       });
