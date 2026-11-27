@@ -9331,7 +9331,7 @@ function renderStandings() {
       if (bracketWrapper) {
         bracketWrapper.classList.remove('standings-view');
         bracketWrapper.innerHTML = renderCupBracketHtml(curEuro);
-        bindCupBracketRoundTabs(bracketWrapper, curEuro);
+        bindEuroTreeControls(bracketWrapper);
       }
       if (statusText) statusText.textContent = compName;
     }
@@ -9339,7 +9339,7 @@ function renderStandings() {
 }
 
 /**
- * カップ戦・欧州決勝Tのラウンド切替タブにクリックイベントを設定する
+ * カップ戦のラウンド切替タブにクリックイベントを設定する
  */
 function bindCupBracketRoundTabs(wrapper, compKey) {
   if (!wrapper || !compKey) return;
@@ -9354,6 +9354,63 @@ function bindCupBracketRoundTabs(wrapper, compKey) {
       renderStandings();
     });
   });
+}
+
+/**
+ * 欧州コンペ左右対称トーナメント表のジャンプ操作と初期フォーカスを設定する
+ */
+function bindEuroTreeControls(wrapper) {
+  if (!wrapper) return;
+  const viewport = wrapper.querySelector('.euro-tree-viewport');
+  const canvas = wrapper.querySelector('.euro-tree-canvas');
+  if (!viewport || !canvas) return;
+
+  const findBestPlayerNode = () => {
+    const nodes = Array.from(canvas.querySelectorAll('[data-tree-player="1"]'));
+    if (nodes.length === 0) return null;
+    nodes.sort((a, b) => Number(b.dataset.roundOrder || 0) - Number(a.dataset.roundOrder || 0));
+    return nodes[0];
+  };
+
+  const scrollToTarget = (mode, smooth) => {
+    const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    if (maxScroll <= 0) return;
+    let targetLeft = maxScroll / 2;
+    if (mode === 'left') {
+      targetLeft = 0;
+    } else if (mode === 'right') {
+      targetLeft = maxScroll;
+    } else if (mode === 'player') {
+      const targetNode = findBestPlayerNode();
+      if (targetNode) {
+        const vpRect = viewport.getBoundingClientRect();
+        const nodeRect = targetNode.getBoundingClientRect();
+        const nodeCenterInVp = viewport.scrollLeft + (nodeRect.left - vpRect.left) + nodeRect.width / 2;
+        targetLeft = nodeCenterInVp - viewport.clientWidth / 2;
+      }
+    }
+    const clamped = Math.max(0, Math.min(maxScroll, Math.round(targetLeft)));
+    if (typeof viewport.scrollTo === 'function') {
+      viewport.scrollTo({ left: clamped, behavior: smooth ? 'smooth' : 'auto' });
+    } else {
+      viewport.scrollLeft = clamped;
+    }
+  };
+
+  wrapper.querySelectorAll('.euro-tree-jump-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.treeJump || 'center';
+      scrollToTarget(mode, true);
+    });
+  });
+
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      scrollToTarget(findBestPlayerNode() ? 'player' : 'center', false);
+    });
+  } else {
+    scrollToTarget(findBestPlayerNode() ? 'player' : 'center', false);
+  }
 }
 
 /**

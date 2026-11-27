@@ -236,7 +236,7 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
 
         self.assertIn('function bindCupBracketRoundTabs(', self.main_js)
         self.assertIn('bindCupBracketRoundTabs(bracketWrapper, curDom);', self.main_js)
-        self.assertIn('bindCupBracketRoundTabs(bracketWrapper, curEuro);', self.main_js)
+        self.assertIn('bindEuroTreeControls(bracketWrapper);', self.main_js)
         self.assertGreaterEqual(self.main_js.count('gameState.selectedCupRounds = {};'), 2)
 
         for css_sel in [
@@ -247,6 +247,39 @@ class TestSeasonAwardsAndRecords(unittest.TestCase):
         ]:
             self.assertIn(css_sel, self.css)
         self.assertNotIn('.bracket-rounds-wrapper', self.css)
+
+    def test_8_euro_fixed_symmetrical_bracket(self):
+        """欧州コンペの組み合わせ固定・左右対称トーナメント表描画・操作バー・CSSを検証"""
+        self.assertIn('function generateKnockoutRound(clubs, preserveOrder = false)', self.competitions_js)
+        self.assertIn('function isFixedBracketCompetition(comp)', self.competitions_js)
+        self.assertIn('generateKnockoutRound(winners, isFixedBracketCompetition(comp))', self.competitions_js)
+        self.assertIn('function renderEuroSymmetricalBracketHtml(compKey)', self.competitions_js)
+
+        fn_match = re.search(r'function renderEuroSymmetricalBracketHtml\([\s\S]*?\n\}', self.competitions_js)
+        self.assertIsNotNone(fn_match)
+        body = fn_match.group(0)
+        for token in [
+            'euro-tree-jump-bar',
+            'euro-tree-viewport',
+            'euro-tree-canvas',
+            'euro-tree-svg',
+            'euro-tree-node',
+            'euro-tree-final-card',
+            'euro-tree-champion',
+            'euro-po-section',
+        ]:
+            self.assertIn(token, body)
+
+        self.assertIn('function bindEuroTreeControls(', self.main_js)
+        for css_sel in [
+            '.euro-tree-jump-bar',
+            '.euro-tree-viewport',
+            '.euro-tree-canvas',
+            '.euro-tree-node',
+            '.euro-tree-final-card',
+            '.euro-tree-champion',
+        ]:
+            self.assertIn(css_sel, self.css)
 
 
 if __name__ == '__main__':
