@@ -4276,7 +4276,7 @@ function advanceScoutingProgressDaily() {
             senderType: 'scout',
             senderName: 'チーフスカウト',
             title: `詳細スカウト完了：${pPos ? pPos + ' ' : ''}${pName}`,
-            body: `${pName}${pOvr ? `（OVR ${pOvr}）` : ''}の詳細調査が完了し、全能力値と獲得条件が判明しました。選手プロフィールから交渉や獲得候補の確認が行えます。`,
+            body: `${pName}の詳細調査が完了し、プレースタイルや実力評価、獲得条件がすべて判明しました。交渉や獲得候補の検討にお役立てください。`,
             actionType: 'open-player-profile',
             actionLabel: '選手詳細を見る',
             actionPayload: task.playerId
@@ -4286,7 +4286,7 @@ function advanceScoutingProgressDaily() {
           showSecretaryModal({
             topic: 'スカウト報告',
             title: `詳細調査完了：${pPos ? pPos + ' ' : ''}${pName}`,
-            speech: `チーフスカウトより ${pName} の詳細調査レポートが届きました。能力値と契約条件のすべてが判明しております。`,
+            speech: `チーフスカウトより ${pName} の詳細調査レポートが届きました。実力評価と契約条件のすべてが判明しております。`,
             detailHtml: `<div class="gm-modal-flat-list"><div class="gm-modal-flat-row"><span class="gm-modal-flat-label">調査対象選手</span><span class="gm-modal-flat-val">${pPos ? pPos + ' ' : ''}${pName}${pOvr ? ` (OVR ${pOvr})` : ''}</span></div></div>`,
             actions: [
               {
@@ -4697,11 +4697,13 @@ function advanceYouthScoutingDaily() {
       const sLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
       const foundCount = (sLv >= 3 && Math.random() < 0.45) ? 2 : 1;
       const foundNames = [];
+      const foundInboxLabels = [];
       for (let i = 0; i < foundCount; i++) {
         if (gameState.youthScoutReports.length >= 12) gameState.youthScoutReports.shift();
         const prospect = createYouthScoutProspect(reg, task.targetRole);
         gameState.youthScoutReports.push(prospect);
         foundNames.push(`${prospect.pos} ${prospect.name} (${prospect.age}歳/POT:${prospect.potential})`);
+        foundInboxLabels.push(`${prospect.pos} ${prospect.name}（${prospect.age}歳）`);
       }
       task.reportsDelivered = (task.reportsDelivered || 0) + 1;
       task.daysUntilNextReport = interval;
@@ -4716,7 +4718,7 @@ function advanceYouthScoutingDaily() {
           senderType: 'scout',
           senderName: `ユーススカウト（${reg.name}）`,
           title: `ユース発掘レポート到着（${foundNames.length}名）`,
-          body: `${reg.name}での視察により、${foundNames.join('、')} を新たに発掘しました。${suffix}ユース画面からアカデミー入団またはトップ昇格の判断を行ってください。`,
+          body: `${reg.name}での視察により、${foundInboxLabels.join('、')} を新たに発掘しました。${suffix}アカデミーでの育成やトップチーム昇格をご検討ください。`,
           actionType: 'goto-youth',
           actionLabel: 'ユース画面を確認',
           actionPayload: null
@@ -4995,14 +4997,14 @@ function evaluateManagerReinforcementWishes(club) {
     let reason = '';
     if (count < reqSlots) {
       score += 50 + (reqSlots - count) * 20;
-      reason = `本職が${count}名のみ（必要枠${reqSlots}）で絶対数が不足`;
+      reason = `本職が${count}名のみで人数が不足`;
     } else if (count < targetDepth) {
       score += 24 + (targetDepth - count) * 8;
       reason = `控え層を含め選手層が薄い（本職${count}名）`;
     }
     if (bestOvr < avgTeamOvr - 2) {
       score += (avgTeamOvr - bestOvr) * 4;
-      reason = reason || `主力水準（平均OVR ${avgTeamOvr}）に対して質が不足（最高OVR ${bestOvr}）`;
+      reason = reason || 'チームの主力水準に対して質が不足';
     }
     if (bestPlayer && (bestPlayer.age || 25) >= 31) {
       score += 10;

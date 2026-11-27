@@ -107,6 +107,46 @@ class TestSecretaryDialogue(unittest.TestCase):
         ]:
             self.assertIn(needle, self.main_js, f"Missing follow-up reply modal in main.js: {needle}")
 
+    def test_6_no_meta_expressions_in_messages(self):
+        """メッセージ・セリフ・スカウト報告・ニュース本文からUI/システム由来のメタ表現が除去されていること"""
+        models_js = read_text('models.js')
+        combined_raw = self.dialogue_js + '\n' + models_js + '\n' + self.main_js
+        combined_msgs = re.sub(r'/\*[\s\S]*?\*/', '', combined_raw)
+        combined_msgs = '\n'.join(
+            line for line in combined_msgs.splitlines() if not line.lstrip().startswith('//')
+        )
+        for forbidden in [
+            '契約締結ボタン',
+            '経営タブの「',
+            '経営タブより',
+            '経営タブから',
+            '経営タブにて',
+            '移籍市場タブから',
+            'オファー一覧から正式契約',
+            'オファー一覧から最終契約',
+            'オファー一覧より契約確定',
+            'オファー一覧より最終契約',
+            'オファー一覧をご確認',
+            'オファー一覧で条件',
+            'ユース画面からアカデミー',
+            '選手プロフィールから交渉',
+            '本部の業務タスクから',
+            '本部の業務一覧に並んだ',
+            '本部タスクより',
+            '自動同期されています',
+            '同期済みでございます',
+            '仮状態のまま',
+            '監督信頼度 +',
+            '平均OVR ',
+            '最高OVR ',
+            '全能力値と獲得条件',
+            '能力値と契約条件',
+            '【月間戦績】',
+            '【月間収支】',
+            '勝利時は ${fanBonusLabel} が加算されます',
+        ]:
+            self.assertNotIn(forbidden, combined_msgs, f'Meta expression still present: {forbidden}')
+
 
 if __name__ == '__main__':
     unittest.main()

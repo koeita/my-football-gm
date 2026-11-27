@@ -110,7 +110,7 @@ function checkAndShowManagerTrustCrisis() {
               topic: '監督退任 報告',
               title: `${oldName}監督の退任手続きを完了しました`,
               soundKey: 'ui_confirm',
-              speech: `双方合意のもと、${oldName}監督の契約解除を違約金£0で完了しました。現在は監督不在のため、経営タブの「監督・指導陣」から後任候補の招聘をご検討ください。`
+              speech: `双方合意のもと、${oldName}監督の契約解除を違約金£0で完了しました。現在は監督不在のため、早急に後任監督の招聘をご検討ください。`
             });
           }
         }
@@ -1166,7 +1166,7 @@ function blockIfPendingInitialStaffSetup() {
     const sec = typeof getActiveSecretary === 'function' ? getActiveSecretary() : null;
     const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
       ? SecretaryDialogue.getEventDialogue('staff_required', {}, sec)
-      : { pages: ['日程を進める前に、監督とコーチ陣の選任が必要です。本部の業務タスクからお手続きください。'] };
+      : { pages: ['日程を進める前に、監督とコーチ陣の選任が必要です。まずは指導体制のお手続きをお進めください。'] };
     showSecretaryModal({
       topic: '就任初期タスク未完了',
       title: '監督・コーチ陣の選任が必要です',
@@ -2427,7 +2427,7 @@ function triggerYouthAwakeningEvent() {
         clubId: playerClub.id,
         playerId: youth.id,
         headline: `${playerClub.name}期待の${youth.name}が才能開花　練習で圧倒的な存在感`,
-        lead: `OVR ${res.beforeOvr}→${res.afterOvr}${res.gainedTrait ? `・新特徴「${res.gainedTrait}」を習得` : ''}`,
+        lead: `飛躍的な成長を達成${res.gainedTrait ? `・新特徴「${res.gainedTrait}」を習得` : ''}`,
         body: `${playerClub.name}のU-21アカデミーに所属する${youth.pos} ${youthDisplayName}（${youth.age}歳）が練習で飛躍的な成長を遂げた。${intensive ? 'トップチーム帯同の特別指導も奏功し、' : ''}今後のトップチーム定着へ大きな期待が寄せられている。`,
         highlight: true
       });
@@ -2439,7 +2439,7 @@ function triggerYouthAwakeningEvent() {
     const showReplyAfterBreakthrough = () => {
       if (typeof showConsultationReplyModal === 'function') {
         const traitMsg = res.gainedTrait ? `「${res.gainedTrait}」の手応えも掴めました。` : '';
-        const potMsg = res.afterPot !== res.beforePot ? `将来性（POT ${res.afterPot}）にも自信が湧いています。` : '';
+        const potMsg = res.afterPot !== res.beforePot ? 'さらに上の舞台で戦える手応えも感じています。' : '';
         showConsultationReplyModal({
           speaker: {
             kind: 'player',
@@ -2452,8 +2452,8 @@ function triggerYouthAwakeningEvent() {
           title: `${youthDisplayName} の返答`,
           soundKey: 'none',
           speech: intensive
-            ? `GM、トップチーム帯同での特別指導ありがとうございます！OVR ${res.beforeOvr} から ${res.afterOvr} へ一気に感覚が研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
-            : `温かいサポートありがとうございます！練習を通じて OVR ${res.beforeOvr} から ${res.afterOvr} へ成長を実感できています。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
+            ? `GM、トップチーム帯同での特別指導ありがとうございます！レベルの違う環境で揉まれて、プレーの感覚が一気に研ぎ澄まされました。${traitMsg}${potMsg}一日も早くトップで結果を出します！`
+            : `温かいサポートありがとうございます！日々の練習で一段階レベルアップできた実感があります。${traitMsg}${potMsg}このままU-21でさらに磨きをかけます！`
         });
       }
     };
@@ -2587,7 +2587,7 @@ function triggerSupporterPetitionEvent() {
               topic: '設備投資 実施報告',
               title: 'スタジアム設備拡張を手配しました',
               soundKey: 'sfx_deal',
-              speech: `ご決断を受け、投資費用 ${formatMoney(investCost)} でスタンド改修およびホスピタリティ拡充を手配しました。サポーター連合からも歓迎の声が届き、クラブの支持基盤が広がっています（ファン ${gainDeltaText}）。`
+              speech: `ご決断を受け、投資費用 ${formatMoney(investCost)} でスタンド改修およびホスピタリティ拡充を手配しました。サポーター連合からも歓迎の声が届き、クラブの支持基盤が大きく広がっています。`
             });
           }
         }
@@ -2606,7 +2606,7 @@ function triggerSupporterPetitionEvent() {
               topic: '設備投資 見送り報告',
               title: 'スタジアム設備拡張を見送りました',
               soundKey: 'ui_confirm',
-              speech: `クラブ財務の安定を優先し、今回のスタジアム設備拡張は見送る旨をサポーター連合へ伝達しました。一時的にファンの反応は控えめとなりますが（ファン ${dropDeltaText}）、資金の目処が立ち次第いつでも施設画面から整備を進められます。`
+              speech: `クラブ財務の安定を優先し、今回のスタジアム設備拡張は見送る旨をサポーター連合へ伝達しました。一時的にサポーターの反応は控えめとなりますが、資金の目処が立ち次第いつでも整備計画を再開できます。`
             });
           }
         }
@@ -3226,7 +3226,7 @@ function showSecretaryOnboardingBriefing(playerClub) {
 
   const dlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
     ? SecretaryDialogue.getEventDialogue('onboarding', { clubName: playerClub.name, deadlineLabel: spWin.deadlineLabel }, sec)
-    : { pages: [`GM、${playerClub.name} の担当秘書 ${sec.name} です。本部の業務タスクから最優先業務をお進めください。`] };
+    : { pages: [`GM、${playerClub.name} の担当秘書 ${sec.name} です。まずはクラブ運営の基盤となる最優先業務をお進めください。`] };
 
   const detailHtml = `
     <div class="gm-modal-flat-list">
@@ -4801,7 +4801,7 @@ function renderNegotiationModal() {
         const isStarter = Boolean(target.isStarter && target.age >= 23 && target.age <= 30);
         const isLastY = Boolean(target.contractYears <= 1);
         if (isStar || isStarter || isLastY) {
-          const reason = isStar ? '主力スター（OVR 78以上）' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
+          const reason = isStar ? 'チームの主力スター' : (isStarter ? 'レギュラー先発陣' : '契約最終年');
           return `
             <div class="neg-feedback-box status-warn" style="margin-bottom: 12px; font-size: 11px;">
               <strong>レンタル獲得困難：</strong>主力選手のためレンタル不可となる可能性が高く、完全移籍での交渉を推奨します。
@@ -5344,7 +5344,7 @@ function submitNegotiationOffer() {
           playerId: target.id,
           headline: `${playerClub.name}、${target.name}と早期更新　契約をつないで次へ`,
           lead: `シーズン中に${newContractYears}年体制の契約で合意`,
-          body: `${playerClub.name}は${target.pos} ${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）と週給 ${formatWage(target.wage)} で契約更新に合意。中核戦力の流出阻止に成功した。`,
+          body: `${playerClub.name}は${target.pos} ${target.name}（${target.age}歳）と週給 ${formatWage(target.wage)} で契約更新に合意。中核戦力の流出阻止に成功した。`,
           highlight: true
         });
       }
@@ -5599,7 +5599,7 @@ function updateOutgoingOffersExpiry() {
             senderType: 'board',
             senderName: '強化・移籍部門',
             title: `オファー合意：${offer.playerName}（${offer.sellerClubName}）`,
-            body: `${offer.sellerClubName}および${offer.playerName}との条件交渉（移籍金 ${formatMoney(offer.offeredFee)}）が合意に達しました。5日以内にオファー一覧から正式契約を確定してください。`,
+            body: `${offer.sellerClubName}および${offer.playerName}との条件交渉（移籍金 ${formatMoney(offer.offeredFee)}）が合意に達しました。5日以内に正式契約を締結してください。`,
             actionType: 'goto-market-offers',
             actionLabel: 'オファー画面へ',
             actionPayload: 'outgoing'
@@ -5661,7 +5661,7 @@ function updateOutgoingOffersExpiry() {
     const hasAgreedOut = respondedItems.some(r => r && r.outcome && r.outcome.includes('合意'));
     const outDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
       ? SecretaryDialogue.getEventDialogue('outgoing_offer_reply', { hasAgreed: hasAgreedOut }, secOut)
-      : { pages: ['送信していた獲得オファーに対する相手クラブからの回答が届いております。オファー一覧より契約確定または再判断を行ってください。'] };
+      : { pages: ['送信していた獲得オファーに対する相手クラブからの回答が届いております。提示条件をご確認のうえ正式契約または再判断を行ってください。'] };
     showSecretaryModal({
       topic: '移籍交渉回答',
       title: `獲得オファーの回答が届きました（${respondedItems.length}件）`,
@@ -6083,7 +6083,7 @@ function completeOutgoingTransferSigning(offerId) {
         playerId: target.id,
         headline: `${playerClub.name}が${target.name}を完全移籍で獲得　移籍金ゼロの補強`,
         lead: `フリーエージェント市場から実力者を確保`,
-        body: `${playerClub.name}は無所属だった${target.name}（OVR ${getPlayerOverallRating(target)}）を移籍金なしで獲得した。`,
+        body: `${playerClub.name}は無所属だった${target.name}を移籍金なしで獲得した。`,
         highlight: true
       });
     }
@@ -6096,7 +6096,7 @@ function completeOutgoingTransferSigning(offerId) {
         playerId: target.id,
         headline: `${playerClub.name}が${target.name}を電撃獲得　${formatMoney(offer.offeredFee)}の投資`,
         lead: `${offer.sellerClubName || '相手クラブ'}との交渉が正式合意`,
-        body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳 / OVR ${getPlayerOverallRating(target)}）の完全移籍加入を完了した。`,
+        body: `${playerClub.name}は${offer.sellerClubName || '相手クラブ'}から${target.name}（${target.age}歳）の完全移籍加入を完了した。`,
         highlight: true
       });
     }
@@ -6253,7 +6253,7 @@ function triggerIncomingTransferOffer(force = false) {
       senderType: 'board',
       senderName: '強化・移籍部門',
       title: `買取オファー着信：${target.name}（${buyerClubName}）`,
-      body: `${buyerClubName}から${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対し、移籍金 ${formatMoney(offerFee)} の正式オファーが届きました。回答期限は5日間です。`,
+      body: `${buyerClubName}から${target.pos} ${target.name}に対し、移籍金 ${formatMoney(offerFee)} の正式オファーが届きました。回答期限は5日間です。`,
       actionType: 'goto-market-offers',
       actionLabel: 'オファーを確認',
       actionPayload: 'incoming'
@@ -6264,10 +6264,10 @@ function triggerIncomingTransferOffer(force = false) {
     const incDlg = typeof SecretaryDialogue !== 'undefined' && SecretaryDialogue
       ? SecretaryDialogue.getEventDialogue('incoming_offer', {
           buyerClubName,
-          playerText: `${target.pos} ${target.name}（OVR ${newOffer.ovr}）`,
+          playerText: `${target.pos} ${target.name}`,
           feeText: formatMoney(offerFee)
         }, secInc)
-      : { pages: [`${buyerClubName}より当クラブ所属の ${target.pos} ${target.name}（OVR ${newOffer.ovr}）に対して正式な買取打診が届いております。回答期限は5日間です。`] };
+      : { pages: [`${buyerClubName}より当クラブ所属の ${target.pos} ${target.name} に対して正式な買取打診が届いております。回答期限は5日間です。`] };
     showSecretaryModal({
       topic: '買取オファー着信',
       title: `${buyerClubName}から ${target.name} への獲得オファー`,
@@ -17763,11 +17763,11 @@ function ageAndRenewCoachingStaffAtSeasonEnd(playerRetirementLogs = []) {
         if (mgr.age >= 72) {
           mgr.contractYears = 0;
           playerRetirementLogs.push(
-            `勇退：${mgr.name}監督（${mgr.age}歳）が高齢のため新シーズン開幕前に勇退予定です（経営タブより後任監督を招聘できます）`
+            `勇退：${mgr.name}監督（${mgr.age}歳）が高齢のため新シーズン開幕前に勇退予定です（後任監督の招聘をご検討ください）`
           );
         } else if (mgr.contractYears === 0) {
           playerRetirementLogs.push(
-            `契約満了：${mgr.name}監督（${mgr.age}歳）の契約が満了しました（経営タブから契約延長、または違約金 £0 で監督交代が可能です）`
+            `契約満了：${mgr.name}監督（${mgr.age}歳）の契約が満了しました（契約延長または違約金 £0 で監督交代が可能です）`
           );
         }
       } else {
@@ -21123,7 +21123,7 @@ function emitPostMatchTeamAndPlayerNews(playerClub, matchData, oppClub, myScore,
         playerId: spotlight.id,
         headline: `${playerClub.name}・${spotlight.name}、大舞台で意地見せる　単独取材に応じる`,
         lead: `${playerClub.name} · ${spotlight.age}歳 · ${spotlight.pos}`,
-        body: `期待の若手 ${spotlight.fullName || spotlight.name}（${spotlight.age}歳 / OVR ${ovr}）が${compLabel}でも高い存在感を示した。「1試合ごとに手応えが増している」とさらなる活躍を誓った。`,
+        body: `期待の若手 ${spotlight.fullName || spotlight.name}（${spotlight.age}歳 / ${spotlight.pos}）が${compLabel}でも高い存在感を示した。「1試合ごとに手応えが増している」とさらなる活躍を誓った。`,
         highlight: true
       });
     } else if ((spotlight.appearances || 0) >= 3) {
@@ -21133,7 +21133,7 @@ function emitPostMatchTeamAndPlayerNews(playerClub, matchData, oppClub, myScore,
         playerId: spotlight.id,
         headline: `${playerClub.name}・${spotlight.name}が先発を重ねる　直近${spotlight.appearances}試合の足跡`,
         lead: `先発出場を重ね、今季 ${spotlight.appearances}試合${spotlight.goals || 0}得点${avgRat ? ` (平均評価 ${avgRat})` : ''}`,
-        body: `攻撃とゲームメイクの要を担う ${spotlight.fullName || spotlight.name}（${spotlight.pos} / OVR ${ovr}）が安定したパフォーマンスを継続。${playerClub.name}の上位躍進を支えている。`,
+        body: `攻撃とゲームメイクの要を担う ${spotlight.fullName || spotlight.name}（${spotlight.pos}）が安定したパフォーマンスを継続。${playerClub.name}の上位躍進を支えている。`,
         highlight: true
       });
     } else {
@@ -21142,7 +21142,7 @@ function emitPostMatchTeamAndPlayerNews(playerClub, matchData, oppClub, myScore,
         clubId: playerClub.id,
         playerId: spotlight.id,
         headline: `${playerClub.name}・${spotlight.name}がピッチで存在感　仕上がりの良さ示す`,
-        lead: `${spotlight.pos} · ${spotlight.age}歳 · OVR ${ovr}`,
+        lead: `${spotlight.pos} · ${spotlight.age}歳`,
         body: `${compLabel}の${oppName}戦に出場した ${spotlight.fullName || spotlight.name} が攻守にわたり精力的な動きを披露。今後の主力起用に向けて好アピールとなった。`,
         highlight: false
       });
@@ -21182,7 +21182,7 @@ function ensureInitialOfficeMessagesAndNews() {
         clubId: playerClub.id,
         playerId: ace.id,
         headline: `${playerClub.name}の主軸 ${ace.name}、新体制での飛躍誓う　開幕へ順調`,
-        lead: `${playerClub.name} · ${ace.age}歳 · ${ace.pos} (OVR ${getPlayerOverallRating(ace)})`,
+        lead: `${playerClub.name} · ${ace.age}歳 · ${ace.pos}`,
         body: `新シーズン始動を迎えた${playerClub.name}でエース格の${ace.fullName || ace.name}が充実の動きを見せた。「目標である${playerClub.targetLabel || '上位進出'}へ向けて準備は整っている」と意気込みを語った。`,
         highlight: true
       });
@@ -21219,7 +21219,7 @@ function generateAndSendManagerWishReport(contextLabel = '補強方針ミーテ�
   const reasonText = (wish.reasons || []).join(' ／ ');
   const candSummary = (wish.candidates && wish.candidates.length > 0)
     ? `スカウトデータも踏まえ、予算内で獲得を狙える具体的な推薦選手を${wish.candidates.length}名ピックアップしました。`
-    : '現有予算に合う対象選手が見つかり次第、移籍市場タブからご検討ください。';
+    : '現有予算に合う候補が見つかり次第、移籍市場での獲得をご検討ください。';
 
   addInboxMessage({
     senderType: 'manager',
@@ -21270,8 +21270,8 @@ function checkAndRewardManagerWishOnSigning(signedPlayer, dealType = 'buy') {
     senderName: `${mgr.name} 監督`,
     title: `補強への謝意：${signedPlayer.name} の加入を歓迎`,
     body: isRecommended
-      ? `私が推薦した ${signedPlayer.name}（${signedPlayer.pos} / OVR ${ovr}）の獲得に尽力いただきありがとうございます。構想に完璧に合致する戦力です。（監督信頼度 +${trustBonus} → ${mgr.trust}%）`
-      : `要望していた ${matchedPos} への ${signedPlayer.name}（OVR ${ovr}）獲得ありがとうございます。チーム競争力と層の厚みが大きく改善しました。（監督信頼度 +${trustBonus} → ${mgr.trust}%）`,
+      ? `私が推薦した ${signedPlayer.name}（${signedPlayer.pos}）の獲得に尽力いただきありがとうございます。構想に完璧に合致する戦力です。フロントの支援に応えられるよう結果で示します。`
+      : `要望していた ${matchedPos} への ${signedPlayer.name} の獲得ありがとうございます。チームの競争力と層の厚みが大きく改善しました。この体制で結果を出してみせます。`,
     actionType: 'goto-pitch',
     actionLabel: '作戦ボードで起用'
   });
@@ -21552,7 +21552,7 @@ function buildManagerConsultation(club) {
         senderName: `${mgr.name} 監督`,
         topic: '起用法相談',
         title: `${mgr.name}監督：スタメン起用の見直し提案`,
-        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} は${reasonTxt}ため、${slotPos} に対応できる ${candidate.fullName || candidate.name}（${candidate.pos} / OVR ${cOvr}）を先発に抜擢させてくれないか。`,
+        speech: `GM、次戦に向けて相談がある。${troubledStarter.fullName || troubledStarter.name} は${reasonTxt}ため、${slotPos} に対応できる ${candidate.fullName || candidate.name}（${candidate.pos}）を先発に抜擢させてくれないか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢について回答待ち`,
         outPlayerId: troubledStarter.id,
@@ -21649,7 +21649,7 @@ function buildManagerConsultation(club) {
         senderName: `${mgr.name} 監督`,
         topic: '起用法相談',
         title: `${mgr.name}監督：${candidate.name}の先発テスト起用提案`,
-        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳 / OVR ${cOvr}）を ${slotPos} の先発で試してみたい。抜擢を認めてもらえるか。`,
+        speech: `GM、直近の練習で抜群の動きを見せている ${candidate.fullName || candidate.name}（${candidate.age}歳）を ${slotPos} の先発で試してみたい。抜擢を認めてもらえるか。`,
         dutyTitle: `${mgr.name}監督の起用法相談`,
         dutyDesc: `${candidate.name} の先発抜擢提案`,
         outPlayerId: replaceStarter.id,
@@ -21828,7 +21828,7 @@ function buildCoachConsultation(club) {
         senderName: `${entry.coach.name} ${entry.roleLabel}`,
         topic: '攻撃陣の起用提案',
         title: `${entry.coach.name} ${entry.roleLabel}：前線の活性化提案`,
-        speech: `GM、攻撃練習でのキレを見る限り、${slotPos} には ${candidate.fullName || candidate.name}（OVR ${cOvr}）を起用する方が得点の匂いがします。次戦の先発で試してみませんか。`,
+        speech: `GM、攻撃練習でのキレを見る限り、${slotPos} には ${candidate.fullName || candidate.name} を起用する方が得点の匂いがします。次戦の先発で試してみませんか。`,
         dutyTitle: `${entry.coach.name}コーチの起用提案`,
         dutyDesc: `${candidate.name} の先発起用について回答待ち`,
         outPlayerId: targetStarter.id,
@@ -21862,7 +21862,7 @@ function buildCoachConsultation(club) {
         senderName: `${entry.coach.name} ${entry.roleLabel}`,
         topic: '守備陣の起用提案',
         title: `${entry.coach.name} ${entry.roleLabel}：守備ラインのテコ入れ提案`,
-        speech: `GM、最終ラインの安定感を高めるため、${slotPos} に ${candidate.fullName || candidate.name}（OVR ${cOvr}）を入れてみるべきです。対人守備の強度が一段上がります。`,
+        speech: `GM、最終ラインの安定感を高めるため、${slotPos} に ${candidate.fullName || candidate.name} を入れてみるべきです。対人守備の強度が一段上がります。`,
         dutyTitle: `${entry.coach.name}コーチの起用提案`,
         dutyDesc: `${candidate.name} の先発起用について回答待ち`,
         outPlayerId: targetStarter.id,
@@ -22902,13 +22902,13 @@ function sendMonthlyBoardReport(dayObj, closingDayObj = null) {
   if (gameState.monthlyReports.length > 12) gameState.monthlyReports = gameState.monthlyReports.slice(0, 12);
 
   const monthlyMvpMsgLine = monthlyMvp
-    ? `\n【月間MVP】${monthlyMvp.playerName}（${monthlyMvp.clubName} / ${monthlyMvp.apps}試 ${monthlyMvp.goals}G ${monthlyMvp.assists}A）`
+    ? `\n月間MVP：${monthlyMvp.playerName}（${monthlyMvp.clubName} / ${monthlyMvp.apps}試 ${monthlyMvp.goals}G ${monthlyMvp.assists}A）`
     : '';
   addInboxMessage({
     senderType: 'board',
     senderName: 'クラブ理事会・財務',
     title: `${reportMonth}月度 月次定例会（戦績・収支報告）`,
-    body: `【月間戦績】${recordSummary} ／ ${rankText}（目標: ${targetText}）\n【月間収支】試合収入 +${formatMoney(matchIncome)} / 売却 +${formatMoney(transferIn)} / 給与 -${formatMoney(payrollPaid)} / 補強 -${formatMoney(transferOut)} ／ 月間純収支 ${netSign}${formatMoney(netBalance)}（現在資金 ${formatMoney(curFunds)} · 安全移籍予算 ${formatMoney(safeBudget)} · 理事会信頼度 ${boardConf}%）。${statusComment}${monthlyMvpMsgLine}`,
+    body: `月間戦績：${recordSummary} ／ ${rankText}（目標：${targetText}）\n月間収支：試合収入 +${formatMoney(matchIncome)} / 売却 +${formatMoney(transferIn)} / 給与 -${formatMoney(payrollPaid)} / 補強 -${formatMoney(transferOut)} ／ 純収支 ${netSign}${formatMoney(netBalance)}（保有資金 ${formatMoney(curFunds)} · 移籍予算目安 ${formatMoney(safeBudget)}）。${statusComment}${monthlyMvpMsgLine}`,
     actionType: null,
     actionLabel: ''
   });
@@ -23268,7 +23268,7 @@ function simulateCpuTransferNewsDaily(dayObj, forceDeadlineDeal = false) {
           playerId: ep.id,
           headline: euroHeadline,
           lead: `${buyer.name} · ${ep.age}歳 · 移籍成立`,
-          body: `${buyer.name}は欧州市場から${ep.name}（${ep.age}歳 / OVR ${epOvr}）の獲得を完了。ライバルクラブの戦力増強に市場が沸いている。`,
+          body: `${buyer.name}は欧州市場から${ep.name}（${ep.age}歳）の獲得を完了。ライバルクラブの戦力増強に市場が沸いている。`,
           highlight: epOvr >= 80
         });
         return { headline: euroHeadline, fee: epFee, buyerName: buyer.name, sellerName: mega.name || '欧州クラブ', playerName: ep.name, ovr: epOvr };
@@ -23300,7 +23300,7 @@ function simulateCpuTransferNewsDaily(dayObj, forceDeadlineDeal = false) {
       playerId: target.id,
       headline: domHeadline,
       lead: `${buyer.name} · ${target.age}歳 · 移籍金 ${formatMoney(fee)}`,
-      body: `移籍金は${formatMoney(fee)}。${target.name}（${target.age}歳 / OVR ${ovr}）は4年契約で新天地へ合流する。`,
+      body: `移籍金は${formatMoney(fee)}。${target.name}（${target.age}歳）は4年契約で新天地へ合流する。`,
       highlight: ovr >= 79
     });
     return { headline: domHeadline, fee, buyerName: buyer.name, sellerName: seller.name, playerName: target.name, ovr };
@@ -26271,6 +26271,7 @@ function maybeTriggerSpecialMatchEveBriefing(nextDay) {
 
   const isDerby = sf.kind === 'derby' || sf.kind === 'classic';
   const fanBonusLabel = `ファン総数 ${sf.fanWinMult.toFixed(1)}倍ボーナス`;
+  const speechBonusLabel = 'サポーターの熱狂と大きな支持拡大';
   const oppName = mInfo.oppClub.name || '強敵';
 
   if (typeof addDailyLog === 'function') {
@@ -26282,7 +26283,7 @@ function maybeTriggerSpecialMatchEveBriefing(nextDay) {
       senderType: 'secretary',
       senderName: sec.name,
       title: `明日開催：${sf.label}（vs ${oppName}）の事前ご案内`,
-      body: `明日（${afterDay.displayDate}）は注目の一戦「${sf.label}」です。${mInfo.isHome ? `本拠地動員 +${Math.round(sf.attendanceBoost * 100)}% の後押しを受け、` : ''}勝利時は ${fanBonusLabel} が加算されます。スタメンと戦術をご確認ください。`,
+      body: `明日（${afterDay.displayDate}）は注目の一戦「${sf.label}」です。${mInfo.isHome ? '本拠地には多くのサポーターが詰めかける見込みで、' : ''}勝利すればファンの熱気とクラブの評価が一気に高まります。先発メンバーと戦術を万全に整えて臨みましょう。`,
       actionType: 'goto-pitch',
       actionLabel: '作戦ボードを確認'
     });
@@ -26297,7 +26298,7 @@ function maybeTriggerSpecialMatchEveBriefing(nextDay) {
           isHome: mInfo.isHome,
           displayDate: afterDay.displayDate,
           isDerby,
-          fanBonusLabel
+          fanBonusLabel: speechBonusLabel
         }, sec)
       : { pages: [`明日（${afterDay.displayDate}）は「${sf.label}」vs ${oppName} です。`] };
     showSecretaryModal({
@@ -26572,7 +26573,7 @@ function generateEventSnsReactions(eventType, ctx = {}) {
       authorType: 'fan',
       displayName: fans[0].displayName,
       handle: fans[0].handle,
-      body: `${p.name}（OVR ${ovr}）獲得きたあああ！${ctx.dealType === 'pre_contract' ? '移籍金£0での来季内定はフロントのファインプレー。' : 'ユニフォーム即買い決定！週末の試合が楽しみすぎる。'}`,
+      body: `${p.name}獲得きたあああ！${ctx.dealType === 'pre_contract' ? '移籍金£0での来季内定はフロントのファインプレー。' : 'ユニフォーム即買い決定！週末の試合が楽しみすぎる。'}`,
       tags: [clubTag, `#${p.pos}`],
       likes: 290 * fanPopScale,
       reposts: 54 * fanPopScale,
