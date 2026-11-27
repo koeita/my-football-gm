@@ -85,6 +85,21 @@ class TestManagersAndYouthScouting(unittest.TestCase):
         self.assertNotIn('col-youth-atk', self.html)
         self.assertNotIn('col-youth-def', self.html)
 
+    def test_4_bench_drawer_full_height_and_youth_promotion_history_clean(self):
+        """作戦ボード控えドロワーの画面縦いっぱい表示と、ユース昇格選手の架空前年実績防止を検証"""
+        drawer_start = self.css.index('body[data-active-tab="roster"][data-roster-subtab="board"] .tactical-side-column')
+        drawer_block = self.css[drawer_start:drawer_start + 700]
+        self.assertIn('bottom: 0 !important;', drawer_block)
+        self.assertIn('100dvh', drawer_block)
+        self.assertNotIn('bottom: var(--tab-nav-total-h)', drawer_block)
+
+        self.assertIn('function initPromotedYouthCareerFields(', self.models_js)
+        self.assertIn('initPromotedYouthCareerFields(prospect, playerClub.name)', self.models_js)
+        self.assertIn('initPromotedYouthCareerFields(youth, playerClub.name)', self.main_js)
+        self.assertIn('isYouthSquadMember', self.main_js)
+        self.assertIn('const pastSeasonsCount = isYouthOrigin ? 0 :', self.main_js)
+        self.assertIn('promotedAfterPrevSeason', self.main_js)
+
 
 if __name__ == '__main__':
     unittest.main()
