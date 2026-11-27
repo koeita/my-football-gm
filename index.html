@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3890">
+  <link rel="stylesheet" href="style.css?v=20261119_3970">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -108,12 +108,15 @@
             <span class="metric-label">資金</span>
             <div class="metric-value-inline-row">
               <span class="metric-value mono accent-gold" id="header-funds">£48.0M</span>
-              <span class="metric-sub-value mono" id="header-safe-budget" title="今後の週給運転資金を見込んだ実質可処分移籍予算">安全 £40.0M</span>
+              <span class="metric-sub-value mono" id="header-safe-budget" title="現在の移籍予算残高">移籍 £40.0M</span>
             </div>
           </div>
           <div class="metric-box metric-payroll" data-mobile-label="週給">
             <span class="metric-label" id="header-payroll-label">週給総額</span>
-            <span class="metric-value mono" id="header-payroll">£0</span>
+            <div class="metric-value-inline-row">
+              <span class="metric-value mono" id="header-payroll">£0</span>
+              <span class="metric-sub-value mono" id="header-wage-budget" title="週給予算の残枠">残+£0k</span>
+            </div>
           </div>
           <div class="metric-box metric-squad" data-mobile-label="登録">
             <span class="metric-label">登録選手</span>
@@ -1154,8 +1157,8 @@
             </div>
             <div class="team-power-badges">
               <span class="power-badge">登録件数 <strong class="mono" id="shortlist-summary-count">0件</strong></span>
-              <span class="power-badge">現在資金 <strong class="mono accent-gold" id="shortlist-summary-funds">£0.0M</strong></span>
-              <span class="power-badge" title="今後の週給運転資金を確保した上で安全に使える実質移籍予算">実質移籍予算 <strong class="mono accent-green" id="shortlist-summary-safe-budget">£0.0M</strong></span>
+              <span class="power-badge">総資金 <strong class="mono accent-gold" id="shortlist-summary-funds">£0.0M</strong></span>
+              <span class="power-badge" title="現在の移籍予算残高">移籍予算 <strong class="mono accent-green" id="shortlist-summary-safe-budget">£0.0M</strong></span>
             </div>
           </div>
           <div class="table-wrapper">
@@ -1205,34 +1208,30 @@
       </div>
     </main>
 
-    <!-- タブ4：経営・施設・人事（3分割：施設投資・監督指導陣・ユース） -->
-    <main id="view-facilities" class="tab-view hidden" data-facilities-subtab="investment">
+    <!-- タブ4：経営・施設・人事（4分割：財務予算・施設興行・監督指導陣・ユース） -->
+    <main id="view-facilities" class="tab-view hidden" data-facilities-subtab="finance">
       <!-- 経営サブタブ切り替えナビゲーションバー -->
       <div class="roster-subnav-bar facilities-subnav-bar" id="facilities-subnav-bar" role="tablist" aria-label="経営メニュー">
-        <button type="button" class="roster-subtab-btn active" data-facilities-subtab="investment" id="facilities-subtab-btn-investment" role="tab" aria-selected="true">施設投資</button>
-        <button type="button" class="roster-subtab-btn" data-facilities-subtab="commercial" id="facilities-subtab-btn-commercial" role="tab" aria-selected="false">スタジアム・興行</button>
+        <button type="button" class="roster-subtab-btn active" data-facilities-subtab="finance" id="facilities-subtab-btn-finance" role="tab" aria-selected="true">財務・予算</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="commercial" id="facilities-subtab-btn-commercial" role="tab" aria-selected="false">施設・興行</button>
         <button type="button" class="roster-subtab-btn" data-facilities-subtab="staff" id="facilities-subtab-btn-staff" role="tab" aria-selected="false">監督・指導陣</button>
-        <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユースチーム</button>
+        <button type="button" class="roster-subtab-btn" data-facilities-subtab="youth" id="facilities-subtab-btn-youth" role="tab" aria-selected="false">ユース</button>
       </div>
 
       <!-- 投資・昇格アクションの通知フィードバックバー -->
       <div id="facility-feedback-banner" class="facility-feedback-banner hidden"></div>
 
-      <!-- サブタブ1：施設投資 -->
-      <div class="facilities-subview" id="facilities-subview-investment" role="tabpanel">
+      <!-- サブタブ1：財務・予算ダッシュボード -->
+      <div class="facilities-subview" id="facilities-subview-finance" role="tabpanel">
         <div class="panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">施設投資</h2>
-            </div>
-            <div class="team-power-badges">
-              <span class="power-badge">資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
-              <span class="power-badge">ホーム増収効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
+              <h2 class="panel-title">財務・予算</h2>
             </div>
           </div>
           <div class="panel-body">
-            <div class="facilities-grid" id="facilities-grid">
-              <!-- JSで3つの施設カードを描画 -->
+            <div id="finance-budget-dashboard-root">
+              <!-- JSで分割予算・配分スライダー・人件費・収支予測を描画 -->
             </div>
             <div class="board-psr-sponsor-panel" id="board-psr-sponsor-panel" style="margin-top: 16px;">
               <!-- JSでスポンサー契約・PSR財務・理事会評価を描画 -->
@@ -1241,11 +1240,29 @@
         </div>
       </div>
 
-      <!-- サブタブ1.5：スタジアム・チケット・グッズ興行管理 -->
+      <!-- サブタブ2：施設改修・興行管理（上段：施設改修3列横並び / 下段：興行計画サマリー＋設定モーダル） -->
       <div class="facilities-subview hidden" id="facilities-subview-commercial" role="tabpanel">
-        <div class="panel">
-          <div id="commercial-management-root">
-            <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+        <div id="commercial-facilities-section" class="panel commercial-facilities-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">施設改修</h2>
+            </div>
+            <div class="commercial-facilities-meta">
+              <span class="commercial-facilities-stat">通年で改修可能</span>
+              <span class="commercial-facilities-stat">総資金 <strong class="mono accent-gold" id="facilities-current-funds">£0</strong></span>
+              <span class="commercial-facilities-stat">規模効果 <strong class="mono accent-green" id="facilities-stadium-bonus">標準規模</strong></span>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="facilities-grid" id="facilities-grid">
+              <!-- JSで3つの施設カードを3列横並び描画 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top: 14px;">
+          <div id="commercial-summary-root">
+            <!-- JSで確定済み/設定中のスタジアム・チケット・グッズ一覧と設定モーダル起動ボタンを描画 -->
           </div>
         </div>
       </div>
@@ -1806,6 +1823,24 @@
     </div>
   </div>
 
+  <!-- 興行計画設定モーダル（スタジアム・チケット・グッズ） -->
+  <div id="commercial-setup-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="commercial-modal-title">
+    <div class="modal-card commercial-setup-modal-card">
+      <div class="info-popup-header commercial-modal-header">
+        <div class="info-popup-title-wrap commercial-modal-title-wrap">
+          <h2 class="info-popup-title" id="commercial-modal-title">興行計画</h2>
+          <span class="commercial-modal-status mono accent-green" id="commercial-modal-status">開幕前設定</span>
+        </div>
+      </div>
+      <div class="commercial-modal-body" id="commercial-management-root">
+        <!-- JSでスタジアムグラフィック選定・席別チケット価格・グッズ収支バランスを描画 -->
+      </div>
+      <div class="commercial-modal-footer" id="commercial-modal-footer">
+        <!-- JSで選択サマリーと確定・閉じるボタンを描画 -->
+      </div>
+    </div>
+  </div>
+
   <!-- 担当秘書変更モーダル -->
   <div id="secretary-select-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="secretary-modal-title">
     <div class="modal-card" style="max-width: 560px;">
@@ -2116,15 +2151,15 @@
 
   <script src="data.js?v=20261119_3300"></script>
   <script src="avatar.js?v=20261112_0400"></script>
-  <script src="models.js?v=20261119_3900"></script>
+  <script src="models.js?v=20261119_3910"></script>
   <script src="competitions.js?v=20261119_3890"></script>
   <script src="match-engine.js?v=20261119_3810"></script>
-  <script src="storage.js?v=20261119_3300"></script>
+  <script src="storage.js?v=20261119_3930"></script>
   <div id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
 
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0020"></script>
-  <script src="main.js?v=20261119_3900"></script>
+  <script src="main.js?v=20261119_3970"></script>
 </body>
 </html>
