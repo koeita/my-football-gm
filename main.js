@@ -2892,7 +2892,9 @@ function showGmModal(opts, fromQueue = false) {
     }
 
     let singleTapNextBtn = null;
-    const actList = actions || [];
+    const actList = (Array.isArray(actions) && actions.length > 0)
+      ? actions
+      : [{ label: '確認', className: 'btn btn-primary', onClick: () => {} }];
     const isSingleNextPrompt = actList.length === 1 && actList[0].isNextPrompt;
     const hasMoreSteps = currentStepIdx < totalSteps - 1;
     const useInlineTapAdvance = !isDetailStep && (hasMoreSteps || isSingleNextPrompt);
@@ -17296,11 +17298,7 @@ function initGame() {
     });
   }
 
-  // シーズン終了・決算サマリーモーダルの閉じる・確認・背景クリック
-  const btnCloseSeasonSummary = document.getElementById('btn-close-season-summary');
-  if (btnCloseSeasonSummary) {
-    btnCloseSeasonSummary.addEventListener('click', closeSeasonSettlementModal);
-  }
+  // シーズン終了・決算サマリーモーダルの確認・背景クリック
   const btnConfirmSeasonSummary = document.getElementById('btn-confirm-season-summary');
   if (btnConfirmSeasonSummary) {
     btnConfirmSeasonSummary.addEventListener('click', closeSeasonSettlementModal);
@@ -20221,12 +20219,14 @@ function openSponsorSelectionModal(club = null, targetSlots = null) {
         ? (st.isWindowExpired ? '受付終了' : 'すべて契約中')
         : '契約を確定する';
     }
+    const deferBtnInRender = document.getElementById('btn-defer-sponsor-modal');
+    if (deferBtnInRender) {
+      deferBtnInRender.textContent = st.editableSet.size === 0 ? '閉じる' : 'あとで選ぶ';
+    }
   };
 
   renderSponsorModal();
 
-  const closeBtn = document.getElementById('btn-close-sponsor-modal');
-  if (closeBtn) closeBtn.onclick = () => closeSponsorSelectionModal();
   const deferBtn = document.getElementById('btn-defer-sponsor-modal');
   if (deferBtn) deferBtn.onclick = () => closeSponsorSelectionModal();
 
@@ -24083,10 +24083,6 @@ function initOfficeCommAndSecretaryEvents() {
     secModal.addEventListener('click', (e) => {
       if (e.target === secModal) closeSecretarySelectModal();
     });
-  }
-  const closeGmBtn = document.getElementById('btn-close-gm-modal');
-  if (closeGmBtn) {
-    closeGmBtn.addEventListener('click', () => closeGmModal(false));
   }
 }
 

@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261119_3810">
+  <link rel="stylesheet" href="style.css?v=20261119_3830">
 </head>
 <body data-active-tab="office" class="main-menu-active">
   <!-- メインメニュー（タイトル画面） -->
@@ -1398,7 +1398,6 @@
     <div class="modal-card gm-secretary-modal-card">
       <div class="modal-header gm-modal-header-row">
         <h3 class="modal-title" id="modal-title">イベントタイトル</h3>
-        <button type="button" class="btn-modal-close mono" id="btn-close-gm-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="gm-vn-stage-body">
         <div class="gm-modal-secretary-row" id="gm-modal-secretary-box">
@@ -1793,7 +1792,6 @@
         <div class="info-popup-title-wrap">
           <h2 class="info-popup-title" id="sponsor-modal-title">スポンサー契約</h2>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-sponsor-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="sponsor-modal-body" id="sponsor-modal-body">
         <!-- JSで胸・袖・公式パートナー枠タブおよび候補リストを描画 -->
@@ -1812,10 +1810,12 @@
         <div class="info-popup-title-wrap">
           <h2 class="info-popup-title" id="secretary-modal-title">担当秘書の選任</h2>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-secretary-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body" id="secretary-modal-body" style="padding: 12px 16px;">
         <!-- JSで秘書候補3名をフラットリスト描画 -->
+      </div>
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-secondary" id="btn-close-secretary-modal">閉じる</button>
       </div>
     </div>
   </div>
@@ -1828,10 +1828,12 @@
           <span class="info-popup-tag mono hidden" id="manager-modal-tag"></span>
           <h2 class="info-popup-title" id="manager-modal-title">監督スカウト</h2>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-manager-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="manager-modal-body" id="manager-modal-body">
         <!-- JSで候補リストを描画 -->
+      </div>
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-secondary" id="btn-close-manager-modal">閉じる</button>
       </div>
     </div>
   </div>
@@ -1844,10 +1846,12 @@
           <span class="info-popup-tag mono hidden" id="coach-modal-tag"></span>
           <h2 class="info-popup-title" id="coach-modal-title">コーチ招聘</h2>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-coach-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="coach-modal-body" id="coach-modal-body">
         <!-- JSで候補リストを描画 -->
+      </div>
+      <div class="modal-footer-bar">
+        <button type="button" class="btn btn-secondary" id="btn-close-coach-modal">閉じる</button>
       </div>
     </div>
   </div>
@@ -2074,7 +2078,6 @@
         <div class="info-popup-title-wrap">
           <h2 class="info-popup-title" id="summary-headline">シーズン終了・決算報告</h2>
         </div>
-        <button type="button" class="btn-modal-close mono" id="btn-close-season-summary" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body season-summary-modal-body">
         <div class="settlement-tab-bar" id="settlement-tab-bar" role="tablist">
@@ -2119,6 +2122,6 @@
   <script src="audio.js?v=20261119_0300"></script>
   <script src="cinematic.js?v=20261127_0010"></script>
   <script src="secretary-dialogue.js?v=20261127_0010"></script>
-  <script src="main.js?v=20261119_3820"></script>
+  <script src="main.js?v=20261119_3840"></script>
 </body>
 </html>
