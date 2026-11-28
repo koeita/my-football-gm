@@ -7260,6 +7260,15 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     padding: 8px 0 0 !important;
   }
 
+  .office-action-bar.office-action-controls {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+  }
+
   .gm-tasks-footer-left {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -17125,6 +17134,21 @@ body {
   display: none !important;
 }
 
+.office-action-bar.office-action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
+  background: #1a1d20 !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  box-shadow: none !important;
+}
+
 .gm-tasks-footer-bar {
   display: flex;
   align-items: center;
@@ -17201,6 +17225,18 @@ body {
 }
 
 @media (max-width: 480px) {
+  .office-action-bar.office-action-controls {
+    padding: 8px 10px !important;
+    gap: 6px !important;
+  }
+  .office-action-bar .btn-office-footer-util {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .office-action-bar .btn-office-footer-util.is-muted {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
   .gm-tasks-panel {
     padding: 12px 12px 10px !important;
   }

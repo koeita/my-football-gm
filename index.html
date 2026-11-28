@@ -236,56 +236,37 @@
 
     <!-- タブ3：本部（GM執務室）★初期表示・中央タブ -->
     <main id="view-office" class="tab-view office-hub-view">
-      <!-- 業務一覧・秘書・スケジュール進行パネル（統合UI） -->
-      <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="業務一覧">
-        <div class="gm-tasks-top-row">
-          <div class="secretary-briefing-bar" id="secretary-briefing-bar">
-            <!-- JSで秘書ドット絵アバター・業務一覧タイトル・残タスクバーを描画 -->
-          </div>
-          <button type="button" class="btn-toggle-tasks" id="btn-toggle-gm-tasks" aria-expanded="true" title="表示切り替え">
-            <span id="gm-tasks-toggle-text">折りたたむ</span>
-            <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
+      <!-- 最上部：日程進行・試合操作アクションバー -->
+      <section class="office-action-bar office-action-controls" id="office-action-controls" aria-label="日程進行・試合操作">
+        <div class="gm-tasks-footer-left">
+          <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
+            <span>+1日進める</span>
           </button>
+          <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
+          <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
+          <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
         </div>
-        <div class="secretary-office-advice hidden" id="secretary-office-advice"></div>
-        <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
-        <div class="gm-tasks-mini-summary hidden" id="gm-tasks-mini-summary">
-          <!-- JSで最優先タスクを1行描画 -->
-        </div>
-        <div class="gm-tasks-grid" id="gm-tasks-list">
-          <!-- JSでクリック可能な業務タスク行を自動描画 -->
-        </div>
-        <div class="gm-tasks-footer-bar office-action-controls" id="office-action-controls">
-          <div class="gm-tasks-footer-left">
-            <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
-              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
-              <span>+1日進める</span>
-            </button>
-            <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
-            <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
-            <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
-          </div>
-          <div class="office-action-primary" id="office-action-primary">
-            <button type="button" class="btn-office-primary-cta" id="btn-advance-to-match">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
-              <span>次戦へ進める</span>
-            </button>
-            <button type="button" class="btn-office-primary-cta is-matchday hidden" id="btn-header-kickoff">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
-              <span>試合へ進む</span>
-            </button>
-            <button type="button" class="btn-office-primary-cta is-pause hidden" id="btn-pause-advance">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-              <span>一時停止</span>
-            </button>
-            <button type="button" class="btn-office-primary-cta hidden" id="btn-next-season">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
-              <span>新シーズン開幕</span>
-            </button>
-            <button type="button" class="btn-office-primary-cta is-danger hidden" id="btn-restart-game">
-              <span>タイトルへ戻る</span>
-            </button>
-          </div>
+        <div class="office-action-primary" id="office-action-primary">
+          <button type="button" class="btn-office-primary-cta" id="btn-advance-to-match">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <span>次戦へ進める</span>
+          </button>
+          <button type="button" class="btn-office-primary-cta is-matchday hidden" id="btn-header-kickoff">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <span>試合へ進む</span>
+          </button>
+          <button type="button" class="btn-office-primary-cta is-pause hidden" id="btn-pause-advance">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            <span>一時停止</span>
+          </button>
+          <button type="button" class="btn-office-primary-cta hidden" id="btn-next-season">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
+            <span>新シーズン開幕</span>
+          </button>
+          <button type="button" class="btn-office-primary-cta is-danger hidden" id="btn-restart-game">
+            <span>タイトルへ戻る</span>
+          </button>
         </div>
       </section>
 
@@ -327,7 +308,7 @@
         <div class="deadline-ticker-list hidden" id="deadline-ticker-list" role="region" aria-label="移籍最終日 LIVE 速報一覧"></div>
       </section>
 
-      <!-- 本日の試合プレビューパネル（試合日のみ業務タスク直下に表示） -->
+      <!-- 本日の試合プレビューパネル（試合日のみ表示） -->
       <section class="office-matchday-section hidden" id="office-matchday-section" aria-label="本日の試合">
         <div id="matchday-hero-container">
           <!-- JSで matchday-card-preview を描画 -->
@@ -336,20 +317,41 @@
 
       <!-- 週間スケジュール -->
       <section class="weekly-schedule-bar" id="weekly-schedule-bar" aria-label="週間スケジュール">
-      <div class="weekly-schedule-header">
-        <div class="weekly-schedule-title-group">
-          <h3 class="weekly-schedule-title">週間スケジュール</h3>
+        <div class="weekly-schedule-header">
+          <div class="weekly-schedule-title-group">
+            <h3 class="weekly-schedule-title">週間スケジュール</h3>
+          </div>
+          <div class="weekly-schedule-badges mono">
+            <button type="button" class="btn-view-full-schedule mono" id="btn-view-full-schedule" title="シーズン全日程・結果を表示">全日程</button>
+            <span class="market-status-pill badge-market-open" id="weekly-market-badge">移籍市場 開催中</span>
+            <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次戦まで 0日</span>
+          </div>
         </div>
-        <div class="weekly-schedule-badges mono">
-          <button type="button" class="btn-view-full-schedule mono" id="btn-view-full-schedule" title="シーズン全日程・結果を表示">全日程</button>
-          <span class="market-status-pill badge-market-open" id="weekly-market-badge">移籍市場 開催中</span>
-          <span class="weekly-ticker-hint mono" id="weekly-schedule-hint">次戦まで 0日</span>
+        <div class="weekly-schedule-track" id="weekly-schedule-track">
+          <!-- JSで直近7日分のカレンダーカードを描画 -->
         </div>
-      </div>
-      <div class="weekly-schedule-track" id="weekly-schedule-track">
-        <!-- JSで直近7日分のカレンダーカードを描画 -->
-      </div>
-    </section>
+      </section>
+
+      <!-- 業務一覧・秘書パネル -->
+      <section class="gm-tasks-panel" id="gm-tasks-panel" aria-label="業務一覧">
+        <div class="gm-tasks-top-row">
+          <div class="secretary-briefing-bar" id="secretary-briefing-bar">
+            <!-- JSで秘書ドット絵アバター・業務一覧タイトル・残タスクバーを描画 -->
+          </div>
+          <button type="button" class="btn-toggle-tasks" id="btn-toggle-gm-tasks" aria-expanded="true" title="表示切り替え">
+            <span id="gm-tasks-toggle-text">折りたたむ</span>
+            <span class="toggle-icon" id="gm-tasks-toggle-icon">▲</span>
+          </button>
+        </div>
+        <div class="secretary-office-advice hidden" id="secretary-office-advice"></div>
+        <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
+        <div class="gm-tasks-mini-summary hidden" id="gm-tasks-mini-summary">
+          <!-- JSで最優先タスクを1行描画 -->
+        </div>
+        <div class="gm-tasks-grid" id="gm-tasks-list">
+          <!-- JSでクリック可能な業務タスク行を自動描画 -->
+        </div>
+      </section>
 
       <!-- クラブ通信パネル（GMモバイル風：メッセージ / ニュース / SNS） -->
       <section class="office-comm-panel gm-phone-shell" id="office-comm-panel" aria-label="メッセージとニュースとSNS">
