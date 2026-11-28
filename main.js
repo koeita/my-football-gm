@@ -1976,7 +1976,7 @@ function renderWeeklySchedule() {
 /**
  * シーズン終了まで一気にスキップ
  */
-function skipToSeasonEnd() {
+function runFastForwardLoop(shouldContinue) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
   stopAdvancingCalendar();
   clearDeferredDaySlideModals();
@@ -1987,31 +1987,31 @@ function skipToSeasonEnd() {
 
   try {
     let safetyGuard = 0;
-    while (!gameState.isSeasonOver && safetyGuard < 500) {
-    safetyGuard++;
-    const curDay = getCurrentCalendarDay();
-    if (!curDay) {
-      processSeasonEnd(true);
-      break;
-    }
-    if (!curDay.played) {
-      if (curDay.isCupMatchDay) {
-        const mInfo = getCalendarDayPlayerMatch(curDay);
-        if (mInfo && !mInfo.played) {
-          playCurrentCupMatchday(true);
-        } else {
+    while (!gameState.isSeasonOver && !gameState.isGameOver && safetyGuard < 500 && shouldContinue()) {
+      safetyGuard++;
+      const curDay = getCurrentCalendarDay();
+      if (!curDay) {
+        processSeasonEnd(true);
+        break;
+      }
+      if (!curDay.played) {
+        if (curDay.isCupMatchDay) {
+          const mInfo = getCalendarDayPlayerMatch(curDay);
+          if (mInfo && !mInfo.played) {
+            playCurrentCupMatchday(true);
+          } else {
+            curDay.played = true;
+          }
+        } else if (curDay.isMatchDay) {
+          if (typeof playCurrentMatchday === 'function') {
+            playCurrentMatchday(true);
+          } else {
+            playNextMatchweek(true);
+          }
           curDay.played = true;
         }
-      } else if (curDay.isMatchDay) {
-        if (typeof playCurrentMatchday === 'function') {
-          playCurrentMatchday(true);
-        } else {
-          playNextMatchweek(true);
-        }
-        curDay.played = true;
       }
-    }
-    if (gameState.isSeasonOver) break;
+      if (gameState.isSeasonOver || gameState.isGameOver) break;
       advanceCalendarDay(true);
     }
   } finally {
@@ -2021,6 +2021,149 @@ function skipToSeasonEnd() {
     }
   }
   renderAll();
+}
+
+function skipToSeasonEnd() {
+  runFastForwardLoop(() => true);
+}
+
+/**
+ * 指定したカレンダーインデックス（日付）まで自動スキップ（当日分は未消化で停止）
+ */
+function skipToTargetDate(targetDayIndex) {
+  if (!Array.isArray(gameState.calendar) || gameState.calendar.length === 0) return;
+  if (typeof targetDayIndex !== 'number' || Number.isNaN(targetDayIndex)) return;
+  if (targetDayIndex >= gameState.calendar.length) {
+    skipToSeasonEnd();
+    return;
+  }
+  const curIdx = gameState.currentDayIndex || 0;
+  const targetIdx = clamp(targetDayIndex, curIdx + 1, gameState.calendar.length - 1);
+  if (targetIdx <= curIdx) return;
+  runFastForwardLoop(() => gameState.currentDayIndex < targetIdx);
+}
+
+let skipToSeasonEndSelected = false;
+
+function formatCalendarIsoDate(dayObj) {
+  if (!dayObj || typeof dayObj.year !== 'number') return '';
+  return `${dayObj.year}-${String(dayObj.month).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
+}
+
+function resolveCalendarIndexForIsoDate(isoStr) {
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  if (!isoStr || cal.length === 0) return Math.min(curIdx + 1, cal.length - 1);
+  const found = cal.findIndex((d, idx) => idx > curIdx && formatCalendarIsoDate(d) >= isoStr);
+  if (found !== -1) return found;
+  return cal.length - 1;
+}
+
+function updateSkipDateSummary() {
+  const summaryEl = document.getElementById('skip-date-summary');
+  const inputEl = document.getElementById('skip-date-input');
+  const confirmBtn = document.getElementById('btn-confirm-skip-date');
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  if (!summaryEl || !cal.length) return;
+
+  if (skipToSeasonEndSelected) {
+    let matchesInSpan = 0;
+    for (let i = curIdx; i < cal.length; i++) {
+      const d = cal[i];
+      if (d && !d.played && (d.isMatchDay || d.isCupMatchDay) && getCalendarDayPlayerMatch(d)) {
+        matchesInSpan++;
+      }
+    }
+    summaryEl.textContent = `シーズン終了までスキップ · 期間中の試合 ${matchesInSpan}戦を自動進行`;
+    if (confirmBtn) confirmBtn.disabled = false;
+    return;
+  }
+
+  const val = inputEl ? inputEl.value : '';
+  const targetIdx = resolveCalendarIndexForIsoDate(val);
+  const daysSpan = Math.max(0, targetIdx - curIdx);
+  let matchesInSpan = 0;
+  for (let i = curIdx; i < targetIdx; i++) {
+    const d = cal[i];
+    if (d && !d.played && (d.isMatchDay || d.isCupMatchDay) && getCalendarDayPlayerMatch(d)) {
+      matchesInSpan++;
+    }
+  }
+  const targetDay = cal[targetIdx];
+  const dateLabel = targetDay ? (targetDay.displayDate || formatCalendarIsoDate(targetDay)) : '';
+  summaryEl.textContent = daysSpan > 0
+    ? `${dateLabel} まで ${daysSpan}日間スキップ · 期間中の試合 ${matchesInSpan}戦を自動進行`
+    : '翌日以降の日付を選択してください';
+  if (confirmBtn) confirmBtn.disabled = daysSpan <= 0;
+}
+
+function openSkipToDateModal() {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating || gameState.isAdvancingCalendar) return;
+  const modal = document.getElementById('skip-to-date-modal');
+  const curEl = document.getElementById('skip-date-current');
+  const inputEl = document.getElementById('skip-date-input');
+  const presetsEl = document.getElementById('skip-date-presets');
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  if (!modal || cal.length === 0 || curIdx >= cal.length - 1) return;
+
+  skipToSeasonEndSelected = false;
+  const curDay = cal[curIdx];
+  if (curEl && curDay) {
+    curEl.textContent = curDay.displayDate || formatCalendarIsoDate(curDay);
+  }
+
+  const minDay = cal[Math.min(curIdx + 1, cal.length - 1)];
+  const maxDay = cal[cal.length - 1];
+  const defIdx = Math.min(curIdx + 7, cal.length - 1);
+  const defDay = cal[defIdx];
+
+  if (inputEl) {
+    inputEl.min = formatCalendarIsoDate(minDay);
+    inputEl.max = formatCalendarIsoDate(maxDay);
+    inputEl.value = formatCalendarIsoDate(defDay);
+  }
+
+  if (presetsEl) {
+    const presets = [];
+    if (curIdx + 7 <= cal.length - 1) presets.push({ label: '1週間後', idx: curIdx + 7 });
+    if (curIdx + 30 <= cal.length - 1) presets.push({ label: '1ヶ月後', idx: curIdx + 30 });
+    const winterIdx = cal.findIndex((d, i) => i > curIdx && d && d.month === 1 && d.day === 1);
+    if (winterIdx !== -1) presets.push({ label: '冬市場 (1/1)', idx: winterIdx });
+    presets.push({ label: 'シーズン終了', isSeasonEnd: true });
+
+    presetsEl.innerHTML = presets.map((p, i) => `
+      <button type="button" class="skip-date-preset-btn" data-preset-idx="${i}">${p.label}</button>
+    `).join('');
+    presetsEl.querySelectorAll('.skip-date-preset-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        const preset = presets[i];
+        presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        if (preset.isSeasonEnd) {
+          skipToSeasonEndSelected = true;
+          if (inputEl) inputEl.value = formatCalendarIsoDate(maxDay);
+        } else {
+          skipToSeasonEndSelected = false;
+          if (inputEl && cal[preset.idx]) inputEl.value = formatCalendarIsoDate(cal[preset.idx]);
+        }
+        updateSkipDateSummary();
+      });
+    });
+  }
+
+  updateSkipDateSummary();
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+}
+
+function closeSkipToDateModal() {
+  const modal = document.getElementById('skip-to-date-modal');
+  const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
+  if (modal) modal.classList.add('hidden');
+  skipToSeasonEndSelected = false;
+  if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -9513,7 +9656,7 @@ function renderHeader() {
   const btnPlayMatch = document.getElementById('btn-play-match');
   const btnPauseAdvance = document.getElementById('btn-pause-advance');
   const btnPlayNext = document.getElementById('btn-play-next');
-  const btnSkipSeason = document.getElementById('btn-skip-season');
+  const btnSkipToDate = document.getElementById('btn-skip-to-date');
   const btnNextSeason = document.getElementById('btn-next-season');
   const btnRestart = document.getElementById('btn-restart-game');
 
@@ -9535,7 +9678,7 @@ function renderHeader() {
   if (btnAdvanceToMatch) btnAdvanceToMatch.disabled = isBusy || isMatchPending || isAdvancing;
   if (btnHeaderKickoff) btnHeaderKickoff.disabled = isBusy || isAdvancing;
   if (btnPlayMatch) btnPlayMatch.disabled = isBusy || isAdvancing;
-  if (btnSkipSeason) btnSkipSeason.disabled = isBusy || isAdvancing;
+  if (btnSkipToDate) btnSkipToDate.disabled = isBusy || isAdvancing;
 
   if (gameState.isGameOver) {
     if (btnAdvanceDay) btnAdvanceDay.classList.add('hidden');
@@ -9544,7 +9687,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.remove('hidden');
   } else if (gameState.isSeasonOver) {
@@ -9554,7 +9697,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.remove('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
   } else if (isAdvancing) {
@@ -9564,7 +9707,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.remove('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
   } else {
@@ -9572,7 +9715,7 @@ function renderHeader() {
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.remove('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.remove('hidden');
 
     if (isMatchPending) {
       if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
@@ -17235,8 +17378,43 @@ function initGame() {
   if (btnPlayNext) {
     btnPlayNext.addEventListener('click', () => openMatchPrecheckModal());
   }
-  const btnSkipSeason = document.getElementById('btn-skip-season');
-  if (btnSkipSeason) btnSkipSeason.addEventListener('click', skipToSeasonEnd);
+  const btnSkipToDate = document.getElementById('btn-skip-to-date');
+  if (btnSkipToDate) btnSkipToDate.addEventListener('click', openSkipToDateModal);
+  const btnCloseSkipDate = document.getElementById('btn-close-skip-date-modal');
+  if (btnCloseSkipDate) btnCloseSkipDate.addEventListener('click', closeSkipToDateModal);
+  const btnCancelSkipDate = document.getElementById('btn-cancel-skip-date');
+  if (btnCancelSkipDate) btnCancelSkipDate.addEventListener('click', closeSkipToDateModal);
+  const skipDateInput = document.getElementById('skip-date-input');
+  if (skipDateInput) {
+    const onDateChange = () => {
+      skipToSeasonEndSelected = false;
+      const presetsEl = document.getElementById('skip-date-presets');
+      if (presetsEl) presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
+      updateSkipDateSummary();
+    };
+    skipDateInput.addEventListener('input', onDateChange);
+    skipDateInput.addEventListener('change', onDateChange);
+  }
+  const btnConfirmSkipDate = document.getElementById('btn-confirm-skip-date');
+  if (btnConfirmSkipDate) {
+    btnConfirmSkipDate.addEventListener('click', () => {
+      const doSeasonEnd = skipToSeasonEndSelected;
+      const val = skipDateInput ? skipDateInput.value : '';
+      closeSkipToDateModal();
+      if (doSeasonEnd) {
+        skipToSeasonEnd();
+      } else {
+        const targetIdx = resolveCalendarIndexForIsoDate(val);
+        skipToTargetDate(targetIdx);
+      }
+    });
+  }
+  const skipDateOverlay = document.getElementById('skip-to-date-modal');
+  if (skipDateOverlay) {
+    skipDateOverlay.addEventListener('click', (e) => {
+      if (e.target === skipDateOverlay) closeSkipToDateModal();
+    });
+  }
   const btnNextSeason = document.getElementById('btn-next-season');
   if (btnNextSeason) btnNextSeason.addEventListener('click', startNextSeason);
   const btnRestart = document.getElementById('btn-restart-game');
@@ -18549,6 +18727,7 @@ function initGame() {
       const recordsOverlay = document.getElementById('records-modal-overlay');
       const settingsOverlay = document.getElementById('settings-modal-overlay');
       const profileModalTop = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+      const skipDateModalTop = document.getElementById('skip-to-date-modal');
       const seasonSummaryModal = document.getElementById('season-summary-box');
       const gmOverlay = document.getElementById('gm-modal-overlay');
       if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
@@ -18569,6 +18748,8 @@ function initGame() {
         }
       } else if ((profileModalTop && !profileModalTop.classList.contains('hidden')) || gameState.profileModalPlayerId) {
         closePlayerProfileModal();
+      } else if (skipDateModalTop && !skipDateModalTop.classList.contains('hidden')) {
+        closeSkipToDateModal();
       } else if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
         closeSeasonSettlementModal();
       }

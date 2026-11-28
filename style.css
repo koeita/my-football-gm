@@ -17277,9 +17277,9 @@ body {
 }
 
 .gm-tasks-top-row .btn-office-primary-cta {
-  min-height: 40px;
-  padding: 10px 16px;
-  font-size: 14px;
+  min-height: 42px;
+  padding: 10px 18px;
+  font-size: 14.5px;
   font-weight: 800;
   border-radius: 8px;
   white-space: nowrap;
@@ -17288,7 +17288,7 @@ body {
 .gm-tasks-action-row.office-action-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   flex-wrap: nowrap;
   width: 100%;
@@ -17302,29 +17302,116 @@ body {
 }
 
 .gm-tasks-action-row .gm-tasks-footer-left {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   flex-wrap: nowrap;
 }
 
-.gm-tasks-action-row #btn-advance-day {
-  flex: 1 1 auto;
+.gm-tasks-action-row #btn-advance-day,
+.gm-tasks-action-row #btn-skip-to-date {
+  flex: 0 0 auto;
   justify-content: center;
-  min-width: 0;
-  min-height: 40px;
-  padding: 9px 14px;
-  font-size: 13.5px;
-  font-weight: 800;
-  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
 }
 
-.gm-tasks-action-row #btn-skip-season {
-  flex: 0 0 auto;
-  font-size: 11px;
-  padding: 4px 6px;
+/* 日付指定スキップモーダル */
+.skip-date-modal-card {
+  max-width: 400px;
+  width: 92vw;
+  background-color: #1a1d20;
+}
+
+.skip-date-modal-body {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skip-date-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.skip-date-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.skip-date-label {
+  font-size: 12px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.skip-date-val {
+  font-size: 13px;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.skip-date-input {
+  background: #24282c;
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color-scheme: dark;
+  min-width: 150px;
+}
+
+.skip-date-summary {
+  font-size: 11.5px;
+  color: #8b949e;
+  padding-top: 4px;
+}
+
+.skip-date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.skip-date-preset-btn {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  color: #2ecc71;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.skip-date-preset-btn:hover,
+.skip-date-preset-btn.is-selected {
+  text-decoration: underline;
+  color: #4ade80;
+}
+
+.skip-date-modal-footer {
+  padding: 10px 18px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .gm-tasks-footer-bar {
@@ -17413,22 +17500,19 @@ body {
     padding: 8px !important;
   }
   .gm-tasks-top-row .btn-office-primary-cta {
-    min-height: 38px;
-    padding: 8px 12px;
-    font-size: 13px;
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 13.5px;
   }
   .gm-tasks-action-row.office-action-controls {
     padding: 6px 0 !important;
-    gap: 6px !important;
+    gap: 8px !important;
   }
-  .gm-tasks-action-row #btn-advance-day {
-    min-height: 38px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-  .gm-tasks-action-row #btn-skip-season {
-    padding: 4px 2px;
-    font-size: 10.5px;
+  .gm-tasks-action-row #btn-advance-day,
+  .gm-tasks-action-row #btn-skip-to-date {
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 11.5px;
   }
   .gm-tasks-panel {
     padding: 12px 12px 10px !important;

@@ -340,7 +340,7 @@
             <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
             <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
           </div>
-          <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
+          <button type="button" class="btn-office-footer-util" id="btn-skip-to-date" title="指定した日付まで早送り">日付指定スキップ</button>
         </div>
         <div class="secretary-office-advice hidden" id="secretary-office-advice"></div>
         <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
@@ -2128,6 +2128,34 @@
       </div>
       <div class="modal-body" id="board-crisis-body" style="padding: 18px 20px;">
         <!-- JSで再就職先クラブ選択またはキャリア終了を描画 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 日付指定スキップ モーダル -->
+  <div id="skip-to-date-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="skip-date-modal-title">
+    <div class="modal-card skip-date-modal-card">
+      <div class="info-popup-header">
+        <div class="info-popup-title-wrap">
+          <h2 class="info-popup-title" id="skip-date-modal-title">日付指定スキップ</h2>
+        </div>
+        <button type="button" class="btn-modal-close mono" id="btn-close-skip-date-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
+      </div>
+      <div class="modal-body skip-date-modal-body">
+        <div class="skip-date-row">
+          <span class="skip-date-label">現在の日付</span>
+          <strong class="skip-date-val mono" id="skip-date-current">-</strong>
+        </div>
+        <div class="skip-date-field">
+          <label for="skip-date-input" class="skip-date-label">移動先の日付</label>
+          <input type="date" id="skip-date-input" class="skip-date-input mono">
+        </div>
+        <div class="skip-date-summary mono" id="skip-date-summary">移動先を選択してください</div>
+        <div class="skip-date-presets" id="skip-date-presets" role="group" aria-label="よく使う移動先"></div>
+      </div>
+      <div class="modal-footer skip-date-modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-skip-date">キャンセル</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-skip-date">スキップ実行</button>
       </div>
     </div>
   </div>
