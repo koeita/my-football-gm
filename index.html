@@ -337,10 +337,10 @@
               <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
               <span>+1日進める</span>
             </button>
+            <button type="button" class="btn-office-footer-util" id="btn-skip-to-date" title="カレンダーから日付を選んで早送り">日付指定スキップ</button>
             <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
             <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
           </div>
-          <button type="button" class="btn-office-footer-util" id="btn-skip-to-date" title="指定した日付まで早送り">日付指定スキップ</button>
         </div>
         <div class="secretary-office-advice hidden" id="secretary-office-advice"></div>
         <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
@@ -2142,16 +2142,27 @@
         <button type="button" class="btn-modal-close mono" id="btn-close-skip-date-modal" aria-label="閉じる" title="閉じる (Esc)">✕</button>
       </div>
       <div class="modal-body skip-date-modal-body">
-        <div class="skip-date-row">
-          <span class="skip-date-label">現在の日付</span>
-          <strong class="skip-date-val mono" id="skip-date-current">-</strong>
+        <div class="skip-cal-toolbar">
+          <div class="skip-cal-nav">
+            <button type="button" class="btn btn-secondary btn-xs mono" id="btn-skip-cal-prev" title="前月">&lt;</button>
+            <strong class="skip-cal-month-label mono" id="skip-cal-month-label">-</strong>
+            <button type="button" class="btn btn-secondary btn-xs mono" id="btn-skip-cal-next" title="翌月">&gt;</button>
+          </div>
+          <div class="skip-date-presets" id="skip-date-presets" role="group" aria-label="よく使う移動先"></div>
         </div>
-        <div class="skip-date-field">
-          <label for="skip-date-input" class="skip-date-label">移動先の日付</label>
-          <input type="date" id="skip-date-input" class="skip-date-input mono">
+        <div class="season-calendar-view skip-cal-view" id="skip-cal-view">
+          <div class="calendar-weekdays-row mono">
+            <span class="cal-weekday col-sun">日</span>
+            <span class="cal-weekday">月</span>
+            <span class="cal-weekday">火</span>
+            <span class="cal-weekday">水</span>
+            <span class="cal-weekday">木</span>
+            <span class="cal-weekday">金</span>
+            <span class="cal-weekday col-sat">土</span>
+          </div>
+          <div class="calendar-days-grid skip-cal-days-grid" id="skip-cal-days-grid"></div>
         </div>
-        <div class="skip-date-summary mono" id="skip-date-summary">移動先を選択してください</div>
-        <div class="skip-date-presets" id="skip-date-presets" role="group" aria-label="よく使う移動先"></div>
+        <div class="skip-date-summary mono" id="skip-date-summary">スキップ先の日付をタップしてください</div>
       </div>
       <div class="modal-footer skip-date-modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-skip-date">キャンセル</button>

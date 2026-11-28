@@ -2044,24 +2044,17 @@ function skipToTargetDate(targetDayIndex) {
 }
 
 let skipToSeasonEndSelected = false;
+let skipSelectedDayIndex = null;
+let skipCalViewYear = null;
+let skipCalViewMonth = null;
 
 function formatCalendarIsoDate(dayObj) {
   if (!dayObj || typeof dayObj.year !== 'number') return '';
   return `${dayObj.year}-${String(dayObj.month).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
 }
 
-function resolveCalendarIndexForIsoDate(isoStr) {
-  const cal = gameState.calendar || [];
-  const curIdx = gameState.currentDayIndex || 0;
-  if (!isoStr || cal.length === 0) return Math.min(curIdx + 1, cal.length - 1);
-  const found = cal.findIndex((d, idx) => idx > curIdx && formatCalendarIsoDate(d) >= isoStr);
-  if (found !== -1) return found;
-  return cal.length - 1;
-}
-
 function updateSkipDateSummary() {
   const summaryEl = document.getElementById('skip-date-summary');
-  const inputEl = document.getElementById('skip-date-input');
   const confirmBtn = document.getElementById('btn-confirm-skip-date');
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
@@ -2080,9 +2073,8 @@ function updateSkipDateSummary() {
     return;
   }
 
-  const val = inputEl ? inputEl.value : '';
-  const targetIdx = resolveCalendarIndexForIsoDate(val);
-  const daysSpan = Math.max(0, targetIdx - curIdx);
+  const targetIdx = typeof skipSelectedDayIndex === 'number' ? skipSelectedDayIndex : -1;
+  const daysSpan = targetIdx > curIdx ? (targetIdx - curIdx) : 0;
   let matchesInSpan = 0;
   for (let i = curIdx; i < targetIdx; i++) {
     const d = cal[i];
@@ -2098,31 +2090,110 @@ function updateSkipDateSummary() {
   if (confirmBtn) confirmBtn.disabled = daysSpan <= 0;
 }
 
+function selectSkipCalendarDayIndex(targetIdx, { scrollIntoView = false, clearPresets = true } = {}) {
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  const gridEl = document.getElementById('skip-cal-days-grid');
+  if (targetIdx <= curIdx || targetIdx >= cal.length) return;
+
+  skipToSeasonEndSelected = false;
+  skipSelectedDayIndex = targetIdx;
+  if (clearPresets) {
+    const presetsEl = document.getElementById('skip-date-presets');
+    if (presetsEl) presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
+  }
+  if (gridEl) {
+    gridEl.querySelectorAll('.cal-day-cell.is-skip-selected').forEach(c => c.classList.remove('is-skip-selected'));
+    const nextCell = gridEl.querySelector(`.cal-day-cell[data-cal-day-index="${targetIdx}"]`);
+    if (nextCell) {
+      nextCell.classList.add('is-skip-selected');
+      if (scrollIntoView && typeof nextCell.scrollIntoView === 'function') {
+        calProgrammaticScrollUntil = performance.now() + 450;
+        nextCell.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  }
+  const dObj = cal[targetIdx];
+  if (dObj) {
+    skipCalViewYear = dObj.year;
+    skipCalViewMonth = dObj.month;
+    const lbl = document.getElementById('skip-cal-month-label');
+    if (lbl) lbl.textContent = `${dObj.year}年 ${dObj.month}月`;
+  }
+  updateSkipDateSummary();
+}
+
+function changeSkipCalendarMonth(delta) {
+  const cal = gameState.calendar || [];
+  if (cal.length === 0) return;
+  const curDay = getCurrentCalendarDay();
+  let y = skipCalViewYear || (curDay ? curDay.year : 2026);
+  let m = (skipCalViewMonth || (curDay ? curDay.month : 8)) + delta;
+  if (m < 1) {
+    m = 12;
+    y -= 1;
+  } else if (m > 12) {
+    m = 1;
+    y += 1;
+  }
+  const startDay = cal[0];
+  const endDay = cal[cal.length - 1];
+  if (startDay && endDay) {
+    const curKey = y * 100 + m;
+    if (curKey < startDay.year * 100 + startDay.month || curKey > endDay.year * 100 + endDay.month) return;
+  }
+  skipCalViewYear = y;
+  skipCalViewMonth = m;
+  const lbl = document.getElementById('skip-cal-month-label');
+  if (lbl) lbl.textContent = `${y}年 ${m}月`;
+  const gridEl = document.getElementById('skip-cal-days-grid');
+  if (gridEl && typeof scrollCalendarContainerToMonth === 'function') {
+    scrollCalendarContainerToMonth(gridEl, y, m, 'smooth');
+  }
+}
+
 function openSkipToDateModal() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating || gameState.isAdvancingCalendar) return;
   const modal = document.getElementById('skip-to-date-modal');
-  const curEl = document.getElementById('skip-date-current');
-  const inputEl = document.getElementById('skip-date-input');
+  const gridEl = document.getElementById('skip-cal-days-grid');
+  const lblEl = document.getElementById('skip-cal-month-label');
   const presetsEl = document.getElementById('skip-date-presets');
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
-  if (!modal || cal.length === 0 || curIdx >= cal.length - 1) return;
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!modal || !gridEl || !playerClub || cal.length === 0 || curIdx >= cal.length - 1) return;
 
   skipToSeasonEndSelected = false;
+  skipSelectedDayIndex = Math.min(curIdx + 7, cal.length - 1);
   const curDay = cal[curIdx];
-  if (curEl && curDay) {
-    curEl.textContent = curDay.displayDate || formatCalendarIsoDate(curDay);
+  skipCalViewYear = curDay ? curDay.year : 2026;
+  skipCalViewMonth = curDay ? curDay.month : 8;
+  if (lblEl) lblEl.textContent = `${skipCalViewYear}年 ${skipCalViewMonth}月`;
+
+  if (typeof buildContinuousCalendarCellsHtml === 'function') {
+    const cellsHtml = buildContinuousCalendarCellsHtml(cal, playerClub, curIdx, {
+      skipPickerMode: true,
+      selectedDayIndex: skipSelectedDayIndex
+    });
+    gridEl.innerHTML = `<div class="cal-continuous-grid">${cellsHtml}</div>`;
   }
 
-  const minDay = cal[Math.min(curIdx + 1, cal.length - 1)];
-  const maxDay = cal[cal.length - 1];
-  const defIdx = Math.min(curIdx + 7, cal.length - 1);
-  const defDay = cal[defIdx];
-
-  if (inputEl) {
-    inputEl.min = formatCalendarIsoDate(minDay);
-    inputEl.max = formatCalendarIsoDate(maxDay);
-    inputEl.value = formatCalendarIsoDate(defDay);
+  if (!gridEl._boundSkipCellClick) {
+    gridEl._boundSkipCellClick = true;
+    gridEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.cal-day-cell.is-skip-selectable[data-cal-day-index]');
+      if (!cell) return;
+      const idx = parseInt(cell.dataset.calDayIndex, 10);
+      if (!Number.isNaN(idx)) {
+        selectSkipCalendarDayIndex(idx, { scrollIntoView: false, clearPresets: true });
+      }
+    });
+  }
+  if (typeof bindCalendarContainerScrollSync === 'function') {
+    bindCalendarContainerScrollSync(gridEl, lblEl, (y, m) => {
+      skipCalViewYear = y;
+      skipCalViewMonth = m;
+    });
   }
 
   if (presetsEl) {
@@ -2143,12 +2214,11 @@ function openSkipToDateModal() {
         btn.classList.add('is-selected');
         if (preset.isSeasonEnd) {
           skipToSeasonEndSelected = true;
-          if (inputEl) inputEl.value = formatCalendarIsoDate(maxDay);
+          gridEl.querySelectorAll('.cal-day-cell.is-skip-selected').forEach(c => c.classList.remove('is-skip-selected'));
+          updateSkipDateSummary();
         } else {
-          skipToSeasonEndSelected = false;
-          if (inputEl && cal[preset.idx]) inputEl.value = formatCalendarIsoDate(cal[preset.idx]);
+          selectSkipCalendarDayIndex(preset.idx, { scrollIntoView: true, clearPresets: false });
         }
-        updateSkipDateSummary();
       });
     });
   }
@@ -2156,6 +2226,11 @@ function openSkipToDateModal() {
   updateSkipDateSummary();
   modal.classList.remove('hidden');
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+  requestAnimationFrame(() => {
+    if (typeof scrollCalendarContainerToMonth === 'function') {
+      scrollCalendarContainerToMonth(gridEl, skipCalViewYear, skipCalViewMonth, 'auto');
+    }
+  });
 }
 
 function closeSkipToDateModal() {
@@ -2163,6 +2238,7 @@ function closeSkipToDateModal() {
   const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
   if (modal) modal.classList.add('hidden');
   skipToSeasonEndSelected = false;
+  skipSelectedDayIndex = null;
   if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
@@ -17384,27 +17460,19 @@ function initGame() {
   if (btnCloseSkipDate) btnCloseSkipDate.addEventListener('click', closeSkipToDateModal);
   const btnCancelSkipDate = document.getElementById('btn-cancel-skip-date');
   if (btnCancelSkipDate) btnCancelSkipDate.addEventListener('click', closeSkipToDateModal);
-  const skipDateInput = document.getElementById('skip-date-input');
-  if (skipDateInput) {
-    const onDateChange = () => {
-      skipToSeasonEndSelected = false;
-      const presetsEl = document.getElementById('skip-date-presets');
-      if (presetsEl) presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
-      updateSkipDateSummary();
-    };
-    skipDateInput.addEventListener('input', onDateChange);
-    skipDateInput.addEventListener('change', onDateChange);
-  }
+  const btnSkipCalPrev = document.getElementById('btn-skip-cal-prev');
+  if (btnSkipCalPrev) btnSkipCalPrev.addEventListener('click', () => changeSkipCalendarMonth(-1));
+  const btnSkipCalNext = document.getElementById('btn-skip-cal-next');
+  if (btnSkipCalNext) btnSkipCalNext.addEventListener('click', () => changeSkipCalendarMonth(1));
   const btnConfirmSkipDate = document.getElementById('btn-confirm-skip-date');
   if (btnConfirmSkipDate) {
     btnConfirmSkipDate.addEventListener('click', () => {
       const doSeasonEnd = skipToSeasonEndSelected;
-      const val = skipDateInput ? skipDateInput.value : '';
+      const targetIdx = skipSelectedDayIndex;
       closeSkipToDateModal();
       if (doSeasonEnd) {
         skipToSeasonEnd();
-      } else {
-        const targetIdx = resolveCalendarIndexForIsoDate(val);
+      } else if (typeof targetIdx === 'number') {
         skipToTargetDate(targetIdx);
       }
     });
@@ -20753,10 +20821,9 @@ function updateScheduleSummaryBadges() {
 let calProgrammaticScrollUntil = 0;
 
 /**
- * 指定年月の1日セルへカレンダーを縦スクロールさせる
+ * 指定年月の1日セルへ指定カレンダーコンテナを縦スクロールさせる共有ヘルパー
  */
-function scrollCalendarToMonth(year, month, behavior = 'auto') {
-  const gridEl = document.getElementById('calendar-days-grid');
+function scrollCalendarContainerToMonth(gridEl, year, month, behavior = 'auto') {
   if (!gridEl) return;
   const targetCell = gridEl.querySelector(`.cal-day-cell[data-cal-month-start="${year}-${month}"]`)
     || gridEl.querySelector(`.cal-day-cell[data-cal-year="${year}"][data-cal-month="${month}"]`);
@@ -20764,6 +20831,14 @@ function scrollCalendarToMonth(year, month, behavior = 'auto') {
   const top = Math.max(0, Math.round(targetCell.getBoundingClientRect().top - gridEl.getBoundingClientRect().top + gridEl.scrollTop));
   calProgrammaticScrollUntil = performance.now() + (behavior === 'smooth' ? 450 : 120);
   gridEl.scrollTo({ top, behavior });
+}
+
+/**
+ * 指定年月の1日セルへカレンダーを縦スクロールさせる
+ */
+function scrollCalendarToMonth(year, month, behavior = 'auto') {
+  const gridEl = document.getElementById('calendar-days-grid');
+  scrollCalendarContainerToMonth(gridEl, year, month, behavior);
 }
 
 /**
@@ -20836,8 +20911,10 @@ function resetCalendarToCurrentMonth() {
 /**
  * シーズン全日程分の連続7列日付セルHTMLを構築するヘルパー（月の切れ目で改行せず連続連結）
  */
-function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
+function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex, options = {}) {
   if (!Array.isArray(allDays) || allDays.length === 0) return '';
+  const skipPickerMode = Boolean(options && options.skipPickerMode);
+  const selectedDayIndex = options && typeof options.selectedDayIndex === 'number' ? options.selectedDayIndex : -1;
   const cellsHtml = [];
 
   // 初日の曜日に応じた先頭空セルのみ挿入（0:日〜6:土）
@@ -20980,9 +21057,17 @@ function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
 
     const currentDayClass = isCurrentDay ? 'is-current-day' : '';
     const dayLabel = isMonthStart ? `${d.month}/1` : `${d.day}`;
+    let skipClass = '';
+    if (skipPickerMode) {
+      const isSelectable = d.dayIndex > inGameDayIndex;
+      skipClass = isSelectable
+        ? (d.dayIndex === selectedDayIndex ? 'is-skip-selectable is-skip-selected' : 'is-skip-selectable')
+        : 'is-skip-disabled';
+      cellAttr = isSelectable ? 'role="button" tabindex="0"' : '';
+    }
 
     cellsHtml.push(`
-      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${monthToneClass} ${monthStartClass} ${matchClass}" data-cal-year="${d.year}" data-cal-month="${d.month}" ${monthStartAttr} ${cellAttr}>
+      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${monthToneClass} ${monthStartClass} ${matchClass} ${skipClass}" data-cal-day-index="${d.dayIndex}" data-cal-year="${d.year}" data-cal-month="${d.month}" ${monthStartAttr} ${cellAttr}>
         <div class="cal-cell-header">
           <span class="cal-day-num">${dayLabel}</span>
           ${isCurrentDay ? '<span class="cal-today-badge mono">TODAY</span>' : ''}
@@ -21004,7 +21089,7 @@ function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
 /**
  * 縦スクロール連動で表示中年月ラベルを同期するリスナーを登録
  */
-function bindCalendarScrollSync(gridEl) {
+function bindCalendarContainerScrollSync(gridEl, labelEl, onMonthChange = null) {
   if (!gridEl || gridEl.dataset.calScrollBound === '1') return;
   gridEl.dataset.calScrollBound = '1';
   let scrollRafId = null;
@@ -21032,15 +21117,21 @@ function bindCalendarScrollSync(gridEl) {
       const y = parseInt(activeAnchor.dataset.calYear, 10);
       const m = parseInt(activeAnchor.dataset.calMonth, 10);
       if (!Number.isNaN(y) && !Number.isNaN(m)) {
-        gameState.calendarViewYear = y;
-        gameState.calendarViewMonth = m;
-        const labelEl = document.getElementById('calendar-current-month-label');
+        if (typeof onMonthChange === 'function') onMonthChange(y, m);
         if (labelEl) {
           labelEl.textContent = `${y}年 ${m}月`;
         }
       }
     });
   }, { passive: true });
+}
+
+function bindCalendarScrollSync(gridEl) {
+  const labelEl = document.getElementById('calendar-current-month-label');
+  bindCalendarContainerScrollSync(gridEl, labelEl, (y, m) => {
+    gameState.calendarViewYear = y;
+    gameState.calendarViewMonth = m;
+  });
 }
 
 /**

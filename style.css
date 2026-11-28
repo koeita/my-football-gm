@@ -7251,14 +7251,22 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     gap: 8px !important;
   }
 
-  .gm-tasks-footer-bar,
-  .gm-tasks-action-row.office-action-controls {
+  .gm-tasks-footer-bar {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 6px !important;
     padding: 7px 0 !important;
+  }
+
+  .gm-tasks-action-row.office-action-controls {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 6px 0 !important;
   }
 
   .gm-tasks-footer-left {
@@ -17321,80 +17329,60 @@ body {
   border-radius: 6px;
 }
 
-/* 日付指定スキップモーダル */
+/* 日付指定スキップモーダル（既存シーズンカレンダー流用） */
 .skip-date-modal-card {
-  max-width: 400px;
-  width: 92vw;
+  max-width: 680px;
+  width: 96vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background-color: #1a1d20;
 }
 
 .skip-date-modal-body {
-  padding: 14px 18px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.skip-date-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
   gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.skip-date-field {
+.skip-cal-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
-.skip-date-label {
-  font-size: 12px;
-  color: #8b949e;
-  white-space: nowrap;
-  flex-shrink: 0;
+.skip-cal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.skip-date-val {
+.skip-cal-month-label {
   font-size: 13px;
   color: var(--text-main);
+  min-width: 82px;
+  text-align: center;
   white-space: nowrap;
-}
-
-.skip-date-input {
-  background: #24282c;
-  color: var(--text-main);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 13px;
-  color-scheme: dark;
-  min-width: 150px;
-}
-
-.skip-date-summary {
-  font-size: 11.5px;
-  color: #8b949e;
-  padding-top: 4px;
 }
 
 .skip-date-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .skip-date-preset-btn {
   background: none;
   border: none;
-  padding: 4px 2px;
+  padding: 2px 2px;
   color: #2ecc71;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -17406,8 +17394,52 @@ body {
   color: #4ade80;
 }
 
+.skip-cal-view {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 2px !important;
+}
+
+.skip-cal-days-grid {
+  flex: 1 1 auto !important;
+  min-height: 240px !important;
+  height: 44vh !important;
+  max-height: 46vh !important;
+  overflow-y: auto !important;
+}
+
+.cal-day-cell.is-skip-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cal-day-cell.is-skip-selectable {
+  cursor: pointer;
+}
+
+.cal-day-cell.is-skip-selectable:hover {
+  background-color: rgba(46, 204, 113, 0.12) !important;
+}
+
+.cal-day-cell.is-skip-selected {
+  background-color: rgba(46, 204, 113, 0.22) !important;
+  outline: 2px solid #2ecc71;
+  outline-offset: -2px;
+}
+
+.skip-date-summary {
+  font-size: 11.5px;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .skip-date-modal-footer {
-  padding: 10px 18px 14px;
+  padding: 10px 14px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: flex-end;
