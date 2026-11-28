@@ -2016,6 +2016,9 @@ function skipToSeasonEnd() {
     }
   } finally {
     isFastForwardingSeason = false;
+    if (typeof markPassedMilestonesSilently === 'function') {
+      markPassedMilestonesSilently(typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+    }
   }
   renderAll();
 }
@@ -25968,6 +25971,38 @@ function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD',
   }
 }
 
+const MILESTONE_THRESHOLDS = {
+  apps: [50, 100, 150, 200, 300],
+  goals: [25, 50, 100, 150],
+  assists: [25, 50, 100]
+};
+
+/**
+ * 早送り（シーズン終了スキップ）等で既に到達済みの節目記録を演出なしで既達成扱いとする
+ */
+function markPassedMilestonesSilently(playerClub) {
+  if (!playerClub) return;
+  syncPlayerClubStatsToHallOfFame(playerClub);
+  const hof = ensureClubHallOfFame();
+  for (const p of (playerClub.players || [])) {
+    if (!p) continue;
+    const entry = hof.players[p.id];
+    if (!entry) continue;
+    const apps = entry.apps || 0;
+    const goals = entry.goals || 0;
+    const assists = entry.assists || 0;
+    for (const mApps of MILESTONE_THRESHOLDS.apps) {
+      if (apps >= mApps) hof.milestonesIssued[`apps_${p.id}_${mApps}`] = true;
+    }
+    for (const mGoals of MILESTONE_THRESHOLDS.goals) {
+      if (goals >= mGoals) hof.milestonesIssued[`goals_${p.id}_${mGoals}`] = true;
+    }
+    for (const mAst of MILESTONE_THRESHOLDS.assists) {
+      if (assists >= mAst) hof.milestonesIssued[`assists_${p.id}_${mAst}`] = true;
+    }
+  }
+}
+
 function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
   if (!playerClub || !matchData || matchData.isPreseason) return;
   syncPlayerClubStatsToHallOfFame(playerClub);
@@ -25975,9 +26010,12 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
   const seasonNum = gameState.season || 1;
   const scorers = matchData.isPlayerHome ? (matchData.homeScorers || []) : (matchData.awayScorers || []);
   const matchGoalsByPlayer = new Map();
+  const matchAssistsByPlayer = new Map();
   for (const s of scorers) {
     const pid = s && s.scorer ? s.scorer.id : null;
     if (pid) matchGoalsByPlayer.set(pid, (matchGoalsByPlayer.get(pid) || 0) + 1);
+    const aid = s && s.assister ? s.assister.id : null;
+    if (aid) matchAssistsByPlayer.set(aid, (matchAssistsByPlayer.get(aid) || 0) + 1);
   }
 
   const playedIds = new Set();
@@ -26020,6 +26058,7 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
 
     const entry = hof.players[p.id];
     if (!entry) continue;
+    const matchA = matchAssistsByPlayer.get(p.id) || 0;
 
     if (p.isYouthGraduate && matchG >= 1 && (entry.goals || 0) === matchG) {
       recordPlayerMilestoneEvent(p, playerClub, `youth_first_goal_${p.id}`, {
@@ -26032,9 +26071,12 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       });
     }
 
-    for (const mApps of [50, 100, 150, 200, 300]) {
-      if ((entry.apps || 0) >= mApps) {
-        recordPlayerMilestoneEvent(p, playerClub, `apps_${p.id}_${mApps}`, {
+    const curApps = entry.apps || 0;
+    const prevApps = Math.max(0, curApps - 1);
+    for (const mApps of MILESTONE_THRESHOLDS.apps) {
+      const appKey = `apps_${p.id}_${mApps}`;
+      if (prevApps < mApps && curApps >= mApps) {
+        recordPlayerMilestoneEvent(p, playerClub, appKey, {
           badge: 'RECORD',
           cinematicTag: `${mApps} APPS`,
           isMajor: mApps >= 100,
@@ -26042,11 +26084,17 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}・${p.name}がクラブ通算${mApps}試合出場を達成`,
           desc: `長期にわたりチームを支える${p.name}がクラブ公式戦通算${mApps}試合の節目に到達した。`
         });
+      } else if (prevApps >= mApps) {
+        hof.milestonesIssued[appKey] = true;
       }
     }
-    for (const mGoals of [25, 50, 100, 150]) {
-      if ((entry.goals || 0) >= mGoals) {
-        recordPlayerMilestoneEvent(p, playerClub, `goals_${p.id}_${mGoals}`, {
+
+    const curGoals = entry.goals || 0;
+    const prevGoals = Math.max(0, curGoals - matchG);
+    for (const mGoals of MILESTONE_THRESHOLDS.goals) {
+      const goalKey = `goals_${p.id}_${mGoals}`;
+      if (matchG > 0 && prevGoals < mGoals && curGoals >= mGoals) {
+        recordPlayerMilestoneEvent(p, playerClub, goalKey, {
           badge: 'RECORD',
           cinematicTag: `${mGoals} GOALS`,
           isMajor: mGoals >= 50,
@@ -26054,11 +26102,17 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}の点取り屋・${p.name}がクラブ通算${mGoals}ゴールに到達`,
           desc: `エース級の決定力を示す${p.name}がクラブ通算${mGoals}得点目を叩き込んだ。`
         });
+      } else if (prevGoals >= mGoals) {
+        hof.milestonesIssued[goalKey] = true;
       }
     }
-    for (const mAst of [25, 50, 100]) {
-      if ((entry.assists || 0) >= mAst) {
-        recordPlayerMilestoneEvent(p, playerClub, `assists_${p.id}_${mAst}`, {
+
+    const curAst = entry.assists || 0;
+    const prevAst = Math.max(0, curAst - matchA);
+    for (const mAst of MILESTONE_THRESHOLDS.assists) {
+      const astKey = `assists_${p.id}_${mAst}`;
+      if (matchA > 0 && prevAst < mAst && curAst >= mAst) {
+        recordPlayerMilestoneEvent(p, playerClub, astKey, {
           badge: 'RECORD',
           cinematicTag: `${mAst} ASSISTS`,
           isMajor: mAst >= 50,
@@ -26066,6 +26120,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}の司令塔・${p.name}がクラブ通算${mAst}アシストを記録`,
           desc: `決定的なパスを供給し続ける${p.name}がクラブ通算${mAst}アシストの節目を迎えた。`
         });
+      } else if (prevAst >= mAst) {
+        hof.milestonesIssued[astKey] = true;
       }
     }
   }

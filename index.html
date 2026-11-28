@@ -309,17 +309,6 @@
           <div class="secretary-briefing-bar" id="secretary-briefing-bar">
             <!-- JSで秘書ドット絵アバター・業務一覧タイトル・残タスクバーを描画 -->
           </div>
-        </div>
-        <div class="gm-tasks-action-row office-action-controls" id="office-action-controls" aria-label="日程進行・試合操作">
-          <div class="gm-tasks-footer-left">
-            <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
-              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
-              <span>+1日進める</span>
-            </button>
-            <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
-            <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
-            <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
-          </div>
           <div class="office-action-primary" id="office-action-primary">
             <button type="button" class="btn-office-primary-cta" id="btn-advance-to-match">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><polygon points="6,4 20,12 6,20"></polygon></svg>
@@ -341,6 +330,17 @@
               <span>タイトルへ戻る</span>
             </button>
           </div>
+        </div>
+        <div class="gm-tasks-action-row office-action-controls" id="office-action-controls" aria-label="日程進行・試合操作">
+          <div class="gm-tasks-footer-left">
+            <button type="button" class="btn-office-footer-util" id="btn-advance-day" title="カレンダーを1日進める">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true"><polygon points="6,4 18,12 6,20"></polygon></svg>
+              <span>+1日進める</span>
+            </button>
+            <button type="button" class="btn btn-primary btn-kickoff-pulse btn-advance-large hidden" id="btn-play-match" style="display: none !important;">キックオフ</button>
+            <button type="button" class="btn btn-primary hidden" id="btn-play-next">次節をプレイ</button>
+          </div>
+          <button type="button" class="btn-office-footer-util is-muted" id="btn-skip-season">シーズン終了へ</button>
         </div>
         <div class="secretary-office-advice hidden" id="secretary-office-advice"></div>
         <!-- 折りたたみ時の1行サマリー表示バー（非表示時はhidden） -->
