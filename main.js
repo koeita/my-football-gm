@@ -2045,8 +2045,6 @@ function skipToTargetDate(targetDayIndex) {
 
 let skipToSeasonEndSelected = false;
 let skipSelectedDayIndex = null;
-let skipCalViewYear = null;
-let skipCalViewMonth = null;
 
 function formatCalendarIsoDate(dayObj) {
   if (!dayObj || typeof dayObj.year !== 'number') return '';
@@ -2113,50 +2111,13 @@ function selectSkipCalendarDayIndex(targetIdx, { scrollIntoView = false, clearPr
       }
     }
   }
-  const dObj = cal[targetIdx];
-  if (dObj) {
-    skipCalViewYear = dObj.year;
-    skipCalViewMonth = dObj.month;
-    const lbl = document.getElementById('skip-cal-month-label');
-    if (lbl) lbl.textContent = `${dObj.year}年 ${dObj.month}月`;
-  }
   updateSkipDateSummary();
-}
-
-function changeSkipCalendarMonth(delta) {
-  const cal = gameState.calendar || [];
-  if (cal.length === 0) return;
-  const curDay = getCurrentCalendarDay();
-  let y = skipCalViewYear || (curDay ? curDay.year : 2026);
-  let m = (skipCalViewMonth || (curDay ? curDay.month : 8)) + delta;
-  if (m < 1) {
-    m = 12;
-    y -= 1;
-  } else if (m > 12) {
-    m = 1;
-    y += 1;
-  }
-  const startDay = cal[0];
-  const endDay = cal[cal.length - 1];
-  if (startDay && endDay) {
-    const curKey = y * 100 + m;
-    if (curKey < startDay.year * 100 + startDay.month || curKey > endDay.year * 100 + endDay.month) return;
-  }
-  skipCalViewYear = y;
-  skipCalViewMonth = m;
-  const lbl = document.getElementById('skip-cal-month-label');
-  if (lbl) lbl.textContent = `${y}年 ${m}月`;
-  const gridEl = document.getElementById('skip-cal-days-grid');
-  if (gridEl && typeof scrollCalendarContainerToMonth === 'function') {
-    scrollCalendarContainerToMonth(gridEl, y, m, 'smooth');
-  }
 }
 
 function openSkipToDateModal() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating || gameState.isAdvancingCalendar) return;
   const modal = document.getElementById('skip-to-date-modal');
   const gridEl = document.getElementById('skip-cal-days-grid');
-  const lblEl = document.getElementById('skip-cal-month-label');
   const presetsEl = document.getElementById('skip-date-presets');
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
@@ -2166,9 +2127,8 @@ function openSkipToDateModal() {
   skipToSeasonEndSelected = false;
   skipSelectedDayIndex = Math.min(curIdx + 7, cal.length - 1);
   const curDay = cal[curIdx];
-  skipCalViewYear = curDay ? curDay.year : 2026;
-  skipCalViewMonth = curDay ? curDay.month : 8;
-  if (lblEl) lblEl.textContent = `${skipCalViewYear}年 ${skipCalViewMonth}月`;
+  const initYear = curDay ? curDay.year : 2026;
+  const initMonth = curDay ? curDay.month : 8;
 
   if (typeof buildContinuousCalendarCellsHtml === 'function') {
     const cellsHtml = buildContinuousCalendarCellsHtml(cal, playerClub, curIdx, {
@@ -2187,12 +2147,6 @@ function openSkipToDateModal() {
       if (!Number.isNaN(idx)) {
         selectSkipCalendarDayIndex(idx, { scrollIntoView: false, clearPresets: true });
       }
-    });
-  }
-  if (typeof bindCalendarContainerScrollSync === 'function') {
-    bindCalendarContainerScrollSync(gridEl, lblEl, (y, m) => {
-      skipCalViewYear = y;
-      skipCalViewMonth = m;
     });
   }
 
@@ -2228,7 +2182,7 @@ function openSkipToDateModal() {
   if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
   requestAnimationFrame(() => {
     if (typeof scrollCalendarContainerToMonth === 'function') {
-      scrollCalendarContainerToMonth(gridEl, skipCalViewYear, skipCalViewMonth, 'auto');
+      scrollCalendarContainerToMonth(gridEl, initYear, initMonth, 'auto');
     }
   });
 }
@@ -17460,10 +17414,6 @@ function initGame() {
   if (btnCloseSkipDate) btnCloseSkipDate.addEventListener('click', closeSkipToDateModal);
   const btnCancelSkipDate = document.getElementById('btn-cancel-skip-date');
   if (btnCancelSkipDate) btnCancelSkipDate.addEventListener('click', closeSkipToDateModal);
-  const btnSkipCalPrev = document.getElementById('btn-skip-cal-prev');
-  if (btnSkipCalPrev) btnSkipCalPrev.addEventListener('click', () => changeSkipCalendarMonth(-1));
-  const btnSkipCalNext = document.getElementById('btn-skip-cal-next');
-  if (btnSkipCalNext) btnSkipCalNext.addEventListener('click', () => changeSkipCalendarMonth(1));
   const btnConfirmSkipDate = document.getElementById('btn-confirm-skip-date');
   if (btnConfirmSkipDate) {
     btnConfirmSkipDate.addEventListener('click', () => {

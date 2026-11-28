@@ -17340,10 +17340,10 @@ body {
 }
 
 .skip-date-modal-body {
-  padding: 10px 12px;
+  padding: 6px 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -17352,23 +17352,9 @@ body {
 .skip-cal-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 6px 10px;
-}
-
-.skip-cal-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.skip-cal-month-label {
-  font-size: 13px;
-  color: var(--text-main);
-  min-width: 82px;
-  text-align: center;
-  white-space: nowrap;
+  gap: 4px 10px;
 }
 
 .skip-date-presets {
@@ -17432,10 +17418,12 @@ body {
 
 .skip-date-summary {
   font-size: 11.5px;
+  line-height: 1.4;
   color: #8b949e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
 }
 
 .skip-date-modal-footer {
