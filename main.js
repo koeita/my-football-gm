@@ -1976,7 +1976,7 @@ function renderWeeklySchedule() {
 /**
  * シーズン終了まで一気にスキップ
  */
-function skipToSeasonEnd() {
+function runFastForwardLoop(shouldContinue) {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating) return;
   stopAdvancingCalendar();
   clearDeferredDaySlideModals();
@@ -1987,31 +1987,31 @@ function skipToSeasonEnd() {
 
   try {
     let safetyGuard = 0;
-    while (!gameState.isSeasonOver && safetyGuard < 500) {
-    safetyGuard++;
-    const curDay = getCurrentCalendarDay();
-    if (!curDay) {
-      processSeasonEnd(true);
-      break;
-    }
-    if (!curDay.played) {
-      if (curDay.isCupMatchDay) {
-        const mInfo = getCalendarDayPlayerMatch(curDay);
-        if (mInfo && !mInfo.played) {
-          playCurrentCupMatchday(true);
-        } else {
+    while (!gameState.isSeasonOver && !gameState.isGameOver && safetyGuard < 500 && shouldContinue()) {
+      safetyGuard++;
+      const curDay = getCurrentCalendarDay();
+      if (!curDay) {
+        processSeasonEnd(true);
+        break;
+      }
+      if (!curDay.played) {
+        if (curDay.isCupMatchDay) {
+          const mInfo = getCalendarDayPlayerMatch(curDay);
+          if (mInfo && !mInfo.played) {
+            playCurrentCupMatchday(true);
+          } else {
+            curDay.played = true;
+          }
+        } else if (curDay.isMatchDay) {
+          if (typeof playCurrentMatchday === 'function') {
+            playCurrentMatchday(true);
+          } else {
+            playNextMatchweek(true);
+          }
           curDay.played = true;
         }
-      } else if (curDay.isMatchDay) {
-        if (typeof playCurrentMatchday === 'function') {
-          playCurrentMatchday(true);
-        } else {
-          playNextMatchweek(true);
-        }
-        curDay.played = true;
       }
-    }
-    if (gameState.isSeasonOver) break;
+      if (gameState.isSeasonOver || gameState.isGameOver) break;
       advanceCalendarDay(true);
     }
   } finally {
@@ -2021,6 +2021,130 @@ function skipToSeasonEnd() {
     }
   }
   renderAll();
+}
+
+function skipToSeasonEnd() {
+  runFastForwardLoop(() => true);
+}
+
+/**
+ * 指定したカレンダーインデックス（日付）まで自動スキップ（当日分は未消化で停止）
+ */
+function skipToTargetDate(targetDayIndex) {
+  if (!Array.isArray(gameState.calendar) || gameState.calendar.length === 0) return;
+  if (typeof targetDayIndex !== 'number' || Number.isNaN(targetDayIndex)) return;
+  if (targetDayIndex >= gameState.calendar.length) {
+    skipToSeasonEnd();
+    return;
+  }
+  const curIdx = gameState.currentDayIndex || 0;
+  const targetIdx = clamp(targetDayIndex, curIdx + 1, gameState.calendar.length - 1);
+  if (targetIdx <= curIdx) return;
+  runFastForwardLoop(() => gameState.currentDayIndex < targetIdx);
+}
+
+let skipSelectedDayIndex = null;
+
+function formatCalendarIsoDate(dayObj) {
+  if (!dayObj || typeof dayObj.year !== 'number') return '';
+  return `${dayObj.year}-${String(dayObj.month).padStart(2, '0')}-${String(dayObj.day).padStart(2, '0')}`;
+}
+
+function updateSkipDateSummary() {
+  const summaryEl = document.getElementById('skip-date-summary');
+  const confirmBtn = document.getElementById('btn-confirm-skip-date');
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  if (!summaryEl || !cal.length) return;
+
+  const targetIdx = typeof skipSelectedDayIndex === 'number' ? skipSelectedDayIndex : -1;
+  const daysSpan = targetIdx > curIdx ? (targetIdx - curIdx) : 0;
+  let matchesInSpan = 0;
+  for (let i = curIdx; i < targetIdx; i++) {
+    const d = cal[i];
+    if (d && !d.played && (d.isMatchDay || d.isCupMatchDay) && getCalendarDayPlayerMatch(d)) {
+      matchesInSpan++;
+    }
+  }
+  const targetDay = cal[targetIdx];
+  const dateLabel = targetDay ? (targetDay.displayDate || formatCalendarIsoDate(targetDay)) : '';
+  summaryEl.textContent = daysSpan > 0
+    ? `${dateLabel} まで ${daysSpan}日間スキップ · 期間中の試合 ${matchesInSpan}戦を自動進行`
+    : '翌日以降の日付を選択してください';
+  if (confirmBtn) confirmBtn.disabled = daysSpan <= 0;
+}
+
+function selectSkipCalendarDayIndex(targetIdx, { scrollIntoView = false } = {}) {
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  const gridEl = document.getElementById('skip-cal-days-grid');
+  if (targetIdx <= curIdx || targetIdx >= cal.length) return;
+
+  skipSelectedDayIndex = targetIdx;
+  if (gridEl) {
+    gridEl.querySelectorAll('.cal-day-cell.is-skip-selected').forEach(c => c.classList.remove('is-skip-selected'));
+    const nextCell = gridEl.querySelector(`.cal-day-cell[data-cal-day-index="${targetIdx}"]`);
+    if (nextCell) {
+      nextCell.classList.add('is-skip-selected');
+      if (scrollIntoView && typeof nextCell.scrollIntoView === 'function') {
+        calProgrammaticScrollUntil = performance.now() + 450;
+        nextCell.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  }
+  updateSkipDateSummary();
+}
+
+function openSkipToDateModal() {
+  if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating || gameState.isAdvancingCalendar) return;
+  const modal = document.getElementById('skip-to-date-modal');
+  const gridEl = document.getElementById('skip-cal-days-grid');
+  const cal = gameState.calendar || [];
+  const curIdx = gameState.currentDayIndex || 0;
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!modal || !gridEl || !playerClub || cal.length === 0 || curIdx >= cal.length - 1) return;
+
+  skipSelectedDayIndex = Math.min(curIdx + 7, cal.length - 1);
+  const curDay = cal[curIdx];
+  const initYear = curDay ? curDay.year : 2026;
+  const initMonth = curDay ? curDay.month : 8;
+
+  if (typeof buildContinuousCalendarCellsHtml === 'function') {
+    const cellsHtml = buildContinuousCalendarCellsHtml(cal, playerClub, curIdx, {
+      skipPickerMode: true,
+      selectedDayIndex: skipSelectedDayIndex
+    });
+    gridEl.innerHTML = `<div class="cal-continuous-grid">${cellsHtml}</div>`;
+  }
+
+  if (!gridEl._boundSkipCellClick) {
+    gridEl._boundSkipCellClick = true;
+    gridEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.cal-day-cell.is-skip-selectable[data-cal-day-index]');
+      if (!cell) return;
+      const idx = parseInt(cell.dataset.calDayIndex, 10);
+      if (!Number.isNaN(idx)) {
+        selectSkipCalendarDayIndex(idx, { scrollIntoView: false });
+      }
+    });
+  }
+
+  updateSkipDateSummary();
+  modal.classList.remove('hidden');
+  if (typeof setBodyModalLock === 'function') setBodyModalLock(true);
+  requestAnimationFrame(() => {
+    if (typeof scrollCalendarContainerToMonth === 'function') {
+      scrollCalendarContainerToMonth(gridEl, initYear, initMonth, 'auto');
+    }
+  });
+}
+
+function closeSkipToDateModal() {
+  const modal = document.getElementById('skip-to-date-modal');
+  const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
+  if (modal) modal.classList.add('hidden');
+  skipSelectedDayIndex = null;
+  if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
 
 /**
@@ -9513,7 +9637,7 @@ function renderHeader() {
   const btnPlayMatch = document.getElementById('btn-play-match');
   const btnPauseAdvance = document.getElementById('btn-pause-advance');
   const btnPlayNext = document.getElementById('btn-play-next');
-  const btnSkipSeason = document.getElementById('btn-skip-season');
+  const btnSkipToDate = document.getElementById('btn-skip-to-date');
   const btnNextSeason = document.getElementById('btn-next-season');
   const btnRestart = document.getElementById('btn-restart-game');
 
@@ -9535,7 +9659,7 @@ function renderHeader() {
   if (btnAdvanceToMatch) btnAdvanceToMatch.disabled = isBusy || isMatchPending || isAdvancing;
   if (btnHeaderKickoff) btnHeaderKickoff.disabled = isBusy || isAdvancing;
   if (btnPlayMatch) btnPlayMatch.disabled = isBusy || isAdvancing;
-  if (btnSkipSeason) btnSkipSeason.disabled = isBusy || isAdvancing;
+  if (btnSkipToDate) btnSkipToDate.disabled = isBusy || isAdvancing;
 
   if (gameState.isGameOver) {
     if (btnAdvanceDay) btnAdvanceDay.classList.add('hidden');
@@ -9544,7 +9668,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.remove('hidden');
   } else if (gameState.isSeasonOver) {
@@ -9554,7 +9678,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.remove('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
   } else if (isAdvancing) {
@@ -9564,7 +9688,7 @@ function renderHeader() {
     if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
     if (btnPauseAdvance) btnPauseAdvance.classList.remove('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.add('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.add('hidden');
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
   } else {
@@ -9572,7 +9696,7 @@ function renderHeader() {
     if (btnNextSeason) btnNextSeason.classList.add('hidden');
     if (btnRestart) btnRestart.classList.add('hidden');
     if (btnPlayNext) btnPlayNext.classList.add('hidden');
-    if (btnSkipSeason) btnSkipSeason.classList.remove('hidden');
+    if (btnSkipToDate) btnSkipToDate.classList.remove('hidden');
 
     if (isMatchPending) {
       if (btnPlayMatch) btnPlayMatch.classList.add('hidden');
@@ -17235,8 +17359,28 @@ function initGame() {
   if (btnPlayNext) {
     btnPlayNext.addEventListener('click', () => openMatchPrecheckModal());
   }
-  const btnSkipSeason = document.getElementById('btn-skip-season');
-  if (btnSkipSeason) btnSkipSeason.addEventListener('click', skipToSeasonEnd);
+  const btnSkipToDate = document.getElementById('btn-skip-to-date');
+  if (btnSkipToDate) btnSkipToDate.addEventListener('click', openSkipToDateModal);
+  const btnCloseSkipDate = document.getElementById('btn-close-skip-date-modal');
+  if (btnCloseSkipDate) btnCloseSkipDate.addEventListener('click', closeSkipToDateModal);
+  const btnCancelSkipDate = document.getElementById('btn-cancel-skip-date');
+  if (btnCancelSkipDate) btnCancelSkipDate.addEventListener('click', closeSkipToDateModal);
+  const btnConfirmSkipDate = document.getElementById('btn-confirm-skip-date');
+  if (btnConfirmSkipDate) {
+    btnConfirmSkipDate.addEventListener('click', () => {
+      const targetIdx = skipSelectedDayIndex;
+      closeSkipToDateModal();
+      if (typeof targetIdx === 'number') {
+        skipToTargetDate(targetIdx);
+      }
+    });
+  }
+  const skipDateOverlay = document.getElementById('skip-to-date-modal');
+  if (skipDateOverlay) {
+    skipDateOverlay.addEventListener('click', (e) => {
+      if (e.target === skipDateOverlay) closeSkipToDateModal();
+    });
+  }
   const btnNextSeason = document.getElementById('btn-next-season');
   if (btnNextSeason) btnNextSeason.addEventListener('click', startNextSeason);
   const btnRestart = document.getElementById('btn-restart-game');
@@ -18549,6 +18693,7 @@ function initGame() {
       const recordsOverlay = document.getElementById('records-modal-overlay');
       const settingsOverlay = document.getElementById('settings-modal-overlay');
       const profileModalTop = document.getElementById('player-profile-modal') || document.getElementById('player-profile-modal-overlay');
+      const skipDateModalTop = document.getElementById('skip-to-date-modal');
       const seasonSummaryModal = document.getElementById('season-summary-box');
       const gmOverlay = document.getElementById('gm-modal-overlay');
       if (recordsOverlay && !recordsOverlay.classList.contains('hidden')) {
@@ -18569,6 +18714,8 @@ function initGame() {
         }
       } else if ((profileModalTop && !profileModalTop.classList.contains('hidden')) || gameState.profileModalPlayerId) {
         closePlayerProfileModal();
+      } else if (skipDateModalTop && !skipDateModalTop.classList.contains('hidden')) {
+        closeSkipToDateModal();
       } else if (seasonSummaryModal && !seasonSummaryModal.classList.contains('hidden')) {
         closeSeasonSettlementModal();
       }
@@ -20572,10 +20719,9 @@ function updateScheduleSummaryBadges() {
 let calProgrammaticScrollUntil = 0;
 
 /**
- * 指定年月の1日セルへカレンダーを縦スクロールさせる
+ * 指定年月の1日セルへ指定カレンダーコンテナを縦スクロールさせる共有ヘルパー
  */
-function scrollCalendarToMonth(year, month, behavior = 'auto') {
-  const gridEl = document.getElementById('calendar-days-grid');
+function scrollCalendarContainerToMonth(gridEl, year, month, behavior = 'auto') {
   if (!gridEl) return;
   const targetCell = gridEl.querySelector(`.cal-day-cell[data-cal-month-start="${year}-${month}"]`)
     || gridEl.querySelector(`.cal-day-cell[data-cal-year="${year}"][data-cal-month="${month}"]`);
@@ -20583,6 +20729,14 @@ function scrollCalendarToMonth(year, month, behavior = 'auto') {
   const top = Math.max(0, Math.round(targetCell.getBoundingClientRect().top - gridEl.getBoundingClientRect().top + gridEl.scrollTop));
   calProgrammaticScrollUntil = performance.now() + (behavior === 'smooth' ? 450 : 120);
   gridEl.scrollTo({ top, behavior });
+}
+
+/**
+ * 指定年月の1日セルへカレンダーを縦スクロールさせる
+ */
+function scrollCalendarToMonth(year, month, behavior = 'auto') {
+  const gridEl = document.getElementById('calendar-days-grid');
+  scrollCalendarContainerToMonth(gridEl, year, month, behavior);
 }
 
 /**
@@ -20655,8 +20809,10 @@ function resetCalendarToCurrentMonth() {
 /**
  * シーズン全日程分の連続7列日付セルHTMLを構築するヘルパー（月の切れ目で改行せず連続連結）
  */
-function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
+function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex, options = {}) {
   if (!Array.isArray(allDays) || allDays.length === 0) return '';
+  const skipPickerMode = Boolean(options && options.skipPickerMode);
+  const selectedDayIndex = options && typeof options.selectedDayIndex === 'number' ? options.selectedDayIndex : -1;
   const cellsHtml = [];
 
   // 初日の曜日に応じた先頭空セルのみ挿入（0:日〜6:土）
@@ -20799,9 +20955,17 @@ function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
 
     const currentDayClass = isCurrentDay ? 'is-current-day' : '';
     const dayLabel = isMonthStart ? `${d.month}/1` : `${d.day}`;
+    let skipClass = '';
+    if (skipPickerMode) {
+      const isSelectable = d.dayIndex > inGameDayIndex;
+      skipClass = isSelectable
+        ? (d.dayIndex === selectedDayIndex ? 'is-skip-selectable is-skip-selected' : 'is-skip-selectable')
+        : 'is-skip-disabled';
+      cellAttr = isSelectable ? 'role="button" tabindex="0"' : '';
+    }
 
     cellsHtml.push(`
-      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${monthToneClass} ${monthStartClass} ${matchClass}" data-cal-year="${d.year}" data-cal-month="${d.month}" ${monthStartAttr} ${cellAttr}>
+      <div class="cal-day-cell ${dayColClass} ${currentDayClass} ${monthToneClass} ${monthStartClass} ${matchClass} ${skipClass}" data-cal-day-index="${d.dayIndex}" data-cal-year="${d.year}" data-cal-month="${d.month}" ${monthStartAttr} ${cellAttr}>
         <div class="cal-cell-header">
           <span class="cal-day-num">${dayLabel}</span>
           ${isCurrentDay ? '<span class="cal-today-badge mono">TODAY</span>' : ''}
@@ -20823,7 +20987,7 @@ function buildContinuousCalendarCellsHtml(allDays, playerClub, inGameDayIndex) {
 /**
  * 縦スクロール連動で表示中年月ラベルを同期するリスナーを登録
  */
-function bindCalendarScrollSync(gridEl) {
+function bindCalendarContainerScrollSync(gridEl, labelEl, onMonthChange = null) {
   if (!gridEl || gridEl.dataset.calScrollBound === '1') return;
   gridEl.dataset.calScrollBound = '1';
   let scrollRafId = null;
@@ -20851,15 +21015,21 @@ function bindCalendarScrollSync(gridEl) {
       const y = parseInt(activeAnchor.dataset.calYear, 10);
       const m = parseInt(activeAnchor.dataset.calMonth, 10);
       if (!Number.isNaN(y) && !Number.isNaN(m)) {
-        gameState.calendarViewYear = y;
-        gameState.calendarViewMonth = m;
-        const labelEl = document.getElementById('calendar-current-month-label');
+        if (typeof onMonthChange === 'function') onMonthChange(y, m);
         if (labelEl) {
           labelEl.textContent = `${y}年 ${m}月`;
         }
       }
     });
   }, { passive: true });
+}
+
+function bindCalendarScrollSync(gridEl) {
+  const labelEl = document.getElementById('calendar-current-month-label');
+  bindCalendarContainerScrollSync(gridEl, labelEl, (y, m) => {
+    gameState.calendarViewYear = y;
+    gameState.calendarViewMonth = m;
+  });
 }
 
 /**

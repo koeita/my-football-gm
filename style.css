@@ -7251,14 +7251,22 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     gap: 8px !important;
   }
 
-  .gm-tasks-footer-bar,
-  .gm-tasks-action-row.office-action-controls {
+  .gm-tasks-footer-bar {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 6px !important;
     padding: 7px 0 !important;
+  }
+
+  .gm-tasks-action-row.office-action-controls {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 6px 0 !important;
   }
 
   .gm-tasks-footer-left {
@@ -17277,9 +17285,9 @@ body {
 }
 
 .gm-tasks-top-row .btn-office-primary-cta {
-  min-height: 40px;
-  padding: 10px 16px;
-  font-size: 14px;
+  min-height: 42px;
+  padding: 10px 18px;
+  font-size: 14.5px;
   font-weight: 800;
   border-radius: 8px;
   white-space: nowrap;
@@ -17288,7 +17296,7 @@ body {
 .gm-tasks-action-row.office-action-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   flex-wrap: nowrap;
   width: 100%;
@@ -17302,29 +17310,100 @@ body {
 }
 
 .gm-tasks-action-row .gm-tasks-footer-left {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   flex-wrap: nowrap;
 }
 
-.gm-tasks-action-row #btn-advance-day {
-  flex: 1 1 auto;
+.gm-tasks-action-row #btn-advance-day,
+.gm-tasks-action-row #btn-skip-to-date {
+  flex: 0 0 auto;
   justify-content: center;
-  min-width: 0;
-  min-height: 40px;
-  padding: 9px 14px;
-  font-size: 13.5px;
-  font-weight: 800;
-  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
 }
 
-.gm-tasks-action-row #btn-skip-season {
-  flex: 0 0 auto;
-  font-size: 11px;
-  padding: 4px 6px;
+/* 日付指定スキップモーダル（既存シーズンカレンダー流用） */
+.skip-date-modal-card {
+  max-width: 680px;
+  width: 96vw;
+  height: min(82vh, 680px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1d20;
+}
+
+.skip-date-modal-body {
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.skip-cal-view {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 2px 4px !important;
+}
+
+.skip-cal-days-grid {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  padding-bottom: 4px !important;
+}
+
+.cal-day-cell.is-skip-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cal-day-cell.is-skip-selectable {
+  cursor: pointer;
+}
+
+.cal-day-cell.is-skip-selectable:hover {
+  background-color: rgba(46, 204, 113, 0.12) !important;
+}
+
+.cal-day-cell.is-skip-selected {
+  background-color: rgba(46, 204, 113, 0.22) !important;
+  outline: 2px solid #2ecc71;
+  outline-offset: -2px;
+}
+
+.skip-date-summary {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #8b949e;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+}
+
+.skip-date-modal-footer {
+  padding: 10px 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .gm-tasks-footer-bar {
@@ -17413,22 +17492,19 @@ body {
     padding: 8px !important;
   }
   .gm-tasks-top-row .btn-office-primary-cta {
-    min-height: 38px;
-    padding: 8px 12px;
-    font-size: 13px;
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 13.5px;
   }
   .gm-tasks-action-row.office-action-controls {
     padding: 6px 0 !important;
-    gap: 6px !important;
+    gap: 8px !important;
   }
-  .gm-tasks-action-row #btn-advance-day {
-    min-height: 38px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-  .gm-tasks-action-row #btn-skip-season {
-    padding: 4px 2px;
-    font-size: 10.5px;
+  .gm-tasks-action-row #btn-advance-day,
+  .gm-tasks-action-row #btn-skip-to-date {
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 11.5px;
   }
   .gm-tasks-panel {
     padding: 12px 12px 10px !important;
