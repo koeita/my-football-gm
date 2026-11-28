@@ -1738,16 +1738,27 @@ function renderOfficeOverview() {
   const standRowsHtml = slice.map((c, offset) => {
     const rankNum = startIdx + offset + 1;
     const isMe = c.id === playerClub.id;
+    const rankBadgeClass = rankNum === 1 ? 'rank-badge rank-1' : 'rank-badge';
     const gdVal = c.gd || 0;
-    const gdTxt = gdVal > 0 ? `+${gdVal}` : `${gdVal}`;
+    const gdSign = gdVal > 0 ? `+${gdVal}` : `${gdVal}`;
+    const zoneClass = isD2
+      ? (rankNum <= 3 ? 'zone-promotion' : (rankNum >= 22 ? 'zone-relegation-p2' : ''))
+      : (rankNum <= 4 ? 'zone-ucl' : (rankNum === 5 ? 'zone-uel' : (rankNum >= 18 ? 'zone-rel' : '')));
+    const rowClass = [isMe ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
+    const emblemHtml = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(c, 20, 'standings-emblem') : '';
     return `
-      <div class="office-mini-row ${isMe ? 'is-player-row' : ''}" data-office-jump="standings">
-        <span class="office-mini-rank mono">${rankNum}</span>
-        <span class="office-mini-club">${escapeCommHtml(c.name || '')}</span>
-        <span class="office-mini-played mono">${c.played || 0}</span>
-        <span class="office-mini-gd mono">${gdTxt}</span>
-        <span class="office-mini-pts mono">${c.pts || 0}</span>
-      </div>
+      <tr class="${rowClass}" data-office-jump="standings">
+        <td class="col-rank"><span class="${rankBadgeClass}">${rankNum}</span></td>
+        <td class="col-team"><span class="team-cell-wrap">${emblemHtml}<span class="team-name-text">${escapeCommHtml(c.name || '')}</span></span></td>
+        <td class="col-num col-played">${c.played || 0}</td>
+        <td class="col-num col-won">${c.won || 0}</td>
+        <td class="col-num col-drawn">${c.drawn || 0}</td>
+        <td class="col-num col-lost">${c.lost || 0}</td>
+        <td class="col-num col-gf"><span class="td-pc">${c.gf || 0}</span><span class="td-mob">${c.gf || 0}-${c.ga || 0}</span></td>
+        <td class="col-num col-ga">${c.ga || 0}</td>
+        <td class="col-num col-gd">${gdSign}</td>
+        <td class="col-pts">${c.pts || 0}</td>
+      </tr>
     `;
   }).join('');
 
@@ -1774,15 +1785,26 @@ function renderOfficeOverview() {
       </div>
       <button type="button" class="office-overview-link" data-office-jump="standings">順位表</button>
     </div>
-    <div class="office-mini-standings" role="region" aria-label="周辺順位">
-      <div class="office-mini-row is-head">
-        <span class="office-mini-rank mono">#</span>
-        <span class="office-mini-club">クラブ</span>
-        <span class="office-mini-played mono">試</span>
-        <span class="office-mini-gd mono">得失</span>
-        <span class="office-mini-pts mono">勝点</span>
-      </div>
-      ${standRowsHtml}
+    <div class="table-wrapper office-mini-standings-wrap" role="region" aria-label="周辺順位">
+      <table class="data-table standings-table office-mini-standings-table">
+        <thead>
+          <tr>
+            <th class="col-rank"><span class="th-pc">順位</span><span class="th-mob">#</span></th>
+            <th class="col-team"><span class="th-pc">クラブ名</span><span class="th-mob">チーム</span></th>
+            <th class="col-num col-played">試合</th>
+            <th class="col-num col-won">勝</th>
+            <th class="col-num col-drawn">分</th>
+            <th class="col-num col-lost"><span class="th-pc">敗</span><span class="th-mob">負</span></th>
+            <th class="col-num col-gf"><span class="th-pc">得点</span><span class="th-mob">+/-</span></th>
+            <th class="col-num col-ga">失点</th>
+            <th class="col-num col-gd"><span class="th-pc">得失点</span><span class="th-mob">差</span></th>
+            <th class="col-pts"><span class="th-pc">勝点</span><span class="th-mob">点</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${standRowsHtml}
+        </tbody>
+      </table>
     </div>
     <div class="office-overview-metrics">
       <button type="button" class="office-metric-item" data-office-jump="finance" title="財務画面を開く">
@@ -13039,7 +13061,8 @@ function renderGmDuties() {
     barsEl.innerHTML = buildGmDutyBarsHtml(levels);
   }
 
-  const isCollapsed = Boolean(gameState.gmTasksCollapsed);
+  gameState.gmTasksCollapsed = false;
+  const isCollapsed = false;
   const toggleBtn = document.getElementById('btn-toggle-gm-tasks');
   const toggleBtnText = document.getElementById('gm-tasks-toggle-text');
   const toggleBtnIcon = document.getElementById('gm-tasks-toggle-icon');

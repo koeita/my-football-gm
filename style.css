@@ -8740,7 +8740,8 @@ body.is-tactical-dragging .bench-sub-item * {
     display: inline !important;
   }
 
-  #view-team .table-wrapper:has(.standings-table) {
+  #view-team .table-wrapper:has(.standings-table),
+  #view-office .table-wrapper:has(.standings-table) {
     overflow-x: hidden !important;
   }
 
@@ -13903,23 +13904,24 @@ button.hidden,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 8px;
+  padding: 2px 4px;
   font-size: 11px;
   font-weight: 700;
   color: var(--accent-green);
-  background: rgba(46, 204, 113, 0.12);
-  border: 1px solid rgba(46, 204, 113, 0.35);
-  border-radius: 4px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
   line-height: 1.2;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .btn-view-full-schedule:hover {
-  background: rgba(46, 204, 113, 0.25);
-  border-color: var(--accent-green);
+  background: transparent !important;
+  border: none !important;
+  text-decoration: underline;
 }
 
 .season-schedule-list {
@@ -17126,15 +17128,31 @@ body {
   display: none !important;
 }
 
-/* 本部最上部：クラブ状況サマリー（ミニ順位表＋主要4指標） */
+/* 本部最上部：クラブ状況サマリー（ミニ順位表＋主要4指標）＆省スペース余白 */
+#view-office.office-hub-view {
+  gap: 8px !important;
+}
+
+#view-office .weekly-schedule-bar {
+  padding: 8px 10px !important;
+  margin: 0 !important;
+}
+
+#view-office .gm-tasks-panel {
+  padding: 8px 10px !important;
+  margin-bottom: 0 !important;
+  gap: 6px !important;
+  border-radius: 10px !important;
+}
+
 .office-overview-panel {
   background: #14171c;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .office-overview-head {
@@ -17190,75 +17208,23 @@ body {
   text-decoration: underline;
 }
 
-.office-mini-standings {
-  display: flex;
-  flex-direction: column;
+.office-mini-standings-wrap {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  max-height: none !important;
 }
 
-.office-mini-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 26px 40px 36px;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 2px;
-  font-size: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.office-mini-standings-table tbody tr {
   cursor: pointer;
-}
-
-.office-mini-row:last-child {
-  border-bottom: none;
-}
-
-.office-mini-row.is-head {
-  font-size: 10.5px;
-  color: #8b949e;
-  padding-top: 0;
-  cursor: default;
-}
-
-.office-mini-row.is-player-row {
-  background: rgba(46, 204, 113, 0.10);
-}
-
-.office-mini-rank,
-.office-mini-played,
-.office-mini-gd,
-.office-mini-pts {
-  text-align: right;
-  white-space: nowrap;
-  flex-shrink: 0;
-  color: #b1bac4;
-}
-
-.office-mini-rank {
-  text-align: center;
-}
-
-.office-mini-pts {
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.office-mini-club {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-main);
-}
-
-.office-mini-row.is-player-row .office-mini-club,
-.office-mini-row.is-player-row .office-mini-pts {
-  color: #2ecc71;
-  font-weight: 700;
 }
 
 .office-overview-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px 10px;
-  padding-top: 8px;
+  gap: 4px 10px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -17291,11 +17257,11 @@ body {
 
 @media (max-width: 520px) {
   .office-overview-panel {
-    padding: 10px 12px;
+    padding: 8px;
   }
   .office-overview-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 14px;
+    gap: 4px 12px;
   }
 }
 
@@ -17303,7 +17269,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: nowrap;
   width: 100%;
   background: transparent !important;
@@ -17311,8 +17277,49 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 0 !important;
-  padding: 8px 0 !important;
+  padding: 6px 0 !important;
   box-shadow: none !important;
+}
+
+.gm-tasks-action-row .gm-tasks-footer-left {
+  flex: 1.25 1 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.gm-tasks-action-row #btn-advance-day {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 10px;
+  font-size: 13.5px;
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+.gm-tasks-action-row #btn-skip-season {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 4px;
+}
+
+.gm-tasks-action-row .office-action-primary {
+  flex: 1 1 0;
+  display: flex;
+  min-width: 0;
+}
+
+.gm-tasks-action-row .btn-office-primary-cta {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 8px;
 }
 
 .gm-tasks-footer-bar {
@@ -17391,17 +17398,40 @@ body {
 }
 
 @media (max-width: 480px) {
-  .gm-tasks-action-row.office-action-controls {
-    padding: 7px 0 !important;
+  #view-office.office-hub-view {
     gap: 6px !important;
   }
-  .gm-tasks-action-row .btn-office-footer-util {
-    padding: 5px 8px;
-    font-size: 11px;
+  #view-office .weekly-schedule-bar {
+    padding: 6px 8px !important;
   }
-  .gm-tasks-action-row .btn-office-footer-util.is-muted {
-    padding-left: 4px;
-    padding-right: 4px;
+  #view-office .gm-tasks-panel {
+    padding: 8px !important;
+  }
+  .gm-tasks-action-row.office-action-controls {
+    padding: 6px 0 !important;
+    gap: 6px !important;
+  }
+  .gm-tasks-action-row .gm-tasks-footer-left {
+    flex: 1.45 1 0;
+    gap: 4px;
+  }
+  .gm-tasks-action-row .office-action-primary {
+    flex: 1 1 0;
+    min-width: 112px;
+  }
+  .gm-tasks-action-row #btn-advance-day {
+    min-height: 38px;
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+  .gm-tasks-action-row .btn-office-primary-cta {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .gm-tasks-action-row #btn-skip-season {
+    padding: 4px 2px;
+    font-size: 10.5px;
   }
   .gm-tasks-panel {
     padding: 12px 12px 10px !important;
