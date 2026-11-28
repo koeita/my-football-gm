@@ -17349,44 +17349,12 @@ body {
   overflow: hidden;
 }
 
-.skip-cal-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-}
-
-.skip-date-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.skip-date-preset-btn {
-  background: none;
-  border: none;
-  padding: 2px 2px;
-  color: #2ecc71;
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.skip-date-preset-btn:hover,
-.skip-date-preset-btn.is-selected {
-  text-decoration: underline;
-  color: #4ade80;
-}
-
 .skip-cal-view {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow: hidden !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 4px 2px !important;
+  padding: 2px 2px 4px !important;
 }
 
 .skip-cal-days-grid {

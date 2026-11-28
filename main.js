@@ -2043,7 +2043,6 @@ function skipToTargetDate(targetDayIndex) {
   runFastForwardLoop(() => gameState.currentDayIndex < targetIdx);
 }
 
-let skipToSeasonEndSelected = false;
 let skipSelectedDayIndex = null;
 
 function formatCalendarIsoDate(dayObj) {
@@ -2057,19 +2056,6 @@ function updateSkipDateSummary() {
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
   if (!summaryEl || !cal.length) return;
-
-  if (skipToSeasonEndSelected) {
-    let matchesInSpan = 0;
-    for (let i = curIdx; i < cal.length; i++) {
-      const d = cal[i];
-      if (d && !d.played && (d.isMatchDay || d.isCupMatchDay) && getCalendarDayPlayerMatch(d)) {
-        matchesInSpan++;
-      }
-    }
-    summaryEl.textContent = `シーズン終了までスキップ · 期間中の試合 ${matchesInSpan}戦を自動進行`;
-    if (confirmBtn) confirmBtn.disabled = false;
-    return;
-  }
 
   const targetIdx = typeof skipSelectedDayIndex === 'number' ? skipSelectedDayIndex : -1;
   const daysSpan = targetIdx > curIdx ? (targetIdx - curIdx) : 0;
@@ -2088,18 +2074,13 @@ function updateSkipDateSummary() {
   if (confirmBtn) confirmBtn.disabled = daysSpan <= 0;
 }
 
-function selectSkipCalendarDayIndex(targetIdx, { scrollIntoView = false, clearPresets = true } = {}) {
+function selectSkipCalendarDayIndex(targetIdx, { scrollIntoView = false } = {}) {
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
   const gridEl = document.getElementById('skip-cal-days-grid');
   if (targetIdx <= curIdx || targetIdx >= cal.length) return;
 
-  skipToSeasonEndSelected = false;
   skipSelectedDayIndex = targetIdx;
-  if (clearPresets) {
-    const presetsEl = document.getElementById('skip-date-presets');
-    if (presetsEl) presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
-  }
   if (gridEl) {
     gridEl.querySelectorAll('.cal-day-cell.is-skip-selected').forEach(c => c.classList.remove('is-skip-selected'));
     const nextCell = gridEl.querySelector(`.cal-day-cell[data-cal-day-index="${targetIdx}"]`);
@@ -2118,13 +2099,11 @@ function openSkipToDateModal() {
   if (gameState.isGameOver || gameState.isSeasonOver || gameState.isSimulating || gameState.isAdvancingCalendar) return;
   const modal = document.getElementById('skip-to-date-modal');
   const gridEl = document.getElementById('skip-cal-days-grid');
-  const presetsEl = document.getElementById('skip-date-presets');
   const cal = gameState.calendar || [];
   const curIdx = gameState.currentDayIndex || 0;
   const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
   if (!modal || !gridEl || !playerClub || cal.length === 0 || curIdx >= cal.length - 1) return;
 
-  skipToSeasonEndSelected = false;
   skipSelectedDayIndex = Math.min(curIdx + 7, cal.length - 1);
   const curDay = cal[curIdx];
   const initYear = curDay ? curDay.year : 2026;
@@ -2145,35 +2124,8 @@ function openSkipToDateModal() {
       if (!cell) return;
       const idx = parseInt(cell.dataset.calDayIndex, 10);
       if (!Number.isNaN(idx)) {
-        selectSkipCalendarDayIndex(idx, { scrollIntoView: false, clearPresets: true });
+        selectSkipCalendarDayIndex(idx, { scrollIntoView: false });
       }
-    });
-  }
-
-  if (presetsEl) {
-    const presets = [];
-    if (curIdx + 7 <= cal.length - 1) presets.push({ label: '1週間後', idx: curIdx + 7 });
-    if (curIdx + 30 <= cal.length - 1) presets.push({ label: '1ヶ月後', idx: curIdx + 30 });
-    const winterIdx = cal.findIndex((d, i) => i > curIdx && d && d.month === 1 && d.day === 1);
-    if (winterIdx !== -1) presets.push({ label: '冬市場 (1/1)', idx: winterIdx });
-    presets.push({ label: 'シーズン終了', isSeasonEnd: true });
-
-    presetsEl.innerHTML = presets.map((p, i) => `
-      <button type="button" class="skip-date-preset-btn" data-preset-idx="${i}">${p.label}</button>
-    `).join('');
-    presetsEl.querySelectorAll('.skip-date-preset-btn').forEach((btn, i) => {
-      btn.addEventListener('click', () => {
-        const preset = presets[i];
-        presetsEl.querySelectorAll('.skip-date-preset-btn').forEach(b => b.classList.remove('is-selected'));
-        btn.classList.add('is-selected');
-        if (preset.isSeasonEnd) {
-          skipToSeasonEndSelected = true;
-          gridEl.querySelectorAll('.cal-day-cell.is-skip-selected').forEach(c => c.classList.remove('is-skip-selected'));
-          updateSkipDateSummary();
-        } else {
-          selectSkipCalendarDayIndex(preset.idx, { scrollIntoView: true, clearPresets: false });
-        }
-      });
     });
   }
 
@@ -2191,7 +2143,6 @@ function closeSkipToDateModal() {
   const modal = document.getElementById('skip-to-date-modal');
   const wasOpen = Boolean(modal && !modal.classList.contains('hidden'));
   if (modal) modal.classList.add('hidden');
-  skipToSeasonEndSelected = false;
   skipSelectedDayIndex = null;
   if (wasOpen && typeof setBodyModalLock === 'function') setBodyModalLock(false);
 }
@@ -17417,12 +17368,9 @@ function initGame() {
   const btnConfirmSkipDate = document.getElementById('btn-confirm-skip-date');
   if (btnConfirmSkipDate) {
     btnConfirmSkipDate.addEventListener('click', () => {
-      const doSeasonEnd = skipToSeasonEndSelected;
       const targetIdx = skipSelectedDayIndex;
       closeSkipToDateModal();
-      if (doSeasonEnd) {
-        skipToSeasonEnd();
-      } else if (typeof targetIdx === 'number') {
+      if (typeof targetIdx === 'number') {
         skipToTargetDate(targetIdx);
       }
     });
