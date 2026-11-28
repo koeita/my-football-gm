@@ -17333,6 +17333,7 @@ body {
 .skip-date-modal-card {
   max-width: 680px;
   width: 96vw;
+  height: min(82vh, 680px);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -17344,13 +17345,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
 }
 
 .skip-cal-view {
-  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
   min-height: 0 !important;
   overflow: hidden !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -17358,11 +17361,12 @@ body {
 }
 
 .skip-cal-days-grid {
-  flex: 1 1 auto !important;
-  min-height: 240px !important;
-  height: 44vh !important;
-  max-height: 46vh !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
   overflow-y: auto !important;
+  padding-bottom: 4px !important;
 }
 
 .cal-day-cell.is-skip-disabled {
