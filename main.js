@@ -1646,6 +1646,205 @@ let lastRenderedWeeklyDayIndex = null;
 let weeklySlideCleanupTimer = null;
 
 /**
+ * クラブの年間収支予測（賞金除く）を算出する共有ヘルパー
+ */
+function calculateClubCashflowProjection(playerClub, summary = null) {
+  const budgetSum = summary || (typeof getClubBudgetSummary === 'function' ? getClubBudgetSummary(playerClub) : null);
+  const annualPayroll = budgetSum ? (budgetSum.annualPayroll || 0) : (typeof getClubTotalPayroll === 'function' ? getClubTotalPayroll(playerClub) : 0);
+  const isD2 = Boolean(playerClub && ((playerClub.isPlayer && typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision()) || playerClub.division === 'd2'));
+  const homeMatches = isD2 ? 23 : 19;
+  const awayMatches = isD2 ? 23 : 19;
+  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
+  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
+  const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
+  let avgHomeGate = Math.round((playerClub.supporters || 14000) * (isD2 ? 0.055 : 0.085) * (1 + (stadiumLv - 1) * 0.15));
+  if (typeof calculateProjectedMatchdayCommercial === 'function') {
+    const commProj = calculateProjectedMatchdayCommercial(playerClub, { matchType: isD2 ? 'league_d2' : 'league_d1' });
+    if (commProj && typeof commProj.netMatchdayIncomeK === 'number') {
+      avgHomeGate = commProj.netMatchdayIncomeK;
+    }
+  }
+  const estHomeAnnual = Math.round(avgHomeGate * homeMatches);
+  const estAwayTvAnnual = Math.round((isD2 ? 450 : 1600) * awayMatches);
+  const sponsorAnnual = typeof getClubTotalBaseSponsorIncome === 'function'
+    ? getClubTotalBaseSponsorIncome(playerClub, isD2)
+    : ((playerClub.sponsor && playerClub.sponsor.baseAnnual) || 0);
+  const centralTv = isD2 ? 2000 : 18000;
+  let euroTv = 0;
+  if (!isD2 && typeof collectEuroCompetitionTvParticipantSets === 'function') {
+    const sets = collectEuroCompetitionTvParticipantSets([]);
+    if (sets.uclIds.has(playerClub.id)) euroTv = 10000;
+    else if (sets.uelIds.has(playerClub.id)) euroTv = 6000;
+    else if (sets.ueclIds.has(playerClub.id)) euroTv = 3000;
+  }
+  const tvSolidarity = centralTv + euroTv;
+  const estGrossRev = estHomeAnnual + estAwayTvAnnual + sponsorAnnual + tvSolidarity;
+  const rawOpCost = 4000 + stadiumLv * 2500 + trainingLv * 2000 + scoutingLv * 1500;
+  const estOpCost = isD2 ? Math.round(rawOpCost * 0.55) : rawOpCost;
+  const instAnnualNet = (Array.isArray(gameState.installments) ? gameState.installments : [])
+    .filter(inst => inst && inst.remainingSeasons > 0)
+    .reduce((sum, inst) => sum + (inst.direction === 'out' ? -(inst.amountPerSeason || 0) : (inst.amountPerSeason || 0)), 0);
+  const estGrossExp = annualPayroll + estOpCost + (instAnnualNet < 0 ? Math.abs(instAnnualNet) : 0);
+  const estAdjRev = estGrossRev + (instAnnualNet > 0 ? instAnnualNet : 0);
+  const estNetAnnual = estAdjRev - estGrossExp;
+  const estNetSign = estNetAnnual >= 0 ? '+' : '';
+  const cashflowRatioSum = Math.max(1, estAdjRev + estGrossExp);
+  const revBarPct = Math.round((estAdjRev / cashflowRatioSum) * 100);
+  return {
+    isD2,
+    homeMatches,
+    awayMatches,
+    stadiumLv,
+    trainingLv,
+    scoutingLv,
+    estHomeAnnual,
+    estAwayTvAnnual,
+    sponsorAnnual,
+    centralTv,
+    euroTv,
+    tvSolidarity,
+    estGrossRev,
+    estOpCost,
+    instAnnualNet,
+    estGrossExp,
+    estAdjRev,
+    estNetAnnual,
+    estNetSign,
+    revBarPct
+  };
+}
+
+/**
+ * 本部最上部：クラブ状況サマリー（5チームミニ順位表 ＋ 4主要指標）の描画
+ */
+function renderOfficeOverview() {
+  const panelEl = document.getElementById('office-overview-panel');
+  const playerClub = typeof getPlayerClub === 'function' ? getPlayerClub() : null;
+  if (!panelEl || !playerClub) return;
+
+  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
+  const divCode = isD2 ? 'ENG-D2' : 'ENG-D1';
+  const leagueClubs = typeof getActivePlayerLeagueClubs === 'function' ? getActivePlayerLeagueClubs() : (gameState.clubs || []);
+  const sorted = [...leagueClubs].filter(Boolean).sort((a, b) => {
+    if ((b.pts || 0) !== (a.pts || 0)) return (b.pts || 0) - (a.pts || 0);
+    if ((b.gd || 0) !== (a.gd || 0)) return (b.gd || 0) - (a.gd || 0);
+    if ((b.gf || 0) !== (a.gf || 0)) return (b.gf || 0) - (a.gf || 0);
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  });
+  const pIdx = Math.max(0, sorted.findIndex(c => c.id === playerClub.id));
+  const startIdx = clamp(pIdx - 2, 0, Math.max(0, sorted.length - 5));
+  const slice = sorted.slice(startIdx, startIdx + 5);
+
+  const standRowsHtml = slice.map((c, offset) => {
+    const rankNum = startIdx + offset + 1;
+    const isMe = c.id === playerClub.id;
+    const rankBadgeClass = rankNum === 1 ? 'rank-badge rank-1' : 'rank-badge';
+    const gdVal = c.gd || 0;
+    const gdSign = gdVal > 0 ? `+${gdVal}` : `${gdVal}`;
+    const zoneClass = isD2
+      ? (rankNum <= 3 ? 'zone-promotion' : (rankNum >= 22 ? 'zone-relegation-p2' : ''))
+      : (rankNum <= 4 ? 'zone-ucl' : (rankNum === 5 ? 'zone-uel' : (rankNum >= 18 ? 'zone-rel' : '')));
+    const rowClass = [isMe ? 'row-player-club' : '', zoneClass].filter(Boolean).join(' ');
+    const emblemHtml = typeof getClubEmblemSvg === 'function' ? getClubEmblemSvg(c, 20, 'standings-emblem') : '';
+    return `
+      <tr class="${rowClass}" data-office-jump="standings">
+        <td class="col-rank"><span class="${rankBadgeClass}">${rankNum}</span></td>
+        <td class="col-team"><span class="team-cell-wrap">${emblemHtml}<span class="team-name-text">${escapeCommHtml(c.name || '')}</span></span></td>
+        <td class="col-num col-played">${c.played || 0}</td>
+        <td class="col-num col-won">${c.won || 0}</td>
+        <td class="col-num col-drawn">${c.drawn || 0}</td>
+        <td class="col-num col-lost">${c.lost || 0}</td>
+        <td class="col-num col-gf"><span class="td-pc">${c.gf || 0}</span><span class="td-mob">${c.gf || 0}-${c.ga || 0}</span></td>
+        <td class="col-num col-ga">${c.ga || 0}</td>
+        <td class="col-num col-gd">${gdSign}</td>
+        <td class="col-pts">${c.pts || 0}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (typeof calculateClubChemistryAndFamiliarity === 'function') {
+    calculateClubChemistryAndFamiliarity(playerClub);
+  }
+  const cf = calculateClubCashflowProjection(playerClub);
+  const netCls = cf.estNetAnnual >= 0 ? 'accent-green' : 'text-danger';
+  const netTxt = `${cf.estNetSign}${formatMoney(cf.estNetAnnual)}`;
+  const boardVal = Math.round(playerClub.boardConfidence ?? 75);
+  const boardCls = boardVal >= 70 ? 'accent-green' : (boardVal >= 45 ? 'accent-gold' : 'text-danger');
+  const famVal = Math.round(playerClub.tacticalFamiliarity ?? 75);
+  const famCls = famVal >= 80 ? 'accent-green' : (famVal >= 60 ? 'accent-gold' : 'text-danger');
+  const chemVal = Math.round(playerClub.teamChemistry ?? 75);
+  const chemCls = chemVal >= 80 ? 'accent-green' : (chemVal >= 60 ? 'accent-gold' : 'text-danger');
+  const targetRankTxt = playerClub.targetRank ? `目標 ${playerClub.targetRank}位` : '';
+
+  panelEl.innerHTML = `
+    <div class="office-overview-head">
+      <div class="office-overview-title-group">
+        <span class="office-overview-div mono">${divCode}</span>
+        <strong class="office-overview-rank mono">現在 第${pIdx + 1}位</strong>
+        ${targetRankTxt ? `<span class="office-overview-target mono">${targetRankTxt}</span>` : ''}
+      </div>
+      <button type="button" class="office-overview-link" data-office-jump="standings">順位表</button>
+    </div>
+    <div class="table-wrapper office-mini-standings-wrap" role="region" aria-label="周辺順位">
+      <table class="data-table standings-table office-mini-standings-table">
+        <thead>
+          <tr>
+            <th class="col-rank"><span class="th-pc">順位</span><span class="th-mob">#</span></th>
+            <th class="col-team"><span class="th-pc">クラブ名</span><span class="th-mob">チーム</span></th>
+            <th class="col-num col-played">試合</th>
+            <th class="col-num col-won">勝</th>
+            <th class="col-num col-drawn">分</th>
+            <th class="col-num col-lost"><span class="th-pc">敗</span><span class="th-mob">負</span></th>
+            <th class="col-num col-gf"><span class="th-pc">得点</span><span class="th-mob">+/-</span></th>
+            <th class="col-num col-ga">失点</th>
+            <th class="col-num col-gd"><span class="th-pc">得失点</span><span class="th-mob">差</span></th>
+            <th class="col-pts"><span class="th-pc">勝点</span><span class="th-mob">点</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${standRowsHtml}
+        </tbody>
+      </table>
+    </div>
+    <div class="office-overview-metrics">
+      <button type="button" class="office-metric-item" data-office-jump="finance" title="財務画面を開く">
+        <span class="office-metric-label">今季予測</span>
+        <strong class="office-metric-val mono ${netCls}">${netTxt}</strong>
+      </button>
+      <div class="office-metric-item" data-glossary-key="board_confidence" role="button" tabindex="0">
+        <span class="office-metric-label">理事会評価</span>
+        <strong class="office-metric-val mono ${boardCls}">${boardVal}%</strong>
+      </div>
+      <div class="office-metric-item" data-glossary-key="tactical_penetration" role="button" tabindex="0">
+        <span class="office-metric-label">戦術浸透</span>
+        <strong class="office-metric-val mono ${famCls}">${famVal}%</strong>
+      </div>
+      <div class="office-metric-item" data-glossary-key="team_chemistry" role="button" tabindex="0">
+        <span class="office-metric-label">チーム連携</span>
+        <strong class="office-metric-val mono ${chemCls}">${chemVal}%</strong>
+      </div>
+    </div>
+  `;
+
+  if (!panelEl._boundOverviewClick) {
+    panelEl._boundOverviewClick = true;
+    panelEl.addEventListener('click', (e) => {
+      if (e.target.closest('[data-glossary-key]')) return;
+      const jumpEl = e.target.closest('[data-office-jump]');
+      if (!jumpEl) return;
+      const dest = jumpEl.dataset.officeJump;
+      if (dest === 'standings') {
+        if (typeof switchTab === 'function') switchTab('team');
+        if (typeof switchTeamSubtab === 'function') switchTeamSubtab('standings');
+      } else if (dest === 'finance') {
+        if (typeof switchTab === 'function') switchTab('facilities');
+        if (typeof switchFacilitiesSubtab === 'function') switchFacilitiesSubtab('finance');
+      }
+    });
+  }
+}
+
+/**
  * 直近1週間のスケジュール（週間カレンダーウィジェット）の描画
  */
 function renderWeeklySchedule() {
@@ -1817,6 +2016,9 @@ function skipToSeasonEnd() {
     }
   } finally {
     isFastForwardingSeason = false;
+    if (typeof markPassedMilestonesSilently === 'function') {
+      markPassedMilestonesSilently(typeof getPlayerClub === 'function' ? getPlayerClub() : null);
+    }
   }
   renderAll();
 }
@@ -9084,6 +9286,7 @@ function renderActiveTabView(force = false) {
   dirtyViews[active] = false;
 
   if (active === 'office') {
+    if (typeof renderOfficeOverview === 'function') renderOfficeOverview();
     if (typeof renderSecretaryBriefing === 'function') renderSecretaryBriefing();
     renderWeeklySchedule();
     renderGmDuties();
@@ -12861,7 +13064,8 @@ function renderGmDuties() {
     barsEl.innerHTML = buildGmDutyBarsHtml(levels);
   }
 
-  const isCollapsed = Boolean(gameState.gmTasksCollapsed);
+  gameState.gmTasksCollapsed = false;
+  const isCollapsed = false;
   const toggleBtn = document.getElementById('btn-toggle-gm-tasks');
   const toggleBtnText = document.getElementById('gm-tasks-toggle-text');
   const toggleBtnIcon = document.getElementById('gm-tasks-toggle-icon');
@@ -13029,45 +13233,21 @@ function renderFinanceBudgetPanel() {
   const mOtherSign = mOther >= 0 ? '+' : '';
 
   // 今季年間収支見込
-  const isD2 = typeof isPlayerInSecondDivision === 'function' && isPlayerInSecondDivision();
-  const homeMatches = isD2 ? 23 : 19;
-  const awayMatches = isD2 ? 23 : 19;
-  const stadiumLv = (gameState.facilities && gameState.facilities.stadium) ? gameState.facilities.stadium : 1;
-  const trainingLv = (gameState.facilities && gameState.facilities.training) ? gameState.facilities.training : 1;
-  const scoutingLv = (gameState.facilities && gameState.facilities.scouting) ? gameState.facilities.scouting : 1;
-  let avgHomeGate = Math.round((playerClub.supporters || 14000) * (isD2 ? 0.055 : 0.085) * (1 + (stadiumLv - 1) * 0.15));
-  if (typeof calculateProjectedMatchdayCommercial === 'function') {
-    const commProj = calculateProjectedMatchdayCommercial(playerClub, { matchType: isD2 ? 'league_d2' : 'league_d1' });
-    if (commProj && typeof commProj.netMatchdayIncomeK === 'number') {
-      avgHomeGate = commProj.netMatchdayIncomeK;
-    }
-  }
-  const estHomeAnnual = Math.round(avgHomeGate * homeMatches);
-  const estAwayTvAnnual = Math.round((isD2 ? 450 : 1600) * awayMatches);
-  const sponsorAnnual = typeof getClubTotalBaseSponsorIncome === 'function'
-    ? getClubTotalBaseSponsorIncome(playerClub, isD2)
-    : ((playerClub.sponsor && playerClub.sponsor.baseAnnual) || 0);
-  const centralTv = isD2 ? 2000 : 18000;
-  let euroTv = 0;
-  if (!isD2 && typeof collectEuroCompetitionTvParticipantSets === 'function') {
-    const sets = collectEuroCompetitionTvParticipantSets([]);
-    if (sets.uclIds.has(playerClub.id)) euroTv = 10000;
-    else if (sets.uelIds.has(playerClub.id)) euroTv = 6000;
-    else if (sets.ueclIds.has(playerClub.id)) euroTv = 3000;
-  }
-  const tvSolidarity = centralTv + euroTv;
-  const estGrossRev = estHomeAnnual + estAwayTvAnnual + sponsorAnnual + tvSolidarity;
-  const rawOpCost = 4000 + stadiumLv * 2500 + trainingLv * 2000 + scoutingLv * 1500;
-  const estOpCost = isD2 ? Math.round(rawOpCost * 0.55) : rawOpCost;
-  const instAnnualNet = (Array.isArray(gameState.installments) ? gameState.installments : [])
-    .filter(inst => inst && inst.remainingSeasons > 0)
-    .reduce((sum, inst) => sum + (inst.direction === 'out' ? -(inst.amountPerSeason || 0) : (inst.amountPerSeason || 0)), 0);
-  const estGrossExp = summary.annualPayroll + estOpCost + (instAnnualNet < 0 ? Math.abs(instAnnualNet) : 0);
-  const estAdjRev = estGrossRev + (instAnnualNet > 0 ? instAnnualNet : 0);
-  const estNetAnnual = estAdjRev - estGrossExp;
-  const estNetSign = estNetAnnual >= 0 ? '+' : '';
-  const cashflowRatioSum = Math.max(1, estAdjRev + estGrossExp);
-  const revBarPct = Math.round((estAdjRev / cashflowRatioSum) * 100);
+  const {
+    isD2,
+    homeMatches,
+    awayMatches,
+    estHomeAnnual,
+    estAwayTvAnnual,
+    sponsorAnnual,
+    tvSolidarity,
+    estOpCost,
+    estGrossExp,
+    estAdjRev,
+    estNetAnnual,
+    estNetSign,
+    revBarPct
+  } = calculateClubCashflowProjection(playerClub, summary);
 
   const installmentsList = Array.isArray(gameState.installments)
     ? gameState.installments.filter(inst => inst && inst.remainingSeasons > 0)
@@ -25791,6 +25971,38 @@ function recordPlayerMilestoneEvent(player, playerClub, key, { badge = 'RECORD',
   }
 }
 
+const MILESTONE_THRESHOLDS = {
+  apps: [50, 100, 150, 200, 300],
+  goals: [25, 50, 100, 150],
+  assists: [25, 50, 100]
+};
+
+/**
+ * 早送り（シーズン終了スキップ）等で既に到達済みの節目記録を演出なしで既達成扱いとする
+ */
+function markPassedMilestonesSilently(playerClub) {
+  if (!playerClub) return;
+  syncPlayerClubStatsToHallOfFame(playerClub);
+  const hof = ensureClubHallOfFame();
+  for (const p of (playerClub.players || [])) {
+    if (!p) continue;
+    const entry = hof.players[p.id];
+    if (!entry) continue;
+    const apps = entry.apps || 0;
+    const goals = entry.goals || 0;
+    const assists = entry.assists || 0;
+    for (const mApps of MILESTONE_THRESHOLDS.apps) {
+      if (apps >= mApps) hof.milestonesIssued[`apps_${p.id}_${mApps}`] = true;
+    }
+    for (const mGoals of MILESTONE_THRESHOLDS.goals) {
+      if (goals >= mGoals) hof.milestonesIssued[`goals_${p.id}_${mGoals}`] = true;
+    }
+    for (const mAst of MILESTONE_THRESHOLDS.assists) {
+      if (assists >= mAst) hof.milestonesIssued[`assists_${p.id}_${mAst}`] = true;
+    }
+  }
+}
+
 function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
   if (!playerClub || !matchData || matchData.isPreseason) return;
   syncPlayerClubStatsToHallOfFame(playerClub);
@@ -25798,9 +26010,12 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
   const seasonNum = gameState.season || 1;
   const scorers = matchData.isPlayerHome ? (matchData.homeScorers || []) : (matchData.awayScorers || []);
   const matchGoalsByPlayer = new Map();
+  const matchAssistsByPlayer = new Map();
   for (const s of scorers) {
     const pid = s && s.scorer ? s.scorer.id : null;
     if (pid) matchGoalsByPlayer.set(pid, (matchGoalsByPlayer.get(pid) || 0) + 1);
+    const aid = s && s.assister ? s.assister.id : null;
+    if (aid) matchAssistsByPlayer.set(aid, (matchAssistsByPlayer.get(aid) || 0) + 1);
   }
 
   const playedIds = new Set();
@@ -25843,6 +26058,7 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
 
     const entry = hof.players[p.id];
     if (!entry) continue;
+    const matchA = matchAssistsByPlayer.get(p.id) || 0;
 
     if (p.isYouthGraduate && matchG >= 1 && (entry.goals || 0) === matchG) {
       recordPlayerMilestoneEvent(p, playerClub, `youth_first_goal_${p.id}`, {
@@ -25855,9 +26071,12 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
       });
     }
 
-    for (const mApps of [50, 100, 150, 200, 300]) {
-      if ((entry.apps || 0) >= mApps) {
-        recordPlayerMilestoneEvent(p, playerClub, `apps_${p.id}_${mApps}`, {
+    const curApps = entry.apps || 0;
+    const prevApps = Math.max(0, curApps - 1);
+    for (const mApps of MILESTONE_THRESHOLDS.apps) {
+      const appKey = `apps_${p.id}_${mApps}`;
+      if (prevApps < mApps && curApps >= mApps) {
+        recordPlayerMilestoneEvent(p, playerClub, appKey, {
           badge: 'RECORD',
           cinematicTag: `${mApps} APPS`,
           isMajor: mApps >= 100,
@@ -25865,11 +26084,17 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}・${p.name}がクラブ通算${mApps}試合出場を達成`,
           desc: `長期にわたりチームを支える${p.name}がクラブ公式戦通算${mApps}試合の節目に到達した。`
         });
+      } else if (prevApps >= mApps) {
+        hof.milestonesIssued[appKey] = true;
       }
     }
-    for (const mGoals of [25, 50, 100, 150]) {
-      if ((entry.goals || 0) >= mGoals) {
-        recordPlayerMilestoneEvent(p, playerClub, `goals_${p.id}_${mGoals}`, {
+
+    const curGoals = entry.goals || 0;
+    const prevGoals = Math.max(0, curGoals - matchG);
+    for (const mGoals of MILESTONE_THRESHOLDS.goals) {
+      const goalKey = `goals_${p.id}_${mGoals}`;
+      if (matchG > 0 && prevGoals < mGoals && curGoals >= mGoals) {
+        recordPlayerMilestoneEvent(p, playerClub, goalKey, {
           badge: 'RECORD',
           cinematicTag: `${mGoals} GOALS`,
           isMajor: mGoals >= 50,
@@ -25877,11 +26102,17 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}の点取り屋・${p.name}がクラブ通算${mGoals}ゴールに到達`,
           desc: `エース級の決定力を示す${p.name}がクラブ通算${mGoals}得点目を叩き込んだ。`
         });
+      } else if (prevGoals >= mGoals) {
+        hof.milestonesIssued[goalKey] = true;
       }
     }
-    for (const mAst of [25, 50, 100]) {
-      if ((entry.assists || 0) >= mAst) {
-        recordPlayerMilestoneEvent(p, playerClub, `assists_${p.id}_${mAst}`, {
+
+    const curAst = entry.assists || 0;
+    const prevAst = Math.max(0, curAst - matchA);
+    for (const mAst of MILESTONE_THRESHOLDS.assists) {
+      const astKey = `assists_${p.id}_${mAst}`;
+      if (matchA > 0 && prevAst < mAst && curAst >= mAst) {
+        recordPlayerMilestoneEvent(p, playerClub, astKey, {
           badge: 'RECORD',
           cinematicTag: `${mAst} ASSISTS`,
           isMajor: mAst >= 50,
@@ -25889,6 +26120,8 @@ function checkPlayerMatchMilestonesAndStreaks(playerClub, matchData) {
           headline: `${playerClub.name}の司令塔・${p.name}がクラブ通算${mAst}アシストを記録`,
           desc: `決定的なパスを供給し続ける${p.name}がクラブ通算${mAst}アシストの節目を迎えた。`
         });
+      } else if (prevAst >= mAst) {
+        hof.milestonesIssued[astKey] = true;
       }
     }
   }

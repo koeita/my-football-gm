@@ -7251,13 +7251,14 @@ body:has(.modal-overlay:not(.hidden)) .tab-nav {
     gap: 8px !important;
   }
 
-  .gm-tasks-footer-bar {
+  .gm-tasks-footer-bar,
+  .gm-tasks-action-row.office-action-controls {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 6px !important;
-    padding: 8px 0 0 !important;
+    padding: 7px 0 !important;
   }
 
   .gm-tasks-footer-left {
@@ -8739,7 +8740,8 @@ body.is-tactical-dragging .bench-sub-item * {
     display: inline !important;
   }
 
-  #view-team .table-wrapper:has(.standings-table) {
+  #view-team .table-wrapper:has(.standings-table),
+  #view-office .table-wrapper:has(.standings-table) {
     overflow-x: hidden !important;
   }
 
@@ -13902,23 +13904,24 @@ button.hidden,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 8px;
+  padding: 2px 4px;
   font-size: 11px;
   font-weight: 700;
   color: var(--accent-green);
-  background: rgba(46, 204, 113, 0.12);
-  border: 1px solid rgba(46, 204, 113, 0.35);
-  border-radius: 4px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
   line-height: 1.2;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .btn-view-full-schedule:hover {
-  background: rgba(46, 204, 113, 0.25);
-  border-color: var(--accent-green);
+  background: transparent !important;
+  border: none !important;
+  text-decoration: underline;
 }
 
 .season-schedule-list {
@@ -17125,6 +17128,205 @@ body {
   display: none !important;
 }
 
+/* 本部最上部：クラブ状況サマリー（ミニ順位表＋主要4指標）＆省スペース余白 */
+#view-office.office-hub-view {
+  gap: 8px !important;
+}
+
+#view-office .weekly-schedule-bar {
+  padding: 8px 10px !important;
+  margin: 0 !important;
+}
+
+#view-office .gm-tasks-panel {
+  padding: 8px 10px !important;
+  margin-bottom: 0 !important;
+  gap: 6px !important;
+  border-radius: 10px !important;
+}
+
+.office-overview-panel {
+  background: #14171c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.office-overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.office-overview-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.office-overview-div {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-overview-rank {
+  font-size: 13px;
+  color: var(--text-main);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-overview-target {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-overview-link {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: #2ecc71;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-overview-link:hover {
+  text-decoration: underline;
+}
+
+.office-mini-standings-wrap {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  max-height: none !important;
+}
+
+.office-mini-standings-table tbody tr {
+  cursor: pointer;
+}
+
+.office-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.office-metric-item {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.office-metric-label {
+  font-size: 11px;
+  color: #8b949e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.office-metric-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .office-overview-panel {
+    padding: 8px;
+  }
+  .office-overview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 12px;
+  }
+}
+
+.gm-tasks-top-row .secretary-briefing-bar {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.gm-tasks-top-row .office-action-primary {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.gm-tasks-top-row .btn-office-primary-cta {
+  min-height: 40px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.gm-tasks-action-row.office-action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  padding: 6px 0 !important;
+  box-shadow: none !important;
+}
+
+.gm-tasks-action-row .gm-tasks-footer-left {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.gm-tasks-action-row #btn-advance-day {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+.gm-tasks-action-row #btn-skip-season {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
 .gm-tasks-footer-bar {
   display: flex;
   align-items: center;
@@ -17201,6 +17403,33 @@ body {
 }
 
 @media (max-width: 480px) {
+  #view-office.office-hub-view {
+    gap: 6px !important;
+  }
+  #view-office .weekly-schedule-bar {
+    padding: 6px 8px !important;
+  }
+  #view-office .gm-tasks-panel {
+    padding: 8px !important;
+  }
+  .gm-tasks-top-row .btn-office-primary-cta {
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .gm-tasks-action-row.office-action-controls {
+    padding: 6px 0 !important;
+    gap: 6px !important;
+  }
+  .gm-tasks-action-row #btn-advance-day {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .gm-tasks-action-row #btn-skip-season {
+    padding: 4px 2px;
+    font-size: 10.5px;
+  }
   .gm-tasks-panel {
     padding: 12px 12px 10px !important;
   }
